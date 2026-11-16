@@ -59,9 +59,9 @@ Paths are relative to `crates/rolldown/src/`.
 - `rename_bindings_shadowing_named_imports`: for each reference to a named import, it checks the name that the finalizer prints for the import.
 - `rename_bindings_shadowing_fixed_names`: it renames the inner bindings that have a fixed name that the body of the module can print. `fixed_names_in_module_body` is the list. Each entry tells the rewrite and the module contents that cause it.
 
-The factory parameter of an external module (IIFE/UMD) is a top-level binding that the renamer gives a name to. The finalizer prints each reference to it for an import binding. Thus the named-import pass covers it through `printed_name`.
+The factory parameter of an external module (IIFE/UMD) is a top-level binding that the renamer gives a name to. The finalizer prints each reference to it for an import binding. Thus the named-import pass covers it through `printed_binding`.
 
-The first two passes use `Renamer::printed_name`. This function follows a namespace alias to its namespace binding, as `finalized_expr_for_symbol_ref` does. The passes also use `rename_bindings_on_path`, which goes through the scope ancestors of the reference. It stops at the root scope, unless `root_scope_is_inner` is true (the module is CJS-wrapped). It renames each binding with that name, except the binding that the reference resolves to.
+The first two passes use `Renamer::printed_binding`. This function follows a namespace alias to its namespace binding, as `finalized_expr_for_symbol_ref` does. The passes also use `rename_bindings_on_path`, which goes through the scope ancestors of the reference. It stops at the root scope, unless `root_scope_is_inner` is true (the module is CJS-wrapped). It renames each binding with that name, except the binding that the reference resolves to.
 
 `Renamer::rename_inner_binding` takes the first `name$N` that is not in the resolver and that no scope of the module binds. Then it reserves that name. It skips a binding that already has a name. It also skips a binding that is linked to another symbol (an import binding), because the finalizer prints that binding with the name of the other symbol.
 
@@ -94,7 +94,11 @@ top-level var. The catch group takes a fresh name while the imported read keeps
 the outer name. `preserve_renamed_catch_vars` emits an uninitialized outer
 declaration (or adds it to the wrapped-ESM hoist set), since the renamed `var`
 inside the catch now declares a different enclosing binding. This also covers
-outer vars whose only source declaration is in a catch loop.
+outer vars whose only source declaration is in a catch loop. The path lookup
+also checks the printed symbol's source name for members of its catch/var group.
+It compares each candidate's effective name with the imported name, so a
+renamed outer var cannot be captured by a group member whose source name stayed
+unchanged.
 
 The scanner records the implicit outer var when visiting a linked catch
 binding. When wrapping ESM, the finalizer hoists that declaration under its

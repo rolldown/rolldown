@@ -166,12 +166,13 @@ impl<'name> Renamer<'name> {
     self.canonical_names.get(&canonical_ref)
   }
 
-  /// Returns the top-level name that the finalizer prints for a reference to `symbol_ref`. The
+  /// Returns the symbol and top-level name that the finalizer prints for `symbol_ref`. The
   /// finalizer prints a namespace alias through its namespace binding (`import_foo.default`,
   /// `node_path.join`). Thus a local with the name of that binding can capture the reference.
   /// This function does the same as `finalized_expr_for_symbol_ref`.
-  pub fn printed_name(&self, symbol_ref: SymbolRef) -> Option<&CompactStr> {
-    self.get_canonical_name(self.symbol_db.canonical_ref_resolving_namespace(symbol_ref))
+  pub fn printed_binding(&self, symbol_ref: SymbolRef) -> Option<(SymbolRef, CompactStr)> {
+    let symbol_ref = self.symbol_db.canonical_ref_resolving_namespace(symbol_ref);
+    self.get_canonical_name(symbol_ref).map(|name| (symbol_ref, name.clone()))
   }
 
   pub fn reserve(&mut self, name: CompactStr) {
@@ -429,15 +430,27 @@ impl NestedScopeRenamer<'_, '_> {
     reference_scope: ScopeId,
     name: Ident<'_>,
     target: SymbolId,
+    printed_symbol: SymbolRef,
   ) {
     let scoping = self.scoping;
     let root_scope_id = scoping.root_scope_id();
     let root_scope_is_inner = self.root_scope_is_inner();
+    let group_name = (printed_symbol.owner == self.module_idx
+      && self.renamer.catch_var_name_groups.contains_key(&printed_symbol))
+    .then(|| scoping.symbol_ident(printed_symbol.symbol));
     for scope_id in scoping.scope_ancestors(reference_scope) {
       if scope_id == root_scope_id && !root_scope_is_inner {
         break;
       }
-      if let Some(binding) = scoping.get_binding(scope_id, name)
+      let binding = scoping.get_binding(scope_id, name).or_else(|| {
+        let binding = scoping.get_binding(scope_id, group_name?)?;
+        self
+          .renamer
+          .get_canonical_name((self.module_idx, binding).into())
+          .is_some_and(|printed_name| printed_name.as_str() == name.as_str())
+          .then_some(binding)
+      });
+      if let Some(binding) = binding
         && binding != target
       {
         self.renamer.rename_inner_binding(
@@ -491,7 +504,8 @@ impl NestedScopeRenamer<'_, '_> {
 
       // Only check for shadowing if the symbol was processed by the renamer
       // (i.e. it has a canonical name entry and is rendered at the chunk's root scope).
-      let Some(printed_name) = self.renamer.printed_name(resolved_symbol).cloned() else {
+      let Some((printed_symbol, printed_name)) = self.renamer.printed_binding(resolved_symbol)
+      else {
         continue;
       };
 
@@ -499,6 +513,7 @@ impl NestedScopeRenamer<'_, '_> {
         current_reference.scope_id(),
         Ident::from(printed_name.as_str()),
         symbol,
+        printed_symbol,
       );
     }
   }
@@ -543,14 +558,19 @@ impl NestedScopeRenamer<'_, '_> {
 
       // Only check for shadowing if the symbol was processed by the renamer
       // (i.e. it has a canonical name entry and is rendered at the chunk's root scope).
-      let Some(printed_name) = self.renamer.printed_name(*symbol_ref).cloned() else {
+      let Some((printed_symbol, printed_name)) = self.renamer.printed_binding(*symbol_ref) else {
         continue;
       };
 
       let printed_name = Ident::from(printed_name.as_str());
       let scoping = self.scoping;
       for reference in scoping.get_resolved_references(symbol_ref.symbol) {
-        self.rename_bindings_on_path(reference.scope_id(), printed_name, symbol_ref.symbol);
+        self.rename_bindings_on_path(
+          reference.scope_id(),
+          printed_name,
+          symbol_ref.symbol,
+          printed_symbol,
+        );
       }
     }
   }

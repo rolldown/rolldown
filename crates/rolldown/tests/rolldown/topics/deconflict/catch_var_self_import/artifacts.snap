@@ -35,6 +35,48 @@ try {
 } catch (cycle$1) {
 	result = cycle;
 }
+// renamed.js
+var e$1;
+var f$1;
+var g$1;
+const log = [];
+var e$1 = "v";
+e$1 += "!";
+try {
+	throw 1;
+} catch (e$2) {
+	log.push(e$1);
+}
+{
+	let e$2 = 3;
+	e$2++;
+	log.push(e$1, e$2);
+}
+var f$1 = "w";
+f$1 += "!";
+try {
+	throw 1;
+} catch (f$2) {
+	log.push(f$1);
+}
+{
+	let f$2 = 5;
+	f$2++;
+	log.push(f$1, f$2);
+}
+var g$1 = 8;
+g$1++;
+try {
+	throw 0;
+} catch (g$2) {
+	var g$2 = 10;
+	log.push(g$2);
+}
+{
+	let g$2 = 11;
+	g$2++;
+	log.push(g$1, g$2);
+}
 // main.js
 assert.deepStrictEqual(results, [
 	2,
@@ -47,6 +89,26 @@ assert.strictEqual(direct, 2);
 assert.strictEqual(onlyCatch, void 0);
 assert.strictEqual(result, 11);
 assert.strictEqual(cycle, 11);
+let e = "entry";
+e += "!";
+let f = "entry";
+f += "!";
+assert.strictEqual(e, "entry!");
+assert.strictEqual(f, "entry!");
+let g = 0;
+g++;
+assert.strictEqual(g, 1);
+assert.deepStrictEqual(log, [
+	"v!",
+	"v!",
+	4,
+	"w!",
+	"w!",
+	6,
+	10,
+	9,
+	12
+]);
 
 ```
 
@@ -88,6 +150,48 @@ try {
 } catch (cycle$1) {
 	result = cycle;
 }
+// renamed.js
+var e$1;
+var f$1;
+var g$1;
+const log = [];
+var e$1 = "v";
+e$1 += "!";
+try {
+	throw 1;
+} catch (e$2) {
+	log.push(e$1);
+}
+{
+	let e$2 = 3;
+	e$2++;
+	log.push(e$1, e$2);
+}
+var f$1 = "w";
+f$1 += "!";
+try {
+	throw 1;
+} catch (f$2) {
+	log.push(f$1);
+}
+{
+	let f$2 = 5;
+	f$2++;
+	log.push(f$1, f$2);
+}
+var g$1 = 8;
+g$1++;
+try {
+	throw 0;
+} catch (g$2) {
+	var g$2 = 10;
+	log.push(g$2);
+}
+{
+	let g$2 = 11;
+	g$2++;
+	log.push(g$1, g$2);
+}
 // main.js
 node_assert_strict.default.deepStrictEqual(results, [
 	2,
@@ -100,6 +204,26 @@ node_assert_strict.default.strictEqual(direct, 2);
 node_assert_strict.default.strictEqual(onlyCatch, void 0);
 node_assert_strict.default.strictEqual(result, 11);
 node_assert_strict.default.strictEqual(cycle, 11);
+let e = "entry";
+e += "!";
+let f = "entry";
+f += "!";
+node_assert_strict.default.strictEqual(e, "entry!");
+node_assert_strict.default.strictEqual(f, "entry!");
+let g = 0;
+g++;
+node_assert_strict.default.strictEqual(g, 1);
+node_assert_strict.default.deepStrictEqual(log, [
+	"v!",
+	"v!",
+	4,
+	"w!",
+	"w!",
+	6,
+	10,
+	9,
+	12
+]);
 
 ```
 
@@ -110,7 +234,7 @@ node_assert_strict.default.strictEqual(cycle, 11);
 ### main.js
 
 ```js
-import e from"node:assert/strict";var t,n,t=1;t++;const r=[];try{throw 0}catch(direct$1){var direct$1=3;r.push(t,direct$1)}try{throw 0}catch(onlyCatch$1){for(var onlyCatch$1 of[4])r.push(n,onlyCatch$1)}r.push(n);var i,i=10;i++;let a;try{throw 0}catch(e){a=i}e.deepStrictEqual(r,[2,3,void 0,4,void 0]),e.strictEqual(t,2),e.strictEqual(n,void 0),e.strictEqual(a,11),e.strictEqual(i,11);
+import e from"node:assert/strict";var t,n,t=1;t++;const r=[];try{throw 0}catch(direct$1){var direct$1=3;r.push(t,direct$1)}try{throw 0}catch(onlyCatch$1){for(var onlyCatch$1 of[4])r.push(n,onlyCatch$1)}r.push(n);var i,i=10;i++;let a;try{throw 0}catch(e){a=i}var o,s,c;const l=[];var o=`v`;o+=`!`;try{throw 1}catch(e){l.push(o)}{let e=3;e++,l.push(o,e)}var s=`w`;s+=`!`;try{throw 1}catch(e){l.push(s)}{let e=5;e++,l.push(s,e)}var c=8;c++;try{throw 0}catch(g$2){var g$2=10;l.push(g$2)}{let g$2=11;g$2++,l.push(c,g$2)}e.deepStrictEqual(r,[2,3,void 0,4,void 0]),e.strictEqual(t,2),e.strictEqual(n,void 0),e.strictEqual(a,11),e.strictEqual(i,11);let u=`entry`;u+=`!`;let d=`entry`;d+=`!`,e.strictEqual(u,`entry!`),e.strictEqual(d,`entry!`);let f=0;f++,e.strictEqual(f,1),e.deepStrictEqual(l,[`v!`,`v!`,4,`w!`,`w!`,6,10,9,12]);
 ```
 
 # Variant: wrapped: [on_demand_wrapping: false] [strict_execution_order: true]
@@ -163,11 +287,60 @@ function init_cycle() {
 		}
 	})))();
 }
+// renamed.js
+var log, e$1, f$1, g$1;
+function init_renamed() {
+	return (init_renamed = __esmMin((() => {
+		init_renamed();
+		log = [];
+		e$1 = "v";
+		e$1 += "!";
+		try {
+			throw 1;
+		} catch (e$2) {
+			e$2 = 2;
+			log.push(e$1);
+		}
+		{
+			let e$2 = 3;
+			e$2++;
+			log.push(e$1, e$2);
+		}
+		f$1 = "w";
+		f$1 += "!";
+		try {
+			throw 1;
+		} catch (f$2) {
+			f$2 = 4;
+			log.push(f$1);
+		}
+		{
+			let f$2 = 5;
+			f$2++;
+			log.push(f$1, f$2);
+		}
+		g$1 = 8;
+		g$1++;
+		try {
+			throw 0;
+		} catch (g$2) {
+			g$2 = 10;
+			log.push(g$2);
+		}
+		{
+			let g$2 = 11;
+			g$2++;
+			log.push(g$1, g$2);
+		}
+	})))();
+}
 // main.js
+var e, f, g;
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_self();
 		init_cycle();
+		init_renamed();
 		assert.deepStrictEqual(results, [
 			2,
 			3,
@@ -179,6 +352,26 @@ function init_main() {
 		assert.strictEqual(onlyCatch, void 0);
 		assert.strictEqual(result, 11);
 		assert.strictEqual(cycle, 11);
+		e = "entry";
+		e += "!";
+		f = "entry";
+		f += "!";
+		assert.strictEqual(e, "entry!");
+		assert.strictEqual(f, "entry!");
+		g = 0;
+		g++;
+		assert.strictEqual(g, 1);
+		assert.deepStrictEqual(log, [
+			"v!",
+			"v!",
+			4,
+			"w!",
+			"w!",
+			6,
+			10,
+			9,
+			12
+		]);
 	})))();
 }
 init_main();
@@ -221,6 +414,48 @@ try {
 } catch (cycle$1) {
 	result = cycle;
 }
+// renamed.js
+var e$1;
+var f$1;
+var g$1;
+const log = [];
+var e$1 = "v";
+e$1 += "!";
+try {
+	throw 1;
+} catch (e$2) {
+	log.push(e$1);
+}
+{
+	let e$2 = 3;
+	e$2++;
+	log.push(e$1, e$2);
+}
+var f$1 = "w";
+f$1 += "!";
+try {
+	throw 1;
+} catch (f$2) {
+	log.push(f$1);
+}
+{
+	let f$2 = 5;
+	f$2++;
+	log.push(f$1, f$2);
+}
+var g$1 = 8;
+g$1++;
+try {
+	throw 0;
+} catch (g$2) {
+	var g$2 = 10;
+	log.push(g$2);
+}
+{
+	let g$2 = 11;
+	g$2++;
+	log.push(g$1, g$2);
+}
 // main.js
 assert.deepStrictEqual(results, [
 	2,
@@ -233,5 +468,25 @@ assert.strictEqual(direct, 2);
 assert.strictEqual(onlyCatch, void 0);
 assert.strictEqual(result, 11);
 assert.strictEqual(cycle, 11);
+let e = "entry";
+e += "!";
+let f = "entry";
+f += "!";
+assert.strictEqual(e, "entry!");
+assert.strictEqual(f, "entry!");
+let g = 0;
+g++;
+assert.strictEqual(g, 1);
+assert.deepStrictEqual(log, [
+	"v!",
+	"v!",
+	4,
+	"w!",
+	"w!",
+	6,
+	10,
+	9,
+	12
+]);
 
 ```

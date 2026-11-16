@@ -18,7 +18,6 @@ The relevant prefix of `LinkStage::link()` (in `mod.rs`) runs roughly:
 
 ```
 sort_modules
-compute_tla
 determine_module_exports_kind   <- this file
 determine_safely_merge_cjs_ns
 wrap_modules
@@ -28,6 +27,7 @@ bind_imports_and_exports
 create_exports_for_ecma_modules
 reference_needed_symbols
 include_statements
+compute_tla
 ```
 
 Position is load-bearing: `wrap_modules` propagates wrap requirements transitively through the graph using the `WrapKind`s set here as roots, and `bind_imports_and_exports` reads the `exports_kind` set here to decide how to thread re-exports through CJS namespace bindings.

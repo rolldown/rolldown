@@ -2,6 +2,7 @@ use oxc::span::Span;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   EcmaModuleAstUsage, ImportKind, ImportRecordIdx, ModuleIdx, ModuleTable, NormalModule,
+  StmtInfoMeta,
 };
 use rolldown_error::{BuildDiagnostic, ImportChainNote, RequireTla};
 use rustc_hash::FxHashSet;
@@ -29,6 +30,21 @@ impl LinkStage<'_> {
       return;
     }
 
+    let tla_sources: FxHashSet<_> = self
+      .module_table
+      .modules
+      .iter()
+      .filter_map(|module| module.as_normal())
+      .filter(|module| {
+        module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait)
+          && self.stmt_infos[module.idx].iter_enumerated().any(|(idx, stmt)| {
+            stmt.meta.contains(StmtInfoMeta::TopLevelAwait)
+              && self.metas[module.idx].stmt_info_included.has_bit(idx)
+          })
+      })
+      .map(|module| module.idx)
+      .collect();
+
     // Known limitation: on a cycle hit we return `None` for the visiting
     // edge and then memoize modules along the current DFS path even
     // though a later branch of the same parent might still discover TLA
@@ -39,6 +55,7 @@ impl LinkStage<'_> {
     fn find_tla_source(
       module_idx: ModuleIdx,
       module_table: &ModuleTable,
+      tla_sources: &FxHashSet<ModuleIdx>,
       visited: &mut IndexVec<ModuleIdx, TlaVisitState>,
     ) -> Option<ModuleIdx> {
       match visited[module_idx] {
@@ -49,10 +66,7 @@ impl LinkStage<'_> {
 
       visited[module_idx] = TlaVisitState::Visiting;
       let module = &module_table[module_idx];
-      let is_self_tla = module
-        .as_normal()
-        .is_some_and(|module| module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait));
-      if is_self_tla {
+      if tla_sources.contains(&module_idx) {
         visited[module_idx] = TlaVisitState::Visited(Some(module_idx));
         return Some(module_idx);
       }
@@ -62,9 +76,9 @@ impl LinkStage<'_> {
         .iter()
         .filter(|rec| matches!(rec.kind, ImportKind::Import))
         .find_map(|rec| {
-          rec
-            .resolved_module
-            .and_then(|dep_idx| find_tla_source(module_table[dep_idx].idx(), module_table, visited))
+          rec.resolved_module.and_then(|dep_idx| {
+            find_tla_source(module_table[dep_idx].idx(), module_table, tla_sources, visited)
+          })
         });
 
       visited[module_idx] = TlaVisitState::Visited(tla_source);
@@ -138,7 +152,7 @@ impl LinkStage<'_> {
     let mut visited = index_vec![TlaVisitState::NotVisited; self.module_table.modules.len()];
 
     self.module_table.modules.iter().filter_map(|m| m.as_normal()).for_each(|module| {
-      let tla_source = find_tla_source(module.idx, &self.module_table, &mut visited);
+      let tla_source = find_tla_source(module.idx, &self.module_table, &tla_sources, &mut visited);
       self.metas[module.idx].is_tla_or_contains_tla_dependency = tla_source.is_some();
 
       // Check for require() of TLA modules — this is forbidden.
@@ -148,7 +162,8 @@ impl LinkStage<'_> {
         }
         let Some(resolved_module_idx) = rec.resolved_module else { continue };
         let dep_idx = self.module_table[resolved_module_idx].idx();
-        let Some(tla_source_idx) = find_tla_source(dep_idx, &self.module_table, &mut visited)
+        let Some(tla_source_idx) =
+          find_tla_source(dep_idx, &self.module_table, &tla_sources, &mut visited)
         else {
           continue;
         };

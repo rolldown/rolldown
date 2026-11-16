@@ -2,17 +2,20 @@
 
 ## Install / run
 
-Zero runtime dependencies (raw CDP over Node ≥22's built-in WebSocket + a system
-Chrome/Edge), so it works three ways:
+Browser measurements use CDP over Node ≥22's built-in `WebSocket` with a local Chrome or Edge installation.
+The HTML parser `parse5` is the only direct runtime dependency. It reads the built `index.html`.
+You can run perf-kit three ways:
 
-- **In this repo**: `node packages/perf-kit/harness.mjs …` from anywhere.
+- **In this repo**: Run `pnpm install` at the repository root. Then run
+  `node packages/perf-kit/harness.mjs …` from that root.
 - **As a dependency**: `npm i -D @rolldown/perf-kit` → `npx perf-kit scan --app .`
   (the `bin` shim replaces any `node node_modules/…` path-typing). When installed,
   state lives in the consumer project at `.perf-kit/` (it writes its own
   `.gitignore`), never inside `node_modules`; override with `ROLLDOWN_PERF_KIT_STATE`.
   The hints print the spelling that applies. No rolldown checkout sits next to an
   installed copy, so `rolldown-install` needs `--from <a built packages/rolldown>`.
-- **Without an install step**: `npx @rolldown/perf-kit scan --app .`.
+- **Without adding it to the project**: `npx @rolldown/perf-kit scan --app .`.
+  npx uses the local package or installs it in the npm cache when needed.
 
 Prompts for an agent, one per target (browser page load, node or deno server startup,
 Cloudflare Worker startup): `PROMPTS.md`.
@@ -24,7 +27,7 @@ deno, and Cloudflare Worker startup in workerd. The harness deliberately does
 **not** run the loop itself — deciding what to try next and whether to keep it is the
 agent's job; every command here is one loop step with machine-readable output.
 
-No dependencies: raw CDP over Node's built-in `WebSocket` (Node >= 22) against a
+Raw CDP over Node's built-in `WebSocket` (Node >= 22) against a
 system Chrome/Edge (`CHROME_PATH` picks the browser). Build your app with its usual
 build command. `graph`, `what-if`, `cut`, `why` and `graph-diff` read the module graph of the
 [build report](https://rolldown.rs/in-depth/build-report), so build the app with

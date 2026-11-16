@@ -1,0 +1,9 @@
+{
+  "config": {
+    "input": [
+      { "name": "index", "import": "./index.js" },
+      { "name": "another", "import": "./another.js" }
+    ],
+    "optimization": { "inlineConst": { "mode": "all", "pass": 10 } }
+  }
+}

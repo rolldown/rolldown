@@ -1,0 +1,58 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## group-a.js
+
+```js
+// a.js
+(globalThis.log ??= []).push("a");
+// dyn.js
+var dyn_default = () => console.log("dyn");
+export { dyn_default as default };
+
+```
+
+## group-b.js
+
+```js
+// b.js
+(globalThis.log ??= []).push("b");
+
+```
+
+## group-c.js
+
+```js
+import "./group-a.js";
+import "./group-b.js";
+// c1.js
+(globalThis.log ??= []).push("c1");
+// c2.js
+(globalThis.log ??= []).push("c2");
+
+```
+
+## main.js
+
+```js
+import "./group-c.js";
+import assert from "node:assert";
+// main.js
+assert.deepStrictEqual(globalThis.log, [
+	"a",
+	"b",
+	"c1",
+	"c2"
+]);
+import("./group-a.js").then((m) => m.default());
+
+```
+
+# Output Stats
+
+- group-a.js, is_entry false, is_dynamic_entry true, exports ["default"]
+- group-b.js, is_entry false, is_dynamic_entry false, exports []
+- group-c.js, is_entry false, is_dynamic_entry false, exports []
+- main.js, is_entry true, is_dynamic_entry false, exports []

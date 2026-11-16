@@ -1,0 +1,62 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## group-b.js
+
+```js
+// b.js
+(globalThis.log ??= []).push("b");
+
+```
+
+## group-c.js
+
+```js
+import { t as require_h } from "./group-h.js";
+import "./other.js";
+import "./group-b.js";
+require_h();
+(globalThis.log ??= []).push("c1");
+// c2.js
+(globalThis.log ??= []).push("c2");
+
+```
+
+## group-h.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// h.cjs
+var require_h = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = 1;
+}));
+export { require_h as t };
+
+```
+
+## main.js
+
+```js
+import "./group-c.js";
+import assert from "node:assert";
+// main.js
+assert.deepStrictEqual(globalThis.log, [
+	"a",
+	"b",
+	"c1",
+	"c2"
+]);
+
+```
+
+## other.js
+
+```js
+// a.js
+(globalThis.log ??= []).push("a");
+// other.js
+console.log("other");
+
+```

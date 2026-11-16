@@ -48,6 +48,12 @@ export default function addProxyPlugin() {
 
 If the module was already loaded, `this.load` will just wait for the parsing to complete and then return its module information. If the module was not yet imported by another module, it will not automatically trigger loading other modules imported by this module. Instead, static and dynamic dependencies will only be loaded once this module has actually been imported at least once.
 
+::: warning Not supported in `buildStart`
+
+Modules start loading only after the [`buildStart`](/reference/Interface.Plugin#buildstart) hook finishes, so calling `this.load` in `buildStart` rejects with an error.
+
+:::
+
 ::: warning Deadlocks caused by awaiting `this.load` in cyclic dependencies
 
 While it is safe to use `this.load` in a [`resolveId`](/reference/Interface.Plugin#resolveid) hook, you should be very careful when awaiting it in a [`load`](/reference/Interface.Plugin#load) or [`transform`](/reference/Interface.Plugin#transform) hook. If there are cyclic dependencies in the module graph, this can easily lead to a deadlock, so any plugin needs to manually take care to avoid waiting for `this.load` inside the [`load`](/reference/Interface.Plugin#load) or [`transform`](/reference/Interface.Plugin#transform) of the any module that is in a cycle with the loaded module.

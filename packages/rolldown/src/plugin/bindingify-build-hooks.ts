@@ -42,9 +42,31 @@ export function bindingifyBuildStart(
 ): PluginHookWithBindingExt<BindingPluginOptions['buildStart']> {
   return bindingifyHook(args.plugin.buildStart, ({ handler }) => ({
     plugin: (ctx, opts) => {
-      return discardResult(
-        handler.call(createPluginContext(args, ctx), args.pluginContextData.getInputOptions(opts)),
-      );
+      const context = createPluginContext(args, ctx);
+      const load = context.load.bind(context);
+      let inBuildStart = true;
+      context.load = (options) => {
+        if (inBuildStart) {
+          return Promise.reject(
+            new Error('`this.load` is not supported in the `buildStart` hook.'),
+          );
+        }
+        return load(options);
+      };
+      try {
+        const result = discardResult(
+          handler.call(context, args.pluginContextData.getInputOptions(opts)),
+        );
+        if (isPromiseLike(result)) {
+          return Promise.resolve(result).finally(() => {
+            inBuildStart = false;
+          });
+        }
+        inBuildStart = false;
+      } catch (error) {
+        inBuildStart = false;
+        throw error;
+      }
     },
   }));
 }

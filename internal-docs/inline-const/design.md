@@ -16,7 +16,7 @@ Reading a `var` before its declarator runs is legal and gives `undefined`. The s
 - The body of a root function (`function f() {}` or `const f = () => {}`) reads it, and module-level code references `f` before the declarator ends, directly or from another such function. Any reference counts as a call, since `f` can be passed on and called right away.
 - Other nested code reads it, such as a callback, an IIFE, or an object or class member, in a module-level statement that starts before the declarator ends.
 
-Such a `var` gets `SymbolRefFlags::ReadBeforeAssigned`. `SymbolRef::is_not_reassigned` then returns `false`, so the `var` is not inlined and a call to it is not dropped as side-effect-free. CommonJS export rendering checks only `IsNotReassigned` and exports the `var` as a plain value, since a read before the declaration does not change the value the `var` ends up with.
+Such a `var` gets `SymbolRefFlags::ReadBeforeAssigned`. `SymbolRef::is_not_reassigned` then returns `false`, so the `var` is not inlined and a call to it is not dropped as side-effect-free. CommonJS export rendering ignores `ReadBeforeAssigned` and exports the `var` as a plain value, since a read before the declaration does not change the value the `var` ends up with. This keeps plain exports for downleveled ES5 classes that an earlier class's constructor reads. Export rendering keeps a getter when direct `eval` in the module can assign the binding, because `IsNotReassigned` does not see such an assignment.
 
 The checks are conservative: an object or class member declared before the `var` keeps the `var` from being inlined even if the member only runs later.
 

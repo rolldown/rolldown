@@ -42,8 +42,9 @@ impl SymbolRef {
   }
 
   /// Whether every read of the binding sees the value its declaration gives it: it is never
-  /// reassigned, and no code reads it before the declaration assigns it. A missing flag means we
-  /// don't know, which is treated conservatively as "possibly reassigned" (`false`).
+  /// reassigned, and no code reads it before the declaration assigns it. Direct `eval` can still
+  /// assign it without a write reference; see `eval_can_assign` in the `rolldown` crate. A missing
+  /// flag means we don't know, which is treated conservatively as "possibly reassigned" (`false`).
   pub fn is_not_reassigned(&self, db: &SymbolRefDb) -> bool {
     self.flags(db).is_some_and(|flags| {
       flags.contains(SymbolRefFlags::IsNotReassigned)

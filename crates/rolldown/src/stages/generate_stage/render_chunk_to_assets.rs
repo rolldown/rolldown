@@ -4,15 +4,15 @@ use futures::future::try_join_all;
 use oxc_index::{IndexVec, index_vec};
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Asset, ChunkIdx, EmittedChunkInfo, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput,
-  Output, OutputAsset, OutputChunk, SharedFileEmitter, SymbolRef, UsedSymbolRefs,
+  Asset, ChunkIdx, EmittedChunkInfo, InstantiationKind, ModuleIdx, ModuleRenderArgs,
+  ModuleRenderOutput, Output, OutputAsset, OutputChunk, SharedFileEmitter, SymbolRef,
+  UsedSymbolRefs,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildResult, Diagnostics};
 use rolldown_utils::{
-  index_vec_ext::IndexVecRefExt as _,
   indexmap::FxIndexMap,
-  rayon::{IntoParallelRefIterator, ParallelIterator},
+  rayon::{IntoParallelIterator, ParallelIterator},
 };
 use rustc_hash::FxHashMap;
 
@@ -47,9 +47,9 @@ impl GenerateStage<'_> {
     let mut diagnostics = std::mem::take(&mut self.link_output.diagnostics);
     let inline_renders = std::mem::take(&mut self.inline_renders);
     // `ast_table` is threaded by value into `create_chunk_to_codegen_ret_map`
-    // (the last reader), where it is dropped at scope exit by the compiler —
-    // releasing the per-module bumpalo arenas before `minify_chunks` and
-    // `finalize_assets` allocate.
+    // (the last reader), which frees each module's AST as soon as it is printed
+    // and drops the rest at scope exit — releasing the per-module bumpalo arenas
+    // before `minify_chunks` and `finalize_assets` allocate.
     let (mut instantiated_chunks, index_chunk_to_instance) = self
       .instantiate_chunks(
         chunk_graph,
@@ -238,39 +238,65 @@ impl GenerateStage<'_> {
   ///   [Some(ecma1_codegen), Some(ecma2_codegen), None],
   ///   [Some(ecma3_codegen), None],
   /// ]
-  // `ast_table` is taken by value on purpose: this is the last reader, and
-  // having the compiler drop it at scope exit (rather than borrowing it and
-  // dropping later) is what releases the per-module bumpalo arenas before the
-  // rest of `instantiate_chunks` runs.
-  #[expect(clippy::needless_pass_by_value)]
+  ///
+  /// This is the last reader of `ast_table`. Each module's AST moves into the work list of the
+  /// chunk that prints it and is dropped as soon as that module is printed, so the per-module
+  /// arenas are released while the other chunks are still rendering. Holding every AST until
+  /// the last chunk is printed would stack the whole AST table on top of all the codegen output.
+  /// A module printed by more than one chunk keeps its AST in `ast_table` until the end.
   fn create_chunk_to_codegen_ret_map(
     &self,
     chunk_graph: &ChunkGraph,
-    ast_table: IndexEcmaAst,
+    mut ast_table: IndexEcmaAst,
   ) -> Vec<Vec<Option<ModuleRenderOutput>>> {
     let needs_extra_indent = matches!(
       self.options.format,
       rolldown_common::OutputFormat::Iife | rolldown_common::OutputFormat::Umd
     );
-    chunk_graph
+    let mut print_count: IndexVec<ModuleIdx, u32> = index_vec![0; ast_table.len()];
+    for (chunk_idx, item) in chunk_graph.chunk_table.iter_enumerated() {
+      // A record's modules were finalized and printed per carrier; its own ASTs stay untouched.
+      if self.inline_state.is_record(chunk_idx) {
+        continue;
+      }
+      for &module_idx in &item.modules {
+        print_count[module_idx] += 1;
+      }
+    }
+    let work = chunk_graph
       .chunk_table
-      .par_iter_enumerated()
+      .iter_enumerated()
       .map(|(chunk_idx, item)| {
-        // A record's modules were finalized and printed per carrier; its own ASTs stay untouched.
         if self.inline_state.is_record(chunk_idx) {
           return vec![];
         }
         item
           .modules
-          .par_iter()
-          .map(|&module_idx| match self.link_output.module_table[module_idx].as_normal() {
-            Some(module) => {
-              let ast = ast_table[module.idx].as_ref().expect("should have ast");
-              #[expect(clippy::bool_to_int_with_if)]
-              let initial_indent = if needs_extra_indent { 1 } else { 0 };
-              Some(module.render(self.options, &ModuleRenderArgs::Ecma { ast }, initial_indent))
-            }
-            _ => None,
+          .iter()
+          .map(|&module_idx| {
+            let owned_ast =
+              if print_count[module_idx] == 1 { ast_table[module_idx].take() } else { None };
+            (module_idx, owned_ast)
+          })
+          .collect::<Vec<_>>()
+      })
+      .collect::<Vec<_>>();
+    let shared_ast_table = &ast_table;
+    work
+      .into_par_iter()
+      .map(|modules| {
+        modules
+          .into_par_iter()
+          .map(|(module_idx, owned_ast)| {
+            let module = self.link_output.module_table[module_idx].as_normal()?;
+            let ast = owned_ast
+              .as_ref()
+              .or(shared_ast_table[module_idx].as_ref())
+              .expect("should have ast");
+            #[expect(clippy::bool_to_int_with_if)]
+            let initial_indent = if needs_extra_indent { 1 } else { 0 };
+            Some(module.render(self.options, &ModuleRenderArgs::Ecma { ast }, initial_indent))
+            // `owned_ast` is dropped here, releasing this module's arena.
           })
           .collect::<Vec<_>>()
       })

@@ -9,7 +9,7 @@ use crate::{
   utils::external_import_interop::{ChunkAssignments, chunk_external_interop_modes},
 };
 use itertools::Either;
-use rolldown_common::{AddonRenderContext, OutputExports, StaticImport};
+use rolldown_common::{AddonRenderContext, ExportsKind, OutputExports, StaticImport};
 use rolldown_error::BuildDiagnostic;
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{
@@ -148,6 +148,15 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
           .get(&exporter_id)
           .expect("every chunk of `static_imports` is in `imports_from_other_chunks`");
         if items.is_empty() {
+          let forwards_cjs_entry =
+            ctx.chunk.entry_module(&ctx.link_output.module_table).is_some_and(|entry| {
+              matches!(entry.exports_kind, ExportsKind::CommonJs)
+                && ctx.link_output.metas[entry.idx].wrap_kind().is_none()
+                && ctx.chunk_graph.module_to_chunk[entry.idx] == Some(exporter_id)
+            });
+          if forwards_cjs_entry {
+            s.push_str("module.exports = ");
+          }
           s.push_str(&require_path_str);
         } else {
           s.push_str("const ");

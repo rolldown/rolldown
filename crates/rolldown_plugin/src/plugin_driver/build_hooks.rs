@@ -426,11 +426,9 @@ impl PluginDriver {
       // Reconstructing the struct is necessary because `args.ast` is moved and reassigned each iteration
       #[expect(clippy::unnecessary_struct_initialization)]
       let transform_args = HookTransformAstArgs {
-        cwd: args.cwd,
         ast: args.ast,
         id: args.id,
         stable_id: args.stable_id,
-        is_user_defined_entry: args.is_user_defined_entry,
         module_type: args.module_type,
       };
       let result = plugin

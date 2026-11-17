@@ -10,10 +10,6 @@ use serde::Deserialize;
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
 pub struct DevModeOptions {
-  /// IP addresses that `DevRuntime` will connect to using WebSocket.
-  pub host: Option<String>,
-  /// Port that `DevRuntime` will connect to using WebSocket.
-  pub port: Option<u16>,
   /// Custom dev mode runtime implementation.
   pub implement: Option<String>,
   /// Do not inject the common dev runtime before the custom implementation.

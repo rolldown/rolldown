@@ -129,7 +129,6 @@ impl GenerateStage<'_> {
               );
               meta
             },
-            bit: count,
             module: module.idx,
           },
           input_base.clone(),
@@ -916,7 +915,6 @@ impl GenerateStage<'_> {
             meta.set(ChunkMeta::EmittedChunk, entry_point.kind.is_emitted_user_defined());
             meta
           },
-          bit: count,
           module: module_idx,
         },
         input_base.clone(),

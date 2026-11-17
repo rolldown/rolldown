@@ -898,7 +898,7 @@ impl GenerateStage<'_> {
       .and_then(|idx| temp_chunk_opt_graph.to_temp_idx(idx));
     let mut imported_bindings = None;
     for (from_chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
-      let ChunkKind::EntryPoint { meta, bit: _, module } = chunk.kind else {
+      let ChunkKind::EntryPoint { meta, module } = chunk.kind else {
         continue;
       };
       let is_emitted_entry_chunk = if meta.contains(ChunkMeta::EmittedChunk) {
@@ -967,7 +967,7 @@ impl GenerateStage<'_> {
         target_chunk.chunk_reason_type.as_ref(),
         ChunkReasonType::ManualCodeSplitting { .. }
       );
-      let is_target_pure_user_entry_chunk = matches!(target_chunk.kind, ChunkKind::EntryPoint { meta, bit: _, module: _ } if meta.is_pure_user_defined_entry());
+      let is_target_pure_user_entry_chunk = matches!(target_chunk.kind, ChunkKind::EntryPoint { meta, module: _ } if meta.is_pure_user_defined_entry());
       let is_target_common_chunk = matches!(target_chunk.kind, ChunkKind::Common);
       // Six optimization scenarios (scenario 1 is handled above for user-defined entries):
       // 1. User-defined facade entry chunk merged with common chunk

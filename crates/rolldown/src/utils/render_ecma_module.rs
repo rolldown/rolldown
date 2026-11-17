@@ -283,7 +283,7 @@ mod tests {
     .unwrap();
     assert_eq!(
       result.get_sources().collect::<Vec<_>>(),
-      ["/project/lib/a.ts", "/project/lib/b.ts"]
+      [Some("/project/lib/a.ts"), Some("/project/lib/b.ts")]
     );
     let SourcemapChainElement::Transform((_, transform)) = &chain[0] else { unreachable!() };
     assert_eq!(transform.get_source(0), Some("../lib/a.ts"));

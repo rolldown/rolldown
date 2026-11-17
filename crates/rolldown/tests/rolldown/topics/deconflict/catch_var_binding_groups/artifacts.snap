@@ -1,0 +1,184 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// value.js
+let outer = 0;
+function update(value) {
+	outer = value;
+}
+// dep.js
+function run() {
+	const values = [];
+	try {
+		throw 1;
+	} catch (outer$1) {
+		var outer$1 = 2;
+		values.push(outer$1, outer);
+		values.push(3);
+	}
+	values.push(outer$1);
+	return values;
+}
+function iterate() {
+	const values = [];
+	try {
+		throw 0;
+	} catch (outer$2) {
+		for (var outer$2 of [4, 5]) values.push(outer$2);
+		var { outer: outer$2 } = { outer: 6 };
+		values.push(outer$2);
+		var [outer$2] = [7];
+		values.push(outer$2);
+		for (var outer$2 in { key: 1 }) values.push(outer$2);
+		values.push(outer);
+	}
+	values.push(outer$2);
+	return values;
+}
+function nested() {
+	const values = [];
+	try {
+		throw 1;
+	} catch (outer$3) {
+		values.push(outer$3);
+		try {
+			throw 2;
+		} catch (outer$3) {
+			var outer$3 = 3;
+			values.push(outer$3, outer);
+		}
+		values.push(outer$3);
+	}
+	values.push(outer$3);
+	return values;
+}
+// main.js
+update(99);
+assert.deepStrictEqual(run(), [
+	2,
+	99,
+	3,
+	void 0
+]);
+assert.deepStrictEqual(iterate(), [
+	4,
+	5,
+	6,
+	7,
+	"key",
+	99,
+	void 0
+]);
+assert.deepStrictEqual(nested(), [
+	1,
+	3,
+	99,
+	1,
+	void 0
+]);
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert_strict = require("node:assert/strict");
+node_assert_strict = __toESM(node_assert_strict);
+// value.js
+let outer = 0;
+function update(value) {
+	outer = value;
+}
+// dep.js
+function run() {
+	const values = [];
+	try {
+		throw 1;
+	} catch (outer$1) {
+		var outer$1 = 2;
+		values.push(outer$1, outer);
+		values.push(3);
+	}
+	values.push(outer$1);
+	return values;
+}
+function iterate() {
+	const values = [];
+	try {
+		throw 0;
+	} catch (outer$2) {
+		for (var outer$2 of [4, 5]) values.push(outer$2);
+		var { outer: outer$2 } = { outer: 6 };
+		values.push(outer$2);
+		var [outer$2] = [7];
+		values.push(outer$2);
+		for (var outer$2 in { key: 1 }) values.push(outer$2);
+		values.push(outer);
+	}
+	values.push(outer$2);
+	return values;
+}
+function nested() {
+	const values = [];
+	try {
+		throw 1;
+	} catch (outer$3) {
+		values.push(outer$3);
+		try {
+			throw 2;
+		} catch (outer$3) {
+			var outer$3 = 3;
+			values.push(outer$3, outer);
+		}
+		values.push(outer$3);
+	}
+	values.push(outer$3);
+	return values;
+}
+// main.js
+update(99);
+node_assert_strict.default.deepStrictEqual(run(), [
+	2,
+	99,
+	3,
+	void 0
+]);
+node_assert_strict.default.deepStrictEqual(iterate(), [
+	4,
+	5,
+	6,
+	7,
+	"key",
+	99,
+	void 0
+]);
+node_assert_strict.default.deepStrictEqual(nested(), [
+	1,
+	3,
+	99,
+	1,
+	void 0
+]);
+
+```
+
+# Variant: minified: [minify: true]
+
+## Assets
+
+### main.js
+
+```js
+import e from"node:assert/strict";let t=0;function n(e){t=e}function r(){let e=[];try{throw 1}catch(outer$1){var outer$1=2;e.push(outer$1,t),e.push(3)}return e.push(outer$1),e}function i(){let e=[];try{throw 0}catch(outer$2){for(var outer$2 of[4,5])e.push(outer$2);var{outer:outer$2}={outer:6};e.push(outer$2);var[outer$2]=[7];for(var outer$2 in e.push(outer$2),{key:1})e.push(outer$2);e.push(t)}return e.push(outer$2),e}function a(){let e=[];try{throw 1}catch(outer$3){e.push(outer$3);try{throw 2}catch(outer$3){var outer$3=3;e.push(outer$3,t)}e.push(outer$3)}return e.push(outer$3),e}n(99),e.deepStrictEqual(r(),[2,99,3,void 0]),e.deepStrictEqual(i(),[4,5,6,7,`key`,99,void 0]),e.deepStrictEqual(a(),[1,3,99,1,void 0]);
+```

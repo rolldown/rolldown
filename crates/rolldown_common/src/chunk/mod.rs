@@ -139,10 +139,6 @@ impl Chunk {
     }
   }
 
-  pub fn has_side_effect(&self, module_table: &ModuleTable) -> bool {
-    self.modules.iter().any(|&module_id| module_table[module_id].side_effects().has_side_effects())
-  }
-
   pub fn import_path_for(&self, importee: &Chunk) -> String {
     let importee_filename = importee
       .absolute_preliminary_filename

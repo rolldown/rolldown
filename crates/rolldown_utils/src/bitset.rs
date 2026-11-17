@@ -49,8 +49,11 @@ impl BitSet {
   }
 
   pub fn union(&mut self, other: &Self) {
-    for (i, &e) in other.entries.iter().enumerate() {
-      self.entries[i] |= e;
+    // One bounds check (panicking, as before, when `other` is longer) instead of one per byte,
+    // which also lets the loop vectorize.
+    let head = &mut self.entries[..other.entries.len()];
+    for (left, right) in head.iter_mut().zip(&other.entries) {
+      *left |= right;
     }
   }
 
@@ -80,8 +83,19 @@ impl BitSet {
   // It is safe to convert `usize` to `u32` here because we ensure that the bitset is created with a maximum bit count that fits within `u32`.
   #[expect(clippy::cast_possible_truncation)]
   pub fn index_of_one(&self) -> impl Iterator<Item = u32> + '_ {
-    self.entries.iter().enumerate().flat_map(|(i, &e)| {
-      (0..8u32).filter(move |&j| e & (1 << j) != 0).map(move |j| (i as u32) * 8 + j)
+    // Visits only the set bits: zero bytes are skipped and each set bit is found with
+    // `trailing_zeros`, instead of testing all eight bits of every byte.
+    self.entries.iter().enumerate().filter(|(_, e)| **e != 0).flat_map(|(i, &e)| {
+      let base = (i as u32) * 8;
+      let mut rest = e;
+      std::iter::from_fn(move || {
+        if rest == 0 {
+          return None;
+        }
+        let bit = rest.trailing_zeros();
+        rest &= rest - 1;
+        Some(base + bit)
+      })
     })
   }
 }
@@ -140,6 +154,15 @@ impl Debug for BitSet {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn index_of_one_lists_set_bits_in_order() {
+    let bits = [0, 3, 7, 8, 15, 16, 31, 63, 64, 69];
+    let set = bits.iter().copied().collect::<BitSet>();
+    assert_eq!(set.index_of_one().collect::<Vec<_>>(), bits);
+    assert_eq!(BitSet::all(13).index_of_one().collect::<Vec<_>>(), (0..13).collect::<Vec<_>>());
+    assert_eq!(BitSet::new(40).index_of_one().count(), 0);
+  }
 
   #[test]
   fn basic() {

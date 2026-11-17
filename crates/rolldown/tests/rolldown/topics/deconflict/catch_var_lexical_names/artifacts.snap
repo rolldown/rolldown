@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// dep.js
+const names = [];
+try {
+	throw 0;
+} catch (e$1) {
+	var e$1 = 1;
+	names.push(e$1);
+}
+{
+	function e() {}
+	names.push(e.name);
+}
+{
+	class e {}
+	names.push(e.name);
+}
+{
+	let e = function() {};
+	names.push(e.name);
+}
+{
+	const e = class {};
+	names.push(e.name);
+}
+// main.js
+const e = 99;
+console.log(names);
+assert.deepStrictEqual(names, [
+	1,
+	"e",
+	"e",
+	"e",
+	"e"
+]);
+assert.strictEqual(e$1, void 0);
+export { e };
+
+```

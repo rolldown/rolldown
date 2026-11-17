@@ -196,21 +196,7 @@ pub async fn finalize_assets(
         ecma_meta.file_dir =
           file_path.parent().expect("chunk file name should have a parent").to_path_buf();
         map.set_file(Path::new(filename.as_str()).file_name().unwrap().to_str().unwrap());
-        // A callback may have included the preliminary map path in a source path.
-        if map.get_sources().any(|source| source.contains("!~{")) {
-          let sources = map
-            .get_sources()
-            .map(|source| {
-              replace_placeholder_with_hash(
-                source,
-                &chunk_hashes_by_placeholder,
-                &HASH_PLACEHOLDER_LEFT_FINDER,
-              )
-              .into_owned()
-            })
-            .collect_vec();
-          map.set_sources(sources);
-        }
+        replace_sourcemap_source_placeholders(map, &chunk_hashes_by_placeholder);
       }
       if let StrOrBytes::Str(content) = &mut instantiated_chunk.content {
         if let Cow::Owned(replaced) = replace_placeholder_with_hash(
@@ -420,6 +406,29 @@ fn finalize_sourcemaps(
   assets.extend(derived_assets);
 
   Ok(())
+}
+
+fn replace_sourcemap_source_placeholders(
+  map: &mut rolldown_sourcemap::SourceMap,
+  chunk_hashes_by_placeholder: &FxHashMap<String, &str>,
+) {
+  // A callback may have included the preliminary map path in a source path.
+  if map.get_sources().flatten().any(|source| source.contains("!~{")) {
+    let sources = map
+      .get_sources()
+      .map(|source| {
+        source.map(|source| {
+          replace_placeholder_with_hash(
+            source,
+            chunk_hashes_by_placeholder,
+            &HASH_PLACEHOLDER_LEFT_FINDER,
+          )
+          .into_owned()
+        })
+      })
+      .collect_vec();
+    map.set_sources(sources);
+  }
 }
 
 fn generate_sourcemap_hashes_by_idx(

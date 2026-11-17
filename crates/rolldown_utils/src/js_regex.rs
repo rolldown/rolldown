@@ -91,19 +91,10 @@ impl HybridRegex {
 
   #[inline(never)]
   pub fn with_flags(pattern: &str, flags: &str) -> anyhow::Result<Self> {
-    // `g` (global) and `d` (hasIndices) do not change what this type's
-    // `matches` / `replace` / `replace_all` compute: global is expressed by
-    // which method the caller invokes, and hasIndices only fills
-    // `RegExp.prototype.exec`'s `indices`. Feeding them to the `regex` crate
-    // as inline flags makes `Regex::new` fail (`(?Rdg)…`), which forced every
-    // such pattern onto the ECMAScript `regress` engine.
-    //
-    // That fallback is extremely expensive on plugin `filter.code` hooks:
-    // Vite registers `/\bnew\s+URL\s*\(…import\.meta\.url…\)/dg` and a Worker
-    // variant, and Rolldown then runs `regress` over every module's source.
-    //
-    // `y` (sticky) and `v` (unicodeSets) really do change match semantics, so
-    // those stay on the ECMAScript engine (same as an unrecognized flag).
+    // `g` and `d` do not change what `matches` / `replace` / `replace_all` return
+    // (`regress` ignores them too), but they make `regex::Regex::new` fail. Drop
+    // them so that patterns such as Vite's `/…/dg` code filters use the `regex`
+    // crate. `y`, `v` and unknown flags stay on `regress`.
     if let Some(engine_flags) = flags_for_regex_crate(flags) {
       let regex_pattern = Self::get_regex_pattern(pattern, &engine_flags);
       if let Ok(reg) = regex::Regex::new(&regex_pattern) {
@@ -144,23 +135,7 @@ impl HybridRegex {
       HybridRegexInner::Ecma { .. } => None,
     }
   }
-}
 
-/// Flags to hand to the `regex` crate, or `None` when the ECMAScript engine
-/// is required. See [`HybridRegex::with_flags`].
-fn flags_for_regex_crate(flags: &str) -> Option<String> {
-  let mut out = String::with_capacity(flags.len());
-  for c in flags.chars() {
-    match c {
-      'g' | 'd' => {}
-      'i' | 'm' | 's' | 'u' => out.push(c),
-      _ => return None,
-    }
-  }
-  Some(out)
-}
-
-impl HybridRegex {
   fn get_regex_pattern(pattern: &str, flags: &str) -> String {
     // ECMAScript regex treats CRLF as a line break like LF
     // (e.g. `/a$/m.test("a\r\n")` and `/a$/m.test("a\n")` both returns `true`)
@@ -227,6 +202,20 @@ impl HybridRegex {
   fn uses_ecma(&self) -> bool {
     matches!(self.0, HybridRegexInner::Ecma { .. })
   }
+}
+
+/// Flags to hand to the `regex` crate, or `None` when the ECMAScript engine
+/// is required. See [`HybridRegex::with_flags`].
+fn flags_for_regex_crate(flags: &str) -> Option<String> {
+  let mut out = String::with_capacity(flags.len());
+  for c in flags.chars() {
+    match c {
+      'g' | 'd' => {}
+      'i' | 'm' | 's' | 'u' => out.push(c),
+      _ => return None,
+    }
+  }
+  Some(out)
 }
 
 #[cfg(test)]

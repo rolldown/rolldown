@@ -217,7 +217,7 @@ impl PreProcessEcmaAst {
         // Drop the transformer's scoping. oxc's own compiler does the same:
         // "The transformer leaves symbols and scopes out of sync with the AST"
         // (`oxc` compiler.rs). Reusing it for DCE trips the minifier's
-        // direct-eval debug assertions and can mis-compile. Inject/DCE will
+        // direct-eval debug assertions and can produce wrong code. Inject/DCE will
         // rebuild from the transformed program.
         let _ = ret.scoping;
         Ok(())

@@ -641,14 +641,9 @@ impl Plugin for ViteResolvePlugin {
     &self,
     _ctx: &PluginContext,
     _path: &str,
-    event: WatcherChangeKind,
+    _event: WatcherChangeKind,
   ) -> rolldown_plugin::HookNoopReturn {
-    match event {
-      WatcherChangeKind::Create | WatcherChangeKind::Delete => {
-        self.resolvers.clear_cache();
-      }
-      WatcherChangeKind::Update => {}
-    };
+    self.resolvers.clear_cache();
     Ok(())
   }
 

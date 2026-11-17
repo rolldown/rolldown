@@ -145,6 +145,11 @@ impl<'name> Renamer<'name> {
         .find(|&scope| scoping.scope_flags(scope).is_var())
         .expect("every binding has an enclosing var scope");
       for (&name, &symbol) in bindings {
+        if scoping.scope_flags(var_scope).is_strict_mode()
+          && !scoping.symbol_flags(symbol).is_function_scoped_declaration()
+        {
+          continue;
+        }
         if let Some(&var) = groups.get(&(var_scope, name)) {
           self.catch_var_name_groups.insert((module_idx, symbol).into(), (module_idx, var).into());
         }

@@ -1,10 +1,11 @@
-use std::{pin::Pin, sync::Arc};
+use std::{cmp::Reverse, future::Future, sync::Arc};
 
 use anyhow::Result;
 use arcstr::ArcStr;
-use futures::{StreamExt as _, TryStreamExt as _};
+use futures::future::try_join_all;
 use rolldown_common::{
-  ChunkTable, ModuleTable, RollupRenderedChunk, SharedNormalizedBundlerOptions,
+  ChunkTable, InsChunkIdx, InstantiatedChunk, ModuleTable, RollupRenderedChunk,
+  SharedNormalizedBundlerOptions,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
@@ -15,18 +16,13 @@ use crate::{
   stages::generate_stage::minify_chunks::ChunkMinifier, type_alias::IndexInstantiatedChunks,
 };
 
-type RenderChunkFuture<'a> =
-  Pin<Box<dyn Future<Output = Result<(usize, Vec<BuildDiagnostic>)>> + Send + 'a>>;
-
 #[tracing::instrument(level = "debug", skip_all)]
 /// Calls `renderChunk` for every chunk, then minifies each chunk when `minifier` is given.
 ///
-/// A chunk is minified as soon as its own `renderChunk` hooks return, on the rayon pool, so
-/// minification overlaps the hooks of the remaining chunks. JavaScript hooks run one at a time
-/// on the main thread, and waiting for all of them before minifying anything left the pool idle
-/// for that whole window and then made the largest chunk the tail of a separate minify phase.
-/// Each chunk still goes through the same steps in the same order: `renderChunk` hooks, chaining
-/// their sourcemaps, then minification.
+/// A chunk's minification starts on the rayon pool as soon as its own `renderChunk` hooks
+/// return, so it overlaps the hooks of the other chunks, which run one at a time on the main
+/// thread when they are JavaScript hooks. The results are taken only after every chunk's hooks
+/// have returned, so an error from a hook is reported before an error from minification.
 pub async fn render_chunks(
   plugin_driver: &SharedPluginDriver,
   assets: &mut IndexInstantiatedChunks,
@@ -45,64 +41,77 @@ pub async fn render_chunks(
       .collect::<FxIndexMap<ArcStr, Arc<RollupRenderedChunk>>>(),
   );
 
-  // Every chunk passes through each plugin's `renderChunk` in turn. Starting all chunks at once
-  // queues every chunk's first JavaScript hook ahead of any chunk's second one, so nearly all
-  // chunks would finish their hooks together at the very end. Keeping a bounded number of
-  // chunks in flight lets them finish one after another while still keeping the main thread
-  // busy, and starting with the largest chunks lets their minification, the longest, begin
-  // first. Results are put back in chunk order, so warnings keep their order.
-  let concurrency = if minifier.is_some() { rayon::current_num_threads() * 4 } else { usize::MAX };
+  // Every chunk starts its `renderChunk` hooks at once, so plugins see the same order of calls
+  // on every run and a hook may wait for other chunks. With more than 16 chunks, a chunk holding
+  // more than a sixteenth of the code to minify starts first: it reaches each hook first, so its
+  // minification, the longest, starts first. 16 is fixed rather than the thread count, so the
+  // order of calls is the same on every machine.
+  const SHARES: usize = 16;
+  let minified_len = |asset: &InstantiatedChunk| {
+    if ChunkMinifier::should_minify(asset) { asset.content.as_bytes().len() } else { 0 }
+  };
   let mut order = assets.iter_mut().enumerate().collect::<Vec<_>>();
-  if minifier.is_some() {
-    order.sort_by_key(|(_, asset)| std::cmp::Reverse(asset.content.as_bytes().len()));
+  if minifier.is_some() && order.len() > SHARES {
+    let share = order.iter().map(|(_, asset)| minified_len(asset)).sum::<usize>() / SHARES;
+    // A stable sort, so the other chunks keep chunk order.
+    order.sort_by_key(|(_, asset)| {
+      let len = minified_len(asset);
+      Reverse(if len > share { len } else { 0 })
+    });
   }
-  let futures = order
-    .into_iter()
-    .map(|(index, asset)| -> RenderChunkFuture<'_> {
-      let chunks = Arc::clone(&chunks);
-      Box::pin(async move {
-        let (code, sourcemaps, chunk_warnings) = plugin_driver
-          .render_chunk(HookRenderChunkArgs {
-            code: Arc::new(std::mem::take(&mut asset.content).try_into_inner_string()?),
-            chunk: Arc::clone(
-              chunks.get(&asset.ecma_meta.rendered_chunk.filename).expect("should have chunk"),
-            ),
-            options,
-            chunk_table,
-            module_table,
-            chunks,
-          })
-          .await?;
+  let mut rendered = try_join_all(order.into_iter().map(|(index, asset)| {
+    let chunks = Arc::clone(&chunks);
+    async move {
+      let (code, sourcemaps, chunk_warnings) = plugin_driver
+        .render_chunk(HookRenderChunkArgs {
+          code: Arc::new(std::mem::take(&mut asset.content).try_into_inner_string()?),
+          chunk: Arc::clone(
+            chunks.get(&asset.ecma_meta.rendered_chunk.filename).expect("should have chunk"),
+          ),
+          options,
+          chunk_table,
+          module_table,
+          chunks,
+        })
+        .await?;
 
-        match minifier {
-          Some(minifier) if ChunkMinifier::should_minify(asset) => {
-            let job = MinifyJob {
-              code,
-              map: asset.map.take(),
-              sourcemaps,
-              filename: asset.preliminary_filename.to_string(),
-            };
-            let (code, map) = run_minify_job(Arc::clone(minifier), job).await?;
-            asset.content = code.into();
-            asset.map = map;
-          }
-          _ => {
-            asset.content = code.into();
-            if let Some(map) = chain_render_chunk_sourcemaps(asset.map.as_ref(), &sourcemaps) {
-              asset.map = Some(map);
-            }
-          }
+      let minified = match minifier {
+        Some(minifier) if ChunkMinifier::should_minify(asset) => {
+          let job = MinifyJob {
+            code,
+            map: asset.map.take(),
+            sourcemaps,
+            filename: asset.preliminary_filename.to_string(),
+          };
+          let minifier = Arc::clone(minifier);
+          Some(spawn_on_rayon(move || job.run(&minifier)))
         }
-        Ok((index, chunk_warnings))
-      })
-    })
-    .collect::<Vec<_>>();
-  // Boxed above: a stream of these borrowing futures is otherwise not provably `Send`.
-  let mut result =
-    futures::stream::iter(futures).buffer_unordered(concurrency).try_collect::<Vec<_>>().await?;
+        _ => {
+          asset.content = code.into();
+          if let Some(map) = chain_render_chunk_sourcemaps(asset.map.as_ref(), &sourcemaps) {
+            asset.map = Some(map);
+          }
+          None
+        }
+      };
+      Ok::<_, anyhow::Error>((index, chunk_warnings, minified))
+    }
+  }))
+  .await?;
 
-  result.sort_unstable_by_key(|(index, _)| *index);
-  Ok(result.into_iter().flat_map(|(_, warnings)| warnings).collect())
+  // Taken in chunk order, so warnings keep their order.
+  rendered.sort_unstable_by_key(|(index, ..)| *index);
+  let mut warnings = vec![];
+  for (index, chunk_warnings, minified) in rendered {
+    if let Some(minified) = minified {
+      let (code, map) = minified.await?;
+      let asset = &mut assets[InsChunkIdx::from(index)];
+      asset.content = code.into();
+      asset.map = map;
+    }
+    warnings.extend(chunk_warnings);
+  }
+  Ok(warnings)
 }
 
 /// The chunk's map with the maps returned by its `renderChunk` hooks chained on, or `None` when
@@ -136,32 +145,45 @@ impl MinifyJob {
       None => self.map,
     };
     let (code, minified_map) = minifier.minify(&self.code, map.as_ref(), &self.filename)?;
-    // The chunk keeps its map when minification makes none, as before.
+    // The chunk keeps its map when minification makes none.
     Ok((code, minified_map.or(map)))
   }
 }
 
+/// Starts `f` on the rayon pool; the returned future yields its result. Everything `f` captured
+/// is dropped before the result is sent. A panic in `f` is resumed where the result is awaited,
+/// where it fails the build as any other panic does: the pool has no panic handler, so a panic in
+/// a spawned job would abort the process.
 #[cfg(not(target_family = "wasm"))]
-async fn run_minify_job(
-  minifier: Arc<ChunkMinifier>,
-  job: MinifyJob,
-) -> Result<(String, Option<SourceMap>)> {
+fn spawn_on_rayon<T: Send + 'static>(
+  f: impl FnOnce() -> T + Send + 'static,
+) -> impl Future<Output = T> {
   let (sender, receiver) = futures::channel::oneshot::channel();
   rayon::spawn(move || {
-    let result = job.run(&minifier);
-    // Release the minifier before reporting back, so it is no longer shared once every job's
-    // result has arrived and `render_chunk_to_assets` can take its property mangle cache.
-    drop(minifier);
     // The receiver only goes away when the build already failed.
-    let _ = sender.send(result);
+    let _ = sender.send(std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)));
   });
-  Ok(receiver.await.expect("minify job dropped its result")?)
+  async move {
+    match receiver.await.expect("the job always sends its result") {
+      Ok(value) => value,
+      Err(panic) => std::panic::resume_unwind(panic),
+    }
+  }
 }
 
 #[cfg(target_family = "wasm")]
-async fn run_minify_job(
-  minifier: Arc<ChunkMinifier>,
-  job: MinifyJob,
-) -> Result<(String, Option<SourceMap>)> {
-  Ok(job.run(&minifier)?)
+fn spawn_on_rayon<T>(f: impl FnOnce() -> T) -> impl Future<Output = T> {
+  std::future::ready(f())
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+mod tests {
+  use super::spawn_on_rayon;
+
+  #[tokio::test]
+  async fn a_panic_in_a_rayon_job_reaches_the_caller() {
+    let result = tokio::spawn(spawn_on_rayon(|| -> () { panic!("minifier bug") })).await;
+    let panic = result.expect_err("the panic reaches the awaiting task").into_panic();
+    assert_eq!(panic.downcast_ref::<&str>(), Some(&"minifier bug"));
+  }
 }

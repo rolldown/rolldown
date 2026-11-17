@@ -48,7 +48,7 @@ impl GenerateStage<'_> {
     let inline_renders = std::mem::take(&mut self.inline_renders);
     // `ast_table` is threaded by value into `create_chunk_to_codegen_ret_map`
     // (the last reader), where it is dropped at scope exit by the compiler —
-    // releasing the per-module bumpalo arenas before `minify_chunks` and
+    // releasing the per-module bumpalo arenas before minification (in `render_chunks`) and
     // `finalize_assets` allocate.
     let (mut instantiated_chunks, index_chunk_to_instance) = self
       .instantiate_chunks(
@@ -65,7 +65,7 @@ impl GenerateStage<'_> {
     self.trace_action_module_rendered(&instantiated_chunks);
 
     // Chunks are minified inside `render_chunks`, each right after its `renderChunk` hooks.
-    // `augmentChunkHash` runs afterwards: it only sees chunk metadata, never the code.
+    // `augmentChunkHash` runs afterwards; minification changes nothing that hook receives.
     let minifier = ChunkMinifier::new(self.options, &instantiated_chunks)?.map(Arc::new);
     diagnostics.extend(
       render_chunks(

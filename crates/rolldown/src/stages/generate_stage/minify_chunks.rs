@@ -16,8 +16,8 @@ use crate::type_alias::IndexInstantiatedChunks;
 use super::GenerateStage;
 
 /// Everything needed to minify ECMAScript chunks, computed once per build. It owns its options,
-/// so `render_chunks` can hand single chunks to the rayon pool as soon as their `renderChunk`
-/// hooks return, instead of waiting for every chunk's hooks before minifying any of them.
+/// so `render_chunks` can hand each chunk to the rayon pool as soon as its `renderChunk` hooks
+/// return.
 pub struct ChunkMinifier {
   compress: bool,
   minify_options: OxcMinifierOptions,
@@ -76,6 +76,7 @@ impl ChunkMinifier {
   }
 
   /// Minifies one chunk's code, returning the new code and its map chained onto `map`.
+  #[tracing::instrument(level = "debug", skip_all)]
   pub fn minify(
     &self,
     content: &str,
@@ -83,6 +84,7 @@ impl ChunkMinifier {
     filename: &str,
   ) -> BuildResult<(String, Option<SourceMap>)> {
     let allocator_guard = self.allocator_pool.get();
+    // TODO: Do we need to ensure `chunk.preliminary_filename` to be absolute path?
     let (minified_content, new_map, chunk_property_mangle_cache) = EcmaCompiler::dce_or_minify(
       &allocator_guard,
       content,
@@ -101,7 +103,10 @@ impl ChunkMinifier {
     }
     let collapsed_map = match (map, &new_map) {
       (Some(origin_map), Some(new_map)) => Some(collapse_sourcemaps(&[origin_map, new_map])),
-      _ => None,
+      _ => {
+        // TODO: Map is dirty. Should we reset the `chunk.map` to `None`?
+        None
+      }
     };
     Ok((minified_content, collapsed_map))
   }
@@ -119,6 +124,9 @@ impl ChunkMinifier {
 }
 
 impl GenerateStage<'_> {
+  /// Checks the final output after `generateBundle`.
+  ///
+  /// Plugins can emit prebuilt chunks after minification, so the early check alone is not enough.
   pub(crate) fn validate_mangle_properties_output(
     options: &NormalizedBundlerOptions,
     outputs: &[Output],

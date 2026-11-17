@@ -1,0 +1,6 @@
+{
+  "_comment": "`issues/11397` with `preserveEntrySignatures: false`, the value of Vite client builds. The automatic variants test only `strict` and `allow-extension`. `false` drops the exports of the entry, so `main.js` puts the loaders on `globalThis`.",
+  "config": {
+    "preserveEntrySignatures": "false"
+  }
+}

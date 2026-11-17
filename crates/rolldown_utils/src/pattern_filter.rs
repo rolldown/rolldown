@@ -21,20 +21,8 @@ impl StringOrRegex {
       StringOrRegex::Regex(_) => anyhow::bail!("expected a string, but got a regex"),
     }
   }
-
-  pub fn try_into_regex(self) -> anyhow::Result<HybridRegex> {
-    match self {
-      StringOrRegex::Regex(s) => Ok(s),
-      StringOrRegex::String(_) => anyhow::bail!("expected a regex, but got a string"),
-    }
-  }
 }
 
-impl AsRef<StringOrRegex> for StringOrRegex {
-  fn as_ref(&self) -> &StringOrRegex {
-    self
-  }
-}
 pub enum StringOrRegexMatchKind<'a> {
   Code,
   // The cwd of id
@@ -81,7 +69,7 @@ pub fn filter(
   let normalized_id = normalize_path(id);
   if let Some(exclude) = exclude {
     for pattern in exclude {
-      let v = pattern.as_ref().test(&normalized_id, &StringOrRegexMatchKind::Id(cwd));
+      let v = pattern.test(&normalized_id, &StringOrRegexMatchKind::Id(cwd));
       if v {
         return FilterResult::Match(false);
       }
@@ -89,7 +77,7 @@ pub fn filter(
   }
   if let Some(include) = include {
     for pattern in include {
-      let v = pattern.as_ref().test(&normalized_id, &StringOrRegexMatchKind::Id(cwd));
+      let v = pattern.test(&normalized_id, &StringOrRegexMatchKind::Id(cwd));
       if v {
         return FilterResult::Match(true);
       }
@@ -189,41 +177,6 @@ impl FilterResult {
     match self {
       FilterResult::Match(v) | FilterResult::NoneMatch(v) => *v,
     }
-  }
-}
-
-/// Same as above but for `code`
-pub fn filter_code(
-  exclude: Option<&[impl AsRef<StringOrRegex>]>,
-  include: Option<&[impl AsRef<StringOrRegex>]>,
-  code: &str,
-) -> FilterResult {
-  if let Some(exclude) = exclude {
-    for pattern in exclude {
-      let v = pattern.as_ref().test(code, &StringOrRegexMatchKind::Code);
-      if v {
-        return FilterResult::Match(false);
-      }
-    }
-  }
-  if let Some(include) = include {
-    for pattern in include {
-      let v = match pattern.as_ref() {
-        StringOrRegex::String(pattern) => {
-          memmem::find(code.as_bytes(), pattern.as_bytes()).is_some()
-        }
-        StringOrRegex::Regex(re) => re.matches(code),
-      };
-      if v {
-        return FilterResult::Match(true);
-      }
-    }
-  }
-  // If the code is neither matched the exclude nor include,
-  // it should only considered should be included if the include pattern is empty
-  match include {
-    None => FilterResult::NoneMatch(true),
-    Some(include) => FilterResult::NoneMatch(include.is_empty()),
   }
 }
 
@@ -464,101 +417,5 @@ filter: {:?}, id: {id}",
     let matches = |id: &str| filter(None, Some(&include), &format!("{root}{id}"), &cwd);
     assert_eq!(matches("/w/my[app]/src/a.js"), FilterResult::Match(true));
     assert_eq!(matches("/w/mya/src/a.js"), FilterResult::NoneMatch(false));
-  }
-
-  #[test]
-  fn test_code_filter() {
-    #[derive(Debug)]
-    struct InputFilter {
-      exclude: Option<[StringOrRegex; 1]>,
-      include: Option<[StringOrRegex; 1]>,
-    }
-    /// code, expected
-    type TestCase<'a> = (&'a str, FilterResult);
-    struct TestCases<'a> {
-      input_filter: InputFilter,
-      cases: Vec<TestCase<'a>>,
-    }
-
-    #[expect(clippy::unnecessary_wraps)]
-    fn string_filter(value: &str) -> Option<[StringOrRegex; 1]> {
-      Some([StringOrRegex::new(value.to_string(), None).unwrap()])
-    }
-    #[expect(clippy::unnecessary_wraps)]
-    fn regex_filter(value: &str) -> Option<[StringOrRegex; 1]> {
-      Some([StringOrRegex::new(value.to_string(), Some(&String::new())).unwrap()])
-    }
-
-    let cases = [
-      TestCases {
-        input_filter: InputFilter { exclude: None, include: string_filter("import.meta") },
-        cases: vec![
-          ("import.meta", FilterResult::Match(true)),
-          ("import_meta", FilterResult::NoneMatch(false)),
-        ],
-      },
-      TestCases {
-        input_filter: InputFilter { exclude: None, include: regex_filter("import\\.\\w+") },
-        cases: vec![
-          ("import.meta", FilterResult::Match(true)),
-          ("import_meta", FilterResult::NoneMatch(false)),
-        ],
-      },
-      TestCases {
-        input_filter: InputFilter { exclude: string_filter("import.meta"), include: None },
-        cases: vec![
-          ("import.meta", FilterResult::Match(false)),
-          ("import_meta", FilterResult::NoneMatch(true)),
-        ],
-      },
-      // Test none ascii
-      TestCases {
-        input_filter: InputFilter { include: string_filter("你好"), exclude: None },
-        cases: vec![
-          ("世界你好 hello world", FilterResult::Match(true)),
-          ("import_meta", FilterResult::NoneMatch(false)),
-        ],
-      },
-      TestCases {
-        input_filter: InputFilter { exclude: regex_filter("import\\.\\w+"), include: None },
-        cases: vec![
-          ("import.meta", FilterResult::Match(false)),
-          ("import_meta", FilterResult::NoneMatch(true)),
-        ],
-      },
-      TestCases {
-        input_filter: InputFilter {
-          exclude: string_filter("import_meta"),
-          include: string_filter("import.meta"),
-        },
-        cases: vec![
-          ("import.meta", FilterResult::Match(true)),
-          ("import_meta", FilterResult::Match(false)),
-          ("importmeta", FilterResult::NoneMatch(false)),
-        ],
-      },
-      TestCases {
-        input_filter: InputFilter {
-          exclude: regex_filter("\\w+\\.meta"),
-          include: regex_filter("import\\.\\w+"),
-        },
-        cases: vec![
-          ("import.meta", FilterResult::Match(false)), // exclude has higher priority
-          ("import.foo", FilterResult::Match(true)),
-          ("foo.meta", FilterResult::Match(false)),
-        ],
-      },
-    ];
-
-    for test_case in cases {
-      for (code, expected) in test_case.cases {
-        let result = filter_code(
-          test_case.input_filter.exclude.as_ref().map(|v| &v[..]),
-          test_case.input_filter.include.as_ref().map(|v| &v[..]),
-          code,
-        );
-        assert_eq!(result, expected, "filter: {:?}, code: {code}", test_case.input_filter);
-      }
-    }
   }
 }

@@ -279,6 +279,8 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
           }
         }
 
+        // `PluginDriver::transform` closes each chain when the module's transform hooks finish,
+        // so only a chain whose transform did not finish (for example on an error) is left here.
         for (module_idx, open) in chains {
           flush_chain(open, module_idx, &mut result);
         }

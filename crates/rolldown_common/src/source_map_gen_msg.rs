@@ -10,9 +10,10 @@ pub enum SourceMapGenMsg {
   /// `module_id` is carried so the sourcemap worker can fill the generated
   /// map's `source` with it
   MagicString(Box<(crate::ModuleIdx, PluginIdx, ArcStr, MagicString<'static>)>),
-  /// Signal that a non-MagicString plugin intervened for this module.
-  /// The background thread must flush any in-progress chain for the module
-  /// before the next MagicString arrives, even if the code is unchanged.
+  /// Close the in-progress chain of this module. Sent when a non-MagicString
+  /// plugin intervened for the module, so the background thread flushes the
+  /// chain before the next MagicString arrives, even if the code is unchanged.
+  /// Also sent when the transform hooks of the module finish.
   Barrier(crate::ModuleIdx),
   Terminate,
 }

@@ -395,6 +395,14 @@ impl PluginDriver {
         call_id: call_id.unwrap_or_default()
       });
     }
+    // The transform hooks of this module are done, so no more MagicString arrives for it. Close
+    // its chain now, so the worker composes the map while other modules still transform. If it
+    // waits for `Terminate`, it composes all maps after the last transform and the scan waits.
+    if let Some(tx) = magic_string_tx.as_ref() {
+      tx.send(rolldown_common::SourceMapGenMsg::Barrier(module_idx)).expect(
+        "Failed to send Barrier to sourcemap worker — worker thread terminated unexpectedly",
+      );
+    }
     *sourcemap_chain = plugin_sourcemap_chain.into_inner();
     Ok(code)
   }

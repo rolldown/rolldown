@@ -137,6 +137,34 @@ impl LinkStage<'_> {
     unreachable_node_ids
   }
 
+  /// A cyclic importer can read an exported `var` while it is still `undefined`.
+  /// See internal-docs/inline-const/design.md.
+  pub(super) fn exclude_cyclic_vars_from_inline_const(&mut self) {
+    for module in self.module_table.modules.iter().filter_map(|module| module.as_normal()) {
+      if module.exports_kind != ExportsKind::Esm
+        || !module.importers_idx.iter().any(|&importer| {
+          self.import_cycles.same_cycle(&self.module_table.modules, importer, module.idx)
+        })
+      {
+        continue;
+      }
+      for export in self.metas[module.idx].resolved_exports.values() {
+        let symbol_ref = self.symbols.canonical_ref_for(export.symbol_ref);
+        if symbol_ref.owner == module.idx
+          && self
+            .symbols
+            .local_db(module.idx)
+            .scoping()
+            .symbol_flags(symbol_ref.symbol)
+            .is_function_scoped_declaration()
+        {
+          symbol_ref.flags_mut(&mut self.symbols).insert(SymbolRefFlags::ReadBeforeAssigned);
+          self.global_constant_symbol_map.remove(&symbol_ref);
+        }
+      }
+    }
+  }
+
   /// A JSX element name can't be a literal, so a constant used as one is not inlined.
   pub(super) fn exclude_jsx_element_names_from_inline_const(&mut self) {
     if !self.symbols.has_module_preserve_jsx() || self.global_constant_symbol_map.is_empty() {
@@ -539,10 +567,7 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
           let symbol_ref: SymbolRef = (self.immutable_ctx.module_idx, binding.symbol_id()).into();
           let local_db = self.immutable_ctx.symbols.local_db(self.immutable_ctx.module_idx);
           // `IsNotReassigned` does not see an assignment inside direct `eval`.
-          let is_not_assigned = local_db
-            .flags
-            .get(&symbol_ref.symbol)
-            .is_some_and(|flag| flag.contains(SymbolRefFlags::IsNotReassigned))
+          let is_not_assigned = symbol_ref.is_not_reassigned(self.immutable_ctx.symbols)
             && !eval_can_assign(local_db.scoping(), symbol_ref.symbol);
 
           if is_not_assigned

@@ -55,11 +55,6 @@ impl TsconfigCache {
 }
 
 impl TsconfigCache {
-  /// Get the resolver instance.
-  pub fn resolver(&self) -> &Resolver {
-    &self.resolver
-  }
-
   /// Find and cache tsconfig for a given file path.
   ///
   /// Returns None if no tsconfig is found for the file.

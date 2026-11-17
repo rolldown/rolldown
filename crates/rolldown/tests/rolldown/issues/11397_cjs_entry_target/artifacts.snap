@@ -1,0 +1,76 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+// main.js
+const load = () => Promise.resolve().then(() => /* @__PURE__ */ require_rolldown_runtime.__toESM(require("./target.js").default));
+const page = () => Promise.resolve().then(() => require("./page.js"));
+exports.load = load;
+exports.page = page;
+
+```
+
+## page.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+const require_target$1 = require("./target.js");
+// page.js
+var import_target = /* @__PURE__ */ require_rolldown_runtime.__toESM(require_target$1.default);
+require_target$1.require_shared();
+var page_default = () => [import_target.value, 7];
+exports.default = page_default;
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+
+```
+
+## target.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+// shared.cjs
+var require_shared = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports) => {
+	exports.n = 7;
+}));
+// target.cjs
+var require_target = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports) => {
+	exports.value = require_shared().n;
+}));
+Object.defineProperty(exports, "default", {
+	enumerable: true,
+	get: function() {
+		return require_target();
+	}
+});
+Object.defineProperty(exports, "require_shared", {
+	enumerable: true,
+	get: function() {
+		return require_shared;
+	}
+});
+
+```

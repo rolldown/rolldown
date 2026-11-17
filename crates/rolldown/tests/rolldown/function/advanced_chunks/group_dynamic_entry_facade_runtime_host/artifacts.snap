@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## layout-group.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+// layout.js
+var import_dep = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { dep: "dep" };
+})))();
+var layout_default = () => import_dep.dep;
+const loadPage = () => import("./page.js");
+export { layout_default as default, loadPage };
+
+```
+
+## main.js
+
+```js
+import assert from "node:assert";
+// main.js
+import("./layout-group.js").then(async (layout) => {
+	assert.deepStrictEqual(Object.keys(layout), ["default", "loadPage"]);
+	assert.strictEqual(layout.default(), "dep");
+	const page = await layout.loadPage();
+	assert.strictEqual(page.default(), "p");
+});
+
+```
+
+## page.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+// page.js
+var import_p = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { p: "p" };
+})))();
+var page_default = () => import_p.p;
+export { page_default as default };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __commonJSMin as t };
+
+```
+
+# Output Stats
+
+- layout-group.js, is_entry false, is_dynamic_entry true, exports ["default", "loadPage"]
+- main.js, is_entry true, is_dynamic_entry false, exports []
+- page.js, is_entry false, is_dynamic_entry true, exports ["default"]
+- rolldown-runtime.js, is_entry false, is_dynamic_entry false, exports ["t"]

@@ -21,7 +21,7 @@ pub fn resolve_sources_against_module(map: &SourceMap, module_id: &str) -> Optio
   }
   let module_dir = module_path.parent()?;
   let source_root = map.get_source_root().filter(|root| !root.is_empty());
-  if source_root.is_some_and(is_url) || !map.get_sources().any(is_relative_path) {
+  if source_root.is_some_and(is_url) || !map.get_sources().flatten().any(is_relative_path) {
     return None;
   }
   let base = match source_root {
@@ -31,11 +31,13 @@ pub fn resolve_sources_against_module(map: &SourceMap, module_id: &str) -> Optio
   let sources = map
     .get_sources()
     .map(|source| {
-      if is_relative_path(source) {
-        base.join(source).normalize().to_string_lossy().into_owned()
-      } else {
-        source.to_string()
-      }
+      source.map(|source| {
+        if is_relative_path(source) {
+          base.join(source).normalize().to_string_lossy().into_owned()
+        } else {
+          source.to_string()
+        }
+      })
     })
     .collect::<Vec<_>>();
 
@@ -69,7 +71,7 @@ mod tests {
       None,
       vec![],
       source_root.map(|root| root.to_string().into()),
-      sources.iter().map(|s| (*s).to_string().into()).collect(),
+      sources.iter().map(|s| Some((*s).to_string().into())).collect(),
       vec![],
       Box::new([]),
       None,
@@ -77,7 +79,7 @@ mod tests {
   }
 
   fn sources(map: &SourceMap) -> Vec<&str> {
-    map.get_sources().collect()
+    map.get_sources().flatten().collect()
   }
 
   #[cfg(not(windows))]
@@ -111,6 +113,20 @@ mod tests {
       resolve_sources_against_module(&map(&["a.ts"], Some("")), "/pkg/dist/x.js").unwrap();
     assert_eq!(sources(&resolved), vec!["/pkg/dist/a.ts"]);
     assert_eq!(resolved.get_source_root(), Some(""));
+  }
+
+  #[test]
+  fn preserves_null_source_slots() {
+    let mut input = map(&["a.ts"], Some("src"));
+    input.set_sources([None, Some("a.ts")]);
+    let dir = std::env::current_dir().unwrap();
+    let module_id = dir.join("out.js");
+    let resolved = resolve_sources_against_module(&input, module_id.to_str().unwrap()).unwrap();
+    let sources = resolved.get_sources().collect::<Vec<_>>();
+    assert_eq!(sources[0], None);
+    let expected = dir.join("src").join("a.ts");
+    assert_eq!(sources[1], expected.to_str());
+    assert_eq!(resolved.get_source_root(), None);
   }
 
   #[test]

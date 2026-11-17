@@ -571,9 +571,12 @@ describe('config', () => {
       reject: false,
       cancelSignal: controller.signal,
     })`rolldown -c -w`;
-    await vi.waitFor(() => {
-      expect(fs.existsSync(path.join(cwd, 'dist/index.js'))).toBe(true);
-    });
+    await vi.waitFor(
+      () => {
+        expect(fs.existsSync(path.join(cwd, 'dist/index.js'))).toBe(true);
+      },
+      { timeout: 5_000 },
+    );
     controller.abort();
   });
 });

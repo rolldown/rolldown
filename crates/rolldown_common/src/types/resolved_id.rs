@@ -1,6 +1,5 @@
 use std::{path::Path, sync::Arc};
 
-use arcstr::ArcStr;
 use rolldown_utils::{
   concat_string, dataurl::is_data_url, ecmascript::escape_line_terminators,
   stabilize_id::stabilize_id,
@@ -97,19 +96,6 @@ impl ResolvedId {
       None => debug_id,
     };
     escape_line_terminators(debug_id)
-  }
-
-  pub fn new_external_without_side_effects(id: ArcStr) -> Self {
-    Self {
-      id: ModuleId::new(id),
-      attributes: ImportAttributes::default(),
-      module_def_format: ModuleDefFormat::Unknown,
-      external: true.into(),
-      normalize_external_id: None,
-      package_json: None,
-      side_effects: None,
-      is_external_without_side_effects: true,
-    }
   }
 }
 

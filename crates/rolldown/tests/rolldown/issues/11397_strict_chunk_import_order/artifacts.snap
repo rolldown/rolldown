@@ -1,0 +1,71 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## leaf1.js
+
+```js
+// leaf1.mjs
+globalThis.__event("leaf1");
+export {};
+
+```
+
+## main.js
+
+```js
+// main.mjs
+const load2 = () => import("./route2.js").then((n) => n.t);
+globalThis.run = async () => {
+	(await import("./page.js")).read();
+	globalThis.route2 = await load2();
+	const { value } = await import("./route0.js");
+	return value;
+};
+export {};
+
+```
+
+## page.js
+
+```js
+import "./leaf1.js";
+import { n } from "./route2.js";
+// page.mjs
+const rows = [];
+rows.push(["leaf0", n]);
+function read() {
+	return rows;
+}
+export { read };
+
+```
+
+## route0.js
+
+```js
+import "./leaf1.js";
+export {};
+
+```
+
+## route2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// leaf0.mjs
+var leaf0_exports = /* @__PURE__ */ __exportAll({
+	bump: () => bump,
+	n: () => n
+});
+let n = 5;
+function bump() {
+	return ++n;
+}
+globalThis.__event("leaf0");
+// route2.mjs
+var route2_exports = /* @__PURE__ */ __exportAll({ leafNamespace: () => leaf0_exports });
+export { leaf0_exports as leafNamespace, n, route2_exports as t };
+
+```

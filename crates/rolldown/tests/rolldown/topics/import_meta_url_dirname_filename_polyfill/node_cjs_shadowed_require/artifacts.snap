@@ -8,8 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
-node_assert = __toESM(node_assert);
 let node_module = require("node:module");
+node_assert = __toESM(node_assert);
 // main.js
 function init() {
 	var require$1 = (0, node_module.createRequire)(require("url").pathToFileURL(__filename).href);

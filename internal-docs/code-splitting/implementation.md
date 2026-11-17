@@ -272,12 +272,6 @@ Without optimization, the BitSet approach can produce many small common chunks (
 
 The chunk optimizer reduces chunk count by merging common chunks back into entry chunks when safe. It operates on a temporary `ChunkOptimizationGraph` to test merges without modifying the real chunk graph.
 
-### Duplicate CommonJS Entries
-
-In CJS output, an unwrapped CommonJS entry assigns `module.exports` directly and has no static default export item.
-The `output.exports: 'default'` check accepts that implicit default value.
-When several input names refer to the same CommonJS module, one chunk contains its body and the other entry facades forward its return value with `module.exports = require(...)`.
-
 ### Common Module Merging (`try_insert_common_module_to_exist_chunk`)
 
 For each common chunk, translates its `bits` to chunk indices (bit positions directly map to `ChunkIdx`), then tries to merge it into one of those entry chunks. Merging is skipped if it would:

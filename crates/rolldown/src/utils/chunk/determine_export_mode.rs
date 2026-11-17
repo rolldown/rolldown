@@ -15,8 +15,7 @@ pub fn determine_export_mode(
   match export_mode {
     OutputExports::Named => Ok(OutputExports::Named),
     OutputExports::Default => {
-      // Native CJS entries assign module.exports without a static default export item.
-      // See internal-docs/code-splitting/implementation.md#duplicate-commonjs-entries.
+      // An unwrapped CommonJS entry assigns module.exports itself, so it has no static default export.
       let has_native_cjs_default = matches!(ctx.options.format, OutputFormat::Cjs)
         && matches!(module.exports_kind, ExportsKind::CommonJs)
         && export_names.is_empty();

@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [
+      { "name": "a", "import": "./lib.cjs" },
+      { "name": "b", "import": "./lib.cjs" },
+      { "name": "u", "import": "./user.cjs" }
+    ],
+    "format": "cjs"
+  },
+  "configVariants": [
+    { "exports": "default" },
+    { "minify": true },
+    { "exports": "default", "minify": true }
+  ]
+}

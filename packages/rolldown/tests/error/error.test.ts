@@ -223,6 +223,16 @@ test('call transformContext error', async () => {
   expect(error!.message).toContain('transform hook error');
 });
 
+test('includes the url of a plugin error in the message', async () => {
+  const error = await buildWithPlugin({
+    name: 'test',
+    transform() {
+      this.error({ message: 'transform hook error', url: 'https://example.com/docs' });
+    },
+  });
+  expect(error!.message).toContain('transform hook error\nhttps://example.com/docs');
+});
+
 // #4141
 // Under the wasm binding the `structuredClone` failure degrades to a plain `Error`, losing the `DataCloneError` name.
 test.skipIf(isWasiTest)('should print original error if it can not be assigned', async () => {

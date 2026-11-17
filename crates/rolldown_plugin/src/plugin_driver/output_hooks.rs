@@ -1,4 +1,8 @@
+use std::future::poll_fn;
+use std::pin::pin;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::task::Poll;
 
 use super::skipped_by_hook_filter;
 use crate::types::hook_close_bundle_args::HookCloseBundleArgs;
@@ -13,6 +17,7 @@ use rolldown_common::{Output, RollupRenderedChunk, SharedNormalizedBundlerOption
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, CausedPlugin};
 use rolldown_sourcemap::SourceMap;
+use tokio::sync::Notify;
 use tracing::Instrument;
 
 impl PluginDriver {
@@ -148,17 +153,21 @@ impl PluginDriver {
   )]
   pub async fn render_chunk(
     &self,
+    order: &RenderChunkOrder,
+    position: usize,
     mut args: HookRenderChunkArgs<'_>,
   ) -> Result<(String, Vec<SourceMap>, Vec<BuildDiagnostic>)> {
     let mut sourcemap_chain = vec![];
     let mut warnings = vec![];
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_render_chunk_meta)
+    for (hook, (plugin_idx, plugin, ctx)) in
+      self.iter_plugin_with_context_by_order(&self.order_by_render_chunk_meta).enumerate()
     {
+      order.wait(hook, position).await;
       if skipped_by_hook_filter(plugin, ctx, HookFilterArgs::RenderChunk(&args)) {
+        order.pass(hook, position);
         continue;
       }
-      async {
+      let call = async {
         if trace_action_enabled!() {
           trace_action!(action::HookRenderChunkStart {
             action: "HookRenderChunkStart",
@@ -205,10 +214,23 @@ impl PluginDriver {
       .instrument(tracing::trace_span!(
         "HookRenderChunk",
         CONTEXT_call_id = rolldown_utils::uuid::uuid_v4()
-      ))
-      .await?;
+      ));
+      let mut call = pin!(call);
+      let first_poll = poll_fn(|cx| Poll::Ready(call.as_mut().poll(cx))).await;
+      order.pass(hook, position);
+      match first_poll {
+        Poll::Ready(result) => result?,
+        Poll::Pending => call.await?,
+      }
     }
     Ok((args.into_code(), sourcemap_chain, warnings))
+  }
+
+  pub fn render_chunk_order(&self, chunks: usize) -> RenderChunkOrder {
+    RenderChunkOrder {
+      next: self.order_by_render_chunk_meta.iter().map(|_| AtomicUsize::new(0)).collect(),
+      turns: (0..chunks).map(|_| Notify::new()).collect(),
+    }
   }
 
   #[tracing::instrument(
@@ -302,5 +324,29 @@ impl PluginDriver {
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
+  }
+}
+
+/// Each `renderChunk` hook receives the chunks in the order of their positions: a chunk calls or
+/// skips a hook only after the chunk before it has, and a call is made in the first poll of the
+/// hook, so the order does not depend on when earlier calls return. A parallel plugin can still
+/// receive them out of order, because its first poll may wait for a free worker.
+pub struct RenderChunkOrder {
+  next: Box<[AtomicUsize]>,
+  turns: Box<[Notify]>,
+}
+
+impl RenderChunkOrder {
+  async fn wait(&self, hook: usize, position: usize) {
+    while self.next[hook].load(Ordering::Acquire) != position {
+      self.turns[position].notified().await;
+    }
+  }
+
+  fn pass(&self, hook: usize, position: usize) {
+    self.next[hook].store(position + 1, Ordering::Release);
+    if let Some(turn) = self.turns.get(position + 1) {
+      turn.notify_one();
+    }
   }
 }

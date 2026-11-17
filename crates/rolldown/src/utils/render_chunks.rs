@@ -41,11 +41,10 @@ pub async fn render_chunks(
       .collect::<FxIndexMap<ArcStr, Arc<RollupRenderedChunk>>>(),
   );
 
-  // Every chunk starts its `renderChunk` hooks at once, so plugins see the same order of calls
-  // on every run and a hook may wait for other chunks. With more than 16 chunks, a chunk holding
-  // more than a sixteenth of the code to minify starts first: it reaches each hook first, so its
-  // minification, the longest, starts first. 16 is fixed rather than the thread count, so the
-  // order of calls is the same on every machine.
+  // Every chunk starts its `renderChunk` hooks at once, so a hook may wait for other chunks. With
+  // more than 16 chunks, a chunk holding more than a sixteenth of the code to minify starts first:
+  // it reaches each hook first, so its minification, the longest, starts first. 16 is fixed rather
+  // than the thread count, so the order of calls is the same on every machine.
   const SHARES: usize = 16;
   let minified_len = |asset: &InstantiatedChunk| {
     if ChunkMinifier::should_minify(asset) { asset.content.as_bytes().len() } else { 0 }
@@ -59,20 +58,26 @@ pub async fn render_chunks(
       Reverse(if len > share { len } else { 0 })
     });
   }
-  let mut rendered = try_join_all(order.into_iter().map(|(index, asset)| {
+  let render_chunk_order = &plugin_driver.render_chunk_order(order.len());
+  let order = order.into_iter().enumerate();
+  let mut rendered = try_join_all(order.map(|(position, (index, asset))| {
     let chunks = Arc::clone(&chunks);
     async move {
       let (code, sourcemaps, chunk_warnings) = plugin_driver
-        .render_chunk(HookRenderChunkArgs {
-          code: Arc::new(std::mem::take(&mut asset.content).try_into_inner_string()?),
-          chunk: Arc::clone(
-            chunks.get(&asset.ecma_meta.rendered_chunk.filename).expect("should have chunk"),
-          ),
-          options,
-          chunk_table,
-          module_table,
-          chunks,
-        })
+        .render_chunk(
+          render_chunk_order,
+          position,
+          HookRenderChunkArgs {
+            code: Arc::new(std::mem::take(&mut asset.content).try_into_inner_string()?),
+            chunk: Arc::clone(
+              chunks.get(&asset.ecma_meta.rendered_chunk.filename).expect("should have chunk"),
+            ),
+            options,
+            chunk_table,
+            module_table,
+            chunks,
+          },
+        )
         .await?;
 
       let minified = match minifier {

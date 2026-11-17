@@ -27,7 +27,7 @@ function dynamicImports(
   };
 }
 
-test('a renderChunk hook after a filtered one sees the chunks the filter skips in chunk order', async () => {
+test('a renderChunk hook after a filtered one sees the chunks in chunk order on every build', async () => {
   async function build() {
     const calls: string[] = [];
     const bundle = await rolldown({
@@ -57,21 +57,10 @@ test('a renderChunk hook after a filtered one sees the chunks the filter skips i
   }
 
   const first = await build();
-  const names = first.chunks.map((chunk) => chunk.name);
-  const skipped = first.chunks
-    .filter((chunk) => !chunk.code.includes('MARK'))
-    .map((chunk) => chunk.name);
-  expect(names.length - skipped.length).toBe(40);
-  // Every chunk starts at once, so the chunks that `filtered` skips reach `recorder` in their first
-  // step, in chunk order. A chunk that `filtered` handles reaches `recorder` when that call
-  // returns, which can be before other chunks have started, so those calls are not pinned.
-  const builds = [first];
+  expect(first.chunks.filter((chunk) => chunk.code.includes('MARK'))).toHaveLength(40);
+  expect(first.calls).toEqual(first.chunks.map((chunk) => chunk.name));
   for (let run = 0; run < 5; run++) {
-    builds.push(await build());
-  }
-  for (const { calls } of builds) {
-    expect([...calls].sort()).toEqual([...names].sort());
-    expect(calls.filter((name) => skipped.includes(name))).toEqual(skipped);
+    expect((await build()).calls).toEqual(first.calls);
   }
 });
 

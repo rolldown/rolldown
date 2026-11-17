@@ -4,6 +4,7 @@ mod output_hooks;
 mod plugin_driver_factory;
 mod watch_hooks;
 
+pub use output_hooks::RenderChunkOrder;
 pub use plugin_driver_factory::PluginDriverFactory;
 
 use std::{

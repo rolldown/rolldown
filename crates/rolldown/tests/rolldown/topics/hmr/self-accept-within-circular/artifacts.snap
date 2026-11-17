@@ -55,20 +55,33 @@ assert.strictEqual(a.b.c, "c");
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["c.js","b.js"],localCount:1,edges:[[1]],stamps:{0:1}});
+__rolldown_runtime__.registerGraph({ids:["b.js","c.js"],localCount:2,edges:[[1],[0]],stamps:{1:1}});
+//#region b.js
+__rolldown_runtime__.registerFactory("b.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ b: () => b });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("c.js");
+		var import_c_00 = __rolldown_runtime__.loadExports("c.js");
+		const hot_b = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const b = { c: import_c_00.c };
+	} finally {}
+}));
+
+//#endregion
 //#region c.js
-import * as import_node_assert_00 from "node:assert";
+import * as import_node_assert_10 from "node:assert";
 __rolldown_runtime__.registerFactory("c.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ c: () => c });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("b.js");
-		var import_b_01 = __rolldown_runtime__.loadExports("b.js");
+		var import_b_11 = __rolldown_runtime__.loadExports("b.js");
 		const hot_c = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const c = "cc";
-		import_node_assert_00.default.strictEqual(c, "cc");
+		import_node_assert_10.default.strictEqual(c, "cc");
 		hot_c.accept(() => {
-			import_node_assert_00.default.fail("the last generation has no further edit to accept");
+			import_node_assert_10.default.fail("the last generation has no further edit to accept");
 		});
 	} finally {}
 }), 1);

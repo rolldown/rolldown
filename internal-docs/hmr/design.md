@@ -127,10 +127,12 @@ The hello (`vite:client-connected`) creates the session. Vite's client
 script sends it; the HTML plugin loads that script as a module before
 the entry chunk. The session starts with an empty `shipped[C]` plus the
 **boot-evaluated map**, frozen at hello: the modules the entry chunk
-runs at top level, with their stamps (the static-import closure of the
-single user entry; with more than one user entry the map is empty and
-lazy chunks ship everything). This map is a static statement about what
-the entry chunk _contains_; the client cannot contradict it (see
+runs at top level, with their stamps (the single user entry's source
+static-import closure, restricted to modules in its emitted static chunk
+closure; with more than one user entry the map is empty). Tree shaking
+can leave a source-reachable barrel in an unloaded chunk, so source
+reachability alone cannot establish that the client ran it. This map is
+a static statement about the entry's loaded output; the client cannot contradict it (see
 Unresolved Questions, "Hello without a build id"). On reconnect the
 client sends a new id, and that new id is the per-client reset: the
 server keeps an existing session when a hello repeats an id.
@@ -156,27 +158,12 @@ modules ran, so it walks static imports (`collect_unheld_sync_deps`,
   may be missing.
 - **Anything else** — carried, and the walk goes through it.
 
-A lazy chunk walks from its entry. A patch walks only from the static
-imports the rebuild added: the new deps of a changed module and every
-dep of a new module. The old deps of a module that ran have run too.
-Walking from every carried module would ship the whole static closure
-whenever the boot-evaluated map is empty (several user entries). Even
-so, with an empty map an edit that adds an import can carry modules the
-client already ran. That costs bytes once; the ship map covers them
-afterwards.
-
-Example: tab B has not opened a route yet. An edit of `shared.js`
-carries `route.js` to tab B, because `route.js` imports `shared.js`.
-Tab B never runs it. When tab B opens the route, the lazy chunk walks
-through `route.js` and carries `dep.js`.
-
-```mermaid
-flowchart LR
-  main["main.js — boot-evaluated"] --> shared["shared.js — boot-evaluated: stop"]
-  main -. "import()" .-> route["route.js — shipped by the patch: walk through"]
-  route --> shared
-  route --> dep["dep.js — not held: carry"]
-```
+A lazy chunk walks from its entry. A patch walks from every carried
+module: even an unchanged dependency may lack a factory when initial
+tree shaking omitted its chunk. The boot-evaluated map stops the walk
+at modules the entry ran. When that map is empty (several user entries),
+the first patch can carry the whole static closure, including modules
+the client already ran. The ship map covers those factories afterwards.
 
 ### 3. The module graph ships as compiler data
 

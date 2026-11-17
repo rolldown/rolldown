@@ -318,61 +318,152 @@ export { a };
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["main.js","named/importer.js","named/target.js","non_accepted/importer.js","promoted/importer.js","side_effect/importer.js","default_import/importer.js","dynamic_import/importer.js","reexport_named/importer.js","reexport_star/importer.js","multi_record/importer.js"],localCount:3,edges:[[1,3,4,5,6,7,8,9,10],[2],[]],bindings:{1:[["a"]]},stamps:{2:1},entries:[0]});
+__rolldown_runtime__.registerGraph({ids:["default_import/importer.js","default_import/target.js","dynamic_import/importer.js","main.js","multi_record/importer.js","multi_record/target.js","named/importer.js","named/target.js","non_accepted/importer.js","non_accepted/target.js","promoted/importer.js","promoted/target.js","reexport_named/importer.js","reexport_named/target.js","reexport_star/importer.js","reexport_star/target.js","side_effect/importer.js","side_effect/target.js","dynamic_import/target.js"],localCount:18,edges:[[1],[],[],[6,8,10,16,0,2,12,14,4],[5],[],[7],[],[9],[],[11],[],[13],[],[15],[],[17],[]],bindings:{0:[["default"]],4:[["a","b"]],6:[["a"]],8:[["b"]],10:[["*"]],12:[["b"]],14:[["*"]],16:[[]]},dynamicEdges:{2:[18]},stamps:{7:1},entries:[3]});
+//#region default_import/importer.js
+__rolldown_runtime__.registerFactory("default_import/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("default_import/target.js");
+		var import_target_00 = __rolldown_runtime__.loadExports("default_import/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.defaultImportImporterRuns ??= 0;
+		globalThis.defaultImportImporterRuns++;
+		globalThis.defaultImportImporterSaw = import_target_00.default;
+	} finally {}
+}));
+
+//#endregion
+//#region default_import/target.js
+import * as import_node_assert_10 from "node:assert";
+__rolldown_runtime__.registerFactory("default_import/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			default: () => __rolldown_default__,
+			a: () => a
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		var __rolldown_default__ = 0;
+		const a = "a";
+		globalThis.defaultImportAcceptCount ??= 0;
+		hot_target.acceptExports(["default"], (mod) => {
+			globalThis.defaultImportAcceptCount++;
+			import_node_assert_10.default.strictEqual(mod.default, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region dynamic_import/importer.js
+__rolldown_runtime__.registerFactory("dynamic_import/importer.js", (function(__rolldown_module_id__) {
+	try {
+		__rolldown_runtime__.registerModule(__rolldown_module_id__);
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.dynamicImportImporterRuns ??= 0;
+		globalThis.dynamicImportImporterRuns++;
+		(__rolldown_runtime__.initModule("dynamic_import/target.js"), Promise.resolve().then(() => __rolldown_runtime__.loadExports("dynamic_import/target.js"))).then((mod) => {
+			globalThis.dynamicImportImporterSawA = mod.a;
+		});
+		hot_importer.accept();
+	} finally {}
+}));
+
+//#endregion
 //#region main.js
-import * as import_node_assert_00 from "node:assert";
+import * as import_node_assert_30 from "node:assert";
 __rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("named/importer.js");
-		var import_importer_01 = __rolldown_runtime__.loadExports("named/importer.js");
+		var import_importer_31 = __rolldown_runtime__.loadExports("named/importer.js");
 		__rolldown_runtime__.initModule("non_accepted/importer.js");
-		var import_importer_02 = __rolldown_runtime__.loadExports("non_accepted/importer.js");
+		var import_importer_32 = __rolldown_runtime__.loadExports("non_accepted/importer.js");
 		__rolldown_runtime__.initModule("promoted/importer.js");
-		var import_importer_03 = __rolldown_runtime__.loadExports("promoted/importer.js");
+		var import_importer_33 = __rolldown_runtime__.loadExports("promoted/importer.js");
 		__rolldown_runtime__.initModule("side_effect/importer.js");
-		var import_importer_04 = __rolldown_runtime__.loadExports("side_effect/importer.js");
+		var import_importer_34 = __rolldown_runtime__.loadExports("side_effect/importer.js");
 		__rolldown_runtime__.initModule("default_import/importer.js");
-		var import_importer_05 = __rolldown_runtime__.loadExports("default_import/importer.js");
+		var import_importer_35 = __rolldown_runtime__.loadExports("default_import/importer.js");
 		__rolldown_runtime__.initModule("dynamic_import/importer.js");
-		var import_importer_06 = __rolldown_runtime__.loadExports("dynamic_import/importer.js");
+		var import_importer_36 = __rolldown_runtime__.loadExports("dynamic_import/importer.js");
 		__rolldown_runtime__.initModule("reexport_named/importer.js");
-		var import_importer_07 = __rolldown_runtime__.loadExports("reexport_named/importer.js");
+		var import_importer_37 = __rolldown_runtime__.loadExports("reexport_named/importer.js");
 		__rolldown_runtime__.initModule("reexport_star/importer.js");
-		var import_importer_08 = __rolldown_runtime__.loadExports("reexport_star/importer.js");
+		var import_importer_38 = __rolldown_runtime__.loadExports("reexport_star/importer.js");
 		__rolldown_runtime__.initModule("multi_record/importer.js");
-		var import_importer_09 = __rolldown_runtime__.loadExports("multi_record/importer.js");
+		var import_importer_39 = __rolldown_runtime__.loadExports("multi_record/importer.js");
 		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		process.on("beforeExit", (code) => {
 			if (code !== 0) return;
-			import_node_assert_00.default.strictEqual(globalThis.namedAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.nonAcceptedAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.promotedAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.sideEffectAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.defaultImportAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.dynamicImportAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.reexportNamedAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.reexportStarAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.multiRecordAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.namedImporterRuns, 1);
-			import_node_assert_00.default.strictEqual(globalThis.promotedImporterRuns, 1);
-			import_node_assert_00.default.strictEqual(globalThis.sideEffectImporterRuns, 1);
-			import_node_assert_00.default.strictEqual(globalThis.defaultImportImporterRuns, 1);
-			import_node_assert_00.default.strictEqual(globalThis.namedImporterSawA, 0);
-			import_node_assert_00.default.strictEqual(globalThis.defaultImportImporterSaw, 0);
-			import_node_assert_00.default.strictEqual(globalThis.nonAcceptedImporterRuns, 2);
-			import_node_assert_00.default.strictEqual(globalThis.nonAcceptedImporterSawB, "b2");
-			import_node_assert_00.default.strictEqual(globalThis.nonAcceptedImporterAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.dynamicImportImporterRuns, 2);
-			import_node_assert_00.default.strictEqual(globalThis.dynamicImportImporterSawA, 1);
-			import_node_assert_00.default.strictEqual(globalThis.reexportNamedImporterRuns, 2);
-			import_node_assert_00.default.strictEqual(globalThis.reexportNamedImporterAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.reexportStarImporterRuns, 2);
-			import_node_assert_00.default.strictEqual(globalThis.reexportStarImporterAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.multiRecordImporterRuns, 2);
-			import_node_assert_00.default.strictEqual(globalThis.multiRecordImporterSaw, "1b2");
-			import_node_assert_00.default.strictEqual(globalThis.multiRecordImporterAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.namedAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.nonAcceptedAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.promotedAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.sideEffectAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.defaultImportAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.dynamicImportAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.reexportNamedAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.reexportStarAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.multiRecordAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.namedImporterRuns, 1);
+			import_node_assert_30.default.strictEqual(globalThis.promotedImporterRuns, 1);
+			import_node_assert_30.default.strictEqual(globalThis.sideEffectImporterRuns, 1);
+			import_node_assert_30.default.strictEqual(globalThis.defaultImportImporterRuns, 1);
+			import_node_assert_30.default.strictEqual(globalThis.namedImporterSawA, 0);
+			import_node_assert_30.default.strictEqual(globalThis.defaultImportImporterSaw, 0);
+			import_node_assert_30.default.strictEqual(globalThis.nonAcceptedImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.nonAcceptedImporterSawB, "b2");
+			import_node_assert_30.default.strictEqual(globalThis.nonAcceptedImporterAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.dynamicImportImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.dynamicImportImporterSawA, 1);
+			import_node_assert_30.default.strictEqual(globalThis.reexportNamedImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.reexportNamedImporterAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.reexportStarImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.reexportStarImporterAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.multiRecordImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.multiRecordImporterSaw, "1b2");
+			import_node_assert_30.default.strictEqual(globalThis.multiRecordImporterAcceptCount, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region multi_record/importer.js
+__rolldown_runtime__.registerFactory("multi_record/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("multi_record/target.js");
+		var import_target_40 = __rolldown_runtime__.loadExports("multi_record/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.multiRecordImporterRuns ??= 0;
+		globalThis.multiRecordImporterRuns++;
+		globalThis.multiRecordImporterSaw = `${import_target_40.a}${import_target_40.b}`;
+		globalThis.multiRecordImporterAcceptCount ??= 0;
+		hot_importer.accept(() => {
+			globalThis.multiRecordImporterAcceptCount++;
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region multi_record/target.js
+import * as import_node_assert_50 from "node:assert";
+__rolldown_runtime__.registerFactory("multi_record/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 0;
+		const b = "b";
+		globalThis.multiRecordAcceptCount ??= 0;
+		hot_target.acceptExports(["a"], (mod) => {
+			globalThis.multiRecordAcceptCount++;
+			import_node_assert_50.default.strictEqual(mod.a, 1);
 		});
 	} finally {}
 }));
@@ -384,17 +475,17 @@ __rolldown_runtime__.registerFactory("named/importer.js", (function(__rolldown_m
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("named/target.js");
-		var import_target_10 = __rolldown_runtime__.loadExports("named/target.js");
+		var import_target_60 = __rolldown_runtime__.loadExports("named/target.js");
 		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		globalThis.namedImporterRuns ??= 0;
 		globalThis.namedImporterRuns++;
-		globalThis.namedImporterSawA = import_target_10.a;
+		globalThis.namedImporterSawA = import_target_60.a;
 	} finally {}
 }));
 
 //#endregion
 //#region named/target.js
-import * as import_node_assert_20 from "node:assert";
+import * as import_node_assert_70 from "node:assert";
 __rolldown_runtime__.registerFactory("named/target.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
@@ -406,10 +497,194 @@ __rolldown_runtime__.registerFactory("named/target.js", (function(__rolldown_mod
 		const a = 1;
 		const b = "b";
 		hot_target.acceptExports(["a"], () => {
-			import_node_assert_20.default.fail("the last generation has no further edit to accept");
+			import_node_assert_70.default.fail("the last generation has no further edit to accept");
 		});
 	} finally {}
 }), 1);
+
+//#endregion
+//#region non_accepted/importer.js
+__rolldown_runtime__.registerFactory("non_accepted/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("non_accepted/target.js");
+		var import_target_80 = __rolldown_runtime__.loadExports("non_accepted/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.nonAcceptedImporterRuns ??= 0;
+		globalThis.nonAcceptedImporterRuns++;
+		globalThis.nonAcceptedImporterSawB = import_target_80.b;
+		globalThis.nonAcceptedImporterAcceptCount ??= 0;
+		hot_importer.accept(() => {
+			globalThis.nonAcceptedImporterAcceptCount++;
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region non_accepted/target.js
+import * as import_node_assert_90 from "node:assert";
+__rolldown_runtime__.registerFactory("non_accepted/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 0;
+		const b = "b";
+		globalThis.nonAcceptedAcceptCount ??= 0;
+		hot_target.acceptExports(["a"], (mod) => {
+			globalThis.nonAcceptedAcceptCount++;
+			import_node_assert_90.default.strictEqual(mod.a, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region promoted/importer.js
+__rolldown_runtime__.registerFactory("promoted/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("promoted/target.js");
+		var import_target_100 = __rolldown_runtime__.loadExports("promoted/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.promotedImporterRuns ??= 0;
+		globalThis.promotedImporterRuns++;
+	} finally {}
+}));
+
+//#endregion
+//#region promoted/target.js
+import * as import_node_assert_110 from "node:assert";
+__rolldown_runtime__.registerFactory("promoted/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 0;
+		const b = "b";
+		globalThis.promotedAcceptCount ??= 0;
+		hot_target.acceptExports(["a", "b"], (mod) => {
+			globalThis.promotedAcceptCount++;
+			import_node_assert_110.default.strictEqual(mod.a, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region reexport_named/importer.js
+__rolldown_runtime__.registerFactory("reexport_named/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ b: () => import_target_120.b });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("reexport_named/target.js");
+		var import_target_120 = __rolldown_runtime__.loadExports("reexport_named/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.reexportNamedImporterRuns ??= 0;
+		globalThis.reexportNamedImporterRuns++;
+		globalThis.reexportNamedImporterAcceptCount ??= 0;
+		hot_importer.accept(() => {
+			globalThis.reexportNamedImporterAcceptCount++;
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region reexport_named/target.js
+import * as import_node_assert_130 from "node:assert";
+__rolldown_runtime__.registerFactory("reexport_named/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 0;
+		const b = "b";
+		globalThis.reexportNamedAcceptCount ??= 0;
+		hot_target?.acceptExports(["a"], (mod) => {
+			globalThis.reexportNamedAcceptCount++;
+			import_node_assert_130.default.strictEqual(mod.a, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region reexport_star/importer.js
+__rolldown_runtime__.registerFactory("reexport_star/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({}, 2);
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("reexport_star/target.js");
+		__rolldown_runtime__.__reExport(__rolldown_exports__, __rolldown_runtime__.loadExports("reexport_star/target.js"));
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.reexportStarImporterRuns ??= 0;
+		globalThis.reexportStarImporterRuns++;
+		globalThis.reexportStarImporterAcceptCount ??= 0;
+		hot_importer.accept(() => {
+			globalThis.reexportStarImporterAcceptCount++;
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region reexport_star/target.js
+import * as import_node_assert_150 from "node:assert";
+__rolldown_runtime__.registerFactory("reexport_star/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 0;
+		const b = "b";
+		globalThis.reexportStarAcceptCount ??= 0;
+		hot_target.acceptExports(["a"], (mod) => {
+			globalThis.reexportStarAcceptCount++;
+			import_node_assert_150.default.strictEqual(mod.a, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region side_effect/importer.js
+__rolldown_runtime__.registerFactory("side_effect/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("side_effect/target.js");
+		var import_target_160 = __rolldown_runtime__.loadExports("side_effect/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.sideEffectImporterRuns ??= 0;
+		globalThis.sideEffectImporterRuns++;
+	} finally {}
+}));
+
+//#endregion
+//#region side_effect/target.js
+import * as import_node_assert_170 from "node:assert";
+__rolldown_runtime__.registerFactory("side_effect/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ a: () => a });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 0;
+		globalThis.sideEffectAcceptCount ??= 0;
+		hot_target.acceptExports([], (mod) => {
+			globalThis.sideEffectAcceptCount++;
+			import_node_assert_170.default.strictEqual(mod.a, 1);
+		});
+	} finally {}
+}));
 
 //#endregion
 ```
@@ -481,64 +756,227 @@ __rolldown_runtime__.registerFactory("non_accepted/target.js", (function(__rolld
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["main.js","promoted/importer.js","promoted/target.js","named/importer.js","non_accepted/importer.js","side_effect/importer.js","default_import/importer.js","dynamic_import/importer.js","reexport_named/importer.js","reexport_star/importer.js","multi_record/importer.js"],localCount:3,edges:[[3,4,1,5,6,7,8,9,10],[2],[]],bindings:{1:[["*"]]},stamps:{2:3},entries:[0]});
+__rolldown_runtime__.registerGraph({ids:["default_import/importer.js","default_import/target.js","dynamic_import/importer.js","main.js","multi_record/importer.js","multi_record/target.js","named/importer.js","named/target.js","non_accepted/importer.js","non_accepted/target.js","promoted/importer.js","promoted/target.js","reexport_named/importer.js","reexport_named/target.js","reexport_star/importer.js","reexport_star/target.js","side_effect/importer.js","side_effect/target.js","dynamic_import/target.js"],localCount:18,edges:[[1],[],[],[6,8,10,16,0,2,12,14,4],[5],[],[7],[],[9],[],[11],[],[13],[],[15],[],[17],[]],bindings:{0:[["default"]],4:[["a","b"]],6:[["a"]],8:[["b"]],10:[["*"]],12:[["b"]],14:[["*"]],16:[[]]},dynamicEdges:{2:[18]},stamps:{7:1,9:2,11:3},entries:[3]});
+//#region default_import/importer.js
+__rolldown_runtime__.registerFactory("default_import/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("default_import/target.js");
+		var import_target_00 = __rolldown_runtime__.loadExports("default_import/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.defaultImportImporterRuns ??= 0;
+		globalThis.defaultImportImporterRuns++;
+		globalThis.defaultImportImporterSaw = import_target_00.default;
+	} finally {}
+}));
+
+//#endregion
+//#region default_import/target.js
+import * as import_node_assert_10 from "node:assert";
+__rolldown_runtime__.registerFactory("default_import/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			default: () => __rolldown_default__,
+			a: () => a
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		var __rolldown_default__ = 0;
+		const a = "a";
+		globalThis.defaultImportAcceptCount ??= 0;
+		hot_target.acceptExports(["default"], (mod) => {
+			globalThis.defaultImportAcceptCount++;
+			import_node_assert_10.default.strictEqual(mod.default, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region dynamic_import/importer.js
+__rolldown_runtime__.registerFactory("dynamic_import/importer.js", (function(__rolldown_module_id__) {
+	try {
+		__rolldown_runtime__.registerModule(__rolldown_module_id__);
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.dynamicImportImporterRuns ??= 0;
+		globalThis.dynamicImportImporterRuns++;
+		(__rolldown_runtime__.initModule("dynamic_import/target.js"), Promise.resolve().then(() => __rolldown_runtime__.loadExports("dynamic_import/target.js"))).then((mod) => {
+			globalThis.dynamicImportImporterSawA = mod.a;
+		});
+		hot_importer.accept();
+	} finally {}
+}));
+
+//#endregion
 //#region main.js
-import * as import_node_assert_00 from "node:assert";
+import * as import_node_assert_30 from "node:assert";
 __rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("named/importer.js");
-		var import_importer_01 = __rolldown_runtime__.loadExports("named/importer.js");
+		var import_importer_31 = __rolldown_runtime__.loadExports("named/importer.js");
 		__rolldown_runtime__.initModule("non_accepted/importer.js");
-		var import_importer_02 = __rolldown_runtime__.loadExports("non_accepted/importer.js");
+		var import_importer_32 = __rolldown_runtime__.loadExports("non_accepted/importer.js");
 		__rolldown_runtime__.initModule("promoted/importer.js");
-		var import_importer_03 = __rolldown_runtime__.loadExports("promoted/importer.js");
+		var import_importer_33 = __rolldown_runtime__.loadExports("promoted/importer.js");
 		__rolldown_runtime__.initModule("side_effect/importer.js");
-		var import_importer_04 = __rolldown_runtime__.loadExports("side_effect/importer.js");
+		var import_importer_34 = __rolldown_runtime__.loadExports("side_effect/importer.js");
 		__rolldown_runtime__.initModule("default_import/importer.js");
-		var import_importer_05 = __rolldown_runtime__.loadExports("default_import/importer.js");
+		var import_importer_35 = __rolldown_runtime__.loadExports("default_import/importer.js");
 		__rolldown_runtime__.initModule("dynamic_import/importer.js");
-		var import_importer_06 = __rolldown_runtime__.loadExports("dynamic_import/importer.js");
+		var import_importer_36 = __rolldown_runtime__.loadExports("dynamic_import/importer.js");
 		__rolldown_runtime__.initModule("reexport_named/importer.js");
-		var import_importer_07 = __rolldown_runtime__.loadExports("reexport_named/importer.js");
+		var import_importer_37 = __rolldown_runtime__.loadExports("reexport_named/importer.js");
 		__rolldown_runtime__.initModule("reexport_star/importer.js");
-		var import_importer_08 = __rolldown_runtime__.loadExports("reexport_star/importer.js");
+		var import_importer_38 = __rolldown_runtime__.loadExports("reexport_star/importer.js");
 		__rolldown_runtime__.initModule("multi_record/importer.js");
-		var import_importer_09 = __rolldown_runtime__.loadExports("multi_record/importer.js");
+		var import_importer_39 = __rolldown_runtime__.loadExports("multi_record/importer.js");
 		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		process.on("beforeExit", (code) => {
 			if (code !== 0) return;
-			import_node_assert_00.default.strictEqual(globalThis.namedAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.nonAcceptedAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.promotedAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.sideEffectAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.defaultImportAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.dynamicImportAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.reexportNamedAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.reexportStarAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.multiRecordAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.namedImporterRuns, 1);
-			import_node_assert_00.default.strictEqual(globalThis.promotedImporterRuns, 1);
-			import_node_assert_00.default.strictEqual(globalThis.sideEffectImporterRuns, 1);
-			import_node_assert_00.default.strictEqual(globalThis.defaultImportImporterRuns, 1);
-			import_node_assert_00.default.strictEqual(globalThis.namedImporterSawA, 0);
-			import_node_assert_00.default.strictEqual(globalThis.defaultImportImporterSaw, 0);
-			import_node_assert_00.default.strictEqual(globalThis.nonAcceptedImporterRuns, 2);
-			import_node_assert_00.default.strictEqual(globalThis.nonAcceptedImporterSawB, "b2");
-			import_node_assert_00.default.strictEqual(globalThis.nonAcceptedImporterAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.dynamicImportImporterRuns, 2);
-			import_node_assert_00.default.strictEqual(globalThis.dynamicImportImporterSawA, 1);
-			import_node_assert_00.default.strictEqual(globalThis.reexportNamedImporterRuns, 2);
-			import_node_assert_00.default.strictEqual(globalThis.reexportNamedImporterAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.reexportStarImporterRuns, 2);
-			import_node_assert_00.default.strictEqual(globalThis.reexportStarImporterAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.multiRecordImporterRuns, 2);
-			import_node_assert_00.default.strictEqual(globalThis.multiRecordImporterSaw, "1b2");
-			import_node_assert_00.default.strictEqual(globalThis.multiRecordImporterAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.namedAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.nonAcceptedAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.promotedAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.sideEffectAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.defaultImportAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.dynamicImportAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.reexportNamedAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.reexportStarAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.multiRecordAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.namedImporterRuns, 1);
+			import_node_assert_30.default.strictEqual(globalThis.promotedImporterRuns, 1);
+			import_node_assert_30.default.strictEqual(globalThis.sideEffectImporterRuns, 1);
+			import_node_assert_30.default.strictEqual(globalThis.defaultImportImporterRuns, 1);
+			import_node_assert_30.default.strictEqual(globalThis.namedImporterSawA, 0);
+			import_node_assert_30.default.strictEqual(globalThis.defaultImportImporterSaw, 0);
+			import_node_assert_30.default.strictEqual(globalThis.nonAcceptedImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.nonAcceptedImporterSawB, "b2");
+			import_node_assert_30.default.strictEqual(globalThis.nonAcceptedImporterAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.dynamicImportImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.dynamicImportImporterSawA, 1);
+			import_node_assert_30.default.strictEqual(globalThis.reexportNamedImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.reexportNamedImporterAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.reexportStarImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.reexportStarImporterAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.multiRecordImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.multiRecordImporterSaw, "1b2");
+			import_node_assert_30.default.strictEqual(globalThis.multiRecordImporterAcceptCount, 1);
 		});
 	} finally {}
 }));
+
+//#endregion
+//#region multi_record/importer.js
+__rolldown_runtime__.registerFactory("multi_record/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("multi_record/target.js");
+		var import_target_40 = __rolldown_runtime__.loadExports("multi_record/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.multiRecordImporterRuns ??= 0;
+		globalThis.multiRecordImporterRuns++;
+		globalThis.multiRecordImporterSaw = `${import_target_40.a}${import_target_40.b}`;
+		globalThis.multiRecordImporterAcceptCount ??= 0;
+		hot_importer.accept(() => {
+			globalThis.multiRecordImporterAcceptCount++;
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region multi_record/target.js
+import * as import_node_assert_50 from "node:assert";
+__rolldown_runtime__.registerFactory("multi_record/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 0;
+		const b = "b";
+		globalThis.multiRecordAcceptCount ??= 0;
+		hot_target.acceptExports(["a"], (mod) => {
+			globalThis.multiRecordAcceptCount++;
+			import_node_assert_50.default.strictEqual(mod.a, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region named/importer.js
+__rolldown_runtime__.registerFactory("named/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("named/target.js");
+		var import_target_60 = __rolldown_runtime__.loadExports("named/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.namedImporterRuns ??= 0;
+		globalThis.namedImporterRuns++;
+		globalThis.namedImporterSawA = import_target_60.a;
+	} finally {}
+}));
+
+//#endregion
+//#region named/target.js
+import * as import_node_assert_70 from "node:assert";
+__rolldown_runtime__.registerFactory("named/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 1;
+		const b = "b";
+		hot_target.acceptExports(["a"], () => {
+			import_node_assert_70.default.fail("the last generation has no further edit to accept");
+		});
+	} finally {}
+}), 1);
+
+//#endregion
+//#region non_accepted/importer.js
+__rolldown_runtime__.registerFactory("non_accepted/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("non_accepted/target.js");
+		var import_target_80 = __rolldown_runtime__.loadExports("non_accepted/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.nonAcceptedImporterRuns ??= 0;
+		globalThis.nonAcceptedImporterRuns++;
+		globalThis.nonAcceptedImporterSawB = import_target_80.b;
+		globalThis.nonAcceptedImporterAcceptCount ??= 0;
+		hot_importer.accept(() => {
+			globalThis.nonAcceptedImporterAcceptCount++;
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region non_accepted/target.js
+import * as import_node_assert_90 from "node:assert";
+__rolldown_runtime__.registerFactory("non_accepted/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 1;
+		const b = "b2";
+		hot_target.acceptExports(["a"], () => {
+			import_node_assert_90.default.fail("the last generation has no further edit to accept");
+		});
+	} finally {}
+}), 2);
 
 //#endregion
 //#region promoted/importer.js
@@ -547,7 +985,7 @@ __rolldown_runtime__.registerFactory("promoted/importer.js", (function(__rolldow
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("promoted/target.js");
-		var import_target_10 = __rolldown_runtime__.loadExports("promoted/target.js");
+		var import_target_100 = __rolldown_runtime__.loadExports("promoted/target.js");
 		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		globalThis.promotedImporterRuns ??= 0;
 		globalThis.promotedImporterRuns++;
@@ -556,7 +994,7 @@ __rolldown_runtime__.registerFactory("promoted/importer.js", (function(__rolldow
 
 //#endregion
 //#region promoted/target.js
-import * as import_node_assert_20 from "node:assert";
+import * as import_node_assert_110 from "node:assert";
 __rolldown_runtime__.registerFactory("promoted/target.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
@@ -568,10 +1006,119 @@ __rolldown_runtime__.registerFactory("promoted/target.js", (function(__rolldown_
 		const a = 1;
 		const b = "b";
 		hot_target.acceptExports(["a", "b"], () => {
-			import_node_assert_20.default.fail("the last generation has no further edit to accept");
+			import_node_assert_110.default.fail("the last generation has no further edit to accept");
 		});
 	} finally {}
 }), 3);
+
+//#endregion
+//#region reexport_named/importer.js
+__rolldown_runtime__.registerFactory("reexport_named/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ b: () => import_target_120.b });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("reexport_named/target.js");
+		var import_target_120 = __rolldown_runtime__.loadExports("reexport_named/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.reexportNamedImporterRuns ??= 0;
+		globalThis.reexportNamedImporterRuns++;
+		globalThis.reexportNamedImporterAcceptCount ??= 0;
+		hot_importer.accept(() => {
+			globalThis.reexportNamedImporterAcceptCount++;
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region reexport_named/target.js
+import * as import_node_assert_130 from "node:assert";
+__rolldown_runtime__.registerFactory("reexport_named/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 0;
+		const b = "b";
+		globalThis.reexportNamedAcceptCount ??= 0;
+		hot_target?.acceptExports(["a"], (mod) => {
+			globalThis.reexportNamedAcceptCount++;
+			import_node_assert_130.default.strictEqual(mod.a, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region reexport_star/importer.js
+__rolldown_runtime__.registerFactory("reexport_star/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({}, 2);
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("reexport_star/target.js");
+		__rolldown_runtime__.__reExport(__rolldown_exports__, __rolldown_runtime__.loadExports("reexport_star/target.js"));
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.reexportStarImporterRuns ??= 0;
+		globalThis.reexportStarImporterRuns++;
+		globalThis.reexportStarImporterAcceptCount ??= 0;
+		hot_importer.accept(() => {
+			globalThis.reexportStarImporterAcceptCount++;
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region reexport_star/target.js
+import * as import_node_assert_150 from "node:assert";
+__rolldown_runtime__.registerFactory("reexport_star/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 0;
+		const b = "b";
+		globalThis.reexportStarAcceptCount ??= 0;
+		hot_target.acceptExports(["a"], (mod) => {
+			globalThis.reexportStarAcceptCount++;
+			import_node_assert_150.default.strictEqual(mod.a, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region side_effect/importer.js
+__rolldown_runtime__.registerFactory("side_effect/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("side_effect/target.js");
+		var import_target_160 = __rolldown_runtime__.loadExports("side_effect/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.sideEffectImporterRuns ??= 0;
+		globalThis.sideEffectImporterRuns++;
+	} finally {}
+}));
+
+//#endregion
+//#region side_effect/target.js
+import * as import_node_assert_170 from "node:assert";
+__rolldown_runtime__.registerFactory("side_effect/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ a: () => a });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 0;
+		globalThis.sideEffectAcceptCount ??= 0;
+		hot_target.acceptExports([], (mod) => {
+			globalThis.sideEffectAcceptCount++;
+			import_node_assert_170.default.strictEqual(mod.a, 1);
+		});
+	} finally {}
+}));
 
 //#endregion
 ```
@@ -589,61 +1136,335 @@ __rolldown_runtime__.registerFactory("promoted/target.js", (function(__rolldown_
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["main.js","side_effect/importer.js","side_effect/target.js","named/importer.js","non_accepted/importer.js","promoted/importer.js","default_import/importer.js","dynamic_import/importer.js","reexport_named/importer.js","reexport_star/importer.js","multi_record/importer.js"],localCount:3,edges:[[3,4,5,1,6,7,8,9,10],[2],[]],bindings:{1:[[]]},stamps:{2:4},entries:[0]});
+__rolldown_runtime__.registerGraph({ids:["default_import/importer.js","default_import/target.js","dynamic_import/importer.js","main.js","multi_record/importer.js","multi_record/target.js","named/importer.js","named/target.js","non_accepted/importer.js","non_accepted/target.js","promoted/importer.js","promoted/target.js","reexport_named/importer.js","reexport_named/target.js","reexport_star/importer.js","reexport_star/target.js","side_effect/importer.js","side_effect/target.js","dynamic_import/target.js"],localCount:18,edges:[[1],[],[],[6,8,10,16,0,2,12,14,4],[5],[],[7],[],[9],[],[11],[],[13],[],[15],[],[17],[]],bindings:{0:[["default"]],4:[["a","b"]],6:[["a"]],8:[["b"]],10:[["*"]],12:[["b"]],14:[["*"]],16:[[]]},dynamicEdges:{2:[18]},stamps:{7:1,9:2,11:3,17:4},entries:[3]});
+//#region default_import/importer.js
+__rolldown_runtime__.registerFactory("default_import/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("default_import/target.js");
+		var import_target_00 = __rolldown_runtime__.loadExports("default_import/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.defaultImportImporterRuns ??= 0;
+		globalThis.defaultImportImporterRuns++;
+		globalThis.defaultImportImporterSaw = import_target_00.default;
+	} finally {}
+}));
+
+//#endregion
+//#region default_import/target.js
+import * as import_node_assert_10 from "node:assert";
+__rolldown_runtime__.registerFactory("default_import/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			default: () => __rolldown_default__,
+			a: () => a
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		var __rolldown_default__ = 0;
+		const a = "a";
+		globalThis.defaultImportAcceptCount ??= 0;
+		hot_target.acceptExports(["default"], (mod) => {
+			globalThis.defaultImportAcceptCount++;
+			import_node_assert_10.default.strictEqual(mod.default, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region dynamic_import/importer.js
+__rolldown_runtime__.registerFactory("dynamic_import/importer.js", (function(__rolldown_module_id__) {
+	try {
+		__rolldown_runtime__.registerModule(__rolldown_module_id__);
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.dynamicImportImporterRuns ??= 0;
+		globalThis.dynamicImportImporterRuns++;
+		(__rolldown_runtime__.initModule("dynamic_import/target.js"), Promise.resolve().then(() => __rolldown_runtime__.loadExports("dynamic_import/target.js"))).then((mod) => {
+			globalThis.dynamicImportImporterSawA = mod.a;
+		});
+		hot_importer.accept();
+	} finally {}
+}));
+
+//#endregion
 //#region main.js
-import * as import_node_assert_00 from "node:assert";
+import * as import_node_assert_30 from "node:assert";
 __rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("named/importer.js");
-		var import_importer_01 = __rolldown_runtime__.loadExports("named/importer.js");
+		var import_importer_31 = __rolldown_runtime__.loadExports("named/importer.js");
 		__rolldown_runtime__.initModule("non_accepted/importer.js");
-		var import_importer_02 = __rolldown_runtime__.loadExports("non_accepted/importer.js");
+		var import_importer_32 = __rolldown_runtime__.loadExports("non_accepted/importer.js");
 		__rolldown_runtime__.initModule("promoted/importer.js");
-		var import_importer_03 = __rolldown_runtime__.loadExports("promoted/importer.js");
+		var import_importer_33 = __rolldown_runtime__.loadExports("promoted/importer.js");
 		__rolldown_runtime__.initModule("side_effect/importer.js");
-		var import_importer_04 = __rolldown_runtime__.loadExports("side_effect/importer.js");
+		var import_importer_34 = __rolldown_runtime__.loadExports("side_effect/importer.js");
 		__rolldown_runtime__.initModule("default_import/importer.js");
-		var import_importer_05 = __rolldown_runtime__.loadExports("default_import/importer.js");
+		var import_importer_35 = __rolldown_runtime__.loadExports("default_import/importer.js");
 		__rolldown_runtime__.initModule("dynamic_import/importer.js");
-		var import_importer_06 = __rolldown_runtime__.loadExports("dynamic_import/importer.js");
+		var import_importer_36 = __rolldown_runtime__.loadExports("dynamic_import/importer.js");
 		__rolldown_runtime__.initModule("reexport_named/importer.js");
-		var import_importer_07 = __rolldown_runtime__.loadExports("reexport_named/importer.js");
+		var import_importer_37 = __rolldown_runtime__.loadExports("reexport_named/importer.js");
 		__rolldown_runtime__.initModule("reexport_star/importer.js");
-		var import_importer_08 = __rolldown_runtime__.loadExports("reexport_star/importer.js");
+		var import_importer_38 = __rolldown_runtime__.loadExports("reexport_star/importer.js");
 		__rolldown_runtime__.initModule("multi_record/importer.js");
-		var import_importer_09 = __rolldown_runtime__.loadExports("multi_record/importer.js");
+		var import_importer_39 = __rolldown_runtime__.loadExports("multi_record/importer.js");
 		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		process.on("beforeExit", (code) => {
 			if (code !== 0) return;
-			import_node_assert_00.default.strictEqual(globalThis.namedAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.nonAcceptedAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.promotedAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.sideEffectAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.defaultImportAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.dynamicImportAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.reexportNamedAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.reexportStarAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.multiRecordAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.namedImporterRuns, 1);
-			import_node_assert_00.default.strictEqual(globalThis.promotedImporterRuns, 1);
-			import_node_assert_00.default.strictEqual(globalThis.sideEffectImporterRuns, 1);
-			import_node_assert_00.default.strictEqual(globalThis.defaultImportImporterRuns, 1);
-			import_node_assert_00.default.strictEqual(globalThis.namedImporterSawA, 0);
-			import_node_assert_00.default.strictEqual(globalThis.defaultImportImporterSaw, 0);
-			import_node_assert_00.default.strictEqual(globalThis.nonAcceptedImporterRuns, 2);
-			import_node_assert_00.default.strictEqual(globalThis.nonAcceptedImporterSawB, "b2");
-			import_node_assert_00.default.strictEqual(globalThis.nonAcceptedImporterAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.dynamicImportImporterRuns, 2);
-			import_node_assert_00.default.strictEqual(globalThis.dynamicImportImporterSawA, 1);
-			import_node_assert_00.default.strictEqual(globalThis.reexportNamedImporterRuns, 2);
-			import_node_assert_00.default.strictEqual(globalThis.reexportNamedImporterAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.reexportStarImporterRuns, 2);
-			import_node_assert_00.default.strictEqual(globalThis.reexportStarImporterAcceptCount, 1);
-			import_node_assert_00.default.strictEqual(globalThis.multiRecordImporterRuns, 2);
-			import_node_assert_00.default.strictEqual(globalThis.multiRecordImporterSaw, "1b2");
-			import_node_assert_00.default.strictEqual(globalThis.multiRecordImporterAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.namedAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.nonAcceptedAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.promotedAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.sideEffectAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.defaultImportAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.dynamicImportAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.reexportNamedAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.reexportStarAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.multiRecordAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.namedImporterRuns, 1);
+			import_node_assert_30.default.strictEqual(globalThis.promotedImporterRuns, 1);
+			import_node_assert_30.default.strictEqual(globalThis.sideEffectImporterRuns, 1);
+			import_node_assert_30.default.strictEqual(globalThis.defaultImportImporterRuns, 1);
+			import_node_assert_30.default.strictEqual(globalThis.namedImporterSawA, 0);
+			import_node_assert_30.default.strictEqual(globalThis.defaultImportImporterSaw, 0);
+			import_node_assert_30.default.strictEqual(globalThis.nonAcceptedImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.nonAcceptedImporterSawB, "b2");
+			import_node_assert_30.default.strictEqual(globalThis.nonAcceptedImporterAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.dynamicImportImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.dynamicImportImporterSawA, 1);
+			import_node_assert_30.default.strictEqual(globalThis.reexportNamedImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.reexportNamedImporterAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.reexportStarImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.reexportStarImporterAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.multiRecordImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.multiRecordImporterSaw, "1b2");
+			import_node_assert_30.default.strictEqual(globalThis.multiRecordImporterAcceptCount, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region multi_record/importer.js
+__rolldown_runtime__.registerFactory("multi_record/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("multi_record/target.js");
+		var import_target_40 = __rolldown_runtime__.loadExports("multi_record/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.multiRecordImporterRuns ??= 0;
+		globalThis.multiRecordImporterRuns++;
+		globalThis.multiRecordImporterSaw = `${import_target_40.a}${import_target_40.b}`;
+		globalThis.multiRecordImporterAcceptCount ??= 0;
+		hot_importer.accept(() => {
+			globalThis.multiRecordImporterAcceptCount++;
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region multi_record/target.js
+import * as import_node_assert_50 from "node:assert";
+__rolldown_runtime__.registerFactory("multi_record/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 0;
+		const b = "b";
+		globalThis.multiRecordAcceptCount ??= 0;
+		hot_target.acceptExports(["a"], (mod) => {
+			globalThis.multiRecordAcceptCount++;
+			import_node_assert_50.default.strictEqual(mod.a, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region named/importer.js
+__rolldown_runtime__.registerFactory("named/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("named/target.js");
+		var import_target_60 = __rolldown_runtime__.loadExports("named/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.namedImporterRuns ??= 0;
+		globalThis.namedImporterRuns++;
+		globalThis.namedImporterSawA = import_target_60.a;
+	} finally {}
+}));
+
+//#endregion
+//#region named/target.js
+import * as import_node_assert_70 from "node:assert";
+__rolldown_runtime__.registerFactory("named/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 1;
+		const b = "b";
+		hot_target.acceptExports(["a"], () => {
+			import_node_assert_70.default.fail("the last generation has no further edit to accept");
+		});
+	} finally {}
+}), 1);
+
+//#endregion
+//#region non_accepted/importer.js
+__rolldown_runtime__.registerFactory("non_accepted/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("non_accepted/target.js");
+		var import_target_80 = __rolldown_runtime__.loadExports("non_accepted/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.nonAcceptedImporterRuns ??= 0;
+		globalThis.nonAcceptedImporterRuns++;
+		globalThis.nonAcceptedImporterSawB = import_target_80.b;
+		globalThis.nonAcceptedImporterAcceptCount ??= 0;
+		hot_importer.accept(() => {
+			globalThis.nonAcceptedImporterAcceptCount++;
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region non_accepted/target.js
+import * as import_node_assert_90 from "node:assert";
+__rolldown_runtime__.registerFactory("non_accepted/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 1;
+		const b = "b2";
+		hot_target.acceptExports(["a"], () => {
+			import_node_assert_90.default.fail("the last generation has no further edit to accept");
+		});
+	} finally {}
+}), 2);
+
+//#endregion
+//#region promoted/importer.js
+__rolldown_runtime__.registerFactory("promoted/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("promoted/target.js");
+		var import_target_100 = __rolldown_runtime__.loadExports("promoted/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.promotedImporterRuns ??= 0;
+		globalThis.promotedImporterRuns++;
+	} finally {}
+}));
+
+//#endregion
+//#region promoted/target.js
+import * as import_node_assert_110 from "node:assert";
+__rolldown_runtime__.registerFactory("promoted/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 1;
+		const b = "b";
+		hot_target.acceptExports(["a", "b"], () => {
+			import_node_assert_110.default.fail("the last generation has no further edit to accept");
+		});
+	} finally {}
+}), 3);
+
+//#endregion
+//#region reexport_named/importer.js
+__rolldown_runtime__.registerFactory("reexport_named/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ b: () => import_target_120.b });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("reexport_named/target.js");
+		var import_target_120 = __rolldown_runtime__.loadExports("reexport_named/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.reexportNamedImporterRuns ??= 0;
+		globalThis.reexportNamedImporterRuns++;
+		globalThis.reexportNamedImporterAcceptCount ??= 0;
+		hot_importer.accept(() => {
+			globalThis.reexportNamedImporterAcceptCount++;
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region reexport_named/target.js
+import * as import_node_assert_130 from "node:assert";
+__rolldown_runtime__.registerFactory("reexport_named/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 0;
+		const b = "b";
+		globalThis.reexportNamedAcceptCount ??= 0;
+		hot_target?.acceptExports(["a"], (mod) => {
+			globalThis.reexportNamedAcceptCount++;
+			import_node_assert_130.default.strictEqual(mod.a, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region reexport_star/importer.js
+__rolldown_runtime__.registerFactory("reexport_star/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({}, 2);
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("reexport_star/target.js");
+		__rolldown_runtime__.__reExport(__rolldown_exports__, __rolldown_runtime__.loadExports("reexport_star/target.js"));
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.reexportStarImporterRuns ??= 0;
+		globalThis.reexportStarImporterRuns++;
+		globalThis.reexportStarImporterAcceptCount ??= 0;
+		hot_importer.accept(() => {
+			globalThis.reexportStarImporterAcceptCount++;
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region reexport_star/target.js
+import * as import_node_assert_150 from "node:assert";
+__rolldown_runtime__.registerFactory("reexport_star/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 0;
+		const b = "b";
+		globalThis.reexportStarAcceptCount ??= 0;
+		hot_target.acceptExports(["a"], (mod) => {
+			globalThis.reexportStarAcceptCount++;
+			import_node_assert_150.default.strictEqual(mod.a, 1);
 		});
 	} finally {}
 }));
@@ -655,7 +1476,7 @@ __rolldown_runtime__.registerFactory("side_effect/importer.js", (function(__roll
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("side_effect/target.js");
-		var import_target_10 = __rolldown_runtime__.loadExports("side_effect/target.js");
+		var import_target_160 = __rolldown_runtime__.loadExports("side_effect/target.js");
 		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		globalThis.sideEffectImporterRuns ??= 0;
 		globalThis.sideEffectImporterRuns++;
@@ -664,7 +1485,7 @@ __rolldown_runtime__.registerFactory("side_effect/importer.js", (function(__roll
 
 //#endregion
 //#region side_effect/target.js
-import * as import_node_assert_20 from "node:assert";
+import * as import_node_assert_170 from "node:assert";
 __rolldown_runtime__.registerFactory("side_effect/target.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ a: () => a });
@@ -672,7 +1493,7 @@ __rolldown_runtime__.registerFactory("side_effect/target.js", (function(__rolldo
 		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const a = 1;
 		hot_target.acceptExports([], () => {
-			import_node_assert_20.default.fail("the last generation has no further edit to accept");
+			import_node_assert_170.default.fail("the last generation has no further edit to accept");
 		});
 	} finally {}
 }), 4);
@@ -693,7 +1514,7 @@ __rolldown_runtime__.registerFactory("side_effect/target.js", (function(__rolldo
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["default_import/importer.js","default_import/target.js","main.js","named/importer.js","non_accepted/importer.js","promoted/importer.js","side_effect/importer.js","dynamic_import/importer.js","reexport_named/importer.js","reexport_star/importer.js","multi_record/importer.js"],localCount:3,edges:[[1],[],[3,4,5,6,0,7,8,9,10]],bindings:{0:[["default"]]},stamps:{1:5},entries:[2]});
+__rolldown_runtime__.registerGraph({ids:["default_import/importer.js","default_import/target.js","dynamic_import/importer.js","main.js","multi_record/importer.js","multi_record/target.js","named/importer.js","named/target.js","non_accepted/importer.js","non_accepted/target.js","promoted/importer.js","promoted/target.js","reexport_named/importer.js","reexport_named/target.js","reexport_star/importer.js","reexport_star/target.js","side_effect/importer.js","side_effect/target.js","dynamic_import/target.js"],localCount:18,edges:[[1],[],[],[6,8,10,16,0,2,12,14,4],[5],[],[7],[],[9],[],[11],[],[13],[],[15],[],[17],[]],bindings:{0:[["default"]],4:[["a","b"]],6:[["a"]],8:[["b"]],10:[["*"]],12:[["b"]],14:[["*"]],16:[[]]},dynamicEdges:{2:[18]},stamps:{1:5,7:1,9:2,11:3,17:4},entries:[3]});
 //#region default_import/importer.js
 __rolldown_runtime__.registerFactory("default_import/importer.js", (function(__rolldown_module_id__) {
 	try {
@@ -728,63 +1549,330 @@ __rolldown_runtime__.registerFactory("default_import/target.js", (function(__rol
 }), 5);
 
 //#endregion
+//#region dynamic_import/importer.js
+__rolldown_runtime__.registerFactory("dynamic_import/importer.js", (function(__rolldown_module_id__) {
+	try {
+		__rolldown_runtime__.registerModule(__rolldown_module_id__);
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.dynamicImportImporterRuns ??= 0;
+		globalThis.dynamicImportImporterRuns++;
+		(__rolldown_runtime__.initModule("dynamic_import/target.js"), Promise.resolve().then(() => __rolldown_runtime__.loadExports("dynamic_import/target.js"))).then((mod) => {
+			globalThis.dynamicImportImporterSawA = mod.a;
+		});
+		hot_importer.accept();
+	} finally {}
+}));
+
+//#endregion
 //#region main.js
-import * as import_node_assert_20 from "node:assert";
+import * as import_node_assert_30 from "node:assert";
 __rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("named/importer.js");
-		var import_importer_21 = __rolldown_runtime__.loadExports("named/importer.js");
+		var import_importer_31 = __rolldown_runtime__.loadExports("named/importer.js");
 		__rolldown_runtime__.initModule("non_accepted/importer.js");
-		var import_importer_22 = __rolldown_runtime__.loadExports("non_accepted/importer.js");
+		var import_importer_32 = __rolldown_runtime__.loadExports("non_accepted/importer.js");
 		__rolldown_runtime__.initModule("promoted/importer.js");
-		var import_importer_23 = __rolldown_runtime__.loadExports("promoted/importer.js");
+		var import_importer_33 = __rolldown_runtime__.loadExports("promoted/importer.js");
 		__rolldown_runtime__.initModule("side_effect/importer.js");
-		var import_importer_24 = __rolldown_runtime__.loadExports("side_effect/importer.js");
+		var import_importer_34 = __rolldown_runtime__.loadExports("side_effect/importer.js");
 		__rolldown_runtime__.initModule("default_import/importer.js");
-		var import_importer_25 = __rolldown_runtime__.loadExports("default_import/importer.js");
+		var import_importer_35 = __rolldown_runtime__.loadExports("default_import/importer.js");
 		__rolldown_runtime__.initModule("dynamic_import/importer.js");
-		var import_importer_26 = __rolldown_runtime__.loadExports("dynamic_import/importer.js");
+		var import_importer_36 = __rolldown_runtime__.loadExports("dynamic_import/importer.js");
 		__rolldown_runtime__.initModule("reexport_named/importer.js");
-		var import_importer_27 = __rolldown_runtime__.loadExports("reexport_named/importer.js");
+		var import_importer_37 = __rolldown_runtime__.loadExports("reexport_named/importer.js");
 		__rolldown_runtime__.initModule("reexport_star/importer.js");
-		var import_importer_28 = __rolldown_runtime__.loadExports("reexport_star/importer.js");
+		var import_importer_38 = __rolldown_runtime__.loadExports("reexport_star/importer.js");
 		__rolldown_runtime__.initModule("multi_record/importer.js");
-		var import_importer_29 = __rolldown_runtime__.loadExports("multi_record/importer.js");
+		var import_importer_39 = __rolldown_runtime__.loadExports("multi_record/importer.js");
 		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		process.on("beforeExit", (code) => {
 			if (code !== 0) return;
-			import_node_assert_20.default.strictEqual(globalThis.namedAcceptCount, 1);
-			import_node_assert_20.default.strictEqual(globalThis.nonAcceptedAcceptCount, 1);
-			import_node_assert_20.default.strictEqual(globalThis.promotedAcceptCount, 1);
-			import_node_assert_20.default.strictEqual(globalThis.sideEffectAcceptCount, 1);
-			import_node_assert_20.default.strictEqual(globalThis.defaultImportAcceptCount, 1);
-			import_node_assert_20.default.strictEqual(globalThis.dynamicImportAcceptCount, 1);
-			import_node_assert_20.default.strictEqual(globalThis.reexportNamedAcceptCount, 1);
-			import_node_assert_20.default.strictEqual(globalThis.reexportStarAcceptCount, 1);
-			import_node_assert_20.default.strictEqual(globalThis.multiRecordAcceptCount, 1);
-			import_node_assert_20.default.strictEqual(globalThis.namedImporterRuns, 1);
-			import_node_assert_20.default.strictEqual(globalThis.promotedImporterRuns, 1);
-			import_node_assert_20.default.strictEqual(globalThis.sideEffectImporterRuns, 1);
-			import_node_assert_20.default.strictEqual(globalThis.defaultImportImporterRuns, 1);
-			import_node_assert_20.default.strictEqual(globalThis.namedImporterSawA, 0);
-			import_node_assert_20.default.strictEqual(globalThis.defaultImportImporterSaw, 0);
-			import_node_assert_20.default.strictEqual(globalThis.nonAcceptedImporterRuns, 2);
-			import_node_assert_20.default.strictEqual(globalThis.nonAcceptedImporterSawB, "b2");
-			import_node_assert_20.default.strictEqual(globalThis.nonAcceptedImporterAcceptCount, 1);
-			import_node_assert_20.default.strictEqual(globalThis.dynamicImportImporterRuns, 2);
-			import_node_assert_20.default.strictEqual(globalThis.dynamicImportImporterSawA, 1);
-			import_node_assert_20.default.strictEqual(globalThis.reexportNamedImporterRuns, 2);
-			import_node_assert_20.default.strictEqual(globalThis.reexportNamedImporterAcceptCount, 1);
-			import_node_assert_20.default.strictEqual(globalThis.reexportStarImporterRuns, 2);
-			import_node_assert_20.default.strictEqual(globalThis.reexportStarImporterAcceptCount, 1);
-			import_node_assert_20.default.strictEqual(globalThis.multiRecordImporterRuns, 2);
-			import_node_assert_20.default.strictEqual(globalThis.multiRecordImporterSaw, "1b2");
-			import_node_assert_20.default.strictEqual(globalThis.multiRecordImporterAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.namedAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.nonAcceptedAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.promotedAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.sideEffectAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.defaultImportAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.dynamicImportAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.reexportNamedAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.reexportStarAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.multiRecordAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.namedImporterRuns, 1);
+			import_node_assert_30.default.strictEqual(globalThis.promotedImporterRuns, 1);
+			import_node_assert_30.default.strictEqual(globalThis.sideEffectImporterRuns, 1);
+			import_node_assert_30.default.strictEqual(globalThis.defaultImportImporterRuns, 1);
+			import_node_assert_30.default.strictEqual(globalThis.namedImporterSawA, 0);
+			import_node_assert_30.default.strictEqual(globalThis.defaultImportImporterSaw, 0);
+			import_node_assert_30.default.strictEqual(globalThis.nonAcceptedImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.nonAcceptedImporterSawB, "b2");
+			import_node_assert_30.default.strictEqual(globalThis.nonAcceptedImporterAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.dynamicImportImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.dynamicImportImporterSawA, 1);
+			import_node_assert_30.default.strictEqual(globalThis.reexportNamedImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.reexportNamedImporterAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.reexportStarImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.reexportStarImporterAcceptCount, 1);
+			import_node_assert_30.default.strictEqual(globalThis.multiRecordImporterRuns, 2);
+			import_node_assert_30.default.strictEqual(globalThis.multiRecordImporterSaw, "1b2");
+			import_node_assert_30.default.strictEqual(globalThis.multiRecordImporterAcceptCount, 1);
 		});
 	} finally {}
 }));
+
+//#endregion
+//#region multi_record/importer.js
+__rolldown_runtime__.registerFactory("multi_record/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("multi_record/target.js");
+		var import_target_40 = __rolldown_runtime__.loadExports("multi_record/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.multiRecordImporterRuns ??= 0;
+		globalThis.multiRecordImporterRuns++;
+		globalThis.multiRecordImporterSaw = `${import_target_40.a}${import_target_40.b}`;
+		globalThis.multiRecordImporterAcceptCount ??= 0;
+		hot_importer.accept(() => {
+			globalThis.multiRecordImporterAcceptCount++;
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region multi_record/target.js
+import * as import_node_assert_50 from "node:assert";
+__rolldown_runtime__.registerFactory("multi_record/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 0;
+		const b = "b";
+		globalThis.multiRecordAcceptCount ??= 0;
+		hot_target.acceptExports(["a"], (mod) => {
+			globalThis.multiRecordAcceptCount++;
+			import_node_assert_50.default.strictEqual(mod.a, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region named/importer.js
+__rolldown_runtime__.registerFactory("named/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("named/target.js");
+		var import_target_60 = __rolldown_runtime__.loadExports("named/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.namedImporterRuns ??= 0;
+		globalThis.namedImporterRuns++;
+		globalThis.namedImporterSawA = import_target_60.a;
+	} finally {}
+}));
+
+//#endregion
+//#region named/target.js
+import * as import_node_assert_70 from "node:assert";
+__rolldown_runtime__.registerFactory("named/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 1;
+		const b = "b";
+		hot_target.acceptExports(["a"], () => {
+			import_node_assert_70.default.fail("the last generation has no further edit to accept");
+		});
+	} finally {}
+}), 1);
+
+//#endregion
+//#region non_accepted/importer.js
+__rolldown_runtime__.registerFactory("non_accepted/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("non_accepted/target.js");
+		var import_target_80 = __rolldown_runtime__.loadExports("non_accepted/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.nonAcceptedImporterRuns ??= 0;
+		globalThis.nonAcceptedImporterRuns++;
+		globalThis.nonAcceptedImporterSawB = import_target_80.b;
+		globalThis.nonAcceptedImporterAcceptCount ??= 0;
+		hot_importer.accept(() => {
+			globalThis.nonAcceptedImporterAcceptCount++;
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region non_accepted/target.js
+import * as import_node_assert_90 from "node:assert";
+__rolldown_runtime__.registerFactory("non_accepted/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 1;
+		const b = "b2";
+		hot_target.acceptExports(["a"], () => {
+			import_node_assert_90.default.fail("the last generation has no further edit to accept");
+		});
+	} finally {}
+}), 2);
+
+//#endregion
+//#region promoted/importer.js
+__rolldown_runtime__.registerFactory("promoted/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("promoted/target.js");
+		var import_target_100 = __rolldown_runtime__.loadExports("promoted/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.promotedImporterRuns ??= 0;
+		globalThis.promotedImporterRuns++;
+	} finally {}
+}));
+
+//#endregion
+//#region promoted/target.js
+import * as import_node_assert_110 from "node:assert";
+__rolldown_runtime__.registerFactory("promoted/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 1;
+		const b = "b";
+		hot_target.acceptExports(["a", "b"], () => {
+			import_node_assert_110.default.fail("the last generation has no further edit to accept");
+		});
+	} finally {}
+}), 3);
+
+//#endregion
+//#region reexport_named/importer.js
+__rolldown_runtime__.registerFactory("reexport_named/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ b: () => import_target_120.b });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("reexport_named/target.js");
+		var import_target_120 = __rolldown_runtime__.loadExports("reexport_named/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.reexportNamedImporterRuns ??= 0;
+		globalThis.reexportNamedImporterRuns++;
+		globalThis.reexportNamedImporterAcceptCount ??= 0;
+		hot_importer.accept(() => {
+			globalThis.reexportNamedImporterAcceptCount++;
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region reexport_named/target.js
+import * as import_node_assert_130 from "node:assert";
+__rolldown_runtime__.registerFactory("reexport_named/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 0;
+		const b = "b";
+		globalThis.reexportNamedAcceptCount ??= 0;
+		hot_target?.acceptExports(["a"], (mod) => {
+			globalThis.reexportNamedAcceptCount++;
+			import_node_assert_130.default.strictEqual(mod.a, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region reexport_star/importer.js
+__rolldown_runtime__.registerFactory("reexport_star/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({}, 2);
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("reexport_star/target.js");
+		__rolldown_runtime__.__reExport(__rolldown_exports__, __rolldown_runtime__.loadExports("reexport_star/target.js"));
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.reexportStarImporterRuns ??= 0;
+		globalThis.reexportStarImporterRuns++;
+		globalThis.reexportStarImporterAcceptCount ??= 0;
+		hot_importer.accept(() => {
+			globalThis.reexportStarImporterAcceptCount++;
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region reexport_star/target.js
+import * as import_node_assert_150 from "node:assert";
+__rolldown_runtime__.registerFactory("reexport_star/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			a: () => a,
+			b: () => b
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 0;
+		const b = "b";
+		globalThis.reexportStarAcceptCount ??= 0;
+		hot_target.acceptExports(["a"], (mod) => {
+			globalThis.reexportStarAcceptCount++;
+			import_node_assert_150.default.strictEqual(mod.a, 1);
+		});
+	} finally {}
+}));
+
+//#endregion
+//#region side_effect/importer.js
+__rolldown_runtime__.registerFactory("side_effect/importer.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("side_effect/target.js");
+		var import_target_160 = __rolldown_runtime__.loadExports("side_effect/target.js");
+		const hot_importer = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		globalThis.sideEffectImporterRuns ??= 0;
+		globalThis.sideEffectImporterRuns++;
+	} finally {}
+}));
+
+//#endregion
+//#region side_effect/target.js
+import * as import_node_assert_170 from "node:assert";
+__rolldown_runtime__.registerFactory("side_effect/target.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ a: () => a });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_target = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const a = 1;
+		hot_target.acceptExports([], () => {
+			import_node_assert_170.default.fail("the last generation has no further edit to accept");
+		});
+	} finally {}
+}), 4);
 
 //#endregion
 ```

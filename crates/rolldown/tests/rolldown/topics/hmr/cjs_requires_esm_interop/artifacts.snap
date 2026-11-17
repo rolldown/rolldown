@@ -84,24 +84,53 @@ process.on("beforeExit", (code) => {
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["shim.js","data.json","esm.js"],localCount:1,edges:[[1,2]],stamps:{0:1}});
+__rolldown_runtime__.registerGraph({ids:["data.json","esm.js","shim.js"],localCount:3,edges:[[],[],[0,1]],stamps:{2:1}});
+//#region data.json
+__rolldown_runtime__.registerFactory("data.json", (function(__rolldown_module_id__) {
+	try {
+		__rolldown_runtime__.registerModule(__rolldown_module_id__);
+		const hot_data = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		[
+			"a",
+			"b",
+			"c"
+		];
+	} finally {}
+}));
+
+//#endregion
+//#region esm.js
+__rolldown_runtime__.registerFactory("esm.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
+			X: () => X,
+			default: () => __rolldown_default__
+		});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_esm = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const X = 1;
+		var __rolldown_default__ = "esm-default";
+	} finally {}
+}));
+
+//#endregion
 //#region shim.js
-import * as import_node_assert_00 from "node:assert";
+import * as import_node_assert_20 from "node:assert";
 __rolldown_runtime__.registerFactory("shim.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		const hot_shim = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const tags = (__rolldown_runtime__.initModule("data.json"), __rolldown_runtime__.loadExports("data.json"));
-		import_node_assert_00.default.deepStrictEqual(tags, [
+		import_node_assert_20.default.deepStrictEqual(tags, [
 			"a",
 			"b",
 			"c"
 		]);
 		const fromEsm = (__rolldown_runtime__.initModule("esm.js"), __rolldown_runtime__.__toCommonJS(__rolldown_runtime__.loadExports("esm.js")));
-		import_node_assert_00.default.strictEqual(fromEsm.X, 1);
-		import_node_assert_00.default.strictEqual(fromEsm.default, "esm-default");
-		import_node_assert_00.default.strictEqual(fromEsm.__esModule, true);
+		import_node_assert_20.default.strictEqual(fromEsm.X, 1);
+		import_node_assert_20.default.strictEqual(fromEsm.default, "esm-default");
+		import_node_assert_20.default.strictEqual(fromEsm.__esModule, true);
 		globalThis.__cjs_requires_esm_interop_patch_ran = true;
 	} finally {}
 }), 1);

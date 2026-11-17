@@ -29,11 +29,11 @@ Data shared across all connected browser tabs:
 
 Data specific to each browser tab:
 
-| Data                  | Description                                                                                                       |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `clientId`            | Unique identifier for the browser tab                                                                             |
-| `shipped` (ship map)  | Module stable id → rebuild stamp of the factory copy this client holds; written only on the client's delivery ack |
-| `top_level_evaluated` | Boot-evaluated map: modules the entry chunk runs at top level, with stamps; frozen at hello, never written again  |
+| Data                  | Description                                                                                                                               |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `clientId`            | Unique identifier for the browser tab                                                                                                     |
+| `shipped` (ship map)  | Module stable id → rebuild stamp of the factory copy this client holds; written only on the client's delivery ack                         |
+| `top_level_evaluated` | Boot-evaluated map: the entry's source static-import closure restricted to its emitted static chunk closure, with stamps; frozen at hello |
 
 Session lifecycle:
 

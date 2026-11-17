@@ -124,7 +124,7 @@ mod tests {
     let resolved = resolve_sources_against_module(&input, module_id.to_str().unwrap()).unwrap();
     let sources = resolved.get_sources().collect::<Vec<_>>();
     assert_eq!(sources[0], None);
-    let expected = dir.join("src/a.ts");
+    let expected = dir.join("src").join("a.ts");
     assert_eq!(sources[1], expected.to_str());
     assert_eq!(resolved.get_source_root(), None);
   }

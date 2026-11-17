@@ -125,11 +125,7 @@ impl DevArtifactsSnapshot {
         let mut code_section = SnapshotSection::with_title("Code");
         let file_ext = snapshot_utils::get_normalized_extension(hmr_patch.filename.as_path());
         code_section.add_content(&format!("```{file_ext}\n"));
-        code_section.add_content(&tweak_snapshot(
-          &hmr_patch.code,
-          test_meta.hidden_runtime_module,
-          true,
-        ));
+        code_section.add_content(&tweak_snapshot(&hmr_patch.code, test_meta.hidden_runtime_module));
         code_section.add_content("\n```");
         Some(code_section)
       }

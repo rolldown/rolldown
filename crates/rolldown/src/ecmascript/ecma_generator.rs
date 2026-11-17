@@ -2,15 +2,15 @@ use std::sync::Arc;
 
 use crate::{
   stages::link_stage::LinkStageOutput,
-  types::generator::{GenerateContext, GenerateOutput, Generator},
+  types::generator::{GenerateContext, GenerateOutput},
   utils::{chunk::generate_rendered_chunk, render_ecma_module::render_ecma_module},
 };
 
 use anyhow::Result;
 use oxc_str::CompactStr;
 use rolldown_common::{
-  AddonRenderContext, ChunkIdx, EcmaAssetMeta, InstantiatedChunk, InstantiationKind, ModuleId,
-  ModuleIdx, OutputFormat, RenderedModule, StrictMode,
+  AddonRenderContext, ChunkIdx, EcmaAssetMeta, InstantiatedChunk, ModuleId, ModuleIdx,
+  OutputFormat, RenderedModule, StrictMode,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookAddonArgs;
@@ -56,9 +56,11 @@ impl RenderedModuleSource {
 
 pub struct EcmaGenerator;
 
-impl Generator for EcmaGenerator {
+impl EcmaGenerator {
   #[expect(clippy::too_many_lines)]
-  async fn instantiate_chunk(ctx: &mut GenerateContext<'_>) -> Result<BuildResult<GenerateOutput>> {
+  pub async fn instantiate_chunk(
+    ctx: &mut GenerateContext<'_>,
+  ) -> Result<BuildResult<GenerateOutput>> {
     let module_id_to_codegen_ret = std::mem::take(&mut ctx.module_id_to_codegen_ret);
     let rendered_pairs: Vec<(RenderedModuleSource, Vec<BuildDiagnostic>)> = ctx
       .chunk
@@ -323,11 +325,11 @@ impl Generator for EcmaGenerator {
     let file_dir = file_path.parent().expect("chunk file name should have a parent");
 
     Ok(Ok(GenerateOutput {
-      chunks: vec![InstantiatedChunk {
+      chunk: InstantiatedChunk {
         originate_from: ctx.chunk_idx,
         content: content.into(),
         map,
-        kind: InstantiationKind::from(EcmaAssetMeta {
+        ecma_meta: Box::new(EcmaAssetMeta {
           rendered_chunk,
           debug_id: 0,
           imports: vec![],
@@ -349,7 +351,7 @@ impl Generator for EcmaGenerator {
         augment_chunk_hash: None,
         post_banner,
         post_footer,
-      }],
+      },
       warnings,
     }))
   }

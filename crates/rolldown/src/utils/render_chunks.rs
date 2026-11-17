@@ -4,8 +4,7 @@ use anyhow::Result;
 use arcstr::ArcStr;
 use futures::future::try_join_all;
 use rolldown_common::{
-  ChunkTable, InsChunkIdx, InstantiationKind, ModuleTable, RollupRenderedChunk,
-  SharedNormalizedBundlerOptions,
+  ChunkTable, InsChunkIdx, ModuleTable, RollupRenderedChunk, SharedNormalizedBundlerOptions,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
@@ -25,12 +24,9 @@ pub async fn render_chunks(
   let chunks = Arc::new(
     assets
       .iter()
-      .filter_map(|asset| {
-        if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
-          Some((ecma_meta.rendered_chunk.filename.clone(), Arc::clone(&ecma_meta.rendered_chunk)))
-        } else {
-          None
-        }
+      .map(|asset| {
+        let rendered_chunk = &asset.ecma_meta.rendered_chunk;
+        (rendered_chunk.filename.clone(), Arc::clone(rendered_chunk))
       })
       .collect::<FxIndexMap<ArcStr, Arc<RollupRenderedChunk>>>(),
   );
@@ -38,31 +34,28 @@ pub async fn render_chunks(
   let result = try_join_all(assets.iter_mut().enumerate().map(|(index, asset)| {
     let chunks = Arc::clone(&chunks);
     async move {
-      if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
-        let render_chunk_ret = plugin_driver
-          .render_chunk(HookRenderChunkArgs {
-            code: Arc::new(std::mem::take(&mut asset.content).try_into_inner_string()?),
-            chunk: Arc::clone(
-              chunks.get(&ecma_meta.rendered_chunk.filename).expect("should have chunk"),
-            ),
-            options,
-            chunk_table,
-            module_table,
-            chunks,
-          })
-          .await?;
-        return Ok(Some((index.into(), render_chunk_ret)));
-      }
-
-      Ok::<Option<(InsChunkIdx, (String, Vec<SourceMap>, Vec<BuildDiagnostic>))>, anyhow::Error>(
-        None,
-      )
+      let render_chunk_ret = plugin_driver
+        .render_chunk(HookRenderChunkArgs {
+          code: Arc::new(std::mem::take(&mut asset.content).try_into_inner_string()?),
+          chunk: Arc::clone(
+            chunks.get(&asset.ecma_meta.rendered_chunk.filename).expect("should have chunk"),
+          ),
+          options,
+          chunk_table,
+          module_table,
+          chunks,
+        })
+        .await?;
+      Ok::<(InsChunkIdx, (String, Vec<SourceMap>, Vec<BuildDiagnostic>)), anyhow::Error>((
+        index.into(),
+        render_chunk_ret,
+      ))
     }
   }))
   .await?;
 
   let mut warnings = vec![];
-  for (index, (code, sourcemaps, chunk_warnings)) in result.into_iter().flatten() {
+  for (index, (code, sourcemaps, chunk_warnings)) in result {
     let asset = &mut assets[index];
     asset.content = code.into();
     if !sourcemaps.is_empty() {

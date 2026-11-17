@@ -2561,6 +2561,7 @@ export interface BindingInputOptions {
   devtools?: BindingDevtoolsOptions
   invalidateJsSideCache?: () => void
   resetJsModuleOptions?: () => void
+  deleteJsModuleOptions?: (moduleIds: string[]) => void
   preserveEntrySignatures?: BindingPreserveEntrySignatures
   optimization?: BindingOptimization
   context?: string

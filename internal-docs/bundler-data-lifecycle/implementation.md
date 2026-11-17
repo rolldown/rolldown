@@ -246,7 +246,7 @@ This is what fixed the bug where `this.getModuleInfo()` returned nothing on the 
 
 **Rule:** the options objects that hooks get (`NormalizedInputOptionsImpl`, `NormalizedOutputOptionsImpl`) hold plain values, not the native `BindingNormalizedOptions`. Their constructors read every `@lazyProp` getter once, then set `inner` to `null` rather than delete it, so `Object.keys()` and `{...options}` keep the same keys.
 
-**Why:** `BindingNormalizedOptions` owns an `Arc<NormalizedBundlerOptions>`, and the options own the JS option functions (`onLog`, `deferSyncScanData`, `invalidateJsSideCache`, and user functions such as `external`). Each of those functions is held by a napi threadsafe function, which is a GC root. Two of them, `deferSyncScanData` and `invalidateJsSideCache`, are always passed and capture `PluginContextData`, which caches the options objects and the plugins. An options object that kept the native object would close a loop the GC cannot see:
+**Why:** `BindingNormalizedOptions` owns an `Arc<NormalizedBundlerOptions>`, and the options own the JS option functions (`onLog`, `deferSyncScanData`, `invalidateJsSideCache`, and user functions such as `external`). Each of those functions is held by a napi threadsafe function, which is a GC root. Four of them, `deferSyncScanData`, `invalidateJsSideCache`, `resetJsModuleOptions` and `deleteJsModuleOptions`, are always passed and capture `PluginContextData`, which caches the options objects and the plugins. An options object that kept the native object would close a loop the GC cannot see:
 
 ```
 GC root → option function → PluginContextData → options object → BindingNormalizedOptions → Arc<options> → GC root
@@ -274,7 +274,7 @@ Rust keeps the JS functions of the bundler options only while their owner is ope
 
 ### The problem
 
-- A JS function of the bundler options reaches Rust as a `JsCallback`. Examples are `external`, `onLog`, the file name functions, and the internal `deferSyncScanData` and `invalidateJsSideCache`. A `JsCallback` keeps a strong napi reference to its JS function. V8 treats that reference as a GC root ("Global handles" in a heap snapshot).
+- A JS function of the bundler options reaches Rust as a `JsCallback`. Examples are `external`, `onLog`, the file name functions, and the internal `deferSyncScanData`, `invalidateJsSideCache`, `resetJsModuleOptions` and `deleteJsModuleOptions`. A `JsCallback` keeps a strong napi reference to its JS function. V8 treats that reference as a GC root ("Global handles" in a heap snapshot).
 - JS can keep a native object that keeps the options alive. An example is the `BindingPluginContext` of `this` in a hook. It reaches the options through `NativePluginContextImpl.options` and `FileEmitter.options`. The options objects that hooks get keep no native object (see [Normalized options objects](#normalized-options-objects)).
 - A JS function of the options can reach such a native object. Then a cycle goes through native code: root → JS function → … → JS wrapper → `Arc<NormalizedBundlerOptions>` → `JsCallback` → root. The GC cannot see the native edge, so it never frees the cycle.
 - The internal callbacks capture `pluginContextData`, which reaches every plugin of the build. So without the release, every plugin of the build stays alive when one plugin keeps `this`. Before rolldown/rolldown#11623, one empty `buildStart` hook had the same effect (rolldown/rolldown#11444).

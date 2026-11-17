@@ -115,6 +115,9 @@ pub struct BindingInputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "() => void")]
   pub reset_js_module_options: Option<UntrackedJsCallback>,
+  #[debug(skip)]
+  #[napi(ts_type = "(moduleIds: string[]) => void")]
+  pub delete_js_module_options: Option<UntrackedJsCallback<FnArgs<(Vec<String>,)>, ()>>,
   pub preserve_entry_signatures: Option<BindingPreserveEntrySignatures>,
   pub optimization: Option<BindingOptimization>,
   pub context: Option<String>,

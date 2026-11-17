@@ -31,6 +31,7 @@ pub mod bundler_options {
       code_splitting_mode::CodeSplittingMode,
       comments::CommentsOptions,
       defer_sync_scan_data_option::DeferSyncScanDataOption,
+      delete_js_module_options::DeleteJsModuleOptions,
       dev_mode_options::DevModeOptions,
       devtools_options::DevtoolsOptions,
       es_module_flag::EsModuleFlag,

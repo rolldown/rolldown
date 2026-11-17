@@ -121,6 +121,7 @@ export function bindingifyInputOptions(
     devtools: inputOptions.devtools,
     invalidateJsSideCache: pluginContextData.clear.bind(pluginContextData),
     resetJsModuleOptions: pluginContextData.resetModuleOptions.bind(pluginContextData),
+    deleteJsModuleOptions: pluginContextData.deleteModuleOptions.bind(pluginContextData),
     preserveEntrySignatures: bindingifyPreserveEntrySignatures(
       inputOptions.preserveEntrySignatures,
     ),

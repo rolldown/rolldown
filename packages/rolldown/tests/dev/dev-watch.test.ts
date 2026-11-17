@@ -2,7 +2,7 @@ import { getDevWatchOptionsForCi } from '@rolldown/test-dev-server';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { InputOptions, OutputOptions, RolldownOutput } from 'rolldown';
+import type { InputOptions, OutputOptions, RolldownOutput, RolldownPlugin } from 'rolldown';
 import type { DevEngine, DevOptions } from 'rolldown/experimental';
 import { dev as _dev } from 'rolldown/experimental';
 import { sleep } from 'rolldown-tests/utils';
@@ -503,3 +503,118 @@ function createTestWithMultiFiles(
   }
   return { dir };
 }
+
+function createToggleSideEffectsTest(testLabel: string, retryCount: number) {
+  const { input, outputDir, dir } = createTestInputAndOutput(testLabel, retryCount);
+  const source = path.join(dir, 'mod-source.js');
+  fs.writeFileSync(input, `import 'virtual:mod'`);
+  fs.writeFileSync(source, 'export const value = 1');
+  return { dir, input, source, outputDir };
+}
+
+// The plugin of https://github.com/rolldown/rolldown/issues/11223: the virtual module is marked
+// side-effect free only while its code is pure, and has no opinion once it has an effect.
+function toggleSideEffects(source: string, seen: unknown[] = []): RolldownPlugin {
+  return {
+    name: 'toggle-side-effects',
+    resolveId: (id) => (id === 'virtual:mod' ? '\0virtual:mod' : undefined),
+    load(id) {
+      if (id !== '\0virtual:mod') return;
+      this.addWatchFile(source);
+      return fs.readFileSync(source, 'utf8');
+    },
+    transform(code, id) {
+      if (id !== '\0virtual:mod') return;
+      return code.includes('EFFECT') ? { code } : { code, moduleSideEffects: false };
+    },
+    moduleParsed(info) {
+      if (info.id === '\0virtual:mod') seen.push(this.getModuleInfo(info.id)?.moduleSideEffects);
+    },
+  };
+}
+
+// https://github.com/rolldown/rolldown/issues/11223
+test.concurrent(
+  'dev rebuild does not keep the `moduleSideEffects: false` of an earlier build',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir, input, source, outputDir } = createToggleSideEffectsTest(
+      'dev-module-options',
+      retryCount,
+    );
+
+    const outputs: RolldownOutput[] = [];
+    const code = () =>
+      outputs
+        .at(-1)
+        ?.output.map((chunk) => (chunk.type === 'chunk' ? chunk.code : ''))
+        .join('\n');
+
+    const engine = await dev(
+      { input, plugins: [toggleSideEffects(source)] },
+      { dir: outputDir },
+      {
+        // Without `devMode`, an edit only rebuilds when the strategy is `always`.
+        rebuildStrategy: 'always',
+        onOutput: (result) => {
+          if (!(result instanceof Error)) outputs.push(result);
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await expect.poll(() => outputs.length).toBeGreaterThan(0);
+    expect(code()).not.toContain('EFFECT');
+
+    outputs.length = 0;
+    await editFile(source, 'globalThis.EFFECT = true\nexport const value = 1');
+    await expect
+      .poll(async () => {
+        await engine.ensureLatestBuildOutput();
+        return code();
+      })
+      .toContain('EFFECT');
+  },
+);
+
+// https://github.com/rolldown/rolldown/issues/11223
+test.concurrent(
+  'dev mode partial scan does not keep the `moduleSideEffects: false` in `getModuleInfo`',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir, input, source, outputDir } = createToggleSideEffectsTest(
+      'dev-module-options-hmr',
+      retryCount,
+    );
+
+    // `this.getModuleInfo().moduleSideEffects` of the virtual module in each `moduleParsed` hook.
+    const seen: unknown[] = [];
+    const engine = await dev(
+      { input, experimental: { devMode: true }, plugins: [toggleSideEffects(source, seen)] },
+      { dir: outputDir },
+      {},
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.ensureCurrentBuildFinish();
+    expect(seen).toEqual([false]);
+
+    await editFile(source, 'globalThis.EFFECT = true\nexport const value = 1');
+    await expect.poll(() => seen.length).toBe(2);
+    expect(seen[1]).not.toBe(false);
+  },
+);

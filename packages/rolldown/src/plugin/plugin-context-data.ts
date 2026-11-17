@@ -206,12 +206,22 @@ export class PluginContextData {
   }
 
   /**
-   * Module options belong to one full scan, as in Rollup: every hook runs again for every module,
-   * so an option a hook stopped returning must not survive. A partial scan keeps them, because
-   * unchanged modules are not fetched again.
+   * A full scan clears all module options: every hook runs again for every module, so an option a
+   * hook stopped returning must not survive. (Rollup differs: it keeps `meta` and
+   * `moduleSideEffects` of an unchanged cached module across watch builds.)
    */
   resetModuleOptions(): void {
     this.moduleOptionMap.clear();
+  }
+
+  /**
+   * A partial scan deletes the module options of the modules it fetches again, because their hooks
+   * run again. It keeps the options of all other modules, which are not fetched again.
+   */
+  deleteModuleOptions(ids: string[]): void {
+    for (const id of ids) {
+      this.moduleOptionMap.delete(this.moduleOptionKey(id));
+    }
   }
 
   clear(): void {

@@ -499,6 +499,19 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         changed_resolved_ids.push(resolved_id);
       }
     }
+    // A partial scan runs the hooks again for each changed module, so the module options that a
+    // hook returned or a plugin set in an earlier build must not survive. A full scan clears all
+    // of them before it starts.
+    if !changed_resolved_ids.is_empty()
+      && let Some(delete_js_module_options) = &self.shared_context.options.delete_js_module_options
+    {
+      let module_ids = changed_resolved_ids.iter().map(|resolved_id| resolved_id.id.to_string());
+      if let Err(err) = delete_js_module_options.call(module_ids.collect()).await {
+        // The files were taken from `pending_rescans`; queue them again.
+        self.revert_partial_scan(changed_resolved_ids, barrel_state_backup);
+        return Err(err.into());
+      }
+    }
     for resolved_id in changed_resolved_ids.iter().cloned() {
       self.shared_context.plugin_driver.invalidate_context_load_module(&resolved_id.id);
       if let Entry::Occupied(mut occ) = self.cache.module_id_to_idx.entry(resolved_id.id.clone()) {

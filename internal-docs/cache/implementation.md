@@ -81,14 +81,26 @@ Related non-`Cache`-named structures in the same file: `ViteMetadata`,
 `Bundler::with_cached_bundle` calls it again before creating the next bundle, because a
 failed scan never reaches the output stage.
 
-The `reset_js_module_options` option is a second `InvalidateJsSideCache`, wired the same way and
-bound to `PluginContextData.resetModuleOptions`. It clears `moduleOptionMap` (the `moduleSideEffects`
-and `meta` that hooks returned or plugins set). `Bundle::scan_modules_impl` calls it at the start
-of every _full_ scan, before `buildStart`, so a watch rebuild starts with fresh module options like
-Rollup does: a hook that stops returning `moduleSideEffects: false` gets the default again. It is
-not part of `PluginContextData.clear`, which also runs before partial scans (HMR/incremental):
-those do not run the hooks again for unchanged modules, whose `meta` must stay. Parallel plugin
-workers each have their own `PluginContextData`, which this callback does not reach.
+Two more options clear the module options (the `moduleSideEffects` and `meta` that hooks returned
+or plugins set) that `PluginContextData.moduleOptionMap` keeps for the whole bundler. Neither is
+part of `PluginContextData.clear`, which also runs before partial scans (HMR/incremental) and
+after every `generate`/`write`.
+
+- `reset_js_module_options` is a second `InvalidateJsSideCache`, wired the same way and bound to
+  `PluginContextData.resetModuleOptions`. It clears `moduleOptionMap` completely.
+  `Bundle::scan_modules_impl` calls it at the start of every _full_ scan, before `buildStart`. A
+  full scan runs every hook again for every module, so a hook that stops returning
+  `moduleSideEffects: false` gets the default again.
+- `delete_js_module_options` is a `DeleteJsModuleOptions` (`crates/rolldown_common/src/inner_bundler_options/types/delete_js_module_options.rs`).
+  It takes module ids and is bound to `PluginContextData.deleteModuleOptions`.
+  `ModuleLoader::fetch_modules` calls it in a _partial_ scan, once, with every changed module,
+  next to the invalidation of those modules. Their hooks run again, so they start with fresh
+  options. The options of the other modules stay, because their hooks do not run again.
+  (Rollup also keeps `meta` and `moduleSideEffects` of an unchanged cached module across watch
+  builds. It reuses them only while the module's code is unchanged.)
+
+Parallel plugin workers each have their own `PluginContextData`, which these callbacks do not
+reach.
 
 ### 6. Watch-mode filesystem cache
 

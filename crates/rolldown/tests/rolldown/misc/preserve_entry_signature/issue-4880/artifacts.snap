@@ -40,8 +40,8 @@ export { foo2_default as default };
 
 ```js
 //! User-defined Entry: [Entry-Module-Id: main.js] [Name: main]
-import foo2_default from "./foo2.js";
 import assert from "node:assert";
+import foo2_default from "./foo2.js";
 // main.js
 assert.strictEqual(foo2_default, "foo2");
 
@@ -88,8 +88,8 @@ export { foo2_default as default };
 
 ```js
 //! User-defined Entry: [Entry-Module-Id: main.js] [Name: main]
-import foo2_default from "./foo2.js";
 import assert from "node:assert";
+import foo2_default from "./foo2.js";
 // main.js
 assert.strictEqual(foo2_default, "foo2");
 

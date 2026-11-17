@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { setImmediate } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 import v8 from 'node:v8';
 import { rolldown, type Plugin } from 'rolldown';
@@ -49,11 +50,14 @@ test('normalized options objects do not keep the native options', async () => {
 
   await build(true);
   expect(inHook).toBeGreaterThan(0);
+  // emnapi's out-of-scope handles are WeakRefs, which keep their targets alive until the job ends.
+  await setImmediate();
   // Compare with the count after the first build, not with 0: from the first native instance on,
   // V8 keeps one empty instance of the class in its template instantiation cache. The WASI binding
   // has no V8 templates, so the count is 0 there.
   const afterFirst = reachableNativeOptions();
   for (const close of [true, false]) await build(close);
+  await setImmediate();
   // Options objects that keep their native options add two per build: input and output.
   expect(reachableNativeOptions(), 'native options reachable after 3 builds').toBe(afterFirst);
   expect(kept).toHaveLength(3 * 6);

@@ -135,6 +135,8 @@ bitflags! {
         /// Statement contains `import.meta` that stays native in the output. In dev mode the
         /// finalizer rewrites `import.meta.hot` to the module's own hot context, so it does not count.
         const ImportMeta = 1 << 4;
+        /// Statement contains a top-level await, for await, or await using.
+        const TopLevelAwait = 1 << 5;
     }
 }
 

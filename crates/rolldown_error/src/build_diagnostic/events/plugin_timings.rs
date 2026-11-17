@@ -7,6 +7,7 @@ use crate::{types::diagnostic_options::DiagnosticOptions, types::event_kind::Eve
 const MIN_ROW_MS: f64 = 1_000.0;
 const MAX_MEASURED_ROWS: usize = 12;
 const MAX_UNMEASURABLE_ROWS: usize = 3;
+const TABLE_HEADER: [&str; 6] = ["total", "%build", "calls", "avg", "max", "callback"];
 
 /// The location where the user configured a measured callback.
 /// The report uses this value to distinguish plugins, input options, and output options.
@@ -32,6 +33,8 @@ pub struct PluginTiming {
   pub calls: u32,
   /// Summed spans. Execution time only when [`PluginTiming::rankable`].
   pub ms: f64,
+  /// The longest single span. Execution time only when [`PluginTiming::rankable`].
+  pub max_ms: f64,
   pub max_in_flight: u32,
   /// How much of [`PluginTiming::ms`] is double counted because calls overlapped.
   pub overlap_ms: f64,
@@ -62,9 +65,6 @@ pub struct PluginTimings {
   /// Rows the caps dropped, so a bounded view can say what it bounded.
   measured_hidden: usize,
   unmeasurable_hidden: usize,
-  /// Rankable rows under [`MIN_ROW_MS`]. The message never shows them. The remainder
-  /// sentence names them only when they exist.
-  below_floor: usize,
 }
 
 impl PluginTimings {
@@ -76,9 +76,7 @@ impl PluginTimings {
     let (rankable, overlapped): (Vec<_>, Vec<_>) =
       measurement.rows.into_iter().partition(|row| row.rankable);
 
-    let (mut measured, below_floor): (Vec<_>, Vec<_>) =
-      rankable.into_iter().partition(|row| row.ms >= MIN_ROW_MS);
-    let below_floor = below_floor.len();
+    let mut measured: Vec<_> = rankable.into_iter().filter(|row| row.ms >= MIN_ROW_MS).collect();
     measured.sort_by(|a, b| b.ms.total_cmp(&a.ms));
     let measured_hidden = measured.len().saturating_sub(MAX_MEASURED_ROWS);
     measured.truncate(MAX_MEASURED_ROWS);
@@ -100,7 +98,6 @@ impl PluginTimings {
       unmeasurable,
       measured_hidden,
       unmeasurable_hidden,
-      below_floor,
     })
   }
 }
@@ -123,114 +120,87 @@ impl BuildEvent for PluginTimings {
       // Without this branch, the headline reads "7.4s of this 7.1s build". That looks like
       // a bug.
       format!(
-        "JavaScript callbacks ran for {}. The build took {}. Callbacks such as `closeBundle` \
-         run after the build ends, so callback time can be more than build time.",
+        "JavaScript callbacks ran for {}, longer than the {} build.\nHooks like `closeBundle` \
+         run after the build ends.",
         format_duration(self.busy_ms),
         format_duration(self.build_ms)
       )
     } else {
       format!(
-        "JavaScript callbacks ran for {} of this {} build ({}%).",
+        "JavaScript callbacks ran for {} of the {} build ({}%).",
         format_duration(self.busy_ms),
         format_duration(self.build_ms),
         share(self.busy_ms)
       )
     };
+    out.push('\n');
 
-    if !self.measured.is_empty() {
-      // Not "time they ran": excluding the dispatch queue is what measuring from inside the
-      // callback buys, and it does not separate running from awaiting.
-      out.push_str(
-        "\nThe slowest callbacks, timed inside each callback (the wait before a callback \
-         starts is excluded, the time it awaits is included):",
-      );
-      let mut listed_ms = 0.0;
-      for row in &self.measured {
-        listed_ms += row.ms;
-        let _ = write!(
-          out,
-          "\n  - {}{} {} ({}%, {}, {} call{})",
-          owner_prefix(row.kind),
-          row.owner,
-          row.hook,
-          share(row.ms),
-          format_duration(row.ms),
-          row.calls,
-          plural(row.calls)
-        );
-      }
-      if self.measured_hidden > 0 {
-        // Every hidden row is over the one-second floor. Only the cap dropped it.
-        let _ = write!(out, "\n  … and {} more callbacks over 1s", self.measured_hidden);
-      }
-      // These sentences explain the gap between the headline and the rows. Without them, a
-      // reader cannot tell whether the gap is unmeasurable hooks, callbacks under the floor,
-      // or core work. The comparison uses unclamped percentages: with both clamped at 100%,
-      // the shares hide a real difference in either direction. The rows are a sum of spans
-      // and the headline is their union. The sign of the difference is meaningful, but its
-      // size is not: two listed hooks that overlap each other make the difference smaller,
-      // and no omitted callback becomes cheaper. That is why no sentence puts a number on the
-      // gap.
-      let rest = percent(self.busy_ms) - percent(listed_ms);
-      if rest < 0 {
-        // Nesting is the usual cause, but not the only one. `rankable` only checks the
-        // overlap of a hook with itself, so two different `async` hooks can still run at the
-        // same time.
-        out.push_str(
-          "\nThese rows add up to more than the total. Callbacks can overlap, so the same \
-           time counts for more than one row.",
-        );
-      } else if rest > 0 {
-        let mut targets = Vec::new();
-        if !self.unmeasurable.is_empty() {
-          targets.push("the callbacks below");
-        }
-        if self.measured_hidden > 0 {
-          targets.push("the callbacks not listed");
-        } else if self.below_floor > 0 {
-          targets.push("callbacks under 1s");
-        }
-        // The sentence shows no numbers. If it showed the sum next to the headline, a reader
-        // would subtract them, and that difference is not the time of the omitted callbacks. A
-        // gap with nothing omitted cannot happen, because a union is at most the sum of its
-        // spans. But a sentence that ends in nothing is worse than no sentence, so the check
-        // stays.
-        if !targets.is_empty() {
-          let _ =
-            write!(out, "\nAdditional callback time came from {}.", targets.join(" and from "));
-        }
-      }
+    let mut listed_ms = 0.0;
+    let mut table = vec![TABLE_HEADER.map(String::from)];
+    for row in &self.measured {
+      listed_ms += row.ms;
+      table.push([
+        format_duration(row.ms),
+        format!("{}%", share(row.ms)),
+        row.calls.to_string(),
+        format_duration(row.ms / f64::from(row.calls.max(1))),
+        format_duration(row.max_ms),
+        callback_label(row),
+      ]);
     }
-
-    if !self.unmeasurable.is_empty() {
-      let total = self.unmeasurable.len() + self.unmeasurable_hidden;
-      let (verb, its, their) =
-        if total == 1 { ("is", "Its", "its") } else { ("are", "Their", "their") };
+    // A number for these would count the same time more than once and rank them above
+    // callbacks doing more work.
+    for row in &self.unmeasurable {
+      let none = || "-".to_string();
+      table.push([none(), none(), row.calls.to_string(), none(), none(), callback_label(row)]);
+    }
+    write_table(&mut out, &table);
+    if self.measured_hidden > 0 {
       let _ = write!(
         out,
-        "\n{} callback{} {verb} listed without a time. {its} calls overlapped, so the time \
-         inside one call includes work from other calls. To find {their} cost, profile the \
-         build with `node --cpu-prof`:",
-        total,
-        plural(u32::try_from(total).unwrap_or(u32::MAX)),
+        "\n  … and {} more callback{} over 1s",
+        self.measured_hidden,
+        plural(self.measured_hidden)
       );
-      for row in &self.unmeasurable {
-        let _ = write!(
-          out,
-          "\n  - {}{} {} ({} call{})",
-          owner_prefix(row.kind),
-          row.owner,
-          row.hook,
-          row.calls,
-          plural(row.calls)
-        );
-      }
-      if self.unmeasurable_hidden > 0 {
-        let _ = write!(out, "\n  … and {} more", self.unmeasurable_hidden);
+    }
+    if self.unmeasurable_hidden > 0 {
+      let _ = write!(
+        out,
+        "\n  … and {} more callback{} without a time",
+        self.unmeasurable_hidden,
+        plural(self.unmeasurable_hidden)
+      );
+    }
+
+    let mut notes = Vec::new();
+    if !self.unmeasurable.is_empty() {
+      notes.push(
+        "A \"-\" means calls of that hook overlapped, so their times include other work."
+          .to_string(),
+      );
+      notes.push(
+        "To see how much CPU time that hook uses, run the build with `node --cpu-prof`."
+          .to_string(),
+      );
+    }
+    // The rows are a sum of spans and the headline is their union. Only the sign of the
+    // difference means something, so the note gives no number. The comparison uses
+    // unclamped percentages, because clamping both at 100% would hide the difference.
+    if percent(listed_ms) > percent(self.busy_ms) {
+      notes.push(format!(
+        "Some callbacks overlapped, so the rows add up to more than {}.",
+        format_duration(self.busy_ms)
+      ));
+    }
+    if !notes.is_empty() {
+      out.push('\n');
+      for note in notes {
+        out.push('\n');
+        out.push_str(&note);
       }
     }
 
-    let _ = write!(out, "\nSee {DOC_LINK} for more details.");
+    let _ = write!(out, "\n\nLearn more at {DOC_LINK}");
     out
   }
 }
@@ -245,13 +215,46 @@ fn owner_prefix(kind: PluginTimingKind) -> &'static str {
   }
 }
 
-/// `1 call`, `2 calls`.
-fn plural(count: u32) -> &'static str {
+/// `plugin vite:css · transform`, `input options · external`.
+fn callback_label(row: &PluginTiming) -> String {
+  format!("{}{} · {}", owner_prefix(row.kind), row.owner, row.hook)
+}
+
+/// Right-aligns every column but the last. The callback name goes last because its length
+/// varies the most.
+fn write_table(out: &mut String, rows: &[[String; 6]]) {
+  let mut widths = [0; 5];
+  for row in rows {
+    for (width, cell) in widths.iter_mut().zip(row) {
+      *width = (*width).max(cell.chars().count());
+    }
+  }
+  for row in rows {
+    out.push_str("\n  ");
+    for (cell, width) in row.iter().zip(widths) {
+      let _ = write!(out, "{cell:>width$}  ");
+    }
+    out.push_str(&row[5]);
+  }
+}
+
+/// `1 callback`, `2 callbacks`.
+fn plural(count: usize) -> &'static str {
   if count == 1 { "" } else { "s" }
 }
 
+/// `2.5s`, `250ms`, `2.5ms`, `40µs`. The unit is picked after rounding, so 999.6ms reads
+/// `1.0s` and not `1000ms`.
 fn format_duration(ms: f64) -> String {
-  if ms >= 1_000.0 { format!("{:.1}s", ms / 1_000.0) } else { format!("{}ms", ms.round()) }
+  if ms >= 999.5 {
+    format!("{:.1}s", ms / 1_000.0)
+  } else if ms >= 9.95 {
+    format!("{ms:.0}ms")
+  } else if ms >= 0.9995 {
+    format!("{ms:.1}ms")
+  } else {
+    format!("{:.0}µs", ms * 1_000.0)
+  }
 }
 
 #[cfg(test)]
@@ -276,6 +279,7 @@ mod tests {
       hook: hook.to_string(),
       calls,
       ms,
+      max_ms: ms / f64::from(calls),
       max_in_flight,
       overlap_ms: 0.0,
       rankable: max_in_flight == 1,
@@ -288,12 +292,12 @@ mod tests {
   }
 
   #[test]
-  fn ranks_measured_rows_and_names_the_ones_it_cannot_measure() {
+  fn ranks_measured_rows_and_lists_the_ones_it_cannot_measure_last() {
     let message = render(
       10_000.0,
       8_000.0,
       vec![
-        row("slow-plugin", "transform", 6_000.0, 500, 1),
+        PluginTiming { max_ms: 900.0, ..row("slow-plugin", "transform", 6_000.0, 500, 1) },
         row_with_kind(
           PluginTimingKind::OutputOption,
           "output options",
@@ -308,28 +312,23 @@ mod tests {
     )
     .unwrap();
 
-    let rows = message.lines().filter(|line| line.starts_with("  - ")).collect::<Vec<_>>();
     assert_eq!(
-      rows,
-      vec![
-        "  - plugin slow-plugin transform (60%, 6.0s, 500 calls)",
-        "  - output options codeSplitting groups[].name \"vendor\" (20%, 2.0s, 900 calls)",
-        "  - plugin async-plugin resolveId (3000 calls)",
+      message,
+      [
+        "JavaScript callbacks ran for 8.0s of the 10.0s build (80%).",
+        "",
+        "  total  %build  calls    avg    max  callback",
+        "   6.0s     60%    500   12ms  900ms  plugin slow-plugin · transform",
+        "   2.0s     20%    900  2.2ms  2.2ms  output options · codeSplitting groups[].name \"vendor\"",
+        "      -       -   3000      -      -  plugin async-plugin · resolveId",
+        "",
+        "A \"-\" means calls of that hook overlapped, so their times include other work.",
+        "To see how much CPU time that hook uses, run the build with `node --cpu-prof`.",
+        "",
+        "Learn more at https://rolldown.rs/reference/InputOptions.checks#bundlertimings",
       ]
+      .join("\n")
     );
-    assert!(
-      message.contains("JavaScript callbacks ran for 8.0s of this 10.0s build (80%)"),
-      "{message}"
-    );
-    assert!(message.contains("The slowest callbacks, timed inside each callback"), "{message}");
-    assert!(
-      message.contains("https://rolldown.rs/reference/InputOptions.checks#bundlertimings"),
-      "{message}"
-    );
-    // The 47s row would top any ranking, which is exactly why it gets no number.
-    assert!(!message.contains("47.0s"));
-    // Below the one-second floor.
-    assert!(!message.contains("tiny-plugin"));
   }
 
   #[test]
@@ -348,7 +347,7 @@ mod tests {
     )
     .unwrap();
 
-    assert!(message.contains("  - input options external (9 calls)"), "{message}");
+    assert!(message.contains("  input options · external\n"), "{message}");
   }
 
   #[test]
@@ -356,58 +355,19 @@ mod tests {
     let message =
       render(10_000.0, 8_000.0, vec![row("output options", "transform", 2_000.0, 1, 1)]).unwrap();
 
-    assert!(
-      message.contains("  - plugin output options transform (20%, 2.0s, 1 call)"),
-      "{message}"
-    );
-  }
-
-  #[test]
-  fn a_single_call_is_not_pluralised() {
-    let message = render(10_000.0, 8_000.0, vec![row("p", "buildStart", 2_000.0, 1, 1)]).unwrap();
-    assert!(message.contains("1 call)"), "{message}");
-    assert!(!message.contains("1 calls"), "{message}");
-  }
-
-  #[test]
-  fn explains_the_gap_between_the_headline_and_the_rows() {
-    // Without this sentence, a reader cannot tell whether the gap between the headline and
-    // the rows is unmeasurable callbacks or core work.
-    let message = render(
-      10_000.0,
-      9_600.0,
-      vec![row("p", "transform", 5_000.0, 3, 1), row("q", "resolveId", 4_000.0, 9, 12)],
-    )
-    .unwrap();
-    // No row here is under the floor, so the sentence must not name such rows. The sentence
-    // has no arithmetic: the rows are a sum of spans and the headline is their union, so
-    // their difference is not the cost of the omitted callbacks.
-    assert!(
-      message.contains("Additional callback time came from the callbacks below."),
-      "{message}"
-    );
+    assert!(message.contains("  plugin output options · transform\n"), "{message}");
   }
 
   #[test]
   fn says_how_many_rows_it_dropped() {
-    // A bounded view has to say what it bounded.
     let measured = (0..u32::try_from(MAX_MEASURED_ROWS).unwrap() + 3)
       .map(|i| row("p", "transform", f64::from(2_000 + i), 1, 1));
     let overlapped = (0..u32::try_from(MAX_UNMEASURABLE_ROWS).unwrap() + 2)
       .map(|i| row("q", "resolveId", 9_000.0, 1, 2 + i));
     let message = render(100_000.0, 90_000.0, measured.chain(overlapped).collect()).unwrap();
 
-    assert!(message.contains("… and 3 more callbacks over 1s"), "{message}");
-    assert!(message.contains("… and 2 more"), "{message}");
-    assert!(message.contains("5 callbacks are listed without a time. Their calls"), "{message}");
-    // The remainder went to the unmeasurable rows and to the rows past the cap. "callbacks
-    // under 1s" would be wrong here.
-    assert!(
-      message.contains(
-        "Additional callback time came from the callbacks below and from the callbacks not listed."
-      ),
-      "{message}"
-    );
+    assert!(message.contains("\n  … and 3 more callbacks over 1s\n"), "{message}");
+    assert!(message.contains("\n  … and 2 more callbacks without a time\n"), "{message}");
   }
 
   #[test]
@@ -426,19 +386,23 @@ mod tests {
     let message =
       render(4_000.0, 6_000.0, vec![row("late", "closeBundle", 6_000.0, 1, 1)]).unwrap();
     assert!(
-      message.contains("JavaScript callbacks ran for 6.0s. The build took 4.0s."),
+      message.starts_with(
+        "JavaScript callbacks ran for 6.0s, longer than the 4.0s build.\n\
+         Hooks like `closeBundle` run after the build ends.\n"
+      ),
       "{message}"
     );
-    assert!(message.contains("callback time can be more than build time"), "{message}");
-    assert!(message.contains("(100%, 6.0s, 1 call)"), "{message}");
+    assert!(
+      message.contains("   6.0s    100%      1  6.0s  6.0s  plugin late · closeBundle"),
+      "{message}"
+    );
     assert!(!message.contains("150%"), "{message}");
   }
 
   #[test]
   fn rows_that_add_up_to_more_than_the_total_are_explained_as_overlap() {
     // A Vite build: a `load` hook runs a nested build, and the transforms inside it count
-    // for both hooks. The rows add up to 125% of the build, and the headline is at 100%. A
-    // sentence such as "the rest is below" would be wrong.
+    // for both hooks.
     let message = render(
       7_100.0,
       7_400.0,
@@ -449,50 +413,24 @@ mod tests {
       ],
     )
     .unwrap();
-    assert!(message.contains("These rows add up to more than the total."), "{message}");
-    assert!(!message.contains("Additional callback time"), "{message}");
-  }
-
-  #[test]
-  fn a_remainder_with_nothing_else_listed_names_callbacks_under_the_floor() {
-    // 6s of rows against an 8s headline, with no unmeasurable rows and no cap. The gap can
-    // only be callbacks under one second, and the message must tell the reader that they
-    // exist.
-    let message = render(
-      10_000.0,
-      8_000.0,
-      vec![row("p", "transform", 6_000.0, 3, 1), row("tiny", "buildStart", 500.0, 40, 1)],
-    )
-    .unwrap();
     assert!(
-      message.contains("Additional callback time came from callbacks under 1s."),
+      message.contains("\nSome callbacks overlapped, so the rows add up to more than 7.4s.\n"),
       "{message}"
     );
   }
 
   #[test]
-  fn a_remainder_past_the_build_carries_no_number() {
-    // 5s of rows on a 4s build with 6s of callback time. A share here would clamp to 100%. A
-    // duration would make the reader subtract a sum from a union.
-    let message = render(
-      4_000.0,
-      6_000.0,
-      vec![row("late", "closeBundle", 5_000.0, 1, 1), row("q", "load", 2_000.0, 9, 4)],
-    )
-    .unwrap();
-    assert!(
-      message.contains("Additional callback time came from the callbacks below."),
-      "{message}"
-    );
-    assert!(!message.contains("add up to"), "{message}");
-  }
-
-  #[test]
-  fn a_single_overlapped_callback_is_not_pluralised() {
-    let message = render(10_000.0, 8_000.0, vec![row("q", "load", 5_000.0, 9, 4)]).unwrap();
-    assert!(
-      message.contains("1 callback is listed without a time. Its calls overlapped"),
-      "{message}"
-    );
+  fn picks_the_duration_unit_after_rounding() {
+    for (ms, expected) in [
+      (2_500.0, "2.5s"),
+      (999.6, "1.0s"),
+      (250.0, "250ms"),
+      (9.96, "10ms"),
+      (2.53, "2.5ms"),
+      (0.9996, "1.0ms"),
+      (0.04, "40µs"),
+    ] {
+      assert_eq!(format_duration(ms), expected, "{ms}");
+    }
   }
 }

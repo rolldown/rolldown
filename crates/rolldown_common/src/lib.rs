@@ -116,6 +116,7 @@ pub use crate::{
       chunk_reason_type::ChunkReasonType,
       cross_chunk_import_item::CrossChunkImportItem,
       preliminary_filename::PreliminaryFilename,
+      static_import::StaticImport,
     },
   },
   ecmascript::{
@@ -163,7 +164,7 @@ pub use crate::{
   types::bundle_mode::BundleMode,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
-  types::constant_value::{ConstExportMeta, ConstantValue},
+  types::constant_value::{ConstExportMeta, ConstantValue, DeferredWriteConstant},
   types::deconflict::ModuleScopeSymbolIdMap,
   types::defer_sync_scan_data::DeferSyncScanData,
   types::entry_point::{EntryPoint, EntryPointKind},

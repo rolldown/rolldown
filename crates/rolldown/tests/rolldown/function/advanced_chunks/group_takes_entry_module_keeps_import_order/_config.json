@@ -1,0 +1,25 @@
+{
+  "_comment": "The non-recursive group `g` takes `e.js` and `s.js` and leaves their dependency `p.js` in the entry chunk `e.js`, which then imports `g.js` while `g.js` imports it back. `main.js` must import `g.js` first: entering the cycle through `e.js` runs `s.js` and `e.js` before `p.js`. Only the order of entry `main` is asserted.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "e",
+        "import": "./e.js"
+      }
+    ],
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "groups": [
+        {
+          "test": "[\\\\/](e|s)\\.js$",
+          "name": "g",
+          "includeDependenciesRecursively": false
+        }
+      ]
+    }
+  }
+}

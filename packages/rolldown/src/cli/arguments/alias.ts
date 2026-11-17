@@ -81,6 +81,12 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   externalLiveBindings: {
     reverse: true,
   },
+  makeAbsoluteExternalsRelative: {
+    reverse: true,
+  },
+  polyfillRequire: {
+    reverse: true,
+  },
   treeshake: {
     reverse: true,
   },

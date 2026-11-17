@@ -22,8 +22,8 @@ export { init_dep as n, useDep as r, dep_exports as t };
 ## hub.js
 
 ```js
-import { r as useDep } from "./dep.js";
 import { n as extend, t as init_hub } from "./hub2.js";
+import { r as useDep } from "./dep.js";
 init_hub();
 export { extend, useDep };
 
@@ -56,8 +56,8 @@ export { extend as n, init_shared as r, init_hub as t };
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
-import { r as useDep } from "./dep.js";
 import { n as extend, t as init_hub } from "./hub2.js";
+import { r as useDep } from "./dep.js";
 // main.js
 var go;
 function init_main() {
@@ -139,8 +139,8 @@ Object.defineProperty(exports, "useDep", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_dep = require("./dep.js");
 const require_hub = require("./hub2.js");
+const require_dep = require("./dep.js");
 require_hub.init_hub();
 exports.extend = require_hub.extend;
 exports.useDep = require_dep.useDep;
@@ -192,8 +192,8 @@ Object.defineProperty(exports, "init_shared", {
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-const require_dep = require("./dep.js");
 const require_hub = require("./hub2.js");
+const require_dep = require("./dep.js");
 // main.js
 var go;
 function init_main() {
@@ -292,8 +292,8 @@ Object.defineProperty(exports, "useDep", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_dep = require("./dep.js");
 const require_hub = require("./hub2.js");
+const require_dep = require("./dep.js");
 require_hub.init_hub();
 exports.extend = require_hub.extend;
 exports.useDep = require_dep.useDep;
@@ -345,8 +345,8 @@ Object.defineProperty(exports, "init_shared", {
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-const require_dep = require("./dep.js");
 const require_hub = require("./hub2.js");
+const require_dep = require("./dep.js");
 // main.js
 var go;
 function init_main() {
@@ -427,8 +427,8 @@ export { init_dep as n, useDep as r, dep_exports as t };
 ### hub.js
 
 ```js
-import { r as useDep } from "./dep.js";
 import { n as extend, t as init_hub } from "./hub2.js";
+import { r as useDep } from "./dep.js";
 init_hub();
 export { extend, useDep };
 
@@ -461,8 +461,8 @@ export { extend as n, init_shared as r, init_hub as t };
 
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
-import { r as useDep } from "./dep.js";
 import { n as extend, t as init_hub } from "./hub2.js";
+import { r as useDep } from "./dep.js";
 // main.js
 var go;
 function init_main() {

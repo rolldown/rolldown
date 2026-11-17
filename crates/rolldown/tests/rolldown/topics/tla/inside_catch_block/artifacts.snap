@@ -16,8 +16,8 @@ export { d };
 ## main.js
 
 ```js
-import { t as s } from "./shared.js";
 import assert from "node:assert";
+import { t as s } from "./shared.js";
 // main.js
 let m;
 try {
@@ -64,8 +64,8 @@ export { d };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as s, t as init_shared } from "./shared.js";
 import assert from "node:assert";
+import { n as s, t as init_shared } from "./shared.js";
 // main.js
 var m;
 function init_main() {
@@ -123,8 +123,8 @@ export { d };
 ### main.js
 
 ```js
-import { t as s } from "./shared.js";
 import assert from "node:assert";
+import { t as s } from "./shared.js";
 // main.js
 let m;
 try {

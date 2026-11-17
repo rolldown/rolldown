@@ -141,8 +141,8 @@ export { M, S };
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
 let ext = require("ext");
-ext = __toESM(ext);
 require("ext2");
+ext = __toESM(ext);
 Object.defineProperty(exports, "M", {
 	enumerable: true,
 	get: function() {

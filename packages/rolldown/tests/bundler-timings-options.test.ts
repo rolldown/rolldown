@@ -67,6 +67,7 @@ describe('checks.bundlerTimings alias', () => {
             hook: 'renderStart',
             calls: 1,
             ms: 4_000,
+            maxMs: 4_000,
             maxInFlight: 1,
             overlapMs: 0,
             rankable: true,

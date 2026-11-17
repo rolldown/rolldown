@@ -1,0 +1,1 @@
+import './nested/dep.js';

@@ -33,11 +33,6 @@ impl Default for CodeSplittingMode {
 }
 
 impl CodeSplittingMode {
-  /// Returns true if automatic code splitting is enabled
-  pub fn is_automatic(&self) -> bool {
-    matches!(self, CodeSplittingMode::Bool(true) | CodeSplittingMode::Advanced(_))
-  }
-
   /// Returns true if dynamic imports should be inlined (no code splitting)
   pub fn is_disabled(&self) -> bool {
     matches!(self, CodeSplittingMode::Bool(false))

@@ -230,12 +230,6 @@ impl NormalizedBundlerOptions {
     self.strict_execution_order
   }
 
-  /// Strict execution order with on-demand wrapping — the selective mode that derives its wrapping
-  /// plan from the execution-order analysis instead of deferring every eligible module.
-  pub fn is_strict_on_demand_wrapping_enabled(&self) -> bool {
-    self.strict_execution_order && self.experimental.is_on_demand_wrapping_enabled()
-  }
-
   pub fn has_manual_code_splitting_groups(&self) -> bool {
     self
       .manual_code_splitting
@@ -251,16 +245,6 @@ impl NormalizedBundlerOptions {
       return self.polyfill_require;
     }
     true
-  }
-
-  pub async fn asset_filename_template(
-    &self,
-    rollup_pre_rendered_asset: &RollupPreRenderedAsset,
-  ) -> anyhow::Result<FilenameTemplate> {
-    Ok(FilenameTemplate::new(
-      self.asset_filenames.call(rollup_pre_rendered_asset).await?,
-      "output.assetFileNames",
-    ))
   }
 
   pub async fn asset_filename_with_file(

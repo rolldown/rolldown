@@ -2,9 +2,8 @@ use std::fmt::Debug;
 
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
-  DebugStmtInfoForTreeShaking, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta,
-  ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord, ResolvedId,
-  StableModuleId, StmtInfoIdx,
+  EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta, ModuleId, ModuleIdx,
+  ModuleInfo, NormalizedBundlerOptions, RawImportRecord, ResolvedId, StableModuleId,
 };
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -13,8 +12,6 @@ use itertools::Itertools;
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
-use rolldown_utils::IndexBitSet;
-use rustc_hash::FxHashSet;
 
 #[derive(Debug, Clone)]
 pub struct NormalModule {
@@ -48,24 +45,6 @@ impl NormalModule {
 
   pub fn has_star_export(&self) -> bool {
     self.ecma_view.meta.has_star_export()
-  }
-
-  pub fn to_debug_normal_module_for_tree_shaking(
-    &self,
-    stmt_infos: &crate::StmtInfos,
-    is_included: bool,
-    stmt_info_included: &IndexBitSet<StmtInfoIdx>,
-  ) -> DebugNormalModuleForTreeShaking {
-    DebugNormalModuleForTreeShaking {
-      id: self.repr_name.clone(),
-      is_included,
-      stmt_infos: stmt_infos
-        .iter_enumerated()
-        .map(|(idx, stmt)| {
-          stmt.to_debug_stmt_info_for_tree_shaking(stmt_info_included.has_bit(idx))
-        })
-        .collect(),
-    }
   }
 
   pub fn to_module_info(
@@ -117,31 +96,6 @@ impl NormalModule {
   // The runtime module and module which path starts with `\0` shouldn't generate sourcemap. Ref see https://github.com/rollup/rollup/blob/master/src/Module.ts#L279.
   pub fn is_virtual(&self) -> bool {
     self.id.starts_with('\0')
-  }
-
-  // https://tc39.es/ecma262/#sec-getexportednames
-  pub fn get_exported_names<'modules>(
-    &'modules self,
-    export_star_set: &mut FxHashSet<ModuleIdx>,
-    modules: &'modules IndexModules,
-    include_default: bool,
-    ret: &mut FxHashSet<&'modules CompactStr>,
-  ) {
-    if export_star_set.contains(&self.idx) {
-      return;
-    }
-
-    export_star_set.insert(self.idx);
-
-    self
-      .star_export_module_ids()
-      .filter_map(|id| modules[id].as_normal())
-      .for_each(|module| module.get_exported_names(export_star_set, modules, false, ret));
-    if include_default {
-      ret.extend(self.ecma_view.named_exports.keys());
-    } else {
-      ret.extend(self.ecma_view.named_exports.keys().filter(|name| name.as_str() != "default"));
-    }
   }
 
   pub fn star_exports_from_external_modules<'me>(
@@ -245,13 +199,6 @@ impl NormalModule {
   pub fn is_hmr_partially_accepting_module(&self) -> bool {
     self.ast_usage.contains(EcmaModuleAstUsage::HmrAcceptExports)
   }
-}
-
-#[derive(Debug)]
-pub struct DebugNormalModuleForTreeShaking {
-  pub id: String,
-  pub is_included: bool,
-  pub stmt_infos: Vec<DebugStmtInfoForTreeShaking>,
 }
 
 impl Deref for NormalModule {

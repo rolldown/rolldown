@@ -1,0 +1,173 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// b.js
+const early = [
+	v,
+	defaultValue,
+	__proto__
+];
+// main.js
+var v = 3;
+var defaultValue = 4;
+var __proto__ = 5;
+assert.deepStrictEqual(early, [
+	void 0,
+	void 0,
+	void 0
+]);
+assert.deepStrictEqual([
+	v,
+	defaultValue,
+	__proto__
+], [
+	3,
+	4,
+	5
+]);
+export { __proto__, defaultValue as default, v };
+
+```
+
+# Variant: [inline_const: Config(InlineConstConfig { mode: Some(All), pass: 2 })]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert";
+// b.js
+const early = [
+	v,
+	defaultValue,
+	__proto__
+];
+// main.js
+var v = 3;
+var defaultValue = 4;
+var __proto__ = 5;
+assert.deepStrictEqual(early, [
+	void 0,
+	void 0,
+	void 0
+]);
+assert.deepStrictEqual([
+	v,
+	defaultValue,
+	__proto__
+], [
+	3,
+	4,
+	5
+]);
+export { __proto__, defaultValue as default, v };
+
+```
+
+# Variant: [format: Cjs]
+
+## warnings
+
+### MIXED_EXPORTS
+
+```text
+[MIXED_EXPORTS] Entry module "main.js" is using named (including "__proto__", "default", "v") and default exports together. Consumers of your bundle will have to use `chunk.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
+
+```
+
+## Assets
+
+### main.js
+
+```js
+Object.defineProperties(exports, {
+	__esModule: { value: true },
+	[Symbol.toStringTag]: { value: "Module" }
+});
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+// b.js
+const early = [
+	v,
+	defaultValue,
+	__proto__
+];
+// main.js
+var v = 3;
+var defaultValue = 4;
+var __proto__ = 5;
+node_assert.default.deepStrictEqual(early, [
+	void 0,
+	void 0,
+	void 0
+]);
+node_assert.default.deepStrictEqual([
+	v,
+	defaultValue,
+	__proto__
+], [
+	3,
+	4,
+	5
+]);
+Object.defineProperty(exports, "__proto__", {
+	enumerable: true,
+	value: __proto__
+});
+exports.default = defaultValue;
+exports.v = v;
+
+```
+
+# Variant: [preserve_modules: true]
+
+## Assets
+
+### b.js
+
+```js
+import defaultValue, { __proto__, v } from "./main.js";
+// b.js
+const early = [
+	v,
+	defaultValue,
+	__proto__
+];
+export { early };
+
+```
+
+### main.js
+
+```js
+import assert from "node:assert";
+import { early } from "./b.js";
+// main.js
+var v = 3;
+var defaultValue = 4;
+var __proto__ = 5;
+assert.deepStrictEqual(early, [
+	void 0,
+	void 0,
+	void 0
+]);
+assert.deepStrictEqual([
+	v,
+	defaultValue,
+	__proto__
+], [
+	3,
+	4,
+	5
+]);
+export { __proto__, defaultValue as default, v };
+
+```

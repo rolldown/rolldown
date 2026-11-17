@@ -772,6 +772,9 @@ impl GenerateStage<'_> {
       let symbol_owners = self.referenced_symbol_owners(module_idx);
       targets.extend(ambiguous.into_iter().filter(|dep_idx| symbol_owners.contains(dep_idx)));
     }
+    if let Some(records) = self.reexport_side_effect_importees.get(&module_idx) {
+      targets.extend(records.values().flatten().copied());
+    }
     targets
   }
 

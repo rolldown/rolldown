@@ -1,0 +1,6 @@
+{
+  "sideEffects": [
+    "./t1.js",
+    "./t2.js"
+  ]
+}

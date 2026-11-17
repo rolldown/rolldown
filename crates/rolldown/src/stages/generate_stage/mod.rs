@@ -160,6 +160,7 @@ pub struct GenerateStage<'a> {
   /// `paths` option, it is resolved asynchronously here before entering sync rendering code,
   /// avoiding the need for `invoke_sync` which can cause deadlocks.
   resolved_paths: Option<PathsOutputOption>,
+  reexport_side_effect_importees: compute_cross_chunk_links::ReexportSideEffectImportees,
   /// Decisions of `experimentalInlineCommonChunks`; empty unless the option is on.
   inline_state: InlineCommonChunksState,
   /// Carrier -> the records it prints, finalized and rendered for it (`finalize_inline_copies`);
@@ -174,12 +175,14 @@ impl<'a> GenerateStage<'a> {
     options: &'a SharedOptions,
     plugin_driver: &'a SharedPluginDriver,
   ) -> Self {
+    let reexport_side_effect_importees = Self::compute_reexport_side_effect_importees(link_output);
     Self {
       link_output,
       ast_table,
       options,
       plugin_driver,
       resolved_paths: None,
+      reexport_side_effect_importees,
       inline_state: InlineCommonChunksState::default(),
       inline_renders: FxHashMap::default(),
     }

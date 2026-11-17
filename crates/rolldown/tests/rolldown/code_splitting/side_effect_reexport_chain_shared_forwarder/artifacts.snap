@@ -1,0 +1,104 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+// lib/a.js
+console.log("A");
+
+```
+
+## b.js
+
+```js
+import "./a.js";
+// lib/b.js
+console.log("B");
+
+```
+
+## entry1.js
+
+```js
+import "./b.js";
+// entry1.js
+console.log("entry1", "foo", "bar");
+
+```
+
+## entry2.js
+
+```js
+import "./b.js";
+// entry2.js
+console.log("entry2", "bar", "foo");
+
+```
+
+## entry3.js
+
+```js
+import "./a.js";
+// entry3.js
+console.log("entry3", "foo");
+
+```
+
+# Variant: [inline_const: Bool(false)]
+
+## Assets
+
+### a.js
+
+```js
+// lib/foo_impl.js
+const foo = "foo";
+// lib/a.js
+console.log("A");
+export { foo as t };
+
+```
+
+### b.js
+
+```js
+import "./a.js";
+// lib/bar_impl.js
+const bar = "bar";
+// lib/b.js
+console.log("B");
+export { bar as t };
+
+```
+
+### entry1.js
+
+```js
+import { t as bar } from "./b.js";
+import { t as foo } from "./a.js";
+// entry1.js
+console.log("entry1", foo, bar);
+
+```
+
+### entry2.js
+
+```js
+import { t as bar } from "./b.js";
+import { t as foo } from "./a.js";
+// entry2.js
+console.log("entry2", bar, foo);
+
+```
+
+### entry3.js
+
+```js
+import { t as foo } from "./a.js";
+// entry3.js
+console.log("entry3", foo);
+
+```

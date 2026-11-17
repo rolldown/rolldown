@@ -5,6 +5,7 @@ use crate::esm_init_obligations::{
   collect_entry_reexported_wrapper_inits, collect_wrapped_esm_init_targets_for_import_record,
   for_each_init_obligation_record,
 };
+use crate::stages::link_stage::LinkStageOutput;
 use crate::utils::chunk::conflict_resolver::{ConflictResolver, deconflict_order_key};
 use crate::utils::chunk::normalize_preserve_entry_signature;
 use crate::utils::external_import_interop::external_import_needs_interop;
@@ -23,6 +24,9 @@ use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::hash::Hash;
+
+pub(super) type ReexportSideEffectImportees =
+  FxHashMap<ModuleIdx, FxIndexMap<ImportRecordIdx, FxIndexSet<ModuleIdx>>>;
 
 type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxIndexSet<SymbolRef>>;
 type IndexChunkImportsFromExternalModules =
@@ -533,6 +537,118 @@ impl GenerateStage<'_> {
     owners
   }
 
+  // See internal-docs/code-splitting/implementation.md.
+  pub(super) fn compute_reexport_side_effect_importees(
+    link_output: &LinkStageOutput,
+  ) -> ReexportSideEffectImportees {
+    let chains = &link_output.normal_symbol_exports_chain_map;
+    let mut reads = FxIndexSet::default();
+    let mut effectful = FxHashMap::default();
+    for module in link_output.module_table.modules.iter().filter_map(Module::as_normal) {
+      let meta = &link_output.metas[module.idx];
+      if !meta.is_included {
+        continue;
+      }
+      for (stmt_idx, stmt) in link_output.stmt_infos[module.idx].iter_enumerated() {
+        if !meta.stmt_info_included.has_bit(stmt_idx) {
+          continue;
+        }
+        for reference in &stmt.referenced_symbols {
+          let Some(import) = module.named_imports.get(reference.symbol_ref()) else { continue };
+          if module.import_records[import.record_idx].kind != ImportKind::Import {
+            continue;
+          }
+          let symbols = match reference {
+            SymbolOrMemberExprRef::Symbol(symbol) => std::slice::from_ref(symbol),
+            SymbolOrMemberExprRef::MemberExpr(expr) => expr
+              .resolution(&meta.resolved_member_expr_refs)
+              .map_or(std::slice::from_ref(&expr.object_ref), |r| r.depended_refs.as_slice()),
+          };
+          reads.extend(
+            symbols
+              .iter()
+              .filter(|symbol| {
+                symbol.owner != module.idx
+                  || chains.get(symbol).is_some_and(|chain| !chain.is_empty())
+              })
+              .map(|&symbol| (module.idx, import.record_idx, symbol)),
+          );
+        }
+      }
+    }
+    let mut targets = ReexportSideEffectImportees::default();
+    for (mut source, mut record, symbol) in reads {
+      for forwarding in std::iter::once(&symbol).chain(chains.get(&symbol).into_iter().flatten()) {
+        let owner = forwarding.owner;
+        if owner == source || !link_output.metas[owner].is_included {
+          continue;
+        }
+        if !link_output.metas[owner].wrap_kind().is_none() {
+          break;
+        }
+        let Some(module) = link_output.module_table[owner].as_normal() else { continue };
+        let Some(import) = module.named_imports.get(forwarding) else { continue };
+        if !*effectful.entry(owner).or_insert_with(|| {
+          let reexport = ImportRecordMeta::IsReExportOnly | ImportRecordMeta::IsExportStar;
+          module.side_effects.has_side_effects()
+            && (link_output.stmt_infos[owner].iter_enumerated_without_namespace_stmt().any(
+              |(idx, stmt)| {
+                link_output.metas[owner].stmt_info_included.has_bit(idx)
+                  && stmt.eval_flags.has_side_effect_for_tree_shaking()
+                  && stmt
+                    .import_records
+                    .iter()
+                    .all(|&id| !module.import_records[id].meta.intersects(reexport))
+              },
+            ) || module.import_records.iter().any(|rec| {
+              rec.kind == ImportKind::Import
+                && !rec.meta.intersects(reexport)
+                && rec.resolved_module.is_some_and(|dep| {
+                  link_output.module_table[dep].side_effects().has_side_effects()
+                })
+            }))
+        }) {
+          continue;
+        }
+        targets.entry(source).or_default().entry(record).or_default().insert(owner);
+        source = owner;
+        record = import.record_idx;
+      }
+    }
+    for (&source, records) in &mut targets {
+      for (&record, importees) in records {
+        if importees.len() < 2 {
+          continue;
+        }
+        let mut pending = link_output.module_table[source].import_records()[record]
+          .resolved_module
+          .into_iter()
+          .collect::<Vec<_>>();
+        let mut visited = FxHashSet::default();
+        let mut ordered = FxIndexSet::default();
+        while let Some(owner) = pending.pop() {
+          if !visited.insert(owner) {
+            continue;
+          }
+          if importees.contains(&owner) {
+            ordered.insert(owner);
+          } else {
+            pending.extend(
+              link_output.module_table[owner]
+                .import_records()
+                .iter()
+                .filter(|rec| rec.kind == ImportKind::Import)
+                .filter_map(|rec| rec.resolved_module)
+                .rev(),
+            );
+          }
+        }
+        *importees = ordered;
+      }
+    }
+    targets
+  }
+
   /// Whether the output keeps the module that declares an inlined constant, because the module or
   /// one of its dependencies has side effects.
   fn keeps_constant_owner(&self, owner: ModuleIdx) -> bool {
@@ -621,6 +737,13 @@ impl GenerateStage<'_> {
       let Some(importee) = record.resolved_module else {
         continue;
       };
+      if let Some(targets) = self
+        .reexport_side_effect_importees
+        .get(&module_idx)
+        .and_then(|records| records.get(&record_idx))
+      {
+        importees.extend(targets.iter().copied());
+      }
       if is_kept(importee) {
         importees.push(importee);
         continue;
@@ -1971,13 +2094,18 @@ impl GenerateStage<'_> {
 
           // From import records.
           // This adds side-effectful imports as bare imports if necessary.
-          for rec in &module.import_records {
-            if rec.kind != ImportKind::Import {
-              continue;
-            }
-            let Some(importee_module_idx) = rec.resolved_module else {
-              continue;
-            };
+          let direct_importees = module
+            .import_records
+            .iter()
+            .filter(|rec| rec.kind == ImportKind::Import)
+            .filter_map(|rec| rec.resolved_module);
+          let reexport_importees = self
+            .reexport_side_effect_importees
+            .get(&module_idx)
+            .into_iter()
+            .flat_map(|records| records.values().flatten())
+            .copied();
+          for importee_module_idx in direct_importees.chain(reexport_importees) {
             if self.options.is_strict_execution_order_enabled()
               && order_state
                 .esm_init_target(importee_module_idx, &self.link_output.metas[importee_module_idx])

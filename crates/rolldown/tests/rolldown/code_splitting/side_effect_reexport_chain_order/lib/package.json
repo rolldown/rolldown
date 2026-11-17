@@ -1,0 +1,9 @@
+{
+  "type": "module",
+  "sideEffects": [
+    "./outer.js",
+    "./inner.js",
+    "./before.js",
+    "./after.js"
+  ]
+}

@@ -10,7 +10,7 @@ OPTIONS
   --config -c, <filename>     Path to the config file (default: \`rolldown.config.js\`).
   --dir -d, <dir>             Output directory, defaults to \`dist\` if \`file\` is not set.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
-  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
+  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, iife, and umd).
   --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key:value\`).
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
@@ -80,17 +80,17 @@ OPTIONS
   --keepNames                 Keep function and class names after bundling.
   --legalComments <legalComments>Control legal comments in the output.
   --logLevel <logLevel>       Log level (silent, info, debug, warn).
-  --makeAbsoluteExternalsRelative Prevent normalization of external imports.
   --minifyInternalExports     Minify internal exports.
   --moduleTypes <types>       Module types for customized extensions.
   --no-externalLiveBindings   Disable external live bindings.
+  --no-makeAbsoluteExternalsRelative Disable normalization of external imports.
+  --no-polyfillRequire        Disable require polyfill injection.
   --no-preserveEntrySignatures Avoid facade chunks for entry points.
   --no-treeshake              Disable treeshaking.
   --optimization.inlineConst <optimization.inlineConst>Enable crossmodule constant inlining.
   --optimization.pifeForModuleWrappers Use PIFE pattern for module wrappers.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --paths <paths>             Maps external module IDs to paths.
-  --polyfillRequire           Disable require polyfill injection.
   --postBanner <postBanner>   A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
   --postFooter <postFooter>   A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
   --preserveModules           Preserve module structure.
@@ -167,7 +167,7 @@ OPTIONS
   --config -c, <filename>     Path to the config file (default: \`rolldown.config.js\`).
   --dir -d, <dir>             Output directory, defaults to \`dist\` if \`file\` is not set.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
-  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
+  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, iife, and umd).
   --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key:value\`).
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
@@ -237,17 +237,17 @@ OPTIONS
   --keepNames                 Keep function and class names after bundling.
   --legalComments <legalComments>Control legal comments in the output.
   --logLevel <logLevel>       Log level (silent, info, debug, warn).
-  --makeAbsoluteExternalsRelative Prevent normalization of external imports.
   --minifyInternalExports     Minify internal exports.
   --moduleTypes <types>       Module types for customized extensions.
   --no-externalLiveBindings   Disable external live bindings.
+  --no-makeAbsoluteExternalsRelative Disable normalization of external imports.
+  --no-polyfillRequire        Disable require polyfill injection.
   --no-preserveEntrySignatures Avoid facade chunks for entry points.
   --no-treeshake              Disable treeshaking.
   --optimization.inlineConst <optimization.inlineConst>Enable crossmodule constant inlining.
   --optimization.pifeForModuleWrappers Use PIFE pattern for module wrappers.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --paths <paths>             Maps external module IDs to paths.
-  --polyfillRequire           Disable require polyfill injection.
   --postBanner <postBanner>   A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
   --postFooter <postFooter>   A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
   --preserveModules           Preserve module structure.
@@ -324,7 +324,7 @@ OPTIONS
   --config -c, <filename>     Path to the config file (default: \`rolldown.config.js\`).
   --dir -d, <dir>             Output directory, defaults to \`dist\` if \`file\` is not set.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
-  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
+  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, iife, and umd).
   --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key:value\`).
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
@@ -394,17 +394,17 @@ OPTIONS
   --keepNames                 Keep function and class names after bundling.
   --legalComments <legalComments>Control legal comments in the output.
   --logLevel <logLevel>       Log level (silent, info, debug, warn).
-  --makeAbsoluteExternalsRelative Prevent normalization of external imports.
   --minifyInternalExports     Minify internal exports.
   --moduleTypes <types>       Module types for customized extensions.
   --no-externalLiveBindings   Disable external live bindings.
+  --no-makeAbsoluteExternalsRelative Disable normalization of external imports.
+  --no-polyfillRequire        Disable require polyfill injection.
   --no-preserveEntrySignatures Avoid facade chunks for entry points.
   --no-treeshake              Disable treeshaking.
   --optimization.inlineConst <optimization.inlineConst>Enable crossmodule constant inlining.
   --optimization.pifeForModuleWrappers Use PIFE pattern for module wrappers.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --paths <paths>             Maps external module IDs to paths.
-  --polyfillRequire           Disable require polyfill injection.
   --postBanner <postBanner>   A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
   --postFooter <postFooter>   A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
   --preserveModules           Preserve module structure.
@@ -481,7 +481,7 @@ OPTIONS
   --config -c, <filename>     Path to the config file (default: \`rolldown.config.js\`).
   --dir -d, <dir>             Output directory, defaults to \`dist\` if \`file\` is not set.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
-  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
+  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, iife, and umd).
   --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key:value\`).
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
@@ -551,17 +551,17 @@ OPTIONS
   --keepNames                 Keep function and class names after bundling.
   --legalComments <legalComments>Control legal comments in the output.
   --logLevel <logLevel>       Log level (silent, info, debug, warn).
-  --makeAbsoluteExternalsRelative Prevent normalization of external imports.
   --minifyInternalExports     Minify internal exports.
   --moduleTypes <types>       Module types for customized extensions.
   --no-externalLiveBindings   Disable external live bindings.
+  --no-makeAbsoluteExternalsRelative Disable normalization of external imports.
+  --no-polyfillRequire        Disable require polyfill injection.
   --no-preserveEntrySignatures Avoid facade chunks for entry points.
   --no-treeshake              Disable treeshaking.
   --optimization.inlineConst <optimization.inlineConst>Enable crossmodule constant inlining.
   --optimization.pifeForModuleWrappers Use PIFE pattern for module wrappers.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --paths <paths>             Maps external module IDs to paths.
-  --polyfillRequire           Disable require polyfill injection.
   --postBanner <postBanner>   A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
   --postFooter <postFooter>   A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
   --preserveModules           Preserve module structure.

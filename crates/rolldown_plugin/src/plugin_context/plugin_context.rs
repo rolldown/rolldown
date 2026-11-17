@@ -119,10 +119,6 @@ impl PluginContext {
     call_native_only!(self, "get_module_info", ctx => ctx.get_module_info(module_id))
   }
 
-  pub fn get_module_ids(&self) -> Vec<ArcStr> {
-    call_native_only!(self, "get_module_ids", ctx => ctx.get_module_ids())
-  }
-
   pub fn cwd(&self) -> &PathBuf {
     call_native_only!(self, "cwd", ctx => ctx.cwd())
   }
@@ -138,10 +134,6 @@ impl PluginContext {
 
   pub fn options(&self) -> &rolldown_common::NormalizedBundlerOptions {
     call_native_only!(self, "options", ctx => &ctx.options)
-  }
-
-  pub fn resolver(&self) -> &rolldown_resolver::Resolver {
-    call_native_only!(self, "resolver", ctx => &ctx.resolver)
   }
 
   pub fn file_emitter(&self) -> &rolldown_common::SharedFileEmitter {

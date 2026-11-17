@@ -120,8 +120,8 @@ files.
 
 `ScanStageCache` must survive a _failed_ build whole, not just a successful one
 — otherwise the next HMR/incremental build reads a broken cache and panics. The
-invariant is: **between builds, `Bundler::cache` is always whole** — `snapshot`
-is `Some` and its `symbol_ref_db` carries real scoping.
+invariant is: **between builds, `Bundler::cache` is always whole** — a `snapshot`
+that is `Some` has a `symbol_ref_db` with real scoping.
 
 A build mutates the cache through several non-atomic "tear → repair" steps. An
 early `?` return landing between a tear and its repair used to leave the cache
@@ -140,6 +140,7 @@ Each repair therefore runs **unconditionally**:
   stage, _before_ the fallible `generate_bundle` / filename-check /
   `invalidate_js_side_cache` steps.
 - `update_defer_sync_data` restores the snapshot before propagating an error.
+- `scan_modules` runs `repair_cache_after_failed_build` when the build fails between updating the cache and `bundle_up`, in `update_defer_sync_data` or `buildEnd`. After a partial scan it moves the scan output's `symbol_ref_db`, which `create_output` took out of the cache together with the scoping, back into the snapshot. After a full scan it empties the cache, so the next build is a full one. A full build that fails in `defer_sync_scan_data` commits no snapshot in the first place.
 
 A failed scan must also not leave the cache _out of sync_. Task results are
 applied as they arrive, so an aborted partial scan has already flipped
@@ -183,8 +184,10 @@ Two consumers depend on that queue's contents:
   revert, while the failed scan's modules still exist in `module_id_to_idx`
   and the live edge list.
 
+A build that fails after its scan updated the cache has merged the scanned modules, so a later build would not fetch them again, and an error that depends on fetching them would not come back: a problem a plugin collects while transforming and reports in `buildEnd`, for example. `repair_cache_after_failed_build` therefore queues the files the scan fetched in `ScanStageCache::pending_build_rescans`, again only those the graph still needs (`ScanStageCache::still_needed`), and every build fetches them again, through `pending_rescans`, until one gets through its scan. HMR updates leave that queue alone, because they do not run `buildEnd`.
+
 The invariant this buys: **between builds the cache is either empty
-(`snapshot` is `None`: fresh bundler, or a failed full scan reset it) or a
+(`snapshot` is `None`: fresh bundler, or a full build failed before `bundle_up`) or a
 valid graph any partial scan can build on.** `Bundler::incremental_bundle`
 picks the scan mode from that property alone (`has_snapshot`), and no other
 consumer needs to reason about failed builds.
@@ -293,7 +296,7 @@ Rust keeps the JS functions of the bundler options only while their owner is ope
   - Example: a plugin keeps `this`, and the options have an `external` function. After a dev engine close, the plugin calls `this.resolve()`. Then `this.resolve()` rejects, and the `cause` of its error has the release message.
   - After `bundle.close()`, the same call fails before it gets to the option function, because that close drops the plugin driver.
 - Option getters still work after the close, because each options object reads all its values in its constructor (see [Normalized options objects](#normalized-options-objects)).
-- The compiler checks only the fields that use `UntrackedJsCallback`. So a new function option must use it too. Nothing checks a new field that uses `JsCallback` directly, because plugin hooks and the watcher event listener also use `JsCallback`.
+- The compiler checks only the fields that use `UntrackedJsCallback`. So a new function option must use it too. Nothing checks a new field that uses `JsCallback` or `MaybeAsyncJsCallback` directly, because plugin hooks and the watcher event listener also use them.
 
 ### Limits
 
@@ -319,6 +322,12 @@ Rust keeps the JS functions of the bundler options only while their owner is ope
   - a second dev engine close while `closeBundle` runs,
   - the error after the release.
 - `packages/rolldown/tests/watch/watch.test.ts`: a rebuild after an event result close, and a watcher close while an event result close runs `closeBundle`.
+
+## Synchronous hook returns
+
+The TypeScript hook adapters and the shared error wrapper preserve synchronous returns. They normalize values inline and only create Promise chains for actual Promises or thenables; an unconditional `async` wrapper would force napi to create fulfillment and rejection handlers even for an empty synchronous hook. This is decided per invocation, because the same hook can return either kind of result. Void hooks discard returned values while still awaiting async completion, and the error wrapper annotates both synchronous throws and asynchronous rejections. Timing instrumentation must preserve this distinction too.
+
+The binding keeps plain returns free of Promises too. Each hook is a `MaybeAsyncJsCallback`, whose return value is a `MaybePromise` (`crates/rolldown_binding/src/types/js_callback.rs`). `MaybePromise` checks for a Promise with `napi_is_promise` only and converts a plain value directly. napi's `Either<Promise<T>, T>` validates a plain value as a Promise first, and that validation creates and rejects a Promise for every plain value, which makes a synchronous hook slower than an `async` one. `Either` also drops the conversion error of a malformed result, such as `{ code: Buffer }` from `load`. `MaybePromise` returns the error that a Promise resolving to the same value gives, including an exception that the conversion throws.
 
 ## Unresolved Questions
 

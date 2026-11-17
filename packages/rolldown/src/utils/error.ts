@@ -118,6 +118,9 @@ function getErrorMessage(e: RolldownError): string {
   }
   const message = `${e.name ?? 'Error'}: ${e.message}`;
   s += message;
+  if (e.url) {
+    s = joinNewLine(s, e.url);
+  }
   if (e.frame) {
     s = joinNewLine(s, e.frame);
   }

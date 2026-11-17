@@ -1,14 +1,14 @@
 use itertools::Itertools;
 use rolldown_common::{
   AddonRenderContext, ChunkIdx, ExportsKind, ExternalModule, ModuleIdx, RUNTIME_MODULE_KEY,
-  Specifier, SymbolRef,
+  Specifier, StaticImport, SymbolRef,
 };
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{
   concat_string,
   ecmascript::{escape_non_ascii, to_ecma_string_literal, to_module_import_export_name_with_ascii},
 };
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{
   share_factory::render_inline_records,
@@ -153,8 +153,42 @@ fn render_chunk_content<'code>(
 fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
   let mut s = String::new();
   let ascii_only = ctx.options.charset.is_ascii();
-  ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
-    let importee_chunk = &ctx.chunk_graph.chunk_table[*exporter_id];
+  let direct_external_imports = ctx
+    .chunk
+    .direct_imports_from_external_modules
+    .iter()
+    .map(|(importee_id, named_imports)| (*importee_id, named_imports))
+    .collect::<FxHashMap<_, _>>();
+  let mut rendered_external_import_namespace_modules = FxHashSet::default();
+  // The chunk imports and the external imports in the order of `static_imports`. An entry-level
+  // `export *` from an external module is written after the imports.
+  for static_import in &ctx.chunk.static_imports {
+    let exporter_id = match *static_import {
+      StaticImport::Chunk(exporter_id) => exporter_id,
+      StaticImport::External(importee_id) => {
+        let Some(named_imports) = direct_external_imports.get(&importee_id) else {
+          continue;
+        };
+        let importee = &ctx.link_output.module_table[importee_id]
+          .as_external()
+          .expect("Should be external module here");
+        let mut has_importee_imported = false;
+        s += &render_named_imports(
+          ctx,
+          importee,
+          named_imports.iter(),
+          &mut has_importee_imported,
+          &mut rendered_external_import_namespace_modules,
+        );
+        continue;
+      }
+    };
+    let items = ctx
+      .chunk
+      .imports_from_other_chunks
+      .get(&exporter_id)
+      .expect("every chunk of `static_imports` is in `imports_from_other_chunks`");
+    let importee_chunk = &ctx.chunk_graph.chunk_table[exporter_id];
     let mut default_alias = vec![];
     // Track seen canonical refs to avoid duplicate imports.
     // Multiple import_refs can resolve to the same canonical_ref (e.g., re-exports from CJS modules),
@@ -173,7 +207,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
           .symbol_db
           .canonical_name_for_or_original(canonical_ref, &ctx.chunk.canonical_names);
         let rendered_imported = escape_non_ascii(imported, ascii_only);
-        let alias = &ctx.render_export_items_index_vec[*exporter_id]
+        let alias = &ctx.render_export_items_index_vec[exporter_id]
           .get(&item.import_ref)
           .expect("should have export item index")[0];
         if alias.as_str() == imported {
@@ -200,22 +234,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
       None,
       ascii_only,
     ));
-  });
-  let mut rendered_external_import_namespace_modules = FxHashSet::default();
-  // render external imports
-  ctx.chunk.direct_imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
-    let importee = &ctx.link_output.module_table[*importee_id]
-      .as_external()
-      .expect("Should be external module here");
-    let mut has_importee_imported = false;
-    s += &render_named_imports(
-      ctx,
-      importee,
-      named_imports.iter(),
-      &mut has_importee_imported,
-      &mut rendered_external_import_namespace_modules,
-    );
-  });
+  }
   (!s.is_empty()).then_some(s)
 }
 

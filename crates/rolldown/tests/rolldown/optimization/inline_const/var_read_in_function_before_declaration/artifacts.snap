@@ -1,0 +1,130 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// main.js
+const reads = [];
+main();
+callsNested();
+const arrow = () => reads.push(["arrow", arrowFlag]);
+arrow();
+[1].forEach(() => reads.push(["callback", callbackFlag]));
+try {
+	throw 0;
+} catch {
+	reads.push(["catch", catchFlag]);
+}
+var Reader = class {
+	static {
+		reads.push(["static", staticFlag]);
+	}
+};
+var flag = true;
+var nestedFlag = true;
+var arrowFlag = true;
+var callbackFlag = true;
+var catchFlag = true;
+var staticFlag = true;
+var lateFlag = true;
+var initFlag = (readInitFlag(), true);
+main();
+reads.push(["late", late()]);
+function main() {
+	reads.push(["main", flag]);
+}
+function callsNested() {
+	nested();
+}
+function nested() {
+	reads.push(["nested", nestedFlag]);
+}
+function late() {
+	return true;
+}
+function readInitFlag() {
+	reads.push(["initializer", initFlag]);
+}
+assert.deepStrictEqual(reads, [
+	["main", void 0],
+	["nested", void 0],
+	["arrow", void 0],
+	["callback", void 0],
+	["catch", void 0],
+	["static", void 0],
+	["initializer", void 0],
+	["main", true],
+	["late", true]
+]);
+export { arrowFlag, callbackFlag, catchFlag, flag, initFlag, lateFlag, nestedFlag, staticFlag };
+
+```
+
+# Variant: [inline_const: Config(InlineConstConfig { mode: Some(All), pass: 2 })]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert";
+// main.js
+const reads = [];
+main();
+callsNested();
+const arrow = () => reads.push(["arrow", arrowFlag]);
+arrow();
+[1].forEach(() => reads.push(["callback", callbackFlag]));
+try {
+	throw 0;
+} catch {
+	reads.push(["catch", catchFlag]);
+}
+var Reader = class {
+	static {
+		reads.push(["static", staticFlag]);
+	}
+};
+var flag = true;
+var nestedFlag = true;
+var arrowFlag = true;
+var callbackFlag = true;
+var catchFlag = true;
+var staticFlag = true;
+var lateFlag = true;
+var initFlag = (readInitFlag(), true);
+main();
+reads.push(["late", late()]);
+function main() {
+	reads.push(["main", flag]);
+}
+function callsNested() {
+	nested();
+}
+function nested() {
+	reads.push(["nested", nestedFlag]);
+}
+function late() {
+	return true;
+}
+function readInitFlag() {
+	reads.push(["initializer", initFlag]);
+}
+assert.deepStrictEqual(reads, [
+	["main", void 0],
+	["nested", void 0],
+	["arrow", void 0],
+	["callback", void 0],
+	["catch", void 0],
+	["static", void 0],
+	["initializer", void 0],
+	["main", true],
+	["late", true]
+]);
+export { arrowFlag, callbackFlag, catchFlag, flag, initFlag, lateFlag, nestedFlag, staticFlag };
+
+```

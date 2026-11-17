@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// dep.cjs
+var require_dep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = function run() {
+		const values = [];
+		try {
+			throw 0;
+		} catch (require$1) {
+			var require$1 = 1;
+			{
+				function require$1() {
+					return 2;
+				}
+				values.push(require$1());
+			}
+			values.push(typeof require$1);
+		}
+		return [values, typeof require$1];
+	};
+}));
+// main.cjs
+const assert = require("node:assert/strict");
+const run = require_dep();
+assert.deepStrictEqual(run(), [[2, "number"], "function"]);
+
+```
+
+# Variant: minified: [minify: true]
+
+## Assets
+
+### main.js
+
+```js
+var e=/* @__PURE__ */ ((e,t)=>()=>(t||(e((t={exports:{}}).exports,t,t.exports),e=null),t.exports))(((e,t)=>{t.exports=function(){let e=[];try{throw 0}catch(require$1){var require$1=1;{function require$1(){return 2}e.push(require$1())}e.push(typeof require$1)}return[e,typeof require$1]}}));const t=require("node:assert/strict"),n=e();t.deepStrictEqual(n(),[[2,`number`],`function`]);
+```

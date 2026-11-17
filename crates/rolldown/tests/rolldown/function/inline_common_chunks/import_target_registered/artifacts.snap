@@ -1,0 +1,93 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { a as __share_require, i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+__share("m-JUauIEEf", ((exports) => {
+	// m.js
+	var m_exports = /* @__PURE__ */ __exportAll({
+		count: () => count,
+		inc: () => inc
+	});
+	function inc() {
+		return ++count;
+	}
+	var count;
+	function init_m() {
+		return (init_m = __esmMin((() => {
+			globalThis.events.push("M body");
+			count = 0;
+		})))();
+	}
+	__share_export(exports, {
+		i: () => m_exports,
+		n: () => inc,
+		r: () => init_m,
+		t: () => count
+	});
+}));
+var share_m = __share_require("m-JUauIEEf");
+// a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		share_m.r();
+		(0, share_m.n)();
+		globalThis.events.push("A " + share_m.t);
+		globalThis.loadFromA = () => Promise.resolve().then((n) => (n = __share_require("m-JUauIEEf"), n.r(), n.i));
+	})))();
+}
+init_a();
+
+```
+
+## b.js
+
+```js
+import { a as __share_require, i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+__share("m-JUauIEEf", ((exports) => {
+	// m.js
+	var m_exports = /* @__PURE__ */ __exportAll({
+		count: () => count,
+		inc: () => inc
+	});
+	function inc() {
+		return ++count;
+	}
+	var count;
+	function init_m() {
+		return (init_m = __esmMin((() => {
+			globalThis.events.push("M body");
+			count = 0;
+		})))();
+	}
+	__share_export(exports, {
+		i: () => m_exports,
+		n: () => inc,
+		r: () => init_m,
+		t: () => count
+	});
+}));
+var share_m = __share_require("m-JUauIEEf");
+// b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		share_m.r();
+		(0, share_m.n)();
+		globalThis.events.push("B " + share_m.t);
+	})))();
+}
+init_b();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as a, __share_export as i, __exportAll as n, __share as r, __esmMin as t };
+
+```

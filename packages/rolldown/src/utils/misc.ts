@@ -10,6 +10,14 @@ export function isPromiseLike(value: any): value is PromiseLike<any> {
   );
 }
 
+// Void hooks must ignore returned values, but still wait for async completion.
+// Keep plain returns synchronous so the native bridge needs no Promise handlers.
+export function discardResult(value: unknown): void | Promise<void> {
+  if (isPromiseLike(value)) {
+    return Promise.resolve(value).then(noop);
+  }
+}
+
 export function unimplemented(info?: string): never {
   if (info) {
     throw new Error(`unimplemented: ${info}`);

@@ -892,8 +892,8 @@ export interface JSONSourceMap {
    * This value is prepended to the individual entries in the "source" field.
    */
   sourceRoot?: string
-  /** A list of original sources used by the "mappings" entry. */
-  sources: Array<string>
+  /** A list of original sources used by the "mappings" entry, with `None` for unknown names. */
+  sources: Array<string | undefined | null>
   /**
    * An optional list of source content, useful when the "source" can't be hosted.
    * The contents are listed in the same order as the sources in line 5. "null" may be used if some original sources should be retrieved by name.
@@ -917,7 +917,7 @@ export interface SourceMap {
   mappings: string
   names: Array<string>
   sourceRoot?: string
-  sources: Array<string>
+  sources: Array<string | undefined | null>
   sourcesContent?: Array<string>
   version: number
   ignoreList?: Array<number>
@@ -2305,8 +2305,6 @@ export interface BindingEsmExternalRequirePluginConfig {
 }
 
 export interface BindingExperimentalDevModeOptions {
-  host?: string
-  port?: number
   implement: string
   /** @deprecated Common runtime injection will be disabled by default in the future. */
   skipCommonRuntimeInjection?: boolean
@@ -2876,6 +2874,8 @@ export interface BindingPluginTiming {
   hook: string
   calls: number
   ms: number
+  /** The longest single call. */
+  maxMs: number
   maxInFlight: number
   /** How much of `ms` is double counted because calls overlapped. */
   overlapMs: number

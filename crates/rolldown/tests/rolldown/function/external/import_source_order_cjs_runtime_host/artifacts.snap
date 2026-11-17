@@ -1,0 +1,50 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+let ext = require("ext");
+const require_shared$1 = require("./shared.js");
+ext = require_shared$1.__toESM(ext);
+// a.js
+var import_shared = /* @__PURE__ */ require_shared$1.__toESM(require_shared$1.require_shared());
+globalThis.values = [ext.default.value, import_shared.default.value];
+
+```
+
+## b.js
+
+```js
+const require_shared$1 = require("./shared.js");
+// b.js
+var import_shared = /* @__PURE__ */ require_shared$1.__toESM(require_shared$1.require_shared());
+globalThis.values = [import_shared.default.value];
+
+```
+
+## shared.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// shared.cjs
+var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	(globalThis.externalOrder ??= []).push("shared");
+	module.exports = { value: "shared" };
+}));
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+Object.defineProperty(exports, "require_shared", {
+	enumerable: true,
+	get: function() {
+		return require_shared;
+	}
+});
+
+```

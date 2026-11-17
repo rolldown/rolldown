@@ -1,0 +1,138 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { a as __share_require, i as __share_export, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+__share("loader-p8k0HGDc", ((exports) => {
+	// loader.js
+	function loadM() {
+		return import("./m.js").then((n) => (n = __share_require("m-JUauIEEf"), n.r(), n.i));
+	}
+	function init_loader() {
+		return (init_loader = __esmMin((() => {})))();
+	}
+	__share_export(exports, {
+		n: () => loadM,
+		t: () => init_loader
+	});
+}));
+var share_loader = __share_require("loader-p8k0HGDc");
+// a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		globalThis.loadFromA = share_loader.n;
+	})))();
+}
+init_a();
+
+```
+
+## b.js
+
+```js
+import { a as __share_require, i as __share_export, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+__share("loader-p8k0HGDc", ((exports) => {
+	// loader.js
+	function loadM() {
+		return import("./m.js").then((n) => (n = __share_require("m-JUauIEEf"), n.r(), n.i));
+	}
+	function init_loader() {
+		return (init_loader = __esmMin((() => {})))();
+	}
+	__share_export(exports, {
+		n: () => loadM,
+		t: () => init_loader
+	});
+}));
+var share_loader = __share_require("loader-p8k0HGDc");
+// b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		globalThis.loadFromB = share_loader.n;
+	})))();
+}
+init_b();
+
+```
+
+## m.js
+
+```js
+import { i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+__share("m-JUauIEEf", ((exports) => {
+	// m.js
+	var m_exports = /* @__PURE__ */ __exportAll({
+		count: () => count,
+		inc: () => inc
+	});
+	function inc() {
+		return ++count;
+	}
+	var count;
+	function init_m() {
+		return (init_m = __esmMin((() => {
+			globalThis.events.push("M body");
+			count = 0;
+		})))();
+	}
+	__share_export(exports, {
+		i: () => m_exports,
+		n: () => inc,
+		r: () => init_m,
+		t: () => count
+	});
+}));
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as a, __share_export as i, __exportAll as n, __share as r, __esmMin as t };
+
+```
+
+## x.js
+
+```js
+import { a as __share_require, i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+__share("m-JUauIEEf", ((exports) => {
+	// m.js
+	var m_exports = /* @__PURE__ */ __exportAll({
+		count: () => count,
+		inc: () => inc
+	});
+	function inc() {
+		return ++count;
+	}
+	var count;
+	function init_m() {
+		return (init_m = __esmMin((() => {
+			globalThis.events.push("M body");
+			count = 0;
+		})))();
+	}
+	__share_export(exports, {
+		i: () => m_exports,
+		n: () => inc,
+		r: () => init_m,
+		t: () => count
+	});
+}));
+var share_m = __share_require("m-JUauIEEf");
+// x.js
+function init_x() {
+	return (init_x = __esmMin((() => {
+		share_m.r();
+		(0, share_m.n)();
+		globalThis.events.push("X " + share_m.t);
+	})))();
+}
+init_x();
+
+```

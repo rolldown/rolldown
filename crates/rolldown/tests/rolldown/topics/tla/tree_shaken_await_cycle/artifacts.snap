@@ -1,0 +1,147 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// utils.js
+let relative = (s) => s;
+(globalThis.tlaOrder ??= []).push("utils");
+function clean(s) {
+	return relative(s);
+}
+// fetch.js
+(globalThis.tlaOrder ??= []).push("fetch");
+// page.js
+(globalThis.tlaOrder ??= []).push("page");
+function render_page() {
+	return clean("page");
+}
+// respond.js
+(globalThis.tlaOrder ??= []).push("respond");
+function respond() {
+	return clean(render_page());
+}
+// server.js
+var Server = class {
+	respond() {
+		return respond();
+	}
+};
+// main.js
+const result = new Server().respond();
+export { result };
+
+```
+
+# Variant: wrap-all: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// utils.js
+function clean(s) {
+	return relative(s);
+}
+var relative;
+function init_utils() {
+	return (init_utils = __esmMin((() => {
+		relative = (s) => s;
+		(globalThis.tlaOrder ??= []).push("utils");
+	})))();
+}
+// fetch.js
+function init_fetch() {
+	return (init_fetch = __esmMin((() => {
+		init_respond();
+		(globalThis.tlaOrder ??= []).push("fetch");
+	})))();
+}
+// page.js
+function render_page() {
+	return clean("page");
+}
+function init_page() {
+	return (init_page = __esmMin((() => {
+		init_fetch();
+		init_utils();
+		(globalThis.tlaOrder ??= []).push("page");
+	})))();
+}
+// respond.js
+function respond() {
+	return clean(render_page());
+}
+function init_respond() {
+	return (init_respond = __esmMin((() => {
+		init_utils();
+		init_page();
+		(globalThis.tlaOrder ??= []).push("respond");
+	})))();
+}
+// server.js
+var Server;
+function init_server() {
+	return (init_server = __esmMin((() => {
+		init_respond();
+		Server = class {
+			respond() {
+				return respond();
+			}
+		};
+	})))();
+}
+// main.js
+var result;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_server();
+		result = new Server().respond();
+	})))();
+}
+init_main();
+export { result };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// utils.js
+let relative = (s) => s;
+(globalThis.tlaOrder ??= []).push("utils");
+function clean(s) {
+	return relative(s);
+}
+// fetch.js
+(globalThis.tlaOrder ??= []).push("fetch");
+// page.js
+(globalThis.tlaOrder ??= []).push("page");
+function render_page() {
+	return clean("page");
+}
+// respond.js
+(globalThis.tlaOrder ??= []).push("respond");
+function respond() {
+	return clean(render_page());
+}
+// server.js
+var Server = class {
+	respond() {
+		return respond();
+	}
+};
+// main.js
+const result = new Server().respond();
+export { result };
+
+```

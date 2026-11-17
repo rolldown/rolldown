@@ -60,12 +60,6 @@ impl FromNapiValue for BindingStringOrRegex {
   }
 }
 
-impl AsRef<StringOrRegex> for BindingStringOrRegex {
-  fn as_ref(&self) -> &StringOrRegex {
-    &self.0
-  }
-}
-
 impl TryFrom<BindingStringOrRegex> for HybridRegex {
   type Error = anyhow::Error;
 

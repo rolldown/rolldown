@@ -2,9 +2,6 @@ use oxc::ast::ast;
 
 pub trait StatementExt<'me, 'ast> {
   fn as_import_declaration(&'me self) -> Option<&'me ast::ImportDeclaration<'ast>>;
-  fn as_export_default_declaration_mut(
-    &'me mut self,
-  ) -> Option<&'me mut ast::ExportDefaultDeclaration<'ast>>;
   fn as_export_all_declaration(&self) -> Option<&ast::ExportAllDeclaration<'ast>>;
   fn as_export_from_declaration_mut(&mut self) -> Option<&mut ast::ExportFromDeclaration<'ast>>;
 
@@ -15,15 +12,6 @@ impl<'ast> StatementExt<'_, 'ast> for ast::Statement<'ast> {
   fn as_import_declaration(&self) -> Option<&ast::ImportDeclaration<'ast>> {
     if let ast::Statement::ImportDeclaration(import_decl) = self {
       return Some(&**import_decl);
-    }
-    None
-  }
-
-  fn as_export_default_declaration_mut(
-    &mut self,
-  ) -> Option<&mut ast::ExportDefaultDeclaration<'ast>> {
-    if let ast::Statement::ExportDefaultDeclaration(export_default_decl) = self {
-      return Some(&mut **export_default_decl);
     }
     None
   }

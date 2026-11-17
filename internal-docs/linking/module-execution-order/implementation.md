@@ -25,6 +25,8 @@ The order is defined by a small set of rules, in precedence order:
 
 The link-time constant lookup in `refine_stmt_side_effects.rs` therefore rejects imported constants within the same static-import strongly connected component, even if the exporter has a lower `exec_order`. With multiple entries or preserved modules, loading a different entry can reverse the order within the cycle and expose a `const` TDZ failure. These components are computed lazily once and shared with the analyzer reruns in cross-module optimization. An exporter outside the importer's component can still supply a constant when it precedes the importer.
 
+The entry re-export fallback in `esm_init_obligations::collect_entry_reexported_wrapper_inits` likewise applies only to unwrapped entries. An ESM-wrapped entry initializes its static dependencies through its own wrapper in source order, including across chunks. Calling its re-export owners first in `exec_order` can enter a dependency cycle through a different module and read an uninitialized binding (issue #11231).
+
 ## Algorithm
 
 The pass is an **iterative post-order DFS** with an explicit `execution_stack: Vec<Status>`. Using an explicit stack (rather than recursion) avoids stack overflow on deep module graphs, which are common in real-world codebases.

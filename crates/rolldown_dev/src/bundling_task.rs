@@ -1,9 +1,6 @@
-use std::{
-  ops::{Deref, DerefMut},
-  sync::{
-    Arc,
-    atomic::{AtomicU32, Ordering},
-  },
+use std::sync::{
+  Arc,
+  atomic::{AtomicU32, Ordering},
 };
 
 use arcstr::ArcStr;
@@ -36,20 +33,6 @@ pub struct BundlingTask {
   /// The watch list the HMR stage added its loaded files to, kept when the rebuild that
   /// followed replaced it. See `rebuild`.
   hmr_stage_watch_files: Option<Arc<FxDashSet<ArcStr>>>,
-}
-
-impl Deref for BundlingTask {
-  type Target = TaskInput;
-
-  fn deref(&self) -> &Self::Target {
-    &self.input
-  }
-}
-
-impl DerefMut for BundlingTask {
-  fn deref_mut(&mut self) -> &mut Self::Target {
-    &mut self.input
-  }
 }
 
 impl BundlingTask {

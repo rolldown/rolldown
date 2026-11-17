@@ -1,5 +1,5 @@
 #![expect(clippy::inherent_to_string)]
-use std::borrow::Cow;
+use std::{borrow::Cow, cell::RefCell, rc::Rc};
 
 use napi::bindgen_prelude::{Either, This, Undefined};
 use napi::{Env, JsString};
@@ -8,6 +8,7 @@ use oxc_napi::JsRegExp;
 use rolldown_sourcemap::{JSONSourceMap, SourceMap};
 use rolldown_utils::base64::to_standard_base64;
 use rolldown_utils::js_regex::{HybridMatch, HybridRegex};
+use rustc_hash::FxHashMap;
 use serde::Serialize;
 use string_wizard::{MagicString, MagicStringOptions, SourceMapOptions, UpdateOptions};
 
@@ -229,6 +230,41 @@ impl Utf16ToByteMapper {
     let len = self.utf16_len();
     if len > 0 && index < 0 { ((index % len) + len) % len } else { index }
   }
+}
+
+thread_local! {
+  /// Compiled regexes of `replace` / `replaceAll`, by pattern source, then by flags.
+  /// A plugin usually passes the same `RegExp` for every module, and compiling it again
+  /// for each call can cost more than the replacement itself. JS calls arrive on one
+  /// thread, so a thread-local map needs no lock.
+  static REGEX_CACHE: RefCell<FxHashMap<String, Vec<(String, Rc<HybridRegex>)>>> =
+    RefCell::default();
+}
+
+/// The number of pattern sources that [`REGEX_CACHE`] keeps. Plugins use a small fixed set
+/// of patterns. A plugin that builds a new pattern for each call fills the cache, and then
+/// the cache is cleared, so it does not grow without limit.
+const REGEX_CACHE_CAPACITY: usize = 64;
+
+fn cached_regex(source: &str, flags: &str) -> napi::Result<Rc<HybridRegex>> {
+  REGEX_CACHE.with_borrow_mut(|cache| {
+    if let Some(reg) = cache
+      .get(source)
+      .and_then(|by_flags| by_flags.iter().find(|(f, _)| f == flags))
+      .map(|(_, reg)| Rc::clone(reg))
+    {
+      return Ok(reg);
+    }
+    let reg = Rc::new(
+      HybridRegex::with_flags(source, flags)
+        .map_err(|e| napi::Error::from_reason(format!("Invalid regex: {e}")))?,
+    );
+    if cache.len() >= REGEX_CACHE_CAPACITY && !cache.contains_key(source) {
+      cache.clear();
+    }
+    cache.entry(source.to_string()).or_default().push((flags.to_string(), Rc::clone(&reg)));
+    Ok(reg)
+  })
 }
 
 #[napi(object)]
@@ -578,8 +614,7 @@ impl BindingMagicString<'_> {
   fn regex_replace(&mut self, js_regex: &JsRegExp, replacement: &str) -> napi::Result<Option<u32>> {
     let global = js_regex.flags.contains('g');
     let flags_without_g: String = js_regex.flags.chars().filter(|&c| c != 'g').collect();
-    let reg = HybridRegex::with_flags(&js_regex.source, &flags_without_g)
-      .map_err(|e| napi::Error::from_reason(format!("Invalid regex: {e}")))?;
+    let reg = cached_regex(&js_regex.source, &flags_without_g)?;
     let source = self.inner.source();
 
     // Track last match end (byte offset) for lastIndex writeback.

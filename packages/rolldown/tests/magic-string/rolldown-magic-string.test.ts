@@ -708,3 +708,53 @@ describe('x_google_ignoreList', () => {
     assert.deepStrictEqual(s.generateDecodedMap().x_google_ignoreList, [0]);
   });
 });
+
+describe('regex cache', () => {
+  // The binding keeps compiled regexes by source and flags, so that a plugin that passes the
+  // same RegExp for every module compiles it only once.
+  it('keeps patterns with the same source and different flags apart', () => {
+    const insensitive = new MagicString('aA');
+    insensitive.replaceAll(/a/gi, 'x');
+    const sensitive = new MagicString('aA');
+    sensitive.replaceAll(/a/g, 'x');
+    assert.strictEqual(insensitive.toString(), 'xx');
+    assert.strictEqual(sensitive.toString(), 'xA');
+  });
+
+  it('reuses one RegExp for many instances', () => {
+    const regex = /b(\d)/g;
+    for (const [source, expected] of [
+      ['b1 b2', 'c1 c2'],
+      ['ab3', 'ac3'],
+      ['none', 'none'],
+    ]) {
+      const s = new MagicString(source);
+      s.replaceAll(regex, 'c$1');
+      assert.strictEqual(s.toString(), expected);
+      assert.strictEqual(regex.lastIndex, 0);
+    }
+  });
+
+  it('reads lastIndex on each call for a cached sticky regex', () => {
+    const regex = /x/y;
+    const first = new MagicString('xax');
+    regex.lastIndex = 0;
+    first.replace(regex, 'y');
+    const second = new MagicString('xax');
+    regex.lastIndex = 2;
+    second.replace(regex, 'y');
+    assert.strictEqual(first.toString(), 'yax');
+    assert.strictEqual(second.toString(), 'xay');
+  });
+
+  it('stays correct after more patterns than the cache keeps', () => {
+    for (let i = 0; i < 100; i++) {
+      const s = new MagicString(`k${i} k${i + 1}`);
+      s.replaceAll(new RegExp(`k${i}\\b`, 'g'), 'v');
+      assert.strictEqual(s.toString(), `v k${i + 1}`);
+    }
+    const s = new MagicString('k0 k00');
+    s.replaceAll(/k0\b/g, 'v');
+    assert.strictEqual(s.toString(), 'v k00');
+  });
+});

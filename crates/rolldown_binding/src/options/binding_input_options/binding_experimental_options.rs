@@ -1,5 +1,9 @@
 use napi::bindgen_prelude::Either;
 
+use crate::types::binding_string_or_regex::{
+  BindingStringOrRegex, bindingify_string_or_regex_array,
+};
+
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingExperimentalOptions {
@@ -124,10 +128,15 @@ impl From<BindingChunkModuleOrderBy> for rolldown_common::ChunkModulesOrderBy {
 pub struct BindingChunkImportMap {
   pub base_url: Option<String>,
   pub file_name: Option<String>,
+  pub include: Option<Vec<BindingStringOrRegex>>,
 }
 
 impl From<BindingChunkImportMap> for rolldown_common::ChunkImportMap {
   fn from(value: BindingChunkImportMap) -> Self {
-    Self { base_url: value.base_url, file_name: value.file_name }
+    Self {
+      base_url: value.base_url,
+      file_name: value.file_name,
+      include: value.include.map(bindingify_string_or_regex_array),
+    }
   }
 }

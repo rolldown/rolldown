@@ -30,7 +30,7 @@ impl LinkStage<'_> {
     unused_record_idxs: &mut Vec<(ModuleIdx, ImportRecordIdx)>,
     unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
   ) -> bool {
-    if !cycled_idx.contains(&entry.idx) {
+    if self.options.code_splitting.is_disabled() || !cycled_idx.contains(&entry.idx) {
       if let Some(item) = self.is_dynamic_entry_alive(
         entry,
         context.is_included_vec,

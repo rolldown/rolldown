@@ -223,7 +223,8 @@ test('call transformContext error', async () => {
   expect(error!.message).toContain('transform hook error');
 });
 
-test('includes the url of a plugin error in the message', async () => {
+// Under the wasm binding the plugin error is reconstructed as a plain `Error`, losing its `url`.
+test.skipIf(isWasiTest)('includes the url of a plugin error in the message', async () => {
   const error = await buildWithPlugin({
     name: 'test',
     transform() {

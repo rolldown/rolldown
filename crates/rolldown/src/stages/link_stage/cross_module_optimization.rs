@@ -137,6 +137,34 @@ impl LinkStage<'_> {
     unreachable_node_ids
   }
 
+  /// A cyclic importer can read an exported `var` while it is still `undefined`.
+  /// See internal-docs/inline-const/design.md.
+  pub(super) fn exclude_cyclic_vars_from_inline_const(&mut self) {
+    for module in self.module_table.modules.iter().filter_map(|module| module.as_normal()) {
+      if module.exports_kind != ExportsKind::Esm
+        || !module.importers_idx.iter().any(|&importer| {
+          self.import_cycles.same_cycle(&self.module_table.modules, importer, module.idx)
+        })
+      {
+        continue;
+      }
+      for export in self.metas[module.idx].resolved_exports.values() {
+        let symbol_ref = self.symbols.canonical_ref_for(export.symbol_ref);
+        if symbol_ref.owner == module.idx
+          && self
+            .symbols
+            .local_db(module.idx)
+            .scoping()
+            .symbol_flags(symbol_ref.symbol)
+            .is_function_scoped_declaration()
+        {
+          symbol_ref.flags_mut(&mut self.symbols).insert(SymbolRefFlags::ReadBeforeAssigned);
+          self.global_constant_symbol_map.remove(&symbol_ref);
+        }
+      }
+    }
+  }
+
   /// A JSX element name can't be a literal, so a constant used as one is not inlined.
   pub(super) fn exclude_jsx_element_names_from_inline_const(&mut self) {
     if !self.symbols.has_module_preserve_jsx() || self.global_constant_symbol_map.is_empty() {

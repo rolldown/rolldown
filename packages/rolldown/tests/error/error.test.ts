@@ -237,6 +237,31 @@ test.skipIf(isWasiTest)('includes the url of a plugin error in the message', asy
   expect(error.errors[0].url).toBe('https://example.com/docs');
 });
 
+test('prints the url of a plugin warning', async () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  try {
+    const build = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [
+        {
+          name: 'test',
+          transform() {
+            this.warn({ message: 'transform hook warning', url: 'https://example.com/docs' });
+          },
+        },
+      ],
+    });
+    await build.generate();
+    await build.close();
+    expect(warn).toHaveBeenCalledWith(
+      '(test plugin) transform hook warning\nhttps://example.com/docs',
+    );
+  } finally {
+    warn.mockRestore();
+  }
+});
+
 // #4141
 // Under the wasm binding the `structuredClone` failure degrades to a plain `Error`, losing the `DataCloneError` name.
 test.skipIf(isWasiTest)('should print original error if it can not be assigned', async () => {

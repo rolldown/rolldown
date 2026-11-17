@@ -20,7 +20,9 @@ Such a `var` gets `SymbolRefFlags::ReadBeforeAssigned`. `SymbolRef::is_not_reass
 
 The checks are conservative: an object or class member declared before the `var` keeps the `var` from being inlined even if the member only runs later.
 
-Reads from other modules are not checked. When an import cycle makes another module run before the declaring module, that module can read the `var` directly, through a re-export, or by calling one of the declaring module's functions, and it gets the inlined value. Rollup assumes the value in these cases by default too; its [`treeshake.correctVarValueBeforeDeclaration`](https://rollupjs.org/configuration-options/#treeshake-correctvarvaluebeforedeclaration) option, off by default, makes it stop assuming the value of any `var`. With tree-shaking on, the dead-code removal that runs on each module when it is parsed also folds a condition such as `if (flag)` in the declaring module when nothing in that module reads the `var` early, even with `optimization.inlineConst: false`.
+At link time, exported `var` bindings in a static-import cycle also get `ReadBeforeAssigned` and are removed from the constant map. The same import-cycle components used by link-time constant lookups identify these modules. This keeps named imports, namespace reads, and re-exports from assuming the initializer ran, and the flag prevents later optimization passes from adding the binding back to the constant map. The check is conservative even when a cyclic importer only reads the binding after initialization.
+
+With tree-shaking on, the dead-code removal that runs on each module when it is parsed still folds a condition such as `if (flag)` in the declaring module when nothing in that module reads the `var` early, even with `optimization.inlineConst: false`.
 
 ## Related
 

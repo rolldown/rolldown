@@ -288,6 +288,7 @@ impl<'a> LinkStage<'a> {
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();
     self.promote_deferred_write_constants();
+    self.exclude_cyclic_vars_from_inline_const();
     let unreachable_import_expression_node_ids = self.cross_module_optimization();
     self.exclude_jsx_element_names_from_inline_const();
     self.refine_stmt_side_effects_with_imported_constants();

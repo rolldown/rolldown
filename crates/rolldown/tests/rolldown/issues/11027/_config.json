@@ -1,0 +1,29 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "lib",
+        "import": "./lib.cjs"
+      }
+    ],
+    "format": "cjs"
+  },
+  "configVariants": [
+    {
+      "preserveEntrySignatures": "false",
+      "_snapshot": false
+    },
+    {
+      "preserveEntrySignatures": "allow-extension",
+      "_snapshot": false
+    },
+    {
+      "preserveEntrySignatures": "strict",
+      "_snapshot": false
+    }
+  ]
+}

@@ -1,0 +1,166 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// b.js
+const same$1 = "local";
+const early = v;
+const names = [
+	defaultValue,
+	__proto__,
+	same,
+	same$1
+];
+// main.js
+var v = 3;
+var defaultValue = 4;
+var __proto__ = 5;
+var same = 6;
+console.log(early, v);
+assert.deepStrictEqual([early, v], [void 0, 3]);
+assert.deepStrictEqual(names, [
+	void 0,
+	void 0,
+	void 0,
+	"local"
+]);
+export { __proto__, defaultValue as default, same, v };
+
+```
+
+# Variant: [inline_const: Config(InlineConstConfig { mode: Some(All), pass: 2 })]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert";
+// b.js
+const same$1 = "local";
+const early = v;
+const names = [
+	defaultValue,
+	__proto__,
+	same,
+	same$1
+];
+// main.js
+var v = 3;
+var defaultValue = 4;
+var __proto__ = 5;
+var same = 6;
+console.log(early, v);
+assert.deepStrictEqual([early, v], [void 0, 3]);
+assert.deepStrictEqual(names, [
+	void 0,
+	void 0,
+	void 0,
+	"local"
+]);
+export { __proto__, defaultValue as default, same, v };
+
+```
+
+# Variant: [format: Cjs]
+
+## warnings
+
+### MIXED_EXPORTS
+
+```text
+[MIXED_EXPORTS] Entry module "main.js" is using named (including "__proto__", "default", "same", "v") and default exports together. Consumers of your bundle will have to use `chunk.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
+
+```
+
+## Assets
+
+### main.js
+
+```js
+Object.defineProperties(exports, {
+	__esModule: { value: true },
+	[Symbol.toStringTag]: { value: "Module" }
+});
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+// b.js
+const same$1 = "local";
+const early = v;
+const names = [
+	defaultValue,
+	__proto__,
+	same,
+	same$1
+];
+// main.js
+var v = 3;
+var defaultValue = 4;
+var __proto__ = 5;
+var same = 6;
+console.log(early, v);
+node_assert.default.deepStrictEqual([early, v], [void 0, 3]);
+node_assert.default.deepStrictEqual(names, [
+	void 0,
+	void 0,
+	void 0,
+	"local"
+]);
+Object.defineProperty(exports, "__proto__", {
+	enumerable: true,
+	value: __proto__
+});
+exports.default = defaultValue;
+exports.same = same;
+exports.v = v;
+
+```
+
+# Variant: [preserve_modules: true]
+
+## Assets
+
+### b.js
+
+```js
+import defaultValue, { __proto__, same as same$1, v } from "./main.js";
+// b.js
+const same = "local";
+const early = v;
+const names = [
+	defaultValue,
+	__proto__,
+	same$1,
+	same
+];
+export { early, names };
+
+```
+
+### main.js
+
+```js
+import assert from "node:assert";
+import { early, names } from "./b.js";
+// main.js
+var v = 3;
+var defaultValue = 4;
+var __proto__ = 5;
+var same = 6;
+console.log(early, v);
+assert.deepStrictEqual([early, v], [void 0, 3]);
+assert.deepStrictEqual(names, [
+	void 0,
+	void 0,
+	void 0,
+	"local"
+]);
+export { __proto__, defaultValue as default, same, v };
+
+```

@@ -136,11 +136,12 @@ function bindingifyDevMode(devMode?: DevModeOptions): BindingExperimentalOptions
         ? { implement: getDefaultDevRuntime(), skipCommonRuntimeInjection: true }
         : undefined;
     }
-    const usesDefaultRuntime = devMode.implement == null;
+    const { host, port, ...rest } = devMode;
+    const usesDefaultRuntime = rest.implement == null;
     return {
-      ...devMode,
-      implement: devMode.implement ?? getDefaultDevRuntime(devMode.host, devMode.port),
-      skipCommonRuntimeInjection: usesDefaultRuntime ? true : devMode.skipCommonRuntimeInjection,
+      ...rest,
+      implement: rest.implement ?? getDefaultDevRuntime(host, port),
+      skipCommonRuntimeInjection: usesDefaultRuntime ? true : rest.skipCommonRuntimeInjection,
     };
   }
 }

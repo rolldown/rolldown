@@ -258,29 +258,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     for idx in &self.new_added_modules_from_partial_scan {
       self.shared_context.plugin_driver.transform_dependencies.remove(idx);
     }
-    // Retry only files the graph still needs: entries, or files something
-    // still imports (judged on the freshest edge state, where modules
-    // re-scanned by this failed scan already updated their edges). A broken
-    // file whose last import was removed must not fail every later build;
-    // a fresh build of the same tree would succeed without it.
-    let pending_rescans = scanned_resolved_ids
-      .into_iter()
-      .filter(|resolved_id| {
-        if self.cache.user_defined_entry.contains(&resolved_id.id) {
-          return true;
-        }
-        let Some(state) = self.cache.module_id_to_idx.get(&resolved_id.id) else {
-          return false;
-        };
-        let idx = state.idx();
-        self.cache.get_snapshot().user_defined_entry_modules.contains(&idx)
-          || self
-            .intermediate_normal_modules
-            .importers
-            .get(idx)
-            .is_some_and(|records| !records.is_empty())
-      })
-      .collect();
+    // Retry only files the graph still needs, judged on the freshest edge
+    // state, where modules re-scanned by this failed scan already updated
+    // their edges.
+    let pending_rescans =
+      self.cache.still_needed(&self.intermediate_normal_modules.importers, scanned_resolved_ids);
     self.intermediate_normal_modules.importers = self.cache.derive_importers_from_snapshot();
     self.cache.modules_with_changed_importers.clear();
     if let Some(backup) = barrel_state_backup {

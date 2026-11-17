@@ -17,15 +17,20 @@ use crate::{
 
 use super::LinkStage;
 
-/// Static-import components, shared by the link-time analyzer runs. Build them only when a
-/// lookup needs to check an imported constant, and use iterative DFS to handle deep graphs.
+/// Static-import components shared by link-time cycle checks, initialized on first use.
+/// Iterative DFS handles deep graphs.
 #[derive(Debug, Default)]
 pub(super) struct ImportCycles {
   components: OnceLock<IndexVec<ModuleIdx, ModuleIdx>>,
 }
 
 impl ImportCycles {
-  fn same_cycle(&self, modules: &IndexModules, importer: ModuleIdx, exporter: ModuleIdx) -> bool {
+  pub(super) fn same_cycle(
+    &self,
+    modules: &IndexModules,
+    importer: ModuleIdx,
+    exporter: ModuleIdx,
+  ) -> bool {
     let components = self.components.get_or_init(|| {
       let mut graph = DiGraph::<(), ()>::with_capacity(modules.len(), 0);
       for _ in modules {

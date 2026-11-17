@@ -104,10 +104,14 @@ impl Utf16Mapping {
 }
 
 #[derive(Clone)]
-struct Utf16ToByteMapper {
+enum Utf16ToByteMapper {
+  /// An ASCII source: each UTF-16 index is equal to its byte offset, so no table is needed.
+  /// Holds the source length. Most sources are ASCII, and the table costs 8 bytes and one
+  /// loop step per code unit of the source each time a hook creates a MagicString.
+  Ascii(u32),
   /// One entry per UTF-16 code unit, plus a sentinel at the end.
   /// Length = utf16_len + 1. Indexed directly by JS string index.
-  entries: Vec<Utf16Mapping>,
+  Table(Vec<Utf16Mapping>),
 }
 
 impl Utf16ToByteMapper {
@@ -119,6 +123,9 @@ impl Utf16ToByteMapper {
   /// unit, so the array is indexed directly by JS string index.
   #[expect(clippy::cast_possible_truncation)]
   fn new(s: &str) -> Self {
+    if s.is_ascii() {
+      return Self::Ascii(s.len() as u32);
+    }
     // UTF-16 length <= UTF-8 byte length for all strings, so s.len() + 1
     // is always a valid upper-bound capacity, avoiding a second pass over chars.
     let mut entries = Vec::with_capacity(s.len() + 1);
@@ -141,12 +148,17 @@ impl Utf16ToByteMapper {
     // End sentinel.
     entries.push(Utf16Mapping { byte_offset, surrogate: 0 });
 
-    Self { entries }
+    Self::Table(entries)
   }
 
   #[inline]
   fn get(&self, utf16_index: u32) -> Option<Utf16Mapping> {
-    self.entries.get(utf16_index as usize).copied()
+    match self {
+      Self::Ascii(len) => {
+        (utf16_index <= *len).then_some(Utf16Mapping { byte_offset: utf16_index, surrogate: 0 })
+      }
+      Self::Table(entries) => entries.get(utf16_index as usize).copied(),
+    }
   }
 
   #[inline]
@@ -158,42 +170,57 @@ impl Utf16ToByteMapper {
   /// pair — returns the byte span of the supplementary character containing it.
   /// Character-boundary indices return `None`.
   fn surrogate_interior_char_span(&self, utf16_offset: u32) -> Option<(u32, u32)> {
-    let entry = self.get(utf16_offset)?;
+    let Self::Table(entries) = self else {
+      return None;
+    };
+    let entry = entries.get(utf16_offset as usize).copied()?;
     if !entry.is_low_surrogate() {
       return None;
     }
     // A low surrogate is always preceded by its high surrogate, whose byte offset is the
     // character's start; the low surrogate's own byte offset is the character's end.
-    let start = self.entries[utf16_offset as usize - 1].byte_offset;
+    let start = entries[utf16_offset as usize - 1].byte_offset;
     Some((start, entry.byte_offset))
   }
 
   /// Returns the UTF-16 code unit count of the original string.
   /// This matches JavaScript's `String.prototype.length`.
   fn utf16_len(&self) -> i64 {
-    #[expect(clippy::cast_possible_wrap)]
-    let count = (self.entries.len() - 1) as i64;
-    count
+    match self {
+      Self::Ascii(len) => i64::from(*len),
+      Self::Table(entries) => {
+        #[expect(clippy::cast_possible_wrap)]
+        let count = (entries.len() - 1) as i64;
+        count
+      }
+    }
   }
 
   /// Converts a UTF-8 byte offset to a UTF-16 code unit offset.
   /// Returns `None` if the byte offset is past the end of the mapping.
   #[expect(clippy::cast_possible_truncation)]
   fn byte_to_utf16(&self, byte_offset: u32) -> Option<u32> {
-    let mut idx = self.entries.partition_point(|e| e.byte_offset < byte_offset);
+    let entries = match self {
+      Self::Ascii(len) => return (byte_offset <= *len).then_some(byte_offset),
+      Self::Table(entries) => entries,
+    };
+    let mut idx = entries.partition_point(|e| e.byte_offset < byte_offset);
     // If we landed on a low surrogate, the byte offset is "after" the
     // supplementary character. The correct UTF-16 position is the next
     // index (which shares the same byte_offset).
-    if idx < self.entries.len() && self.entries[idx].is_low_surrogate() {
+    if idx < entries.len() && entries[idx].is_low_surrogate() {
       idx += 1;
     }
-    (idx < self.entries.len()).then_some(idx as u32)
+    (idx < entries.len()).then_some(idx as u32)
   }
 
   /// Returns the total UTF-8 byte length of the original string.
   /// This is the correct sentinel for out-of-bounds index clamping in `slice`.
   fn total_len(&self) -> u32 {
-    self.entries.last().map_or(0, |e| e.byte_offset)
+    match self {
+      Self::Ascii(len) => *len,
+      Self::Table(entries) => entries.last().map_or(0, |e| e.byte_offset),
+    }
   }
 
   /// Normalizes a potentially negative index to a positive index.
@@ -432,9 +459,9 @@ impl<'a> BindingMagicString<'a> {
     self.ensure_live()?;
     self.consumed = true;
     // Every method that reads the UTF-16 mapping table refuses a consumed instance, so free it
-    // now rather than when the JS wrapper is garbage collected: it holds 8 bytes per byte of the
-    // original source.
-    self.utf16_to_byte_mapper.entries = Vec::new();
+    // now rather than when the JS wrapper is garbage collected: a non-ASCII source has a table
+    // with 8 bytes per byte of the original source.
+    self.utf16_to_byte_mapper = Utf16ToByteMapper::Ascii(0);
     Ok(std::mem::take(&mut self.inner))
   }
 

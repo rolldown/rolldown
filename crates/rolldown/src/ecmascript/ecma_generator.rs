@@ -10,10 +10,9 @@ use crate::{
 };
 
 use anyhow::Result;
-use oxc_str::CompactStr;
 use rolldown_common::{
   AddonRenderContext, ChunkIdx, EcmaAssetMeta, InstantiatedChunk, ModuleId, ModuleIdx,
-  OutputFormat, RenderedModule, StrictMode,
+  NormalModule, OutputFormat, RenderedModule, StrictMode,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookAddonArgs;
@@ -29,14 +28,20 @@ use super::format::{cjs::render_cjs, esm::render_esm, iife::render_iife, umd::re
 
 pub type RenderedModuleSources = Vec<RenderedModuleSource>;
 
-/// The export names of a module that survive tree shaking, reported on its `RenderedModule`.
-fn retained_export_names(link_output: &LinkStageOutput, module_idx: ModuleIdx) -> Vec<CompactStr> {
-  link_output.metas[module_idx]
+/// Output metadata shares code pieces without retaining the module's sourcemap.
+fn generate_rendered_module(
+  link_output: &LinkStageOutput,
+  module: &NormalModule,
+  content: Option<&RenderedModuleContent>,
+) -> RenderedModule {
+  let rendered_exports = link_output.metas[module.idx]
     .resolved_exports
     .iter()
     .filter(|(_, export)| link_output.retained_export_symbols.contains(&export.symbol_ref))
     .map(|(name, _)| name.clone())
-    .collect()
+    .collect();
+  let sources = content.map(RenderedModuleContent::clone_sources);
+  RenderedModule::new(sources, rendered_exports, module.exec_order)
 }
 
 pub struct RenderedModuleSource {
@@ -45,10 +50,6 @@ pub struct RenderedModuleSource {
 }
 
 impl RenderedModuleSource {
-  pub fn new(module_idx: ModuleIdx, content: Option<RenderedModuleContent>) -> Self {
-    Self { module_idx, content }
-  }
-
   pub fn append_to<'a>(&'a mut self, joiner: &mut SourceJoiner<'a>) {
     if let Some(content) = &mut self.content {
       content.append_to(joiner);
@@ -77,7 +78,7 @@ impl EcmaGenerator {
       })
       .map(|(m, codegen_ret)| {
         let render = render_ecma_module(m, ctx.options, codegen_ret);
-        (RenderedModuleSource::new(m.idx, render.content), render.warnings)
+        (RenderedModuleSource { module_idx: m.idx, content: render.content }, render.warnings)
       })
       .collect::<Vec<_>>();
 
@@ -97,9 +98,7 @@ impl EcmaGenerator {
         let module = ctx.link_output.module_table[*module_idx]
           .as_normal()
           .expect("a rendered module is a normal module");
-        let rendered_exports = retained_export_names(ctx.link_output, *module_idx);
-        let sources = content.as_ref().map(|content| Arc::clone(content.sources()));
-        (module.id.clone(), RenderedModule::new(sources, rendered_exports, module.exec_order))
+        (module.id.clone(), generate_rendered_module(ctx.link_output, module, content.as_ref()))
       })
       .collect();
     // The inline common chunk records this file carries were finalized and printed for it; their
@@ -118,13 +117,11 @@ impl EcmaGenerator {
               .expect("a record holds only normal modules");
             let render = render_ecma_module(module, ctx.options, codegen_ret);
             sourcemap_broken_warnings.extend(render.warnings);
-            let rendered_exports = retained_export_names(ctx.link_output, *module_idx);
-            let sources = render.content.as_ref().map(|content| Arc::clone(content.sources()));
             rendered_modules.insert(
               module.id.clone(),
-              RenderedModule::new(sources, rendered_exports, module.exec_order),
+              generate_rendered_module(ctx.link_output, module, render.content.as_ref()),
             );
-            RenderedModuleSource::new(module.idx, render.content)
+            RenderedModuleSource { module_idx: module.idx, content: render.content }
           })
           .collect();
         (carried.record, sources)

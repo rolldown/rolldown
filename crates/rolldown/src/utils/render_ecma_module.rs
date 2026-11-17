@@ -47,21 +47,20 @@ impl RenderedModuleContent {
     Self { sources, mapped_body }
   }
 
-  pub fn sources(&self) -> &SharedSources {
-    &self.sources
+  /// Shares only the mapless code pieces with output metadata.
+  pub fn clone_sources(&self) -> SharedSources {
+    Arc::clone(&self.sources)
   }
 
   pub fn append_to<'a>(&'a mut self, joiner: &mut SourceJoiner<'a>) {
-    if let Some(mapped_body) = self.mapped_body.take() {
-      for source in &self.sources[..self.sources.len() - 1] {
-        joiner.append_source(source);
-      }
+    let (body, prefix) = self.sources.split_last().expect("a rendered module has a code body");
+    for source in prefix {
+      joiner.append_source(source);
+    }
+    match self.mapped_body.take() {
       // Transfer the existing box; the joiner can take its map without another allocation.
-      joiner.append_source_dyn(mapped_body);
-    } else {
-      for source in self.sources.iter() {
-        joiner.append_source(source);
-      }
+      Some(mapped_body) => joiner.append_source_dyn(mapped_body),
+      None => joiner.append_source(body),
     }
   }
 }
@@ -86,10 +85,7 @@ pub fn render_ecma_module(
   let enable_sourcemap = options.sourcemap.is_some() && !module.is_virtual();
   let mut warnings = vec![];
 
-  // Because oxc codegen sourcemap is last of sourcemap chain,
-  // If here no extra sourcemap need remapping, we using it as final module sourcemap.
-  // So here make sure using correct `source_name` and `source_content.
-
+  // Collapse load/transform maps with the final codegen map before sharing the code.
   let map = if enable_sourcemap {
     collapse_module_sourcemap(
       &module.sourcemap_chain,
@@ -204,7 +200,7 @@ mod tests {
       vec![Box::new("// module".to_string()), Box::new(code)],
       Some(module_map),
     );
-    let shared_sources = Arc::clone(content.sources());
+    let shared_sources = content.clone_sources();
     let mut following = RenderedModuleContent::new(
       vec![Box::new("third();".to_string())],
       Some(map("third.js", "third();")),
@@ -252,7 +248,8 @@ mod tests {
   #[cfg(target_pointer_width = "64")]
   fn rendered_module_source_stays_compact() {
     use crate::ecmascript::ecma_generator::RenderedModuleSource;
-    assert_eq!(size_of::<RenderedModuleSource>(), 32);
+    let size = size_of::<RenderedModuleSource>();
+    assert!(size <= 32, "rendered module source grew to {size} bytes");
   }
 
   fn plugin_idx() -> PluginIdx {

@@ -15,10 +15,13 @@ last piece's code. Its newline count is precomputed during module rendering.
 
 `RenderedModuleSource` stores only `ModuleIdx` and optional content. Module id and execution
 order are read from the module table when constructing `RenderedModule` metadata.
+Both ordinary modules and inline records use `generate_rendered_module` for this metadata;
+`clone_sources` shares only the mapless code pieces.
 
 All format renderers, including ESM inline common chunk factories, use `append_to`. It
-appends the marker before transferring the existing mapped-source box through
-`SourceJoiner::append_source_dyn`. Without a map it borrows the shared source pieces as before.
+splits the sources into a prefix and code body, appends the marker, then transfers the
+mapped-source box through `SourceJoiner::append_source_dyn`. Without a map it borrows the
+shared source pieces as before.
 
 The existing joiner calls `take_sourcemap` and `add_sourcemap_owned`: strings move into the
 chunk map, while tokens are copied/rebased and the module map's buffers are discarded.
@@ -33,7 +36,7 @@ chunk map, while tokens are copied/rebased and the module map's buffers are disc
 - Only mapped modules allocate a mapped-source box. That box transfers directly into the
   joiner without reboxing; no lock or shared mutable map is needed.
 - The optional map is behind the existing source box, keeping the temporary module record
-  compact even when sourcemaps are disabled. A 64-bit layout test guards its 32-byte size.
+  compact even when sourcemaps are disabled. A 64-bit layout test enforces a 32-byte budget.
 
 ## Validation
 

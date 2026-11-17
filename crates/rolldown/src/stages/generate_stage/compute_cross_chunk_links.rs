@@ -1210,7 +1210,18 @@ impl GenerateStage<'_> {
           let entry = &self.link_output.module_table[*entry_id].as_normal().unwrap();
           let entry_meta = &self.link_output.metas[entry.idx];
 
-          if !matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
+          if !matches!(entry_meta.wrap_kind(), WrapKind::Cjs)
+            && (self.options.preserve_modules
+              || !entry.dynamic_importers.is_empty()
+              || !matches!(
+                normalize_preserve_entry_signature(
+                  &self.link_output.overrode_preserve_entry_signature_map,
+                  self.options,
+                  entry.idx,
+                ),
+                PreserveEntrySignatures::False
+              ))
+          {
             self.register_entry_export_depended_symbols(
               chunk_graph,
               order_state,

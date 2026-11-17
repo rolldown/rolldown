@@ -12,6 +12,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::collect_entry_reexported_wrapper_inits;
+use crate::utils::chunk::normalize_preserve_entry_signature;
 
 use super::{
   GenerateStage, code_splitting::IndexSplittingInfo, reduced_chunk_graph::ReducedChunkGraph,
@@ -718,7 +719,7 @@ impl GenerateStage<'_> {
 
   /// An entry chunk imports the canonical symbol of every live resolved export it serves
   /// (`register_entry_export_depended_symbols`), even when no included statement of the entry
-  /// references it — a re-export the entry never uses still becomes a real import of the owner's
+  /// references it — a preserved re-export still becomes a real import of the owner's
   /// chunk. `load_dependencies` only carries the narrowed `referenced_symbols_by_entry_point_chunk`
   /// set, so these targets are derived separately from the full `resolved_exports`.
   ///
@@ -739,6 +740,19 @@ impl GenerateStage<'_> {
     let meta = &self.link_output.metas[module_idx];
     if matches!(meta.wrap_kind(), WrapKind::Cjs) {
       // A CJS entry is consumed through its wrapper, not through per-export symbols.
+      return;
+    }
+    if !self.options.preserve_modules
+      && self.link_output.module_table[module_idx].as_normal().unwrap().dynamic_importers.is_empty()
+      && matches!(
+        normalize_preserve_entry_signature(
+          &self.link_output.overrode_preserve_entry_signature_map,
+          self.options,
+          module_idx,
+        ),
+        PreserveEntrySignatures::False
+      )
+    {
       return;
     }
     let symbol_db = &self.link_output.symbol_db;

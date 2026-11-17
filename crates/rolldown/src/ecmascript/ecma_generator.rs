@@ -3,7 +3,10 @@ use std::sync::Arc;
 use crate::{
   stages::link_stage::LinkStageOutput,
   types::generator::{GenerateContext, GenerateOutput},
-  utils::{chunk::generate_rendered_chunk, render_ecma_module::render_ecma_module},
+  utils::{
+    chunk::generate_rendered_chunk,
+    render_ecma_module::{RenderedModuleContent, render_ecma_module},
+  },
 };
 
 use anyhow::Result;
@@ -14,7 +17,7 @@ use rolldown_common::{
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookAddonArgs;
-use rolldown_sourcemap::Source;
+use rolldown_sourcemap::SourceJoiner;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
@@ -38,19 +41,18 @@ fn retained_export_names(link_output: &LinkStageOutput, module_idx: ModuleIdx) -
 
 pub struct RenderedModuleSource {
   pub module_idx: ModuleIdx,
-  pub module_id: ModuleId,
-  pub exec_order: u32,
-  pub sources: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
+  pub content: Option<RenderedModuleContent>,
 }
 
 impl RenderedModuleSource {
-  pub fn new(
-    module_idx: ModuleIdx,
-    module_id: ModuleId,
-    exec_order: u32,
-    sources: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
-  ) -> Self {
-    Self { module_idx, module_id, exec_order, sources }
+  pub fn new(module_idx: ModuleIdx, content: Option<RenderedModuleContent>) -> Self {
+    Self { module_idx, content }
+  }
+
+  pub fn append_to<'a>(&'a mut self, joiner: &mut SourceJoiner<'a>) {
+    if let Some(content) = &mut self.content {
+      content.append_to(joiner);
+    }
   }
 }
 
@@ -75,15 +77,12 @@ impl EcmaGenerator {
       })
       .map(|(m, codegen_ret)| {
         let render = render_ecma_module(m, ctx.options, codegen_ret);
-        (
-          RenderedModuleSource::new(m.idx, m.id.clone(), m.exec_order, render.sources),
-          render.warnings,
-        )
+        (RenderedModuleSource::new(m.idx, render.content), render.warnings)
       })
       .collect::<Vec<_>>();
 
     let mut sourcemap_broken_warnings: Vec<BuildDiagnostic> = Vec::new();
-    let rendered_module_sources: RenderedModuleSources = rendered_pairs
+    let mut rendered_module_sources: RenderedModuleSources = rendered_pairs
       .into_iter()
       .map(|(source, warnings)| {
         sourcemap_broken_warnings.extend(warnings);
@@ -94,16 +93,19 @@ impl EcmaGenerator {
     let mut rendered_modules: FxHashMap<ModuleId, RenderedModule> = rendered_module_sources
       .iter()
       .map(|rendered_module_source| {
-        let RenderedModuleSource { module_idx, module_id, exec_order, sources } =
-          rendered_module_source;
+        let RenderedModuleSource { module_idx, content } = rendered_module_source;
+        let module = ctx.link_output.module_table[*module_idx]
+          .as_normal()
+          .expect("a rendered module is a normal module");
         let rendered_exports = retained_export_names(ctx.link_output, *module_idx);
-        (module_id.clone(), RenderedModule::new(sources.clone(), rendered_exports, *exec_order))
+        let sources = content.as_ref().map(|content| Arc::clone(content.sources()));
+        (module.id.clone(), RenderedModule::new(sources, rendered_exports, module.exec_order))
       })
       .collect();
     // The inline common chunk records this file carries were finalized and printed for it; their
     // modules are part of this file like its own.
     let carried_renders = std::mem::take(&mut ctx.carried_renders);
-    let carried_sources: Vec<(ChunkIdx, RenderedModuleSources)> = carried_renders
+    let mut carried_sources: Vec<(ChunkIdx, RenderedModuleSources)> = carried_renders
       .into_iter()
       .map(|carried| {
         let sources = ctx.chunk_graph.chunk_table[carried.record]
@@ -117,16 +119,12 @@ impl EcmaGenerator {
             let render = render_ecma_module(module, ctx.options, codegen_ret);
             sourcemap_broken_warnings.extend(render.warnings);
             let rendered_exports = retained_export_names(ctx.link_output, *module_idx);
+            let sources = render.content.as_ref().map(|content| Arc::clone(content.sources()));
             rendered_modules.insert(
               module.id.clone(),
-              RenderedModule::new(render.sources.clone(), rendered_exports, module.exec_order),
+              RenderedModule::new(sources, rendered_exports, module.exec_order),
             );
-            RenderedModuleSource::new(
-              module.idx,
-              module.id.clone(),
-              module.exec_order,
-              render.sources,
-            )
+            RenderedModuleSource::new(module.idx, render.content)
           })
           .collect();
         (carried.record, sources)
@@ -277,20 +275,23 @@ impl EcmaGenerator {
     };
     let mut source_joiner = match ctx.options.format {
       OutputFormat::Esm => {
-        render_esm(ctx, addon_render_context, &rendered_module_sources, &carried_sources)
+        render_esm(ctx, addon_render_context, &mut rendered_module_sources, &mut carried_sources)
       }
       OutputFormat::Cjs => {
-        render_cjs(ctx, addon_render_context, &rendered_module_sources, &mut warnings)
+        render_cjs(ctx, addon_render_context, &mut rendered_module_sources, &mut warnings)
       }
       OutputFormat::Iife => {
-        match render_iife(ctx, addon_render_context, &rendered_module_sources, &mut warnings).await
+        match render_iife(ctx, addon_render_context, &mut rendered_module_sources, &mut warnings)
+          .await
         {
           Ok(source_joiner) => source_joiner,
           Err(errors) => return Ok(Err(errors)),
         }
       }
       OutputFormat::Umd => {
-        match render_umd(ctx, addon_render_context, &rendered_module_sources, &mut warnings).await {
+        match render_umd(ctx, addon_render_context, &mut rendered_module_sources, &mut warnings)
+          .await
+        {
           Ok(source_joiner) => source_joiner,
           Err(errors) => return Ok(Err(errors)),
         }

@@ -181,8 +181,7 @@ fn test_concat_mixed_owned_and_borrowed_sourcemaps() {
 
   let mut joiner = SourceJoiner::default();
   joiner.append_source(&borrowed_source);
-  joiner
-    .append_source(SourceMapSource::new("owned();".to_string(), map("owned.js", "owned source")));
+  joiner.append_source(SourceMapSource::new("owned();", map("owned.js", "owned source")));
 
   let (content, map) = joiner.join();
   let map = map.expect("both input sourcemaps should be preserved");

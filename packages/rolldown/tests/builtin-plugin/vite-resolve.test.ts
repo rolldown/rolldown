@@ -247,6 +247,31 @@ test('resolveId handles Node builtins when called directly in build mode', async
   });
 });
 
+test('an `update` watch event clears a cached miss', async () => {
+  const root = await mkdtemp(nodePath.join(tmpdir(), 'rolldown-vite-resolve-'));
+  try {
+    const plugin = createViteResolvePlugin({ root }) as unknown as {
+      resolveId: CallableResolveIdHook;
+      watchChange: (id: string, change: { event: string }) => Promise<void>;
+    };
+    const main = nodePath.join(root, 'main.js');
+    await writeFile(main, `import { a } from './a'`);
+
+    expect(await plugin.resolveId('./a', main, {})).toBeFalsy();
+
+    // A file deleted and written again within a short time (e.g. by
+    // `git checkout`) is reported as a single `update` by chokidar's
+    // `atomic` option.
+    const file = nodePath.join(root, 'a.js');
+    await writeFile(file, 'export const a = 1');
+    await plugin.watchChange(file, { event: 'update' });
+
+    expect((await plugin.resolveId('./a', main, {}))?.id).toMatch(/[\\/]a\.js$/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('converts automatically externalized Node builtin require calls for ssr.target=webworker builds', async () => {
   const { code, warnings } = await bundleNodeBuiltinRequire({ platform: 'browser' });
 
@@ -291,30 +316,6 @@ test('converts external Node builtin require calls when an npm package with the 
     expect(code).toContain('from "util"');
     expect(code).not.toContain('__require("util")');
     expect(warnings).toStrictEqual([]);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-test('an `update` watch event clears a cached miss', async () => {
-  const root = await mkdtemp(nodePath.join(tmpdir(), 'rolldown-vite-resolve-'));
-  try {
-    const plugin = createViteResolvePlugin({ root }) as unknown as {
-      resolveId: CallableResolveIdHook;
-      watchChange: (id: string, change: { event: string }) => Promise<void>;
-    };
-    const main = nodePath.join(root, 'main.js');
-    await writeFile(main, `import { a } from './a'`);
-
-    expect(await plugin.resolveId('./a', main, {})).toBeFalsy();
-
-    // An editor or `git checkout` can replace a file atomically, which a
-    // watcher reports as a single `update` instead of `delete` + `create`.
-    const file = nodePath.join(root, 'a.js');
-    await writeFile(file, 'export const a = 1');
-    await plugin.watchChange(file, { event: 'update' });
-
-    expect((await plugin.resolveId('./a', main, {}))?.id).toMatch(/[\\/]a\.js$/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

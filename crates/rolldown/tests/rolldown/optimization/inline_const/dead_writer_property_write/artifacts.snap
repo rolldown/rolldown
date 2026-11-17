@@ -1,0 +1,43 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// flag.js
+let flag = false;
+const api = {};
+api.enable = () => {
+	flag = true;
+};
+function run() {
+	api.enable();
+}
+
+// registry.js
+const registry = {};
+
+// imported-flag.js
+let imported = false;
+registry.enable = () => {
+	imported = true;
+};
+function run_imported() {
+	registry.enable();
+}
+
+// main.js
+function read() {
+	run();
+	run_imported();
+	return [
+		flag,
+		imported,
+		false
+	];
+}
+
+export { read };
+```

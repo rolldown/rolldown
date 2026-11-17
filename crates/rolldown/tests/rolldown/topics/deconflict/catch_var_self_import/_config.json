@@ -1,0 +1,8 @@
+{
+  "configVariants": [
+    { "_configName": "cjs", "format": "cjs" },
+    { "_configName": "minified", "minify": true },
+    { "_configName": "wrapped", "strictExecutionOrder": true, "onDemandWrapping": false },
+    { "_configName": "on-demand", "strictExecutionOrder": true, "onDemandWrapping": true }
+  ]
+}

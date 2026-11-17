@@ -25,8 +25,8 @@ Object.defineProperty(exports, "default", {
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-const require_lib$1 = require("./lib.js");
 let node_assert = require("node:assert");
+const require_lib$1 = require("./lib.js");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
 // main.js
 var import_lib = require_lib$1.default;

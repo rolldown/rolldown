@@ -7,8 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // a.js
-const targetPromise = import("./dyn.js").then((n) => n.t);
-export { targetPromise };
+const targetPromise = import("./dyn.js").then((n) => n.n);
+const target2Promise = import("./dyn.js").then((n) => n.t);
+export { target2Promise, targetPromise };
 
 ```
 
@@ -27,6 +28,8 @@ import "./dyn.js";
 globalThis.observed = true;
 // target.js
 var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
-export { target_exports as t };
+// target2.js
+var target2_exports = /* @__PURE__ */ __exportAll({ value2: () => 2 });
+export { target_exports as n, target2_exports as t };
 
 ```

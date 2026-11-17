@@ -25,7 +25,7 @@ You need:
 - For a page: Chrome or Edge on the machine. `CHROME_PATH` selects the browser.
 - For a Worker: `@cloudflare/vite-plugin` and `wrangler` as dev dependencies of the app. Coverage needs Wrangler 4.108.0 or later.
 
-perf-kit has no dependencies, so it runs without an install step:
+You can run perf-kit without adding it as a project dependency:
 
 ::: code-group
 

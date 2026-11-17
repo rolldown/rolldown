@@ -28,12 +28,12 @@ use napi::bindgen_prelude::{Either, Either3, FnArgs};
 use oxc::transformer::EngineTargets;
 use rolldown::{
   AddonOutputOption, AssetFilenamesOutputOption, BundlerConfig, BundlerOptions,
-  ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, HashCharacters,
-  InlineCommonChunksOptions, IsExternal, ManglePropertiesPattern, ManglePropertiesPatterns,
-  ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType, OptimizationOption,
-  OutputCharset, OutputExports, OutputFormat, Platform, PluginTimingsOption, RawCompressOptions,
-  RawMangleOptions, RawManglePropertiesOptions, RawMinifyOptions, RawMinifyOptionsDetailed,
-  SanitizeFilename, StrictMode, TsConfig,
+  ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, EsModuleFlag,
+  HashCharacters, InlineCommonChunksOptions, IsExternal, ManglePropertiesPattern,
+  ManglePropertiesPatterns, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType,
+  OptimizationOption, OutputCharset, OutputExports, OutputFormat, Platform, PluginTimingsOption,
+  RawCompressOptions, RawMangleOptions, RawManglePropertiesOptions, RawMinifyOptions,
+  RawMinifyOptionsDetailed, SanitizeFilename, StrictMode, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -642,10 +642,13 @@ pub fn normalize_binding_options(
       })
       .transpose()?,
     sourcemap: output_options.sourcemap.map(Into::into),
-    es_module: output_options.es_module.map(|es_module| match es_module {
-      Either::A(es_module_bool) => es_module_bool.into(),
-      Either::B(es_module_string) => es_module_string.into(),
-    }),
+    es_module: output_options
+      .es_module
+      .map(|es_module| match es_module {
+        Either::A(v) => Ok(EsModuleFlag::from(v)),
+        Either::B(v) => EsModuleFlag::try_from(v).map_err(napi::Error::from_reason),
+      })
+      .transpose()?,
     banner: normalize_addon_option(output_options.banner, "banner option", &callbacks),
     footer: normalize_addon_option(output_options.footer, "footer option", &callbacks),
     post_banner: normalize_addon_option(

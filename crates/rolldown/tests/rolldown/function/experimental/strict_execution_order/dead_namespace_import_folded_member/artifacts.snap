@@ -16,8 +16,8 @@ globalThis.cssResult = setOpacity("a", 1);
 ## first.js
 
 ```js
-import "./css.js";
 import assert from "node:assert";
+import "./css.js";
 // first.js
 assert.strictEqual(globalThis.cssResult, "a:1");
 
@@ -35,8 +35,8 @@ await import("./second.js");
 ## second.js
 
 ```js
-import "./css.js";
 import assert from "node:assert";
+import "./css.js";
 // second.js
 assert.strictEqual(globalThis.cssResult, "a:1");
 
@@ -72,8 +72,8 @@ export { init_css as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_css } from "./css.js";
 import assert from "node:assert";
+import { t as init_css } from "./css.js";
 // first.js
 function init_first() {
 	return (init_first = __esmMin((() => {
@@ -112,8 +112,8 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_css } from "./css.js";
 import assert from "node:assert";
+import { t as init_css } from "./css.js";
 // second.js
 function init_second() {
 	return (init_second = __esmMin((() => {

@@ -28,6 +28,7 @@ use sugar_path::SugarPath;
 
 use self::types::{
   cross_chunk_import_item::CrossChunkImportItem, preliminary_filename::PreliminaryFilename,
+  static_import::StaticImport,
 };
 
 bitflags::bitflags! {
@@ -104,6 +105,11 @@ pub struct Chunk {
   pub depended_runtime_helper: RuntimeHelper,
   /// related to [`crate::types::import_record::ImportRecordMeta::EntryLevelExternal`]
   pub entry_level_external_module_idx: Vec<ModuleIdx>,
+  /// The chunks of `cross_chunk_imports` and the external modules of
+  /// `direct_imports_from_external_modules` and `entry_level_external_module_idx`, in the order
+  /// in which the chunk imports them, which is also the order of `chunk.imports`. The renderer
+  /// writes an entry-level `export *` from an external module after the imports.
+  pub static_imports: Vec<StaticImport>,
   pub insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>>,
   pub remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>,
   /// Pre-computed export mode for the chunk
@@ -131,10 +137,6 @@ impl Chunk {
       preserve_entry_signature,
       ..Self::default()
     }
-  }
-
-  pub fn has_side_effect(&self, module_table: &ModuleTable) -> bool {
-    self.modules.iter().any(|&module_id| module_table[module_id].side_effects().has_side_effects())
   }
 
   pub fn import_path_for(&self, importee: &Chunk) -> String {

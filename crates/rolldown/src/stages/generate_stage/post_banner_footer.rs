@@ -11,10 +11,6 @@ impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn post_banner_footer(chunks: &mut IndexInstantiatedChunks) -> BuildResult<()> {
     chunks.par_iter_mut().try_for_each(|chunk| -> anyhow::Result<()> {
-      if !matches!(chunk.kind, rolldown_common::InstantiationKind::Ecma(_)) {
-        // Only process Ecma chunks
-        return Ok(());
-      }
       if chunk.post_banner.is_none() && chunk.post_footer.is_none() {
         // Nothing to do
         return Ok(());

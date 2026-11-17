@@ -6,9 +6,7 @@ use oxc::{
   span::SourceType,
 };
 use oxc_allocator::AllocatorPool;
-use rolldown_common::{
-  InstantiatedChunk, InstantiationKind, MinifyOptions, NormalizedBundlerOptions, Output,
-};
+use rolldown_common::{InstantiatedChunk, MinifyOptions, NormalizedBundlerOptions, Output};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
@@ -160,8 +158,7 @@ fn chunk_minify_options(
 }
 
 fn is_minifiable_ecma_chunk(chunk: &InstantiatedChunk) -> bool {
-  matches!(chunk.kind, InstantiationKind::Ecma(_))
-    && !test_d_ts_pattern(chunk.preliminary_filename.as_str())
+  !test_d_ts_pattern(chunk.preliminary_filename.as_str())
 }
 
 fn test_d_ts_pattern(input: &str) -> bool {

@@ -120,6 +120,8 @@ The sourcemap sequence is:
 
 Preparation and emission are separate so user callbacks run only once while every content-changing map option contributes to `[hash]`. Debug IDs are deliberately added after the sourcemap hash, matching Rollup. The path passed to sourcemap callbacks is the default `<preliminary-chunk-file>.map` path (possibly containing hash placeholders), which avoids circular dependencies through either a chunk hash or a custom sourcemap hash. A callback that incorporates this path into a source path has its chunk placeholders resolved before emission.
 
+Null source slots retain their indices through preparation and placeholder substitution. Path transforms and ignore-list callbacks receive only named sources; their results are mapped back to the original source indices.
+
 ## Why Not Hash the Preliminary Filename Directly
 
 Tempting alternative: mix the preliminary filename into the final hash _after normalizing its placeholder_ — this would satisfy uniqueness for chunks with different chunk names without any rehash loop.

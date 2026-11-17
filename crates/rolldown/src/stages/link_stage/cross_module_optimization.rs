@@ -539,10 +539,7 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
           let symbol_ref: SymbolRef = (self.immutable_ctx.module_idx, binding.symbol_id()).into();
           let local_db = self.immutable_ctx.symbols.local_db(self.immutable_ctx.module_idx);
           // `IsNotReassigned` does not see an assignment inside direct `eval`.
-          let is_not_assigned = local_db
-            .flags
-            .get(&symbol_ref.symbol)
-            .is_some_and(|flag| flag.contains(SymbolRefFlags::IsNotReassigned))
+          let is_not_assigned = symbol_ref.is_not_reassigned(self.immutable_ctx.symbols)
             && !eval_can_assign(local_db.scoping(), symbol_ref.symbol);
 
           if is_not_assigned

@@ -4,7 +4,7 @@ use anyhow::Result;
 use arcstr::ArcStr;
 use futures::{StreamExt as _, TryStreamExt as _};
 use rolldown_common::{
-  ChunkTable, InstantiationKind, ModuleTable, RollupRenderedChunk, SharedNormalizedBundlerOptions,
+  ChunkTable, ModuleTable, RollupRenderedChunk, SharedNormalizedBundlerOptions,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
@@ -38,12 +38,9 @@ pub async fn render_chunks(
   let chunks = Arc::new(
     assets
       .iter()
-      .filter_map(|asset| {
-        if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
-          Some((ecma_meta.rendered_chunk.filename.clone(), Arc::clone(&ecma_meta.rendered_chunk)))
-        } else {
-          None
-        }
+      .map(|asset| {
+        let rendered_chunk = &asset.ecma_meta.rendered_chunk;
+        (rendered_chunk.filename.clone(), Arc::clone(rendered_chunk))
       })
       .collect::<FxIndexMap<ArcStr, Arc<RollupRenderedChunk>>>(),
   );
@@ -64,14 +61,11 @@ pub async fn render_chunks(
     .map(|(index, asset)| -> RenderChunkFuture<'_> {
       let chunks = Arc::clone(&chunks);
       Box::pin(async move {
-        let InstantiationKind::Ecma(ecma_meta) = &asset.kind else {
-          return Ok::<(usize, Vec<BuildDiagnostic>), anyhow::Error>((index, vec![]));
-        };
         let (code, sourcemaps, chunk_warnings) = plugin_driver
           .render_chunk(HookRenderChunkArgs {
             code: Arc::new(std::mem::take(&mut asset.content).try_into_inner_string()?),
             chunk: Arc::clone(
-              chunks.get(&ecma_meta.rendered_chunk.filename).expect("should have chunk"),
+              chunks.get(&asset.ecma_meta.rendered_chunk.filename).expect("should have chunk"),
             ),
             options,
             chunk_table,

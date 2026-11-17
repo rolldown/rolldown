@@ -23,9 +23,9 @@
     "vitepress-plugin-feedback-tracker": "^0.2.0-alpha.1",
     "vitepress-plugin-graphviz": "^0.1.0",
     "vitepress-plugin-group-icons": "^1.8.2",
-    "vitepress-plugin-llms": "^1.14.0",
+    "vitepress-plugin-llms": "^1.15.0",
     "vitepress-plugin-og": "^0.0.5",
-    "void": "~1.6.2",
-    "wrangler": "^4.156.0"
+    "void": "~1.8.0",
+    "wrangler": "^4.161.0"
   }
 }

@@ -6,8 +6,8 @@ use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, InstantiationKind, ModuleIdx, NormalModule, OutputExports,
-  PackageJson, PathsOutputOption, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, ModuleIdx, NormalModule, OutputExports, PackageJson,
+  PathsOutputOption, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -686,9 +686,7 @@ impl<'a> GenerateStage<'a> {
     if trace_action_enabled!() {
       let mut bytes_by_module: FxHashMap<&str, u64> = FxHashMap::default();
       for chunk in instantiated_chunks {
-        let InstantiationKind::Ecma(ecma_meta) = &chunk.kind else {
-          continue;
-        };
+        let ecma_meta = &chunk.ecma_meta;
         for (module_id, rendered_module) in ecma_meta
           .rendered_chunk
           .modules
@@ -770,9 +768,7 @@ impl<'a> GenerateStage<'a> {
       }
 
       for chunk in instantiated_chunks {
-        let InstantiationKind::Ecma(ecma_meta) = &chunk.kind else {
-          continue;
-        };
+        let ecma_meta = &chunk.ecma_meta;
 
         for (module_id, rendered_module) in ecma_meta
           .rendered_chunk

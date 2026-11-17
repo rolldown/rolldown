@@ -301,7 +301,6 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       })
     })?;
     let source = match source {
-      _ if self.resolved_id.id.starts_with("rolldown:") => source,
       StrOrBytes::Str(source) => {
         // Run plugin transform.
         let source = transform_source(

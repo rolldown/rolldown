@@ -1,5 +1,4 @@
 use std::{
-  ops::{Deref, DerefMut},
   path::{Path, PathBuf},
   sync::Arc,
 };
@@ -148,20 +147,6 @@ pub struct TransformOptions {
   /// table once per entry in [`LOWERABLE_ES_FEATURES`]. Set it from
   /// [`target_needs_js_transform`] if you ever build this struct by hand.
   pub should_transform_js: bool,
-}
-
-impl Deref for TransformOptions {
-  type Target = TransformOptionsInner;
-
-  fn deref(&self) -> &Self::Target {
-    &self.inner
-  }
-}
-
-impl DerefMut for TransformOptions {
-  fn deref_mut(&mut self) -> &mut Self::Target {
-    &mut self.inner
-  }
 }
 
 impl TransformOptions {

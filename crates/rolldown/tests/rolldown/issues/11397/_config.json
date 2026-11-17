@@ -1,0 +1,14 @@
+{
+  "_comment": "Keep internal chunk exports out of an observable dynamic-import namespace, while preserving live bindings and the static consumer's imports. The CJS variant renders the extracted namespace through `require`. `preserveEntrySignatures` does not apply to a pure dynamic entry, so the automatic `allow-extension` variant expects the same keys.",
+  "config": {},
+  "configVariants": [
+    {
+      "format": "cjs",
+      "_snapshot": false
+    },
+    {
+      "strictExecutionOrder": true,
+      "_snapshot": false
+    }
+  ]
+}

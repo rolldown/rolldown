@@ -96,6 +96,8 @@ module.exports = [
     "rollup@form@paths-function: external paths (#754)@generates es",
     "rollup@form@export-globals: Supports reexports of globals with namespace access@generates es",
     "rollup@form@arbitrary-module-namespace-identifiers-star: renders imports and exports with names that start with \"*\"@generates es",
+    "rollup@form@export-var-loops: renders exported var declarations in single-statement positions@generates es",
+    "rollup@form@export-var-loops: renders exported var declarations in single-statement positions@generates cjs",
     // Passed. convert reexport to import and export
     "rollup@form@reexport-external-default-and-name: reexports a an external default as a name and imports another name from that dependency@generates es",
     "rollup@form@reexport-external-default-and-namespace: reexports a default external import as default export (when using named exports)@generates es",

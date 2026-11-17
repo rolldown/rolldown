@@ -1,4 +1,4 @@
-use napi::bindgen_prelude::{FromNapiValue, ToNapiValue, TypeName, ValidateNapiValue};
+use napi::bindgen_prelude::{FromNapiValue, TypeName, ValidateNapiValue};
 
 #[derive(Debug)]
 pub struct LimitedBooleanValue<const VALUE: bool>();
@@ -31,14 +31,4 @@ impl<const VALUE: bool> FromNapiValue for LimitedBooleanValue<VALUE> {
   }
 }
 
-impl<const VALUE: bool> ToNapiValue for LimitedBooleanValue<VALUE> {
-  unsafe fn to_napi_value(
-    env: napi::sys::napi_env,
-    _value: Self,
-  ) -> napi::Result<napi::sys::napi_value> {
-    unsafe { bool::to_napi_value(env, VALUE) }
-  }
-}
-
 pub type BindingTrueValue = LimitedBooleanValue<true>;
-pub type BindingFalseValue = LimitedBooleanValue<false>;

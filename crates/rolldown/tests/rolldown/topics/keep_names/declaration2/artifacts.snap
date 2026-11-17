@@ -15,7 +15,7 @@ var a_exports = /* @__PURE__ */ __exportAll({
 });
 var delay$1 = /* @__PURE__ */ __name(function(time) {}, "delay");
 function random64$1() {
-	return BigInt(Math.random() * 4294967295 & 4294967295) << 32n & BigInt(Math.random() * 4294967295 & 4294967295);
+	return BigInt(Math.random() * 0xffffffff & 0xffffffff) << 32n & BigInt(Math.random() * 0xffffffff & 0xffffffff);
 }
 __name(random64$1, "random64");
 // main.js

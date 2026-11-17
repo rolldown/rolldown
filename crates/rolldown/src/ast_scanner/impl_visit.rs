@@ -227,6 +227,10 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     let symbol_id = ident.symbol_id.get().unpack();
     if self.is_root_symbol(symbol_id) {
       self.declare_normal_symbol_ref(symbol_id);
+    } else if let Some(var_id) = self.result.symbol_ref_db.scoping().catch_var_binding(symbol_id)
+      && self.is_root_symbol(var_id)
+    {
+      self.declare_normal_symbol_ref(var_id);
     }
   }
 

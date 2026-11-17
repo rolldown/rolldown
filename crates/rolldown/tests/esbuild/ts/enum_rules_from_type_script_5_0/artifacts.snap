@@ -24,6 +24,6 @@ console.log(TemplateExpressions.NULL, TemplateExpressions.TRUE, TemplateExpressi
 
 ```js
 // supported.ts
-console.log(123, "x", 1, -2, -4, 3, -1, 6, .5, 1, 8, 4, -5, 2147483643, 13, 4, 9, "x0", "0x", "xy", "NaN", "Infinity", "-Infinity", "0", "A0BxC-31246D", 321, 123, "123x", "x123", "a123b", 123, "123x", "x123", "a123b", "x", "xy", "yx", "axb", "x", "xy", "yx", "axb");
+console.log(123, "x", 1, -2, -4, 3, -1, 6, .5, 1, 8, 4, -5, 0x7ffffffb, 13, 4, 9, "x0", "0x", "xy", "NaN", "Infinity", "-Infinity", "0", "A0BxC-31246D", 321, 123, "123x", "x123", "a123b", 123, "123x", "x123", "a123b", "x", "xy", "yx", "axb", "x", "xy", "yx", "axb");
 
 ```

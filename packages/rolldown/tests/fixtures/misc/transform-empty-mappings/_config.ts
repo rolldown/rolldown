@@ -26,7 +26,7 @@ export default defineTest({
   async afterTest(output) {
     const chunk = output.output[0];
     const code = chunk.code;
-    const smc = await new SourceMapConsumer(chunk.map!);
+    const smc = await new SourceMapConsumer(chunk.map!.toString());
     expect([
       smc.originalPositionFor(getLocation(code, code.indexOf(`dep1-test`))),
       smc.originalPositionFor(getLocation(code, code.indexOf(`dep2-generated`))),

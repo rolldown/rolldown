@@ -79,8 +79,7 @@ function init_outer_barrel() {
 }
 // reader.js
 function getScale(name) {
-	const factory = outer_barrel_exports[name];
-	const built = factory();
+	const built = (0, outer_barrel_exports[name])();
 	return built ? built.value : "NO_UNIT";
 }
 function init_reader() {
@@ -208,8 +207,7 @@ function init_outer_barrel() {
 }
 // reader.js
 function getScale(name) {
-	const factory = outer_barrel_exports[name];
-	const built = factory();
+	const built = (0, outer_barrel_exports[name])();
 	return built ? built.value : "NO_UNIT";
 }
 function init_reader() {

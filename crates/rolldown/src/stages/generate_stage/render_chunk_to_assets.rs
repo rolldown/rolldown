@@ -29,7 +29,7 @@ use crate::{
   },
 };
 
-use super::{CarriedRender, GenerateStage};
+use super::{CarriedRender, GenerateStage, minify_chunks::ChunkMinifier};
 
 impl GenerateStage<'_> {
   pub async fn render_chunk_to_assets(
@@ -49,7 +49,7 @@ impl GenerateStage<'_> {
     // `ast_table` is threaded by value into `create_chunk_to_codegen_ret_map`
     // (the last reader), which frees each module's AST as soon as it is printed
     // and drops the rest at scope exit — releasing the per-module bumpalo arenas
-    // before `minify_chunks` and `finalize_assets` allocate.
+    // before minification (in `render_chunks`) and `finalize_assets` allocate.
     let (mut instantiated_chunks, index_chunk_to_instance) = self
       .instantiate_chunks(
         chunk_graph,
@@ -64,6 +64,9 @@ impl GenerateStage<'_> {
     self.trace_action_package_graph_ready(chunk_graph, &instantiated_chunks);
     self.trace_action_module_rendered(&instantiated_chunks);
 
+    // Chunks are minified inside `render_chunks`, each right after its `renderChunk` hooks.
+    // `augmentChunkHash` runs afterwards; minification changes nothing that hook receives.
+    let minifier = ChunkMinifier::new(self.options, &instantiated_chunks)?.map(Arc::new);
     diagnostics.extend(
       render_chunks(
         self.plugin_driver,
@@ -71,13 +74,16 @@ impl GenerateStage<'_> {
         self.options,
         &chunk_graph.chunk_table,
         &self.link_output.module_table,
+        minifier.as_ref(),
       )
       .await?,
     );
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
 
-    let mangle_cache = Self::minify_chunks(self.options, &mut instantiated_chunks)?;
+    let mangle_cache = minifier.and_then(|minifier| {
+      Arc::into_inner(minifier).expect("minify jobs have finished").into_mangle_cache()
+    });
 
     Self::post_banner_footer(&mut instantiated_chunks)?;
 

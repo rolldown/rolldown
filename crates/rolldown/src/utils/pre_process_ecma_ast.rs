@@ -7,7 +7,7 @@ use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
 use oxc::ast_visit::{VisitJs, VisitJsMut, walk_js};
 use oxc::diagnostics::{LabeledSpan, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
-use oxc::semantic::{Scoping, Stats};
+use oxc::semantic::{Scoping, SemanticBuilder, Stats};
 use oxc::syntax::symbol::SymbolFlags;
 use oxc::transformer::Transformer;
 use oxc::transformer_plugins::{
@@ -16,7 +16,7 @@ use oxc::transformer_plugins::{
 use oxc_str::CompactStr;
 
 use rolldown_common::{ConstExportMeta, ConstantValue, ModuleId, NormalizedBundlerOptions};
-use rolldown_ecmascript::{EcmaAst, WithMutFields, semantic_builder_for_transform};
+use rolldown_ecmascript::{EcmaAst, WithMutFields};
 use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -27,15 +27,12 @@ use super::parse_to_ecma_ast::ParseToEcmaAstResult;
 use super::tweak_ast_for_scanning::PreProcessor;
 
 #[derive(Default)]
-pub struct PreProcessEcmaAst {
-  /// Semantic statistics.
-  stats: Stats,
-}
+pub struct PreProcessEcmaAst {}
 
 impl PreProcessEcmaAst {
   #[expect(clippy::too_many_arguments)]
   pub fn build(
-    &mut self,
+    &self,
     mut ast: EcmaAst,
     stable_id: &str,
     module_id: &ModuleId,
@@ -67,8 +64,15 @@ impl PreProcessEcmaAst {
     }
 
     // Step 1: Build initial semantic data and check for semantic errors.
+    // `enum_eval` only matters for TypeScript enums (the transformer reads
+    // `Scoping::get_enum_member_value`). Plain JS/JSX never declare enums, so
+    // leave it off there.
+    let needs_enum_eval = matches!(parsed_type, OxcParseType::Ts | OxcParseType::Tsx);
     let semantic_ret = ast.program.with_dependent(|_owner, dep| {
-      semantic_builder_for_transform().with_check_syntax_error(true).build(&dep.program)
+      SemanticBuilder::new()
+        .with_enum_eval(needs_enum_eval)
+        .with_check_syntax_error(true)
+        .build(&dep.program)
     });
 
     let diagnostics = semantic_ret.diagnostics;
@@ -101,7 +105,6 @@ impl PreProcessEcmaAst {
       }));
     }
 
-    self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
 
     // Extract enum member values before the transformer converts enums.
@@ -185,12 +188,14 @@ impl PreProcessEcmaAst {
           preserve_jsx = true;
         }
 
-        let scoping = self.recreate_scoping(&mut scoping, program);
+        // Enum lowering inside the transformer needs `enum_eval` data; later
+        // recreates (inject / DCE / scan) do not.
+        let scoping_for_transform = self.recreate_scoping(&mut scoping, program, needs_enum_eval);
         // Import attributes are not part of the file name, e.g. `_jsxFileName`.
         let stable_path =
           stable_id.strip_suffix(module_id.attributes_suffix()).unwrap_or(stable_id);
         let ret = Transformer::new(allocator, Path::new(stable_path), &transform_options)
-          .build_with_scoping(scoping, program);
+          .build_with_scoping(scoping_for_transform, program);
 
         let diagnostics = ret.diagnostics;
         if diagnostics.has_errors() {
@@ -209,6 +214,12 @@ impl PreProcessEcmaAst {
           Severity::Warning,
           EventKind::ToleratedTransform,
         ));
+        // Drop the transformer's scoping. oxc's own compiler does the same:
+        // "The transformer leaves symbols and scopes out of sync with the AST"
+        // (`oxc` compiler.rs). Reusing it for DCE trips the minifier's
+        // direct-eval debug assertions and can mis-compile. Inject/DCE will
+        // rebuild from the transformed program.
+        let _ = ret.scoping;
         Ok(())
       })?;
     }
@@ -221,9 +232,12 @@ impl PreProcessEcmaAst {
     // Step 4: Run inject plugin.
     if !bundle_options.inject.is_empty() {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
-        let new_scoping = self.recreate_scoping(&mut scoping, program);
+        let new_scoping = self.recreate_scoping(&mut scoping, program, false);
         let inject_config = bundle_options.oxc_inject_global_variables_config.clone();
         let ret = InjectGlobalVariables::new(allocator, inject_config).build(new_scoping, program);
+        // Inject may splice new import statements without updating `Scoping`
+        // (`changed == true`). Only reuse the returned scoping when the AST
+        // was left untouched.
         if !ret.changed {
           scoping = Some(ret.scoping);
         }
@@ -234,7 +248,7 @@ impl PreProcessEcmaAst {
     // Avoid DCE for lazy export.
     if bundle_options.treeshake.is_some() && !has_lazy_export {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
-        let scoping = self.recreate_scoping(&mut scoping, program);
+        let scoping = self.recreate_scoping(&mut scoping, program, false);
         let mut treeshake = TreeShakeOptions::from(&bundle_options.treeshake);
         treeshake.invalid_import_side_effects = true;
         let options = CompressOptions {
@@ -256,7 +270,10 @@ impl PreProcessEcmaAst {
         );
         pre_processor.visit_program(program);
         let defer_spans = pre_processor.take_defer_spans();
-        (self.recreate_scoping(&mut None, program), defer_spans)
+        // PreProcessor always rewrites the AST (hoisting, var splitting, …),
+        // so any scoping from DCE/transform is stale. This is the one
+        // `SemanticBuilder` pass the scanner keeps.
+        (self.recreate_scoping(&mut None, program, false), defer_spans)
       });
 
     warnings.extend(import_defer_spans.into_iter().map(|span| {
@@ -284,17 +301,30 @@ impl PreProcessEcmaAst {
     })
   }
 
-  fn recreate_scoping(&mut self, scoping: &mut Option<Scoping>, program: &Program<'_>) -> Scoping {
+  /// Returns a live `Scoping` for `program`, reusing `scoping` when it is still
+  /// valid. A rebuild counts the current AST first so reserves match this
+  /// program (transform/DCE change node counts; stale stats would force
+  /// table growth in `SemanticBuilder`).
+  ///
+  /// `enum_eval` must be set when the result is handed to the TypeScript
+  /// transformer (or used to read enum member values). It is not required
+  /// for inject, DCE, or the final scan scoping.
+  fn recreate_scoping(
+    &self,
+    scoping: &mut Option<Scoping>,
+    program: &Program<'_>,
+    enum_eval: bool,
+  ) -> Scoping {
     if let Some(scoping) = scoping.take() {
       return scoping;
     }
-    let ret = semantic_builder_for_transform()
-      // Preallocate memory for the underlying data structures.
-      .with_stats(self.stats)
+    let stats = Stats::count(program);
+    SemanticBuilder::new()
+      .with_enum_eval(enum_eval)
+      .with_stats(stats)
       .build(program)
-      .semantic;
-    self.stats = ret.stats();
-    ret.into_scoping()
+      .semantic
+      .into_scoping()
   }
 }
 

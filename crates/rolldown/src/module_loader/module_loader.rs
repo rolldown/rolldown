@@ -499,15 +499,15 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         changed_resolved_ids.push(resolved_id);
       }
     }
-    // A partial scan runs the hooks again for each changed module, so the module options that a
-    // hook returned or a plugin set in an earlier build must not survive. A full scan clears all
-    // of them before it starts.
+    // The changed modules are fetched again, but their importers do not resolve them again. So
+    // their module options go back to what their resolutions set.
+    // See internal-docs/cache/implementation.md.
     if !changed_resolved_ids.is_empty()
-      && let Some(delete_js_module_options) = &self.shared_context.options.delete_js_module_options
+      && let Some(reset_js_module_options) = &self.shared_context.options.reset_js_module_options
     {
       let module_ids = changed_resolved_ids.iter().map(|resolved_id| resolved_id.id.to_string());
-      if let Err(err) = delete_js_module_options.call(module_ids.collect()).await {
-        // The files were taken from `pending_rescans`; queue them again.
+      if let Err(err) = reset_js_module_options.call(Some(module_ids.collect())).await {
+        // The files were taken from `pending_rescans`, so queue them again.
         self.revert_partial_scan(changed_resolved_ids, barrel_state_backup);
         return Err(err.into());
       }

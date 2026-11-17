@@ -46,6 +46,11 @@ export interface OutputCodeCacheEntry {
 export class PluginContextData {
   moduleOptionMap: Map<string, ModuleOptions> = new Map();
   /**
+   * The part of `moduleOptionMap` that a module got when it was resolved. See
+   * `resetModuleOptions`.
+   */
+  private resolvedModuleOptionMap: Map<string, ModuleOptions> = new Map();
+  /**
    * The cache is `null` in parallel plugin workers. In a worker, each plugin has its own
    * `PluginContextData`, so the cache never finds a match. See `parallel-plugin-worker.ts`.
    */
@@ -86,8 +91,19 @@ export class PluginContextData {
     return this.importAttributes ? id : parseModuleId(id).rawId;
   }
 
-  updateModuleOption(id: string, option: ModuleOptions): ModuleOptions {
+  /** `isResolution` is set for the options of a resolution (`resolveId`, `this.load`). */
+  updateModuleOption(id: string, option: ModuleOptions, isResolution = false): ModuleOptions {
     id = this.moduleOptionKey(id);
+    if (isResolution) {
+      const resolved = this.resolvedModuleOptionMap.get(id);
+      if (resolved) {
+        resolved.moduleSideEffects = option.moduleSideEffects ?? resolved.moduleSideEffects;
+        Object.assign(resolved.meta, option.meta);
+      } else {
+        // A merge changes `meta` in place, so this map keeps its own copy.
+        this.resolvedModuleOptionMap.set(id, { ...option, meta: { ...option.meta } });
+      }
+    }
     const existing = this.moduleOptionMap.get(id);
     if (existing) {
       if (option.moduleSideEffects != null) {
@@ -206,21 +222,26 @@ export class PluginContextData {
   }
 
   /**
-   * A full scan clears all module options: every hook runs again for every module, so an option a
-   * hook stopped returning must not survive. (Rollup differs: it keeps `meta` and
-   * `moduleSideEffects` of an unchanged cached module across watch builds.)
+   * Rust calls this before it fetches modules again, so an option that a hook stopped returning
+   * does not survive. A full scan (`ids` is `null`) resolves every module again and clears all
+   * options. A partial scan fetches the given modules again, but their importers do not resolve
+   * them again. So each one goes back to the options of its resolutions, like a new module in
+   * Rollup.
    */
-  resetModuleOptions(): void {
-    this.moduleOptionMap.clear();
-  }
-
-  /**
-   * A partial scan deletes the module options of the modules it fetches again, because their hooks
-   * run again. It keeps the options of all other modules, which are not fetched again.
-   */
-  deleteModuleOptions(ids: string[]): void {
+  resetModuleOptions(ids: string[] | null): void {
+    if (!ids) {
+      this.moduleOptionMap.clear();
+      this.resolvedModuleOptionMap.clear();
+      return;
+    }
     for (const id of ids) {
-      this.moduleOptionMap.delete(this.moduleOptionKey(id));
+      const key = this.moduleOptionKey(id);
+      const resolved = this.resolvedModuleOptionMap.get(key);
+      if (resolved) {
+        this.moduleOptionMap.set(key, { ...resolved, meta: { ...resolved.meta } });
+      } else {
+        this.moduleOptionMap.delete(key);
+      }
     }
   }
 

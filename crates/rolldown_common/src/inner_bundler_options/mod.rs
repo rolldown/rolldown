@@ -3,7 +3,6 @@ use rustc_hash::FxHashMap;
 use std::{fmt::Debug, path::PathBuf};
 use types::code_splitting_mode::CodeSplittingMode;
 use types::comments::CommentsOptions;
-use types::delete_js_module_options::DeleteJsModuleOptions;
 use types::devtools_options::DevtoolsOptions;
 use types::generated_code_options::GeneratedCodeOptions;
 use types::inject_import::InjectImport;
@@ -17,6 +16,7 @@ use types::optimization::OptimizationOption;
 use types::output_option::{
   AssetFilenamesOutputOption, GlobalsOutputOption, PathsOutputOption, PreserveEntrySignatures,
 };
+use types::reset_js_module_options::ResetJsModuleOptions;
 use types::sanitize_filename::SanitizeFilename;
 use types::watch_option::WatchOption;
 
@@ -238,13 +238,7 @@ pub struct BundlerOptions {
     serde(default, skip_deserializing),
     schemars(skip)
   )]
-  pub reset_js_module_options: Option<InvalidateJsSideCache>,
-  #[cfg_attr(
-    feature = "deserialize_bundler_options",
-    serde(default, skip_deserializing),
-    schemars(skip)
-  )]
-  pub delete_js_module_options: Option<DeleteJsModuleOptions>,
+  pub reset_js_module_options: Option<ResetJsModuleOptions>,
   pub log_level: Option<LogLevel>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",

@@ -552,7 +552,6 @@ pub fn prepare_build_context(
       .unwrap_or_default(),
     invalidate_js_side_cache: raw_options.invalidate_js_side_cache,
     reset_js_module_options: raw_options.reset_js_module_options,
-    delete_js_module_options: raw_options.delete_js_module_options,
     log_level: raw_options.log_level,
     on_log: raw_options.on_log,
     preserve_modules: raw_options.preserve_modules.unwrap_or_default(),

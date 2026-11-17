@@ -81,25 +81,19 @@ Related non-`Cache`-named structures in the same file: `ViteMetadata`,
 `Bundler::with_cached_bundle` calls it again before creating the next bundle, because a
 failed scan never reaches the output stage.
 
-Two more options clear the module options (the `moduleSideEffects` and `meta` that hooks returned
-or plugins set) that `PluginContextData.moduleOptionMap` keeps for the whole bundler. Neither is
-part of `PluginContextData.clear`, which also runs before partial scans (HMR/incremental) and
-after every `generate`/`write`.
+`PluginContextData.moduleOptionMap` keeps the module options (`moduleSideEffects`, `meta`) for
+the whole bundler, and a hook result without an option keeps the old one. So Rust resets them
+through `reset_js_module_options` (bound to `PluginContextData.resetModuleOptions`) before it
+fetches modules again (rolldown/rolldown#11223).
 
-- `reset_js_module_options` is a second `InvalidateJsSideCache`, wired the same way and bound to
-  `PluginContextData.resetModuleOptions`. It clears `moduleOptionMap` completely.
-  `Bundle::scan_modules_impl` calls it at the start of every _full_ scan, before `buildStart`. A
-  full scan runs every hook again for every module, so a hook that stops returning
-  `moduleSideEffects: false` gets the default again.
-- `delete_js_module_options` is a `DeleteJsModuleOptions` (`crates/rolldown_common/src/inner_bundler_options/types/delete_js_module_options.rs`).
-  It takes module ids and is bound to `PluginContextData.deleteModuleOptions`.
-  `ModuleLoader::fetch_modules` calls it in a _partial_ scan, once, with every changed module,
-  next to the invalidation of those modules. Their hooks run again, so they start with fresh
-  options. The options of the other modules stay, because their hooks do not run again.
-  (Rollup also keeps `meta` and `moduleSideEffects` of an unchanged cached module across watch
-  builds. It reuses them only while the module's code is unchanged.)
+- `Bundle::scan_modules_impl` passes `None` at the start of every full scan, before `buildStart`.
+  A full scan resolves every module again, so all options are cleared.
+- `ModuleLoader::fetch_modules` passes the changed modules of a partial scan. They are fetched
+  again, but their importers do not resolve them again. So each one goes back to the options of
+  its resolutions (`resolvedModuleOptionMap`), like a new module in Rollup. The other modules
+  keep theirs.
 
-Parallel plugin workers each have their own `PluginContextData`, which these callbacks do not
+Parallel plugin workers each have their own `PluginContextData`, which this callback does not
 reach.
 
 ### 6. Watch-mode filesystem cache

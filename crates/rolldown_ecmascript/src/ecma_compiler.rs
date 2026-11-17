@@ -8,8 +8,9 @@ use oxc::{
     builder::AstBuilder,
   },
   codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions, LegalComment},
-  minifier::{ManglePropertyCache, Minifier, MinifierOptions},
+  minifier::{CompressOptions, Compressor, ManglePropertyCache, MinifierOptions, PropertyMangler},
   parser::{ParseOptions, Parser},
+  semantic::{SemanticBuilder, Stats},
   span::{SPAN, SourceType},
 };
 use oxc_sourcemap::SourceMap;
@@ -136,22 +137,85 @@ impl EcmaCompiler {
       );
     }
     let mut program = ret.program;
-    let minifier = Minifier::new(minify_options);
-    let ret = if compress {
-      minifier.minify(allocator, &mut program)
-    } else {
-      minifier.dce(allocator, &mut program)
-    };
-    let property_mangle_cache = ret.property_mangle_cache;
+    // Count once so both the compress/DCE semantic and the later mangle
+    // semantic reserve their tables. `Minifier::minify` / `Minifier::dce`
+    // build semantic with no stats, so large chunks grow those tables
+    // (oxc measures that growth at up to 30% of semantic time).
+    // Mangle runs on the post-compress AST; reusing the pre-compress
+    // counts only over-reserves, which does not reallocate.
+    let stats = Stats::count(&program);
+    let minified = minify_program(allocator, &mut program, compress, minify_options, stats);
     let ret = Codegen::new()
       .with_options(CodegenOptions {
         source_map_path: enable_sourcemap.then(|| PathBuf::from(filename)),
         ..codegen_options
       })
-      .with_scoping(ret.scoping)
-      .with_private_member_mappings(ret.class_private_mappings)
+      .with_scoping(minified.scoping)
+      .with_private_member_mappings(minified.class_private_mappings)
       .build(&program);
-    Ok((ret.code, ret.map, property_mangle_cache))
+    Ok((ret.code, ret.map, minified.property_mangle_cache))
+  }
+}
+
+/// Same pipeline as `oxc_minifier::Minifier::build`, but the compress/DCE
+/// and mangle `SemanticBuilder`s are sized with `stats`.
+fn minify_program<'a>(
+  allocator: &'a Allocator,
+  program: &mut Program<'a>,
+  compress: bool,
+  options: MinifierOptions,
+  stats: Stats,
+) -> oxc::minifier::MinifierReturn {
+  let MinifierOptions { mangle, mangle_properties, compress: compress_options } = options;
+
+  let property_mangle_cache = mangle_properties.map(|options| {
+    let mut mangler = PropertyMangler::new_in(options, allocator);
+    mangler.collect(program);
+    mangler.assign();
+    mangler.rewrite(program);
+    mangler.into_cache()
+  });
+
+  let mut iterations = 0u8;
+  if let Some(compress_options) = compress_options {
+    let semantic = SemanticBuilder::new().with_stats(stats).build(program).semantic;
+    let scoping = semantic.into_scoping();
+    let compressor = Compressor::new(allocator);
+    iterations = if compress {
+      compressor.build_with_scoping(program, scoping, compress_options)
+    } else {
+      // Match `Minifier::dce`: keep the caller's target and treeshake, but
+      // otherwise use the DCE-only compress set.
+      let options = CompressOptions {
+        target: compress_options.target,
+        treeshake: compress_options.treeshake,
+        ..CompressOptions::dce()
+      };
+      compressor.dead_code_elimination_with_scoping(program, scoping, options)
+    };
+  }
+
+  let (scoping, class_private_mappings) = match mangle {
+    Some(options) => {
+      let mut semantic = SemanticBuilder::new()
+        .with_build_nodes(true)
+        .with_class_table(true)
+        .with_stats(stats)
+        .build(program)
+        .semantic;
+      let class_private_mappings = oxc::mangler::Mangler::default()
+        .with_options(options)
+        .build_with_semantic(&mut semantic, program);
+      (Some(semantic.into_scoping()), Some(class_private_mappings))
+    }
+    None => (None, None),
+  };
+
+  oxc::minifier::MinifierReturn {
+    scoping,
+    class_private_mappings,
+    property_mangle_cache,
+    iterations,
   }
 }
 

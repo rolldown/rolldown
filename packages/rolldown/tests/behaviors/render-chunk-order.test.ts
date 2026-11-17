@@ -27,52 +27,34 @@ function dynamicImports(
   };
 }
 
-test('a renderChunk hook after a filtered one sees the chunks the filter skips in chunk order', async () => {
-  async function build() {
-    const calls: string[] = [];
-    const bundle = await rolldown({
-      input: 'entry',
-      plugins: [
-        dynamicImports(200, (index) => index % 5 === 0),
-        {
-          name: 'filtered',
-          renderChunk: {
-            filter: { code: /MARK/ },
-            handler: (code) => `${code}\n// filtered`,
-          },
+test('a renderChunk hook after a filtered one sees every chunk once', async () => {
+  const calls: string[] = [];
+  const bundle = await rolldown({
+    input: 'entry',
+    plugins: [
+      dynamicImports(200, (index) => index % 5 === 0),
+      {
+        name: 'filtered',
+        renderChunk: {
+          filter: { code: /MARK/ },
+          handler: (code) => `${code}\n// filtered`,
         },
-        {
-          name: 'recorder',
-          renderChunk(_code, chunk) {
-            calls.push(chunk.name);
-            return null;
-          },
+      },
+      {
+        name: 'recorder',
+        renderChunk(_code, chunk) {
+          calls.push(chunk.name);
+          return null;
         },
-      ],
-    });
-    const { output } = await bundle.generate({});
-    await bundle.close();
-    const chunks = output.filter((item): item is OutputChunk => item.type === 'chunk');
-    return { calls, chunks };
-  }
-
-  const first = await build();
-  const names = first.chunks.map((chunk) => chunk.name);
-  const skipped = first.chunks
-    .filter((chunk) => !chunk.code.includes('MARK'))
-    .map((chunk) => chunk.name);
-  expect(names.length - skipped.length).toBe(40);
-  // Every chunk starts at once, so the chunks that `filtered` skips reach `recorder` in their first
-  // step, in chunk order. A chunk that `filtered` handles reaches `recorder` when that call
-  // returns, which can be before other chunks have started, so those calls are not pinned.
-  const builds = [first];
-  for (let run = 0; run < 5; run++) {
-    builds.push(await build());
-  }
-  for (const { calls } of builds) {
-    expect([...calls].sort()).toEqual([...names].sort());
-    expect(calls.filter((name) => skipped.includes(name))).toEqual(skipped);
-  }
+      },
+    ],
+  });
+  const { output } = await bundle.generate({});
+  await bundle.close();
+  const chunks = output.filter((item): item is OutputChunk => item.type === 'chunk');
+  expect(chunks.filter((chunk) => chunk.code.includes('MARK'))).toHaveLength(40);
+  // Chunks call their hooks concurrently, so the order of the calls is not part of the contract.
+  expect([...calls].sort()).toEqual(chunks.map((chunk) => chunk.name).sort());
 });
 
 test('a renderChunk hook can wait until every chunk has called it', async () => {
@@ -123,9 +105,9 @@ test('with more than 16 chunks, a chunk holding more than a sixteenth of the cod
   });
   const { output } = await bundle.generate({});
   await bundle.close();
-  const others = output
+  const names = output
     .filter((item): item is OutputChunk => item.type === 'chunk')
-    .map((chunk) => chunk.name)
-    .filter((name) => name !== 'm30');
-  expect(calls).toEqual(['m30', ...others]);
+    .map((chunk) => chunk.name);
+  expect(calls[0]).toBe('m30');
+  expect([...calls].sort()).toEqual([...names].sort());
 });

@@ -348,7 +348,7 @@ impl LinkStage<'_> {
     });
 
     let mut unused_record_idxs = vec![];
-    let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
+    self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
     let mut included_dynamic_entry = FxHashSet::default();
     loop {
       context.module_inclusion_changed = false;
@@ -366,7 +366,6 @@ impl LinkStage<'_> {
         }
         let included = self.process_and_retain_dynamic_entry(
           entry,
-          &cycled_idx,
           context,
           &mut unused_record_idxs,
           unreachable_import_expression_node_ids,

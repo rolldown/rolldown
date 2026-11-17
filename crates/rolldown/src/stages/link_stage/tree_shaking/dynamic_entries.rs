@@ -25,20 +25,17 @@ impl LinkStage<'_> {
   pub(super) fn process_and_retain_dynamic_entry(
     &self,
     entry: &EntryPoint,
-    cycled_idx: &FxHashSet<ModuleIdx>,
     context: &mut IncludeContext,
     unused_record_idxs: &mut Vec<(ModuleIdx, ImportRecordIdx)>,
     unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
   ) -> bool {
-    if self.options.code_splitting.is_disabled() || !cycled_idx.contains(&entry.idx) {
-      if let Some(item) = self.is_dynamic_entry_alive(
-        entry,
-        context.is_included_vec,
-        unreachable_import_expression_node_ids,
-      ) {
-        unused_record_idxs.extend(item);
-        return false;
-      }
+    if let Some(item) = self.is_dynamic_entry_alive(
+      entry,
+      context.is_included_vec,
+      unreachable_import_expression_node_ids,
+    ) {
+      unused_record_idxs.extend(item);
+      return false;
     }
     let module = match &self.module_table[entry.idx] {
       Module::Normal(module) => module,
@@ -92,7 +89,7 @@ impl LinkStage<'_> {
   pub(super) fn sort_dynamic_entries_by_topological_order(
     &self,
     dynamic_entries: &mut [EntryPoint],
-  ) -> FxHashSet<ModuleIdx> {
+  ) {
     let mut graph: DiGraphMap<ModuleIdx, ()> = DiGraphMap::new();
 
     // TODO: Since we don't skip visited node, If a project has a lot of dynamic entries,
@@ -104,27 +101,19 @@ impl LinkStage<'_> {
       let mut visited = FxHashSet::default();
       self.construct_dynamic_entry_graph(&mut graph, &mut visited, &mut entry_module_idx, cur);
     }
-    let mut cycled_dynamic_entries = FxHashSet::default();
     // https://docs.rs/petgraph/latest/petgraph/algo/fn.tarjan_scc.html
     // the order of struct connected component is sorted by reverse topological sort.
     let idx_to_order_map = petgraph::algo::tarjan_scc(&graph)
       .into_iter()
       .enumerate()
-      .filter(|(_idx, scc)| {
-        if scc.len() > 1 {
-          cycled_dynamic_entries.extend(scc.iter().copied());
-          return false;
-        }
-        true
-      })
+      .filter(|(_idx, scc)| scc.len() == 1)
       .map(|(idx, scc)| (scc[0], idx))
       .collect::<FxHashMap<ModuleIdx, usize>>();
-    // We only need to ensure the relative order of those none cycled dynamic entries are correct, rest of them
-    // we just bailout them
+    // Entries in an `import()` cycle have no topological order; the inclusion loop re-checks them
+    // until nothing changes.
     dynamic_entries.sort_by_key(|item| {
       idx_to_order_map.get(&item.idx).map_or(Reverse(usize::MAX), |&order| Reverse(order))
     });
-    cycled_dynamic_entries
   }
 
   fn construct_dynamic_entry_graph(

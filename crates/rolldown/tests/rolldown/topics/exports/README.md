@@ -13,7 +13,7 @@ Based on the code in `crates/rolldown/src/module_finalizers/mod.rs` (lines 330-3
 
 | #   | Chunk Type | WrapKind | OutputExports | Export Name | Expected Result              | Test Coverage                                                                                           |
 | --- | ---------- | -------- | ------------- | ----------- | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
-| 1   | Entry      | Cjs      | Default       | default     | `require_binding`            | `entry_cjs_default_default` (BUG FOUND)                                                                 |
+| 1   | Entry      | Cjs      | Default       | default     | `require_binding`            | `entry_cjs_default_default`                                                                             |
 | 2   | Entry      | Cjs      | Named         | default     | `require_binding.default`    | `entry_cjs_named_default`                                                                               |
 | 3   | Entry      | Cjs      | Named         | named       | `require_binding.exportName` | `entry_cjs_named_named`                                                                                 |
 | 4   | ~~Entry~~  | ~~Esm~~  | ~~Default~~   | ~~default~~ | ~~N/A~~                      | **INVALID** (ESM wrap adds extra exports)                                                               |
@@ -28,17 +28,6 @@ Based on the code in `crates/rolldown/src/module_finalizers/mod.rs` (lines 330-3
 | 13  | Common     | Esm      | Named         | named       | `require_binding.exportName` | `common_esm_named_named`                                                                                |
 | 14  | Common     | None     | Named         | default     | `require_binding.default`    | `topics/live_bindings/default_export_expr_in_common_chunks_cjs`                                         |
 | 15  | Common     | None     | Named         | named       | `require_binding.exportName` | `topics/generated_code/symbols_common_chunk`, `topics/live_bindings/named_exports_in_common_chunks_cjs` |
-
-## Bugs Found
-
-### Test #1: Entry + Cjs + Default + default
-
-The generated output has a bug where `lib.js` generates TWO `module.exports =` statements:
-
-1. First exports the runtime helpers (`__toESM`, `__toCommonJS`, `__name`)
-2. Second exports the actual value (overwriting the first)
-
-This causes `main.js` to fail at runtime with `require_lib$1.__toESM is not a function` because the runtime helpers are overwritten.
 
 ## Test Naming Convention
 

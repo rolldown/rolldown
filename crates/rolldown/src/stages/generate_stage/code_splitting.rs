@@ -21,9 +21,9 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleId, ModuleIdx, ModuleNamespaceIncludedReason,
-  ModuleTag, ModuleTagBitSet, ModuleTagRegistry, ModuleType, NormalModule,
-  PostChunkOptimizationOperation, PreserveEntrySignatures, RetainedExportSymbols, SymbolRef,
-  UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
+  ModuleTag, ModuleTagBitSet, ModuleTagRegistry, ModuleType, NormalModule, OutputExports,
+  OutputFormat, PostChunkOptimizationOperation, PreserveEntrySignatures, RetainedExportSymbols,
+  SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_std_utils::PathBufExt as _;
@@ -876,6 +876,15 @@ impl GenerateStage<'_> {
       let is_user_defined_entry = self.link_output.user_defined_entry_modules.contains(&module.idx);
       let preserve_entry_signature = if is_user_defined_entry {
         match finalized_preserve_entry_signatures {
+          // A CJS default entry returns module.exports; extra exports would overwrite that value.
+          // See internal-docs/code-splitting/implementation.md.
+          _ if matches!(entry_point.kind, EntryPointKind::UserDefined)
+            && matches!(self.options.format, OutputFormat::Cjs)
+            && matches!(self.options.exports, OutputExports::Auto | OutputExports::Default)
+            && matches!(self.link_output.metas[module.idx].wrap_kind(), WrapKind::Cjs) =>
+          {
+            Some(PreserveEntrySignatures::Strict)
+          }
           PreserveEntrySignatures::AllowExtension
           | PreserveEntrySignatures::Strict
           | PreserveEntrySignatures::False => Some(finalized_preserve_entry_signatures),
@@ -983,6 +992,9 @@ impl GenerateStage<'_> {
     let allow_avoid_redundant_chunk_loads =
       self.options.experimental.is_avoid_redundant_chunk_loads_enabled()
         && !has_tla_or_tla_dependency;
+    // The pure dynamic entry chunks that a merge gives modules of other entries. See
+    // `find_leaking_dynamic_entry_namespaces`.
+    let mut dynamic_entry_merge_targets = FxHashSet::default();
     // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
     if allow_avoid_redundant_chunk_loads {
       let entries_len: u32 = self
@@ -998,6 +1010,7 @@ impl GenerateStage<'_> {
         chunk_graph,
         entries_len,
         used_symbol_refs_builder,
+        &mut dynamic_entry_merge_targets,
       );
     }
     self.extract_standalone_runtime_chunk(
@@ -1092,8 +1105,22 @@ impl GenerateStage<'_> {
         bits_to_chunk,
         input_base,
         &mut temp_chunk_graph,
+        &mut dynamic_entry_merge_targets,
       );
+    }
 
+    // The plain merges of the already-loaded analysis and of
+    // `try_insert_common_module_to_exist_chunk` can move modules of other entries into a pure
+    // dynamic entry chunk. One check finds the chunks that add keys to the namespace of `import()`.
+    // The check runs after module assignment and before runtime placement, also when the merge of
+    // common chunks is off (`issues/11397_merge_common_chunks_off`). See
+    // internal-docs/code-splitting/implementation.md#dynamic-entry-namespaces.
+    let namespace_extractions = self.find_leaking_dynamic_entry_namespaces(
+      chunk_graph,
+      &dynamic_entry_merge_targets,
+      used_symbol_refs_builder,
+    );
+    if allow_merge_common_chunks {
       self.optimize_facade_entry_chunks(
         chunk_graph,
         index_splitting_info,
@@ -1101,6 +1128,21 @@ impl GenerateStage<'_> {
         &mut module_is_assigned,
         &temp_chunk_graph,
         used_symbol_refs_builder,
+        &namespace_extractions,
+      );
+    } else if !namespace_extractions.is_empty() {
+      self.apply_dynamic_entry_namespace_extractions(
+        chunk_graph,
+        &namespace_extractions,
+        used_symbol_refs_builder,
+      );
+      // The extraction can include `__exportAll`. Then the runtime module can need its own chunk,
+      // as after the replay in `optimize_facade_entry_chunks`.
+      self.extract_standalone_runtime_chunk(
+        index_splitting_info,
+        &mut module_is_assigned,
+        chunk_graph,
+        input_base,
       );
     }
 

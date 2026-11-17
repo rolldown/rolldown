@@ -14,6 +14,11 @@ pub use source_joiner::SourceJoiner;
 /// lifetime-parameterized `oxc_sourcemap::SourceMap` to its `'static` form.
 pub type SourceMap = oxc_sourcemap::SourceMap<'static>;
 
+/// The lifetime-parameterized sourcemap, for callers that collapse a map
+/// which still borrows its source (for example an oxc codegen map) and must
+/// not `into_owned` it first.
+pub type SourceMapRef<'a> = oxc_sourcemap::SourceMap<'a>;
+
 pub use crate::source::{Source, SourceMapSource};
 
 /// Strips the first `lines` destination lines from the sourcemap, decrementing all remaining

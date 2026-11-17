@@ -1039,19 +1039,15 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     //
     // Warnings are dropped: a module rendered here was rendered by the full build too,
     // which reports a broken chain for it already.
-    let (code, codegen_map) = match codegen.map {
-      Some(map) => (codegen.code, Some(map.into_owned())),
-      None => (codegen.code, None),
-    };
-
-    // Guarded, because a chain collapses to a map even when the codegen step
-    // contributed none — which would hand back a sourcemap for a render that asked
-    // not to have one.
+    // Collapse against the borrowed codegen map. `into_owned` here would
+    // copy sourcesContent/names that the collapse immediately copies again
+    // (or drops). The returned map is owned.
+    let code = codegen.code;
     let map = enable_sourcemap
       .then(|| {
         collapse_module_sourcemap(
           &module.sourcemap_chain,
-          codegen_map,
+          codegen.map.as_ref(),
           module.id.as_str(),
           &mut Vec::new(),
         )

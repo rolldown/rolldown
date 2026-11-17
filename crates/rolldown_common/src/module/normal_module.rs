@@ -175,9 +175,19 @@ impl NormalModule {
             ascii_only: options.charset.is_ascii(),
           },
         );
+        // The codegen map borrows this module's source. Callers that collapse
+        // it with `sourcemap_chain` must do so before this render returns;
+        // `render` itself only owns the map when it is the final module map
+        // (empty chain) or when sourcemaps are off (`None`).
+        // See `render_ecma_module::render_normal_module`, which collapses a
+        // non-empty chain against the borrowed map and skips this copy.
         ModuleRenderOutput {
           code: render_output.code,
           map: render_output.map.map(oxc_sourcemap::SourceMap::into_owned),
+          // Chain collapse is done by `render_normal_module` on the borrowed
+          // codegen map. This method owns the map for callers that do not
+          // collapse; it does not walk the chain.
+          warnings: Vec::new(),
         }
       }
     }

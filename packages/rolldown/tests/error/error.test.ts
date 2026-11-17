@@ -225,13 +225,16 @@ test('call transformContext error', async () => {
 
 // Under the wasm binding the plugin error is reconstructed as a plain `Error`, losing its `url`.
 test.skipIf(isWasiTest)('includes the url of a plugin error in the message', async () => {
-  const error = await buildWithPlugin({
+  const error: any = await buildWithPlugin({
     name: 'test',
     transform() {
       this.error({ message: 'transform hook error', url: 'https://example.com/docs' });
     },
   });
-  expect(error!.message).toContain('transform hook error\nhttps://example.com/docs');
+  expect(error.message).toContain('transform hook error\nhttps://example.com/docs');
+  // Same as Rollup, the error object itself keeps the url out of its message.
+  expect(error.errors[0].message).toBe('transform hook error');
+  expect(error.errors[0].url).toBe('https://example.com/docs');
 });
 
 // #4141

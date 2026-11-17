@@ -207,6 +207,7 @@ function bindingifyExperimental(
     chunkOptimization: experimental?.chunkOptimization,
     lazyBarrel: experimental?.lazyBarrel,
     importAttributes: experimental?.importAttributes,
+    chunkGraphOnly: experimental?.chunkGraphOnly,
   };
 }
 

@@ -2320,6 +2320,7 @@ export interface BindingExperimentalOptions {
   chunkOptimization?: boolean | BindingChunkOptimizationOptions
   lazyBarrel?: boolean
   importAttributes?: boolean
+  chunkGraphOnly?: boolean
 }
 
 export interface BindingFilterToken {

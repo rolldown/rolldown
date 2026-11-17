@@ -499,9 +499,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         changed_resolved_ids.push(resolved_id);
       }
     }
-    // The changed modules are fetched again, but their importers do not resolve them again. So
-    // their module options go back to what their resolutions set.
-    // See internal-docs/cache/implementation.md.
+    // Keep only the module options set when the changed modules were resolved, because their
+    // importers do not resolve them again.
     if !changed_resolved_ids.is_empty()
       && let Some(reset_js_module_options) = &self.shared_context.options.reset_js_module_options
     {

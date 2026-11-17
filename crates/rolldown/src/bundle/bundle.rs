@@ -110,8 +110,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     trace_action!(action::BuildStart { action: "BuildStart" });
     let is_full_scan_mode = scan_mode.is_full();
 
-    // A full scan resolves and fetches every module again. Clear their module options before
-    // `buildStart`, which may already set some. See internal-docs/cache/implementation.md.
+    // Clear the module options of earlier builds before `buildStart` can set new ones.
     if is_full_scan_mode
       && let Some(reset_js_module_options) = &self.options.reset_js_module_options
     {

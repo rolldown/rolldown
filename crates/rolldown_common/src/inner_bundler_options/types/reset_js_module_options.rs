@@ -7,8 +7,7 @@ pub type ResetJsModuleOptionsFn = dyn Fn(Option<Vec<String>>) -> Pin<Box<dyn Fut
   + Send
   + Sync;
 
-/// Resets the module options (`moduleSideEffects`, `meta`) that the JS plugin layer keeps, for all
-/// modules (`None`) or for the given module ids. See `internal-docs/cache/implementation.md`.
+/// Resets the module options kept on the JS side, for all modules (`None`) or the given ones.
 #[derive(Clone, Debug)]
 #[debug("ResetJsModuleOptionsFn::Fn(...)")]
 pub struct ResetJsModuleOptions(Arc<ResetJsModuleOptionsFn>);

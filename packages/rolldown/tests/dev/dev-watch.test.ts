@@ -576,7 +576,7 @@ test.concurrent(
         return outputCode();
       })
       .toContain('EFFECT');
-    // The `meta` of the resolution stays, the `moduleSideEffects: false` of the old transform does not.
+    // Only the options from `resolveId` stay.
     expect(infos.at(-1)).toEqual({ meta: { resolved: true }, moduleSideEffects: null });
   },
 );

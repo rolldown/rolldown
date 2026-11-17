@@ -83,15 +83,13 @@ failed scan never reaches the output stage.
 
 `PluginContextData.moduleOptionMap` keeps the module options (`moduleSideEffects`, `meta`) for
 the whole bundler, and a hook result without an option keeps the old one. So Rust resets them
-through `reset_js_module_options` (bound to `PluginContextData.resetModuleOptions`) before it
-fetches modules again (rolldown/rolldown#11223).
+through `reset_js_module_options` before it loads modules again (rolldown/rolldown#11223).
 
-- `Bundle::scan_modules_impl` passes `None` at the start of every full scan, before `buildStart`.
-  A full scan resolves every module again, so all options are cleared.
-- `ModuleLoader::fetch_modules` passes the changed modules of a partial scan. They are fetched
-  again, but their importers do not resolve them again. So each one goes back to the options of
-  its resolutions (`resolvedModuleOptionMap`), like a new module in Rollup. The other modules
-  keep theirs.
+- `Bundle::scan_modules_impl` passes `None` before `buildStart` of a full scan. All options are
+  cleared.
+- `ModuleLoader::fetch_modules` passes the changed modules of a partial scan. Each one goes back
+  to the options set when it was resolved (`resolvedModuleOptionMap`), because its importers do
+  not resolve it again.
 
 Parallel plugin workers each have their own `PluginContextData`, which this callback does not
 reach.

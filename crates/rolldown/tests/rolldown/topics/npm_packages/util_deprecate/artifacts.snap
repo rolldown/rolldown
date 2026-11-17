@@ -8,8 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
-node_assert = __toESM(node_assert);
 let node_util = require("node:util");
+node_assert = __toESM(node_assert);
 // main.js
 const exports$1 = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
 	/**

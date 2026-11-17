@@ -31,8 +31,8 @@ export { instance };
 ## main.js
 
 ```js
-import { t as instance } from "./dep2.js";
 import assert from "node:assert";
+import { t as instance } from "./dep2.js";
 // main.js
 const tagged = await import("./dep3.js");
 const same = await import("./dep3.js");

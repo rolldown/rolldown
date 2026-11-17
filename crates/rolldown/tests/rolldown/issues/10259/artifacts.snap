@@ -50,8 +50,8 @@ export { init_app_admin as n, init_app_personal as r, init_app_theming as t };
 ## personal.js
 
 ```js
-import "./apps~personal~admin~theming.js";
 import { t as init_personal } from "./personal2.js";
+import "./apps~personal~admin~theming.js";
 init_personal();
 
 ```
@@ -155,8 +155,8 @@ export { init_app_admin as n, init_app_personal as r, init_app_theming as t };
 ### personal.js
 
 ```js
-import "./apps~personal~admin~theming.js";
 import { t as init_personal } from "./personal2.js";
+import "./apps~personal~admin~theming.js";
 init_personal();
 
 ```

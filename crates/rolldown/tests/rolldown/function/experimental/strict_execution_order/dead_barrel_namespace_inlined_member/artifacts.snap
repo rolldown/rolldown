@@ -26,8 +26,8 @@ await import("./page-a.js").then(console.log);
 ## page-a.js
 
 ```js
-import { t as y } from "./constants.js";
 import assert from "node:assert";
+import { t as y } from "./constants.js";
 // page-a.js
 assert.strictEqual(globalThis.inlineNamespaceValue, 0);
 function render() {
@@ -84,8 +84,8 @@ await import("./page-a.js").then(console.log);
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as y, t as init_constants } from "./constants.js";
 import assert from "node:assert";
+import { n as y, t as init_constants } from "./constants.js";
 // page-a.js
 function render() {
 	console.log(1, y);
@@ -169,8 +169,8 @@ await init_main();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as y, t as init_constants } from "./constants.js";
 import assert from "node:assert";
+import { n as y, t as init_constants } from "./constants.js";
 // page-a.js
 function render() {
 	console.log(1, y);

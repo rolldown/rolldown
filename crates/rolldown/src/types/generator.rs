@@ -4,7 +4,7 @@ use rolldown_common::{
   Chunk, ChunkIdx, InstantiatedChunk, ModuleIdx, ModuleRenderOutput, NormalizedBundlerOptions,
   OutputExports, PathsOutputOption, SymbolRef, UsedSymbolRefs,
 };
-use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{ecmascript::property_access_str, indexmap::FxIndexMap};
 use rustc_hash::FxHashMap;
@@ -185,14 +185,7 @@ impl GenerateContext<'_> {
   }
 }
 
-#[derive(Default)]
 pub struct GenerateOutput {
-  pub chunks: Vec<InstantiatedChunk>,
+  pub chunk: InstantiatedChunk,
   pub warnings: Vec<BuildDiagnostic>,
-}
-
-pub trait Generator {
-  async fn instantiate_chunk(
-    ctx: &mut GenerateContext,
-  ) -> anyhow::Result<BuildResult<GenerateOutput>>;
 }

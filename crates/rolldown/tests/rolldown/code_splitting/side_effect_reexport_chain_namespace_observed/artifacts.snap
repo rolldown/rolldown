@@ -1,0 +1,78 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry1.js
+
+```js
+import { t as lib_exports } from "./lib.js";
+// entry1.js
+console.log("entry1", Object.keys(lib_exports).join(","));
+
+```
+
+## entry2.js
+
+```js
+import { t as lib_exports } from "./lib.js";
+// entry2.js
+console.log("entry2", Object.keys(lib_exports).join(","));
+
+```
+
+## lib.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// lib/effect.js
+console.log("side effect");
+// lib/index.js
+var lib_exports = /* @__PURE__ */ __exportAll({
+	bar: () => "bar",
+	foo: () => "foo"
+});
+export { lib_exports as t };
+
+```
+
+# Variant: [inline_const: Bool(false)]
+
+## Assets
+
+### entry1.js
+
+```js
+import { t as lib_exports } from "./lib.js";
+// entry1.js
+console.log("entry1", Object.keys(lib_exports).join(","));
+
+```
+
+### entry2.js
+
+```js
+import { t as lib_exports } from "./lib.js";
+// entry2.js
+console.log("entry2", Object.keys(lib_exports).join(","));
+
+```
+
+### lib.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// lib/effect.js
+console.log("side effect");
+// lib/foo_impl.js
+const foo = "foo";
+// lib/bar.js
+const bar = "bar";
+// lib/index.js
+var lib_exports = /* @__PURE__ */ __exportAll({
+	bar: () => bar,
+	foo: () => foo
+});
+export { lib_exports as t };
+
+```

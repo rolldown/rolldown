@@ -1,0 +1,51 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry1.js
+
+```js
+// entry1.js
+console.log("entry1", "bar");
+
+```
+
+## entry2.js
+
+```js
+// entry2.js
+console.log("entry2", "bar");
+
+```
+
+# Variant: [inline_const: Bool(false)]
+
+## Assets
+
+### bar.js
+
+```js
+// lib/bar.js
+const bar = "bar";
+export { bar as t };
+
+```
+
+### entry1.js
+
+```js
+import { t as bar } from "./bar.js";
+// entry1.js
+console.log("entry1", bar);
+
+```
+
+### entry2.js
+
+```js
+import { t as bar } from "./bar.js";
+// entry2.js
+console.log("entry2", bar);
+
+```

@@ -1105,6 +1105,11 @@ impl LinkStage<'_> {
                   if strict_execution_order {
                     star_reexport_steps.push((canonical_ref_owner.idx, name.clone()));
                   }
+                  // The export's own forwarding binding is separate from its re-export chain.
+                  // See internal-docs/linking/reference-needed-symbols/implementation.md.
+                  if side_effects_modules.contains(&export_symbol.symbol_ref.owner) {
+                    side_effects_dependency.push(export_symbol.symbol_ref.owner);
+                  }
                   depended_refs.push(export_symbol.symbol_ref);
                   if let Some(chains) =
                     normal_symbol_exports_chain_map.get(&export_symbol.symbol_ref)

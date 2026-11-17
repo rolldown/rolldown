@@ -207,6 +207,8 @@ wrapped importee without any entry reaching it: debug builds assert in chunk ass
 builds emit a chunk no entry loads. The consumer then initializes the canonical owner itself, as the
 `Import`, `WrapKind::None` arm under [Dispatch](#dispatch) describes.
 
+For a resolved namespace member read, `resolve_member_expr_refs` records the side-effectful owner of the exported binding as a module dependency, alongside the owners of its re-export chain. This matches the dependencies recorded for named imports by `match_imports_with_exports`. Including those modules drains their deferred forwarding declarations and retains their effects. The dependency also makes the retained modules reachable during chunk assignment. Reading another member does not demand this forwarding path.
+
 ## Implementation constraints
 
 - **Parallel mutation through raw-pointer casts.** The pass walks modules in parallel via `par_iter()` (which yields `&NormalModule`) but writes to two of the importer's fields, `stmt_infos` and `depended_runtime_helper`. Both are mutated through `addr_of!(...).cast_mut()`. Safety relies on per-module isolation: each closure mutates only the importer it was handed, and all cross-module reads (e.g. `self.module_table[importee_idx]`, `self.metas[..]`) touch other modules' state through `&self`. Don't widen the casts beyond those two fields without rebuilding the safety argument.

@@ -1,0 +1,48 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry1",
+        "import": "./entry1.js"
+      },
+      {
+        "name": "entry2",
+        "import": "./entry2.js"
+      },
+      {
+        "name": "entry3",
+        "import": "./entry3.js"
+      }
+    ],
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "before",
+          "test": "[\\\\/]before\\.js$",
+          "includeDependenciesRecursively": false
+        },
+        {
+          "name": "after",
+          "test": "[\\\\/]after\\.js$",
+          "includeDependenciesRecursively": false
+        },
+        {
+          "name": "outer",
+          "test": "[\\\\/]outer\\.js$",
+          "includeDependenciesRecursively": false
+        },
+        {
+          "name": "inner",
+          "test": "[\\\\/]inner\\.js$",
+          "includeDependenciesRecursively": false
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "inlineConst": false
+    }
+  ]
+}

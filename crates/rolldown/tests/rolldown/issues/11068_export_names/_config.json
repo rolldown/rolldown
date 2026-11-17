@@ -3,8 +3,5 @@
     "input": [{ "name": "main", "import": "./main.js" }],
     "chunkFilenames": "[name].js"
   },
-  "configVariants": [
-    { "_configName": "no-merge", "chunkOptimization": { "mergeCommonChunks": false } },
-    { "preserveEntrySignatures": "false", "_snapshot": false }
-  ]
+  "configVariants": [{ "preserveEntrySignatures": "false", "_snapshot": false }]
 }

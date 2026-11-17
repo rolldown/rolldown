@@ -196,7 +196,7 @@ pub fn collapse_module_sourcemap<'a>(
 /// Reborrow a `'static` sourcemap at a shorter lifetime so it can share a
 /// collapse chain with a codegen map that borrows its source.
 /// `oxc_sourcemap::SourceMap` is covariant in that lifetime.
-fn coerce_static_map_ref<'a>(map: &'a SourceMap) -> &'a rolldown_sourcemap::SourceMapRef<'a> {
+fn coerce_static_map_ref(map: &SourceMap) -> &rolldown_sourcemap::SourceMapRef<'_> {
   map
 }
 

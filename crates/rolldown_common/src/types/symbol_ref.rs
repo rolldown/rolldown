@@ -23,10 +23,6 @@ impl SymbolRef {
     db[self.owner].unpack_ref().ast_scopes.symbol_name(self.symbol)
   }
 
-  pub fn set_name(&self, db: &mut SymbolRefDb, name: &str) {
-    db[self.owner].unpack_ref_mut().ast_scopes.set_symbol_name(self.symbol, name);
-  }
-
   /// Not all symbols have flags info, we only care about part of them.
   /// If you want to ensure the flags info exists, use `flags_mut` instead.
   pub fn flags<'db, T: GetLocalDb>(&self, db: &'db T) -> Option<&'db SymbolRefFlags> {

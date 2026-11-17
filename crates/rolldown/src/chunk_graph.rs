@@ -49,11 +49,6 @@ impl ChunkGraph {
     }
   }
 
-  #[expect(unused)]
-  pub fn sorted_chunks(&self) -> impl ExactSizeIterator<Item = &Chunk> {
-    self.sorted_chunk_idx_vec.iter().map(move |&id| &self.chunk_table.chunks[id])
-  }
-
   pub fn add_chunk(&mut self, chunk: Chunk) -> ChunkIdx {
     let idx = self.chunk_table.push(chunk);
     self.finalized_cjs_ns_map_idx_vec.push(FxHashMap::default());

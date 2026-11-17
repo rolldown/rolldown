@@ -41,10 +41,6 @@ impl FilenameTemplate {
     Self { template, pattern_name }
   }
 
-  pub fn template(&self) -> &str {
-    &self.template
-  }
-
   pub fn pattern_name(&self) -> &'static str {
     self.pattern_name
   }

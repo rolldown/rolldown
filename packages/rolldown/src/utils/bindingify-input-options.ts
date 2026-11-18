@@ -8,8 +8,6 @@ import {
 import type {
   BindingDeferSyncScanData,
   BindingExperimentalOptions,
-  BindingInjectImportNamed,
-  BindingInjectImportNamespace,
   BindingInputOptions,
 } from '../binding.cjs';
 import { bindingifyManifestPlugin, BuiltinPlugin } from '../builtin-plugin/utils';
@@ -21,12 +19,10 @@ import type { OutputOptions } from '../options/output-options';
 import type { Plugin, RolldownPlugin } from '../plugin';
 import { bindingifyPlugin } from '../plugin/bindingify-plugin';
 import type { PluginContextData } from '../plugin/plugin-context-data';
+import { bindingifyInject } from './bindingify-inject';
 import { arraify } from './misc';
 import { normalizedStringOrRegex } from './normalize-string-or-regex';
-import {
-  type NormalizedTransformOptions,
-  normalizeTransformOptions,
-} from './normalize-transform-options';
+import { normalizeTransformOptions } from './normalize-transform-options';
 import { getParallelPluginInfo } from './parallel-plugin';
 import { getDefaultDevRuntime } from './default-dev-runtime';
 import {
@@ -231,51 +227,6 @@ function bindingifyResolve(resolve: InputOptions['resolve']): BindingInputOption
     return {
       yarnPnp,
     };
-  }
-}
-
-function bindingifyInject(
-  inject: NormalizedTransformOptions['inject'],
-): BindingInputOptions['inject'] {
-  if (inject) {
-    return Object.entries(inject).map(
-      ([alias, item]): BindingInjectImportNamed | BindingInjectImportNamespace => {
-        if (Array.isArray(item)) {
-          // import * as fs from 'node:fs'
-          // fs: ['node:fs', '*' ],
-          if (item[1] === '*') {
-            return {
-              tagNamespace: true,
-              alias,
-              from: item[0],
-            };
-          }
-
-          // import { Promise } from 'es6-promise'
-          // Promise: [ 'es6-promise', 'Promise' ],
-
-          // import { Promise as P } from 'es6-promise'
-          // P: [ 'es6-promise', 'Promise' ],
-          return {
-            tagNamed: true,
-            alias,
-            from: item[0],
-            imported: item[1],
-          };
-        } else {
-          // import $ from 'jquery'
-          // $: 'jquery',
-
-          // 'Object.assign': path.resolve( 'src/helpers/object-assign.js' ),
-          return {
-            tagNamed: true,
-            imported: 'default',
-            alias,
-            from: item,
-          };
-        }
-      },
-    );
   }
 }
 

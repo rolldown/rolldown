@@ -1,0 +1,15 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## input.js
+
+```js
+import { Button } from "./button.js";
+import { jsx } from "react/jsx-runtime";
+// input.jsx
+const App = () => /* @__PURE__ */ jsx(Button, { label: "ok" });
+export { App };
+
+```

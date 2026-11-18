@@ -49,4 +49,23 @@ impl InjectImport {
   pub fn default(alias: String, from: String) -> Self {
     Self::Named { imported: "default".to_string(), alias: Some(alias), from }
   }
+
+  /// The name the import binds, e.g. `P` for `import { Promise as P } from 'es6-promise'`.
+  pub fn local(&self) -> &str {
+    match self {
+      Self::Named { imported, alias, .. } => alias.as_deref().unwrap_or(imported),
+      Self::Namespace { alias, .. } => alias,
+    }
+  }
+
+  pub fn to_oxc(&self) -> oxc::transformer_plugins::InjectImport {
+    match self {
+      Self::Named { imported, from, .. } => {
+        oxc::transformer_plugins::InjectImport::named_specifier(from, Some(imported), self.local())
+      }
+      Self::Namespace { alias, from } => {
+        oxc::transformer_plugins::InjectImport::namespace_specifier(from, alias)
+      }
+    }
+  }
 }

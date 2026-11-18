@@ -1,0 +1,29 @@
+[package]
+name = "rolldown_plugin_inject"
+version = "1.3.2"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+publish = true
+repository.workspace = true
+description = "Rolldown plugin for injecting imports of global variables"
+readme = "../../README.md"
+
+[lib]
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+oxc = { workspace = true }
+rolldown_common = { workspace = true }
+rolldown_ecmascript = { workspace = true }
+rolldown_plugin = { workspace = true }
+rolldown_utils = { workspace = true }
+rustc-hash = { workspace = true }
+
+[dev-dependencies]
+rolldown = { workspace = true }
+rolldown_testing = { path = '../rolldown_testing' }
+tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }

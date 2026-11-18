@@ -10,7 +10,6 @@ use crate::{
 };
 use itertools::Either;
 use rolldown_common::{AddonRenderContext, OutputExports, StaticImport};
-use rolldown_error::BuildDiagnostic;
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{
   concat_string,
@@ -25,7 +24,6 @@ pub fn render_cjs<'code>(
   ctx: &GenerateContext<'_>,
   addon_render_context: AddonRenderContext<'code>,
   module_sources: &'code RenderedModuleSources,
-  _warnings: &mut Vec<BuildDiagnostic>,
 ) -> SourceJoiner<'code> {
   let mut source_joiner = SourceJoiner::default();
   let AddonRenderContext { hashbang, banner, intro, outro, footer, directives } =
@@ -61,12 +59,10 @@ pub fn render_cjs<'code>(
 
     // Only `named` export can we render the namespace markers.
     if entry_module.exports_kind.is_esm() {
-      // Symbol.toStringTag should only be added to module facades (chunks that represent a specific module)
       if let Some(marker) = render_namespace_markers(
         ctx.options.es_module,
         has_default_export,
         &ctx.options.generated_code,
-        ctx.chunk.is_entry_point(),
       ) {
         source_joiner.append_source(marker);
       }

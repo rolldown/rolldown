@@ -632,7 +632,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
   pub async fn compile_lazy_entry(
     &mut self,
     module_id: &str,
-    _client_id: &str,
     shipped: &FxHashMap<ArcStr, u32>,
     evaluated: &FxHashMap<ArcStr, u32>,
     stamp_table: &HmrStampTable,

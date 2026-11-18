@@ -1612,7 +1612,7 @@ export declare class BindingDecodedMap {
 }
 
 export declare class BindingDevEngine {
-  constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
+  constructor(options: BindingBundlerOptions, devOptions: BindingDevOptions)
   run(): Promise<void>
   ensureCurrentBuildFinish(): Promise<void>
   getBundleState(): Promise<BindingBundleState>

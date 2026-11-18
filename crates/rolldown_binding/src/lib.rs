@@ -76,8 +76,9 @@ pub use oxc_resolver_napi;
 /// Starts at 0 so the runtime is torn down exactly when the last holder releases it.
 /// Every JS object that outlives a single call and spawns onto the runtime
 /// (`RolldownBuild`, `Watcher`, `DevEngine`, the `scan` bundler) must acquire on
-/// create and release on close. An unpaired release drops the runtime out from
-/// under the remaining holders (#8411, #8747).
+/// create and release on close. Each async binding call also holds it until its
+/// promise settles (`spawn_boxed_future`). An unpaired release drops the runtime
+/// out from under the remaining holders (#8411, #8747).
 #[cfg(all(target_family = "wasm", tokio_unstable))]
 pub static ACTIVE_TASK_COUNT: LazyLock<AtomicU32> = LazyLock::new(|| AtomicU32::new(0));
 

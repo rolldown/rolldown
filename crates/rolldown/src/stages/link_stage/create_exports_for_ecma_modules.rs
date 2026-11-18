@@ -220,7 +220,6 @@ impl LinkStage<'_> {
           &self.module_table.modules,
           &self.metas,
           &mut self.star_reexport_records_by_imported_symbol,
-          &mut FxHashSet::default(),
         );
       }
     }

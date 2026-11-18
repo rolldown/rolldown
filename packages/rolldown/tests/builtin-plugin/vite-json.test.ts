@@ -5,6 +5,17 @@ import type { BindingCallableBuiltinPlugin } from '../../src/binding.cjs';
 
 type CallableJsonPlugin = ReturnType<typeof viteJsonPlugin> & BindingCallableBuiltinPlugin;
 
+test.each([false, true, 'auto'] as const)(
+  'transform returns an empty sourcemap to JavaScript (stringify: %s)',
+  async (stringify) => {
+    const plugin = viteJsonPlugin({ stringify }) as CallableJsonPlugin;
+    const result = await plugin.transform(JSON.stringify(['x']), 'data.json', {
+      moduleType: 'json',
+    });
+    expect(result).toMatchObject({ map: { mappings: '' } });
+  },
+);
+
 test.each(
   ['JSON', 'nested', 'invalid-key'].flatMap((key) =>
     [false, true].map((reverse) => ({ key, reverse })),

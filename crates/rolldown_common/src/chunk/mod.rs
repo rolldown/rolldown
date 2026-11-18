@@ -336,11 +336,4 @@ impl Chunk {
   pub fn is_async_entry(&self) -> bool {
     matches!(&self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::DynamicImported))
   }
-
-  /// Returns true if this chunk is an entry point.
-  /// Entry points include both user-defined entries and dynamically imported modules.
-  /// When `generatedCode.symbols` is enabled, entry point chunks get `Symbol.toStringTag` defined.
-  pub fn is_entry_point(&self) -> bool {
-    matches!(&self.kind, ChunkKind::EntryPoint { .. })
-  }
 }

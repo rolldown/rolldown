@@ -132,7 +132,6 @@ impl RawImportRecord {
     namespace_ref: SymbolRef,
     span: Span,
     importer_span: Span,
-    assert_module_type: Option<ModuleType>,
     dynamic_import_expr_info: Option<Box<DynamicImportExprInfo>>,
   ) -> RawImportRecord {
     RawImportRecord {
@@ -140,11 +139,7 @@ impl RawImportRecord {
       kind,
       namespace_ref,
       meta: ImportRecordMeta::empty(),
-      state: ImportRecordStateInit {
-        span,
-        importer_span,
-        asserted_module_type: assert_module_type,
-      },
+      state: ImportRecordStateInit { span, importer_span, asserted_module_type: None },
       attributes: ImportAttributes::default(),
       dynamic_import_expr_info,
     }

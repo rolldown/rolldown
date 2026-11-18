@@ -36,7 +36,7 @@ fn object_key(name: &str, ascii_only: bool) -> String {
 pub fn render_inline_records<'code>(
   ctx: &GenerateContext<'code>,
   source_joiner: &mut SourceJoiner<'code>,
-  carried: &'code [(ChunkIdx, RenderedModuleSources)],
+  carried: &'code mut [(ChunkIdx, RenderedModuleSources)],
 ) {
   let read = ctx.inline_state.readers_of(ctx.chunk_idx);
   if carried.is_empty() && read.is_empty() {
@@ -102,11 +102,7 @@ pub fn render_inline_records<'code>(
     }
     source_joiner.append_source(head);
     for module_source in module_sources {
-      if let Some(sources) = &module_source.sources {
-        for source in sources.as_ref() {
-          source_joiner.append_source(source);
-        }
-      }
+      module_source.append_to(source_joiner);
     }
     // The getter table publishing the record's exports, then the factory's closing brace.
     let mut tail = String::new();

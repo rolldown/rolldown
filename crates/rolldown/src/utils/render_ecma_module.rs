@@ -6,13 +6,63 @@ use rolldown_common::{
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_sourcemap::{
-  Source, SourceMap, SourceMapSource, collapse_sourcemaps_traced, empty_sourcemap,
+  Source, SourceJoiner, SourceMap, SourceMapSource, collapse_sourcemaps_traced, empty_sourcemap,
 };
 use rolldown_utils::concat_string;
 
 pub struct RenderEcmaModuleOutput {
-  pub sources: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
+  pub content: Option<RenderedModuleContent>,
   pub warnings: Vec<BuildDiagnostic>,
+}
+
+type SharedSources = Arc<[Box<dyn Source + Send + Sync>]>;
+
+/// Code is shared with `RenderedModule`, while its map belongs only to chunk assembly.
+/// See internal-docs/module-sourcemap-ownership/implementation.md.
+pub struct RenderedModuleContent {
+  sources: SharedSources,
+  mapped_body: Option<Box<SourceMapSource<ModuleBody>>>,
+}
+
+/// A map's content shares the module's source pieces without retaining another map.
+struct ModuleBody(SharedSources);
+
+impl AsRef<str> for ModuleBody {
+  fn as_ref(&self) -> &str {
+    self.0.last().expect("a rendered module has a code body").as_ref().content()
+  }
+}
+
+impl RenderedModuleContent {
+  fn new(sources: Vec<Box<dyn Source + Send + Sync>>, map: Option<SourceMap>) -> Self {
+    // The optional module marker precedes the code body, which is always last.
+    debug_assert!(!sources.is_empty());
+    let sources: SharedSources = Arc::from(sources.into_boxed_slice());
+    let mapped_body = map.map(|map| {
+      Box::new(
+        SourceMapSource::new(ModuleBody(Arc::clone(&sources)), map)
+          .with_pre_compute_sourcemap_data(true),
+      )
+    });
+    Self { sources, mapped_body }
+  }
+
+  /// Shares only the mapless code pieces with output metadata.
+  pub fn clone_sources(&self) -> SharedSources {
+    Arc::clone(&self.sources)
+  }
+
+  pub fn append_to<'a>(&'a mut self, joiner: &mut SourceJoiner<'a>) {
+    let (body, prefix) = self.sources.split_last().expect("a rendered module has a code body");
+    for source in prefix {
+      joiner.append_source(source);
+    }
+    match self.mapped_body.take() {
+      // Transfer the existing box; the joiner can take its map without another allocation.
+      Some(mapped_body) => joiner.append_source_dyn(mapped_body),
+      None => joiner.append_source(body),
+    }
+  }
 }
 
 pub fn render_ecma_module(
@@ -21,7 +71,7 @@ pub fn render_ecma_module(
   render_output: ModuleRenderOutput,
 ) -> RenderEcmaModuleOutput {
   if render_output.code.is_empty() {
-    return RenderEcmaModuleOutput { sources: None, warnings: vec![] };
+    return RenderEcmaModuleOutput { content: None, warnings: vec![] };
   }
   let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send + Sync>> = Vec::with_capacity(6);
   // Mark only where a module starts, like esbuild and bun.
@@ -35,29 +85,20 @@ pub fn render_ecma_module(
   let enable_sourcemap = options.sourcemap.is_some() && !module.is_virtual();
   let mut warnings = vec![];
 
-  // Because oxc codegen sourcemap is last of sourcemap chain,
-  // If here no extra sourcemap need remapping, we using it as final module sourcemap.
-  // So here make sure using correct `source_name` and `source_content.
-
-  if enable_sourcemap {
-    if let Some(sourcemap) = collapse_module_sourcemap(
+  // Collapse load/transform maps with the final codegen map before sharing the code.
+  let map = if enable_sourcemap {
+    collapse_module_sourcemap(
       &module.sourcemap_chain,
       render_output.map,
       module.id.as_str(),
       &mut warnings,
-    ) {
-      sources.push(Box::new(
-        SourceMapSource::new(render_output.code, sourcemap)
-          .with_pre_compute_sourcemap_data(options.is_sourcemap_enabled()),
-      ));
-    } else {
-      sources.push(Box::new(render_output.code));
-    }
+    )
   } else {
-    sources.push(Box::new(render_output.code));
-  }
+    None
+  };
+  sources.push(Box::new(render_output.code));
 
-  RenderEcmaModuleOutput { sources: Some(Arc::from(sources.into_boxed_slice())), warnings }
+  RenderEcmaModuleOutput { content: Some(RenderedModuleContent::new(sources, map)), warnings }
 }
 
 /// Collapses a module's `sourcemap_chain` together with the oxc codegen map
@@ -134,13 +175,82 @@ pub fn collapse_module_sourcemap(
 
 #[cfg(test)]
 mod tests {
-  use super::collapse_module_sourcemap;
+  use super::{RenderedModuleContent, collapse_module_sourcemap};
   use arcstr::ArcStr;
   use insta::assert_snapshot;
   use rolldown_common::{PluginIdx, SourcemapChainElement};
   use rolldown_sourcemap::{SourceMap, SourceMapBuilder, empty_sourcemap};
 
   const MODULE_ID: &str = "/project/src/index.js";
+
+  #[test]
+  fn chunk_takes_map_strings_and_keeps_shared_module_code() {
+    use rolldown_sourcemap::SourceJoiner;
+    use std::sync::Arc;
+
+    let module_map = SourceMap::from_json_string(
+      r#"{"version":3,"names":["first"],"sources":[null,"/project/src/index.js"],"sourcesContent":[null,"first();\nsecond();"],"mappings":"ACAAA;AACA"}"#,
+    ).unwrap().into_owned();
+    let name_ptr = module_map.get_names().next().unwrap().as_ptr();
+    let source_ptr = module_map.get_sources().nth(1).unwrap().unwrap().as_ptr();
+    let content_ptr = module_map.get_source_content(1).unwrap().as_ptr();
+    let code = "first();\nsecond();".to_string();
+    let code_ptr = code.as_ptr();
+    let mut content = RenderedModuleContent::new(
+      vec![Box::new("// module".to_string()), Box::new(code)],
+      Some(module_map),
+    );
+    let shared_sources = content.clone_sources();
+    let mut following = RenderedModuleContent::new(
+      vec![Box::new("third();".to_string())],
+      Some(map("third.js", "third();")),
+    );
+    let mut joiner = SourceJoiner::default();
+    joiner.prepend_source("// banner");
+    content.append_to(&mut joiner);
+    following.append_to(&mut joiner);
+    joiner.append_source("// footer");
+    let (code, map) = joiner.join();
+    let map = map.unwrap();
+    assert_eq!(code, "// banner\n// module\nfirst();\nsecond();\nthird();\n// footer");
+    assert_eq!(map.get_names().next().unwrap().as_ptr(), name_ptr);
+    assert_eq!(map.get_sources().nth(1).unwrap().unwrap().as_ptr(), source_ptr);
+    assert_eq!(map.get_source_content(1).unwrap().as_ptr(), content_ptr);
+    assert_eq!(map.get_sources().next(), Some(None));
+    assert_eq!(map.get_source_content(0), None);
+    assert_eq!(map.get_token(0).unwrap().get_dst_line(), 2);
+    assert_eq!(map.get_token(1).unwrap().get_dst_line(), 3);
+    assert_eq!(map.get_token(2).unwrap().get_dst_line(), 4);
+    assert_eq!(shared_sources[1].as_ref().content().as_ptr(), code_ptr);
+    assert!(shared_sources.iter().all(|source| source.sourcemap().is_none()));
+    drop(joiner);
+    assert!(content.mapped_body.is_none());
+    drop(content);
+    assert_eq!(Arc::strong_count(&shared_sources), 1);
+  }
+
+  #[test]
+  fn unmapped_module_has_no_mapped_source() {
+    use rolldown_sourcemap::SourceJoiner;
+    let mut content = RenderedModuleContent::new(
+      vec![Box::new("// module".to_string()), Box::new("run();".to_string())],
+      None,
+    );
+    assert!(content.mapped_body.is_none());
+    let mut joiner = SourceJoiner::default();
+    content.append_to(&mut joiner);
+    let (code, map) = joiner.join();
+    assert_eq!(code, "// module\nrun();");
+    assert!(map.is_none());
+  }
+
+  #[test]
+  #[cfg(target_pointer_width = "64")]
+  fn rendered_module_source_stays_compact() {
+    use crate::ecmascript::ecma_generator::RenderedModuleSource;
+    let size = size_of::<RenderedModuleSource>();
+    assert!(size <= 32, "rendered module source grew to {size} bytes");
+  }
 
   fn plugin_idx() -> PluginIdx {
     PluginIdx::from_usize(0)

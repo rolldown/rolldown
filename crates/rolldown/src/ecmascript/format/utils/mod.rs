@@ -4,7 +4,7 @@ use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::ecmascript::escape_non_ascii;
 
 use crate::{
-  ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
+  ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
   utils::external_import_interop::{ChunkAssignments, chunk_external_interop_modes},
 };
@@ -134,23 +134,14 @@ pub fn render_chunk_external_imports<'a>(
 pub fn render_modules_with_peek_runtime_module_at_first<'a>(
   ctx: &GenerateContext<'_>,
   source_joiner: &mut SourceJoiner<'a>,
-  module_sources: &'a RenderedModuleSources,
+  module_sources: &'a mut RenderedModuleSources,
   import_code: String,
 ) {
-  let mut module_sources_peekable = module_sources.iter().peekable();
-  match module_sources_peekable.peek() {
-    Some(RenderedModuleSource { module_idx, .. })
-      if *module_idx == ctx.link_output.runtime.id() =>
-    {
-      if let RenderedModuleSource { sources: Some(emitted_sources), .. } =
-        module_sources_peekable.next().expect("Must have module")
-      {
-        for source in emitted_sources.iter() {
-          source_joiner.append_source(source);
-        }
-      }
-    }
-    _ => {}
+  let mut module_sources_peekable = module_sources.iter_mut().peekable();
+  if let Some(runtime_module) = module_sources_peekable
+    .next_if(|module_source| module_source.module_idx == ctx.link_output.runtime.id())
+  {
+    runtime_module.append_to(source_joiner);
   }
 
   // An empty import prelude is not a source slot. Appending it would make `SourceJoiner` insert a
@@ -160,15 +151,9 @@ pub fn render_modules_with_peek_runtime_module_at_first<'a>(
   }
 
   // chunk content
-  module_sources_peekable.for_each(
-    |RenderedModuleSource { sources: module_render_output, .. }| {
-      if let Some(emitted_sources) = module_render_output {
-        for source in emitted_sources.as_ref() {
-          source_joiner.append_source(source);
-        }
-      }
-    },
-  );
+  for module_source in module_sources_peekable {
+    module_source.append_to(source_joiner);
+  }
 }
 
 pub fn render_chunk_directives<'a, T: Iterator<Item = &'a &'a str>>(directives: T) -> String {

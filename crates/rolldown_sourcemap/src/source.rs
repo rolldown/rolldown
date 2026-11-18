@@ -37,38 +37,39 @@ impl Source for String {
   }
 }
 
+/// Code paired with an exclusively owned map. Content may be owned or shared separately.
 #[derive(Debug)]
-pub struct SourceMapSource {
-  content: String,
+pub struct SourceMapSource<T = String> {
+  content: T,
   sourcemap: Option<SourceMap>,
   pre_computed_lines_count: Option<u32>,
 }
 
-impl SourceMapSource {
-  pub fn new(content: String, sourcemap: SourceMap) -> Self {
+impl<T: AsRef<str>> SourceMapSource<T> {
+  pub fn new(content: T, sourcemap: SourceMap) -> Self {
     Self { content, sourcemap: Some(sourcemap), pre_computed_lines_count: None }
   }
 
   #[must_use]
   pub fn with_pre_compute_sourcemap_data(mut self, pre_compute: bool) -> Self {
     if pre_compute {
-      self.pre_computed_lines_count = Some(lines_count(&self.content));
+      self.pre_computed_lines_count = Some(lines_count(self.content.as_ref()));
     }
     self
   }
 }
 
-impl Source for SourceMapSource {
+impl<T: AsRef<str>> Source for SourceMapSource<T> {
   fn sourcemap(&self) -> Option<&SourceMap> {
     self.sourcemap.as_ref()
   }
 
   fn content(&self) -> &str {
-    &self.content
+    self.content.as_ref()
   }
 
   fn lines_count(&self) -> u32 {
-    self.pre_computed_lines_count.unwrap_or_else(|| lines_count(&self.content))
+    self.pre_computed_lines_count.unwrap_or_else(|| lines_count(self.content.as_ref()))
   }
 
   fn take_sourcemap(&mut self) -> Option<SourceMap> {
@@ -101,4 +102,18 @@ fn test() {
   assert_eq!(lines_count("a\nb\nc"), 2);
   assert_eq!(lines_count("a\nb\nc\n"), 3);
   assert_eq!(lines_count("a"), 0);
+}
+
+#[test]
+fn mapped_source_can_borrow_code_and_yield_its_map() {
+  let code = "first();\nsecond();";
+  let mut source =
+    SourceMapSource::new(code, SourceMap::default()).with_pre_compute_sourcemap_data(true);
+  assert_eq!(source.content(), code);
+  assert_eq!(source.lines_count(), 1);
+  assert!(source.take_sourcemap().is_some());
+  assert!(source.take_sourcemap().is_none());
+  assert!(source.sourcemap().is_none());
+  assert_eq!(source.content(), code);
+  assert_eq!(source.lines_count(), 1);
 }

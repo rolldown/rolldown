@@ -26,8 +26,8 @@ use crate::{
 pub fn render_esm<'code>(
   ctx: &GenerateContext<'code>,
   addon_render_context: AddonRenderContext<'code>,
-  module_sources: &'code RenderedModuleSources,
-  carried_sources: &'code [(ChunkIdx, RenderedModuleSources)],
+  module_sources: &'code mut RenderedModuleSources,
+  carried_sources: &'code mut [(ChunkIdx, RenderedModuleSources)],
 ) -> SourceJoiner<'code> {
   let mut source_joiner = SourceJoiner::default();
   let AddonRenderContext { hashbang, banner, intro, outro, footer, directives } =
@@ -106,7 +106,7 @@ pub fn render_esm<'code>(
 
 fn render_chunk_content<'code>(
   ctx: &GenerateContext<'_>,
-  module_sources: &'code [RenderedModuleSource],
+  module_sources: &'code mut [RenderedModuleSource],
   source_joiner: &mut SourceJoiner<'code>,
 ) {
   // Dev mode: every chunk carries a graph-rows prelude for the client-side HMR walk.
@@ -136,18 +136,13 @@ fn render_chunk_content<'code>(
     }
   }
 
-  module_sources.iter().for_each(
-    |RenderedModuleSource { sources: module_render_output, module_idx, .. }| {
-      if let Some(emitted_sources) = module_render_output {
-        for source in emitted_sources.as_ref() {
-          source_joiner.append_source(source);
-        }
-      }
-      if let Some(prelude) = dev_graph_prelude.take_if(|_| is_runtime_module(*module_idx)) {
-        source_joiner.append_source(prelude);
-      }
-    },
-  );
+  for module_source in module_sources {
+    let module_idx = module_source.module_idx;
+    module_source.append_to(source_joiner);
+    if let Some(prelude) = dev_graph_prelude.take_if(|_| is_runtime_module(module_idx)) {
+      source_joiner.append_source(prelude);
+    }
+  }
 }
 
 fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {

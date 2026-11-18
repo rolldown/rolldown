@@ -180,13 +180,12 @@ Object.defineProperty(exports, "__toESM", {
 const require_barrel = require("./barrel.js");
 const require_dep = require("./dep.js");
 require("./group.js");
+var s_y;
+try {
+	s_y = require_barrel.barrel_exports.y;
+} catch (e) {}
 exports.s_foreign = require_dep.foreign;
-Object.defineProperty(exports, "s_y", {
-	enumerable: true,
-	get: function() {
-		return require_barrel.barrel_exports.y;
-	}
-});
+exports.s_y = s_y;
 
 ```
 
@@ -195,13 +194,12 @@ Object.defineProperty(exports, "s_y", {
 ```js
 const require_dep = require("./dep.js");
 const require_group = require("./group.js");
+var x;
+try {
+	x = require_group.import_lib.x;
+} catch (e) {}
 exports.foreign = require_dep.foreign;
-Object.defineProperty(exports, "x", {
-	enumerable: true,
-	get: function() {
-		return require_group.import_lib.x;
-	}
-});
+exports.x = x;
 
 ```
 

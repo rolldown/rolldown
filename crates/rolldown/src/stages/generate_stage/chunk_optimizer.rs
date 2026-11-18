@@ -1087,10 +1087,9 @@ impl GenerateStage<'_> {
   /// entry module. The facade stays for code outside the bundle. An `import()` in the bundle loads
   /// the group chunk and reads the namespace object of the entry, as it does when the facade is
   /// removed (`ChunkGraph::entry_module_to_dynamic_import_chunk`). The facade does not give the
-  /// same value: in CJS output its exports object is writable, ESM output reads each CommonJS
-  /// export one time when the facade loads, and a facade has no names of an `export *` from
-  /// CommonJS. Also, a static namespace import of the entry gets the namespace object of the
-  /// group chunk.
+  /// same value: in CJS output its exports object is writable, the facade reads each CommonJS
+  /// export one time when it loads, and a facade has no names of an `export *` from CommonJS.
+  /// Also, a static namespace import of the entry gets the namespace object of the group chunk.
   ///
   /// See internal-docs/code-splitting/implementation.md.
   fn resolve_emitted_chunk_group_conflicts(

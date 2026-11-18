@@ -105,8 +105,8 @@ pub struct Chunk {
   /// `true` for the facade of an emitted entry whose module a `codeSplitting` group holds, when
   /// the facade stays only because the entry exports a binding of another chunk. Without this
   /// reason the group chunk replaces the facade, and no file reads the CommonJS exports of the
-  /// entry when it loads. Thus in ESM output, this facade reads each CommonJS export in a `try`
-  /// block. See internal-docs/code-splitting/implementation.md.
+  /// entry when it loads. Thus this facade reads each CommonJS export one time, in a `try` block,
+  /// and exports the saved value. See internal-docs/code-splitting/implementation.md.
   pub is_cross_chunk_export_facade: bool,
   pub depended_runtime_helper: RuntimeHelper,
   /// related to [`crate::types::import_record::ImportRecordMeta::EntryLevelExternal`]

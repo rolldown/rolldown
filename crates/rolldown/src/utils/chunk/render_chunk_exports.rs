@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::hash_map::Entry;
 use std::fmt::Write as _;
 
 use oxc_str::CompactStr;
@@ -14,7 +15,7 @@ use rolldown_utils::{
   },
   indexmap::FxIndexSet,
 };
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::ast_scanner::const_eval::eval_can_assign;
 use crate::esm_init_obligations::{WrappedEsmInitTarget, collect_entry_reexported_wrapper_inits};
@@ -213,6 +214,8 @@ pub fn render_chunk_exports(
         return None;
       }
       let mut s = String::new();
+      // The saved value of each CommonJS property in a marked facade (`save_commonjs_property`).
+      let mut saved_commonjs_properties = FxHashMap::default();
       let rendered_items = export_items
         .into_iter()
         .map(|(exported_name, export_ref)| {
@@ -229,10 +232,10 @@ pub fn render_chunk_exports(
             exported_name,
             symbol.chunk_idx
           );
-          let canonical_name = link_output
+          let mut canonical_name = link_output
             .symbol_db
             .canonical_name_for_or_original(canonical_ref, &chunk.canonical_names);
-          let rendered_canonical_name = escape_non_ascii(canonical_name, ascii_only);
+          let mut rendered_canonical_name = escape_non_ascii(canonical_name, ascii_only);
           if let Some(ns_alias) = &symbol.namespace_alias {
             let canonical_ns_name = link_output
               .symbol_db
@@ -244,18 +247,20 @@ pub fn render_chunk_exports(
               ascii_only,
             );
             if chunk.is_cross_chunk_export_facade {
-              // Without the cross-chunk export, the group chunk replaces this facade, and no file
-              // reads this property when it loads. A getter that throws must not stop the load of
-              // the other exports. Node also ignores an error from a getter when it reads the
-              // exports of a CommonJS module for an ESM import. See
-              // internal-docs/code-splitting/implementation.md.
-              s.push_str("var ");
-              s.push_str(&rendered_canonical_name);
-              s.push_str(";\ntry {\n\t");
-              s.push_str(&rendered_canonical_name);
-              s.push_str(" = ");
-              s.push_str(&property_read);
-              s.push_str(";\n} catch (e) {}\n");
+              if let Some(saved_name) = save_commonjs_property(
+                &mut s,
+                &mut saved_commonjs_properties,
+                (
+                  link_output.symbol_db.canonical_ref_for(ns_alias.namespace_ref),
+                  property_name.as_str(),
+                ),
+                canonical_name,
+                &rendered_canonical_name,
+                &property_read,
+              ) {
+                canonical_name = saved_name;
+                rendered_canonical_name = escape_non_ascii(saved_name, ascii_only);
+              }
             } else {
               s.push_str("var ");
               s.push_str(&rendered_canonical_name);
@@ -299,16 +304,51 @@ pub fn render_chunk_exports(
             });
           }
           if !export_items.is_empty() {
+            // The saved value of each CommonJS property in a marked facade
+            // (`save_commonjs_property`).
+            let mut saved_commonjs_properties = FxHashMap::default();
             let rendered_items = export_items
               .into_iter()
               .map(|(exported_name, export_ref)| {
                 let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
-                let exported_value = ctx.finalized_string_pattern_for_symbol_ref(
+                let value_pattern = ctx.finalized_string_pattern_for_symbol_ref(
                   canonical_ref,
                   ctx.chunk_idx,
                   &chunk.canonical_names,
                 );
-                let exported_value = escape_non_ascii(&exported_value, ascii_only);
+                let mut exported_value = escape_non_ascii(&value_pattern, ascii_only);
+                // A property of an external module keeps the getter of `external_live_bindings`.
+                let commonjs_property = link_output
+                  .symbol_db
+                  .get(canonical_ref)
+                  .namespace_alias
+                  .as_ref()
+                  .filter(|ns_alias| {
+                    chunk.is_cross_chunk_export_facade
+                      && matches!(export_mode, Some(OutputExports::Named | OutputExports::Default))
+                      && !link_output.module_table[ns_alias.namespace_ref.owner].is_external()
+                  });
+                let is_saved_value = commonjs_property.is_some();
+                if let Some(ns_alias) = commonjs_property {
+                  let name = link_output
+                    .symbol_db
+                    .canonical_name_for_or_original(canonical_ref, &chunk.canonical_names);
+                  let rendered_name = escape_non_ascii(name, ascii_only);
+                  exported_value = match save_commonjs_property(
+                    &mut s,
+                    &mut saved_commonjs_properties,
+                    (
+                      link_output.symbol_db.canonical_ref_for(ns_alias.namespace_ref),
+                      ns_alias.property_name.as_str(),
+                    ),
+                    name,
+                    &rendered_name,
+                    &exported_value,
+                  ) {
+                    Some(saved_name) => escape_non_ascii(saved_name, ascii_only),
+                    None => rendered_name,
+                  };
+                }
 
                 match export_mode {
                   Some(OutputExports::Named) => {
@@ -340,7 +380,8 @@ pub fn render_chunk_exports(
                        export branch (`exports.{exported_name} = {exported_value}`): it would \
                        freeze the pre-rebind function and re-run the module body",
                     );
-                    if is_order_wrapper_ref || keep_live_binding {
+                    // A saved value does not change. Thus its export needs no getter.
+                    if !is_saved_value && (is_order_wrapper_ref || keep_live_binding) {
                       render_object_define_property(&exported_name, &exported_value, ascii_only)
                     } else if exported_name.as_str() == "__proto__" {
                       // `__proto__` has special semantics - assigning to it sets the prototype
@@ -504,6 +545,40 @@ pub fn render_object_define_property_value(key: &str, value: &str, ascii_only: b
     "
 });"
   )
+}
+
+/// Saves the value of a CommonJS property in a facade that `Chunk::is_cross_chunk_export_facade`
+/// marks. `key` is the canonical namespace and the property name. For the first export of a
+/// property, the function writes `var name; try { name = read; } catch (e) {}` to `s` and returns
+/// `None`. For the other exports of the property, it returns the variable of the first export.
+/// Thus all names of the property export the value of one read.
+///
+/// Without the cross-chunk export, the group chunk replaces the facade, and no file reads the
+/// property when it loads. Node reads each export of a CommonJS module one time when it imports
+/// the module. If the read throws, the export is `undefined`. See
+/// internal-docs/code-splitting/implementation.md.
+fn save_commonjs_property<'name>(
+  s: &mut String,
+  saved: &mut FxHashMap<(SymbolRef, &'name str), &'name str>,
+  key: (SymbolRef, &'name str),
+  name: &'name str,
+  rendered_name: &str,
+  read: &str,
+) -> Option<&'name str> {
+  match saved.entry(key) {
+    Entry::Occupied(first) => Some(*first.get()),
+    Entry::Vacant(entry) => {
+      entry.insert(name);
+      s.push_str("var ");
+      s.push_str(rendered_name);
+      s.push_str(";\ntry {\n\t");
+      s.push_str(rendered_name);
+      s.push_str(" = ");
+      s.push_str(read);
+      s.push_str(";\n} catch (e) {}\n");
+      None
+    }
+  }
 }
 
 pub fn get_export_items(chunk: &Chunk) -> Vec<(CompactStr, SymbolRef)> {

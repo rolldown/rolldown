@@ -381,7 +381,7 @@ Each failure needs its own guard. Also, the module-level import prediction must 
 A kept facade does not give the same value as the namespace object of the entry in the group chunk. `import()` of the entry returns that object when the facade is removed:
 
 - In CJS output, a write to an export of the facade changes the export. A write to an export of the namespace object fails, as for a module namespace.
-- In ESM output, the facade reads each CommonJS export one time, when it loads. If a getter throws, the export of the facade is `undefined`, as in Node. The namespace object reads the export at each access.
+- The facade reads each CommonJS export one time, when it loads. If a getter throws, the export of the facade is `undefined`, as in Node. The namespace object reads the export at each access.
 - A facade does not re-export the names that `export *` gets from a CommonJS module. The namespace object gets them at run time.
 - Another module can read the namespace object as a value (`import * as ns`). Then `import()` must return that same object.
 
@@ -391,11 +391,15 @@ The redirect applies only when the cross-chunk check is the only reason for the 
 
 **Rejected alternative: merge such an `import()` target.** The optimizer can remove the facade of an `import()` target when the facade gives a different value, as it does without the cross-chunk check. Then each case in the list above needs its own guard, and each new case needs a new guard. Also, the merged entry loses its re-exports from other chunks for code outside the bundle.
 
-**Load of a kept facade.** An ESM facade binds each export to a variable, so it reads each CommonJS export when it loads. When the optimizer removes the facade, the group chunk does not export such a property, and no file reads it when it loads. Code outside the bundle then imports the other exports of the entry from the group chunk, and a getter that throws does not stop that load. Thus a getter that throws must not stop the load of a facade that the cross-chunk check keeps. Such a facade reads each CommonJS export in a `try` block. Node does the same when it reads the exports of a CommonJS module for an ESM import. CJS output needs no change, because a getter of the facade reads the export only on access.
+**Load of a kept facade.** An ESM facade binds each export to a variable, so it reads each CommonJS export when it loads. When the optimizer removes the facade, the group chunk does not export such a property, and no file reads it when it loads. Code outside the bundle then imports the other exports of the entry from the group chunk, and a getter that throws does not stop that load. Thus a getter that throws must not stop the load of a facade that the cross-chunk check keeps. Node reads each export of a CommonJS module one time when it imports the module, and it ignores an error from a getter. Thus such a facade reads each CommonJS export one time, in a `try` block, and all export names of one CommonJS export get the value of that read (`export { x as a, x as b }`). The CJS facade does the same, so both output formats give the same values. Module initialization stays outside the `try` block.
 
-Other ESM entry chunks and facades read without a `try` block, and a getter that throws makes their load fail. This design does not change that separate gap. In strict execution order, the bundle also restores the facade of an emitted entry in the order wrap plan when the cross-chunk check does not keep it. Thus such a facade also reads without a `try` block.
+In CJS output, a bundled module can get a property through `export *` from an external module. The facade cannot tell such a property from a CommonJS property, so it saves that value too, and the property is not live. A direct re-export of an external module keeps its getter.
 
-**Rejected alternative: no CommonJS exports in such a facade.** The facade then reads nothing when it loads, as the group chunk. But the ESM facade then has fewer exports than the CJS facade, and code outside the bundle loses an export that the source has.
+Other entry chunks and facades do not change. In ESM output, they read without a `try` block, so a getter that throws makes their load fail. CJS output keeps their getters. This design does not change these separate gaps. In strict execution order, the bundle also restores the facade of an emitted entry in the order wrap plan when the cross-chunk check does not keep it. Thus such a facade renders as the other facades.
+
+**Rejected alternative: a `try` block in each CJS getter.** Then the spread of the facade (`{ ...facade }`) does not throw. But the getter reads the export at each access, so two reads can give different values. Node reads the export one time.
+
+**Rejected alternative: no CommonJS exports in such a facade.** The facade then reads nothing when it loads, as the group chunk. But code outside the bundle then loses an export that the source has.
 
 **Rejected alternative: remove the facade when it exports a CommonJS property.** The group chunk then loads as it does without the cross-chunk check. But such an entry loses its re-exports from other chunks again ([#11767](https://github.com/rolldown/rolldown/issues/11767)).
 

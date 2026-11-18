@@ -45,7 +45,7 @@ async fn allow_extension_cross_chunk_reexport_cjs_namespace() {
   // - `seg_named.js` re-exports `x` from a CommonJS module. The namespace is in the `group` chunk.
   // - `seg_barrel.js` re-exports `y` from `barrel.js`, which gets `y` through `export *` from a
   //   CommonJS module. The namespace of `barrel.js` is in the `barrel.js` chunk.
-  // In CJS output, the getter of such an export must read the namespace through the `require()`
+  // In CJS output, the read of such a property must get the namespace through the `require()`
   // binding of the other chunk. The `index.js` entry also re-exports `y` this way.
   //
   // `index.js` loads `seg_named.js` and `seg_star.js` with `import()`. That loads the `group`

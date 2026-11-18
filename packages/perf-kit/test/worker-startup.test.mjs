@@ -6,10 +6,11 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
   COVERAGE_FLAGS,
@@ -43,7 +44,8 @@ import {
   whyModule,
 } from '../lib/worker/attrib.mjs';
 import { attribOutDir, viteConfigShim } from '../lib/worker/config.mjs';
-import { entryIdx, minCut } from '../lib/min-cut.mjs';
+import { minCut } from '../lib/min-cut.mjs';
+import { entryIndices } from '../lib/module-graph.mjs';
 import { indexOf, makeGraph } from './graph-fixtures.mjs';
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'perf-kit-worker-'));
@@ -547,7 +549,7 @@ test('with the class module as a root, the min cut lands below it instead of at 
   const cls = indexOf(graph, 'worker/agents/ThinkAgent.ts');
   const withoutRoot = minCut(graph, lib);
   assert.equal(withoutRoot.flow, 1);
-  const withRoot = minCut(graph, lib, [], [...entryIdx(graph), cls]);
+  const withRoot = minCut(graph, lib, [], [...entryIndices(graph), cls]);
   assert.deepEqual(withRoot.cutEdges, [{ from: cls, to: lib }]);
 });
 
@@ -591,6 +593,35 @@ test('why: the chain holds only real static imports', () => {
   assert.deepEqual(graphChainResolver(graph)('src/lib.js'), chain);
   assert.deepEqual(whyModule(graph, main).chain, []);
   assert.deepEqual(whyModule(graph, indexOf(graph, 'src/lazy.js')).chain, []);
+});
+
+test('why and worker attribution keep virtual hops in a shared import chain', (t) => {
+  const virtual = '\\0virtual:bridge';
+  const graph = makeGraph(
+    [
+      { id: 'a-entry.js', bytes: 10, imports: [[2, false]] },
+      { id: 'b-entry.js', bytes: 10, imports: [[3, false]] },
+      { id: virtual, bytes: 10, imports: [[4, false]] },
+      { id: 'b-bridge.js', bytes: 10, imports: [[4, false]] },
+      { id: 'z-bridge.js', bytes: 10, imports: [[5, false]] },
+      { id: 'shared.js', bytes: 10 },
+    ],
+    ['a-entry.js', 'b-entry.js'],
+  );
+  const chain = ['a-entry.js', virtual, 'z-bridge.js'];
+  assert.deepEqual(graphChainResolver(graph)('shared.js'), chain);
+
+  const dir = tmp();
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const report = write(dir, 'module-graph.json', JSON.stringify(graph));
+  const cli = fileURLToPath(new URL('../harness.mjs', import.meta.url));
+  const run = spawnSync(process.execPath, [cli, 'why', 'shared.js', '--report', report], {
+    cwd: dir,
+    encoding: 'utf8',
+    timeout: 20_000,
+  });
+  assert.equal(run.status, 0, run.stderr);
+  assert.ok(run.stdout.includes(`chain from the entry: ${[...chain, 'shared.js'].join(' -> ')}`));
 });
 
 // --- the config shim ---------------------------------------------------------------------

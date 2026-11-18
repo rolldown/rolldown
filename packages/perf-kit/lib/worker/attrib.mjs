@@ -145,9 +145,7 @@ export function graphChainResolver(graph) {
   return (file) => {
     const i = byKey.get(norm(file));
     if (i == null) return null;
-    return chainTo(i)
-      .map((j) => graph.modules[j].id)
-      .filter((id) => !/^(\\0|\0)/.test(id));
+    return chainTo(i).map((j) => graph.modules[j].id);
   };
 }
 

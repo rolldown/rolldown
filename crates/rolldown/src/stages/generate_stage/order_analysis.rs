@@ -144,16 +144,22 @@ impl GenerateStage<'_> {
       };
 
       let expected_order = self.expected_order_for_root(root);
-      let (actual_order, trigger_hosts) =
-        self.actual_order_for_root(root, root_chunk, chunk_graph, &import_edges);
-      let mut at_risk = self.at_risk_modules(&expected_order, &actual_order, &trigger_hosts);
-      // Lowering can change the entry edge into a static chunk cycle, so wrap every eligible
-      // source module under a root that reaches one.
-      if chunk_cycles.reachable_from(root_chunk, &import_edges) {
-        at_risk
-          .extend(expected_order.iter().copied().filter(|idx| self.is_order_wrap_eligible(*idx)));
+      // An emitted entry can keep its facade for code outside the bundle while an `import()` in
+      // the bundle loads the chunk that holds its module
+      // (`ChunkGraph::entry_module_to_dynamic_import_chunk`). Check the load of each chunk.
+      let dynamic_import_chunk = chunk_graph.entry_module_to_dynamic_import_chunk.get(&root);
+      for &root_chunk in std::iter::once(&root_chunk).chain(dynamic_import_chunk) {
+        let (actual_order, trigger_hosts) =
+          self.actual_order_for_root(root, root_chunk, chunk_graph, &import_edges);
+        let mut at_risk = self.at_risk_modules(&expected_order, &actual_order, &trigger_hosts);
+        // Lowering can change the entry edge into a static chunk cycle, so wrap every eligible
+        // source module under a root that reaches one.
+        if chunk_cycles.reachable_from(root_chunk, &import_edges) {
+          at_risk
+            .extend(expected_order.iter().copied().filter(|idx| self.is_order_wrap_eligible(*idx)));
+        }
+        all_at_risk.extend(at_risk.iter().copied());
       }
-      all_at_risk.extend(at_risk.iter().copied());
       roots.push(RootOrderAnalysis { root, expected_order });
     }
 

@@ -376,7 +376,25 @@ An emitted `allow-extension` entry that merges into a group chunk can re-export 
 - An ambiguous `export *` name gave the group chunk an extra import. The module-level import prediction (`predicted_static_import_targets`) did not include this import, so a debug assertion in `compute_cross_chunk_links` panicked.
 - When one binding had two export names, the group chunk exported it with only one of the names.
 
-Each failure needs its own guard. Also, the module-level import prediction must include the new imports. Thus the chunk optimizer keeps the facade of such an entry instead (see [implementation.md](./implementation.md#facade-elimination-optimize_facade_entry_chunks)). The cost is one more chunk for each such entry. The runtime helper can also move into its own chunk, as in the repro of [#11767](https://github.com/rolldown/rolldown/issues/11767).
+Each failure needs its own guard. Also, the module-level import prediction must include the new imports. Thus the chunk optimizer keeps the facade of such an entry instead (see [implementation.md](./implementation.md#facade-elimination-optimize_facade_entry_chunks)). The cost is one more chunk for each such entry.
+
+A kept facade does not give the same value as the namespace object of the entry in the group chunk. `import()` of the entry returns that object when the facade is removed:
+
+- In CJS output, a write to an export of the facade changes the export. A write to an export of the namespace object fails, as for a module namespace.
+- In ESM output, the facade reads each CommonJS export when it loads. A getter that throws makes the load fail.
+- A facade does not re-export the names that `export *` gets from a CommonJS module. The namespace object gets them at run time.
+- Another module can read the namespace object as a value (`import * as ns`). Then `import()` must return that same object.
+
+Thus the facade stays for code outside the bundle, and each `import()` of the entry in the bundle reads the namespace object in the group chunk. `entry_module_to_entry_chunk` still names the facade, and a second map gives the target of `import()`. Then `import()` in the bundle gets the same value as when the facade is removed, and code outside the bundle gets the re-exports of the entry.
+
+The redirect applies only when the cross-chunk check is the only reason for the facade. A facade that the name check keeps is still the target of `import()`. In strict execution order, an emitted entry in the order wrap plan keeps a facade in all layouts, so `import()` of such an entry also loads the facade.
+
+**Rejected alternative: merge such an `import()` target.** The optimizer can remove the facade of an `import()` target when the facade gives a different value, as it does without the cross-chunk check. Then each case in the list above needs its own guard, and each new case needs a new guard. Also, the merged entry loses its re-exports from other chunks for code outside the bundle.
+
+**Unresolved.** The namespace object of the group chunk differs from Node in two cases, with or without the facade:
+
+- In ESM output, the namespace object does not get the names of an external `export *`.
+- The namespace object reads a CommonJS export at each access. Node reads the export one time, when it loads the CommonJS module. Thus the namespace object sees a later write.
 
 ### Late `WrapKind` override
 

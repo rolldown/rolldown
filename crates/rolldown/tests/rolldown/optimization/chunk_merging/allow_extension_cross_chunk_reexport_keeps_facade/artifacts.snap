@@ -21,9 +21,13 @@ To fix:
 ## group.js
 
 ```js
+import { n as task } from "./task.js";
+// HIDDEN [\0rolldown/runtime.js]
+// seg_dynamic.js
+var seg_dynamic_exports = /* @__PURE__ */ __exportAll({ s_task: () => task });
 // seg_local.js
 const s_local = () => "local";
-export { s_local };
+export { s_local, seg_dynamic_exports as t };
 
 ```
 
@@ -32,7 +36,7 @@ export { s_local };
 ```js
 import { n as task, t as helper } from "./task.js";
 // index.js
-const load = () => import("./seg_dynamic.js");
+const load = () => import("./group.js").then((n) => n.t);
 export { helper, load, task };
 
 ```
@@ -40,16 +44,16 @@ export { helper, load, task };
 ## seg_dynamic.js
 
 ```js
-export { n as s_task } from "./task.js";
 import "./group.js";
+export { n as s_task } from "./task.js";
 
 ```
 
 ## seg_static.js
 
 ```js
-export { t as s_helper } from "./task.js";
 import "./group.js";
+export { t as s_helper } from "./task.js";
 
 ```
 

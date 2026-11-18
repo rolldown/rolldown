@@ -1048,14 +1048,13 @@ impl GenerateStage<'_> {
     {
       return;
     }
-    // The finalizer rewrites `import()` specifiers through `entry_module_to_entry_chunk`, which
-    // diverges from the hosting chunk whenever the dynamic entry's facade chunk survives while
-    // another chunk hosts its body (order-wrap facade splits, or kept facades when common-chunk
-    // merging is off); record the chunk the emitted specifier actually names.
+    // The finalizer rewrites `import()` specifiers through `ChunkGraph::dynamic_import_chunk`,
+    // which diverges from the hosting chunk whenever the dynamic entry's facade chunk survives
+    // while another chunk hosts its body (order-wrap facade splits, or kept facades when
+    // common-chunk merging is off), and from the entry chunk when an emitted entry keeps its facade
+    // only for code outside the bundle; record the chunk the emitted specifier actually names.
     let importee_chunk = chunk_graph
-      .entry_module_to_entry_chunk
-      .get(&importee_module_idx)
-      .copied()
+      .dynamic_import_chunk(importee_module_idx)
       .or(chunk_graph.module_to_chunk[importee_module_idx])
       .expect("importee chunk should exist");
     if chunk_graph.module_to_chunk[importer_idx]

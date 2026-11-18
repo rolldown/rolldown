@@ -305,14 +305,32 @@ The name check runs first, so the names that it assigns do not depend on the cro
 The cross-chunk check does not count these exports:
 
 - A binding that an external module owns. Such a binding is in no chunk, because each chunk imports it from the external module itself.
-- A property of a namespace, for example an import from a CommonJS module. In CJS output, a facade that exports such a property can read a namespace that the facade does not declare.
+- A property of a namespace, for example an import from a CommonJS module. The group chunk does not export such a property either. That loss is a separate gap, and this check does not change it.
 - All exports of a CommonJS entry. The facade of a CommonJS entry can export a name that the facade does not declare.
 - The exports that come from CommonJS, for example through `export * from './cjs.js'`. `register_entry_export_depended_symbols` also skips these exports.
 
 The last three kinds do not keep the facade:
 
 - If no other export keeps the facade, the optimizer removes it. Then the entry loses such an export.
-- If another export keeps the facade, the facade also exports a property of a namespace, but not the exports that come from CommonJS. In CJS output, a read of such a property can throw a `ReferenceError`. A facade that the name check keeps has the same problem.
+- If another export keeps the facade, the facade also exports a property of a namespace, but not the exports that come from CommonJS. The namespace can be in another chunk, for example in the group chunk. In CJS output, the getter of such a property reads the namespace through the `require()` binding of that chunk (`finalized_string_pattern_for_symbol_ref`, `optimization/chunk_merging/allow_extension_cross_chunk_reexport_cjs_namespace`). A facade that the name check keeps uses the same path.
+
+An entry that keeps its facade only because of the cross-chunk check can also be an `import()` target (`ChunkMeta::DynamicImported`). Then `resolve_emitted_chunk_group_conflicts` returns the entry with its group chunk. The facade stays for code outside the bundle. Each `import()` of the entry in the bundle loads the group chunk and reads the namespace object of the entry, as it does when the optimizer removes the facade. The facade does not give the same value:
+
+- In CJS output, a write to an export of the facade changes the export. A write to an export of the namespace object fails, as for a module namespace.
+- In ESM output, the facade reads each CommonJS export when it loads. A getter that throws makes the load fail.
+- A facade does not re-export the names that `export *` gets from a CommonJS module (`came_from_commonjs`). The namespace object gets them at run time (`__reExport`).
+- A static namespace import of the entry (`import * as ns`) reads the namespace object from the group chunk. `import()` must return the same object.
+
+`entry_module_to_entry_chunk` still names the facade. `optimize_facade_entry_chunks` puts the group chunk in `entry_module_to_dynamic_import_chunk`, and `ChunkGraph::dynamic_import_chunk` reads that map first. The `import()` rewrite of the module finalizer, the dynamic imports of `compute_cross_chunk_links` and `dynamic_entry_hosts` get the target from `dynamic_import_chunk`. For these entries, the inclusion replay does the namespace work of a facade elimination: `narrow_namespace_stmt_to_used_symbols`, `include_dynamic_entry_namespace_extractions` and, for a wrapped entry, the runtime dependency of the group chunk. Then `rewrite_dynamic_import_for_merged_entry` renders the call, for example `import("./group.js").then((n) => n.t)`. `apply_common_chunk_merges` updates both maps. The fixtures are `optimization/chunk_merging/allow_extension_cross_chunk_reexport_dynamic_import` (ESM output) and `optimization/chunk_merging/allow_extension_cross_chunk_reexport_cjs_namespace` (CJS output).
+
+A facade that the name check keeps gets no redirect, and `import()` loads that facade. In strict execution order, `restore_order_wrap_entry_facades` removes the redirect of each entry in the order wrap plan, with its namespace request in `common_chunk_exported_facade_chunk_namespace`. The function restores the removed facade of an emitted entry in the plan, and `import()` loads that facade. Thus `import()` loads the facade in both layouts (`optimization/chunk_merging/allow_extension_cross_chunk_reexport_strict_order`). An entry that is not in the plan keeps its redirect, for example with `experimental.onDemandWrapping`. For such an entry, the on-demand analysis (`analyze_execution_order`) checks the load of the facade and the load of the group chunk, because code outside the bundle loads the facade and `import()` loads the group chunk.
+
+The namespace object of the group chunk differs from Node in two cases. Both cases also occur when the optimizer removes the facade:
+
+- In ESM output, the namespace object does not get the names of an external `export *`. The facade re-exports them.
+- The namespace object reads a CommonJS export at each access. Node reads each export one time, when it loads the CommonJS module, and it ignores an error from a getter. Thus the namespace object sees a later write, and a getter that throws throws at each read.
+
+See [design.md](./design.md#group-chunk-re-exports-for-merged-emitted-entries) for the reason and the rejected alternative.
 
 The optimizer marks a removed facade `RemovedWithPreservedExports`. It also adds the entry module to the set of the group chunk in `common_chunk_preserve_export_names_modules`. `deconflict_exported_names` uses this set to keep the export names of the entry in the group chunk, but only when `minifyInternalExports` is `true`. See [design.md](./design.md#group-chunk-re-exports-for-merged-emitted-entries) for the rejected alternative.
 
@@ -636,6 +654,7 @@ pub struct ChunkGraph {
     pub chunk_table: ChunkTable,                    // IndexVec<ChunkIdx, Chunk>
     pub module_to_chunk: IndexVec<ModuleIdx, Option<ChunkIdx>>,
     pub entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx>,
+    pub entry_module_to_dynamic_import_chunk: FxHashMap<ModuleIdx, ChunkIdx>,
     pub post_chunk_optimization_operations: FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
     // ...
 }
@@ -643,6 +662,7 @@ pub struct ChunkGraph {
 
 - `chunk_table` — All chunks, indexed by `ChunkIdx`. May contain removed chunks (marked in `post_chunk_optimization_operations`) since re-indexing would be expensive.
 - `module_to_chunk` — Which chunk each module belongs to. O(1) lookup.
+- `entry_module_to_dynamic_import_chunk` — The chunk that an `import()` in the bundle loads for an entry module, when it is not the chunk in `entry_module_to_entry_chunk`. Read the target through `ChunkGraph::dynamic_import_chunk`. See [Facade Elimination](#facade-elimination-optimize_facade_entry_chunks).
 
 ## Related
 

@@ -71,14 +71,19 @@ impl GenerateContext<'_> {
     let canonical_symbol = symbol_db.get(canonical_ref);
     let namespace_alias = &canonical_symbol.namespace_alias;
     if let Some(ns_alias) = namespace_alias {
-      // The namespace itself may be declared in another chunk. This is normally hidden by the
-      // facade and namespace living together, but generated per-record interop carriers place the
-      // namespace beside the CJS importee while its re-export facade stays owned by the barrel.
-      // Resolve the namespace through the same cross-chunk path as an ordinary symbol before
-      // appending the property; otherwise CJS output renders a bare, undeclared local identifier.
-      // The same applies to a namespace owned by an inline common chunk record.
+      // The namespace itself may be declared in another chunk. Resolve the namespace through the
+      // same cross-chunk path as an ordinary symbol before appending the property; otherwise CJS
+      // output renders a bare, undeclared local identifier. These are examples:
+      // - An entry facade chunk has no modules. Thus the namespace of a re-export from a CommonJS
+      //   module stays in the chunk of the entry module (issue #11767).
+      // - Generated per-record interop carriers place the namespace beside the CJS importee, while
+      //   its re-export facade stays owned by the barrel.
+      // - An inline common chunk record owns the namespace.
       let canonical_ns_name =
-        if self.order_wrap_state.is_order_cjs_carrier_namespace(ns_alias.namespace_ref)
+        if self.imports_symbol_from_other_chunk(
+          symbol_db.canonical_ref_for(ns_alias.namespace_ref),
+          cur_chunk_idx,
+        ) || self.order_wrap_state.is_order_cjs_carrier_namespace(ns_alias.namespace_ref)
           || self.inline_bridge_pattern(ns_alias.namespace_ref, cur_chunk_idx).is_some()
         {
           self.finalized_string_pattern_for_symbol_ref(
@@ -155,6 +160,25 @@ impl GenerateContext<'_> {
       }
       _ => self.canonical_name_for(canonical_names, canonical_ref).to_string(),
     }
+  }
+
+  /// Returns `true` if the chunk `cur_chunk_idx` imports `canonical_ref` from the other chunk that
+  /// declares it. Then the cross-chunk path has the `require()` binding and the export name of the
+  /// symbol. If the link pass did not register such an import, the caller keeps the local name.
+  fn imports_symbol_from_other_chunk(
+    &self,
+    canonical_ref: SymbolRef,
+    cur_chunk_idx: ChunkIdx,
+  ) -> bool {
+    self.link_output.symbol_db.get(canonical_ref).chunk_idx.is_some_and(|chunk_idx| {
+      chunk_idx != cur_chunk_idx
+        && self.chunk_graph.chunk_table[cur_chunk_idx]
+          .require_binding_names_for_other_chunks
+          .contains_key(&chunk_idx)
+        && self.chunk_graph.chunk_table[chunk_idx]
+          .exports_to_other_chunks
+          .contains_key(&canonical_ref)
+    })
   }
 
   /// `bridge.name` when `canonical_ref` is owned by an inline common chunk record that

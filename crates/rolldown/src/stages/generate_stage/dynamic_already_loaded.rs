@@ -423,11 +423,13 @@ impl GenerateStage<'_> {
     });
   }
 
-  /// Makes each entry chunk export the namespace of its entry module, in the closure of
-  /// `replay_link_stage_inclusion`. The closure returns the result: whether a namespace needs
-  /// `__exportAll`. Call `narrow_namespace_stmt_to_used_symbols` for each entry module before the
-  /// replay. `optimize_facade_entry_chunks` calls this function in the replay of its facade
-  /// changes, so that one replay does both changes.
+  /// Makes each chunk export the namespace of the entry module in the same item, in the closure of
+  /// `replay_link_stage_inclusion`. For a namespace extraction, the chunk is the entry chunk of
+  /// the module. The closure returns the result: whether a namespace needs `__exportAll`. Call
+  /// `narrow_namespace_stmt_to_used_symbols` for each entry module before the replay.
+  /// `optimize_facade_entry_chunks` calls this function in the replay of its facade changes, so
+  /// that one replay does both changes. It also passes the entries that keep their facades only
+  /// for code outside the bundle, with the group chunk that hosts each entry module.
   ///
   /// When a namespace needs `__exportAll`, the chunk gets the helper flag. The flag makes the chunk
   /// a runtime consumer, so runtime placement needs no other record of the chunk.

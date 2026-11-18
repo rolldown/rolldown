@@ -1168,6 +1168,27 @@ impl GenerateStage<'_> {
       return false;
     }
 
+    // An emitted entry that keeps its facade only for code outside the bundle sends the `import()`
+    // calls of the bundle to the chunk that hosts its module
+    // (`ChunkGraph::entry_module_to_dynamic_import_chunk`). The loop below restores the removed
+    // facade of each wrapped emitted entry, and `import()` then loads that facade. Send `import()`
+    // to the kept facade in the same case, so the two layouts load the same file.
+    for entry_module_idx in &entries_to_restore {
+      let Some(host_chunk_idx) =
+        chunk_graph.entry_module_to_dynamic_import_chunk.remove(entry_module_idx)
+      else {
+        continue;
+      };
+      if let Some(set) =
+        chunk_graph.common_chunk_exported_facade_chunk_namespace.get_mut(&host_chunk_idx)
+      {
+        set.remove(entry_module_idx);
+        if set.is_empty() {
+          chunk_graph.common_chunk_exported_facade_chunk_namespace.remove(&host_chunk_idx);
+        }
+      }
+    }
+
     // One statement-aware scan serves every restore candidate. See `live_dynamic_importers`.
     let dynamic_importers =
       self.live_dynamic_importers(chunk_graph, entries_to_restore.iter().copied());

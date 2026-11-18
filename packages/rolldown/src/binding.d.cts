@@ -2948,9 +2948,7 @@ export interface BindingResolveOptions {
   yarnPnp?: boolean
 }
 
-export interface BindingSourcemap {
-  inner: string | BindingJsonSourcemap
-}
+export type BindingSourcemap = string | BindingJsonSourcemap
 
 export interface BindingSourceMapOptions {
   /** The filename for the generated file (goes into `map.file`) */

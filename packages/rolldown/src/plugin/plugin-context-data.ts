@@ -113,10 +113,16 @@ export class PluginContextData {
         existing.invalidate = option.invalidate;
       }
     } else {
+      // Copy `meta`, so merges leave the object that the hook returned unchanged.
+      option = { ...option, meta: { ...option.meta } };
       this.moduleOptionMap.set(id, option);
       return option;
     }
     return existing;
+  }
+
+  getResolvedModuleOption(id: string): ModuleOptions | undefined {
+    return this.resolvedModuleOptionMap.get(this.moduleOptionKey(id));
   }
 
   getModuleOption(id: string): ModuleOptions {

@@ -134,9 +134,9 @@ function bindingifyResolveIdResult(
     return { id: ret, normalizeExternalId: false };
   }
 
-  // Make sure the `moduleSideEffects` is update to date
-  let exist = args.pluginContextData.updateModuleOption(
-    args.pluginContextData.toModuleId(ret.id, ret.attributes ?? attributes),
+  const moduleId = args.pluginContextData.toModuleId(ret.id, ret.attributes ?? attributes);
+  args.pluginContextData.updateModuleOption(
+    moduleId,
     {
       meta: ret.meta || {},
       moduleSideEffects: ret.moduleSideEffects ?? null,
@@ -149,7 +149,9 @@ function bindingifyResolveIdResult(
     id: ret.id,
     external: ret.external,
     normalizeExternalId: false,
-    moduleSideEffects: exist.moduleSideEffects ?? undefined,
+    // Earlier resolutions count too, but not the `load` and `transform` hooks.
+    moduleSideEffects:
+      args.pluginContextData.getResolvedModuleOption(moduleId)?.moduleSideEffects ?? undefined,
     packageJsonPath: ret.packageJsonPath,
     attributes: ret.attributes,
   };

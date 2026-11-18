@@ -143,11 +143,7 @@ pub use crate::{
     lazy_chunk_output::HmrLazyChunkOutput,
     lazy_proxy_id::{LAZY_PROXY_QUERY, is_lazy_proxy, lazy_proxy_target, write_lazy_proxy_id},
   },
-  module::{
-    Module,
-    external_module::ExternalModule,
-    normal_module::{ModuleRenderArgs, NormalModule},
-  },
+  module::{Module, external_module::ExternalModule, normal_module::NormalModule},
   module_loader::{
     AddEntryModuleMsg, ModuleLoaderMsg,
     runtime_module_brief::{RUNTIME_MODULE_ID, RUNTIME_MODULE_KEY, RuntimeModuleBrief},

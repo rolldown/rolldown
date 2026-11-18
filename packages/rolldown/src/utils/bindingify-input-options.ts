@@ -133,16 +133,12 @@ export function bindingifyInputOptions(
 function bindingifyDevMode(devMode?: DevModeOptions): BindingExperimentalOptions['devMode'] {
   if (devMode) {
     if (typeof devMode === 'boolean') {
-      return devMode
-        ? { implement: getDefaultDevRuntime(), skipCommonRuntimeInjection: true }
-        : undefined;
+      return devMode ? { implement: getDefaultDevRuntime() } : undefined;
     }
     const { host, port, ...rest } = devMode;
-    const usesDefaultRuntime = rest.implement == null;
     return {
       ...rest,
       implement: rest.implement ?? getDefaultDevRuntime(host, port),
-      skipCommonRuntimeInjection: usesDefaultRuntime ? true : rest.skipCommonRuntimeInjection,
     };
   }
 }

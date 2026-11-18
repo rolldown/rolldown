@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { ModuleInfo, RolldownWatcher, WatchOptions } from 'rolldown';
 import { rolldown, watch as _watch } from 'rolldown';
+import { esmExternalRequirePlugin } from 'rolldown/plugins';
 import { sleep } from 'rolldown-tests/utils';
 import { test, vi } from 'vitest';
 
@@ -1486,6 +1487,49 @@ test.concurrent(
     onTestFinished(async () => await watcher.close());
 
     await expect(waitBuildFinished(watcher)).rejects.toThrow('reject circular dependency');
+  },
+);
+
+// https://github.com/rolldown/rolldown/issues/9922
+test.concurrent(
+  'watch should fail when onLog rejects a native plugin warning',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('watch-native-plugin-warning-error', retryCount, {
+      'main.js': `const ext = require('ext');\nconsole.log(ext);`,
+    });
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const buildEndFn = vi.fn();
+    const watcher = watch({
+      input: path.join(dir, 'main.js'),
+      output: { dir: path.join(dir, 'dist') },
+      external: ['ext'],
+      plugins: [
+        esmExternalRequirePlugin({ external: ['ext'] }),
+        {
+          name: 'observe-build-end',
+          buildEnd(error) {
+            buildEndFn(error?.message);
+          },
+        },
+      ],
+      onLog(_level, log) {
+        if (log.message.includes('duplicate external')) {
+          throw new Error('convert log to error');
+        }
+      },
+    });
+    onTestFinished(async () => await watcher.close());
+
+    await expect(waitBuildFinished(watcher)).rejects.toThrow('convert log to error');
+    expect(buildEndFn).toHaveBeenCalledWith(expect.stringContaining('convert log to error'));
+    expect(fs.existsSync(path.join(dir, 'dist'))).toBe(false);
   },
 );
 

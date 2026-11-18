@@ -12,10 +12,6 @@ use serde::Deserialize;
 pub struct DevModeOptions {
   /// Custom dev mode runtime implementation.
   pub implement: Option<String>,
-  /// Do not inject the common dev runtime before the custom implementation.
-  ///
-  /// Deprecated: common runtime injection will be disabled by default in the future.
-  pub skip_common_runtime_injection: Option<bool>,
   /// Enable lazy compilation for dynamic imports.
   pub lazy: Option<bool>,
   /// Call the `hotUpdate` plugin hook. Off by default. The `hotUpdate` dev option also turns it on.

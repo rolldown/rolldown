@@ -35,25 +35,19 @@ pub struct BindingDevEngine {
 #[napi]
 impl BindingDevEngine {
   #[napi(constructor)]
-  pub fn new(
-    _env: Env,
-    options: BindingBundlerOptions,
-    dev_options: Option<BindingDevOptions>,
-  ) -> napi::Result<Self> {
+  pub fn new(options: BindingBundlerOptions, dev_options: BindingDevOptions) -> napi::Result<Self> {
     let session_id = rolldown_devtools::generate_session_id();
     let session = rolldown_devtools::Session::dummy();
 
-    let on_hmr_updates_callback = dev_options.as_ref().and_then(|opts| opts.on_hmr_updates.clone());
-    let on_output_callback = dev_options.as_ref().and_then(|opts| opts.on_output.clone());
-    let on_additional_assets_callback =
-      dev_options.as_ref().and_then(|opts| opts.on_additional_assets.clone());
+    let on_hmr_updates_callback = dev_options.on_hmr_updates;
+    let on_output_callback = dev_options.on_output;
+    let on_additional_assets_callback = dev_options.on_additional_assets;
 
     let cwd: Arc<Path> = Arc::from(PathBuf::from(options.input_options.cwd.clone()));
 
-    let rebuild_strategy =
-      dev_options.as_ref().and_then(|opts| opts.rebuild_strategy).map(Into::into);
-    let hot_update = dev_options.as_ref().and_then(|opts| opts.hot_update);
-    let dev_watch_options = dev_options.and_then(|opts| opts.watch).map(Into::into);
+    let rebuild_strategy = dev_options.rebuild_strategy.map(Into::into);
+    let hot_update = dev_options.hot_update;
+    let dev_watch_options = dev_options.watch.map(Into::into);
 
     // Create bundler config
     let normalized = create_bundler_config_from_binding_options(options)?;

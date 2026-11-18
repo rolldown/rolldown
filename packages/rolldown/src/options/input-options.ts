@@ -216,13 +216,6 @@ export type DevModeOptions =
       host?: string;
       port?: number;
       implement?: string;
-      /**
-       * Prevent Rolldown from prepending its common dev runtime to {@link implement}.
-       * @deprecated Common runtime injection will be disabled by default in the future.
-       * Include the common runtime in {@link implement} instead.
-       * @default false
-       */
-      skipCommonRuntimeInjection?: boolean;
       lazy?: boolean;
       /**
        * Call the `hotUpdate` plugin hook. The `hotUpdate` option of `dev()` also turns it on.

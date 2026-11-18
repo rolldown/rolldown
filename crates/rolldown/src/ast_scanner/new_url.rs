@@ -1,10 +1,12 @@
+use std::borrow::Cow;
+
 use oxc::ast::{
   Comment,
   ast::{Expression, NewExpression},
 };
 use rolldown_common::{ImportKind, ImportRecordMeta, ModuleType, get_leading_comment};
 use rolldown_ecmascript_utils::ExpressionExt;
-use rolldown_utils::{dataurl::is_data_url, ecmascript::to_usv_str};
+use rolldown_utils::{dataurl::is_data_url, ecmascript::to_usv_str, url::decode_uri_path};
 
 use super::AstScanner;
 
@@ -57,6 +59,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     if is_data_url(&path) {
       return;
     }
+
+    // `new URL()` treats its first argument as a URL, so `my%20file.txt` refers to `my file.txt`.
+    let path = decode_uri_path(&path).map_or(path, Cow::Owned);
 
     let idx = self.add_import_record(
       &path,

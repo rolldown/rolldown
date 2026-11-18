@@ -9,18 +9,18 @@ use napi_derive::napi;
 use rolldown::ModuleType;
 use rolldown_common::{ImportAttributes, WatcherChangeKind};
 use rolldown_plugin::{
-  __inner::SharedPluginable, CustomField, HookLoadArgs, HookLoadOutput, HookResolveIdArgs,
-  HookResolveIdOutput, HookTransformArgs, LoadPluginContext, PluginIdx, PluginOrder,
-  SharedTransformPluginContext, TransformPluginContext,
+  __inner::SharedPluginable, CustomField, HookLoadArgs, HookResolveIdArgs, HookResolveIdOutput,
+  HookTransformArgs, LoadPluginContext, PluginIdx, PluginOrder, SharedTransformPluginContext,
+  TransformPluginContext,
 };
 use rolldown_plugin_vite_resolve::ResolveIdOptionsScan;
 use rolldown_utils::unique_arc::UniqueArc;
 
 use crate::options::plugin::types::{
+  binding_hook_load_output::BindingHookLoadOutput,
   binding_hook_side_effects::BindingHookSideEffects,
   binding_hook_transform_output::BindingHookTransformOutput,
   binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
-  binding_shared_string::BindingSharedString,
 };
 
 use super::{
@@ -131,7 +131,7 @@ impl BindingCallableBuiltinPlugin {
     &self,
     env: Env,
     id: String,
-  ) -> napi::Result<AsyncBlock<Option<BindingHookJsLoadOutput>>> {
+  ) -> napi::Result<AsyncBlock<Option<BindingHookLoadOutput>>> {
     let plugin = Arc::clone(&self.inner);
     let context = Arc::clone(&self.context);
     crate::start_async_runtime();
@@ -283,25 +283,6 @@ impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
       external: value.external.map(Into::into),
       module_side_effects: value.side_effects.map(Into::into),
       package_json_path: value.package_json_path,
-    }
-  }
-}
-
-#[napi_derive::napi(object, object_from_js = false)]
-pub struct BindingHookJsLoadOutput {
-  #[napi(ts_type = "string")]
-  pub code: BindingSharedString,
-  pub map: Option<String>,
-  #[napi(ts_type = "boolean | 'no-treeshake'")]
-  pub module_side_effects: Option<BindingHookSideEffects>,
-}
-
-impl From<HookLoadOutput> for BindingHookJsLoadOutput {
-  fn from(value: HookLoadOutput) -> Self {
-    Self {
-      code: BindingSharedString::from(value.code),
-      map: value.map.map(|map| map.to_json_string()),
-      module_side_effects: value.side_effects.map(Into::into),
     }
   }
 }

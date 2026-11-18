@@ -93,7 +93,9 @@ impl ChunkGraph {
       .iter_enumerated()
       .filter(|(chunk_idx, _)| !only_live || self.chunk_is_live(*chunk_idx))
       .sorted_unstable_by_key(|(index, chunk)| match &chunk.kind {
-        ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) => {
+        ChunkKind::EntryPoint { meta, .. }
+          if meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk) =>
+        {
           (0, index.raw())
         }
         _ => (1, chunk.exec_order),

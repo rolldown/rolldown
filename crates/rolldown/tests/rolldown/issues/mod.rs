@@ -10,6 +10,8 @@ mod _11253;
 mod _11351;
 #[path = "./11351_dynamic_import/mod.rs"]
 mod _11351_dynamic_import;
+#[path = "./11447/mod.rs"]
+mod _11447;
 #[path = "./1733/mod.rs"]
 mod _1733;
 #[path = "./4895/mod.rs"]

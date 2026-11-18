@@ -29,6 +29,8 @@ export default defineConfig({
 The first argument takes the same patterns as [`transform.inject`](/reference/InputOptions.transform#inject):
 
 ```js
+import path from 'node:path';
+
 injectPlugin({
   // import { Promise } from 'es6-promise'
   Promise: ['es6-promise', 'Promise'],
@@ -47,7 +49,7 @@ injectPlugin({
 });
 ```
 
-A module gets an import only for the names it uses and does not declare or import itself.
+A module gets an import only for the names it uses as values and does not declare or import itself.
 
 ## Options
 
@@ -55,7 +57,7 @@ A module gets an import only for the names it uses and does not declare or impor
 
 - **Type:** `string | RegExp | (string | RegExp)[]`
 
-Only inject into modules whose id matches one of these patterns. Strings are glob patterns, resolved against the [`cwd`](/reference/InputOptions.cwd) option when relative.
+Only inject into modules whose id matches one of these patterns. Strings are glob patterns. Relative ones are resolved against the [`cwd`](/reference/InputOptions.cwd) option, or against `process.cwd()` when the plugin is called outside a Rolldown build, for example by Vite.
 
 ### `exclude`
 
@@ -81,5 +83,7 @@ export default defineConfig({
 ```
 
 ## Differences from `transform.inject`
+
+`injectPlugin` skips `.cjs` and `.cts` modules, since Rolldown parses them as CommonJS and an `import` statement isn't valid there. Use `transform.inject` if those modules need the names.
 
 `injectPlugin` runs in the `transform` hook, so it sees the code before Rolldown applies [`transform.define`](/reference/InputOptions.transform#define). If you inject an object that a `define` key starts with, such as `process` and `process.env.NODE_ENV`, the define no longer matches, since `process` is no longer a global. Use [`replacePlugin`](/builtin-plugins/replace) for those values, or put the plugin that replaces them before `injectPlugin`.

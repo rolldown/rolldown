@@ -456,10 +456,12 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         };
 
         let (commonjs_ref_expr, _) = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
-        let shadows_amd_define =
-          self.scope.scoping().root_unresolved_references().contains_key("define");
-
         let mut stmts_inside_closure = allocator::Vec::new_in(self);
+        // Keep UMD dependencies on their CommonJS path. See internal-docs/renaming/design.md,
+        // principle 7.
+        if self.scope.scoping().root_unresolved_references().contains_key("define") {
+          stmts_inside_closure.push(Statement::new_var_decl_no_init("define", self));
+        }
         // CJS exposes these as mutable wrapper-local bindings, not as aliases to import.meta.
         self.prepend_cjs_ambient_path_bindings(&mut stmts_inside_closure);
         stmts_inside_closure.append(&mut program.body);
@@ -469,7 +471,6 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           commonjs_ref_expr,
           stmts_inside_closure,
           &self.cjs_wrapper_params(),
-          shadows_amd_define,
           self.ctx.options.profiler_names,
           &self.ctx.module.stable_id,
           self.ctx.linking_info.is_tla_or_contains_tla_dependency,

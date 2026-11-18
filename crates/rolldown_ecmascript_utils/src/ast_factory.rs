@@ -790,19 +790,13 @@ pub trait StatementFactoryExt<'ast> {
   fn new_commonjs_wrapper_stmt<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     binding_name: &str,
     commonjs_expr: Expression<'ast>,
-    mut statements: allocator::Vec<'ast, Statement<'ast>>,
+    statements: allocator::Vec<'ast, Statement<'ast>>,
     params: &[&str],
-    shadows_amd_define: bool,
     profiler_names: bool,
     stable_id: &str,
     is_async: bool,
     builder: &B,
   ) -> Statement<'ast> {
-    // Keep bundled UMD dependencies on their CommonJS path when a host AMD loader exists.
-    if shadows_amd_define {
-      statements.insert(0, Statement::new_var_decl_no_init("define", builder));
-    }
-
     let params = FormalParameters::boxed(
       SPAN,
       FormalParameterKind::Signature,

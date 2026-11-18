@@ -15,7 +15,7 @@ use crate::{
   plugin_context::{NativePluginContextImpl, PluginContextMeta},
   plugin_driver::{ContextLoadCompletionManager, hook_orders::PluginHookOrders},
   type_aliases::{IndexPluginContext, IndexPluginable},
-  types::build_timings::BuildTimings,
+  types::{build_timings::BuildTimings, module_meta_store::SharedModuleMetaStore},
 };
 
 pub struct PluginDriverFactory {
@@ -38,7 +38,9 @@ impl PluginDriverFactory {
     module_infos: SharedModuleInfoDashMap,
     module_side_effects_overrides: SharedModuleSideEffectsOverrides,
     transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<WatchPath>>>>,
+    module_meta: SharedModuleMetaStore,
   ) -> Arc<crate::plugin_driver::PluginDriver> {
+    let module_meta_build = module_meta.start_build();
     let watch_files = Arc::new(FxDashSet::default());
     let meta = Arc::new(PluginContextMeta::default());
     let tx = Arc::new(std::sync::Mutex::new(None));
@@ -89,6 +91,8 @@ impl PluginDriverFactory {
           manual_resolve_span: manual_resolve_span.clone(),
           log_hook_tasks: Arc::clone(&log_hook_tasks),
           cache_recorder: None,
+          module_meta: Arc::clone(&module_meta),
+          module_meta_build,
         })));
       });
 
@@ -110,6 +114,8 @@ impl PluginDriverFactory {
         // presence is what says a report is coming and the clocks are worth keeping.
         build_timings: Arc::new(BuildTimings::new(options.plugin_timings.is_some())),
         log_hook_tasks,
+        module_meta,
+        module_meta_build,
       }
     })
   }

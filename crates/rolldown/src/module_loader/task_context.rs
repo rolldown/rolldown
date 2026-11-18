@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
-use rolldown_common::{ModuleId, ModuleInfo, ModuleLoaderMsg, ResolvedId};
+use rolldown_common::{JsModuleMeta, ModuleId, ModuleInfo, ModuleLoaderMsg, ResolvedId};
 use rolldown_error::BuildDiagnostic;
 use rolldown_fs::FileSystem;
 use rolldown_plugin::{ContextLoadProgress, SharedPluginDriver};
@@ -45,12 +45,27 @@ impl<Fs: FileSystem> TaskContext<Fs> {
 
 impl<Fs: FileSystem> TaskContext<Fs> {
   /// Tells JS that `resolved_id` created a module. Call it before the `load` hook runs.
-  pub async fn create_js_module_options(&self, resolved_id: &ResolvedId) -> anyhow::Result<()> {
+  /// `saved_own_meta` is the `meta` of the skipped hooks of a module that reuses its saved result.
+  pub async fn create_js_module_options(
+    &self,
+    resolved_id: &ResolvedId,
+    saved_own_meta: Option<&JsModuleMeta>,
+  ) -> anyhow::Result<()> {
     let Some(create_js_module_options) = &self.options.create_js_module_options else {
       return Ok(());
     };
+    // A live resolution has a receipt, and JS has its `meta` already.
+    let saved_meta = match resolved_id.module_options_receipt {
+      Some(_) => None,
+      None => resolved_id.js_meta.as_ref().map(|meta| meta.to_entries_json()),
+    };
     create_js_module_options
-      .call(resolved_id.id.to_string(), resolved_id.module_options_receipt)
+      .call(
+        resolved_id.id.to_string(),
+        resolved_id.module_options_receipt,
+        saved_meta,
+        saved_own_meta.map(JsModuleMeta::to_entries_json),
+      )
       .await
   }
 }

@@ -7,7 +7,9 @@ use rolldown_utils::{
 };
 
 use super::module_id::ModuleId;
-use crate::{ImportAttributes, ModuleDefFormat, PackageJson, side_effects::HookSideEffects};
+use crate::{
+  ImportAttributes, JsModuleMeta, ModuleDefFormat, PackageJson, side_effects::HookSideEffects,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ResolvedExternal {
@@ -51,6 +53,9 @@ pub struct ResolvedId {
   /// Set when a JS hook returned this resolution as an object. JS keeps the `meta` of that
   /// result under this receipt, and a module created from this resolution starts with it.
   pub module_options_receipt: Option<u32>,
+  /// The `meta` of this resolution, when the persistent cache saves it or gave it back. A module
+  /// created from a reused resolution starts with it, since JS holds no receipt for it.
+  pub js_meta: Option<Arc<JsModuleMeta>>,
 }
 
 impl ResolvedId {
@@ -80,6 +85,7 @@ impl ResolvedId {
       side_effects: None,
       is_external_without_side_effects: false,
       module_options_receipt: None,
+      js_meta: None,
     }
   }
 
@@ -127,6 +133,7 @@ impl ResolvedId {
       side_effects: None,
       is_external_without_side_effects: true,
       module_options_receipt: None,
+      js_meta: None,
     }
   }
 }

@@ -8,7 +8,7 @@ use rolldown_common::{
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, EventKindSwitcher};
 use rolldown_fs::{FileSystem, OsFileSystem};
-use rolldown_plugin::{__inner::SharedPluginable, PluginDriverFactory};
+use rolldown_plugin::{__inner::SharedPluginable, PluginDriverFactory, SharedModuleMetaStore};
 use rolldown_plugin_lazy_compilation::LazyCompilationContext;
 use rolldown_utils::dashmap::FxDashSet;
 use rustc_hash::FxHashMap;
@@ -60,6 +60,10 @@ pub struct BundleFactory {
   pub lazy_compilation_context: Option<LazyCompilationContext>,
 
   pub persistent_cache: Option<SharedPersistentScanCache>,
+
+  /// The meta of Rust plugins. It lives as long as the factory, also across full builds, and
+  /// also without the persistent cache.
+  module_meta: SharedModuleMetaStore,
 }
 
 impl BundleFactory {
@@ -112,6 +116,7 @@ impl BundleFactory {
       transform_dependencies_for_incremental_build: Arc::default(),
       lazy_compilation_context: inner_plugins_result.lazy_compilation_context,
       persistent_cache,
+      module_meta: Arc::default(),
     })
   }
 
@@ -209,6 +214,7 @@ impl BundleFactory {
       module_infos,
       module_side_effects_overrides,
       transform_dependencies,
+      Arc::clone(&self.module_meta),
     );
     let bundle = Bundle {
       fs,

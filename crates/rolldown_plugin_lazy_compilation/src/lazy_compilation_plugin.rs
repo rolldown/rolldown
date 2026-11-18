@@ -102,6 +102,7 @@ impl Plugin for LazyCompilationPlugin {
         package_json_path: None,
         attributes: None,
         module_options_receipt: None,
+        js_meta: None,
       }));
     }
 
@@ -170,6 +171,7 @@ impl Plugin for LazyCompilationPlugin {
         // The proxy is not the module that `original_id` points to, so it does not start with
         // the module options of that resolution.
         module_options_receipt: None,
+        js_meta: None,
       }));
     }
 

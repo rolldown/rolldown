@@ -111,8 +111,9 @@ fn restore_resolved_id<Fs: FileSystem>(
     package_json,
     side_effects: saved.side_effects,
     is_external_without_side_effects: saved.is_external_without_side_effects,
-    // The cache saves no result for a hook call that returned `meta`, so no `meta` is lost.
+    // JS holds no receipt for a reused resolution. A module that it creates gets `js_meta`.
     module_options_receipt: None,
+    js_meta: saved.js_meta,
   })
 }
 

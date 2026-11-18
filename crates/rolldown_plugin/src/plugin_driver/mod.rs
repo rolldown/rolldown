@@ -29,7 +29,10 @@ use crate::{
   HookFilterArgs, PluginContext, PluginHookMeta, Pluginable,
   plugin_driver::hook_orders::PluginHookOrders,
   type_aliases::{IndexPluginContext, IndexPluginable},
-  types::{build_timings::BuildTimings, module_cache_recorder::RecordedAction},
+  types::{
+    build_timings::BuildTimings, module_cache_recorder::RecordedAction,
+    module_meta_store::SharedModuleMetaStore,
+  },
 };
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
@@ -71,6 +74,10 @@ pub struct PluginDriver {
   /// Pending `onLog` callback tasks spawned by `PluginContext::{info,warn,debug}`.
   pub(crate) log_hook_tasks: SharedLogHookTasks,
   pub(crate) cacheable_hooks: CacheableHooks,
+  /// The meta of Rust plugins. `BundleFactory` owns it, so it lives across builds.
+  pub(crate) module_meta: SharedModuleMetaStore,
+  /// The number of this build in `module_meta`.
+  pub(crate) module_meta_build: u64,
 }
 
 /// For each hook, the plugins whose result the persistent cache may reuse.
@@ -120,6 +127,7 @@ impl PluginDriver {
     self.module_side_effects_overrides.clear();
     // Note: transform_dependencies is NOT cleared here - it's preserved across incremental builds
     // by BundleFactory which manages its lifecycle (reset on full builds only)
+    // `module_meta` is not cleared either: it lives as long as the bundler.
     self.context_load_completion_manager.clear();
     self.file_emitter.clear();
     // A task left over from the previous build must not fail the next one.
@@ -283,6 +291,9 @@ impl PluginDriver {
               .call(level, rolldown_common::Log { js_log_json: Some(json), ..Default::default() })
               .await?;
           }
+        }
+        RecordedAction::RustModuleMeta { module_id, key, value } => {
+          self.module_meta.set(&module_id, &key, value, self.module_meta_build);
         }
       }
     }

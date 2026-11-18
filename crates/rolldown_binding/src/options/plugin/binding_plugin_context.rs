@@ -16,6 +16,7 @@ use super::types::{
   binding_import_attributes::{
     BindingImportAttributes, from_binding_import_attributes, to_binding_import_attributes,
   },
+  binding_module_meta_entry::BindingModuleMetaEntry,
   binding_plugin_context_load_options::BindingPluginContextLoadOptions,
   binding_plugin_context_resolve_options::BindingPluginContextResolveOptions,
   binding_resolved_external::BindingResolvedExternal,
@@ -48,6 +49,27 @@ impl BindingPluginContext {
   #[napi]
   pub fn record_log(&self, level: String, log: String) {
     self.inner.record_js_log(rolldown_common::LogLevel::from(level), log);
+  }
+
+  /// @internal Whether the persistent cache records this hook call, and its module task can
+  /// still get a saved result.
+  #[napi]
+  pub fn is_cache_recording(&self) -> bool {
+    self.inner.is_cache_recording()
+  }
+
+  /// @internal The module of the task that this hook call belongs to, when the persistent cache
+  /// records the call.
+  #[napi]
+  pub fn cache_module_id(&self) -> Option<String> {
+    self.inner.cache_module_id().map(ToString::to_string)
+  }
+
+  /// @internal Records the `meta` that a `load` or `transform` hook returned, so the persistent
+  /// cache can give it back when it reuses the result.
+  #[napi]
+  pub fn record_module_meta(&self, entries: Vec<BindingModuleMetaEntry>) {
+    self.inner.record_js_module_meta(entries.into_iter().map(Into::into).collect());
   }
 
   #[napi(

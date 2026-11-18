@@ -82,11 +82,9 @@ export default defineConfig({
 
 ## Differences from `transform.inject`
 
-`injectPlugin` skips `.cjs` modules, since Rolldown parses them as CommonJS and an `import` statement isn't valid there. Use `transform.inject` if those modules need the names.
+`injectPlugin` runs in the `transform` hook, so it sees the code before Rolldown lowers JSX and TypeScript and applies [`transform.define`](/reference/InputOptions.transform#define):
 
-`injectPlugin` sees the code before JSX and TypeScript are lowered:
-
+- If you inject an object that a `define` key starts with, such as `process` and `process.env.NODE_ENV`, the define no longer matches, since `process` is no longer a global. Use [`replacePlugin`](/builtin-plugins/replace) for those values, or put the plugin that replaces them before `injectPlugin`.
 - With the classic JSX runtime, injecting `React` has no effect, since `<div />` is not yet `React.createElement(...)`.
 - In a TS module, an ambient declaration such as `declare const useKey: () => string` counts as a declaration, so `useKey` is not injected. `transform.inject` runs after it is stripped, so it injects `useKey`.
-
-`injectPlugin` runs in the `transform` hook, so it sees the code before Rolldown applies [`transform.define`](/reference/InputOptions.transform#define). If you inject an object that a `define` key starts with, such as `process` and `process.env.NODE_ENV`, the define no longer matches, since `process` is no longer a global. Use [`replacePlugin`](/builtin-plugins/replace) for those values, or put the plugin that replaces them before `injectPlugin`.
+- `.cjs` modules are skipped, since Rolldown parses them as CommonJS and an `import` statement isn't valid there. Use `transform.inject` if those modules need the names.

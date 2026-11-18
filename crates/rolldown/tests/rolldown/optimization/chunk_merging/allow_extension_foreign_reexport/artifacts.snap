@@ -1,0 +1,106 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Variant: Esm
+
+## Assets
+
+### entry.js
+
+```js
+import { t as task } from "./task.js";
+// entry.js
+const load = () => [import("./group.js").then((n) => n.t), import("./group.js").then((n) => n.n)];
+export { load, task };
+
+```
+
+### group.js
+
+```js
+import { t as task } from "./task.js";
+// HIDDEN [\0rolldown/runtime.js]
+// seg_other.js
+var seg_other_exports = /* @__PURE__ */ __exportAll({ s_other: () => s_other });
+const s_other = () => "other";
+// seg_task.js
+var seg_task_exports = /* @__PURE__ */ __exportAll({ s_task: () => task });
+export { seg_other_exports as n, s_other, task as s_task, seg_task_exports as t };
+
+```
+
+### task.js
+
+```js
+// task.js
+const task = () => "task";
+export { task as t };
+
+```
+
+# Variant: Cjs
+
+## Assets
+
+### entry.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_task = require("./task.js");
+// entry.js
+const load = () => [Promise.resolve().then(() => require("./group.js")).then((n) => n.seg_task_exports), Promise.resolve().then(() => require("./group.js")).then((n) => n.seg_other_exports)];
+exports.load = load;
+exports.task = require_task.task;
+
+```
+
+### group.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+const require_task = require("./task.js");
+// seg_other.js
+var seg_other_exports = /* @__PURE__ */ __exportAll({ s_other: () => s_other });
+const s_other = () => "other";
+// seg_task.js
+var seg_task_exports = /* @__PURE__ */ __exportAll({ s_task: () => require_task.task });
+Object.defineProperty(exports, "s_other", {
+	enumerable: true,
+	get: function() {
+		return s_other;
+	}
+});
+Object.defineProperty(exports, "s_task", {
+	enumerable: true,
+	get: function() {
+		return require_task.task;
+	}
+});
+Object.defineProperty(exports, "seg_other_exports", {
+	enumerable: true,
+	get: function() {
+		return seg_other_exports;
+	}
+});
+Object.defineProperty(exports, "seg_task_exports", {
+	enumerable: true,
+	get: function() {
+		return seg_task_exports;
+	}
+});
+
+```
+
+### task.js
+
+```js
+// task.js
+const task = () => "task";
+Object.defineProperty(exports, "task", {
+	enumerable: true,
+	get: function() {
+		return task;
+	}
+});
+
+```

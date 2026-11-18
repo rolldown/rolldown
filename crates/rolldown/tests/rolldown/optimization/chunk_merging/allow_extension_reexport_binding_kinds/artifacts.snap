@@ -1,0 +1,225 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Variant: Esm
+
+## warnings
+
+### UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve 'node:path' in entry.js
+   ╭─[ entry.js:3:21 ]
+   │
+ 3 │ export { sep } from 'node:path';
+   │                     ─────┬─────  
+   │                          ╰─────── Module not found, treating it as an external dependency
+───╯
+
+```
+
+### UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve 'node:path' in seg_a.js
+   ╭─[ seg_a.js:3:30 ]
+   │
+ 3 │ export { sep as s_sep } from 'node:path';
+   │                              ─────┬─────  
+   │                                   ╰─────── Module not found, treating it as an external dependency
+───╯
+
+```
+
+### UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Could not resolve 'node:path' in seg_a.js
+   ╭─[ seg_a.js:4:21 ]
+   │
+ 4 │ export * as ns from 'node:path';
+   │                     ─────┬─────  
+   │                          ╰─────── Module not found, treating it as an external dependency
+───╯
+
+```
+
+## Assets
+
+### dep.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// dep.cjs
+var require_dep = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.foo = () => "foo";
+}));
+export { require_dep as t };
+
+```
+
+### entry.js
+
+```js
+import { task } from "./task.js";
+import { t as require_dep } from "./dep.js";
+import { sep } from "node:path";
+var foo = require_dep().foo;
+export { foo, sep, task };
+
+```
+
+### group.js
+
+```js
+import { task } from "./task.js";
+import { t as require_dep } from "./dep.js";
+import * as ns from "node:path";
+import { sep as s_sep } from "node:path";
+// seg_a.js
+var import_dep = require_dep();
+const v = () => "v";
+const x = () => "x";
+var s_foo = import_dep.foo;
+export { ns, s_foo, s_sep, task as s_task, import_dep as t, v, v as w, x, x as y };
+
+```
+
+### task.js
+
+```js
+// task.js
+const task = () => "task";
+export { task };
+
+```
+
+# Variant: Cjs
+
+## Assets
+
+### dep.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// dep.cjs
+var require_dep = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.foo = () => "foo";
+}));
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+Object.defineProperty(exports, "require_dep", {
+	enumerable: true,
+	get: function() {
+		return require_dep;
+	}
+});
+
+```
+
+### entry.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_task = require("./task.js");
+const require_dep$1 = require("./dep.js");
+let node_path = require("node:path");
+// entry.js
+var import_dep = require_dep$1.require_dep();
+Object.defineProperty(exports, "foo", {
+	enumerable: true,
+	get: function() {
+		return import_dep.foo;
+	}
+});
+Object.defineProperty(exports, "sep", {
+	enumerable: true,
+	get: function() {
+		return node_path.sep;
+	}
+});
+exports.task = require_task.task;
+
+```
+
+### group.js
+
+```js
+const require_task = require("./task.js");
+const require_dep$1 = require("./dep.js");
+let node_path = require("node:path");
+node_path = require_dep$1.__toESM(node_path);
+// seg_a.js
+var import_dep = require_dep$1.require_dep();
+const v = () => "v";
+const x = () => "x";
+Object.defineProperty(exports, "import_dep", {
+	enumerable: true,
+	get: function() {
+		return import_dep;
+	}
+});
+Object.defineProperty(exports, "ns", {
+	enumerable: true,
+	get: function() {
+		return node_path;
+	}
+});
+Object.defineProperty(exports, "s_foo", {
+	enumerable: true,
+	get: function() {
+		return import_dep.foo;
+	}
+});
+Object.defineProperty(exports, "s_sep", {
+	enumerable: true,
+	get: function() {
+		return node_path.sep;
+	}
+});
+Object.defineProperty(exports, "s_task", {
+	enumerable: true,
+	get: function() {
+		return require_task.task;
+	}
+});
+Object.defineProperty(exports, "v", {
+	enumerable: true,
+	get: function() {
+		return v;
+	}
+});
+Object.defineProperty(exports, "w", {
+	enumerable: true,
+	get: function() {
+		return v;
+	}
+});
+Object.defineProperty(exports, "x", {
+	enumerable: true,
+	get: function() {
+		return x;
+	}
+});
+Object.defineProperty(exports, "y", {
+	enumerable: true,
+	get: function() {
+		return x;
+	}
+});
+
+```
+
+### task.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// task.js
+const task = () => "task";
+exports.task = task;
+
+```

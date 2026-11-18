@@ -1,0 +1,135 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Variant: Cjs
+
+## Assets
+
+### entry.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_task = require("./task.js");
+const require_group = require("./group.js");
+// entry.js
+const useInner = () => require_group.s_task$1;
+const load = () => [Promise.resolve().then(() => require("./group.js")).then((n) => n.seg_a_exports), Promise.resolve().then(() => require("./group.js")).then((n) => n.seg_b_exports)];
+exports.load = load;
+exports.task = require_task.task;
+exports.useInner = useInner;
+
+```
+
+### group.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+const require_task = require("./task.js");
+// helper.js
+const s_task = () => "helper";
+// seg_a.js
+var seg_a_exports = /* @__PURE__ */ __exportAll({
+	a_local: () => a_local,
+	s_task: () => require_task.task
+});
+const task = "local-a";
+const a_local = () => task;
+// seg_b.js
+var seg_b_exports = /* @__PURE__ */ __exportAll({ s_task2: () => require_task.task });
+Object.defineProperty(exports, "a_local", {
+	enumerable: true,
+	get: function() {
+		return a_local;
+	}
+});
+Object.defineProperty(exports, "s_task", {
+	enumerable: true,
+	get: function() {
+		return require_task.task;
+	}
+});
+Object.defineProperty(exports, "s_task2", {
+	enumerable: true,
+	get: function() {
+		return require_task.task;
+	}
+});
+Object.defineProperty(exports, "s_task$1", {
+	enumerable: true,
+	get: function() {
+		return s_task;
+	}
+});
+Object.defineProperty(exports, "seg_a_exports", {
+	enumerable: true,
+	get: function() {
+		return seg_a_exports;
+	}
+});
+Object.defineProperty(exports, "seg_b_exports", {
+	enumerable: true,
+	get: function() {
+		return seg_b_exports;
+	}
+});
+
+```
+
+### task.js
+
+```js
+// task.js
+const task = () => "task";
+Object.defineProperty(exports, "task", {
+	enumerable: true,
+	get: function() {
+		return task;
+	}
+});
+
+```
+
+# Variant: Esm
+
+## Assets
+
+### entry.js
+
+```js
+import { t as task } from "./task.js";
+import { r as s_task } from "./group.js";
+// entry.js
+const useInner = () => s_task;
+const load = () => [import("./group.js").then((n) => n.n), import("./group.js").then((n) => n.t)];
+export { load, task, useInner };
+
+```
+
+### group.js
+
+```js
+import { t as task$1 } from "./task.js";
+// HIDDEN [\0rolldown/runtime.js]
+// helper.js
+const s_task = () => "helper";
+// seg_a.js
+var seg_a_exports = /* @__PURE__ */ __exportAll({
+	a_local: () => a_local,
+	s_task: () => task$1
+});
+const task = "local-a";
+const a_local = () => task;
+// seg_b.js
+var seg_b_exports = /* @__PURE__ */ __exportAll({ s_task2: () => task$1 });
+export { a_local, seg_a_exports as n, s_task as r, task$1 as s_task, task$1 as s_task2, seg_b_exports as t };
+
+```
+
+### task.js
+
+```js
+// task.js
+const task = () => "task";
+export { task as t };
+
+```

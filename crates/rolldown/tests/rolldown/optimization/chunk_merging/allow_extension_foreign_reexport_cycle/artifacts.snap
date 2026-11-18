@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+export { t as task } from "./task.js";
+
+```
+
+## group.js
+
+```js
+// seg_other.js
+const groupValue = () => "task";
+export { groupValue as t };
+
+```
+
+## seg_task.js
+
+```js
+import "./group.js";
+export { t as s_task } from "./task.js";
+
+```
+
+## task.js
+
+```js
+import { t as groupValue } from "./group.js";
+// task.js
+const task = groupValue;
+export { task as t };
+
+```

@@ -1786,6 +1786,36 @@ impl GenerateStage<'_> {
           }
         }
 
+        let mut preserved_reexport_refs = FxIndexSet::default();
+        if let Some(modules) = chunk_graph.common_chunk_preserve_export_names_modules.get(&chunk_id)
+        {
+          for &module_idx in modules {
+            for (name, export) in self.link_output.metas[module_idx].canonical_exports(false) {
+              let export_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
+              if !self.cross_chunk_symbol_is_live(
+                used_symbol_refs_view,
+                order_live_symbols,
+                export_ref,
+              ) {
+                continue;
+              }
+              let names = index_chunk_exported_symbols[chunk_id].entry(export_ref).or_default();
+              if !names.contains(name) {
+                names.push(name.clone());
+              }
+              let Some(owner) =
+                symbol_chunk_table.chunk_of(export_ref, &self.link_output.symbol_db)
+              else {
+                continue;
+              };
+              if owner != chunk_id && !index_chunk_depended_symbols[chunk_id].contains(&export_ref)
+              {
+                preserved_reexport_refs.insert(export_ref);
+              }
+            }
+          }
+        }
+
         // A chunk that absorbed a dynamic-entry facade must publish that absorbed
         // entry's namespace/wrapper so the importer's rewritten dynamic import can
         // extract it via `.then(n => n.<ns>)`. Applies regardless of chunk kind:
@@ -1863,7 +1893,7 @@ impl GenerateStage<'_> {
         }
 
         let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
-        for import_ref in chunk_meta_imports.iter().copied() {
+        for import_ref in chunk_meta_imports.iter().copied().chain(preserved_reexport_refs) {
           // Depended symbols are over-collected; drop refs that are not live. A normal
           // module's namespace ref answers to the namespace decision; everything else to
           // the inclusion fixpoint (whose dead refs here are constants that got inlined —
@@ -2122,8 +2152,18 @@ impl GenerateStage<'_> {
               if processed_entry_exports.contains(&export_ref) {
                 return;
               }
-              used_names.insert(name.clone());
-              chunk.exports_to_other_chunks.entry(export_ref).or_default().push(name.clone());
+              let names = &exported_chunk_symbols[&export_ref];
+              if names.is_empty() {
+                used_names.insert(name.clone());
+                chunk.exports_to_other_chunks.entry(export_ref).or_default().push(name.clone());
+              } else {
+                used_names.extend(names.iter().cloned());
+                chunk
+                  .exports_to_other_chunks
+                  .entry(export_ref)
+                  .or_default()
+                  .extend_from_slice(names);
+              }
               processed_entry_exports.insert(export_ref);
             });
           }
@@ -2163,33 +2203,6 @@ impl GenerateStage<'_> {
         continue;
       }
 
-      // The symbols an `emitFile` consumer reaches under the name `then`. Unlike an entry
-      // signature they arrive with no predefined name, so they would otherwise be
-      // indistinguishable from a bundler-owned internal name below. Only the export name is the
-      // contract: a preserve-name module whose local `then` leaves under an alias goes through
-      // the resolver like everything else, so it can never hand `then` to the chunk.
-      //
-      // The carve-out below additionally requires the declaring symbol to be named `then`: with
-      // internal minification off this pass outputs declaring-symbol names, so export aliases are
-      // already not honored — a pre-existing defect tracked in #10500, whose fix (routing
-      // preserved names through the predefined-names path) also removes this set and the
-      // first-wins flag below.
-      let preserved_then_refs: FxHashSet<SymbolRef> = preserve_export_names_modules
-        .get(&chunk_id)
-        .map(|modules| {
-          modules
-            .iter()
-            .flat_map(|&module_idx| {
-              self.link_output.metas[module_idx]
-                .canonical_exports(false)
-                .filter(|(name, _)| name.as_str() == THENABLE_HAZARD_EXPORT_NAME)
-                .map(|(_, export)| self.link_output.symbol_db.canonical_ref_for(export.symbol_ref))
-            })
-            .collect()
-        })
-        .unwrap_or_default();
-      let mut preserved_then_taken = false;
-
       let mut resolver =
         ConflictResolver::with_capacity(index_chunk_exported_symbols[chunk_id].len());
       // Names taken from source symbols can collide with `then`; reserving it up front deconflicts
@@ -2197,6 +2210,13 @@ impl GenerateStage<'_> {
       // internal-docs/code-splitting/design.md ("Thenable chunk namespaces"). Predefined names take the `lst` branch below,
       // which re-reserves (a no-op) and emits them verbatim, so a public `then` still stays `then`.
       resolver.reserve(CompactStr::new_const(THENABLE_HAZARD_EXPORT_NAME));
+      if preserve_export_names_modules.contains_key(&chunk_id) {
+        for names in index_chunk_exported_symbols[chunk_id].values() {
+          for name in names {
+            resolver.reserve(name.clone());
+          }
+        }
+      }
       for (chunk_export, predefined_names) in index_chunk_exported_symbols[chunk_id]
         .iter()
         .sorted_by_cached_key(|(symbol_ref, _predefined_names)| {
@@ -2246,20 +2266,7 @@ impl GenerateStage<'_> {
         } else {
           original_name
         };
-        let chosen = if base == THENABLE_HAZARD_EXPORT_NAME
-          && !preserved_then_taken
-          && preserved_then_refs
-            .contains(&self.link_output.symbol_db.canonical_ref_for(*chunk_export))
-        {
-          // A name an `emitFile` consumer relies on is a contract, so it keeps `then`. The
-          // reservation above only fences off bundler-owned internal names. Two preserved
-          // modules both exporting the name `then` cannot both be honored — the second falls
-          // back to the resolver so the chunk at least stays parseable.
-          preserved_then_taken = true;
-          base
-        } else {
-          resolver.resolve(base, |_, _| true)
-        };
+        let chosen = resolver.resolve(base, |_, _| true);
         chunk.exports_to_other_chunks.entry(*chunk_export).or_default().push(chosen);
       }
     }

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## index.js
 
 ```js
-import { then$1, then$2 as then } from "./libs.js";
+import { first as then, second as then$1 } from "./libs.js";
 import assert from "node:assert";
 // index.js
 assert.strictEqual(typeof then, "function");
@@ -25,6 +25,6 @@ function then$1(resolve) {
 function then(resolve) {
 	resolve("lib2");
 }
-export { then as then$1, then$1 as then$2 };
+export { then$1 as first, then as second };
 
 ```

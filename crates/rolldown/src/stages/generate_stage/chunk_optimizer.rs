@@ -1001,6 +1001,25 @@ impl GenerateStage<'_> {
           inherit_group: true,
         });
       } else if is_target_manual_chunk && is_emitted_entry_chunk {
+        // The group chunk re-exports this entry's bindings from the chunks that declare them; keep
+        // the facade when such a chunk already reaches the group, because that import would close
+        // a cycle.
+        // See internal-docs/code-splitting/implementation.md#facade-elimination-optimize_facade_entry_chunks.
+        let needs_facade =
+          self.link_output.metas[module].canonical_exports(false).any(|(_, export)| {
+            let export_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
+            let Some(owner_chunk_idx) = chunk_graph.module_to_chunk[export_ref.owner] else {
+              return false;
+            };
+            owner_chunk_idx != target_chunk_idx
+              && temp_chunk_opt_graph
+                .to_temp_idx(owner_chunk_idx)
+                .zip(temp_chunk_opt_graph.to_temp_idx(target_chunk_idx))
+                .is_some_and(|(owner, target)| temp_chunk_opt_graph.is_reachable(owner, target))
+          });
+        if needs_facade {
+          continue;
+        }
         emitted_chunk_groups.entry(target_chunk_idx).or_default().push(from_chunk_idx);
       } else if !is_emitted_entry_chunk {
         // Check if merging would create a circular dependency.

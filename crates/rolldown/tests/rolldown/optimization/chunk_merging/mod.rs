@@ -1,3 +1,7 @@
 mod allow_extension_exports;
+mod allow_extension_foreign_reexport;
+mod allow_extension_foreign_reexport_cycle;
 mod allow_extension_merge_aliased_then_locals;
 mod allow_extension_merge_same_exports;
+mod allow_extension_reexport_binding_kinds;
+mod allow_extension_reexport_name_collision;

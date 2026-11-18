@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// b.js
+function init_b() {
+	return (init_b = __esmMin((async () => {
+		await init_a();
+		(globalThis.tlaOrder ??= []).push("b");
+	})))();
+}
+// c.js
+function init_c() {
+	return (init_c = __esmMin((async () => {
+		await 0;
+		(globalThis.tlaOrder ??= []).push("c");
+	})))();
+}
+// a.js
+function init_a() {
+	return (init_a = __esmMin((async () => {
+		await init_b();
+		await init_c();
+		(globalThis.tlaOrder ??= []).push("a");
+	})))();
+}
+await init_a();
+
+```

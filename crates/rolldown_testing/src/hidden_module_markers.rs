@@ -272,7 +272,6 @@ fn is_disguised_marker(text: &str) -> bool {
 /// The module ids whose output `tweak_snapshot` replaces with a `// HIDDEN [...]` line.
 fn is_hidden_module(id: &str, hide_runtime_module: bool) -> bool {
   (hide_runtime_module && id == r"\0rolldown/runtime.js")
-    || id == "rolldown:hmr"
     || id.starts_with(r"\0@oxc-project+runtime@")
 }
 
@@ -327,7 +326,7 @@ mod tests {
 
   #[test]
   fn marker_text_inside_a_template_literal_is_left_as_built() {
-    let source = "const a = `x\n// rolldown:hmr\n\ny`;\nconst b = `x\n// \\0rolldown/runtime.js\ny`;\n\nconst c = `x\n//#region literal\n//!#region literal\ny`;\nexport { a, b, c };\n";
+    let source = "const b = `x\n// \\0rolldown/runtime.js\ny`;\n\nconst c = `x\n//#region literal\n//!#region literal\ny`;\nexport { b, c };\n";
     assert_eq!(protect_hidden_module_markers(source, SourceType::mjs(), true), None);
     assert_eq!(restore_region_markers(source, SourceType::mjs()), source);
   }

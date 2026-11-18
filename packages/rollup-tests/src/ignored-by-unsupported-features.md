@@ -10,8 +10,9 @@
  - rollup@function@uses-supplied-ast: uses supplied AST
  - rollup@form@custom-ast: supports returning a custom AST from a plugin
 
-### The `resolveId` hook `resolvedBy` is not supported
+### The `resolveId` / `resolveDynamicImport` hook `resolvedBy` is not supported
  - rollup@function@validate-resolved-by-logic: validate resolvedBy logic
+ - rollup@function@resolve-dynamic-import-resolved-by: sets resolvedBy to the plugin that resolved a dynamic import
 
 ### The `shouldTransformCachedModule` hook is not supported
  - rollup@function@plugin-error-should-transform: errors in shouldTransformCachedModule abort the build
@@ -142,6 +143,21 @@
  - rollup@function@top-level-await-using-system: awaits disposal from top-level await using in System output
  - rollup@function@top-level-for-await-system: executes top-level for-await loops asynchronously in System output
  - rollup@function@top-level-for-await-using-system: awaits disposal from loop-head await using in System output
+ - rollup@function@system-export-catch-parameter-mixed-declarators: exports only the non-catch declarations in mixed declarators that shadow an exported var
+ - rollup@function@system-export-catch-parameter-nested: assigns the outer catch parameter from a var declaration in a nested catch
+ - rollup@function@system-export-catch-parameter-shadowed-nested: does not export an outer catch parameter assigned after a shadowed inner catch
+ - rollup@function@system-export-catch-parameter: does not export catch parameters that shadow an exported var
+ - rollup@function@system-export-destructuring-assignment: parenthesizes system export updates for destructuring assignments that start a statement
+ - rollup@function@system-export-for-loop-bindings: updates system exports for bindings assigned in for-of and for-in heads
+ - rollup@function@system-export-var-braceless-loop-bodies: updates system exports for multiple var declarations in braceless loop bodies
+ - rollup@function@system-export-var-for-init: updates system exports for multiple and destructured var declarations in for-loop initializers
+ - rollup@function@system-export-var-for-loops: updates system exports for var bindings in for-of and for-in heads
+ - rollup@function@system-export-var-for-of-body: updates system exports when a var declaration is the body of a for-of or for-in loop
+ - rollup@function@system-export-var-for-statement: updates system exports for a var binding declared in a for-loop head
+ - rollup@function@system-export-var-if-branches: updates system exports for multi-declarator var declarations in if and else branches
+ - rollup@function@system-export-var-shadowed-exports: renames a block binding that shadows exports when a var is hoisted through that block
+ - rollup@form@system-export-assignment-and-for-loops: renders system exports for destructuring assignment statements and for-of/for-in bindings
+ - rollup@form@export-var-loops: renders exported var declarations in single-statement positions@generates system
 
 ### The `input.perf` and `bundle.getTimings()` is not supported
  - rollup@function@adds-timings-to-bundle-when-codesplitting: Adds timing information to bundle when bundling with perf=true
@@ -309,7 +325,8 @@
  - rollup@function@amd-auto-id-id: throws when using both the amd.autoId and the amd.id option
  - rollup@function@amd-base-path-id: throws when using both the amd.basePath and the amd.id option
  - rollup@function@amd-base-path: throws when using only amd.basePath option
-
+ - rollup@function@amd-export-var-loops: runs exported var loop assignments in AMD output
+ - rollup@form@export-var-loops: renders exported var declarations in single-statement positions@generates amd
 
 ### The `output.sourcemapBaseUrl` is not compatible yet
  - rollup@function@sourcemap-base-url-invalid: throws for invalid sourcemapBaseUrl
@@ -332,6 +349,7 @@
  - rollup@function@check-exports-exportedBindings-as-a-supplementary-test: check exports and exportedBindings in moduleParsed as a supplementary test
  - rollup@function@load-resolve-dependencies: allows to wait for dependency resolution in this.load to scan dependency trees (`importedIdResolutions`) 
  - rollup@function@resolve-relative-external-id: resolves relative external ids
+ - rollup@function@dynamically-imported-id-resolutions-from-hook: lists dynamic imports resolved by the resolveDynamicImport hook in dynamicallyImportedIdResolutions (`dynamicallyImportedIdResolutions`)
 
 ### `ModuleInfo.ast` is not supported
  - rollup@chunking form@implicit-dependencies@implicitly-dependent-emitted-entry2: makes sure emitted entry points are never implicit dependencies@generates cjs

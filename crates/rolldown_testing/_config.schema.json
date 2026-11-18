@@ -1080,23 +1080,6 @@
     "DevModeOptions": {
       "type": "object",
       "properties": {
-        "host": {
-          "description": "IP addresses that `DevRuntime` will connect to using WebSocket.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "port": {
-          "description": "Port that `DevRuntime` will connect to using WebSocket.",
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint16",
-          "minimum": 0,
-          "maximum": 65535
-        },
         "implement": {
           "description": "Custom dev mode runtime implementation.",
           "type": [

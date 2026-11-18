@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## b.js
+
+```js
+import { t as B } from "./plugin.js";
+// indicator.js
+function indicator() {
+	return "i";
+}
+export { B, indicator as t };
+
+```
+
+## lib.js
+
+```js
+// lib.js
+function helper(x) {
+	return x;
+}
+export { helper as t };
+
+```
+
+## main.js
+
+```js
+// main.js
+const loadA = () => import("./plugin.js").then((n) => n.n);
+const loadB = () => import("./b.js");
+export { loadA, loadB };
+
+```
+
+## plugin.js
+
+```js
+import { t as helper } from "./lib.js";
+import { t as indicator } from "./b.js";
+// HIDDEN [\0rolldown/runtime.js]
+// a.js
+var a_exports = /* @__PURE__ */ __exportAll({ A: () => A });
+function A() {
+	return helper("a");
+}
+// menu.js
+function Menu() {
+	return indicator();
+}
+// b.js
+function B() {
+	return helper("b") + Menu();
+}
+export { a_exports as n, B as t };
+
+```

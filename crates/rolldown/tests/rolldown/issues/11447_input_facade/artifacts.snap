@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dynamic.js
+
+```js
+export { r as ns } from "./main3.js";
+
+```
+
+## main.js
+
+```js
+export { t as f, n as load } from "./main3.js";
+
+```
+
+## main2.js
+
+```js
+// other.js
+const other = "other";
+export { other };
+
+```
+
+## main3.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// main.js
+var main_exports = /* @__PURE__ */ __exportAll({
+	f: () => f,
+	load: () => load
+});
+function f() {
+	return 42;
+}
+const load = () => import("./dynamic.js");
+export { load as n, main_exports as r, f as t };
+
+```

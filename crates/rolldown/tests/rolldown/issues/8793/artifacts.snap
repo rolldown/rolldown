@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## chunk.js
 
 ```js
-//#region chunk.js
+// chunk.js
 function Ub() {}
-//#endregion
 export { Ub as Pb };
 
 ```
@@ -17,7 +16,7 @@ export { Ub as Pb };
 
 ```js
 import { Pb as Ub$1 } from "./chunk.js";
-//#region index.js
+// index.js
 console.log(() => {
 	"use strict";
 	return 0;
@@ -33,6 +32,5 @@ console.log(class {
 	}
 	static p = Ub$1({});
 });
-//#endregion
 
 ```

@@ -7,12 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region foo.js
+// foo.js
 const foo = "foo";
-//#endregion
-//#region dynamic.js
+// dynamic.js
 var dynamic_exports = /* @__PURE__ */ __exportAll({ foo: () => "foo" });
-//#endregion
 export { foo as n, dynamic_exports as t };
 
 ```
@@ -21,17 +19,15 @@ export { foo as n, dynamic_exports as t };
 
 ```js
 import "./dynamic.js";
-//#region main1.js
+// main1.js
 console.log("foo");
-//#endregion
 
 ```
 
 ## main2.js
 
 ```js
-//#region main2.js
+// main2.js
 import("./dynamic.js").then((n) => n.t).then(console.log);
-//#endregion
 
 ```

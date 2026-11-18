@@ -1,0 +1,74 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## form.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_path = require("node:path");
+// translations.js
+var translations_default = { title: "Transfer" };
+// form.js
+var form_exports = /* @__PURE__ */ __exportAll({
+	count: () => count,
+	increment: () => increment,
+	sep: () => node_path.sep,
+	transferForm: () => transferForm,
+	translations: () => translations
+});
+const translations = translations_default;
+const transferForm = () => ({ name: "transfer" });
+let count = 0;
+function increment() {
+	count++;
+}
+Object.defineProperty(exports, "count", {
+	enumerable: true,
+	get: function() {
+		return count;
+	}
+});
+Object.defineProperty(exports, "form_exports", {
+	enumerable: true,
+	get: function() {
+		return form_exports;
+	}
+});
+exports.increment = increment;
+Object.defineProperty(exports, "sep", {
+	enumerable: true,
+	get: function() {
+		return node_path.sep;
+	}
+});
+exports.transferForm = transferForm;
+exports.translations = translations;
+exports.translations_default = translations_default;
+
+```
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// main.js
+const loadForm = () => Promise.resolve().then(() => require("./form.js")).then((n) => n.form_exports);
+const loadPage = () => Promise.resolve().then(() => require("./page.js"));
+exports.loadForm = loadForm;
+exports.loadPage = loadPage;
+
+```
+
+## page.js
+
+```js
+const require_form = require("./form.js");
+// page.js
+function Page() {
+	return [require_form.translations_default.title, require_form.transferForm().name];
+}
+exports.default = Page;
+
+```

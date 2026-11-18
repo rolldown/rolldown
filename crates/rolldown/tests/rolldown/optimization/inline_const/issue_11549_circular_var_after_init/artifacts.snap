@@ -1,0 +1,92 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// b.js
+function read() {
+	return v;
+}
+// main.js
+var v = 3;
+console.log(read(), v);
+assert.deepStrictEqual([read(), v], [3, 3]);
+export { v };
+
+```
+
+# Variant: [inline_const: Config(InlineConstConfig { mode: Some(All), pass: 2 })]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert";
+// b.js
+function read() {
+	return v;
+}
+// main.js
+var v = 3;
+console.log(read(), v);
+assert.deepStrictEqual([read(), v], [3, 3]);
+export { v };
+
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+// b.js
+function read() {
+	return v;
+}
+// main.js
+var v = 3;
+console.log(read(), v);
+node_assert.default.deepStrictEqual([read(), v], [3, 3]);
+exports.v = v;
+
+```
+
+# Variant: [preserve_modules: true]
+
+## Assets
+
+### b.js
+
+```js
+import { v } from "./main.js";
+// b.js
+function read() {
+	return v;
+}
+export { read };
+
+```
+
+### main.js
+
+```js
+import assert from "node:assert";
+import { read } from "./b.js";
+// main.js
+var v = 3;
+console.log(read(), v);
+assert.deepStrictEqual([read(), v], [3, 3]);
+export { v };
+
+```

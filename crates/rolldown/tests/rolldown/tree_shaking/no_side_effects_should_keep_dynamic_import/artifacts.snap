@@ -6,13 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 // @__NO_SIDE_EFFECTS__
 function wrapper(load) {
 	return { load };
 }
 const pages = [/* @__PURE__ */ wrapper(() => import("./page.js"))];
-//#endregion
 export { pages, wrapper };
 
 ```
@@ -20,9 +19,8 @@ export { pages, wrapper };
 ## page.js
 
 ```js
-//#region page.js
+// page.js
 const message = "Hello from page.js";
-//#endregion
 export { message };
 
 ```

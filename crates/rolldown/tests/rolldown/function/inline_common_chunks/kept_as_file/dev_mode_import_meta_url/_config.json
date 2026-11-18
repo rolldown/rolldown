@@ -1,0 +1,24 @@
+{
+  "_comment": "Dev mode prints `import.meta.hot` as the module's hot context, but `shared.js` also reads `import.meta.url`, which stays native and names the file it is printed in; the chunk stays a file.",
+  "config": {
+    "input": [
+      {
+        "name": "a",
+        "import": "./a.js"
+      },
+      {
+        "name": "b",
+        "import": "./b.js"
+      }
+    ],
+    "preserveEntrySignatures": "false",
+    "experimental": {
+      "devMode": {}
+    },
+    "codeSplitting": {
+      "experimentalInlineCommonChunks": {
+        "maxSize": 4096
+      }
+    }
+  }
+}

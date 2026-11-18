@@ -11,7 +11,7 @@ pub struct IndexBitSet<I: Idx> {
 }
 
 impl<I: Idx> IndexBitSet<I> {
-  const _ASSERT_IDX_FITS_U32: () = assert!(I::MAX <= u32::MAX as usize);
+  const ASSERT_IDX_FITS_U32: () = assert!(I::MAX <= u32::MAX as usize);
 
   #[inline]
   fn bit(idx: I) -> u32 {
@@ -23,7 +23,7 @@ impl<I: Idx> IndexBitSet<I> {
   }
 
   pub fn new(capacity: usize) -> Self {
-    let () = Self::_ASSERT_IDX_FITS_U32;
+    let () = Self::ASSERT_IDX_FITS_U32;
     debug_assert!(capacity <= I::MAX, "IndexBitSet capacity exceeds maximum index of type");
     #[expect(clippy::cast_possible_truncation)]
     let inner = { BitSet::new(capacity as u32) };
@@ -82,7 +82,7 @@ impl<I: Idx> IntoIterator for IndexBitSet<I> {
 
 impl<I: Idx> FromIterator<I> for IndexBitSet<I> {
   fn from_iter<T: IntoIterator<Item = I>>(iter: T) -> Self {
-    let () = Self::_ASSERT_IDX_FITS_U32;
+    let () = Self::ASSERT_IDX_FITS_U32;
     let inner = iter.into_iter().map(Self::bit).collect::<BitSet>();
     Self { inner, _marker: PhantomData }
   }

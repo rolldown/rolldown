@@ -127,10 +127,12 @@ The hello (`vite:client-connected`) creates the session. Vite's client
 script sends it; the HTML plugin loads that script as a module before
 the entry chunk. The session starts with an empty `shipped[C]` plus the
 **boot-evaluated map**, frozen at hello: the modules the entry chunk
-runs at top level, with their stamps (the static-import closure of the
-single user entry; with more than one user entry the map is empty and
-lazy chunks ship everything). This map is a static statement about what
-the entry chunk _contains_; the client cannot contradict it (see
+runs at top level, with their stamps (the single user entry's source
+static-import closure, restricted to modules in its emitted static chunk
+closure; with more than one user entry the map is empty). Tree shaking
+can leave a source-reachable barrel in an unloaded chunk, so source
+reachability alone cannot establish that the client ran it. This map is
+a static statement about the entry's loaded output; the client cannot contradict it (see
 Unresolved Questions, "Hello without a build id"). On reconnect the
 client sends a new id, and that new id is the per-client reset: the
 server keeps an existing session when a hello repeats an id.
@@ -156,27 +158,17 @@ modules ran, so it walks static imports (`collect_unheld_sync_deps`,
   may be missing.
 - **Anything else** — carried, and the walk goes through it.
 
-A lazy chunk walks from its entry. A patch walks only from the static
-imports the rebuild added: the new deps of a changed module and every
-dep of a new module. The old deps of a module that ran have run too.
-Walking from every carried module would ship the whole static closure
-whenever the boot-evaluated map is empty (several user entries). Even
-so, with an empty map an edit that adds an import can carry modules the
-client already ran. That costs bytes once; the ship map covers them
-afterwards.
+A lazy chunk walks from its entry. A patch walks from carried modules
+present in the client's shipped or boot-evaluated map at any stamp, and
+from newly added static imports.
 
-Example: tab B has not opened a route yet. An edit of `shared.js`
-carries `route.js` to tab B, because `route.js` imports `shared.js`.
-Tab B never runs it. When tab B opens the route, the lazy chunk walks
-through `route.js` and carries `dep.js`.
-
-```mermaid
-flowchart LR
-  main["main.js — boot-evaluated"] --> shared["shared.js — boot-evaluated: stop"]
-  main -. "import()" .-> route["route.js — shipped by the patch: walk through"]
-  route --> shared
-  route --> dep["dep.js — not held: carry"]
-```
+The maps do not record modules a client ran from a plain dynamic chunk,
+or from any entry when there are several (emitted chunks count as
+entries, and the boot-evaluated map is then empty). A walk from such a
+module would count the modules it ran as missing and ship them again, so
+a carried module absent from both maps starts no walk. If that module
+imports a barrel whose chunk never loaded, the update still lacks the
+barrel's factory and throws `MissingFactoryError`.
 
 ### 3. The module graph ships as compiler data
 
@@ -188,6 +180,18 @@ starts with one `registerGraph(delta)` statement with one graph row per
 module in the payload: its static and dynamic `import()` edges, in
 separate sets, unioned by `getImporters`. The client merges deltas into
 one flat graph; the newest row for a module replaces the older one.
+A common chunk inlined by `experimentalInlineCommonChunks` registers its
+modules' rows from its factory (see
+[inline-common-chunks/design.md](../inline-common-chunks/design.md#dev-mode)).
+
+A row also says whether its module is an entry (`isEntry`). The page
+started each entry, and only a page load starts it again. So when an
+update removes an entry from the module cache and no boundary runs it
+again, the client reloads. A module that is not an entry and has no
+importer that ran is no longer imported, so the update stops there.
+Webpack records a similar fact at run time (`module.hot._main`: no
+parent's `require` ran the module first). FBM has no `require` call to
+watch, so the compiler sends the flag.
 
 Rejected: an edges argument on `registerModule` (the call that enters a
 module into the module cache). A module registers itself only when it
@@ -233,10 +237,11 @@ per-payload re-run flag written into the generated code — that puts
 runtime policy into codegen and cannot express "re-run this time, skip
 next time".
 
-A lazy `import()` goes through the same gate. The proxy stub removes
-its own id from the cache before it fetches the lazy chunk, and the
-chunk's `initModule` tail then re-runs it (see
-[lazy-compilation/design.md](../lazy-compilation/design.md)).
+A lazy `import()` goes through the same gate (`requestLazy`, see
+[lazy-compilation/design.md](../lazy-compilation/design.md)). Removing
+a module from the cache also forgets its cached lazy load, so a lazy
+module edited after it loaded re-runs instead of being served from the
+old promise.
 
 `removeModuleCache` is also where cleanup lives: each removal runs the
 module's `hot.dispose` with its `hot.data` object — for every removed
@@ -271,8 +276,9 @@ the seed only; the client-side decision is unchanged.
 - **The `hotUpdate` plugin hook** runs first. A plugin may replace the
   changed set for a file — a config file that affects many modules, a
   content file that is not a module at all. The hook runs only when the
-  `dev.hotUpdate` option is on (off by default, see Unresolved
-  Questions). Vite does not pass this option yet.
+  `experimental.devMode.hotUpdate` input option or the `dev.hotUpdate`
+  option is on (off by default, see Unresolved Questions). Vite forwards
+  `experimental.devMode` from the user config, but not `dev.hotUpdate`.
 - **Unchanged-output suppression** runs second. If a module's rendered
   output is byte-identical before and after the rebuild, it is dropped
   from the changed set. A save with no effective change no longer
@@ -311,6 +317,40 @@ chunks stay outside the queue. The ship map is written at ack time, so a
 chunk omits a module only if the payload carrying it was acked first.
 Concurrent fetches both carry the shared factory. The result is
 duplicate bytes, which is safe.
+
+Registration keeps the newest copy. Payloads can land out of render
+order: a lazy chunk rendered before an edit can land after the patch
+for that edit. Each payload passes the module's stamp to
+`registerFactory` (a third argument, left out when 0) and to
+`registerGraph` (`stamps`). The runtime drops a factory or a graph row
+older than the one it holds. Equal stamps mean equal code, so the later
+write wins.
+
+That rule needs a stamp to name one rendered factory, not only one
+source. An importer's factory also reads facts about each importee:
+its `exports_kind` and whether it has a lazy export. These choose the
+interop code (`__toESM`, `__toDynamicImportESM`). So when an edit
+changes them, the update stamps every importer of that module too and
+carries it like a changed module, even though the importer's own source
+did not change. It does not add the importer to the changed ids, so no
+client re-runs it for this reason.
+
+Example: `importer.js` imports `dep.js`, and an edit turns `dep.js`
+from ESM into CommonJS. The patch carries `importer.js` with the new
+stamp and the `__toESM` interop. A lazy chunk that was rendered before
+the edit still has the old `importer.js` at the old stamp, so the
+runtime drops it when it lands late.
+
+```mermaid
+flowchart LR
+  edit["edit: dep.js ESM → CJS"] --> dep["dep.js — stamp 1"]
+  edit --> imp["importer.js — stamp 1, __toESM interop"]
+  late["late lazy chunk: importer.js — stamp 0"] -. "0 < 1: dropped" .-> imp
+```
+
+Full-build chunks carry no stamps. They run their code right
+away, so their rows always replace the old ones. An older runtime ignores
+the extra argument and field.
 
 ## Failure policy
 
@@ -393,18 +433,11 @@ the changed module.
   `css-update` message, and module cache removal for styles are
   unspecified. `hot.prune` callbacks never run in FBM, because the
   server never sends a `prune` message.
-- **`hotUpdate` gate** — the engine hook exists but `dev.hotUpdate`
-  stays off by default until file-to-module invalidation is complete
-  (rolldown/rolldown#10714): the set a hook receives is not yet correct
-  for query-variant modules. Vite does not pass the option and does not
-  run its `handleHotUpdate` / `hotUpdate` hooks in FBM yet.
-- **Lazy dynamic-import HMR** — an edit under a lazy boundary
-  (`app → proxy → foo`, where the proxy is the placeholder module that
-  stands in for a lazy-compiled module) full-reloads until the walk can
-  follow an edge through a proxy. The server excludes proxy importers
-  from its dynamic index (`rebuild_importer_sets`, `ecma_view.rs`).
-  Nothing registers under the proxy id in the client, so the client
-  walk finds no executed importer and asks for a reload.
+- **`hotUpdate` gate** — the engine hook exists but stays off by default
+  until file-to-module invalidation is complete (rolldown/rolldown#10714):
+  the set a hook receives is not yet correct for query-variant modules.
+  `experimental.devMode.hotUpdate` or `dev.hotUpdate` turns it on. Vite
+  does not run its own `handleHotUpdate` / `hotUpdate` hooks in FBM yet.
 - **Hello without a build id** — a client that loaded an output older
   than the latest rebuild gets the newer boot-evaluated map at hello.
   Two mismatches follow, until the hello carries a build id:
@@ -421,7 +454,7 @@ the changed module.
   from `initModule` is not turned into a reload (Failure policy). Known
   entry points: the build-id gap above, and a payload that threw before
   its ack. The fix is a reload request from the apply queue's catch and
-  from the lazy proxy stub.
+  from `requestLazy`.
 - **Reloads from the client walk going past the prediction** — if the
   client walk often climbs past the server's predicted set, widen the
   server walk (more first-edit bytes, more hot coverage). Needs
@@ -438,11 +471,11 @@ the changed module.
 - [dev-engine/implementation.md](../dev-engine/implementation.md) — the
   step order inside `compute_hmr_update_for_file_changes`
 - [lazy-compilation/design.md](../lazy-compilation/design.md) — the
-  `rolldown:exports` proxy contract; lazy chunk sizing reads the ship map
+  `requestLazy` entry point; lazy chunk sizing reads the ship map
 - Runtime API (`runtime-extra-dev-common.js`): lifecycle methods
   `registerGraph`, `registerFactory`, `registerModule`, `initModule`,
-  `removeModuleCache`, `loadExports`; read-only queries
-  `getImporters`, `isExecuted`, `hasFactory`; hooks
+  `removeModuleCache`, `loadExports`, `requestLazy`; read-only queries
+  `getImporters`, `isEntry`, `isExecuted`, `hasFactory`; hooks
   `createModuleHotContext`, `onModuleCacheRemoval`
 - Key code: `crates/rolldown/src/hmr/module_graph_delta.rs`,
   `crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js`

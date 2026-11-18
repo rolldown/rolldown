@@ -6,15 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lib.js
 
 ```js
-//#region a.js
+// a.js
 const other = "other";
-//#endregion
-//#region a2.js
+// a2.js
 const thing = "thing";
-//#endregion
-//#region lib.js
+// lib.js
 var foo = "foo";
-//#endregion
 export { foo, other, thing };
 
 ```
@@ -22,9 +19,8 @@ export { foo, other, thing };
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 import("./lib.js").then((ns) => [ns.foo, ns.thing]);
 import("./lib.js").then(({ ...rest }) => rest.other);
-//#endregion
 
 ```

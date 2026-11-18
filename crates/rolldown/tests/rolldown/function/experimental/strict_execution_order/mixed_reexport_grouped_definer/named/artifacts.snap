@@ -1,0 +1,172 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as SNAPSHOT } from "./snapshot.js";
+import { n as init_shared } from "./shared.js";
+// ../pure.js
+const PURE = "pure";
+// lazy.js
+function read() {
+	return [SNAPSHOT, PURE];
+}
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		init_shared();
+	})))();
+}
+init_lazy();
+export { read };
+
+```
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared, t as LOCAL } from "./shared.js";
+// main.js
+var local, load;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_shared();
+		globalThis.__seed = 1;
+		local = LOCAL;
+		load = () => import("./lazy.js").then((module) => module.read());
+	})))();
+}
+init_main();
+export { load, local };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+## shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_value } from "./snapshot.js";
+// ../shared.js
+var LOCAL;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		init_value();
+		LOCAL = "local";
+	})))();
+}
+export { init_shared as n, LOCAL as t };
+
+```
+
+## snapshot.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// ../snapshots/value.js
+var SNAPSHOT;
+function init_value() {
+	return (init_value = __esmMin((() => {
+		SNAPSHOT = globalThis.__seed ?? 0;
+	})))();
+}
+export { init_value as n, SNAPSHOT as t };
+
+```
+
+# Variant: no-optimization: [chunk_optimization: Bool(false)]
+
+## Assets
+
+### lazy.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as SNAPSHOT } from "./snapshot.js";
+import { n as init_shared } from "./shared.js";
+// ../pure.js
+const PURE = "pure";
+// lazy.js
+function read() {
+	return [SNAPSHOT, PURE];
+}
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		init_shared();
+	})))();
+}
+init_lazy();
+export { read };
+
+```
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared, t as LOCAL } from "./shared.js";
+// main.js
+var local, load;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_shared();
+		globalThis.__seed = 1;
+		local = LOCAL;
+		load = () => import("./lazy.js").then((module) => module.read());
+	})))();
+}
+init_main();
+export { load, local };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_value } from "./snapshot.js";
+// ../shared.js
+var LOCAL;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		init_value();
+		LOCAL = "local";
+	})))();
+}
+export { init_shared as n, LOCAL as t };
+
+```
+
+### snapshot.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// ../snapshots/value.js
+var SNAPSHOT;
+function init_value() {
+	return (init_value = __esmMin((() => {
+		SNAPSHOT = globalThis.__seed ?? 0;
+	})))();
+}
+export { init_value as n, SNAPSHOT as t };
+
+```

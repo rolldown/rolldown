@@ -7,11 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
-//#region package.json
-//#endregion
-//#region main.js
+// main.js
 assert.strictEqual("lib", "lib");
-//#endregion
 export {};
 
 ```

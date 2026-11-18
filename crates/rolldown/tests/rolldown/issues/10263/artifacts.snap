@@ -6,17 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## app.js
 
 ```js
-//#region vendor.js
+// vendor.js
 function f0(x) {
 	return x * 2 + 1;
 }
-//#endregion
-//#region app.js
+// app.js
 console.log(f0(1));
 const done = import("./lazy.js").then(({ fn }) => {
 	fn();
 });
-//#endregion
 export { done, f0 as t };
 
 ```
@@ -25,11 +23,10 @@ export { done, f0 as t };
 
 ```js
 import { t as f0 } from "./app.js";
-//#region lazy.js
+// lazy.js
 function fn() {
 	console.log(f0(3));
 }
-//#endregion
 export { fn };
 
 ```
@@ -37,9 +34,8 @@ export { fn };
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 const done = import("./app.js").then((app) => app.done);
-//#endregion
 export { done };
 
 ```

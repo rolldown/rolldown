@@ -1,9 +1,9 @@
 //! `output.codeSplitting.experimentalInlineCommonChunks`.
 //!
 //! A selected common chunk ("record") is not written as a file. Every file that carries it (a
-//! reader, unless a static dependency outside its import cycle already registers it) prints its
-//! own copy of the record's modules inside a registry factory (`__share(id, (exports) => {
-//! ... })`), finalized and named as part of that file, and every reader obtains the shared
+//! reader, unless every known entry loading path already registers it, or the loader an `import()`
+//! of the record loads) prints its own copy of the record's modules inside a registry factory
+//! (`__share(id, (exports) => { ... })`), finalized and named as part of that file, and every reader obtains the shared
 //! exports object through `__share_require(id)` ("bridge"). The decisions live here, separate from `ChunkGraph`:
 //! `module_to_chunk` and `chunk.modules` never change, a record stays a live chunk, and the
 //! placement table below answers "is this a file" and "who carries what". See
@@ -21,7 +21,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_str::CompactStr;
 use rolldown_common::{ChunkIdx, ModuleIdx, SymbolRef, SymbolRefDb};
-use rolldown_utils::{base64::to_url_safe_base64, indexmap::FxIndexMap};
+use rolldown_utils::{base64::to_url_safe_base64, concat_string, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
 use xxhash_rust::xxh3::Xxh3;
 
@@ -42,7 +42,7 @@ pub struct InlineCommonChunksState {
   records: FxIndexMap<ChunkIdx, InlineRecord>,
   /// Who reads and who carries each record, computed at selection.
   placement: InlinePlacement,
-  /// File or record -> the names its deconflict pass chose for the feature's bindings.
+  /// File -> the names its deconflict pass chose for the feature's bindings.
   names: FxHashMap<ChunkIdx, FileInlineNames>,
   runtime_chunk: Option<ChunkIdx>,
 }
@@ -51,10 +51,14 @@ pub struct InlineCommonChunksState {
 pub struct InlineRecord {
   /// Registry id, see [`record_id`].
   pub id: ArcStr,
+  /// The file an `import()` from another chunk loads for this record: it registers the record and
+  /// exports nothing. `None` when no such `import()` needs a file. See
+  /// internal-docs/inline-common-chunks/design.md.
+  pub loader: Option<ChunkIdx>,
 }
 
-/// The bindings `experimentalInlineCommonChunks` adds to one output file, or to a record's own
-/// rendering, named by that chunk's deconflict pass together with everything else it declares.
+/// The bindings `experimentalInlineCommonChunks` adds to one output file,
+/// named by that file's deconflict pass together with everything else it declares.
 #[derive(Debug)]
 pub struct FileInlineNames {
   /// The parameter every factory printed in the file receives the registry's exports object in.
@@ -99,7 +103,7 @@ pub(super) fn record_id<'a>(
   }
   loop {
     let hash = to_url_safe_base64(hasher.digest128().to_le_bytes());
-    let id = ArcStr::from(format!("{chunk_name}-{}", &hash[..RECORD_ID_HASH_LEN]));
+    let id = ArcStr::from(concat_string!(chunk_name, "-", &hash[..RECORD_ID_HASH_LEN]));
     if taken.insert(id.clone()) {
       return id;
     }
@@ -153,6 +157,37 @@ impl InlineCommonChunksState {
     let mut carriers = self.placement.carried.keys().copied().collect::<Vec<_>>();
     carriers.sort_unstable();
     carriers
+  }
+
+  /// Every file that reads or prints a record: the reading files and the carriers, among them the
+  /// files that `import()` loads for a record. Sorted by chunk index.
+  pub fn inline_files(&self) -> Vec<ChunkIdx> {
+    let mut files = self
+      .placement
+      .reading_files
+      .iter()
+      .chain(self.placement.carried.keys())
+      .copied()
+      .collect_vec();
+    files.sort_unstable();
+    files.dedup();
+    files
+  }
+
+  /// Record -> the file an `import()` loads for it ([`InlineRecord::loader`]), in record order.
+  pub fn loaders(&self) -> FxIndexMap<ChunkIdx, ChunkIdx> {
+    self
+      .records
+      .iter()
+      .filter_map(|(record, InlineRecord { loader, .. })| Some((*record, (*loader)?)))
+      .collect()
+  }
+
+  /// The record whose [`InlineRecord::loader`] is `chunk_idx`.
+  pub fn loaded_record(&self, chunk_idx: ChunkIdx) -> Option<ChunkIdx> {
+    self.records.iter().find_map(|(record, InlineRecord { loader, .. })| {
+      (*loader == Some(chunk_idx)).then_some(*record)
+    })
   }
 
   pub fn file_names(&self, file: ChunkIdx) -> Option<&FileInlineNames> {
@@ -231,10 +266,14 @@ impl InlineCommonChunksState {
   pub(crate) fn set_selection(
     &mut self,
     records: impl IntoIterator<Item = ChunkIdx>,
+    loaders: &FxIndexMap<ChunkIdx, ChunkIdx>,
     placement: InlinePlacement,
     runtime_chunk: ChunkIdx,
   ) {
-    self.records = records.into_iter().map(|idx| (idx, InlineRecord::default())).collect();
+    self.records = records
+      .into_iter()
+      .map(|idx| (idx, InlineRecord { loader: loaders.get(&idx).copied(), ..Default::default() }))
+      .collect();
     self.placement = placement;
     self.runtime_chunk = Some(runtime_chunk);
   }

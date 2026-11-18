@@ -6,21 +6,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## class.js
 
 ```js
-//#region class.js
+// class.js
 keep;
 keep;
 Symbol.wtf;
-//#endregion
 
 ```
 
 ## object.js
 
 ```js
-//#region object.js
+// object.js
 keep;
 keep;
 Symbol.wtf;
-//#endregion
 
 ```

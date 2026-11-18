@@ -8,10 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //! Dynamic Entry: [Entry-Module-Id: child.js] [Name: <none>]
 import { t as require_b } from "./entry.js";
-//#region child.js
+// child.js
 var import_b = require_b();
 console.log("child", (0, import_b.b)());
-//#endregion
 
 ```
 
@@ -20,32 +19,27 @@ console.log("child", (0, import_b.b)());
 ```js
 //! User-defined Entry: [Entry-Module-Id: entry.js] [Name: entry]
 // HIDDEN [\0rolldown/runtime.js]
-//#region a-impl.js
+// a-impl.js
 var require_a_impl = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "a";
 }));
-//#endregion
-//#region a.js
+// a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = require_a_impl();
 }));
-//#endregion
-//#region b-impl.js
+// b-impl.js
 var require_b_impl = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.b = () => "b";
 }));
-//#endregion
-//#region b.js
+// b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = require_b_impl();
 }));
-//#endregion
-//#region entry.js
+// entry.js
 var import_a = /* @__PURE__ */ __toESM(require_a());
 var import_b = require_b();
 console.log("entry", import_a.default, (0, import_b.b)());
 import("./route.js");
-//#endregion
 export { require_a as n, __toESM as r, require_b as t };
 
 ```
@@ -55,12 +49,11 @@ export { require_a as n, __toESM as r, require_b as t };
 ```js
 //! Dynamic Entry: [Entry-Module-Id: route.js] [Name: <none>]
 import { n as require_a, r as __toESM, t as require_b } from "./entry.js";
-//#region route.js
+// route.js
 var import_a = /* @__PURE__ */ __toESM(require_a());
 var import_b = require_b();
 console.log("route", import_a.default, (0, import_b.b)());
 import("./child.js");
-//#endregion
 
 ```
 

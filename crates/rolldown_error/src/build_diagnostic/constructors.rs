@@ -21,14 +21,20 @@ use super::events::bundler_initialize_error::BundlerInitializeError;
 use super::events::cannot_call_namespace::CannotCallNamespace;
 use super::events::configuration_field_conflict::ConfigurationFieldConflict;
 use super::events::could_not_clean_directory::CouldNotCleanDirectory;
+use super::events::deprecated_import_assertion::DeprecatedImportAssertion;
 use super::events::duplicate_shebang::DuplicateShebang;
+use super::events::external_module_conflict::{
+  ExternalModuleConflict, ExternalModuleConflictImporter,
+};
 use super::events::filename_conflict::FilenameConflict;
 use super::events::filename_outside_output_directory::FilenameOutsideOutputDirectory;
 use super::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use super::events::import_is_undefined::ImportIsUndefined;
 use super::events::invalid_annotation::InvalidAnnotation;
 use super::events::invalid_define_config::InvalidDefineConfig;
+use super::events::invalid_import_attribute::{InvalidImportAttribute, InvalidImportAttributeKind};
 use super::events::invalid_option::{InvalidOption, InvalidOptionType};
+use super::events::invalid_tla_format::InvalidTlaFormat;
 use super::events::json_parse::JsonParse;
 use super::events::missing_global_name::MissingGlobalName;
 use super::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
@@ -37,6 +43,7 @@ use super::events::plugin_timings::PluginTimings;
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
 use super::events::require_tla::RequireTla;
 use super::events::resolve_error::DiagnosableResolveError;
+use super::events::shimmed_export::ShimmedExport;
 use super::events::sourcemap_broken::SourcemapBroken;
 
 use super::events::tsconfig_error::TsConfigError;
@@ -74,8 +81,51 @@ impl BuildDiagnostic {
     Self::new_inner(ModuleLevelDirective { module_id, directive, source, span })
   }
 
+  pub fn deprecated_import_assertion(module_id: String, source: ArcStr, span: Span) -> Self {
+    Self::new_inner(DeprecatedImportAssertion { module_id, source, span })
+  }
+
+  pub fn invalid_import_attribute(
+    module_id: String,
+    source: ArcStr,
+    span: Span,
+    kind: InvalidImportAttributeKind,
+  ) -> Self {
+    Self::new_inner(InvalidImportAttribute { module_id, source, span, kind })
+  }
+
   pub fn entry_cannot_be_external(unresolved_id: impl AsRef<Path>) -> Self {
     Self::new_inner(ExternalEntry { id: unresolved_id.as_ref().to_path_buf() })
+  }
+
+  /// Use this error when the module of an id is not external, but a later resolution of the
+  /// id is external.
+  pub fn invalid_external_id(
+    module_id: ArcStr,
+    importer: Option<ExternalModuleConflictImporter>,
+    is_existing_kind_from_previous_build: bool,
+  ) -> Self {
+    Self::new_inner(ExternalModuleConflict {
+      module_id,
+      is_existing_module_external: false,
+      is_existing_kind_from_previous_build,
+      importer,
+    })
+  }
+
+  /// Use this error when the module of an id is external, but a later resolution of the id
+  /// is not external.
+  pub fn external_modules_cannot_be_transformed_to_modules(
+    module_id: ArcStr,
+    importer: Option<ExternalModuleConflictImporter>,
+    is_existing_kind_from_previous_build: bool,
+  ) -> Self {
+    Self::new_inner(ExternalModuleConflict {
+      module_id,
+      is_existing_module_external: true,
+      is_existing_kind_from_previous_build,
+      importer,
+    })
   }
 
   pub fn ambiguous_external_namespace(
@@ -268,6 +318,10 @@ impl BuildDiagnostic {
     Self::new_inner(ImportIsUndefined { filename, source, span, name, stable_importer })
   }
 
+  pub fn shimmed_export(exporter: String, binding: String) -> Self {
+    Self::new_inner(ShimmedExport { exporter, binding }).with_severity_warning()
+  }
+
   pub fn unsupported_feature(
     filename: ArcStr,
     source: ArcStr,
@@ -275,6 +329,10 @@ impl BuildDiagnostic {
     error_message: String,
   ) -> Self {
     Self::new_inner(UnsupportedFeature { source, filename, span, error_message })
+  }
+
+  pub fn invalid_tla_format(filename: ArcStr, source: ArcStr, span: Span, format: ArcStr) -> Self {
+    Self::new_inner(InvalidTlaFormat { filename, source, span, format })
   }
 
   pub fn empty_import_meta(
@@ -503,6 +561,24 @@ impl BuildDiagnostic {
     Self::new_inner(super::events::large_barrel_modules::LargeBarrelModules {
       module_id,
       reexport_count,
+    })
+  }
+
+  pub fn lazy_barrel_unloaded_binding(
+    importer: String,
+    stable_importer: String,
+    importer_source: ArcStr,
+    module_request: String,
+    imported_specifier: String,
+    imported_specifier_span: Span,
+  ) -> Self {
+    Self::new_inner(super::events::lazy_barrel_unloaded_binding::LazyBarrelUnloadedBinding {
+      importer,
+      stable_importer,
+      importer_source,
+      module_request,
+      imported_specifier,
+      imported_specifier_span,
     })
   }
 }

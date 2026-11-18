@@ -20,32 +20,29 @@ __rolldown_runtime__.registerGraph({
 		[0],
 		[0],
 		[1, 2]
-	]
+	],
+	entries: [3]
 });
-//#region lib.js
+// lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ value: () => "lib" });
 __rolldown_runtime__.createModuleHotContext("lib.js");
 __rolldown_runtime__.registerModule("lib.js", { exports: lib_exports });
-//#endregion
-//#region accepter.js
+// accepter.js
 var accepter_exports = /* @__PURE__ */ __exportAll({ read: () => read });
 const accepter_hot = __rolldown_runtime__.createModuleHotContext("accepter.js");
 __rolldown_runtime__.registerModule("accepter.js", { exports: accepter_exports });
 const read = () => "lib";
 accepter_hot.accept();
-//#endregion
-//#region dropper.js
+// dropper.js
 var dropper_exports = /* @__PURE__ */ __exportAll({ tag: () => tag });
 const dropper_hot = __rolldown_runtime__.createModuleHotContext("dropper.js");
 __rolldown_runtime__.registerModule("dropper.js", { exports: dropper_exports });
 const tag = `dropper-lib`;
 dropper_hot.accept();
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-//#endregion
 
 ```
 
@@ -54,7 +51,7 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["dropper.js"],localCount:1,edges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["dropper.js"],localCount:1,edges:[[]],stamps:{0:1}});
 //#region dropper.js
 __rolldown_runtime__.registerFactory("dropper.js", (function(__rolldown_module_id__) {
 	try {
@@ -64,7 +61,7 @@ __rolldown_runtime__.registerFactory("dropper.js", (function(__rolldown_module_i
 		const tag = "dropper";
 		hot_dropper.accept();
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```
@@ -82,7 +79,7 @@ __rolldown_runtime__.registerFactory("dropper.js", (function(__rolldown_module_i
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["accepter.js","lib.js"],localCount:2,edges:[[1],[]]});
+__rolldown_runtime__.registerGraph({ids:["accepter.js","lib.js"],localCount:2,edges:[[1],[]],stamps:{1:2}});
 //#region accepter.js
 __rolldown_runtime__.registerFactory("accepter.js", (function(__rolldown_module_id__) {
 	try {
@@ -105,7 +102,7 @@ __rolldown_runtime__.registerFactory("lib.js", (function(__rolldown_module_id__)
 		const hot_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const value = "lib-edited";
 	} finally {}
-}));
+}), 2);
 
 //#endregion
 ```

@@ -35,8 +35,8 @@ export default defineTest({
             for (const [moduleId, module] of Object.entries(chunk.modules)) {
               switch (moduleId) {
                 case entry:
-                  expect(module.code).toBe('//#region main.js\nconsole.log(foo);\n\n//#endregion');
-                  expect(module.renderedLength).toBe(49);
+                  expect(module.code).toBe('// main.js\nconsole.log(foo);\n');
+                  expect(module.renderedLength).toBe(29);
                   break;
 
                 case foo:

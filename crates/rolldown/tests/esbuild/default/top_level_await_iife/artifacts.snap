@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Errors
 
-## UNSUPPORTED_FEATURE
+## INVALID_TLA_FORMAT
 
 ```text
-[UNSUPPORTED_FEATURE] Top-level await is currently not supported with the 'iife' output format
+[INVALID_TLA_FORMAT] Module format "iife" does not support top-level await. Use the "es" output format instead.
    ╭─[ entry.js:1:1 ]
    │
  1 │ await foo;
@@ -16,10 +16,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-## UNSUPPORTED_FEATURE
+## INVALID_TLA_FORMAT
 
 ```text
-[UNSUPPORTED_FEATURE] Top-level await is currently not supported with the 'iife' output format
+[INVALID_TLA_FORMAT] Module format "iife" does not support top-level await. Use the "es" output format instead.
    ╭─[ entry.js:2:1 ]
    │
  2 │ for await (foo of bar) ;

@@ -26,9 +26,10 @@ use super::sanitize_filename::SanitizeFilename;
 use super::treeshake::NormalizedTreeshakeOptions;
 use super::watch_option::WatchOption;
 use super::{
-  is_external::IsExternal, output_exports::OutputExports, output_format::OutputFormat,
-  output_option::AddonOutputOption, platform::Platform, source_map_type::SourceMapType,
-  sourcemap_ignore_list::SourceMapIgnoreList, sourcemap_path_transform::SourceMapPathTransform,
+  is_external::IsExternal, output_charset::OutputCharset, output_exports::OutputExports,
+  output_format::OutputFormat, output_option::AddonOutputOption, platform::Platform,
+  source_map_type::SourceMapType, sourcemap_ignore_list::SourceMapIgnoreList,
+  sourcemap_path_transform::SourceMapPathTransform,
 };
 use crate::inner_bundler_options::types::optimization::NormalizedOptimizationConfig;
 use crate::{
@@ -63,6 +64,7 @@ pub struct NormalizedBundlerOptions {
   // The rolldown resolved output directory from `dir` or `file`.
   pub out_dir: String,
   pub file: Option<String>,
+  pub charset: OutputCharset,
   pub format: OutputFormat,
   pub exports: OutputExports,
   pub es_module: EsModuleFlag,
@@ -146,6 +148,7 @@ impl Default for NormalizedBundlerOptions {
       dir: Default::default(),
       out_dir: Default::default(),
       file: Default::default(),
+      charset: Default::default(),
       format: OutputFormat::Esm,
       exports: Default::default(),
       es_module: Default::default(),
@@ -227,12 +230,6 @@ impl NormalizedBundlerOptions {
     self.strict_execution_order
   }
 
-  /// Strict execution order with on-demand wrapping — the selective mode that derives its wrapping
-  /// plan from the execution-order analysis instead of deferring every eligible module.
-  pub fn is_strict_on_demand_wrapping_enabled(&self) -> bool {
-    self.strict_execution_order && self.experimental.is_on_demand_wrapping_enabled()
-  }
-
   pub fn has_manual_code_splitting_groups(&self) -> bool {
     self
       .manual_code_splitting
@@ -248,16 +245,6 @@ impl NormalizedBundlerOptions {
       return self.polyfill_require;
     }
     true
-  }
-
-  pub async fn asset_filename_template(
-    &self,
-    rollup_pre_rendered_asset: &RollupPreRenderedAsset,
-  ) -> anyhow::Result<FilenameTemplate> {
-    Ok(FilenameTemplate::new(
-      self.asset_filenames.call(rollup_pre_rendered_asset).await?,
-      "output.assetFileNames",
-    ))
   }
 
   pub async fn asset_filename_with_file(

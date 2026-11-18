@@ -9,8 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 let ext = require("ext");
 ext = __toESM(ext);
-//#region entry.js
+// entry.js
 console.log(ext.mustBeUnquoted, ext["mustBeQuoted"]);
-//#endregion
 
 ```

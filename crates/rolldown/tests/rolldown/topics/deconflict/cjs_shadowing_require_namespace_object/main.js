@@ -7,7 +7,8 @@
 // closure, so the require initializer became the self-referential
 // `var lib_exports = (init_lib(), __toCommonJS(lib_exports))` -> `__toCommonJS(undefined)` ->
 // `TypeError: Cannot convert undefined or null to object` (issue #9882, require()/namespace
-// channel). After the fix the local is deconflicted (e.g. `lib_exports$1`).
+// channel). Now the local keeps its name, and the synthesized namespace object avoids it
+// (`lib_exports$1`).
 var lib_exports = require('./lib.js');
 
 module.exports = lib_exports.default() + ':' + lib_exports.named;

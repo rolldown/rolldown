@@ -19,6 +19,7 @@ pub struct OrderWrapState {
   modules: FxHashMap<ModuleIdx, OrderWrappedModule>,
   reexport_init_transparent: FxHashSet<ModuleIdx>,
   consumer_local_reexport_routes: FxHashSet<ModuleIdx>,
+  consumer_local_reexport_records: FxHashMap<ModuleIdx, FxHashSet<ImportRecordIdx>>,
   consumer_local_namespace_targets: FxHashMap<ModuleIdx, Vec<WrappedEsmInitTarget>>,
   cjs_carriers: FxHashMap<OrderCjsCarrierKey, OrderCjsCarrier>,
   cjs_carriers_by_importee: FxHashMap<ModuleIdx, Vec<OrderCjsCarrierKey>>,
@@ -171,6 +172,8 @@ impl OrderWrapState {
     self.consumed_reexport_facades.contains(&symbol_ref)
   }
 
+  /// The wrapper evaluates the module-owned body. Consumer-local re-exports require the
+  /// additional targets selected by the import-record or complete-namespace resolver.
   pub(crate) fn esm_init_target(
     &self,
     module_idx: ModuleIdx,
@@ -431,6 +434,30 @@ impl OrderWrapState {
 
   pub(crate) fn has_consumer_local_reexport_routes(&self) -> bool {
     !self.consumer_local_reexport_routes.is_empty()
+      || !self.consumer_local_reexport_records.is_empty()
+  }
+
+  pub(crate) fn insert_consumer_local_reexport_record(
+    &mut self,
+    module_idx: ModuleIdx,
+    rec_idx: ImportRecordIdx,
+  ) {
+    self.consumer_local_reexport_records.entry(module_idx).or_default().insert(rec_idx);
+  }
+
+  pub(crate) fn has_consumer_local_reexport_records(&self, module_idx: ModuleIdx) -> bool {
+    self.consumer_local_reexport_records.contains_key(&module_idx)
+  }
+
+  pub(crate) fn is_consumer_local_reexport_record(
+    &self,
+    module_idx: ModuleIdx,
+    rec_idx: ImportRecordIdx,
+  ) -> bool {
+    self
+      .consumer_local_reexport_records
+      .get(&module_idx)
+      .is_some_and(|records| records.contains(&rec_idx))
   }
 
   pub(crate) fn set_consumer_local_namespace_targets(
@@ -584,6 +611,16 @@ impl OrderWrapState {
       .into_iter()
       .flatten()
       .filter_map(|key| self.import_overlay(*key).map(|overlay| (*key, overlay)))
+  }
+
+  /// Returns `true` when an overlay of `importer_idx` has `reexports_dynamic_exports`: the overlay
+  /// re-exports an importee with dynamic exports. The overlay writer in the module finalizer reads
+  /// this field to decide if it emits `__reExport` into the namespace object of `importer_idx`. So
+  /// that object must stay open.
+  pub(crate) fn has_dynamic_reexport_overlay(&self, importer_idx: ModuleIdx) -> bool {
+    self
+      .import_overlays_for_importer(importer_idx)
+      .any(|(_, overlay)| overlay.reexports_dynamic_exports)
   }
 
   pub(crate) fn import_overlays_for_statement(

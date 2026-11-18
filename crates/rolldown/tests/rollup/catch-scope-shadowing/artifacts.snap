@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "assert";
-//#region main.js
+// main.js
 var x = "value";
 (function() {
 	try {} catch (e) {
@@ -20,6 +20,5 @@ var x = "value";
 	var x;
 })();
 assert.strictEqual(x, "value");
-//#endregion
 
 ```

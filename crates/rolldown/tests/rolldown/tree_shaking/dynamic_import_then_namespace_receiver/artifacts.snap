@@ -1,0 +1,61 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] target.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## in_function.js
+
+```js
+// in_function.js
+function then(resolve) {
+	globalThis.inFunctionThenCalls = (globalThis.inFunctionThenCalls ?? 0) + 1;
+	resolve({});
+}
+export { then };
+
+```
+
+## kept.js
+
+```js
+// kept/kept.js
+function then(resolve) {
+	globalThis.keptThenCalls = (globalThis.keptThenCalls ?? 0) + 1;
+	globalThis.thenCalled();
+	resolve({});
+}
+export { then };
+
+```
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// target.js
+var target_exports = /* @__PURE__ */ __exportAll({
+	then: () => then,
+	value: () => value
+});
+let value = "expected";
+function then(resolve) {
+	resolve({ value: "assimilated:" + this.value });
+}
+// main.js
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+import("./kept.js");
+const load = () => Promise.resolve().then(() => target_exports).then((ns) => ns.value);
+const loadInFunction = () => import("./in_function.js").then(() => "loaded");
+export { then as keepThen, load, loadInFunction };
+
+```

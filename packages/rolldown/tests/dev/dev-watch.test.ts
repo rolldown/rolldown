@@ -22,8 +22,11 @@ function dev(
   return _dev(inputOptions, outputOptions, {
     ...devOptions,
     watch: {
-      ...getDevWatchOptionsForCi(),
       ...devOptions.watch,
+      watcher: {
+        ...getDevWatchOptionsForCi().watcher,
+        ...devOptions.watch?.watcher,
+      },
     },
   });
 }
@@ -268,6 +271,149 @@ test.concurrent(
     expect(patch.code).not.toMatch(/registerFactory\("[^"]*lib\.js"/);
     // The re-run resolves the new import through the registry instead.
     expect(patch.code).toMatch(/initModule\("[^"]*lib\.js"\)/);
+  },
+);
+
+test.concurrent(
+  'HMR patch includes a factory for an initially unloaded barrel',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir: cwd } = createTestWithMultiFiles('dev-patch-barrel-factory', retryCount, {
+      'main.js': `import { render } from './view.js';\nconsole.log(render());\n`,
+      'view.js': `import { format } from './barrel.js';\nexport const render = () => format('before');\nimport.meta.hot.accept();\n`,
+      'barrel.js': `export * from './implementation.js';\n`,
+      'implementation.js': `export const format = value => 'rendered:' + value;\n`,
+    });
+
+    const onHmrUpdates = vi.fn();
+    const engine = await dev(
+      {
+        cwd,
+        input: './main.js',
+        experimental: { devMode: true },
+        optimization: { inlineConst: false },
+        plugins: [
+          {
+            name: 'side-effect-free-barrel',
+            resolveId(source) {
+              if (source === './barrel.js') {
+                return { id: path.join(cwd, 'barrel.js'), moduleSideEffects: false };
+              }
+            },
+          },
+        ],
+      },
+      {
+        dir: path.join(cwd, 'dist'),
+        codeSplitting: {
+          groups: [
+            {
+              name: 'barrel',
+              test: /barrel\.js$/,
+              includeDependenciesRecursively: false,
+              entriesAware: false,
+              minShareCount: 1,
+            },
+          ],
+        },
+      },
+      { onHmrUpdates },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.registerClient('barrel-client');
+    const view = path.join(cwd, 'view.js');
+    await editFile(view, fs.readFileSync(view, 'utf8').replace("'before'", "'after'"));
+
+    const findPatch = () =>
+      onHmrUpdates.mock.calls
+        .flatMap(([result]) => (result instanceof Error ? [] : result.updates))
+        .find((u) => u.clientId === 'barrel-client' && u.update.type === 'Patch');
+    await expect.poll(findPatch, { timeout: 20_000 }).toBeTruthy();
+
+    const patch = findPatch()!.update as { type: 'Patch'; code: string };
+    expect(patch.code).toMatch(/registerFactory\("[^"]*barrel\.js"/);
+  },
+);
+
+// A lazy proxy never runs in the client: `requestLazy` runs the real module. So no patch
+// carries a factory for a proxy. Two edits could bring one in: the real module changes its
+// interop, which the proxy's own `import()` of it reads, and a new `import()` creates a new
+// proxy.
+test.concurrent(
+  'an HMR patch carries no factory for a lazy proxy',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir: cwd } = createTestWithMultiFiles('dev-lazy-proxy-not-in-patch', retryCount, {
+      'main.js': `import('./lazy.js');\n`,
+      'lazy.js': `export const value = 'esm';\n`,
+      'other.js': `export const other = 'other';\n`,
+    });
+
+    const onHmrUpdates = vi.fn();
+    const engine = await dev(
+      {
+        cwd,
+        input: './main.js',
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(cwd, 'dist') },
+      { onHmrUpdates },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.registerClient('client');
+    const chunk = await engine.compileEntry(
+      `${path.join(cwd, 'lazy.js')}?rolldown-lazy=1`,
+      'client',
+    );
+    await engine.notifyPayloadDelivered(chunk.filename);
+    await engine.ensureLatestBuildOutput();
+
+    const patchWith = (code: unknown) =>
+      expect.objectContaining({
+        updates: expect.arrayContaining([
+          expect.objectContaining({
+            clientId: 'client',
+            update: expect.objectContaining({ type: 'Patch', code }),
+          }),
+        ]),
+      });
+    const lazyFactory = expect.stringMatching(/registerFactory\("[^"]*lazy\.js"/);
+    const proxyFactory = expect.stringMatching(/registerFactory\("[^"]*\?rolldown-lazy=1"/);
+
+    // ESM to CommonJS
+    onHmrUpdates.mockClear();
+    await editFile(path.join(cwd, 'lazy.js'), `module.exports = { value: 'cjs' };\n`);
+    await expect
+      .poll(() => onHmrUpdates, { timeout: 20_000 })
+      .toHaveBeenCalledWith(patchWith(lazyFactory));
+    expect(onHmrUpdates).not.toHaveBeenCalledWith(patchWith(proxyFactory));
+
+    // a new lazy `import()`, so a new proxy
+    onHmrUpdates.mockClear();
+    await editFile(
+      path.join(cwd, 'lazy.js'),
+      `module.exports = { value: 'cjs', load: () => import('./other.js') };\n`,
+    );
+    await expect
+      .poll(() => onHmrUpdates, { timeout: 20_000 })
+      .toHaveBeenCalledWith(patchWith(lazyFactory));
+    expect(onHmrUpdates).not.toHaveBeenCalledWith(patchWith(proxyFactory));
   },
 );
 

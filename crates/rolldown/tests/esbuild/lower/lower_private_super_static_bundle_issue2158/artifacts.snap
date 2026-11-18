@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 var Foo = class extends Object {
 	static FOO;
 	constructor() {
@@ -14,7 +14,6 @@ var Foo = class extends Object {
 	}
 	#foo;
 };
-//#endregion
 export { Foo };
 
 ```

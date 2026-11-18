@@ -1,0 +1,123 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+    ╭─[ main.js:10:8 ]
+    │
+  2 │ import * as ns from './nested.js';
+    │             ─┬  
+    │              ╰── 'ns' is imported here
+    │ 
+ 10 │ ns.sub.FOO = 'changed';
+    │        ─┬─  
+    │         ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+────╯
+
+```
+
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+   ╭─[ main.js:4:5 ]
+   │
+ 1 │ import { env } from './dynamic.js';
+   │          ─┬─  
+   │           ╰─── 'env' is imported here
+   │ 
+ 4 │ env.FOO = 'changed';
+   │     ─┬─  
+   │      ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+───╯
+
+```
+
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+   ╭─[ main.js:5:5 ]
+   │
+ 1 │ import { env } from './dynamic.js';
+   │          ─┬─  
+   │           ╰─── 'env' is imported here
+   │ 
+ 5 │ env.FOO++;
+   │     ─┬─  
+   │      ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+───╯
+
+```
+
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+   ╭─[ main.js:6:6 ]
+   │
+ 1 │ import { env } from './dynamic.js';
+   │          ─┬─  
+   │           ╰─── 'env' is imported here
+   │ 
+ 6 │ [env.FOO] = ['changed'];
+   │      ─┬─  
+   │       ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+───╯
+
+```
+
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+   ╭─[ main.js:7:10 ]
+   │
+ 1 │ import { env } from './dynamic.js';
+   │          ─┬─  
+   │           ╰─── 'env' is imported here
+   │ 
+ 7 │ for (env.FOO of ['changed']);
+   │          ─┬─  
+   │           ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+───╯
+
+```
+
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+   ╭─[ main.js:8:12 ]
+   │
+ 1 │ import { env } from './dynamic.js';
+   │          ─┬─  
+   │           ╰─── 'env' is imported here
+   │ 
+ 8 │ delete env.FOO;
+   │            ─┬─  
+   │             ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+───╯
+
+```
+
+## ASSIGN_TO_IMPORT
+
+```text
+[ASSIGN_TO_IMPORT] Cannot assign to import 'FOO'
+   ╭─[ main.js:9:13 ]
+   │
+ 1 │ import { env } from './dynamic.js';
+   │          ─┬─  
+   │           ╰─── 'env' is imported here
+   │ 
+ 9 │ delete env?.FOO;
+   │             ─┬─  
+   │              ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setFoo') and then import and call that function here instead.
+───╯
+
+```

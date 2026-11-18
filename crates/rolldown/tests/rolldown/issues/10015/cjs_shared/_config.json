@@ -1,0 +1,44 @@
+{
+  "configName": "exports-only",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "platform": "node",
+    "minifyInternalExports": false
+  },
+  "configVariants": [
+    {
+      "_configName": "cjs",
+      "preserveEntrySignatures": "strict",
+      "format": "cjs"
+    },
+    {
+      "_configName": "on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true,
+      "_snapshot": false
+    },
+    {
+      "_configName": "wrap-all",
+      "strictExecutionOrder": true,
+      "_snapshot": false
+    },
+    {
+      "_configName": "unoptimized",
+      "chunkOptimization": false,
+      "_snapshot": false
+    },
+    {
+      "_configName": "merge-only",
+      "chunkOptimization": {
+        "mergeCommonChunks": true,
+        "avoidRedundantChunkLoads": false
+      },
+      "_snapshot": false
+    }
+  ]
+}

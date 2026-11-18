@@ -2,15 +2,15 @@ use std::sync::Arc;
 
 use crate::{
   stages::link_stage::LinkStageOutput,
-  types::generator::{GenerateContext, GenerateOutput, Generator},
+  types::generator::{GenerateContext, GenerateOutput},
   utils::{chunk::generate_rendered_chunk, render_ecma_module::render_ecma_module},
 };
 
 use anyhow::Result;
 use oxc_str::CompactStr;
 use rolldown_common::{
-  AddonRenderContext, ChunkIdx, EcmaAssetMeta, InstantiatedChunk, InstantiationKind, ModuleId,
-  ModuleIdx, OutputFormat, RenderedModule, StrictMode,
+  AddonRenderContext, ChunkIdx, EcmaAssetMeta, InstantiatedChunk, ModuleId, ModuleIdx,
+  OutputFormat, RenderedModule, StrictMode,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookAddonArgs;
@@ -18,6 +18,7 @@ use rolldown_sourcemap::Source;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
+use rolldown_utils::{concat_string, ecmascript::escape_line_terminators};
 use rustc_hash::FxHashMap;
 
 use super::format::utils::is_use_strict_directive;
@@ -55,9 +56,11 @@ impl RenderedModuleSource {
 
 pub struct EcmaGenerator;
 
-impl Generator for EcmaGenerator {
+impl EcmaGenerator {
   #[expect(clippy::too_many_lines)]
-  async fn instantiate_chunk(ctx: &mut GenerateContext<'_>) -> Result<BuildResult<GenerateOutput>> {
+  pub async fn instantiate_chunk(
+    ctx: &mut GenerateContext<'_>,
+  ) -> Result<BuildResult<GenerateOutput>> {
     let module_id_to_codegen_ret = std::mem::take(&mut ctx.module_id_to_codegen_ret);
     let rendered_pairs: Vec<(RenderedModuleSource, Vec<BuildDiagnostic>)> = ctx
       .chunk
@@ -276,9 +279,7 @@ impl Generator for EcmaGenerator {
       OutputFormat::Esm => {
         render_esm(ctx, addon_render_context, &rendered_module_sources, &carried_sources)
       }
-      OutputFormat::Cjs => {
-        render_cjs(ctx, addon_render_context, &rendered_module_sources, &mut warnings)
-      }
+      OutputFormat::Cjs => render_cjs(ctx, addon_render_context, &rendered_module_sources),
       OutputFormat::Iife => {
         match render_iife(ctx, addon_render_context, &rendered_module_sources, &mut warnings).await
         {
@@ -295,9 +296,16 @@ impl Generator for EcmaGenerator {
     };
 
     if ctx.options.experimental.is_attach_debug_info_full() && !ctx.chunk.debug_info.is_empty() {
-      let debug_info_str =
-        ctx.chunk.debug_info.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n//! ");
-      source_joiner.prepend_source(format!("//! {debug_info_str}"));
+      // Module ids and chunk names can hold line terminators. Escape them, so that each item
+      // stays on its own `//!` line.
+      let debug_info_str = ctx
+        .chunk
+        .debug_info
+        .iter()
+        .map(|info| escape_line_terminators(info.to_string()))
+        .collect::<Vec<_>>()
+        .join("\n//! ");
+      source_joiner.prepend_source(concat_string!("//! ", debug_info_str));
     }
 
     let (content, map) = source_joiner.join();
@@ -315,11 +323,11 @@ impl Generator for EcmaGenerator {
     let file_dir = file_path.parent().expect("chunk file name should have a parent");
 
     Ok(Ok(GenerateOutput {
-      chunks: vec![InstantiatedChunk {
+      chunk: InstantiatedChunk {
         originate_from: ctx.chunk_idx,
         content: content.into(),
         map,
-        kind: InstantiationKind::from(EcmaAssetMeta {
+        ecma_meta: Box::new(EcmaAssetMeta {
           rendered_chunk,
           debug_id: 0,
           imports: vec![],
@@ -341,7 +349,7 @@ impl Generator for EcmaGenerator {
         augment_chunk_hash: None,
         post_banner,
         post_footer,
-      }],
+      },
       warnings,
     }))
   }

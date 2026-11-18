@@ -123,6 +123,8 @@ pub fn to_binding_error(diagnostic: &BuildDiagnostic, cwd: std::path::PathBuf) -
     }
     Err(error) => {
       let diag = error.to_diagnostic_with(&DiagnosticOptions { cwd });
+      let location = diag.get_primary_location();
+      let frame = location.as_ref().and_then(|&(_, line, column, _)| diag.frame(line, column));
 
       // Extract location information from the diagnostic if available
       // Note: Line numbers, columns, and byte positions are cast to u32.
@@ -131,7 +133,7 @@ pub fn to_binding_error(diagnostic: &BuildDiagnostic, cwd: std::path::PathBuf) -
         clippy::cast_possible_truncation,
         reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
       )]
-      let (loc, pos) = if let Some((_file, line, column, position)) = diag.get_primary_location() {
+      let (loc, pos) = if let Some((_file, line, column, position)) = location {
         (
           Some(super::binding_log::BindingLogLocation {
             line: line as u32,
@@ -147,8 +149,10 @@ pub fn to_binding_error(diagnostic: &BuildDiagnostic, cwd: std::path::PathBuf) -
 
       BindingError::NativeError(super::error::native_error::NativeError {
         kind: error.kind().to_string(),
-        message: diag.to_color_string(),
+        message: diag.to_stderr_string(),
         id: error.id(),
+        plugin: error.plugin(),
+        frame,
         exporter: error.exporter(),
         loc,
         pos,

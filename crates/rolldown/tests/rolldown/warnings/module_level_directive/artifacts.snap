@@ -40,11 +40,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 "use asm";
 "use client";
-//#region main.js
+// main.js
 function nested() {
 	"nested directive";
 }
-//#endregion
 export { nested as default };
 
 ```

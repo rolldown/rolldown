@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      { "name": "imported", "import": "./imported.js" },
+      { "name": "reexported", "import": "./reexported.js" },
+      { "name": "imported-barrel", "import": "./imported-barrel.js" },
+      { "name": "reexported-barrel", "import": "./reexported-barrel.js" }
+    ],
+    "external": ["node:https"],
+    "format": "cjs"
+  },
+  "configVariants": [{ "format": "esm", "_configName": "esm" }]
+}

@@ -6,3 +6,9 @@ import('./three-mesh-bvh/index.js').then((res) => {
     throw new Error('MeshBVH missing from dynamic namespace');
   }
 });
+
+import('./three-mesh-bvh/extra.js').then((res) => {
+  if (res.extra !== 'extra') {
+    throw new Error('extra missing from dynamic namespace');
+  }
+});

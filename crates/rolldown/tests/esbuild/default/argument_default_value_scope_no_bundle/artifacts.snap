@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 function a(x = foo) {
 	return x;
 }
@@ -31,7 +31,6 @@ let c = [
 		}
 	}
 ];
-//#endregion
 export { a, b, c };
 
 ```

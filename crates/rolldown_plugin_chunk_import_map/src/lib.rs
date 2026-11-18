@@ -50,16 +50,33 @@ impl Plugin for ChunkImportMapPlugin {
         let hasher = match &chunk.facade_module_id {
           Some(module_id) => {
             let mut hasher = Xxh3::with_seed(0);
-            module_id.as_str().hash(&mut hasher);
+            let is_path = module_id.is_path();
+            if is_path {
+              (is_path, module_id.stabilize(&args.options.cwd).as_str()).hash(&mut hasher);
+            } else {
+              (is_path, module_id.as_str()).hash(&mut hasher);
+            }
             hasher
           }
           None => {
-            // Fallback logic for common chunk
             let mut hasher = Xxh3::with_seed(1);
             if used_names.contains(&chunk.name) {
-              // Reduce the impact factor
-              let Some(module_id) = chunk.module_ids.iter().min() else { continue };
-              module_id.as_str().hash(&mut hasher);
+              // See internal-docs/inline-common-chunks/implementation.md.
+              let logical_chunk = &args.chunk_table[chunk.originate_from];
+              let Some(module_key) = logical_chunk
+                .modules
+                .iter()
+                .map(|&idx| {
+                  let module = &args.module_table[idx];
+                  let is_path = module.id().is_path();
+                  let id = if is_path { module.stable_id().as_str() } else { module.id().as_str() };
+                  (is_path, id)
+                })
+                .min()
+              else {
+                continue;
+              };
+              module_key.hash(&mut hasher);
             } else {
               used_names.insert(chunk.name.clone());
               chunk.name.hash(&mut hasher);

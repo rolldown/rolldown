@@ -7,10 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-//#region lib.js
+// lib.js
 const foo = "foo_value";
 const bar = 42;
-//#endregion
 exports.bar = bar;
 exports.foo = foo;
 
@@ -21,13 +20,12 @@ exports.foo = foo;
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
-const require_lib = require("./lib.js");
 let node_assert = require("node:assert");
+const require_lib = require("./lib.js");
 node_assert = __toESM(node_assert);
-//#region main.js
+// main.js
 node_assert.default.strictEqual(require_lib.foo, "foo_value");
 node_assert.default.strictEqual(42, 42);
-//#endregion
 exports.bar = require_lib.bar;
 exports.foo = require_lib.foo;
 

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.ts
+// entry.ts
 var SameFileGood = /* @__PURE__ */ function(SameFileGood) {
 	SameFileGood["STR"] = "str 1";
 	SameFileGood[SameFileGood["NUM"] = 123] = "NUM";
@@ -44,6 +44,5 @@ mustBeComputed({ ["__proto__"]: null }, { ["__proto__"]: null }, class {
 }, class {
 	static ["prototype"]() {}
 });
-//#endregion
 
 ```

@@ -1,0 +1,6 @@
+{
+  "config": {
+    "treeshake": { "propertyWriteSideEffects": "false" },
+    "minify": false
+  }
+}

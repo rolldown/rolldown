@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## const-entry.js
 
 ```js
-//#region const-entry.js
+// const-entry.js
 console.log(["string"], ["foobar"], [
 	false,
 	true,
@@ -23,14 +23,13 @@ console.log(["string"], ["foobar"], [
 	"y",
 	"n"
 ]);
-//#endregion
 
 ```
 
 ## enum-entry.js
 
 ```js
-//#region enum-entry.ts
+// enum-entry.ts
 console.log(["string"], ["foobar"], [
 	false,
 	true,
@@ -47,18 +46,16 @@ console.log(["string"], ["foobar"], [
 	"y",
 	"n"
 ]);
-//#endregion
 
 ```
 
 ## nested-entry.js
 
 ```js
-//#region nested-entry.ts
+// nested-entry.ts
 console.log({
 	"should be foobarbaz": "foobarbaz",
 	"should be FOOBARBAZ": "FOOBARBAZ"
 });
-//#endregion
 
 ```

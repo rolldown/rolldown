@@ -6,58 +6,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { n as init_a, t as defValue } from "./a2.js";
-init_a();
+import { n as vDef } from "./barrel.js";
+// a.js
+(globalThis.__events ??= []).push("a");
+const defValue = vDef;
 export { defValue };
-
-```
-
-## a2.js
-
-```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_barrel } from "./barrel.js";
-//#region definer.js
-function build() {
-	return { value: 7 };
-}
-var vDef;
-function init_definer() {
-	return (init_definer = __esmMin((() => {
-		vDef = /* @__PURE__ */ build();
-	})))();
-}
-//#endregion
-//#region a.js
-var defValue;
-function init_a() {
-	return (init_a = __esmMin((() => {
-		init_barrel();
-		(globalThis.__events ??= []).push("a");
-		defValue = vDef;
-	})))();
-}
-//#endregion
-export { init_a as n, init_definer as r, defValue as t };
 
 ```
 
 ## b.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { r as vSib, t as init_barrel } from "./barrel.js";
-//#region b.js
-var sibValue;
-function init_b() {
-	return (init_b = __esmMin((() => {
-		init_barrel();
-		(globalThis.__events ??= []).push("b");
-		sibValue = vSib;
-	})))();
-}
-//#endregion
-init_b();
+import { t as vSib } from "./barrel.js";
+// b.js
+(globalThis.__events ??= []).push("b");
+const sibValue = vSib;
 export { sibValue };
 
 ```
@@ -65,34 +28,15 @@ export { sibValue };
 ## barrel.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { r as init_definer } from "./a2.js";
-//#region sibling.js
-var vSib;
-function init_sibling() {
-	return (init_sibling = __esmMin((() => {
-		(globalThis.__events ??= []).push("sibling");
-		vSib = { value: 3 };
-	})))();
+// definer.js
+function build() {
+	return { value: 7 };
 }
-//#endregion
-//#region barrel.js
-function init_barrel() {
-	return (init_barrel = __esmMin((() => {
-		init_definer();
-		init_sibling();
-	})))();
-}
-//#endregion
-export { init_sibling as n, vSib as r, init_barrel as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+const vDef = /* @__PURE__ */ build();
+// sibling.js
+(globalThis.__events ??= []).push("sibling");
+const vSib = { value: 3 };
+export { vDef as n, vSib as t };
 
 ```
 
@@ -103,29 +47,9 @@ export { __esmMin as t };
 ### a.js
 
 ```js
-import { n as init_a, t as defValue } from "./a2.js";
-init_a();
-export { defValue };
-
-```
-
-### a2.js
-
-```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { t as init_barrel } from "./barrel.js";
-//#region definer.js
-function build() {
-	return { value: 7 };
-}
-var vDef;
-function init_definer() {
-	return (init_definer = __esmMin((() => {
-		vDef = /* @__PURE__ */ build();
-	})))();
-}
-//#endregion
-//#region a.js
+import { a as vDef, t as init_barrel } from "./barrel.js";
+// a.js
 var defValue;
 function init_a() {
 	return (init_a = __esmMin((() => {
@@ -134,8 +58,8 @@ function init_a() {
 		defValue = vDef;
 	})))();
 }
-//#endregion
-export { init_a as n, init_definer as r, defValue as t };
+init_a();
+export { defValue };
 
 ```
 
@@ -144,7 +68,7 @@ export { init_a as n, init_definer as r, defValue as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import { r as vSib, t as init_barrel } from "./barrel.js";
-//#region b.js
+// b.js
 var sibValue;
 function init_b() {
 	return (init_b = __esmMin((() => {
@@ -153,7 +77,6 @@ function init_b() {
 		sibValue = vSib;
 	})))();
 }
-//#endregion
 init_b();
 export { sibValue };
 
@@ -163,8 +86,17 @@ export { sibValue };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { r as init_definer } from "./a2.js";
-//#region sibling.js
+// definer.js
+function build() {
+	return { value: 7 };
+}
+var vDef;
+function init_definer() {
+	return (init_definer = __esmMin((() => {
+		vDef = /* @__PURE__ */ build();
+	})))();
+}
+// sibling.js
 var vSib;
 function init_sibling() {
 	return (init_sibling = __esmMin((() => {
@@ -172,16 +104,14 @@ function init_sibling() {
 		vSib = { value: 3 };
 	})))();
 }
-//#endregion
-//#region barrel.js
+// barrel.js
 function init_barrel() {
 	return (init_barrel = __esmMin((() => {
 		init_definer();
 		init_sibling();
 	})))();
 }
-//#endregion
-export { init_sibling as n, vSib as r, init_barrel as t };
+export { vDef as a, init_definer as i, init_sibling as n, vSib as r, init_barrel as t };
 
 ```
 

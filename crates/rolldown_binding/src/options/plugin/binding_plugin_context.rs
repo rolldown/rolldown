@@ -7,9 +7,13 @@ use rolldown_plugin::__inner::infer_module_def_format;
 use rolldown_plugin::{PluginContext, SharedNativePluginContext};
 
 use super::types::{
-  binding_emitted_asset::BindingEmittedAsset, binding_emitted_chunk::BindingEmittedChunk,
+  binding_emitted_asset::BindingEmittedAsset,
+  binding_emitted_chunk::BindingEmittedChunk,
   binding_emitted_prebuilt_chunk::BindingEmittedPrebuiltChunk,
   binding_hook_side_effects::BindingHookSideEffects,
+  binding_import_attributes::{
+    BindingImportAttributes, from_binding_import_attributes, to_binding_import_attributes,
+  },
   binding_plugin_context_resolve_options::BindingPluginContextResolveOptions,
   binding_resolved_external::BindingResolvedExternal,
 };
@@ -24,11 +28,12 @@ pub struct BindingPluginContext {
 #[napi]
 impl BindingPluginContext {
   #[napi(
-    ts_args_type = "specifier: string, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string"
+    ts_args_type = "rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string"
   )]
   pub async fn load(
     &self,
-    specifier: String,
+    raw_id: String,
+    attributes: BindingImportAttributes,
     side_effects: Option<BindingHookSideEffects>,
     package_json_path: Option<String>,
   ) -> napi::Result<()> {
@@ -36,12 +41,17 @@ impl BindingPluginContext {
       .as_ref()
       .map(|p| self.inner.try_get_package_json_or_create(p.as_path()))
       .transpose()?;
-    let module_def_format = infer_module_def_format(&specifier, package_json.as_ref());
+    let module_def_format = infer_module_def_format(&raw_id, package_json.as_ref());
     self
       .inner
-      .load(&specifier, side_effects.map(TryInto::try_into).transpose()?, module_def_format)
+      .load(
+        &raw_id,
+        from_binding_import_attributes(attributes),
+        side_effects.map(TryInto::try_into).transpose()?,
+        module_def_format,
+      )
       .await
-      .map_err(|program_err| napi_error::load_error(&specifier, program_err))
+      .map_err(|program_err| napi_error::load_error(&raw_id, program_err))
   }
 
   #[napi]
@@ -64,7 +74,8 @@ impl BindingPluginContext {
 
     Ok(ret.map(|info| BindingPluginContextResolvedId {
       // TODO: should use `&str` instead. (claude code) Attempt failed due to NAPI object field must be String type
-      id: info.id.to_string(),
+      id: info.id.raw_id().to_string(),
+      attributes: to_binding_import_attributes(&info.attributes).unwrap_or_default(),
       external: info.external.into(),
       module_side_effects: info.side_effects.map(Into::into),
       // TODO: should use `&str` instead. (claude code) Attempt failed due to PathBuf conversion requires to_string_lossy()
@@ -146,7 +157,10 @@ impl From<PluginContext> for BindingPluginContext {
 }
 #[napi_derive::napi(object, object_from_js = false)]
 pub struct BindingPluginContextResolvedId {
+  /// The resolved id without its import attributes.
   pub id: String,
+  #[napi(ts_type = "Record<string, string>")]
+  pub attributes: BindingImportAttributes,
   pub package_json_path: Option<String>,
   #[napi(ts_type = "boolean | 'absolute' | 'relative'")]
   pub external: BindingResolvedExternal,

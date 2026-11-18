@@ -7,8 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { fn as console_log } from "pkg";
-//#region entry.js
+// entry.js
 console_log(test);
-//#endregion
 
 ```

@@ -24,6 +24,7 @@ import {
 import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
 import { error, logPluginError } from '../log/logs';
+import { isPromiseLike } from '../utils/misc';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import {
@@ -227,16 +228,24 @@ function wrapHandlers(
     // plugin's own work rather than the wrapper's promise machinery.
     const handler = raw && measureHookCost(timings, owner, hookName, raw);
     if (handler) {
-      plugin[hookName] = async (...args: any[]) => {
+      const onError = (e: any, args: any[]) =>
+        error(
+          logPluginError(e, plugin.name, {
+            hook: hookName,
+            id: hookName === 'transform' ? args[2] : undefined,
+          }),
+        );
+      // Keep synchronous hooks synchronous all the way to the native bridge.
+      // See internal-docs/bundler-data-lifecycle/implementation.md ("Synchronous hook returns").
+      plugin[hookName] = (...args: any[]) => {
         try {
-          return await handler(...args);
+          const result = handler(...args);
+          if (isPromiseLike(result)) {
+            return Promise.resolve(result).catch((e: any) => onError(e, args));
+          }
+          return result;
         } catch (e: any) {
-          return error(
-            logPluginError(e, plugin.name, {
-              hook: hookName,
-              id: hookName === 'transform' ? args[2] : undefined,
-            }),
-          );
+          return onError(e, args);
         }
       };
     }

@@ -9,9 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 //! User-defined Entry: [Entry-Module-Id: main.js] [Name: main]
 import "./vendor-similarity.js";
 import "./vendor-similarity2.js";
-//#region src/app-shell.js
+// src/app-shell.js
 console.log("app shell");
-//#endregion
 
 ```
 
@@ -19,12 +18,10 @@ console.log("app shell");
 
 ```js
 //! ManualCodeSplitting: [Group-Name: vendor-similarity]
-//#region node_modules/date-fns/format.js
+// node_modules/date-fns/format.js
 console.log("date-fns/format");
-//#endregion
-//#region node_modules/date-fns/parseISO.js
+// node_modules/date-fns/parseISO.js
 console.log("date-fns/parseISO");
-//#endregion
 
 ```
 
@@ -32,11 +29,9 @@ console.log("date-fns/parseISO");
 
 ```js
 //! ManualCodeSplitting: [Group-Name: vendor-similarity]
-//#region node_modules/react/index.js
+// node_modules/react/index.js
 console.log("react/index");
-//#endregion
-//#region node_modules/react/jsx-runtime.js
+// node_modules/react/jsx-runtime.js
 console.log("react/jsx-runtime");
-//#endregion
 
 ```

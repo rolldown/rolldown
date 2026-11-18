@@ -166,7 +166,7 @@ fn test_concat_mixed_owned_and_borrowed_sourcemaps() {
       None,
       vec![],
       None,
-      vec![Cow::Owned(filename.to_string())],
+      vec![Some(Cow::Owned(filename.to_string()))],
       vec![Some(Cow::Owned(source_content.to_string()))],
       vec![Token::new(0, 0, 0, 0, Some(0), None)].into_boxed_slice(),
       None,
@@ -188,7 +188,7 @@ fn test_concat_mixed_owned_and_borrowed_sourcemaps() {
   let map = map.expect("both input sourcemaps should be preserved");
 
   assert_eq!(content, "borrowed();\nowned();");
-  assert_eq!(map.get_sources().collect::<Vec<_>>(), ["borrowed.js", "owned.js"]);
+  assert_eq!(map.get_sources().collect::<Vec<_>>(), [Some("borrowed.js"), Some("owned.js")]);
   assert_eq!(map.get_source_content(0), Some("borrowed source"));
   assert_eq!(map.get_source_content(1), Some("owned source"));
   assert_eq!(map.get_token(0).and_then(|token| token.get_source_id()), Some(0));

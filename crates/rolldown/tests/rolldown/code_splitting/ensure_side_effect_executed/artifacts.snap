@@ -13,8 +13,7 @@ import "./entry_js.js";
 ## entry_js.js
 
 ```js
-//#region entry.js
+// entry.js
 globalThis.sideEffectExecuted = true;
-//#endregion
 
 ```

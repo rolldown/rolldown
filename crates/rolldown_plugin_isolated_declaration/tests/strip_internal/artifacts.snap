@@ -15,13 +15,12 @@ export declare class A {
 ## main.js
 
 ```js
-//#region main.ts
+// main.ts
 var A = class {
 	foo = 1;
 	/** @internal */
 	bar = 2;
 };
-//#endregion
 export { A };
 
 ```

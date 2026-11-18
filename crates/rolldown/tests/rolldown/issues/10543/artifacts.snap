@@ -7,10 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { r as init_w, t as P } from "./w.js";
-//#region icon.js
+// icon.js
 init_w();
 const iconP = P;
-//#endregion
 export { iconP };
 
 ```
@@ -18,44 +17,36 @@ export { iconP };
 ## lab.js
 
 ```js
-import { i as __toCommonJS, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
-//#region top.js
+import { a as __esmMin, i as __commonJSMin, o as __exportAll, s as __toCommonJS } from "./w.js";
+// top.js
 var top_exports = /* @__PURE__ */ __exportAll({ t: () => 2 });
 var init_top = __esmMin((() => {}));
-//#endregion
-//#region lab.cjs
+// lab.cjs
 var require_lab = /* @__PURE__ */ __commonJSMin(((exports) => {
 	const { t } = (init_top(), __toCommonJS(top_exports));
 	exports.t = t;
 }));
-//#endregion
 export default require_lab();
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ```
 
 ## styles.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-import { n as V, r as init_w, t as P } from "./w.js";
-//#region system.js
+import { a as __esmMin, n as V, r as init_w, t as P } from "./w.js";
+// mid.js
+var init_mid = __esmMin((() => {
+	init_w();
+}));
+// system.js
 var util;
-//#endregion
-//#region styles.js
+// styles.js
 __esmMin((() => {
+	init_mid();
 	util = 1;
 }))();
 init_w();
 globalThis.__entry_body_saw_w = globalThis.__w_side_effect;
-//#endregion
 export { P, V, util };
 
 ```
@@ -63,8 +54,8 @@ export { P, V, util };
 ## w.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
-//#region w.js
+// HIDDEN [\0rolldown/runtime.js]
+// w.js
 function P() {
 	return "v18";
 }
@@ -73,7 +64,6 @@ var init_w = __esmMin((() => {
 	globalThis.__w_side_effect = "ran";
 	V = "v18";
 }));
-//#endregion
-export { V as n, init_w as r, P as t };
+export { __esmMin as a, __commonJSMin as i, V as n, __exportAll as o, init_w as r, __toCommonJS as s, P as t };
 
 ```

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 let firstLevelLet = "let";
 var firstLevelVar = "var";
 const firstLevelConst = "const";
@@ -25,7 +25,6 @@ function second_level() {
 	console.log(secondLevelLet, secondLevelVar, secondLevelConst, new SecondLevelClass());
 }
 second_level();
-//#endregion
 export { ExportedClass, exportedConst, exportedFunction, exportedLet };
 
 ```
@@ -37,7 +36,7 @@ export { ExportedClass, exportedConst, exportedFunction, exportedLet };
 ### main.js
 
 ```js
-//#region main.js
+// main.js
 var firstLevelLet = "let";
 var firstLevelVar = "var";
 var firstLevelConst = "const";
@@ -56,7 +55,6 @@ function second_level() {
 	console.log(secondLevelLet, secondLevelVar, secondLevelConst, new SecondLevelClass());
 }
 second_level();
-//#endregion
 export { ExportedClass, exportedConst, exportedFunction, exportedLet };
 
 ```

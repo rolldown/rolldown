@@ -15,7 +15,7 @@ const FETCH_TIMEOUT_MS = 5_000;
  */
 const BUILD_STABLE_MS = (() => {
   const opts = getDevWatchOptionsForCi();
-  return opts.debounceDuration + opts.debounceTickRate + 200;
+  return opts.watcher.debounceDelay + opts.watcher.debounceTickRate + 200;
 })();
 
 export interface DevStatus {

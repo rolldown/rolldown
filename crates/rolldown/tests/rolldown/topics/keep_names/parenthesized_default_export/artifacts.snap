@@ -8,27 +8,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region dep.js
+// dep.js
 var dep_default = /* @__PURE__ */ __name((function() {}), "default");
-//#endregion
-//#region dep-class.js
+// dep-class.js
 var dep_class_default = class {
 	static {
 		__name(this, "default");
 	}
 };
-//#endregion
-//#region dep-arrow.js
+// dep-arrow.js
 var dep_arrow_default = /* @__PURE__ */ __name(() => {}, "default");
-//#endregion
-//#region dep-named-default.js
+// dep-named-default.js
 var dep_named_default_default = (function name() {});
-//#endregion
-//#region main.js
+// main.js
 assert.strictEqual(dep_default.name, "default");
 assert.strictEqual(dep_class_default.name, "default");
 assert.strictEqual(dep_arrow_default.name, "default");
 assert.strictEqual(dep_named_default_default.name, "name");
-//#endregion
 
 ```

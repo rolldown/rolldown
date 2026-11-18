@@ -1,0 +1,68 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Unexpected token
+   ╭─[ bundle.js:1:7 ]
+   │
+ 1 │ const = ;
+   │       ┬  
+   │       ╰── 
+───╯
+
+```
+
+# Variant: fatal-minify: [minify: true]
+
+## Errors
+
+### PARSE_ERROR
+
+```text
+[PARSE_ERROR] Unexpected token
+   ╭─[ bundle.js:1:7 ]
+   │
+ 1 │ const = ;
+   │       ┬  
+   │       ╰── 
+───╯
+
+```
+
+# Variant: recoverable-dce: 
+
+## Errors
+
+### PARSE_ERROR
+
+```text
+[PARSE_ERROR] A 'return' statement can only be used within a function body.
+   ╭─[ bundle.js:1:1 ]
+   │
+ 1 │ return 1;
+   │ ───┬──  
+   │    ╰──── 
+───╯
+
+```
+
+# Variant: recoverable-minify: [minify: true]
+
+## Errors
+
+### PARSE_ERROR
+
+```text
+[PARSE_ERROR] A 'return' statement can only be used within a function body.
+   ╭─[ bundle.js:1:1 ]
+   │
+ 1 │ return 1;
+   │ ───┬──  
+   │    ╰──── 
+───╯
+
+```

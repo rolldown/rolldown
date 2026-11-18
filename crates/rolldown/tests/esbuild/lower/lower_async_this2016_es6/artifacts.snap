@@ -6,12 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region other.js
+// other.js
 let bar = async () => {};
-//#endregion
-//#region entry.js
+// entry.js
 let foo = async () => void 0;
-//#endregion
 export { bar, foo };
 
 ```

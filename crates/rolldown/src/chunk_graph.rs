@@ -49,11 +49,6 @@ impl ChunkGraph {
     }
   }
 
-  #[expect(unused)]
-  pub fn sorted_chunks(&self) -> impl ExactSizeIterator<Item = &Chunk> {
-    self.sorted_chunk_idx_vec.iter().map(move |&id| &self.chunk_table.chunks[id])
-  }
-
   pub fn add_chunk(&mut self, chunk: Chunk) -> ChunkIdx {
     let idx = self.chunk_table.push(chunk);
     self.finalized_cjs_ns_map_idx_vec.push(FxHashMap::default());
@@ -135,9 +130,7 @@ impl ChunkGraph {
       let mut runtime_related = vec![];
       for &module_idx in &chunk.modules {
         let module = &link_output.module_table[module_idx];
-        if module.id().as_str().starts_with("rolldown:")
-          || module.id().as_str().starts_with("\0rolldown/")
-        {
+        if module_idx == link_output.runtime.id() {
           runtime_related.push(module_idx);
           continue;
         }

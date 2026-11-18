@@ -31,7 +31,7 @@ exports.v2 = require_g.v2;
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_m0 = require("./m0.js");
 const require_m3 = require("./m3.js");
-//#region m2.js
+// m2.js
 var v2;
 function init_m2() {
 	return (init_m2 = require_rolldown_runtime.__esmMin((() => {
@@ -41,8 +41,7 @@ function init_m2() {
 		v2 = 12;
 	})))();
 }
-//#endregion
-//#region m1.js
+// m1.js
 var v1;
 function init_m1() {
 	return (init_m1 = require_rolldown_runtime.__esmMin((() => {
@@ -52,7 +51,6 @@ function init_m1() {
 		v1 = 1;
 	})))();
 }
-//#endregion
 Object.defineProperty(exports, "init_m1", {
 	enumerable: true,
 	get: function() {
@@ -84,7 +82,7 @@ Object.defineProperty(exports, "v2", {
 
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-//#region m0.js
+// m0.js
 var v0;
 function init_m0() {
 	return (init_m0 = require_rolldown_runtime.__esmMin((() => {
@@ -92,7 +90,6 @@ function init_m0() {
 		v0 = 10;
 	})))();
 }
-//#endregion
 Object.defineProperty(exports, "init_m0", {
 	enumerable: true,
 	get: function() {
@@ -113,14 +110,13 @@ Object.defineProperty(exports, "v0", {
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_g = require("./g.js");
-//#region m3.js
+// m3.js
 function init_m3() {
 	return (init_m3 = require_rolldown_runtime.__esmMin((() => {
 		require_g.init_m2();
 		globalThis.__log.push("m3");
 	})))();
 }
-//#endregion
 Object.defineProperty(exports, "init_m3", {
 	enumerable: true,
 	get: function() {
@@ -133,7 +129,7 @@ Object.defineProperty(exports, "init_m3", {
 ## rolldown-runtime.js
 
 ```js
-//#region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 var __esmMin = (fn, res, err) => () => {
 	if (err) throw err[0];
 	try {
@@ -142,7 +138,6 @@ var __esmMin = (fn, res, err) => () => {
 		throw err = [e], e;
 	}
 };
-//#endregion
 Object.defineProperty(exports, "__esmMin", {
 	enumerable: true,
 	get: function() {
@@ -184,7 +179,7 @@ exports.v2 = require_g.v2;
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_m0 = require("./m0.js");
 const require_m3 = require("./m3.js");
-//#region m2.js
+// m2.js
 var v2;
 function init_m2() {
 	return (init_m2 = require_rolldown_runtime.__esmMin((() => {
@@ -194,8 +189,7 @@ function init_m2() {
 		v2 = 12;
 	})))();
 }
-//#endregion
-//#region m1.js
+// m1.js
 var v1;
 function init_m1() {
 	return (init_m1 = require_rolldown_runtime.__esmMin((() => {
@@ -205,7 +199,6 @@ function init_m1() {
 		v1 = 1;
 	})))();
 }
-//#endregion
 Object.defineProperty(exports, "init_m1", {
 	enumerable: true,
 	get: function() {
@@ -237,7 +230,7 @@ Object.defineProperty(exports, "v2", {
 
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-//#region m0.js
+// m0.js
 var v0;
 function init_m0() {
 	return (init_m0 = require_rolldown_runtime.__esmMin((() => {
@@ -245,7 +238,6 @@ function init_m0() {
 		v0 = 10;
 	})))();
 }
-//#endregion
 Object.defineProperty(exports, "init_m0", {
 	enumerable: true,
 	get: function() {
@@ -266,14 +258,13 @@ Object.defineProperty(exports, "v0", {
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 const require_g = require("./g.js");
-//#region m3.js
+// m3.js
 function init_m3() {
 	return (init_m3 = require_rolldown_runtime.__esmMin((() => {
 		require_g.init_m2();
 		globalThis.__log.push("m3");
 	})))();
 }
-//#endregion
 Object.defineProperty(exports, "init_m3", {
 	enumerable: true,
 	get: function() {
@@ -286,7 +277,7 @@ Object.defineProperty(exports, "init_m3", {
 ### rolldown-runtime.js
 
 ```js
-//#region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 var __esmMin = (fn, res, err) => () => {
 	if (err) throw err[0];
 	try {
@@ -295,7 +286,6 @@ var __esmMin = (fn, res, err) => () => {
 		throw err = [e], e;
 	}
 };
-//#endregion
 Object.defineProperty(exports, "__esmMin", {
 	enumerable: true,
 	get: function() {

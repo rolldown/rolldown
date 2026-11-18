@@ -27,6 +27,7 @@ export default defineTest({
       chunkFileNames,
       assetFileNames: 'assets/[name]-[hash][extname]',
       file: 'dist/[name].js',
+      charset: 'ascii',
       format: 'umd',
       exports: 'auto',
       esModule: 'if-default-prop',
@@ -97,6 +98,7 @@ export default defineTest({
       expect(option.assetFileNames).toBe('assets/[name]-[hash][extname]');
       expect(option.file).toBe('dist/[name].js');
       expect(option.dir).toBe(undefined);
+      expect(option.charset).toBe('ascii');
       expect(option.format).toBe('umd');
       expect(option.exports).toBe('auto');
       expect(option.esModule).toBe('if-default-prop');

@@ -16,7 +16,7 @@ bin/cli.mjs
         → register options with cac          — loop schemaInfo + alias, build rawName strings
         → cli.parse(process.argv, { run: true })
         → post-processing:
-          → delete `--` key and short-alias duplicates
+          → append `--` arguments to positionals, then delete the key and short-alias duplicates
           → prototype pollution guard
           → unknown option detection + warning
           → rawArgs snapshot
@@ -26,7 +26,7 @@ bin/cli.mjs
       → arguments/normalize.ts
         → validateCliOptions() via valibot
         → split into input/output based on schema keys
-        → merge positionals into input.input
+        → use positionals as input.input (exit with an error if `--input` is also set, like Rollup; `--help` and `--version` skip this check)
     → process --environment (KEY:VALUE → process.env)
     → if --help: showHelp()
     → if --version: print version
@@ -134,7 +134,7 @@ cli.parse(process.argv, { run: true });
 
 ## Post-Processing Order
 
-1. Delete `parsedOptions['--']` (cac-specific artifact)
+1. Append `parsedOptions['--']` to positional input, then delete the cac-specific key
 2. Delete short-alias duplicate keys
 3. Prototype pollution guard
 4. Unknown option detection + warning
@@ -176,7 +176,11 @@ After cac's `setDotProp`, parsed options already have nested structure. The obje
 
 ### `--` Delimiter
 
-`parseArgs` treats args after `--` as positionals. cac collects them into `options['--']` as an array. We delete this key in post-processing since no downstream code uses it.
+`parseArgs` treats args after `--` as positionals. cac collects them into `options['--']` as a string array. Post-processing appends them to the earlier positionals before deleting this parser-specific key. Their order is preserved, and values beginning with `-` remain entry paths rather than options.
+
+### The JS API Loads `cli/logger.ts` Lazily
+
+`utils/bindingify-output-options.ts` prints its warnings with the CLI logger, so the JS API and the CLI show them in the same format. consola is costly to load (it bundles `string-width`, which creates an `Intl.Segmenter` at load time), so that file imports `cli/logger.ts` with `await import()`, only when a warning can be printed. Keep `cli/logger.ts` out of the static imports of the JS API entries (`index.ts`, `experimental-index.ts`).
 
 ## Edge Cases
 
@@ -261,12 +265,12 @@ The previous implementation used Node.js's built-in `parseArgs` with 16 hand-rol
 
 ### Behavioral Differences
 
-| Change                      | Before                                             | After                                                |
-| --------------------------- | -------------------------------------------------- | ---------------------------------------------------- |
-| Numeric string coercion     | `--code-splitting.min-size 1000` → string `"1000"` | → number `1000` (mri coerces numeric-looking values) |
-| `--no-*` on unknown options | warns "foo is unrecognized"                        | same warning, value is `false` instead of absent     |
-| `--` delimiter              | args after `--` become positionals                 | collected into `options['--']`, deleted in post-proc |
-| Short flag stacking         | not supported                                      | `-ms` = `--minify --sourcemap`                       |
+| Change                      | Before                                             | After                                                        |
+| --------------------------- | -------------------------------------------------- | ------------------------------------------------------------ |
+| Numeric string coercion     | `--code-splitting.min-size 1000` → string `"1000"` | → number `1000` (mri coerces numeric-looking values)         |
+| `--no-*` on unknown options | warns "foo is unrecognized"                        | same warning, value is `false` instead of absent             |
+| `--` delimiter              | args after `--` become positionals                 | collected into `options['--']`, then appended to positionals |
+| Short flag stacking         | not supported                                      | `-ms` = `--minify --sourcemap`                               |
 
 ### Why `default` Was Removed From `alias.ts`
 

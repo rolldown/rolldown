@@ -1,0 +1,76 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// main.js
+const reads = [flag];
+const errors = [];
+try {
+	run();
+} catch (error) {
+	errors.push(error.name);
+}
+var flag = true;
+var run = () => {};
+assert.deepStrictEqual(reads, [void 0]);
+assert.deepStrictEqual(errors, ["TypeError"]);
+export { flag, run };
+
+```
+
+# Variant: [inline_const: Config(InlineConstConfig { mode: Some(All), pass: 2 })]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert";
+// main.js
+const reads = [flag];
+const errors = [];
+try {
+	run();
+} catch (error) {
+	errors.push(error.name);
+}
+var flag = true;
+var run = () => {};
+assert.deepStrictEqual(reads, [void 0]);
+assert.deepStrictEqual(errors, ["TypeError"]);
+export { flag, run };
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+// main.js
+const reads = [flag];
+const errors = [];
+try {
+	run();
+} catch (error) {
+	errors.push(error.name);
+}
+var flag = true;
+var run = () => {};
+node_assert.default.deepStrictEqual(reads, [void 0]);
+node_assert.default.deepStrictEqual(errors, ["TypeError"]);
+exports.flag = flag;
+exports.run = run;
+
+```

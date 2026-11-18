@@ -6,32 +6,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region default.jsx
+// default.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
-//#endregion
-//#region null.jsx
+// null.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
-//#endregion
-//#region boolean.jsx
+// boolean.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
-//#endregion
-//#region number.jsx
+// number.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
-//#endregion
-//#region string-single-empty.jsx
+// string-single-empty.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
-//#endregion
-//#region string-double-empty.jsx
+// string-double-empty.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
-//#endregion
-//#region string-single-punctuation.jsx
+// string-single-punctuation.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
-//#endregion
-//#region string-double-punctuation.jsx
+// string-double-punctuation.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
-//#endregion
-//#region string-template.jsx
+// string-template.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null));
-//#endregion
 
 ```

@@ -7,9 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-//#region foo.js
+// foo.js
 const devil = "devil";
-//#endregion
 exports["😈"] = devil;
 
 ```

@@ -8,29 +8,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region leaflet.js
-var require_leaflet = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+// leaflet.js
+var require_leaflet = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
 	(function(global, factory) {
 		typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.leaflet = {}));
-	})(exports, function(exports$1) {
+	})(this$1, function(exports) {
 		"use strict";
-		exports$1.foo = "foo";
-		global.L = exports$1;
+		exports.foo = "foo";
+		global.L = exports;
 	});
 }));
-//#endregion
-//#region leaflet-toolbar.js
+// leaflet-toolbar.js
 var require_leaflet_toolbar = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	global.bar = global.L.foo;
 	module.exports = bar;
 }));
-//#endregion
-//#region lib.js
 require_leaflet();
 require_leaflet_toolbar();
-//#endregion
-//#region main.js
+// main.js
 assert.equal(bar, "foo");
-//#endregion
 
 ```

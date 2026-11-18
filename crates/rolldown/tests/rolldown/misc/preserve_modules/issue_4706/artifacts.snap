@@ -15,10 +15,9 @@ export { __commonJSMin };
 
 ```js
 import { require_cjs } from "./cjs.js";
-//#region child.js
+// child.js
 const m = require_cjs();
 console.log(m);
-//#endregion
 
 ```
 
@@ -26,11 +25,10 @@ console.log(m);
 
 ```js
 import { __commonJSMin } from "./_virtual/_rolldown/runtime.js";
-//#region cjs.js
+// cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1e4;
 }));
-//#endregion
 export default require_cjs();
 export { require_cjs };
 
@@ -39,9 +37,8 @@ export { require_cjs };
 ## dynamic.js
 
 ```js
-//#region dynamic.js
+// dynamic.js
 console.log("dynamic");
-//#endregion
 
 ```
 
@@ -56,8 +53,7 @@ import "./reexport.js";
 ## reexport.js
 
 ```js
-//#region reexport.js
+// reexport.js
 import("./dynamic.js");
-//#endregion
 
 ```

@@ -8,19 +8,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as init_m1 } from "./m1.js";
-//#region m3.cjs
+// m3.cjs
 var require_m3 = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("m3");
 }));
-//#endregion
-//#region m2.js
+// m2.js
 function init_m2() {
 	return (init_m2 = __esmMin((() => {
 		console.log("m2");
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_m1();
@@ -28,7 +26,6 @@ function init_main() {
 		console.log("m0");
 	})))();
 }
-//#endregion
 export { init_m2 as n, require_m3 as r, init_main as t };
 
 ```
@@ -38,14 +35,12 @@ export { init_m2 as n, require_m3 as r, init_main as t };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { r as require_m3 } from "./group-0.js";
-//#region m1.js
 function init_m1() {
 	return (init_m1 = __esmMin((() => {
 		require_m3();
 		console.log("m1");
 	})))();
 }
-//#endregion
 export { init_m1 as t };
 
 ```
@@ -76,19 +71,17 @@ export { __esmMin as n, __commonJSMin as t };
 ```js
 import { n as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
 import { t as init_m1 } from "./m1.js";
-//#region m3.cjs
+// m3.cjs
 var require_m3 = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("m3");
 }));
-//#endregion
-//#region m2.js
+// m2.js
 function init_m2() {
 	return (init_m2 = __esmMin((() => {
 		console.log("m2");
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_m1();
@@ -96,7 +89,6 @@ function init_main() {
 		console.log("m0");
 	})))();
 }
-//#endregion
 export { init_m2 as n, require_m3 as r, init_main as t };
 
 ```
@@ -106,14 +98,12 @@ export { init_m2 as n, require_m3 as r, init_main as t };
 ```js
 import { n as __esmMin } from "./rolldown-runtime.js";
 import { r as require_m3 } from "./group-0.js";
-//#region m1.js
 function init_m1() {
 	return (init_m1 = __esmMin((() => {
 		require_m3();
 		console.log("m1");
 	})))();
 }
-//#endregion
 export { init_m1 as t };
 
 ```

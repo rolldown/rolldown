@@ -1,19 +1,17 @@
-use std::{ops::Deref, pin::Pin, sync::Arc};
+use std::{ops::Deref, sync::Arc};
 
 use futures::future::try_join_all;
 use oxc_index::{IndexVec, index_vec};
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Asset, ChunkIdx, ConcatenateWrappedModuleKind, EmittedChunkInfo, InstantiationKind,
-  ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk, SharedFileEmitter,
-  SymbolRef, UsedSymbolRefs,
+  Asset, ChunkIdx, EmittedChunkInfo, InstantiationKind, ModuleIdx, ModuleRenderOutput, Output,
+  OutputAsset, OutputChunk, SharedFileEmitter, SymbolRef, UsedSymbolRefs,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
-use rolldown_error::{BatchedBuildDiagnostic, BuildResult, Diagnostics};
+use rolldown_error::{BuildResult, Diagnostics};
 use rolldown_utils::{
-  index_vec_ext::IndexVecRefExt as _,
-  indexmap::{FxIndexMap, FxIndexSet},
-  rayon::{IntoParallelRefIterator, ParallelIterator},
+  indexmap::FxIndexMap,
+  rayon::{IntoParallelIterator, ParallelIterator},
 };
 use rustc_hash::FxHashMap;
 
@@ -21,8 +19,8 @@ use crate::{
   BundleOutput,
   chunk_graph::ChunkGraph,
   ecmascript::ecma_generator::EcmaGenerator,
-  type_alias::{AssetVec, IndexChunkToInstances, IndexEcmaAst, IndexInstantiatedChunks},
-  types::generator::{GenerateContext, GenerateOutput, Generator},
+  type_alias::{AssetVec, IndexChunkToInstance, IndexEcmaAst, IndexInstantiatedChunks},
+  types::generator::GenerateContext,
   utils::{
     augment_chunk_hash::augment_chunk_hash,
     chunk::{finalize_chunks::finalize_assets, render_chunk_exports::get_export_items},
@@ -30,15 +28,7 @@ use crate::{
   },
 };
 
-use super::{CarriedRender, GenerateStage};
-
-type ChunkGeneratorFuture<'a> = Pin<
-  Box<
-    dyn Future<Output = Result<Result<GenerateOutput, BatchedBuildDiagnostic>, anyhow::Error>>
-      + 'a
-      + Send,
-  >,
->;
+use super::{CarriedRender, GenerateStage, minify_chunks::ChunkMinifier};
 
 impl GenerateStage<'_> {
   pub async fn render_chunk_to_assets(
@@ -56,10 +46,10 @@ impl GenerateStage<'_> {
     let mut diagnostics = std::mem::take(&mut self.link_output.diagnostics);
     let inline_renders = std::mem::take(&mut self.inline_renders);
     // `ast_table` is threaded by value into `create_chunk_to_codegen_ret_map`
-    // (the last reader), where it is dropped at scope exit by the compiler —
-    // releasing the per-module bumpalo arenas before `minify_chunks` and
-    // `finalize_assets` allocate.
-    let (mut instantiated_chunks, index_chunk_to_instances) = self
+    // (the last reader), which frees each module's AST as soon as it is printed
+    // and drops the rest at scope exit — releasing the per-module bumpalo arenas
+    // before minification (in `render_chunks`) and `finalize_assets` allocate.
+    let (mut instantiated_chunks, index_chunk_to_instance) = self
       .instantiate_chunks(
         chunk_graph,
         ast_table,
@@ -71,13 +61,28 @@ impl GenerateStage<'_> {
       .await?;
 
     self.trace_action_package_graph_ready(chunk_graph, &instantiated_chunks);
+    self.trace_action_module_rendered(&instantiated_chunks);
 
-    diagnostics
-      .extend(render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await?);
+    // Chunks are minified inside `render_chunks`, each right after its `renderChunk` hooks.
+    // `augmentChunkHash` runs afterwards; minification changes nothing that hook receives.
+    let minifier = ChunkMinifier::new(self.options, &instantiated_chunks)?.map(Arc::new);
+    diagnostics.extend(
+      render_chunks(
+        self.plugin_driver,
+        &mut instantiated_chunks,
+        self.options,
+        &chunk_graph.chunk_table,
+        &self.link_output.module_table,
+        minifier.as_ref(),
+      )
+      .await?,
+    );
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
 
-    let mangle_cache = Self::minify_chunks(self.options, &mut instantiated_chunks)?;
+    let mangle_cache = minifier.and_then(|minifier| {
+      Arc::into_inner(minifier).expect("minify jobs have finished").into_mangle_cache()
+    });
 
     Self::post_banner_footer(&mut instantiated_chunks)?;
 
@@ -85,7 +90,7 @@ impl GenerateStage<'_> {
       chunk_graph,
       self.link_output,
       instantiated_chunks,
-      &index_chunk_to_instances,
+      &index_chunk_to_instance,
       self.options.hash_characters,
       self.options,
       self.resolved_paths.as_ref(),
@@ -105,7 +110,7 @@ impl GenerateStage<'_> {
           let rendered_chunk = ecma_meta.rendered_chunk;
           output.push(Output::Chunk(Arc::new(OutputChunk {
             name: rendered_chunk.name.clone(),
-            filename: filename.clone(),
+            filename,
             code,
             is_entry: rendered_chunk.is_entry,
             is_dynamic_entry: rendered_chunk.is_dynamic_entry,
@@ -122,18 +127,10 @@ impl GenerateStage<'_> {
         }
         InstantiationKind::Sourcemap(sourcemap_meta) => {
           output.push(Output::Asset(Arc::new(OutputAsset {
-            filename: filename.clone(),
+            filename,
             source: code,
             original_file_names: sourcemap_meta.original_file_names,
             names: sourcemap_meta.names,
-          })));
-        }
-        InstantiationKind::None => {
-          output.push(Output::Asset(Arc::new(OutputAsset {
-            filename: filename.clone(),
-            source: code,
-            original_file_names: vec![],
-            names: vec![],
           })));
         }
       }
@@ -165,9 +162,9 @@ impl GenerateStage<'_> {
     used_symbol_refs: &UsedSymbolRefs,
     order_state: &super::order_wrap_state::OrderWrapState,
     mut inline_renders: FxHashMap<ChunkIdx, Vec<CarriedRender>>,
-  ) -> BuildResult<(IndexInstantiatedChunks, IndexChunkToInstances)> {
-    let mut index_chunk_to_instances: IndexChunkToInstances =
-      index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
+  ) -> BuildResult<(IndexInstantiatedChunks, IndexChunkToInstance)> {
+    let mut index_chunk_to_instance: IndexChunkToInstance =
+      index_vec![None; chunk_graph.chunk_table.len()];
     let mut index_instantiated_chunks: IndexInstantiatedChunks =
       IndexVec::with_capacity(chunk_graph.chunk_table.len());
     let chunk_index_to_codegen_rets = self.create_chunk_to_codegen_ret_map(chunk_graph, ast_table);
@@ -201,9 +198,9 @@ impl GenerateStage<'_> {
           let carried_renders = inline_renders.remove(&chunk_idx).unwrap_or_default();
           Some((chunk_idx, chunk, module_id_to_codegen_ret, carried_renders))
         })
-        .flat_map(|(chunk_idx, chunk, module_id_to_codegen_ret, carried_renders)| {
+        .map(|(chunk_idx, chunk, module_id_to_codegen_ret, carried_renders)| {
           let resolved_paths = self.resolved_paths.as_ref();
-          let ecma_chunks_future: ChunkGeneratorFuture = Box::pin(async move {
+          async move {
             let mut ecma_ctx = GenerateContext {
               chunk_idx,
               chunk,
@@ -219,34 +216,23 @@ impl GenerateStage<'_> {
               inline_state: &self.inline_state,
               carried_renders,
             };
-            let ecma_chunks_future = EcmaGenerator::instantiate_chunk(&mut ecma_ctx);
-            let ecma_chunks = ecma_chunks_future.await?;
-            Ok(ecma_chunks)
-          });
-          [ecma_chunks_future]
+            EcmaGenerator::instantiate_chunk(&mut ecma_ctx).await
+          }
         }),
     )
     .await?
     .into_iter()
     .for_each(|result| match result {
       Ok(generate_output) => {
-        generate_output.chunks.into_iter().for_each(|ins_chunk| {
-          let base_chunk_idx = ins_chunk.originate_from;
-          let ins_chunk_idx = index_instantiated_chunks.push(ins_chunk);
-          index_chunk_to_instances[base_chunk_idx].insert(ins_chunk_idx);
-        });
+        let base_chunk_idx = generate_output.chunk.originate_from;
+        let ins_chunk_idx = index_instantiated_chunks.push(generate_output.chunk);
+        index_chunk_to_instance[base_chunk_idx] = Some(ins_chunk_idx);
         diagnostics.extend(generate_output.warnings);
       }
       Err(e) => diagnostics.extend(e.into_vec()),
     });
 
-    index_chunk_to_instances.iter_mut().for_each(|instances| {
-      instances.sort_by_cached_key(|ins_chunk_idx| {
-        index_instantiated_chunks[*ins_chunk_idx].preliminary_filename.as_str()
-      });
-    });
-
-    Ok((index_instantiated_chunks, index_chunk_to_instances))
+    Ok((index_instantiated_chunks, index_chunk_to_instance))
   }
 
   /// Create a IndexVecMap from chunk index to related modules codegen return list.
@@ -257,47 +243,70 @@ impl GenerateStage<'_> {
   ///   [Some(ecma1_codegen), Some(ecma2_codegen), None],
   ///   [Some(ecma3_codegen), None],
   /// ]
-  // `ast_table` is taken by value on purpose: this is the last reader, and
-  // having the compiler drop it at scope exit (rather than borrowing it and
-  // dropping later) is what releases the per-module bumpalo arenas before the
-  // rest of `instantiate_chunks` runs.
-  #[expect(clippy::needless_pass_by_value)]
+  ///
+  /// This is the last reader of `ast_table`. Each module's AST moves into the work list of the
+  /// chunk that prints it and is dropped as soon as that module is printed, so the per-module
+  /// arenas are released while the other chunks are still rendering. Holding every AST until
+  /// the last chunk is printed would stack the whole AST table on top of all the codegen output.
+  /// A module printed by more than one chunk keeps its AST in `ast_table` until the end.
   fn create_chunk_to_codegen_ret_map(
     &self,
     chunk_graph: &ChunkGraph,
-    ast_table: IndexEcmaAst,
+    mut ast_table: IndexEcmaAst,
   ) -> Vec<Vec<Option<ModuleRenderOutput>>> {
     let needs_extra_indent = matches!(
       self.options.format,
       rolldown_common::OutputFormat::Iife | rolldown_common::OutputFormat::Umd
     );
-    chunk_graph
+    let mut print_count: IndexVec<ModuleIdx, u32> = index_vec![0; ast_table.len()];
+    for (chunk_idx, item) in chunk_graph.chunk_table.iter_enumerated() {
+      // A record's modules were finalized and printed per carrier; its own ASTs stay untouched.
+      if self.inline_state.is_record(chunk_idx) {
+        continue;
+      }
+      for &module_idx in &item.modules {
+        print_count[module_idx] += 1;
+      }
+    }
+    let work = chunk_graph
       .chunk_table
-      .par_iter_enumerated()
+      .iter_enumerated()
       .map(|(chunk_idx, item)| {
-        // A record's modules were finalized and printed per carrier; its own ASTs stay untouched.
         if self.inline_state.is_record(chunk_idx) {
           return vec![];
         }
         item
           .modules
-          .par_iter()
-          .map(|&module_idx| match self.link_output.module_table[module_idx].as_normal() {
-            Some(module) => {
-              let ast = ast_table[module.idx].as_ref().expect("should have ast");
-              #[expect(clippy::bool_to_int_with_if)]
-              let initial_indent = if needs_extra_indent
-                || !matches!(
-                  self.link_output.metas[module_idx].concatenated_wrapped_module_kind,
-                  ConcatenateWrappedModuleKind::None
-                ) {
-                1
-              } else {
-                0
-              };
-              Some(module.render(self.options, &ModuleRenderArgs::Ecma { ast }, initial_indent))
-            }
-            _ => None,
+          .iter()
+          .map(|&module_idx| {
+            let owned_ast =
+              if print_count[module_idx] == 1 { ast_table[module_idx].take() } else { None };
+            (module_idx, owned_ast)
+          })
+          .collect::<Vec<_>>()
+      })
+      .collect::<Vec<_>>();
+    let shared_ast_table = &ast_table;
+    work
+      .into_par_iter()
+      .map(|modules| {
+        modules
+          .into_par_iter()
+          .map(|(module_idx, owned_ast)| {
+            let module = self.link_output.module_table[module_idx].as_normal()?;
+            let ast = owned_ast
+              .as_ref()
+              .or(shared_ast_table[module_idx].as_ref())
+              .expect("should have ast");
+            #[expect(clippy::bool_to_int_with_if)]
+            let initial_indent = if needs_extra_indent { 1 } else { 0 };
+            Some(crate::utils::render_ecma_module::render_normal_module(
+              module,
+              self.options,
+              ast,
+              initial_indent,
+            ))
+            // `owned_ast` is dropped here, releasing this module's arena.
           })
           .collect::<Vec<_>>()
       })

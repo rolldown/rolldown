@@ -1,0 +1,9 @@
+{
+  "_comment": "`M.js` reaches `X` through `a.js` and through `b.js`. `q.js` resolves the `b.js` branch to `q1.js`, and only its skipped record from `q2.js` leaves that branch uncertain. The binding is still known and differs from `a.js`, so `X` is ambiguous whatever the skipped record holds. It must be reported as AMBIGUOUS_EXTERNAL_NAMESPACES, like with lazy barrel off.",
+  "config": {
+    "experimental": {
+      "lazyBarrel": true
+    }
+  },
+  "expectError": true
+}

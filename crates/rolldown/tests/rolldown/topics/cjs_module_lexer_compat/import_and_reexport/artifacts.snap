@@ -8,7 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 let external = require("external");
-exports.readFileSync = external.readFileSync;
+Object.defineProperty(exports, "readFileSync", {
+	enumerable: true,
+	get: function() {
+		return external.readFileSync;
+	}
+});
 Object.keys(external).forEach(function(k) {
 	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,

@@ -4,9 +4,10 @@ use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
 use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions};
+use oxc::diagnostics::Severity as OxcSeverity;
 use oxc::parser::{ParseOptions, Parser};
 use oxc::transformer::Transformer;
-use rolldown_common::{BundlerTransformOptions, ModuleType};
+use rolldown_common::{BundlerTransformOptions, LogWithoutPlugin, ModuleType};
 use rolldown_ecmascript::semantic_builder_for_transform;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, EventKind, Severity};
 use rolldown_plugin::{HookTransformOutputMap, HookUsage, Plugin, SharedTransformPluginContext};
@@ -81,14 +82,28 @@ impl Plugin for ViteTransformPlugin {
     let scoping = semantic_builder_for_transform().build(&program).semantic.into_scoping();
     let transformer = Transformer::new(&allocator, Path::new(args.id), &transform_options);
     let transformer_return = transformer.build_with_scoping(scoping, &mut program);
-    if !transformer_return.diagnostics.is_empty() {
-      Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
-        transformer_return.diagnostics,
-        args.code,
-        args.id,
-        Severity::Error,
-        EventKind::ParseError,
-      )))?;
+    let diagnostics = transformer_return.diagnostics;
+    if diagnostics.has_errors() {
+      return Err(
+        BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
+          diagnostics.into_iter().filter(|d| d.severity == OxcSeverity::Error),
+          args.code,
+          args.id,
+          Severity::Error,
+          EventKind::ParseError,
+        ))
+        .into(),
+      );
+    }
+    // The transformer also reports warnings (e.g. unsupported syntax for the target).
+    // They should not fail the build.
+    for warning in diagnostics {
+      ctx.warn(LogWithoutPlugin {
+        message: warning.message.to_string(),
+        id: Some(args.id.to_string()),
+        code: Some(EventKind::ToleratedTransform.to_string()),
+        ..Default::default()
+      });
     }
 
     let CodegenReturn { mut code, map, .. } = Codegen::new()

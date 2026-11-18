@@ -1,0 +1,63 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## EVAL
+
+```text
+[EVAL] Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[ main.js:6:3 ]
+   │
+ 6 │   eval('flag = false; other = false');
+   │   ──┬─  
+   │     ╰─── Use of direct `eval` here.
+   │ 
+   │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// main.js
+const before = flag;
+var flag = true;
+var other = true;
+function change() {
+	eval("flag = false; other = false");
+}
+function read() {
+	return [flag, other];
+}
+exports.before = before;
+Object.defineProperty(exports, "change", {
+	enumerable: true,
+	get: function() {
+		return change;
+	}
+});
+Object.defineProperty(exports, "flag", {
+	enumerable: true,
+	get: function() {
+		return flag;
+	}
+});
+Object.defineProperty(exports, "other", {
+	enumerable: true,
+	get: function() {
+		return other;
+	}
+});
+Object.defineProperty(exports, "read", {
+	enumerable: true,
+	get: function() {
+		return read;
+	}
+});
+
+```

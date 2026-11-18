@@ -6,17 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## pageA_page.js
 
 ```js
-//#region pageA/page.js
+// pageA/page.js
 console.log(123);
-//#endregion
 
 ```
 
 ## pageB_page.js
 
 ```js
-//#region pageB/page.js
+// pageB/page.js
 console.log(-123);
-//#endregion
 
 ```

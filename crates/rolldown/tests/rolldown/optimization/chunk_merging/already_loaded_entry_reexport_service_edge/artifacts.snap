@@ -7,15 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as a } from "./x.js";
-//#region w.js
+// w.js
 const q = "value-q";
-//#endregion
-//#region y.js
+// y.js
 (globalThis.entryLog ??= []).push(`y:${a}`);
-//#endregion
-//#region d.js
+// d.js
 (globalThis.entryLog ??= []).push(`d:${q}`);
-//#endregion
 export { q as t };
 
 ```
@@ -25,19 +22,17 @@ export { q as t };
 ```js
 import { t as a } from "./x.js";
 import "./d.js";
-//#region entry.js
+// entry.js
 (globalThis.entryLog ??= []).push(`entry:${a}`);
 globalThis.loadD = () => import("./d.js");
-//#endregion
 
 ```
 
 ## x.js
 
 ```js
-//#region x.js
+// x.js
 const a = "value-a";
-//#endregion
 export { a as t };
 
 ```

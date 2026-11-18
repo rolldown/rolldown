@@ -1,0 +1,27 @@
+{
+  "_comment": "A later constant pass must not give `ALIAS` the value of `VALUE` before `VALUE` is initialized: `VALUE` is declared after `ALIAS`, or a later module of the same import cycle exports it. `ALIAS` is `undefined` or in its TDZ, so `1n * ALIAS` must throw.",
+  "config": {
+    "input": [
+      {
+        "name": "main-var",
+        "import": "./main-var.js"
+      },
+      {
+        "name": "main-const",
+        "import": "./main-const.js"
+      },
+      {
+        "name": "main-cycle",
+        "import": "./main-cycle.js"
+      }
+    ],
+    "minify": false,
+    "optimization": {
+      "inlineConst": {
+        "mode": "smart",
+        "pass": 2
+      }
+    }
+  },
+  "snapshot": false
+}

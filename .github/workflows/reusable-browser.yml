@@ -29,40 +29,48 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+      - uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
+        id: vp-setup
+        background: true
         with:
-          tools: just
+          version: '1.7.0'
+          cache: true
+
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@12a52e3caf7bac9d8b9ca550a82c425ed6343aee # v1.0.18
+        with:
           # reads the cache the WASI job saves on main; both build the same debug wasm32 target
           cache-key: debug-build-wasi
           save-cache: false
 
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
-        with:
-          version: '1.0.0'
-          cache: true
-
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
+
+      - wait: vp-setup
+
+      - name: Prepare browser test fixtures
+        env:
+          FIXTURE_SUITE: ${{ inputs.changed && 'all' || 'webcontainer' }}
+        run: vp run --filter browser-tests prepare-fixture "$FIXTURE_SUITE"
 
       # no browser download: the vitest config points Playwright at the runner's system Chrome
       - name: Browser Smoke Test
         if: ${{ inputs.changed }}
-        run: just test-browser
+        run: vp exec --filter browser-tests vitest run --project browser
 
       # plain Node, no WebContainer: the packed `rolldown` with no binding installed has to load
       # the packed WASI binding through webcontainer-fallback.cjs, the path vite.new takes
       - name: WebContainer Fallback Test
         if: ${{ inputs.changed }}
-        run: just test-webcontainer-fallback
+        run: vp exec --filter browser-tests vitest run --project webcontainer-fallback
 
       # opt-in only, and slower: it boots a WebContainer from StackBlitz's CDN
       - name: WebContainer Smoke Test
         if: ${{ inputs.webcontainer }}
-        run: just test-webcontainer
+        run: vp exec --filter browser-tests vitest run --project webcontainer
 
       - name: Upload failure screenshots
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: browser-tests-screenshots

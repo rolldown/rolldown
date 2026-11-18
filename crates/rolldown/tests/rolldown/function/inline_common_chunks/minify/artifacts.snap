@@ -6,13 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import{i as e,n as t,r as n,t as r}from"./rolldown-runtime.js";t(`shared-ZmCA4nrZ`,e=>{function t(){return i+=1,i}var i;function a(){return(a=r((()=>{globalThis.events.push(`S body`),i=0})))()}n(e,{n:()=>i,r:()=>a,t:()=>t})});var i=e(`shared-ZmCA4nrZ`);function a(){return(a=r((()=>{i.r(),globalThis.events.push(`A `+i.n+` `+(0,i.t)())})))()}a();
+import{i as e,n as t,r as n,t as r}from"./rolldown-runtime.js";t(`shared-ZmCA4nrZ`,(e=>{function t(){return i+=1,i}var i;function a(){return(a=r((()=>{globalThis.events.push(`S body`),i=0})))()}n(e,{n:()=>i,r:()=>a,t:()=>t})}));var i=e(`shared-ZmCA4nrZ`);function a(){return(a=r((()=>{i.r(),globalThis.events.push(`A `+i.n+` `+(0,i.t)())})))()}a();
 ```
 
 ## b.js
 
 ```js
-import{i as e,n as t,r as n,t as r}from"./rolldown-runtime.js";t(`shared-ZmCA4nrZ`,e=>{function t(){return i+=1,i}var i;function a(){return(a=r((()=>{globalThis.events.push(`S body`),i=0})))()}n(e,{n:()=>i,r:()=>a,t:()=>t})});var i=e(`shared-ZmCA4nrZ`);function a(){return(a=r((()=>{i.r(),globalThis.events.push(`B `+i.n+` `+(0,i.t)())})))()}a();
+import{i as e,n as t,r as n,t as r}from"./rolldown-runtime.js";t(`shared-ZmCA4nrZ`,(e=>{function t(){return i+=1,i}var i;function a(){return(a=r((()=>{globalThis.events.push(`S body`),i=0})))()}n(e,{n:()=>i,r:()=>a,t:()=>t})}));var i=e(`shared-ZmCA4nrZ`);function a(){return(a=r((()=>{i.r(),globalThis.events.push(`B `+i.n+` `+(0,i.t)())})))()}a();
 ```
 
 ## rolldown-runtime.js

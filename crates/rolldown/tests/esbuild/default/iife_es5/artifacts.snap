@@ -7,9 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 (function() {
-	//#region entry.js
+	// entry.js
 	console.log("test");
-	//#endregion
 })();
 
 ```

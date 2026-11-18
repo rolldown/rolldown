@@ -1,8 +1,8 @@
 pub mod chunk_debug_info;
 pub mod chunk_reason_type;
 pub mod cross_chunk_import_item;
-pub mod module_group;
 pub mod preliminary_filename;
+pub mod static_import;
 
 pub struct AddonRenderContext<'code> {
   pub hashbang: Option<&'code str>,

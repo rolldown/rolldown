@@ -1,0 +1,13 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/11400 — with preserveModules, `[name]` must keep extensions that are not JS/TS, matching Rollup. `card.json` is emitted as `card.json.js` so it does not take `card.js` away from the real module (which would be renamed `card2.js`). `note.ts` still drops `.ts` and stays `note.js`.",
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "./index.js"
+      }
+    ],
+    "preserveModules": true,
+    "entryFilenames": "[name].js"
+  }
+}

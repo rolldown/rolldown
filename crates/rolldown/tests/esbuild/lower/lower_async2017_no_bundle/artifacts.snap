@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 async function foo(bar) {
 	await bar;
 	return arguments;
@@ -30,7 +30,6 @@ var entry_default = [
 		};
 	}
 ];
-//#endregion
 export { entry_default as default };
 
 ```

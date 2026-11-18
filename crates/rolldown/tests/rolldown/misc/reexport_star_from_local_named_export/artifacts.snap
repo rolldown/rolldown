@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region foo.js
+// foo.js
 const value = 1;
-//#endregion
 export { value as foo };
 
 ```

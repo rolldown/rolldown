@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// local/jsx-runtime.js
+const jsx = (type, props, key) => ({
+	key,
+	props
+});
+// main.js
+const withEntities = /* @__PURE__ */ jsx("input", {
+	pattern: "\\d+",
+	title: "<tag>"
+}, "a & b");
+assert.strictEqual(withEntities.key, "a & b");
+assert.strictEqual(withEntities.props.pattern, "\\d+");
+assert.strictEqual(withEntities.props.title, "<tag>");
+const withLineBreak = /* @__PURE__ */ jsx("input", {}, "first\nsecond");
+assert.strictEqual(withLineBreak.key, "first\nsecond");
+
+```

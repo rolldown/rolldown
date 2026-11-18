@@ -35,12 +35,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region cjs.js
+// cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo_ = 123;
 	__require("xyz").bar_;
 }));
-//#endregion
 export default require_cjs();
 
 ```
@@ -49,9 +48,8 @@ export default require_cjs();
 
 ```js
 import "xyz";
-//#region esm.js
+// esm.js
 let foo_ = 123;
-//#endregion
 export { foo_ };
 
 ```

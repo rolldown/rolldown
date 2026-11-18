@@ -13,9 +13,11 @@ use super::super::{
 };
 use anyhow::Context;
 use arcstr::ArcStr;
-use rolldown_common::{GetLocalDbMut, Module, ScanMode, SharedFileEmitter, SymbolRefDb};
+use rolldown_common::{
+  GetLocalDbMut, Module, Output, ResolvedId, ScanMode, SharedFileEmitter, SymbolRefDb,
+};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
-use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
+use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Severity};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookCloseBundleArgs, HookRenderErrorArgs, SharedPluginDriver,
@@ -87,6 +89,25 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     Ok(())
   }
 
+  /// Await the `onLog` callback tasks spawned so far and fold any error they produced into the
+  /// result, so a throwing `onLog` fails the build. The watcher and incremental builds call
+  /// `scan_modules`, `bundle_write` and `bundle_generate` directly, so the drain lives in those
+  /// rather than in `write()` and `generate()`.
+  async fn merge_log_hook_errors<T>(&self, result: BuildResult<T>) -> BuildResult<T> {
+    let errors = self.plugin_driver.await_log_hook_tasks().await;
+    if errors.is_empty() {
+      return result;
+    }
+    let diagnostics = errors.into_iter().map(BuildDiagnostic::from);
+    match result {
+      Ok(_) => Err(BatchedBuildDiagnostic::new(diagnostics.collect())),
+      Err(mut batched) => {
+        batched.extend(diagnostics);
+        Err(batched)
+      }
+    }
+  }
+
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   pub async fn scan_modules(
     &mut self,
@@ -107,6 +128,15 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
   ) -> BuildResult<NormalizedScanStageOutput> {
     trace_action!(action::BuildStart { action: "BuildStart" });
     let is_full_scan_mode = scan_mode.is_full();
+
+    if !is_full_scan_mode {
+      // See `ScanStageCache::pending_build_rescans`.
+      for resolved_id in &self.cache.pending_build_rescans {
+        if self.cache.pending_rescans.iter().all(|queued| queued.id != resolved_id.id) {
+          self.cache.pending_rescans.push(resolved_id.clone());
+        }
+      }
+    }
 
     let scan_stage_output = match ScanStage::new(
       Arc::clone(&self.options),
@@ -131,20 +161,94 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
         return Err(errs);
       }
     };
+    self.cache.pending_build_rescans.clear();
 
-    let scan_stage_output = self
+    // The files this scan fetched; `repair_cache_after_failed_build` queues them again if the
+    // build fails.
+    let fetched_resolved_ids = if is_full_scan_mode {
+      vec![]
+    } else {
+      scan_stage_output
+        .module_table
+        .iter()
+        .filter_map(Module::as_normal)
+        .map(|module| module.originative_resolved_id.clone())
+        .collect()
+    };
+
+    let scan_stage_output = match self
       .normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode)
-      .await?;
+      .await
+    {
+      Ok(output) => output,
+      Err(errors) => {
+        self.repair_cache_after_failed_build(is_full_scan_mode, fetched_resolved_ids, None);
+        return Err(errors);
+      }
+    };
 
     // Make sure the cache is reset if incremental build is not enabled.
     if !self.options.experimental.is_incremental_build_enabled() {
       std::mem::take(&mut self.cache);
     }
 
-    Self::trace_action_module_graph_ready(&scan_stage_output);
+    if let Err(errors) = self.end_build_phase(&scan_stage_output).await {
+      self.repair_cache_after_failed_build(
+        is_full_scan_mode,
+        fetched_resolved_ids,
+        Some(scan_stage_output.symbol_ref_db),
+      );
+      return Err(errors);
+    }
+    Ok(scan_stage_output)
+  }
+
+  async fn end_build_phase(
+    &self,
+    scan_stage_output: &NormalizedScanStageOutput,
+  ) -> BuildResult<()> {
+    Self::trace_action_module_graph_ready(scan_stage_output);
+    // Drain before `buildEnd` so the hook receives an error thrown by `onLog` during the scan.
+    if let Err(errs) = self.merge_log_hook_errors(Ok(())).await {
+      self
+        .plugin_driver
+        .build_end(Some(&HookBuildEndArgs { errors: &errs, cwd: &self.options.cwd }))
+        .await?;
+      self
+        .plugin_driver
+        .close_bundle(Some(&HookCloseBundleArgs { errors: &errs, cwd: &self.options.cwd }))
+        .await?;
+      return Err(errs);
+    }
+
     self.plugin_driver.build_end(None).await?;
     trace_action!(action::BuildEnd { action: "BuildEnd" });
-    Ok(scan_stage_output)
+    Ok(())
+  }
+
+  /// Leaves the cache whole after a build failed between updating it and `bundle_up`, and queues
+  /// this build's files in [`ScanStageCache::pending_build_rescans`].
+  /// See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
+  ///
+  /// `symbol_ref_db` is the symbol table of the scan output, if
+  /// `normalize_scan_stage_output_and_update_cache` returned one.
+  fn repair_cache_after_failed_build(
+    &mut self,
+    is_full_scan_mode: bool,
+    fetched_resolved_ids: Vec<ResolvedId>,
+    symbol_ref_db: Option<SymbolRefDb>,
+  ) {
+    if is_full_scan_mode {
+      // No graph to build on: empty the cache, so the next build is a full one.
+      std::mem::take(&mut self.cache);
+      return;
+    }
+    if let Some(symbol_ref_db) = symbol_ref_db {
+      // `create_output` moved the table, scoping included, out of the cache.
+      self.cache.get_snapshot_mut().symbol_ref_db = symbol_ref_db;
+    }
+    self.cache.pending_build_rescans =
+      self.cache.still_needed(&self.cache.importers, fetched_resolved_ids);
   }
 
   #[inline]
@@ -166,6 +270,15 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   pub async fn bundle_write(
+    &mut self,
+    scan_stage_output: NormalizedScanStageOutput,
+  ) -> BuildResult<BundleOutput> {
+    let result = self.bundle_write_impl(scan_stage_output).await;
+    let result = self.merge_log_hook_errors(result).await;
+    self.invalidate_js_side_cache(result).await
+  }
+
+  async fn bundle_write_impl(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
@@ -238,7 +351,26 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
-    self.bundle_up(scan_stage_output, false).await
+    let result = self.bundle_up(scan_stage_output, false).await;
+    let result = self.merge_log_hook_errors(result).await;
+    self.invalidate_js_side_cache(result).await
+  }
+
+  /// A plugin may read `chunk.code` in `generateBundle` or `writeBundle` before a later hook fails, so the
+  /// JS side must drop its per-build caches on every exit of the output stage, not only on success.
+  async fn invalidate_js_side_cache(
+    &self,
+    result: BuildResult<BundleOutput>,
+  ) -> BuildResult<BundleOutput> {
+    let Some(invalidate_js_side_cache) = &self.options.invalidate_js_side_cache else {
+      return result;
+    };
+    match (result, invalidate_js_side_cache.call().await) {
+      (Ok(output), Ok(())) => Ok(output),
+      // The build error is the one to report.
+      (Err(errors), _) => Err(errors),
+      (Ok(_), Err(err)) => Err(err.into()),
+    }
   }
 
   #[tracing::instrument(level = "debug", skip(self, output))]
@@ -252,17 +384,13 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     if is_full_scan_mode {
       let mut output: NormalizedScanStageOutput =
         output.try_into().expect("Should be able to convert to NormalizedScanStageOutput");
-      // The scan produced a complete `output`; `defer_sync_scan_data` only
-      // mutates per-module `side_effects` best-effort, so its error doesn't
-      // invalidate `output`. Commit it rather than fall back to the stale prior
-      // snapshot.
+      // A full scan started from an empty cache, and the build fails on this error, so commit
+      // nothing: the next build is a full one, as after a failed full scan.
       // See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
-      let result =
-        defer_sync_scan_data(&self.options, &self.cache.module_id_to_idx, &mut output).await;
+      defer_sync_scan_data(&self.options, &self.cache.module_id_to_idx, &mut output).await?;
       if is_incremental {
         self.cache.set_snapshot(output.make_copy());
       }
-      result?;
       return Ok(output);
     }
 
@@ -295,20 +423,14 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     self.merge_immutable_fields_for_cache(std::mem::take(&mut link_stage_output.symbol_db));
 
     // `link_stage_output` is dead from here on (its `symbol_db` was just taken
-    // for the cache merge); ship the remaining heavy fields (module_table,
-    // metas, stmt_infos, ...) to a rayon worker so their free() happens off
-    // the critical path.
+    // for the cache merge); free the remaining heavy fields (module_table, metas,
+    // stmt_infos, ...) off the critical path.
     crate::utils::defer_drop::spawn_drop(link_stage_output);
 
-    if let Err(errors) = &bundle_output {
-      debug_assert!(errors.iter().all(|e| e.severity() == Severity::Error));
-      self
-        .plugin_driver
-        .render_error(&HookRenderErrorArgs { errors, cwd: &self.options.cwd })
-        .await?;
-    }
-
-    let mut output = bundle_output?;
+    let mut output = match bundle_output {
+      Ok(output) => output,
+      Err(errors) => return Err(self.handle_render_error(errors).await),
+    };
 
     // Add additional files from build plugins.
     self.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
@@ -321,11 +443,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     if let Err(errors) =
       GenerateStage::validate_mangle_properties_output(&self.options, &output.assets)
     {
-      self
-        .plugin_driver
-        .render_error(&HookRenderErrorArgs { errors: &errors, cwd: &self.options.cwd })
-        .await?;
-      return Err(errors);
+      return Err(self.handle_render_error(errors).await);
     }
 
     for asset in &output.assets {
@@ -337,11 +455,47 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       }
     }
 
-    if let Some(invalidate_js_side_cache) = &self.options.invalidate_js_side_cache {
-      invalidate_js_side_cache.call().await?;
-    }
-
+    Self::trace_action_output_chunk_graph_ready(&output.assets);
     Ok(output)
+  }
+
+  async fn handle_render_error(
+    &self,
+    mut errors: BatchedBuildDiagnostic,
+  ) -> BatchedBuildDiagnostic {
+    debug_assert!(errors.iter().all(|e| e.severity() == Severity::Error));
+    if let Err(error) = self
+      .plugin_driver
+      .render_error(&HookRenderErrorArgs { errors: &errors, cwd: &self.options.cwd })
+      .await
+    {
+      // Report the handler failure alongside the original rendering diagnostics.
+      errors.extend(BatchedBuildDiagnostic::from(error).into_vec());
+    }
+    errors
+  }
+
+  fn trace_action_output_chunk_graph_ready(output: &[Output]) {
+    if trace_action_enabled!() {
+      // See internal-docs/devtools/implementation.md. Plugins can rename, delete,
+      // or change imports in generateBundle, so the output is the graph source.
+      let chunks = output
+        .iter()
+        .filter_map(|asset| match asset {
+          Output::Chunk(chunk) => Some(action::OutputChunk {
+            file_name: chunk.filename.to_string(),
+            name: chunk.name.to_string(),
+            bytes: chunk.code.len() as u64,
+            is_entry: chunk.is_entry || chunk.is_dynamic_entry,
+            facade_module_id: chunk.facade_module_id.as_ref().map(ToString::to_string),
+            imports: chunk.imports.iter().map(ToString::to_string).collect(),
+            dynamic_imports: chunk.dynamic_imports.iter().map(ToString::to_string).collect(),
+          }),
+          Output::Asset(_) => None,
+        })
+        .collect();
+      trace_action!(action::OutputChunkGraphReady { action: "OutputChunkGraphReady", chunks });
+    }
   }
 
   fn merge_immutable_fields_for_cache(&mut self, symbol_db: SymbolRefDb) {

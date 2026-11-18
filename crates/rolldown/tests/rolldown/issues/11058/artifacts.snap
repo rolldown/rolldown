@@ -6,8 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { InjectionToken, Injector } from "ext";
-export { InjectionToken, Injector };
+export { InjectionToken, Injector } from "ext";
 
 ```
 

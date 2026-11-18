@@ -1,8 +1,8 @@
 // Eager pure re-export barrel in chunk A. It has no side effect or order-sensitive initializer of
 // its own, so on-demand wrapping does not plan it. The entry's live `pv` obligation must resolve
 // directly to `definer`; the retained-path overlay must not additionally reference
-// `init_definer`, because that would manufacture a cross-chunk A -> B edge. Wrap-all may retain a
-// conservative `init_forwarder` path and handles the resulting cycle through wrapper projection.
+// `init_definer`, because that would manufacture a cross-chunk A -> B edge. Wrap-all wraps this
+// barrel in an empty `init_forwarder` and resolves `pv` to `definer` the same way.
 //
 // The exported function declaration is hoisted and contributes nothing to an `__esm` closure, so
 // it keeps the barrel a real, retained module in chunk A (its named re-export is not inlined away)

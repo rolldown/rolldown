@@ -1,0 +1,30 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "app",
+        "import": "./main.js"
+      },
+      {
+        "name": "utility-page",
+        "import": "./utilities-page.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "preserveEntrySignatures": "false"
+  },
+  "configVariants": [
+    {
+      "_configName": "inline-large",
+      "codeSplitting": {
+        "experimentalInlineCommonChunks": {
+          "maxSize": 4096
+        }
+      }
+    },
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true
+    }
+  ]
+}

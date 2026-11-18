@@ -6,12 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region lib.js
+// lib.js
 let foo;
 try {
 	foo = await Promise.resolve("foo");
 } catch (_e) {}
-//#endregion
 export { foo };
 
 ```
@@ -24,7 +23,7 @@ export { foo };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region lib.js
+// lib.js
 var foo;
 function init_lib() {
 	return (init_lib = __esmMin((async () => {
@@ -33,14 +32,12 @@ function init_lib() {
 		} catch (_e) {}
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((async () => {
 		await init_lib();
 	})))();
 }
-//#endregion
 await init_main();
 export { foo };
 
@@ -53,12 +50,11 @@ export { foo };
 ### main.js
 
 ```js
-//#region lib.js
+// lib.js
 let foo;
 try {
 	foo = await Promise.resolve("foo");
 } catch (_e) {}
-//#endregion
 export { foo };
 
 ```

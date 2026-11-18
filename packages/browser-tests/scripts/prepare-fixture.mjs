@@ -8,6 +8,8 @@
 // webcontainer: the tarballs tests/webcontainer mounts inside the container.
 //   - @rolldown/browser, the single self-contained package the StackBlitz starter uses.
 //   - the plain `rolldown` package plus the separate @rolldown/binding-wasm32-wasi package.
+// webcontainer-fallback: the same `rolldown` and @rolldown/binding-wasm32-wasi tarballs, for the
+//   plain-Node suite that exercises the WebContainer download fallback.
 // browser: the same @rolldown/browser tarball, installed into tests/browser, the app the
 //   real-browser suite loads through Vite.
 import { execFileSync } from 'node:child_process';
@@ -25,8 +27,10 @@ const args = process.argv.slice(2);
 const shouldBuild = !args.includes('--no-build');
 const suite = args.find((arg) => !arg.startsWith('--')) ?? 'all';
 
-if (!['webcontainer', 'browser', 'all'].includes(suite)) {
-  throw new Error(`Unknown suite "${suite}", expected one of webcontainer, browser, all`);
+if (!['webcontainer', 'webcontainer-fallback', 'browser', 'all'].includes(suite)) {
+  throw new Error(
+    `Unknown suite "${suite}", expected one of webcontainer, webcontainer-fallback, browser, all`,
+  );
 }
 
 // files the @rolldown/binding-wasm32-wasi package publishes, produced by `build-binding:wasi`
@@ -74,7 +78,7 @@ function packBrowserPackage() {
   browserPacked = true;
 
   if (shouldBuild) {
-    run('pnpm', ['run', '--filter', 'rolldown', 'build-browser-pkg:debug'], repoRoot, 'browser');
+    run('pnpm', ['run', '--filter', 'rolldown', 'build-node'], repoRoot, 'browser');
   }
   pack(
     join(repoRoot, 'packages/browser'),
@@ -86,7 +90,6 @@ function packBrowserPackage() {
 
 function packNodePackages() {
   if (shouldBuild) {
-    run('pnpm', ['run', '--filter', 'rolldown', 'build-binding:wasi'], repoRoot);
     // TARGET is dropped so `dist` keeps the published shape, without the wasm inlined
     run('pnpm', ['run', '--filter', 'rolldown', 'build-node'], repoRoot);
   }
@@ -94,6 +97,7 @@ function packNodePackages() {
   // always regenerated, so the binding package.json cannot keep a version the tarball outgrew
   const npmDir = join(rolldownPackage, 'npm/wasm32-wasi');
   run('pnpm', ['exec', 'napi', 'create-npm-dirs'], rolldownPackage);
+  run('node', [join(repoRoot, 'scripts/misc/pin-wasi-binding-deps.mjs')], repoRoot);
   for (const file of WASI_ARTIFACTS) {
     copyFileSync(join(rolldownPackage, 'src', file), join(npmDir, file));
   }
@@ -114,8 +118,15 @@ function installBrowserPage() {
   run('pnpm', ['install', '--ignore-workspace', '--no-frozen-lockfile'], browserPage);
 }
 
+if (shouldBuild) {
+  run('pnpm', ['run', '--filter', 'rolldown', 'build-binding:wasi'], repoRoot);
+}
+
 if (suite === 'webcontainer' || suite === 'all') {
   packBrowserPackage();
+}
+
+if (suite === 'webcontainer' || suite === 'webcontainer-fallback' || suite === 'all') {
   packNodePackages();
 }
 

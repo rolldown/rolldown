@@ -3,7 +3,7 @@
 use std::{borrow::Cow, sync::Arc};
 
 use futures::future::{self, BoxFuture};
-use rolldown_plugin::{__inner::SharedPluginable, HookUsage, Plugin};
+use rolldown_plugin::{__inner::SharedPluginable, HookFilterArgs, HookUsage, Plugin};
 
 use super::{BindingPluginOptions, JsPlugin};
 use crate::worker_manager::WorkerManager;
@@ -384,5 +384,17 @@ impl Plugin for ParallelJsPlugin {
 
   fn register_hook_usage(&self) -> HookUsage {
     Plugin::register_hook_usage(self.first_plugin())
+  }
+
+  fn hook_filter_matches(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    args: HookFilterArgs<'_>,
+  ) -> bool {
+    // Each worker can build a different filter from `threadNumber`, and the driver asks before
+    // `run_single` selects a worker. So pass when the filter of any worker accepts the call: the
+    // driver then never skips a call that the selected worker would run. That worker checks its
+    // own filter again. See internal-docs/devtools/implementation.md.
+    self.plugins.iter().any(|plugin| Plugin::hook_filter_matches(plugin, ctx, args))
   }
 }

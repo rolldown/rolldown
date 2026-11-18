@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 function testReturn() {
 	return y + z();
 	function z() {
@@ -45,6 +45,5 @@ testReturn();
 testThrow();
 testBreak();
 testContinue();
-//#endregion
 
 ```

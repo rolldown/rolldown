@@ -137,6 +137,20 @@ test('codeSplitting: object with advancedChunks warns and ignores', async () => 
   );
 });
 
+test('codeSplitting: object with manualChunks warns and ignores', async () => {
+  const bundle = await rolldown({
+    input: './fixtures/tree-shake/inline-dynamic-imports/main.js',
+    cwd: import.meta.dirname + '/..',
+  });
+  await bundle.generate({
+    codeSplitting: { minSize: 1000 },
+    manualChunks: () => undefined,
+  });
+  expect(consoleSpy).toHaveBeenCalledWith(
+    '`manualChunks` option is ignored because the `codeSplitting` option is specified.',
+  );
+});
+
 test('advancedChunks without codeSplitting shows deprecation warning', async () => {
   const bundle = await rolldown({
     input: './fixtures/tree-shake/inline-dynamic-imports/main.js',

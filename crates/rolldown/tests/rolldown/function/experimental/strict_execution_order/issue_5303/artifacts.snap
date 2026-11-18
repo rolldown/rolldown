@@ -6,18 +6,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as init_foo } from "./test.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region setup.js
+import { t as init_foo } from "./test.js";
+// setup.js
 globalThis.globalValue = "foo";
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_foo();
 	})))();
 }
-//#endregion
 init_main();
 
 ```
@@ -35,22 +33,20 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
-//#region foo_inner.js
+// foo_inner.js
 var foo_inner_default;
 function init_foo_inner() {
 	return (init_foo_inner = __esmMin((() => {
 		foo_inner_default = { foo: /* #__PURE__ */ (() => globalValue)() };
 	})))();
 }
-//#endregion
-//#region foo.js
+// foo.js
 function init_foo() {
 	return (init_foo = __esmMin((() => {
 		init_foo_inner();
 		assert.strictEqual(foo_inner_default.foo, "foo");
 	})))();
 }
-//#endregion
 export { init_foo as t };
 
 ```
@@ -62,23 +58,21 @@ export { init_foo as t };
 ### main.js
 
 ```js
-import { t as init_foo } from "./test.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region setup.js
+import { t as init_foo } from "./test.js";
+// setup.js
 function init_setup() {
 	return (init_setup = __esmMin((() => {
 		globalThis.globalValue = "foo";
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_setup();
 		init_foo();
 	})))();
 }
-//#endregion
 init_main();
 
 ```
@@ -96,22 +90,20 @@ export { __esmMin as t };
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
-//#region foo_inner.js
+// foo_inner.js
 var foo_inner_default;
 function init_foo_inner() {
 	return (init_foo_inner = __esmMin((() => {
 		foo_inner_default = { foo: /* #__PURE__ */ (() => globalValue)() };
 	})))();
 }
-//#endregion
-//#region foo.js
+// foo.js
 function init_foo() {
 	return (init_foo = __esmMin((() => {
 		init_foo_inner();
 		assert.strictEqual(foo_inner_default.foo, "foo");
 	})))();
 }
-//#endregion
 export { init_foo as t };
 
 ```

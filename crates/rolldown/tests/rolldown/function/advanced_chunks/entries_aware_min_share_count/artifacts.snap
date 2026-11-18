@@ -8,9 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //! User-defined Entry: [Entry-Module-Id: entry-a.js] [Name: entry-a]
 import "./utils~entry-a~entry-b.js";
-//#region utils/debounce.js
+// utils/debounce.js
 console.log("debounce");
-//#endregion
 
 ```
 
@@ -35,9 +34,8 @@ import "./utils~entry-b~entry-c.js";
 
 ```js
 //! ManualCodeSplitting: [Group-Name: utils] [Entries: entry-a.js, entry-b.js]
-//#region utils/formatDate.js
+// utils/formatDate.js
 console.log("formatDate");
-//#endregion
 
 ```
 
@@ -45,8 +43,7 @@ console.log("formatDate");
 
 ```js
 //! ManualCodeSplitting: [Group-Name: utils] [Entries: entry-b.js, entry-c.js]
-//#region utils/deepClone.js
+// utils/deepClone.js
 console.log("deepClone");
-//#endregion
 
 ```

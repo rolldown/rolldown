@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.ts
+// entry.ts
 var Foo = @x.y() @(new y.x()) class Foo {
 	constructor() {
 		this.mDef = 1;
@@ -40,7 +40,6 @@ var Foo = @x.y() @(new y.x()) class Foo {
 	@x @y static accessor #asUndef;
 	@x @y static accessor #asDef = 1;
 };
-//#endregion
 export { Foo as default };
 
 ```

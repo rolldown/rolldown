@@ -1,0 +1,28 @@
+{
+  "_comment": "`self_accept.js` (read by `a` and `b`) accepts its own updates, and `accept_dep.js` (read by `b` and `c`) accepts updates of `dep.js`. Dev mode inlines both common chunks. Step 0 edits `self_accept.js` and step 1 edits `dep.js`; each update stops at a module printed inside a factory, without a full reload.",
+  "config": {
+    "input": [
+      {
+        "name": "a",
+        "import": "./a.js"
+      },
+      {
+        "name": "b",
+        "import": "./b.js"
+      },
+      {
+        "name": "c",
+        "import": "./c.js"
+      }
+    ],
+    "preserveEntrySignatures": "false",
+    "experimental": {
+      "devMode": {}
+    },
+    "codeSplitting": {
+      "experimentalInlineCommonChunks": {
+        "maxSize": 4096
+      }
+    }
+  }
+}

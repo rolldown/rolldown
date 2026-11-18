@@ -6,9 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## e0.js
 
 ```js
-import { r as init_m13 } from "./gb.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region e0.js
+import { r as init_m13 } from "./gb.js";
+// e0.js
 var reg;
 function init_e0() {
 	return (init_e0 = __esmMin((() => {
@@ -17,7 +17,6 @@ function init_e0() {
 		reg.dyn2 = () => import("./m29.js");
 	})))();
 }
-//#endregion
 init_e0();
 
 ```
@@ -25,16 +24,15 @@ init_e0();
 ## gb.js
 
 ```js
-import { t as init_m31 } from "./m31.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region m13.js
+import { t as init_m31 } from "./m31.js";
+// m13.js
 function init_m13() {
 	return (init_m13 = __esmMin((() => {
 		console.log("sfx-m13-0");
 	})))();
 }
-//#endregion
-//#region m29.js
+// m29.js
 function cf_m29(x) {
 	return x + 9;
 }
@@ -43,7 +41,6 @@ function init_m29() {
 		init_m31();
 	})))();
 }
-//#endregion
 export { init_m29 as n, init_m13 as r, cf_m29 as t };
 
 ```
@@ -62,13 +59,12 @@ export { cf_m29 };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region m31.js
+// m31.js
 function init_m31() {
 	return (init_m31 = __esmMin((() => {
 		console.log("sfx-m31-0");
 	})))();
 }
-//#endregion
 export { init_m31 as t };
 
 ```
@@ -88,9 +84,9 @@ export { __esmMin as t };
 ### e0.js
 
 ```js
-import { r as init_m13 } from "./gb.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region e0.js
+import { r as init_m13 } from "./gb.js";
+// e0.js
 var reg;
 function init_e0() {
 	return (init_e0 = __esmMin((() => {
@@ -99,7 +95,6 @@ function init_e0() {
 		reg.dyn2 = () => import("./m29.js");
 	})))();
 }
-//#endregion
 init_e0();
 
 ```
@@ -107,16 +102,15 @@ init_e0();
 ### gb.js
 
 ```js
-import { t as init_m31 } from "./m31.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region m13.js
+import { t as init_m31 } from "./m31.js";
+// m13.js
 function init_m13() {
 	return (init_m13 = __esmMin((() => {
 		console.log("sfx-m13-0");
 	})))();
 }
-//#endregion
-//#region m29.js
+// m29.js
 function cf_m29(x) {
 	return x + 9;
 }
@@ -125,7 +119,6 @@ function init_m29() {
 		init_m31();
 	})))();
 }
-//#endregion
 export { init_m29 as n, init_m13 as r, cf_m29 as t };
 
 ```
@@ -144,13 +137,12 @@ export { cf_m29 };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region m31.js
+// m31.js
 function init_m31() {
 	return (init_m31 = __esmMin((() => {
 		console.log("sfx-m31-0");
 	})))();
 }
-//#endregion
 export { init_m31 as t };
 
 ```

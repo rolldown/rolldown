@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 x("_doNotMangleThis", `_doNotMangleThis`);
 x._mangleThis(
 	/* @__KEY__ */
@@ -22,6 +22,5 @@ x._mangleThisToo(
 );
 x._someKey = /* #__KEY__ */ "_someKey" in y;
 x([`foo._mangleThis = bar._mangleThisToo`, `foo.notMangled = bar.notMangledEither`]);
-//#endregion
 
 ```

@@ -1,4 +1,4 @@
-import type { BindingSourcemap } from '../binding.cjs';
+import type { BindingSourcemap, SourceMap as NativeSourceMap } from '../binding.cjs';
 import type { SourceMap } from './rolldown-output';
 
 /** @category Plugin APIs */
@@ -10,6 +10,7 @@ export interface ExistingRawSourceMap {
   sourcesContent?: (string | null | undefined)[] | undefined;
   sourceRoot?: string | undefined;
   version?: number | undefined; // make it optional to compat { mappings: '' }
+  ignoreList?: number[] | undefined;
   x_google_ignoreList?: number[] | undefined;
 }
 
@@ -17,29 +18,27 @@ export interface ExistingRawSourceMap {
 export type SourceMapInput = ExistingRawSourceMap | string | null;
 
 export function bindingifySourcemap(
-  map?: SourceMapInput | SourceMap,
+  map?: SourceMapInput | SourceMap | NativeSourceMap,
 ): undefined | BindingSourcemap {
   if (map == null) return;
-  return {
-    inner:
-      typeof map === 'string'
-        ? map
-        : {
-            file: map.file ?? undefined,
-            mappings: map.mappings,
-            // according to the spec, `sourceRoot: null` is not valid,
-            // but some tools returns a sourcemap with it.
-            // in that case, napi-rs outputs an error which is difficult
-            // to understand by users ("Value is none of these types `String`, `BindingJsonSourcemap`").
-            // we convert it to undefined to skip that error.
-            // note that if `sourceRoot: null` is included in a string sourcemap,
-            // it will be converted to None by serde-json.
-            sourceRoot: 'sourceRoot' in map ? (map.sourceRoot ?? undefined) : undefined,
-            sources: map.sources?.map((s) => s ?? undefined),
-            sourcesContent: map.sourcesContent?.map((s) => s ?? undefined),
-            names: map.names,
-            x_google_ignoreList: map.x_google_ignoreList,
-            debugId: 'debugId' in map ? map.debugId : undefined,
-          },
-  };
+  return typeof map === 'string'
+    ? map
+    : {
+        file: map.file ?? undefined,
+        mappings: map.mappings,
+        // according to the spec, `sourceRoot: null` is not valid,
+        // but some tools returns a sourcemap with it.
+        // in that case, napi-rs outputs an error which is difficult
+        // to understand by users ("Value is none of these types `String`, `BindingJsonSourcemap`").
+        // we convert it to undefined to skip that error.
+        // note that if `sourceRoot: null` is included in a string sourcemap,
+        // it will be converted to None by serde-json.
+        sourceRoot: 'sourceRoot' in map ? (map.sourceRoot ?? undefined) : undefined,
+        sources: map.sources?.map((s) => s ?? undefined),
+        sourcesContent: map.sourcesContent?.map((s) => s ?? undefined),
+        names: map.names,
+        ignoreList: map.ignoreList,
+        x_google_ignoreList: 'x_google_ignoreList' in map ? map.x_google_ignoreList : undefined,
+        debugId: 'debugId' in map ? map.debugId : undefined,
+      };
 }

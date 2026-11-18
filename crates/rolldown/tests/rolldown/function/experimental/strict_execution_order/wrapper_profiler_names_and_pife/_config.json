@@ -1,0 +1,20 @@
+{
+  "_comment": "Uses wrap-all because on-demand wrapping leaves these modules unwrapped.",
+  "configName": "wrap-all",
+  "config": {
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": false
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "profiler-names",
+      "profilerNames": true
+    },
+    {
+      "_configName": "pife-disabled",
+      "pifeForModuleWrappers": false
+    }
+  ]
+}

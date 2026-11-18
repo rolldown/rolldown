@@ -6,139 +6,115 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## base-instance-accessor.js
 
 ```js
-//#region base-instance-accessor.js
 (class Foo {
 	@dec accessor foo = Foo;
 });
-//#endregion
 
 ```
 
 ## base-instance-field.js
 
 ```js
-//#region base-instance-field.js
 (class Foo {
 	@dec foo = Foo;
 });
-//#endregion
 
 ```
 
 ## base-instance-method.js
 
 ```js
-//#region base-instance-method.js
 (class Foo {
 	@dec foo() {
 		return Foo;
 	}
 });
-//#endregion
 
 ```
 
 ## base-static-accessor.js
 
 ```js
-//#region base-static-accessor.js
 (class Foo {
 	@dec static accessor foo = Foo;
 });
-//#endregion
 
 ```
 
 ## base-static-field.js
 
 ```js
-//#region base-static-field.js
 (class Foo {
 	@dec static foo = Foo;
 });
-//#endregion
 
 ```
 
 ## base-static-method.js
 
 ```js
-//#region base-static-method.js
 (class Foo {
 	@dec static foo() {
 		return Foo;
 	}
 });
-//#endregion
 
 ```
 
 ## derived-instance-accessor.js
 
 ```js
-//#region derived-instance-accessor.js
 (class Foo extends Bar {
 	@dec accessor foo = Foo;
 });
-//#endregion
 
 ```
 
 ## derived-instance-field.js
 
 ```js
-//#region derived-instance-field.js
 (class Foo extends Bar {
 	@dec foo = Foo;
 });
-//#endregion
 
 ```
 
 ## derived-instance-method.js
 
 ```js
-//#region derived-instance-method.js
 (class Foo extends Bar {
 	@dec foo() {
 		return Foo;
 	}
 });
-//#endregion
 
 ```
 
 ## derived-static-accessor.js
 
 ```js
-//#region derived-static-accessor.js
 (class Foo extends Bar {
 	@dec static accessor foo = Foo;
 });
-//#endregion
 
 ```
 
 ## derived-static-field.js
 
 ```js
-//#region derived-static-field.js
 (class Foo extends Bar {
 	@dec static foo = Foo;
 });
-//#endregion
 
 ```
 
 ## derived-static-method.js
 
 ```js
-//#region derived-static-method.js
 (class Foo extends Bar {
 	@dec static foo() {
 		return Foo;
 	}
 });
-//#endregion
 
 ```

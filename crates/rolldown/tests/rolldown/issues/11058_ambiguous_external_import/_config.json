@@ -1,0 +1,12 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/11058. Unlike `11058_import_through_barrel`, `T` resolves to two different bindings of the external `ext` here, so importing it through the barrel is still ambiguous.",
+  "expectError": true,
+  "config": {
+    "external": ["ext"]
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

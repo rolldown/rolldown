@@ -1,0 +1,8 @@
+{
+  "config": {
+    "treeshake": false,
+    "experimental": {
+      "resolveNewUrlToAsset": true
+    }
+  }
+}

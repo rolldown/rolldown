@@ -1,0 +1,33 @@
+{
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "entry", "import": "./entry.js" }
+    ],
+    "platform": "node",
+    "preserveEntrySignatures": "strict",
+    "shimMissingExports": true,
+    "minifyInternalExports": false
+  },
+  "configVariants": [
+    { "_configName": "minified", "minifyInternalExports": true, "_snapshot": false },
+    { "_configName": "cjs", "format": "cjs", "_snapshot": false },
+    {
+      "_configName": "cjs-minified",
+      "format": "cjs",
+      "minifyInternalExports": true,
+      "_snapshot": false
+    },
+    {
+      "_configName": "exports-only",
+      "preserveEntrySignatures": "exports-only",
+      "_snapshot": false
+    },
+    {
+      "_configName": "on-demand",
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true,
+      "_snapshot": false
+    }
+  ]
+}

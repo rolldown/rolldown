@@ -10,9 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 (function(factory) {
 	typeof define === "function" && define.amd ? define([], factory) : factory();
 })(function() {
-	//#region main.js
+	// main.js
 	console.log("umd entry hashbang");
-	//#endregion
 });
 
 ```

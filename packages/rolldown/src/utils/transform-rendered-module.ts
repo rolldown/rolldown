@@ -9,7 +9,7 @@ export function transformToRenderedModule(
       return bindingRenderedModule.code;
     },
     get renderedLength() {
-      return bindingRenderedModule.code?.length || 0;
+      return bindingRenderedModule.renderedLength;
     },
     get renderedExports() {
       return bindingRenderedModule.renderedExports;

@@ -30,21 +30,18 @@ module.exports = { value: 'foo' };
 When bundled, it produces:
 
 ```js
-// #region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 // ...runtime code
-// #endregion
 
-// #region foo.js
+// foo.js
 var require_foo = __commonJS({
   'foo.js'(exports, module) {
     module.exports = { value: 'foo' };
   },
 });
 
-// #endregion
-// #region index.js
+// index.js
 const getFooExports = () => require_foo();
-// #endregion
 ```
 
 In this example, the `foo.js` module won't be executed until `getFooExports()` is called, maintaining the lazy-loading behavior of CommonJS.
@@ -68,26 +65,30 @@ module.exports = { value: 'foo' };
 Bundled output:
 
 ```js
-// #region \0rolldown/runtime.js
+// \0rolldown/runtime.js
 // ...runtime code
-// #endregion
 
-// #region foo.js
+// foo.js
 var require_foo = __commonJS({
   'foo.js'(exports, module) {
     module.exports = { value: 'foo' };
   },
 });
 
-// #endregion
-// #region index.js
+// index.js
 var import_foo = __toESM(require_foo());
 console.log(import_foo.value);
-
-// #endregion
 ```
 
 The `__toESM` helper ensures that CommonJS exports are properly converted to ES module format, allowing seamless access to the exported values.
+
+### CommonJS path variables in ESM output
+
+When [`platform: 'node'`](../guide/notable-features.md#platform-presets) and `format: 'esm'` are configured, Rolldown provides `__dirname` and `__filename` bindings to bundled CommonJS modules using Node's [`import.meta.dirname`](https://nodejs.org/api/esm.html#importmetadirname) and [`import.meta.filename`](https://nodejs.org/api/esm.html#importmetafilename). This prevents CommonJS dependencies from failing with `ReferenceError` when they use these variables in ESM output. ESM source modules, locally declared bindings, other platforms, and other output formats are unchanged.
+
+Each generated CommonJS wrapper receives its own mutable bindings, matching Node's per-module isolation. Their initial values identify the emitted ESM chunk containing the wrapper, not the original source module. This is useful for locating assets emitted next to the bundle, but code that expects paths relative to its unbundled source may need to account for the new output location.
+
+The generated output requires a Node version that supports `import.meta.dirname` and `import.meta.filename`. These properties are available from Node 20.11.0 and are only present for local `file:` modules.
 
 ## Caveats
 

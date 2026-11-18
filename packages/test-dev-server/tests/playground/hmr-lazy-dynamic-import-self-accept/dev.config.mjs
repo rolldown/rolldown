@@ -9,8 +9,7 @@ export default defineDevConfig({
     platform: 'browser',
     treeshake: false,
     experimental: {
-      // Lazy: dynamic import() targets compile on demand behind a `?rolldown-lazy=1`
-      // proxy, so the importer walk sees the proxy chain, not the real dynamic edge.
+      // Lazy: dynamic import() targets compile on demand behind a `?rolldown-lazy=1` proxy.
       devMode: { lazy: true },
     },
   },

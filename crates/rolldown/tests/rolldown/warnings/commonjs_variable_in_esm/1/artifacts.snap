@@ -42,7 +42,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 exports.test.res = 1e3;
 exports.a = 1e3;
 module.test = {};
@@ -50,7 +50,6 @@ module.exports = {};
 typeof module === "object" ? module.exports : exports;
 const a = 1;
 const e = 1;
-//#endregion
 export { a, e };
 
 ```

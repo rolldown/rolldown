@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-//#region main.js
+// main.js
 const NOT_THROWN = Symbol("not thrown");
 (async () => {
 	const errors = [];
@@ -36,25 +36,22 @@ const NOT_THROWN = Symbol("not thrown");
 	assert.strictEqual(nulls[0], null, "every import of throws_null.js should throw null");
 	assert.strictEqual(nulls[1], null, "every import of throws_null.js should throw null");
 })();
-//#endregion
 
 ```
 
 ## throws_error.js
 
 ```js
-//#region throws_error.js
+// throws_error.js
 throw new Error("evaluation error");
-//#endregion
 
 ```
 
 ## throws_null.js
 
 ```js
-//#region throws_null.js
+// throws_null.js
 throw null;
-//#endregion
 
 ```
 
@@ -67,19 +64,17 @@ throw null;
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region throws_error.js
+// throws_error.js
 var throws_error_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
 var init_throws_error = __esmMin((() => {
 	throw new Error("evaluation error");
 }));
-//#endregion
-//#region throws_null.js
+// throws_null.js
 var throws_null_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
 var init_throws_null = __esmMin((() => {
 	throw null;
 }));
-//#endregion
-//#region main.js
+// main.js
 const NOT_THROWN = Symbol("not thrown");
 (async () => {
 	const errors = [];
@@ -108,6 +103,5 @@ const NOT_THROWN = Symbol("not thrown");
 	assert.strictEqual(nulls[0], null, "every import of throws_null.js should throw null");
 	assert.strictEqual(nulls[1], null, "every import of throws_null.js should throw null");
 })();
-//#endregion
 
 ```

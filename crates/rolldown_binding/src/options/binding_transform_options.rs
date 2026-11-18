@@ -27,7 +27,7 @@ fn napi_sourcemap_to_sourcemap(
     sources_content: map.sources_content.map(|v| v.into_iter().map(Some).collect()),
     names: map.names,
     debug_id: None,
-    x_google_ignore_list: map.x_google_ignorelist,
+    ignore_list: map.ignore_list,
   })
   .map_err(|e| anyhow::anyhow!("Failed to convert sourcemap: {e}"))
 }

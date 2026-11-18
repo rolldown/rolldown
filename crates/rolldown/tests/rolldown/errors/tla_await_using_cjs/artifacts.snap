@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Errors
 
-## UNSUPPORTED_FEATURE
+## INVALID_TLA_FORMAT
 
 ```text
-[UNSUPPORTED_FEATURE] Top-level await is currently not supported with the 'cjs' output format
+[INVALID_TLA_FORMAT] Module format "cjs" does not support top-level await. Use the "es" output format instead.
    ╭─[ main.js:2:1 ]
    │
  2 │ await using handle = resource;

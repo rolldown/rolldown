@@ -1,8 +1,10 @@
 import path from 'node:path';
+import type { PluginContext } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
 let fooHookCalls = 0;
+let loadFromBuildStart: PluginContext['load'];
 
 export default defineTest({
   config: {
@@ -10,19 +12,16 @@ export default defineTest({
       {
         name: 'test-plugin-context',
         async buildStart() {
-          try {
-            await this.load({
+          loadFromBuildStart = this.load.bind(this);
+          await expect(
+            this.load({
               id: path.join(__dirname, 'foo.js'),
-            });
-          } catch (e: any) {
-            expect(e.message).toMatch(
-              'The `PluginContext.load` only work at `resolveId/load/transform/moduleParsed` hooks',
-            );
-          }
+            }),
+          ).rejects.toThrow('`this.load` is not supported in the `buildStart` hook.');
         },
         async load(id) {
           if (id.endsWith('main.js')) {
-            const moduleInfo = await this.load({
+            const moduleInfo = await loadFromBuildStart({
               id: path.join(__dirname, 'foo.js'),
               moduleSideEffects: false,
             });

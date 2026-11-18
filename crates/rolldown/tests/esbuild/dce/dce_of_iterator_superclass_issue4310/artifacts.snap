@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry_js.js
 
 ```js
-//#region entry.js
+// entry.js
 NotIterator;
 Iterator;
-//#endregion
 
 ```

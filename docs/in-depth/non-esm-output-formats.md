@@ -73,3 +73,10 @@ export default defineConfig({
 ### Other properties and `import.meta` object itself
 
 Other properties and `import.meta` object itself are replaced with `{}`. Since this does not keep the original value, Rolldown emits a warning in this case.
+
+## Import Attributes
+
+An import of an [external module](/in-depth/external-modules) can have [import attributes](/in-depth/import-attributes), such as `with { type: 'json' }`. In non-ESM formats:
+
+- A static import becomes `require()` or a global variable. Neither can carry attributes, so Rolldown drops them without a warning.
+- A dynamic `import()` with options stays an `import()` and keeps its options. Rolldown does not turn it into `require()`, even with [`dynamicImportInCjs: false`](/reference/OutputOptions.dynamicImportInCjs), because `require()` cannot carry attributes.

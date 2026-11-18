@@ -11,17 +11,15 @@ import { t as trim } from "./string.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["bar.js", "utils/string.js"],
 	localCount: 1,
-	edges: [[1]],
-	dynamicEdges: [[]]
+	edges: [[1]]
 });
-//#region bar.js
+// bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ default: () => bar_default });
 __rolldown_runtime__.createModuleHotContext("bar.js");
 __rolldown_runtime__.registerModule("bar.js", { exports: bar_exports });
 function bar_default() {
 	return trim("Route Bar");
 }
-//#endregion
 export { bar_default as default };
 
 ```
@@ -38,25 +36,22 @@ __rolldown_runtime__.registerGraph({
 		"utils/string.js"
 	],
 	localCount: 2,
-	edges: [[2], [0]],
-	dynamicEdges: [[], []]
+	edges: [[2], [0]]
 });
-//#region utils/index.js
+// utils/index.js
 var utils_exports = /* @__PURE__ */ __exportAll({
 	trim: () => trim,
 	unused: () => unused
 });
 __rolldown_runtime__.createModuleHotContext("utils/index.js");
 __rolldown_runtime__.registerModule("utils/index.js", { exports: utils_exports });
-//#endregion
-//#region foo.js
+// foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ default: () => foo_default });
 __rolldown_runtime__.createModuleHotContext("foo.js");
 __rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
 function foo_default() {
 	return trim("Route Foo");
 }
-//#endregion
 export { foo_default as default };
 
 ```
@@ -73,13 +68,12 @@ __rolldown_runtime__.registerGraph({
 	],
 	localCount: 1,
 	edges: [[]],
-	dynamicEdges: [[1, 2]]
+	dynamicEdges: { 0: [1, 2] },
+	entries: [0]
 });
-//#region main.js
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js");
 import("./foo.js"), import("./bar.js");
-//#endregion
 export { __exportAll as t };
 
 ```
@@ -91,10 +85,9 @@ import { t as __exportAll } from "./main.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["utils/string.js"],
 	localCount: 1,
-	edges: [[]],
-	dynamicEdges: [[]]
+	edges: [[]]
 });
-//#region utils/string.js
+// utils/string.js
 var string_exports = /* @__PURE__ */ __exportAll({
 	trim: () => trim,
 	unused: () => unused
@@ -107,7 +100,6 @@ function trim(s) {
 function unused() {
 	return "unused";
 }
-//#endregion
 export { unused as n, trim as t };
 
 ```

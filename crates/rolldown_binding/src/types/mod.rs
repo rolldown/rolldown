@@ -23,4 +23,5 @@ pub mod defer_sync_scan_data;
 pub mod error;
 pub mod external_memory_status;
 pub mod js_callback;
+pub mod js_callback_release;
 pub mod preserve_entry_signatures;

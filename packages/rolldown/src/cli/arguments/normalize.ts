@@ -76,11 +76,14 @@ export function normalizeCliOptions(
   }
 
   if (!result.config && positionals.length > 0) {
-    if (Array.isArray(result.input.input)) {
-      result.input.input.push(...positionals);
-    } else {
-      result.input.input = positionals;
+    // Like Rollup, `--input` and positional entries cannot be used together.
+    // `--help` and `--version` still print and exit 0, as in Rollup.
+    // See internal-docs/cli/implementation.md.
+    if (result.input.input !== undefined && !result.help && !result.version) {
+      logger.error('Either use --input, or pass input path as argument');
+      process.exit(1);
     }
+    result.input.input = positionals;
   }
 
   return result;

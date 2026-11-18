@@ -22,8 +22,11 @@ function dev(
   return _dev(inputOptions, outputOptions, {
     ...devOptions,
     watch: {
-      ...getDevWatchOptionsForCi(),
       ...devOptions.watch,
+      watcher: {
+        ...getDevWatchOptionsForCi().watcher,
+        ...devOptions.watch?.watcher,
+      },
     },
   });
 }
@@ -271,20 +274,88 @@ test.concurrent(
   },
 );
 
-// Skipped acceptance test for https://github.com/rolldown/rolldown/issues/10487.
+// A lazy proxy never runs in the client: `requestLazy` runs the real module. So no patch
+// carries a factory for a proxy. Two edits could bring one in: the real module changes its
+// interop, which the proxy's own `import()` of it reads, and a new `import()` creates a new
+// proxy.
+test.concurrent(
+  'an HMR patch carries no factory for a lazy proxy',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir: cwd } = createTestWithMultiFiles('dev-lazy-proxy-not-in-patch', retryCount, {
+      'main.js': `import('./lazy.js');\n`,
+      'lazy.js': `export const value = 'esm';\n`,
+      'other.js': `export const other = 'other';\n`,
+    });
+
+    const onHmrUpdates = vi.fn();
+    const engine = await dev(
+      {
+        cwd,
+        input: './main.js',
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(cwd, 'dist') },
+      { onHmrUpdates },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.registerClient('client');
+    const chunk = await engine.compileEntry(
+      `${path.join(cwd, 'lazy.js')}?rolldown-lazy=1`,
+      'client',
+    );
+    await engine.notifyPayloadDelivered(chunk.filename);
+    await engine.ensureLatestBuildOutput();
+
+    const patchWith = (code: unknown) =>
+      expect.objectContaining({
+        updates: expect.arrayContaining([
+          expect.objectContaining({
+            clientId: 'client',
+            update: expect.objectContaining({ type: 'Patch', code }),
+          }),
+        ]),
+      });
+    const lazyFactory = expect.stringMatching(/registerFactory\("[^"]*lazy\.js"/);
+    const proxyFactory = expect.stringMatching(/registerFactory\("[^"]*\?rolldown-lazy=1"/);
+
+    // ESM to CommonJS
+    onHmrUpdates.mockClear();
+    await editFile(path.join(cwd, 'lazy.js'), `module.exports = { value: 'cjs' };\n`);
+    await expect
+      .poll(() => onHmrUpdates, { timeout: 20_000 })
+      .toHaveBeenCalledWith(patchWith(lazyFactory));
+    expect(onHmrUpdates).not.toHaveBeenCalledWith(patchWith(proxyFactory));
+
+    // a new lazy `import()`, so a new proxy
+    onHmrUpdates.mockClear();
+    await editFile(
+      path.join(cwd, 'lazy.js'),
+      `module.exports = { value: 'cjs', load: () => import('./other.js') };\n`,
+    );
+    await expect
+      .poll(() => onHmrUpdates, { timeout: 20_000 })
+      .toHaveBeenCalledWith(patchWith(lazyFactory));
+    expect(onHmrUpdates).not.toHaveBeenCalledWith(patchWith(proxyFactory));
+  },
+);
+
+// https://github.com/rolldown/rolldown/issues/10487
 //
-// DESIRED behavior, matching Vite's bundled dev and a cold build (covered
-// end-to-end by the `hmr-delete-self-watched` dev-server playground): deleting
-// a still-imported file must fail the round with an unresolved-import error,
-// and recreating the file must recover.
-//
-// The raw engine does not do this today: oxc_resolver caches every filesystem
-// lookup and watch events never invalidate the cache (only a full rebuild or a
-// tsconfig change clears it), so the importer's re-scan resolves the deleted
-// path from the stale cache and the round ends in a silent Noop that a server
-// restart contradicts. Skipped until per-event resolver-cache invalidation
-// lands — the fix un-skips this test.
-test.skip(
+// Deleting a still-imported file must fail the round with an unresolved-import
+// error, and recreating the file must recover. This matches Vite's bundled dev
+// and a cold build (covered end-to-end by the `hmr-delete-self-watched`
+// dev-server playground). oxc_resolver caches every filesystem lookup, so the
+// engine clears the resolver cache when a batch creates or deletes a file.
+test.concurrent(
   'deleting an imported file surfaces a resolve error and recreating it recovers',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {

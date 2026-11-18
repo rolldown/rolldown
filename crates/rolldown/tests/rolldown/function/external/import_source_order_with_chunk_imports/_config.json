@@ -1,0 +1,23 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "./index.js"
+      },
+      {
+        "name": "other",
+        "import": "./other.js"
+      }
+    ],
+    "external": ["polyfill", "lib"]
+  },
+  "configVariants": [
+    {
+      "strictExecutionOrder": true
+    },
+    {
+      "format": "cjs"
+    }
+  ]
+}

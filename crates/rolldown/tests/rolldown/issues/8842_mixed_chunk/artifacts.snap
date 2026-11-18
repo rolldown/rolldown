@@ -10,11 +10,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 let foo = require("foo");
 let foo$3 = __toESM(foo, 1);
 foo = __toESM(foo);
-//#region sub1.mjs
+// sub1.mjs
 console.log(foo$3.default.bar);
-//#endregion
-//#region sub2.js
+// sub2.js
 console.log(foo.default.baz);
-//#endregion
 
 ```

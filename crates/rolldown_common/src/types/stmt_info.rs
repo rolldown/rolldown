@@ -132,6 +132,11 @@ bitflags! {
         const ReExportDynamicExports = 1 << 2;
         /// Statement contains non-static dynamic import like `import(foo)` or `import('a' + 'b')`
         const NonStaticDynamicImport = 1 << 3;
+        /// Statement contains `import.meta` that stays native in the output. In dev mode the
+        /// finalizer rewrites `import.meta.hot` to the module's own hot context, so it does not count.
+        const ImportMeta = 1 << 4;
+        /// Statement contains a top-level await, for await, or await using.
+        const TopLevelAwait = 1 << 5;
     }
 }
 
@@ -159,18 +164,6 @@ const _: () = {
 };
 
 impl StmtInfo {
-  pub fn to_debug_stmt_info_for_tree_shaking(
-    &self,
-    is_included: bool,
-  ) -> DebugStmtInfoForTreeShaking {
-    DebugStmtInfoForTreeShaking {
-      is_included,
-      eval_flags: self.eval_flags,
-      #[cfg(debug_assertions)]
-      source: self.debug_label.clone().unwrap_or_else(|| "<Noop>".into()),
-    }
-  }
-
   #[must_use]
   pub fn with_declared_symbols(mut self, declared_symbols: DeclaredSymbols) -> Self {
     self.declared_symbols = declared_symbols;
@@ -182,24 +175,4 @@ impl StmtInfo {
     self.referenced_symbols = referenced_symbols;
     self
   }
-
-  #[inline]
-  pub fn unwrap_debug_label(&self) -> &str {
-    #[cfg(debug_assertions)]
-    {
-      self.debug_label.as_deref().unwrap_or("<Noop>")
-    }
-    #[cfg(not(debug_assertions))]
-    {
-      "<Noop>"
-    }
-  }
-}
-
-#[derive(Debug)]
-pub struct DebugStmtInfoForTreeShaking {
-  pub is_included: bool,
-  pub eval_flags: StmtEvalFlags,
-  #[cfg(debug_assertions)]
-  pub source: String,
 }

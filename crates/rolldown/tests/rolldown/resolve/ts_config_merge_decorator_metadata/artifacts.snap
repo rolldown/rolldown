@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
-//#region main.tsx
+// main.tsx
 function LogMethod(target, propertyKey, descriptor) {
 	console.log(target);
 	console.log(propertyKey);
@@ -24,6 +24,5 @@ __decorate([
 	__decorateMetadata("design:returntype", void 0)
 ], Demo.prototype, "foo", null);
 new Demo();
-//#endregion
 
 ```

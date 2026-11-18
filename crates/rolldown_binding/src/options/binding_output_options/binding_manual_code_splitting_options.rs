@@ -7,7 +7,7 @@ use rolldown::ChunkingContext;
 
 use crate::types::{
   binding_module_info::BindingModuleInfo, binding_string_or_regex::BindingStringOrRegex,
-  js_callback::JsCallback,
+  js_callback_release::UntrackedJsCallback,
 };
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -20,16 +20,30 @@ pub struct BindingManualCodeSplittingOptions {
   pub max_size: Option<f64>,
   pub min_module_size: Option<f64>,
   pub max_module_size: Option<f64>,
+  pub experimental_inline_common_chunks: Option<BindingInlineCommonChunksOptions>,
   #[debug("InternalInvalidateModuleInfoCache(...)")]
   #[napi(ts_type = "() => void")]
-  pub internal_invalidate_module_info_cache: Option<JsCallback>,
+  pub internal_invalidate_module_info_cache: Option<UntrackedJsCallback>,
+}
+
+/// `output.codeSplitting.experimentalInlineCommonChunks`. `exclude` entries use the same shape
+/// as `BindingMatchGroup.test`, including the batched function shim.
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Debug)]
+pub struct BindingInlineCommonChunksOptions {
+  pub max_size: Option<f64>,
+  #[napi(ts_type = "Array<string | RegExp | ((ids: Array<string>) => Uint8Array)>")]
+  #[debug("InlineCommonChunksExclude(...)")]
+  pub exclude: Option<Vec<BindingMatchGroupTest>>,
 }
 
 /// The JS side wraps the user's per-id function in one shim per group. The result holds one byte
 /// per id, and a nonzero byte captures the module. See
 /// `packages/rolldown/src/utils/bindingify-output-options.ts`.
-type BindingMatchGroupTest =
-  Either<BindingStringOrRegex, JsCallback<FnArgs<(/*module ids*/ Vec<String>,)>, Uint8Array>>;
+pub type BindingMatchGroupTest = Either<
+  BindingStringOrRegex,
+  UntrackedJsCallback<FnArgs<(/*module ids*/ Vec<String>,)>, Uint8Array>,
+>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug)]
@@ -38,8 +52,10 @@ pub struct BindingMatchGroup {
     ts_type = "string | ((ids: Array<string>, ctx: BindingChunkingContext) => Array<VoidNullable<string>>)"
   )]
   #[debug("MatchGroupName(...)")]
-  pub name:
-    Either<String, JsCallback<FnArgs<(Vec<String>, BindingChunkingContext)>, Vec<Option<String>>>>,
+  pub name: Either<
+    String,
+    UntrackedJsCallback<FnArgs<(Vec<String>, BindingChunkingContext)>, Vec<Option<String>>>,
+  >,
   #[napi(ts_type = "string | RegExp | ((ids: Array<string>) => Uint8Array)")]
   #[debug("MatchGroupTest(...)")]
   pub test: Option<BindingMatchGroupTest>,

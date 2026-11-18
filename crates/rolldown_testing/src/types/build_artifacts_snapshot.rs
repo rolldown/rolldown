@@ -108,7 +108,7 @@ impl BuildArtifactsSnapshot {
         match asset {
           Output::Chunk(output_chunk) => {
             let content = &output_chunk.code;
-            let content = tweak_snapshot(content, test_meta.hidden_runtime_module, true);
+            let content = tweak_snapshot(content, test_meta.hidden_runtime_module);
 
             let mut asset_child = SnapshotSection::with_title(asset.filename().to_string());
             asset_child.add_content(&format!("```{file_ext}\n"));

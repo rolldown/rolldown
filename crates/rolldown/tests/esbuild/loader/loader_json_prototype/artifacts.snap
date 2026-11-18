@@ -6,13 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region data.json
-//#endregion
-//#region entry.js
+// entry.js
 console.log({
 	"": "The property below should be converted to a computed property:",
 	["__proto__"]: { "foo": "bar" }
 });
-//#endregion
 
 ```

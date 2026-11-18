@@ -24,9 +24,12 @@ jobs:
   benchmark-node:
     name: Benchmark Node
     if: >
-      github.event_name != 'pull_request' ||
-      (github.event.pull_request.draft != true &&
-      !contains(github.event.pull_request.labels.*.name, 'graphite: merge-when-ready'))
+      github.repository == 'rolldown/rolldown' &&
+      (
+        github.event_name != 'pull_request' ||
+        (github.event.pull_request.draft != true &&
+        !contains(github.event.pull_request.labels.*.name, 'graphite: merge-when-ready'))
+      )
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -45,19 +48,22 @@ jobs:
       - name: List Files
         run: find -maxdepth 2 -ls
 
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
-        with:
-          version: '0.2.1'
-          cache: true
+      - parallel:
+          - uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
+            with:
+              version: '1.7.0'
+              cache: true
 
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
-        with:
-          tools: just
-          cache-key: release-build
-          save-cache: ${{ github.ref_name == 'main' }}
+          - name: Setup Rust
+            uses: oxc-project/setup-rust@12a52e3caf7bac9d8b9ca550a82c425ed6343aee # v1.0.18
+            with:
+              tools: just
+              cache-key: release-build
+              save-cache: ${{ github.ref_name == 'main' }}
 
       - name: Setup Benchmark Input
+        id: benchmark-input
+        background: true
         run: just setup-bench
 
       - name: Build packages
@@ -65,6 +71,8 @@ jobs:
         # (`(peak memory)` series). It shifts timing numbers by at most ~2.3%
         # once — far below the 110% alert threshold.
         run: just build-rolldown-release-tracking
+
+      - wait: benchmark-input
 
       - name: Run benchmarks
         run: vp run --filter bench bench-ci

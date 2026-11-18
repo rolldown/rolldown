@@ -6,10 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-//#region a.js
-const targetPromise = import("./dyn.js").then((n) => n.t);
-//#endregion
-export { targetPromise };
+// a.js
+const targetPromise = import("./dyn.js").then((n) => n.n);
+const target2Promise = import("./dyn.js").then((n) => n.t);
+export { target2Promise, targetPromise };
 
 ```
 
@@ -24,12 +24,12 @@ import "./dyn.js";
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region observer.js
+// observer.js
 globalThis.observed = true;
-//#endregion
-//#region target.js
+// target.js
 var target_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
-//#endregion
-export { target_exports as t };
+// target2.js
+var target2_exports = /* @__PURE__ */ __exportAll({ value2: () => 2 });
+export { target_exports as n, target2_exports as t };
 
 ```

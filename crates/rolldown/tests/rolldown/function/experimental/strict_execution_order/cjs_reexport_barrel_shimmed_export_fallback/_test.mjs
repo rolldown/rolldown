@@ -32,7 +32,7 @@ function staticClosure(root) {
 
 // A shimmed missing export on the barrel rejects consumer-local routing; the monolithic barrel
 // keeps the unrelated CJS leaf eager and the shimmed binding reads undefined.
-assert.match(staticClosure('main.js'), /clone-deep\.cjs/);
+assert.match(staticClosure('main.js'), /__events\.push\("clone-deep"\)/);
 
 globalThis.__events = [];
 

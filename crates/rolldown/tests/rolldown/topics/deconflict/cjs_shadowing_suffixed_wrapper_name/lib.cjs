@@ -7,7 +7,9 @@
 //
 // Pre-fix, only the *un-suffixed* `require_dup` was recognized as shadowing a chunk-root wrapper,
 // so `require_dup$1` kept its name and collided with the deconflicted wrapper for `./b/dup.cjs`,
-// emitting the self-referential `const require_dup$1 = require_dup$1()` (issue #10792).
+// emitting the self-referential `const require_dup$1 = require_dup$1()` (issue #10792). Now the
+// locals keep their names, and the synthesized wrappers avoid both (`require_dup$3`,
+// `require_dup$2`).
 const require_dup = require('./a/dup.cjs');
 const require_dup$1 = require('./b/dup.cjs');
 

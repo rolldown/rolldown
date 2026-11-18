@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use derive_more::derive::Debug;
 use oxc_str::CompactStr;
-use rolldown_sourcemap::{Source, SourceJoiner};
+use rolldown_sourcemap::Source;
 
 #[derive(Clone, Default, Debug)]
 #[debug("RenderedModule")]
@@ -23,19 +23,33 @@ impl RenderedModule {
 
   pub fn code(&self) -> Option<String> {
     self.inner_code.as_ref().map(|sources| {
-      let mut joiner = SourceJoiner::default();
+      let mut code = String::with_capacity(self.rendered_byte_length());
 
-      for source in sources.iter() {
-        joiner.append_source(source);
+      for (index, source) in sources.iter().enumerate() {
+        if index > 0 {
+          code.push('\n');
+        }
+        code.push_str(source.content());
       }
 
-      joiner.join().0
+      code
     })
   }
 
-  pub fn rendered_length(&self) -> usize {
+  /// Length of the rendered code in UTF-8 bytes, the unit of the package size report.
+  /// `rendered_utf16_length` is the unit JavaScript sees as `code.length`.
+  pub fn rendered_byte_length(&self) -> usize {
     self.inner_code.as_ref().map_or(0, |sources| {
       sources.iter().map(|source| source.content().len()).sum::<usize>()
+        + sources.len().saturating_sub(1)
+    })
+  }
+
+  /// Length of the rendered code in UTF-16 code units, which is what JavaScript's `String.prototype.length`
+  /// returns for `code`. Computed from the source pieces without joining or copying them.
+  pub fn rendered_utf16_length(&self) -> usize {
+    self.inner_code.as_ref().map_or(0, |sources| {
+      sources.iter().map(|source| simd_utf16_len::utf16_len(source.content())).sum::<usize>()
         + sources.len().saturating_sub(1)
     })
   }

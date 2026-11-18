@@ -6,14 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## common-a.js
 
 ```js
-//#region common-b.js
+// common-b.js
 const sharedB = "shared-b";
-//#endregion
-//#region common-a.js
+// common-a.js
 function getSharedB() {
 	return sharedB;
 }
-//#endregion
 export { getSharedB as t };
 
 ```
@@ -22,10 +20,9 @@ export { getSharedB as t };
 
 ```js
 import { t as getSharedB } from "./common-a.js";
-//#region dynamic1.js
+// dynamic1.js
 const value = getSharedB();
 console.log(`dynamic1:${value}`);
-//#endregion
 export { value };
 
 ```
@@ -34,9 +31,8 @@ export { value };
 
 ```js
 import { t as getSharedB } from "./common-a.js";
-//#region dynamic2.js
+// dynamic2.js
 const value = getSharedB();
-//#endregion
 export { value };
 
 ```
@@ -44,19 +40,17 @@ export { value };
 ## entry-a.js
 
 ```js
-//#region entry-a.js
+// entry-a.js
 console.log("entry-a");
 globalThis.loadDynamic1FromEntryA = () => import("./dynamic1.js");
 globalThis.loadDynamic2FromEntryA = () => import("./dynamic2.js");
-//#endregion
 
 ```
 
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 import("./dynamic1.js");
-//#endregion
 
 ```

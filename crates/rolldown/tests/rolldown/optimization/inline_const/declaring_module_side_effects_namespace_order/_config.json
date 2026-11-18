@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      { "name": "direct", "import": "./direct.js" },
+      { "name": "namespace", "import": "./namespace.js" },
+      { "name": "shared", "import": "./shared.js" },
+      { "name": "setup_only", "import": "./setup_only.js" }
+    ]
+  }
+}

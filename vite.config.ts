@@ -142,6 +142,7 @@ export default defineConfig({
       'packages/rolldown/src/wasi-worker-browser.mjs',
       'packages/rolldown/src/wasi-worker.mjs',
       'packages/rolldown/tests/fixtures/misc/error/diagnostics/**/*.js',
+      'packages/rolldown/tests/fixtures/misc/error/json-parse-id/data.json',
       'packages/rolldown/tests/stability/issue-3453/src',
       'packages/rollup-tests',
       'packages/rollup/test',

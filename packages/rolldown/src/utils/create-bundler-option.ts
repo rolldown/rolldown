@@ -1,5 +1,4 @@
 import type { BindingBundlerOptions } from '../binding.cjs';
-import type { LogHandler } from '../log/log-handler';
 import { getLogger, getOnLog } from '../log/logger';
 import { LOG_LEVEL_INFO } from '../log/logging';
 import type { InputOptions } from '../options/input-options';
@@ -115,6 +114,7 @@ export async function createBundlerOptions(
       normalizedInputPlugins,
       normalizedOutputPlugins,
     );
+    pluginContextData.importAttributes = inputOptions.experimental?.importAttributes ?? false;
 
     // Convert `InputOptions` to `BindingInputOptions`
     const bindingInputOptions = bindingifyInputOptions(
@@ -130,7 +130,7 @@ export async function createBundlerOptions(
     );
 
     // Convert `OutputOptions` to `BindingOutputOptions`
-    const bindingOutputOptions = bindingifyOutputOptions(
+    const bindingOutputOptions = await bindingifyOutputOptions(
       outputOptions,
       pluginContextData,
       onLog,
@@ -143,8 +143,6 @@ export async function createBundlerOptions(
         outputOptions: bindingOutputOptions,
         parallelPluginsRegistry: parallelPluginInitResult?.registry,
       },
-      inputOptions,
-      onLog,
       stopWorkers: parallelPluginInitResult?.stopWorkers,
     };
   } catch (e) {
@@ -155,7 +153,5 @@ export async function createBundlerOptions(
 
 export interface BundlerOptionWithStopWorker {
   bundlerOptions: BindingBundlerOptions;
-  inputOptions: InputOptions;
-  onLog: LogHandler;
   stopWorkers?: () => Promise<void>;
 }

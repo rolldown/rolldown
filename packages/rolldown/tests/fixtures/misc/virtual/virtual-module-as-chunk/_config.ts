@@ -30,7 +30,7 @@ export default defineTest({
       "[
         "entry.js",
         "main.js",
-        "_module-BtqDmUPt.js"
+        "_module-B0JnUV0q.js"
       ]"
     `);
   },

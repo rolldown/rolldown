@@ -1,0 +1,10 @@
+{
+  "_comment": "Template constants must preserve runtime regexp flag order and prototype coercion even with tree shaking disabled.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "treeshake": false,
+    "minify": false
+  },
+  "snapshot": false,
+  "configVariants": [{ "inlineConst": { "mode": "all", "pass": 2 } }]
+}

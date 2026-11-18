@@ -6,11 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 x;
 var [KEEP2] = [x];
 var [KEEP3] = [...{}];
 var { KEEP4 } = {};
-//#endregion
 
 ```

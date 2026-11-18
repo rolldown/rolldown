@@ -12,9 +12,10 @@ use oxc_resolver::{
 use rolldown_utils::dashmap::FxDashMap;
 
 #[napi]
+#[derive(Clone)]
 pub struct TsconfigCache {
   resolver: Arc<Resolver>,
-  cache: FxDashMap<PathBuf, Arc<TsConfig>>,
+  cache: Arc<FxDashMap<PathBuf, Arc<TsConfig>>>,
 }
 
 #[napi]
@@ -33,7 +34,7 @@ impl TsconfigCache {
         yarn_pnp,
         ..Default::default()
       })),
-      cache: FxDashMap::default(),
+      cache: Arc::default(),
     }
   }
 
@@ -54,11 +55,6 @@ impl TsconfigCache {
 }
 
 impl TsconfigCache {
-  /// Get the resolver instance.
-  pub fn resolver(&self) -> &Resolver {
-    &self.resolver
-  }
-
   /// Find and cache tsconfig for a given file path.
   ///
   /// Returns None if no tsconfig is found for the file.

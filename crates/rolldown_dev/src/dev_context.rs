@@ -45,8 +45,10 @@ pub struct DevContext {
   pub top_level_evaluated: Mutex<Arc<FxHashMap<ArcStr, u32>>>,
   /// Whether the previous bundling task errored. The next HMR compute passes it
   /// as `last_build_errored` to disable the unchanged-output suppression, so a
-  /// byte-identical recovery still reaches clients stuck on that error. Written
-  /// at the end of every task; tasks are serialized by the coordinator.
+  /// byte-identical recovery still reaches clients stuck on that error. The next
+  /// task also reads it to clear the resolver cache
+  /// (`BundlingTask::should_clear_resolver_cache`). Written at the end of every
+  /// task; tasks are serialized by the coordinator.
   pub last_task_errored: AtomicBool,
 }
 

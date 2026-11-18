@@ -1,0 +1,13 @@
+{
+  "_comment": "Regression for https://github.com/rolldown/rolldown/issues/11058. `a.js` and `b.js` both re-export `InjectionToken` from the external `ext`. Each holds a local binding of its own, but both resolve to the same binding of `ext`, so the name isn't ambiguous and `main.js` must keep exporting it.",
+  "expectExecuted": false,
+  "expectWarning": false,
+  "config": {
+    "external": ["ext"]
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

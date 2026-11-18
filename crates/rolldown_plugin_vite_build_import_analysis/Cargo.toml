@@ -24,3 +24,4 @@ oxc = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_ecmascript_utils = { workspace = true }
 rolldown_plugin = { workspace = true }
+rolldown_utils = { workspace = true }

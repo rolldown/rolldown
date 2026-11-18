@@ -12,7 +12,7 @@ use crate::{
     chunk_ext::ChunkDebugExt,
     chunk_optimizer::{ChunkOptimizationGraph, RuntimeMergeCascade},
   },
-  types::linking_metadata::LinkingMetadataVec,
+  types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
   utils::chunk::normalize_preserve_entry_signature,
 };
 use arcstr::ArcStr;
@@ -21,9 +21,9 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleId, ModuleIdx, ModuleNamespaceIncludedReason,
-  ModuleTag, ModuleTagBitSet, ModuleTagRegistry, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RetainedExportSymbols, SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder,
-  WrapKind,
+  ModuleTag, ModuleTagBitSet, ModuleTagRegistry, ModuleType, NormalModule, OutputExports,
+  OutputFormat, PostChunkOptimizationOperation, PreserveEntrySignatures, RetainedExportSymbols,
+  SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_std_utils::PathBufExt as _;
@@ -88,7 +88,12 @@ impl GenerateStage<'_> {
         .len()
         .try_into()
         .expect("Entry length exceeds u32::MAX");
-      for (idx, module) in self.link_output.module_table.modules.iter_enumerated() {
+      // Module indices follow the order in which modules finished loading, so the chunks are created
+      // in execution order instead. Their order decides which of two identical chunks keeps the
+      // hashed file name.
+      let mut modules = self.link_output.module_table.modules.iter_enumerated().collect::<Vec<_>>();
+      modules.sort_by_key(|(_, module)| module.exec_order());
+      for (idx, module) in modules {
         let Module::Normal(module) = module else {
           continue;
         };
@@ -124,7 +129,6 @@ impl GenerateStage<'_> {
               );
               meta
             },
-            bit: count,
             module: module.idx,
           },
           input_base.clone(),
@@ -188,7 +192,8 @@ impl GenerateStage<'_> {
   /// Assign each live chunk a render `exec_order` from the execution order of its lead module, so
   /// that both `sorted_chunk_idx_vec` and the cross-chunk import sort (`compute_cross_chunk_links`)
   /// reflect real evaluation order. A `Common` chunk keys on `modules[0]` — the lowest-`exec_order`
-  /// module after `sort_chunk_modules`.
+  /// module after `sort_chunk_modules`. An `EntryPoint` chunk keys on `entry_chunk_exec_order`,
+  /// which skips the runtime module, so hosting the runtime does not move it.
   ///
   /// This keying is sensitive to chunk *membership*: the runtime module has `exec_order` 0 and
   /// `sort_chunk_modules` always places it first, so any chunk hosting the runtime keys on 0. The
@@ -218,6 +223,7 @@ impl GenerateStage<'_> {
   /// and guarantees entry chunks precede others, static chunks precede dynamic ones, and every chunk
   /// has a stable order at the per-entry-chunk level.
   pub(super) fn assign_chunk_exec_orders(&self, chunk_graph: &mut ChunkGraph) {
+    let module_to_chunk = &chunk_graph.module_to_chunk;
     chunk_graph
       .chunk_table
       .iter_mut_enumerated()
@@ -225,7 +231,7 @@ impl GenerateStage<'_> {
         chunk_graph.post_chunk_optimization_operations.get(chunk_idx).copied()
           != Some(PostChunkOptimizationOperation::Removed)
       })
-      .sorted_by(|(_ai, a), (_bi, b)| {
+      .sorted_by(|(ai, a), (bi, b)| {
         let a_should_be_first = Ordering::Less;
         let b_should_be_first = Ordering::Greater;
 
@@ -233,11 +239,12 @@ impl GenerateStage<'_> {
           (
             ChunkKind::EntryPoint { module: a_module_id, .. },
             ChunkKind::EntryPoint { module: b_module_id, .. },
-          ) => self.link_output.module_table[*a_module_id]
-            .exec_order()
-            .cmp(&self.link_output.module_table[*b_module_id].exec_order()),
+          ) => self
+            .entry_chunk_exec_order(module_to_chunk, *ai, a, *a_module_id)
+            .cmp(&self.entry_chunk_exec_order(module_to_chunk, *bi, b, *b_module_id)),
           (ChunkKind::EntryPoint { module: a_module_id, .. }, ChunkKind::Common) => {
-            let a_module_exec_order = self.link_output.module_table[*a_module_id].exec_order();
+            let a_module_exec_order =
+              self.entry_chunk_exec_order(module_to_chunk, *ai, a, *a_module_id);
             let b_chunk_first_module_exec_order =
               self.link_output.module_table[b.modules[0]].exec_order();
             if a_module_exec_order == b_chunk_first_module_exec_order {
@@ -247,7 +254,8 @@ impl GenerateStage<'_> {
             }
           }
           (ChunkKind::Common, ChunkKind::EntryPoint { module: b_module_id, .. }) => {
-            let b_module_exec_order = self.link_output.module_table[*b_module_id].exec_order();
+            let b_module_exec_order =
+              self.entry_chunk_exec_order(module_to_chunk, *bi, b, *b_module_id);
             let a_chunk_first_module_exec_order =
               self.link_output.module_table[a.modules[0]].exec_order();
             if a_chunk_first_module_exec_order == b_module_exec_order {
@@ -269,6 +277,31 @@ impl GenerateStage<'_> {
       .for_each(|(i, (_chunk_idx, chunk))| {
         chunk.exec_order = i.try_into().expect("Too many chunks, u32 overflowed.");
       });
+  }
+
+  /// The key of an `EntryPoint` chunk in `assign_chunk_exec_orders`: the earlier of its entry
+  /// module and its first non-runtime module. A chunk whose entry module is in another chunk keys
+  /// on its entry module.
+  pub(super) fn entry_chunk_exec_order(
+    &self,
+    module_to_chunk: &IndexVec<ModuleIdx, Option<ChunkIdx>>,
+    chunk_idx: ChunkIdx,
+    chunk: &Chunk,
+    entry_module_idx: ModuleIdx,
+  ) -> u32 {
+    let module_table = &self.link_output.module_table;
+    let runtime_idx = self.link_output.runtime.id();
+    let entry_exec_order = module_table[entry_module_idx].exec_order();
+    if module_to_chunk[entry_module_idx] != Some(chunk_idx) {
+      return entry_exec_order;
+    }
+    chunk
+      .modules
+      .iter()
+      .find(|&&module_idx| module_idx != runtime_idx)
+      .map_or(entry_exec_order, |&first_module_idx| {
+        entry_exec_order.min(module_table[first_module_idx].exec_order())
+      })
   }
 
   /// Merge symbols that import the same binding from the same external module, now that chunk
@@ -386,7 +419,14 @@ impl GenerateStage<'_> {
       for idx in js_import_order {
         match self.link_output.metas[idx].wrap_kind() {
           WrapKind::None => {
-            if !wrapped_modules.is_empty() {
+            // An unwrapped JSON module declares only data, so it needs no other module to
+            // initialize first and is never a target (#10999). A wrapped JSON module stays a
+            // dependency: its data exists only after its wrapper runs.
+            // See internal-docs/code-splitting/implementation.md.
+            let is_json = self.link_output.module_table[idx]
+              .as_normal()
+              .is_some_and(|module| matches!(module.module_type, ModuleType::Json));
+            if !wrapped_modules.is_empty() && !is_json {
               none_wrapped_module_to_wrapped_dependency_length.insert(idx, wrapped_modules.len());
             }
           }
@@ -507,7 +547,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     order_state: &super::order_wrap_state::OrderWrapState,
   ) {
-    let mut chunk_list: IndexVec<ChunkIdx, FxHashMap<(ModuleIdx, usize), Vec<SymbolRef>>> =
+    let mut chunk_list: IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<SymbolRef>>> =
       index_vec![FxHashMap::default(); chunk_graph.chunk_table.len()];
     for (k, info) in &self.link_output.safely_merge_cjs_ns_map {
       for symbol_ref in info
@@ -535,16 +575,10 @@ impl GenerateStage<'_> {
         let owner = symbol_ref.owner;
         let chunk_idx = chunk_graph.module_to_chunk[owner].expect("Module should be in chunk");
 
-        let group_idx = if self.link_output.metas[owner].wrap_kind().is_none() {
-          Some(usize::MAX)
-        } else {
-          chunk_graph.chunk_table[chunk_idx].module_idx_to_group_idx.get(&owner).copied()
-        };
-
-        let Some(group_idx) = group_idx else {
+        if !self.link_output.metas[owner].wrap_kind().is_none() {
           continue;
-        };
-        chunk_list[chunk_idx].entry((*k, group_idx)).or_default().push(*symbol_ref);
+        }
+        chunk_list[chunk_idx].entry(*k).or_default().push(*symbol_ref);
       }
     }
 
@@ -590,37 +624,10 @@ impl GenerateStage<'_> {
         let m = module.as_normal()?;
         let meta = &self.link_output.metas[module_idx];
 
-        let module_namespace_included_reason = &meta.module_namespace_included_reason;
-        // SimulateFacadeChunk is set by the chunk optimizer when a dynamic entry is merged
-        // into a common chunk. This is an authoritative decision that the namespace must
-        // exist regardless of the module's exports_kind (e.g. empty modules have
-        // ExportsKind::None but still need their namespace declaration when exported
-        // cross-chunk).
-        let order_requires_namespace = order_state
-          .requires_namespace(m.namespace_object_ref, |importer_idx| {
+        let is_namespace_referenced =
+          module_namespace_is_referenced(m, meta, order_state, |importer_idx| {
             chunk_graph.module_is_in_live_chunk(importer_idx)
           });
-        let is_namespace_referenced = if order_requires_namespace
-          || module_namespace_included_reason
-            .contains(ModuleNamespaceIncludedReason::SimulateFacadeChunk)
-        {
-          true
-        } else if matches!(m.exports_kind, ExportsKind::Esm) {
-          if module_namespace_included_reason.contains(ModuleNamespaceIncludedReason::Unknown) {
-            true
-          } else if module_namespace_included_reason
-            .contains(ModuleNamespaceIncludedReason::ReExportDynamicExports)
-          {
-            // If the module namespace is only used to reexport external module,
-            // then we need to ensure if it is still has dynamic exports after flatten entry level
-            // external module, see `find_entry_level_external_module`
-            meta.has_dynamic_exports
-          } else {
-            false
-          }
-        } else {
-          false
-        };
         Some((module_idx, is_namespace_referenced))
       })
       .collect_vec();
@@ -789,9 +796,9 @@ impl GenerateStage<'_> {
     /// preserve-modules chunk names disagree about where the module lives.
     fn common_dir_input<'a>(id: &'a ModuleId, cwd: &Path) -> Option<Cow<'a, str>> {
       if id.is_path() {
-        return Some(Cow::Borrowed(id.as_ref()));
+        return Some(Cow::Borrowed(id.raw_id()));
       }
-      let glued = node_style_absolute(Path::new(id.as_str()), cwd)?;
+      let glued = node_style_absolute(Path::new(id.raw_id()), cwd)?;
       Some(Cow::Owned(glued.into_owned().expect_into_string()))
     }
 
@@ -868,12 +875,21 @@ impl GenerateStage<'_> {
       let is_user_defined_entry = self.link_output.user_defined_entry_modules.contains(&module.idx);
       let preserve_entry_signature = if is_user_defined_entry {
         match finalized_preserve_entry_signatures {
+          // A CJS default entry returns module.exports; extra exports would overwrite that value.
+          // See internal-docs/code-splitting/implementation.md.
+          _ if matches!(entry_point.kind, EntryPointKind::UserDefined)
+            && matches!(self.options.format, OutputFormat::Cjs)
+            && matches!(self.options.exports, OutputExports::Auto | OutputExports::Default)
+            && matches!(self.link_output.metas[module.idx].wrap_kind(), WrapKind::Cjs) =>
+          {
+            Some(PreserveEntrySignatures::Strict)
+          }
           PreserveEntrySignatures::AllowExtension
           | PreserveEntrySignatures::Strict
           | PreserveEntrySignatures::False => Some(finalized_preserve_entry_signatures),
           PreserveEntrySignatures::ExportsOnly => {
             let meta = &self.link_output.metas[module.idx];
-            if meta.sorted_and_non_ambiguous_resolved_exports.is_empty() {
+            if meta.is_canonical_exports_empty() && !meta.has_dynamic_exports {
               Some(PreserveEntrySignatures::AllowExtension)
             } else {
               Some(PreserveEntrySignatures::Strict)
@@ -899,7 +915,6 @@ impl GenerateStage<'_> {
             meta.set(ChunkMeta::EmittedChunk, entry_point.kind.is_emitted_user_defined());
             meta
           },
-          bit: count,
           module: module_idx,
         },
         input_base.clone(),
@@ -936,6 +951,10 @@ impl GenerateStage<'_> {
   ) -> BuildResult<()> {
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
     let tag_registry = ModuleTagRegistry::new();
+    let init_dependencies = self
+      .options
+      .is_strict_execution_order_enabled()
+      .then(|| self.pre_chunk_init_dependencies(used_symbol_refs_builder, pre_chunk_order_state));
     for (entry_index, (&module_idx, entry_point)) in self
       .link_output
       .entries
@@ -952,10 +971,14 @@ impl GenerateStage<'_> {
         entry_index.try_into().expect("Too many entries, u32 overflowed."),
         index_splitting_info,
         is_user_defined_entry,
-        used_symbol_refs_builder,
+        init_dependencies.as_ref(),
         pre_chunk_order_state,
       );
     }
+    self.place_unselected_consumer_local_reexport_targets(
+      index_splitting_info,
+      pre_chunk_order_state,
+    );
 
     let mut module_is_assigned: IndexBitSet<ModuleIdx> =
       IndexBitSet::new(self.link_output.module_table.modules.len());
@@ -967,6 +990,9 @@ impl GenerateStage<'_> {
     let allow_avoid_redundant_chunk_loads =
       self.options.experimental.is_avoid_redundant_chunk_loads_enabled()
         && !has_tla_or_tla_dependency;
+    // The pure dynamic entry chunks that a merge gives modules of other entries. See
+    // `find_leaking_dynamic_entry_namespaces`.
+    let mut dynamic_entry_merge_targets = FxHashSet::default();
     // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
     if allow_avoid_redundant_chunk_loads {
       let entries_len: u32 = self
@@ -982,6 +1008,7 @@ impl GenerateStage<'_> {
         chunk_graph,
         entries_len,
         used_symbol_refs_builder,
+        &mut dynamic_entry_merge_targets,
       );
     }
     self.extract_standalone_runtime_chunk(
@@ -1076,8 +1103,22 @@ impl GenerateStage<'_> {
         bits_to_chunk,
         input_base,
         &mut temp_chunk_graph,
+        &mut dynamic_entry_merge_targets,
       );
+    }
 
+    // The plain merges of the already-loaded analysis and of
+    // `try_insert_common_module_to_exist_chunk` can move modules of other entries into a pure
+    // dynamic entry chunk. One check finds the chunks that add keys to the namespace of `import()`.
+    // The check runs after module assignment and before runtime placement, also when the merge of
+    // common chunks is off (`issues/11397_merge_common_chunks_off`). See
+    // internal-docs/code-splitting/implementation.md#dynamic-entry-namespaces.
+    let namespace_extractions = self.find_leaking_dynamic_entry_namespaces(
+      chunk_graph,
+      &dynamic_entry_merge_targets,
+      used_symbol_refs_builder,
+    );
+    if allow_merge_common_chunks {
       self.optimize_facade_entry_chunks(
         chunk_graph,
         index_splitting_info,
@@ -1085,10 +1126,30 @@ impl GenerateStage<'_> {
         &mut module_is_assigned,
         &temp_chunk_graph,
         used_symbol_refs_builder,
+        &namespace_extractions,
+      );
+    } else if !namespace_extractions.is_empty() {
+      self.apply_dynamic_entry_namespace_extractions(
+        chunk_graph,
+        &namespace_extractions,
+        used_symbol_refs_builder,
+      );
+      // The extraction can include `__exportAll`. Then the runtime module can need its own chunk,
+      // as after the replay in `optimize_facade_entry_chunks`.
+      self.extract_standalone_runtime_chunk(
+        index_splitting_info,
+        &mut module_is_assigned,
+        chunk_graph,
+        input_base,
       );
     }
 
-    self.try_merge_runtime_chunk(chunk_graph, None, RuntimeMergeCascade::Full);
+    self.try_merge_runtime_chunk(
+      chunk_graph,
+      None,
+      RuntimeMergeCascade::Full,
+      used_symbol_refs_builder,
+    );
 
     Ok(())
   }
@@ -1099,13 +1160,13 @@ impl GenerateStage<'_> {
     module_is_assigned: &mut IndexBitSet<ModuleIdx>,
     chunk_graph: &mut ChunkGraph,
     input_base: &ArcStr,
-  ) -> Option<ChunkIdx> {
+  ) {
     let runtime_module_idx = self.link_output.runtime.id();
     if self.options.code_splitting.is_disabled()
       || !self.link_output.metas[runtime_module_idx].is_included
       || module_is_assigned.has_bit(runtime_module_idx)
     {
-      return None;
+      return;
     }
 
     debug_assert!(
@@ -1138,7 +1199,101 @@ impl GenerateStage<'_> {
       self.link_output.metas[runtime_module_idx].depended_runtime_helper,
     );
     module_is_assigned.set_bit(runtime_module_idx);
-    Some(runtime_chunk_idx)
+  }
+
+  // See internal-docs/code-splitting/implementation.md#reachability-propagation.
+  // Init imports must affect placement before a target can be co-hosted with a lazy entry.
+  fn pre_chunk_init_dependencies(
+    &self,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+    pre_chunk_order_state: &super::order_wrap_state::OrderWrapState,
+  ) -> IndexVec<ModuleIdx, Vec<ModuleIdx>> {
+    let mut dependencies = index_vec![Vec::new(); self.link_output.module_table.modules.len()];
+    for module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal) {
+      let meta = &self.link_output.metas[module.idx];
+      if !meta.is_included {
+        continue;
+      }
+      let ctx = WrappedEsmInitTargetContext {
+        importer: module,
+        importer_meta: meta,
+        modules: &self.link_output.module_table.modules,
+        metas: &self.link_output.metas,
+        stmt_infos: &self.link_output.stmt_infos,
+        symbol_db: &self.link_output.symbol_db,
+        constant_value_map: &self.link_output.global_constant_symbol_map,
+        inline_const_mode: self.options.optimization.inline_const.map(|config| config.mode),
+        order_wrap_state: pre_chunk_order_state,
+        strict_execution_order: true,
+      };
+      let mut init_targets = self.pre_chunk_transitive_esm_init_targets(
+        module,
+        pre_chunk_order_state,
+        used_symbol_refs_builder.view(),
+      );
+      for (stmt_idx, stmt_info) in self.link_output.stmt_infos[module.idx].iter_enumerated() {
+        let stmt_is_included = meta.stmt_info_included.has_bit(stmt_idx);
+        for &rec_idx in &stmt_info.import_records {
+          let record = &module.import_records[rec_idx];
+          let Some(importee_idx) = record.resolved_module else {
+            continue;
+          };
+          if record.kind != ImportKind::Import {
+            continue;
+          }
+          let routes_consumer_local_importee = (pre_chunk_order_state
+            .is_consumer_local_reexport_route(importee_idx)
+            || pre_chunk_order_state.has_consumer_local_reexport_records(importee_idx))
+            && (record_is_init_obligation(
+              ObligationPurpose::Project,
+              pre_chunk_order_state,
+              module,
+              record,
+              rec_idx,
+              stmt_is_included,
+            ) || import_record_has_live_binding_consumer(&ctx, rec_idx, |symbol_ref| {
+              used_symbol_refs_builder.contains(&symbol_ref)
+            }));
+          if !routes_consumer_local_importee
+            && !record_is_init_obligation(
+              ObligationPurpose::Register,
+              pre_chunk_order_state,
+              module,
+              record,
+              rec_idx,
+              stmt_is_included,
+            )
+          {
+            continue;
+          }
+          init_targets.extend(collect_wrapped_esm_init_targets_for_import_record(
+            &ctx,
+            rec_idx,
+            |symbol_ref| used_symbol_refs_builder.contains(&symbol_ref),
+            |_| true,
+            |_| false,
+          ));
+        }
+      }
+      let targets = &mut dependencies[module.idx];
+      for target in init_targets {
+        let target_idx = match target {
+          WrappedEsmInitTarget::Module(target_idx) => target_idx,
+          WrappedEsmInitTarget::CjsCarrier(key) => {
+            pre_chunk_order_state
+              .order_cjs_carrier(key)
+              .expect("pre-chunk order CJS carrier should exist")
+              .importee
+          }
+        };
+        if !meta.load_dependencies.contains(&target_idx) {
+          targets.push(target_idx);
+        }
+      }
+      targets.sort_unstable();
+      targets.dedup();
+    }
+    dependencies
   }
 
   fn determine_reachable_modules_for_entry(
@@ -1147,15 +1302,13 @@ impl GenerateStage<'_> {
     entry_index: u32,
     index_splitting_info: &mut IndexSplittingInfo,
     is_user_defined_entry: bool,
-    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+    init_dependencies: Option<&IndexVec<ModuleIdx, Vec<ModuleIdx>>>,
     pre_chunk_order_state: &super::order_wrap_state::OrderWrapState,
   ) {
     debug_assert!(
       self.link_output.module_table[entry_module_idx].is_normal(),
       "Entry module {entry_module_idx:?} should be a normal module. External dynamic imports should be filtered out in module_loader.rs."
     );
-    let has_consumer_local_reexport_routes =
-      pre_chunk_order_state.has_consumer_local_reexport_routes();
     let mut q = VecDeque::from([entry_module_idx]);
     while let Some(module_idx) = q.pop_front() {
       if !self.link_output.module_table[module_idx].is_normal() {
@@ -1192,7 +1345,7 @@ impl GenerateStage<'_> {
         constant_value_map: &self.link_output.global_constant_symbol_map,
         inline_const_mode: self.options.optimization.inline_const.map(|config| config.mode),
         order_wrap_state: pre_chunk_order_state,
-        strict_execution_order: true,
+        strict_execution_order: self.options.is_strict_execution_order_enabled(),
       };
       let is_consumer_local_barrel =
         pre_chunk_order_state.is_consumer_local_reexport_route(module_idx);
@@ -1202,13 +1355,36 @@ impl GenerateStage<'_> {
       // traversing it here would couple all routes before the per-record carrier even exists. A
       // barrel that is itself the entry still exposes its whole namespace and therefore keeps the
       // ordinary full traversal. Otherwise preserve only consumer-local waypoint chains and
-      // effectful carriers unconditionally; selected leaves are added below from each consuming
-      // import record through the shared resolver.
+      // effectful carriers unconditionally. Selected leaves come from the consuming modules'
+      // precomputed initialization dependencies.
       if is_consumer_local_barrel && module_idx != entry_module_idx {
+        if module_namespace_is_referenced(module, meta, pre_chunk_order_state, |idx| {
+          self.link_output.metas[idx].is_included
+        }) {
+          // Namespace getters still reference nested namespace objects after forwarding
+          // statements disappear. Preserve those owners separately from leaf init demands.
+          for name in meta.sorted_and_non_ambiguous_resolved_exports.keys() {
+            let symbol_ref = self
+              .link_output
+              .symbol_db
+              .canonical_ref_resolving_namespace(meta.resolved_exports[name].symbol_ref);
+            if self.link_output.module_table[symbol_ref.owner]
+              .as_normal()
+              .is_some_and(|owner| owner.namespace_object_ref == symbol_ref)
+            {
+              q.push_back(symbol_ref.owner);
+            }
+          }
+        }
         for rec in &module.import_records {
+          // A materialized namespace belongs to the consumers of that object. Adding it as an
+          // unconditional waypoint would import all its getter targets into unrelated consumers.
           if rec.kind == ImportKind::Import
             && let Some(importee_idx) = rec.resolved_module
             && pre_chunk_order_state.is_consumer_local_reexport_route(importee_idx)
+            && !self.link_output.metas[importee_idx]
+              .module_namespace_included_reason
+              .contains(ModuleNamespaceIncludedReason::Unknown)
           {
             q.push_back(importee_idx);
           }
@@ -1229,62 +1405,64 @@ impl GenerateStage<'_> {
       meta.load_dependencies.iter().copied().for_each(|dep_idx| {
         q.push_back(dep_idx);
       });
-      if !has_consumer_local_reexport_routes {
-        continue;
-      }
-      for (stmt_idx, stmt_info) in self.link_output.stmt_infos[module_idx].iter_enumerated() {
-        let stmt_is_included = meta.stmt_info_included.has_bit(stmt_idx);
-        for &rec_idx in &stmt_info.import_records {
-          let record = &module.import_records[rec_idx];
-          let Some(importee_idx) = record.resolved_module else {
-            continue;
-          };
-          // The resolver below only changes placement for consumer-local waypoints. Check that
-          // cheap route fact before scanning all named imports and included statement references
-          // for importer-local binding demand.
-          if !pre_chunk_order_state.is_consumer_local_reexport_route(importee_idx) {
-            continue;
-          }
-          let has_live_binding =
-            import_record_has_live_binding_consumer(&ctx, rec_idx, |symbol_ref| {
-              used_symbol_refs_builder.contains(&symbol_ref)
-            });
-          if !record_is_init_obligation(
-            ObligationPurpose::Project,
-            pre_chunk_order_state,
-            module,
-            record,
-            rec_idx,
-            stmt_is_included,
-          ) && !has_live_binding
-          {
-            continue;
-          }
-          // Resolve through every transparent waypoint, not only a barrel that directly owns a
-          // carrier. An outer ESM-only barrel can re-export a binding from an inner carrierized
-          // barrel; the importer-local symbol route must cross that whole chain before the inner
-          // barrel's module-wide dependency union is suppressed.
-          let placement_targets = collect_wrapped_esm_init_targets_for_import_record(
-            &ctx,
-            rec_idx,
-            |symbol_ref| used_symbol_refs_builder.contains(&symbol_ref),
-            |_| true,
-            |_| false,
-          );
-          for target in placement_targets {
-            match target {
-              WrappedEsmInitTarget::Module(target_idx) => q.push_back(target_idx),
-              WrappedEsmInitTarget::CjsCarrier(key) => {
-                let carrier = pre_chunk_order_state
-                  .order_cjs_carrier(key)
-                  .expect("pre-chunk order CJS carrier should exist");
-                q.push_back(carrier.importee);
-              }
-            }
-          }
-        }
+      if let Some(dependencies) = init_dependencies {
+        q.extend(dependencies[module_idx].iter().copied());
       }
     }
+  }
+
+  // See internal-docs/code-splitting/implementation.md#reachability-propagation.
+  fn place_unselected_consumer_local_reexport_targets(
+    &self,
+    index_splitting_info: &mut IndexSplittingInfo,
+    pre_chunk_order_state: &super::order_wrap_state::OrderWrapState,
+  ) {
+    if !pre_chunk_order_state.has_consumer_local_reexport_routes() {
+      return;
+    }
+    for module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal) {
+      if !self.link_output.metas[module.idx].is_included
+        || !index_splitting_info[module.idx].bits.is_empty()
+      {
+        continue;
+      }
+      let mut bits = index_splitting_info[module.idx].bits.clone();
+      let mut is_initial = false;
+      for &importer_idx in &module.importers_idx {
+        if pre_chunk_order_state.is_consumer_local_reexport_route(importer_idx) {
+          let importer = &index_splitting_info[importer_idx];
+          bits.union(&importer.bits);
+          is_initial |= importer.tags_bit_set.has_bit(ModuleTag::INITIAL_BIT);
+        }
+      }
+      let info = &mut index_splitting_info[module.idx];
+      info.share_count = bits.bit_count();
+      info.bits = bits;
+      if is_initial {
+        info.tags_bit_set.set_bit(ModuleTag::INITIAL_BIT);
+      }
+    }
+  }
+}
+
+pub(super) fn module_namespace_is_referenced(
+  module: &NormalModule,
+  meta: &LinkingMetadata,
+  order_state: &super::order_wrap_state::OrderWrapState,
+  importer_is_live: impl Fn(ModuleIdx) -> bool,
+) -> bool {
+  let reason = meta.module_namespace_included_reason;
+  // A merged dynamic entry needs a namespace even when it has no exports.
+  if order_state.requires_namespace(module.namespace_object_ref, importer_is_live)
+    || reason.contains(ModuleNamespaceIncludedReason::SimulateFacadeChunk)
+  {
+    true
+  } else if matches!(module.exports_kind, ExportsKind::Esm) {
+    reason.contains(ModuleNamespaceIncludedReason::Unknown)
+      || (reason.contains(ModuleNamespaceIncludedReason::ReExportDynamicExports)
+        && meta.has_dynamic_exports)
+  } else {
+    false
   }
 }
 

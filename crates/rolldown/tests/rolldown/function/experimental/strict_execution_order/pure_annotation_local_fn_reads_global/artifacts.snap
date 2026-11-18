@@ -7,18 +7,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import assert from "node:assert";
-//#region setup.js
+// setup.js
 globalThis.globalValue = "foo";
-//#endregion
-//#region dep.js
+// dep.js
 function getGlobalValue() {
 	return globalValue;
 }
 var dep_default = /*#__PURE__*/ getGlobalValue();
-//#endregion
-//#region main.js
+// main.js
 assert.strictEqual(dep_default, "foo");
-//#endregion
 
 ```
 
@@ -31,14 +28,13 @@ assert.strictEqual(dep_default, "foo");
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
-//#region setup.js
+// setup.js
 function init_setup() {
 	return (init_setup = __esmMin((() => {
 		globalThis.globalValue = "foo";
 	})))();
 }
-//#endregion
-//#region dep.js
+// dep.js
 function getGlobalValue() {
 	return globalValue;
 }
@@ -48,8 +44,7 @@ function init_dep() {
 		dep_default = /*#__PURE__*/ getGlobalValue();
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_setup();
@@ -57,7 +52,6 @@ function init_main() {
 		assert.strictEqual(dep_default, "foo");
 	})))();
 }
-//#endregion
 init_main();
 
 ```

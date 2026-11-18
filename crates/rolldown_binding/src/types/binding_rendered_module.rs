@@ -1,4 +1,3 @@
-use napi::bindgen_prelude::FromNapiValue;
 use napi_derive::napi;
 use rolldown_common::RenderedModule;
 use std::{fmt::Debug, sync::Arc};
@@ -20,6 +19,12 @@ impl BindingRenderedModule {
     self.inner.code()
   }
 
+  /// `code.length` without materializing `code`.
+  #[napi(getter)]
+  pub fn rendered_length(&self) -> u32 {
+    u32::try_from(self.inner.rendered_utf16_length()).unwrap_or(u32::MAX)
+  }
+
   #[napi(getter)]
   pub fn rendered_exports(&self) -> Vec<&str> {
     self.inner.rendered_exports.iter().map(AsRef::as_ref).collect()
@@ -29,14 +34,5 @@ impl BindingRenderedModule {
 impl Debug for BindingRenderedModule {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("BindingRenderedModule").field("code", &"...").finish()
-  }
-}
-
-impl FromNapiValue for BindingRenderedModule {
-  unsafe fn from_napi_value(
-    _env: napi::sys::napi_env,
-    _napi_val: napi::sys::napi_value,
-  ) -> napi::Result<Self> {
-    Ok(BindingRenderedModule { inner: Arc::new(RenderedModule::default()) })
   }
 }

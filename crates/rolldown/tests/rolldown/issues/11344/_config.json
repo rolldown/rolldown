@@ -1,0 +1,8 @@
+{
+  "_comment": "https://github.com/rolldown/rolldown/issues/11344 - `lib/mod.js` is loaded for its own export `value`, so lazy barrel loads its re-export record to `barrel` without requesting `Foo`, and skips `barrel`'s `export *` record. The unused `LibFoo` re-export must not be reported as MISSING_EXPORT.",
+  "config": {
+    "experimental": {
+      "lazyBarrel": true
+    }
+  }
+}

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 let count = 0;
 function reset() {
 	count = 0;
@@ -15,7 +15,6 @@ function inc() {
 	count += 1;
 }
 var main_default = count;
-//#endregion
 export { main_default as default, inc, reset };
 
 ```

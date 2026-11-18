@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// umd.js
+var require_umd = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+	(function(root) {
+		root.value = 1;
+	})(this$1);
+}));
+// reader.js
+var require_reader = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = require_umd().value;
+}));
+require_umd();
+var import_reader = require_reader();
+assert.strictEqual(import_reader.value, 1);
+
+```

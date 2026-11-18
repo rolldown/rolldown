@@ -6,14 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region inject.js
+// inject.js
 const old = fn;
 const fn = (...args) => old.apply(console, ["log:"].concat(args));
-//#endregion
-//#region entry.js
+// entry.js
 fn(test);
 fn(test);
 fn(test);
-//#endregion
 
 ```

@@ -1,0 +1,25 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "app",
+        "import": "./main.js"
+      },
+      {
+        "name": "page",
+        "import": "./page.js"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "external": ["node:path"],
+    "treeshake": {
+      "moduleSideEffects": false
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "on-demand",
+      "onDemandWrapping": true
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## EXTERNAL_MODULES_CANNOT_BE_TRANSFORMED_TO_MODULES
+
+```text
+[EXTERNAL_MODULES_CANNOT_BE_TRANSFORMED_TO_MODULES] "lib.js" is resolved as a module now, but it was an external module before.
+   ╭─[ main.js:3:23 ]
+   │
+ 3 │ import { value } from './lib'
+   │                       ───┬───  
+   │                          ╰───── This import resolves to a non-external module.
+   │ 
+   │ Help: Make all imports of this module resolve the same way: all as external, or all as non-external.
+───╯
+
+```

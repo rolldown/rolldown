@@ -167,6 +167,17 @@ export interface OutputOptions {
    */
   file?: string;
   /**
+   * Controls how non-ASCII characters are represented in generated JavaScript.
+   *
+   * - `'utf8'`: Preserve non-ASCII characters.
+   * - `'ascii'`: Escape non-ASCII characters where possible.
+   *
+   * {@include ./docs/output-charset.md}
+   *
+   * @default 'utf8'
+   */
+  charset?: 'ascii' | 'utf8';
+  /**
    * Which exports mode to use.
    *
    * {@include ./docs/output-exports.md}
@@ -393,7 +404,7 @@ export interface OutputOptions {
    * - `[hash]`: A hash based only on the content of the final generated chunk, including transformations in `renderChunk` and any referenced file hashes. You can also set a specific hash length via e.g. `[hash:10]`. By default, it will create a base-64 hash. If you need a reduced character set, see {@linkcode hashCharacters | output.hashCharacters}.
    * - `[name]`: The file name (without extension) of the entry point, unless the object form of input was used to define a different name.
    *
-   * Forward slashes (`/`) can be used to place files in sub-directories. This pattern will also be used for every file when setting the {@linkcode preserveModules | output.preserveModules} option.
+   * Forward slashes (`/`) can be used to place files in sub-directories. This pattern will also be used for every file when setting the {@linkcode preserveModules | output.preserveModules} option. Note that in this case, `[name]` will include the relative path from the output root and possibly the original file extension if it was not one of `.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, or `.cts`.
    *
    * See also {@linkcode assetFileNames | output.assetFileNames}, {@linkcode chunkFileNames | output.chunkFileNames}.
    *
@@ -460,6 +471,7 @@ export interface OutputOptions {
   name?: string;
   /**
    * Specifies `id: variableName` pairs necessary for {@link InputOptions.external | external} imports in `umd` / `iife` {@link OutputOptions.format | formats}.
+   * The `id` does not include import attributes.
    *
    * @example
    * ```js
@@ -487,7 +499,8 @@ export interface OutputOptions {
    */
   globals?: Record<string, string> | GlobalsFunction;
   /**
-   * Maps {@link InputOptions.external | external} module IDs to paths.
+   * Maps {@link InputOptions.external | external} module IDs to paths. The ID does not include
+   * import attributes.
    *
    * Allows customizing the path used when importing external dependencies.
    * This is particularly useful for loading dependencies from CDNs or custom locations.
@@ -549,6 +562,8 @@ export interface OutputOptions {
    * Whether to keep external dynamic imports as `import(...)` expressions in CommonJS output.
    *
    * If set to `false`, external dynamic imports will be rewritten to use `require(...)` calls.
+   * An `import()` with a second argument, such as `{ with: { type: 'json' } }`, stays an
+   * `import()`, because `require()` cannot carry import attributes.
    * This may be necessary to support environments that do not support dynamic `import()` in CommonJS modules like old Node.js versions.
    *
    * @default true
@@ -769,6 +784,10 @@ export interface OutputOptions {
    *
    * > [!WARNING]
    * > Enabling this option increases bundle size because wrapped modules need runtime init helpers.
+   *
+   * {@linkcode CodeSplittingOptions.experimentalInlineCommonChunks | experimentalInlineCommonChunks}
+   * with a `maxSize` above `0` turns this option on when it is omitted.
+   *
    * @default false
    */
   strictExecutionOrder?: boolean;
@@ -1014,6 +1033,39 @@ export type CodeSplittingGroup = {
 export type AdvancedChunksGroup = CodeSplittingGroup;
 
 /**
+ * Options for [`output.codeSplitting.experimentalInlineCommonChunks`](https://rolldown.rs/reference/OutputOptions.codeSplitting#experimentalinlinecommonchunks).
+ *
+ * See the [Inline Common Chunks guide](https://rolldown.rs/in-depth/inline-common-chunks)
+ * for how inlining works, its tradeoffs, and compatibility with plugins.
+ *
+ * @experimental This feature is experimental. Its behavior and option shape may change in any release.
+ *
+ * @category Code Splitting
+ */
+export type ExperimentalInlineCommonChunksOptions = {
+  /**
+   * Inline eligible automatic common chunks whose size is strictly smaller than this value.
+   * Size is the sum of their modules' transformed source sizes in bytes, before rendering,
+   * minification and compression.
+   *
+   * Must be a non-negative safe integer or `Infinity`. `0` disables inlining.
+   * `Infinity` removes the size limit.
+   *
+   * @default 0
+   */
+  maxSize?: number;
+  /**
+   * A matcher for module ids, or an array of them: a string (matched as a regular expression), a
+   * RegExp, or a function, each applied like {@linkcode CodeSplittingGroup.test | test}. A common
+   * chunk is not inlined when any of its modules matches any matcher.
+   */
+  exclude?:
+    | StringOrRegExp
+    | CodeSplittingTestFunction
+    | Array<StringOrRegExp | CodeSplittingTestFunction>;
+};
+
+/**
  * Configuration options for advanced code splitting.
  *
  * @category Code Splitting
@@ -1047,6 +1099,40 @@ export type CodeSplittingOptions = {
    * Groups to be used for code splitting.
    */
   groups?: CodeSplittingGroup[];
+  /**
+   * Inline small automatic common chunks into their consumers to reduce the chunk count.
+   * This duplicates code and adds runtime overhead.
+   *
+   * Set `maxSize` above `0` to enable it. Requires {@linkcode OutputOptions.format | output.format: 'es'}
+   * and an explicit {@linkcode InputOptions.preserveEntrySignatures | preserveEntrySignatures: false}.
+   * Requires {@linkcode OutputOptions.strictExecutionOrder | strictExecutionOrder},
+   * which is enabled automatically when omitted.
+   * Incompatible with {@linkcode OutputOptions.preserveModules | output.preserveModules}.
+   *
+   * Plugins must support modules appearing in multiple output chunks. See the
+   * [Inline Common Chunks guide](https://rolldown.rs/in-depth/inline-common-chunks)
+   * for behavior, tradeoffs and plugin compatibility.
+   *
+   * @example
+   * ```js
+   * import { defineConfig } from 'rolldown';
+   *
+   * export default defineConfig({
+   *   preserveEntrySignatures: false,
+   *   output: {
+   *     format: 'es',
+   *     codeSplitting: {
+   *       experimentalInlineCommonChunks: {
+   *         maxSize: 10 * 1024, // Example threshold in bytes.
+   *       },
+   *     },
+   *   },
+   * });
+   * ```
+   *
+   * @experimental This feature is experimental. Its behavior and option shape may change in any release.
+   */
+  experimentalInlineCommonChunks?: ExperimentalInlineCommonChunksOptions;
 };
 
 /**

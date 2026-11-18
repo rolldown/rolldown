@@ -7,17 +7,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region node_modules/fs/abc.js
+// node_modules/fs/abc.js
 var require_abc = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("include this");
 }));
-//#endregion
-//#region node_modules/fs/index.js
+// node_modules/fs/index.js
 var require_fs = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("include this too");
 }));
-//#endregion
-//#region entry.js
+// entry.js
 console.log([
 	require("fs"),
 	require("fs/promises"),
@@ -25,6 +23,5 @@ console.log([
 	require_abc(),
 	require_fs()
 ]);
-//#endregion
 
 ```

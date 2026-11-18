@@ -27,10 +27,12 @@ export interface SourceMap {
   file: string;
   mappings: string;
   names: string[];
-  sources: string[];
+  sources: (string | null)[];
   sourcesContent: string[];
   version: number;
   debugId?: string;
+  ignoreList?: number[];
+  /** @deprecated Use `ignoreList` instead. */
   x_google_ignoreList?: number[];
   toString(): string;
   toUrl(): string;

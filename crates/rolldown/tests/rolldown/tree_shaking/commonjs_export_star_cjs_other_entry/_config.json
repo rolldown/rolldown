@@ -1,0 +1,9 @@
+{
+  "config": {
+    "format": "cjs",
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "dep", "import": "./dep.cjs" }
+    ]
+  }
+}

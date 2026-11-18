@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## 0shared-file!.js
 
 ```js
-//#region 0shared-file!.js
+// 0shared-file!.js
 var _0shared_file__default = "shared";
-//#endregion
 Object.defineProperty(exports, "_0shared_file__default", {
 	enumerable: true,
 	get: function() {
@@ -22,9 +21,8 @@ Object.defineProperty(exports, "_0shared_file__default", {
 
 ```js
 const require_0shared_file_ = require("./0shared-file!.js");
-//#region main1.js
+// main1.js
 console.log(require_0shared_file_._0shared_file__default);
-//#endregion
 
 ```
 
@@ -32,8 +30,7 @@ console.log(require_0shared_file_._0shared_file__default);
 
 ```js
 const require_0shared_file_ = require("./0shared-file!.js");
-//#region main2.js
+// main2.js
 console.log(require_0shared_file_._0shared_file__default);
-//#endregion
 
 ```

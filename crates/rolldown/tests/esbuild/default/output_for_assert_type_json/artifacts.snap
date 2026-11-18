@@ -1,30 +1,167 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Errors
+# warnings
 
-## MISSING_EXPORT
+## DEPRECATED_IMPORT_ASSERTION
 
 ```text
-[MISSING_EXPORT] "default" is not exported by "foo.copy".
-   ╭─[ js-entry.js:2:8 ]
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "js-entry.js" is deprecated and is treated as `with`. Use `with` instead.
+   ╭─[ js-entry.js:1:30 ]
    │
- 2 │ import copy from './foo.copy' assert { type: 'json' }
-   │        ──┬─  
-   │          ╰─── Missing export
+ 1 │ import all from './foo.json' assert { type: 'json' }
+   │                              ───────────┬───────────  
+   │                                         ╰───────────── replace `assert` with `with`
 ───╯
 
 ```
 
-## MISSING_EXPORT
+## DEPRECATED_IMPORT_ASSERTION
 
 ```text
-[MISSING_EXPORT] "default" is not exported by "foo.copy".
-   ╭─[ ts-entry.ts:2:8 ]
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "js-entry.js" is deprecated and is treated as `with`. Use `with` instead.
+   ╭─[ js-entry.js:2:31 ]
    │
  2 │ import copy from './foo.copy' assert { type: 'json' }
-   │        ──┬─  
-   │          ╰─── Missing export
+   │                               ───────────┬───────────  
+   │                                          ╰───────────── replace `assert` with `with`
 ───╯
+
+```
+
+## DEPRECATED_IMPORT_ASSERTION
+
+```text
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "js-entry.js" is deprecated and is treated as `with`. Use `with` instead.
+   ╭─[ js-entry.js:4:34 ]
+   │
+ 4 │ import * as ns from './foo.json' assert { type: 'json' }
+   │                                  ───────────┬───────────  
+   │                                             ╰───────────── replace `assert` with `with`
+───╯
+
+```
+
+## DEPRECATED_IMPORT_ASSERTION
+
+```text
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "js-entry.js" is deprecated and is treated as `with`. Use `with` instead.
+   ╭─[ js-entry.js:6:38 ]
+   │
+ 6 │ export { default } from './foo.json' assert { type: 'json' }
+   │                                      ───────────┬───────────  
+   │                                                 ╰───────────── replace `assert` with `with`
+───╯
+
+```
+
+## DEPRECATED_IMPORT_ASSERTION
+
+```text
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "ts-entry.ts" is deprecated and is treated as `with`. Use `with` instead.
+   ╭─[ ts-entry.ts:1:30 ]
+   │
+ 1 │ import all from './foo.json' assert { type: 'json' }
+   │                              ───────────┬───────────  
+   │                                         ╰───────────── replace `assert` with `with`
+───╯
+
+```
+
+## DEPRECATED_IMPORT_ASSERTION
+
+```text
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "ts-entry.ts" is deprecated and is treated as `with`. Use `with` instead.
+   ╭─[ ts-entry.ts:2:31 ]
+   │
+ 2 │ import copy from './foo.copy' assert { type: 'json' }
+   │                               ───────────┬───────────  
+   │                                          ╰───────────── replace `assert` with `with`
+───╯
+
+```
+
+## DEPRECATED_IMPORT_ASSERTION
+
+```text
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "ts-entry.ts" is deprecated and is treated as `with`. Use `with` instead.
+   ╭─[ ts-entry.ts:5:34 ]
+   │
+ 5 │ import * as ns from './foo.json' assert { type: 'json' }
+   │                                  ───────────┬───────────  
+   │                                             ╰───────────── replace `assert` with `with`
+───╯
+
+```
+
+## DEPRECATED_IMPORT_ASSERTION
+
+```text
+[DEPRECATED_IMPORT_ASSERTION] The legacy `assert` keyword in "ts-entry.ts" is deprecated and is treated as `with`. Use `with` instead.
+   ╭─[ ts-entry.ts:7:38 ]
+   │
+ 7 │ export { default } from './foo.json' assert { type: 'json' }
+   │                                      ───────────┬───────────  
+   │                                                 ╰───────────── replace `assert` with `with`
+───╯
+
+```
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Import `prop` will always be undefined because there is no matching export in 'foo.json?attributes=%7B%22type%22%3A%22json%22%7D'
+   ╭─[ js-entry.js:5:21 ]
+   │
+ 5 │ use(all, copy, def, ns.prop)
+   │                     ───┬───  
+   │                        ╰───── 
+───╯
+
+```
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Import `prop` will always be undefined because there is no matching export in 'foo.json?attributes=%7B%22type%22%3A%22json%22%7D'
+   ╭─[ ts-entry.ts:6:21 ]
+   │
+ 6 │ use(all, copy, def, ns.prop)
+   │                     ───┬───  
+   │                        ╰───── 
+───╯
+
+```
+
+# Assets
+
+## foo.js
+
+```js
+// foo.json with { type: "json" }
+var foo_default$1 = {};
+// foo.copy with { type: "json" }
+var foo_default = {};
+export { foo_default$1 as n, foo_default as t };
+
+```
+
+## js-entry.js
+
+```js
+import { n as foo_default, t as foo_default$1 } from "./foo.js";
+// js-entry.js
+use(foo_default, foo_default$1, foo_default, void 0);
+export { foo_default as default };
+
+```
+
+## ts-entry.js
+
+```js
+import { n as foo_default, t as foo_default$1 } from "./foo.js";
+// ts-entry.ts
+use(foo_default, foo_default$1, foo_default, void 0);
+export { foo_default as default };
 
 ```

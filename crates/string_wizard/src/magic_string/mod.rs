@@ -25,12 +25,18 @@ use crate::{
 pub struct MagicStringOptions {
   pub filename: Option<String>,
   pub ignore_list: bool,
+  /// The resolution of a sourcemap that a caller generates from this instance without its own
+  /// `hires` value. `None` lets each caller use its own default.
+  #[cfg(feature = "sourcemap")]
+  pub hires: Option<crate::Hires>,
 }
 
 #[derive(Debug, Clone)]
 pub struct MagicString<'s> {
   filename: Option<String>,
   ignore_list: bool,
+  #[cfg(feature = "sourcemap")]
+  hires: Option<crate::Hires>,
   intro: VecDeque<CowStr<'s>>,
   outro: VecDeque<CowStr<'s>>,
   source: Cow<'s, str>,
@@ -83,6 +89,8 @@ impl<'text> MagicString<'text> {
       chunk_by_end: Default::default(),
       filename: options.filename,
       ignore_list: options.ignore_list,
+      #[cfg(feature = "sourcemap")]
+      hires: options.hires,
       guessed_indentor: OnceLock::default(),
       stored_names: FxHashMap::default(),
       last_searched_chunk_idx: initial_chunk_idx,
@@ -106,6 +114,12 @@ impl<'text> MagicString<'text> {
     self.ignore_list
   }
 
+  /// See [`MagicStringOptions::hires`].
+  #[cfg(feature = "sourcemap")]
+  pub fn hires(&self) -> Option<crate::Hires> {
+    self.hires
+  }
+
   /// Returns the length in UTF-8 bytes of the content within chunks (intro + content + outro
   /// per chunk), excluding the global intro/outro from `prepend`/`append`.
   /// This aligns with the reference `magic-string` behavior.
@@ -122,11 +136,7 @@ impl<'text> MagicString<'text> {
   /// This is what the reference `magic-string` `length()` returns, since JavaScript string
   /// length is measured in UTF-16 code units.
   pub fn len_utf16(&self) -> usize {
-    self
-      .iter_chunks()
-      .flat_map(|c| c.fragments(&self.source))
-      .map(|f| f.chars().map(char::len_utf16).sum::<usize>())
-      .sum()
+    self.iter_chunks().flat_map(|c| c.fragments(&self.source)).map(simd_utf16_len::utf16_len).sum()
   }
 
   /// Returns the length in UTF-8 bytes of the whole generated output, including the global

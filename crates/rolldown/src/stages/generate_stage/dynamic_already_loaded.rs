@@ -7,14 +7,16 @@ use rolldown_common::{
   UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
-use rolldown_utils::BitSet;
+use rolldown_utils::{BitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::collect_entry_reexported_wrapper_inits;
+use crate::stages::link_stage::IncludeContext;
 
 use super::{
   GenerateStage, code_splitting::IndexSplittingInfo,
+  dynamic_entry_namespace::is_pure_dynamic_entry_chunk, reduced_chunk_graph::ReducedChunkGraph,
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
@@ -50,6 +52,47 @@ impl ReducedEntriesAction {
   fn apply_if(apply: bool) -> Self {
     if apply { ReducedEntriesAction::Apply } else { ReducedEntriesAction::Avoid }
   }
+
+  fn record_namespace_extraction(
+    &self,
+    namespace_extractions: &mut FxHashSet<(ChunkIdx, ModuleIdx)>,
+  ) {
+    if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
+      entry_chunk_idx,
+      entry_module_idx,
+    } = *self
+    {
+      namespace_extractions.insert((entry_chunk_idx, entry_module_idx));
+    }
+  }
+
+  /// Records the chunk when this plain merge moves the atom into the chunk of a pure dynamic
+  /// entry. A plain merge into such a chunk passes only the weak first check of
+  /// `can_use_reduced_dependent_entries`. `find_leaking_dynamic_entry_namespaces` checks the chunk
+  /// again with the links.
+  fn record_dynamic_entry_merge_target(
+    &self,
+    reduced: &BitSet,
+    chunk_graph: &ChunkGraph,
+    dynamic_entry_merge_targets: &mut FxHashSet<ChunkIdx>,
+  ) {
+    if matches!(self, ReducedEntriesAction::Apply)
+      && reduced.bit_count() == 1
+      && let Some(entry_bit) = reduced.index_of_one().next()
+      && let entry_chunk_idx = ChunkIdx::from_raw(entry_bit)
+      && chunk_graph.chunk_table.get(entry_chunk_idx).is_some_and(is_pure_dynamic_entry_chunk)
+    {
+      dynamic_entry_merge_targets.insert(entry_chunk_idx);
+    }
+  }
+}
+
+/// A reduction that the pass accepted but did not apply in its first loop: the cycle check rejected
+/// the move, or the move waits for `keep_inlinable_dynamic_entry_atoms_shared`.
+struct RejectedMove {
+  atom_idx: usize,
+  reduced: BitSet,
+  action: ReducedEntriesAction,
 }
 
 impl GenerateStage<'_> {
@@ -59,6 +102,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     entries_len: u32,
     used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
+    dynamic_entry_merge_targets: &mut FxHashSet<ChunkIdx>,
   ) {
     let mut namespace_extractions = FxHashSet::default();
     let DynamicEntryAnalysis {
@@ -83,8 +127,8 @@ impl GenerateStage<'_> {
       &flattened_entry_modules,
       used_symbol_refs_builder,
     );
-    // Indexed by entry bit, so `reduced_atom_graph_has_static_cycle` can pair each facade chunk
-    // with its entry module's host atom by index instead of hashing a synthesized `BitSet`.
+    // Indexed by entry bit, so `ReducedChunkGraph` can pair each facade chunk with its entry
+    // module's host atom.
     let host_atom_by_entry_bit: Vec<Option<usize>> =
       flattened_entry_modules.iter().map(|&module_idx| module_to_atom_idx[module_idx]).collect();
 
@@ -102,45 +146,75 @@ impl GenerateStage<'_> {
       atoms.len(),
     );
 
+    let mut reduced_chunk_graph = ReducedChunkGraph::new(
+      atoms.iter().map(|atom| &atom.dependent_entries),
+      &atom_dependencies.cycle,
+      &host_atom_by_entry_bit,
+    );
     let mut changed = false;
-    for atom_idx in 0..atoms.len() {
-      let original_dependent_entries = atoms[atom_idx].dependent_entries.clone();
-      let dependent_entries = atoms[atom_idx].dependent_entries.index_of_one().collect::<Vec<_>>();
+    let mut rejected_moves = vec![];
+    // Manual code splitting places its modules after this pass, so the cycle graph does not see
+    // the chunks of its groups. A retry can then fold a dependency of a group into a chunk that
+    // imports the group (`issues/9225`).
+    let retries = !self.options.has_manual_code_splitting_groups();
+    // A move that can cost a facade file waits for `keep_inlinable_dynamic_entry_atoms_shared`.
+    let waits_for_facade_check = |atom: &ChunkAtom| {
+      retries
+        && atom.dependent_entries.bit_count() == 1
+        && self.prefers_inline_with_dynamic_entries(&atom.modules)
+    };
+    for (atom_idx, atom) in atoms.iter_mut().enumerate() {
+      let original_dependent_entries = atom.dependent_entries.clone();
+      let dependent_entries = atom.dependent_entries.index_of_one().collect::<Vec<_>>();
       let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
       for entry_idx in dependent_entries {
         if already_loaded_atoms_by_entry[entry_idx as usize].has_bit(atom_bit) {
-          atoms[atom_idx].dependent_entries.clear_bit(entry_idx);
+          atom.dependent_entries.clear_bit(entry_idx);
         }
       }
-      let action = if atoms[atom_idx].dependent_entries == original_dependent_entries {
+      let action = if atom.dependent_entries == original_dependent_entries {
         ReducedEntriesAction::Avoid
       } else {
         self.can_use_reduced_dependent_entries(
-          &atoms[atom_idx],
+          atom,
           &original_dependent_entries,
-          &atoms[atom_idx].dependent_entries,
+          &atom.dependent_entries,
           chunk_graph,
           &dynamic_entry_modules_by_entry,
         )
       };
-      if !matches!(action, ReducedEntriesAction::Avoid)
-        && !Self::reduced_atom_graph_has_static_cycle(
-          &atoms,
-          &atom_dependencies.cycle,
-          &host_atom_by_entry_bit,
-        )
+      if matches!(action, ReducedEntriesAction::Avoid) {
+        atom.dependent_entries = original_dependent_entries;
+      } else if !waits_for_facade_check(atom)
+        && reduced_chunk_graph.try_move(atom_idx, &atom.dependent_entries)
       {
         changed = true;
-        if let ReducedEntriesAction::ApplyWithNamespaceExtraction {
-          entry_chunk_idx,
-          entry_module_idx,
-        } = action
-        {
-          namespace_extractions.insert((entry_chunk_idx, entry_module_idx));
-        }
+        action.record_namespace_extraction(&mut namespace_extractions);
+        action.record_dynamic_entry_merge_target(
+          &atom.dependent_entries,
+          chunk_graph,
+          dynamic_entry_merge_targets,
+        );
       } else {
-        atoms[atom_idx].dependent_entries = original_dependent_entries;
+        let reduced = std::mem::replace(&mut atom.dependent_entries, original_dependent_entries);
+        rejected_moves.push(RejectedMove { atom_idx, reduced, action });
       }
+    }
+    if retries {
+      self.keep_inlinable_dynamic_entry_atoms_shared(
+        &mut rejected_moves,
+        &atoms,
+        &module_to_atom_idx,
+        &dynamic_entry_modules_by_entry,
+      );
+      changed |= Self::retry_rejected_moves(
+        &mut atoms,
+        &mut reduced_chunk_graph,
+        rejected_moves,
+        &mut namespace_extractions,
+        chunk_graph,
+        dynamic_entry_merge_targets,
+      );
     }
 
     if !changed {
@@ -163,6 +237,57 @@ impl GenerateStage<'_> {
     );
   }
 
+  /// Retries the rejected moves after the first pass. A rejected move can close a cycle only
+  /// through an atom that has not moved yet, so a later move can make it acyclic. Each round first
+  /// moves the rejected atoms with equal reduced bits together, then one by one, until a round
+  /// moves nothing. See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
+  fn retry_rejected_moves(
+    atoms: &mut [ChunkAtom],
+    reduced_chunk_graph: &mut ReducedChunkGraph<'_>,
+    mut rejected_moves: Vec<RejectedMove>,
+    namespace_extractions: &mut FxHashSet<(ChunkIdx, ModuleIdx)>,
+    chunk_graph: &ChunkGraph,
+    dynamic_entry_merge_targets: &mut FxHashSet<ChunkIdx>,
+  ) -> bool {
+    let mut changed = false;
+    while !rejected_moves.is_empty() {
+      let mut groups: FxIndexMap<&BitSet, Vec<usize>> = FxIndexMap::default();
+      for (idx, rejected_move) in rejected_moves.iter().enumerate() {
+        groups.entry(&rejected_move.reduced).or_default().push(idx);
+      }
+      let mut moved = vec![false; rejected_moves.len()];
+      for (bits, idxs) in groups {
+        let atom_idxs = idxs.iter().map(|&idx| rejected_moves[idx].atom_idx).collect::<Vec<_>>();
+        if atom_idxs.len() > 1 && reduced_chunk_graph.try_move_atoms(&atom_idxs, bits) {
+          idxs.iter().for_each(|&idx| moved[idx] = true);
+          continue;
+        }
+        for (&idx, &atom_idx) in idxs.iter().zip(&atom_idxs) {
+          moved[idx] = reduced_chunk_graph.try_move(atom_idx, bits);
+        }
+      }
+      if !moved.contains(&true) {
+        break;
+      }
+      changed = true;
+      let mut moved = moved.into_iter();
+      rejected_moves.retain(|rejected_move| {
+        if !moved.next().unwrap_or_default() {
+          return true;
+        }
+        atoms[rejected_move.atom_idx].dependent_entries = rejected_move.reduced.clone();
+        rejected_move.action.record_namespace_extraction(namespace_extractions);
+        rejected_move.action.record_dynamic_entry_merge_target(
+          &rejected_move.reduced,
+          chunk_graph,
+          dynamic_entry_merge_targets,
+        );
+        false
+      });
+    }
+    changed
+  }
+
   fn can_use_reduced_dependent_entries(
     &self,
     atom: &ChunkAtom,
@@ -183,6 +308,11 @@ impl GenerateStage<'_> {
     let Some(chunk) = chunk_graph.chunk_table.get(entry_chunk_idx) else {
       return ReducedEntriesAction::Avoid;
     };
+
+    // See internal-docs/inline-common-chunks/design.md#keeping-shared-code-available-for-inlining.
+    if self.prefers_inline_common_chunk(&atom.modules) {
+      return ReducedEntriesAction::Avoid;
+    }
 
     let can_merge_without_changing_entry_signature =
       self.can_merge_without_changing_entry_signature(chunk, &atom.modules);
@@ -226,7 +356,10 @@ impl GenerateStage<'_> {
   /// If all the used exports of the dynamic import are statically known and actual exports
   /// of the module, code will never observe the extra exports and we can avoid the extra
   /// indirection of exporting a synthetic namespace.
-  fn dynamic_entry_partial_usage_allows_plain_merge(&self, entry_module_idx: ModuleIdx) -> bool {
+  pub(super) fn dynamic_entry_partial_usage_allows_plain_merge(
+    &self,
+    entry_module_idx: ModuleIdx,
+  ) -> bool {
     let Some(DynamicImportExportsUsage::Partial(used)) =
       self.link_output.dynamic_import_exports_usage_map.get(&entry_module_idx)
     else {
@@ -239,7 +372,10 @@ impl GenerateStage<'_> {
   /// Whether `import()` of this dynamic entry can be preserved by exporting the
   /// entry's namespace object from its chunk and rewriting every dynamic importer to
   /// `.then((n) => n.<ns>)` (see `rewrite_dynamic_import_for_merged_entry`).
-  fn dynamic_entry_supports_namespace_extraction(&self, entry_module_idx: ModuleIdx) -> bool {
+  pub(super) fn dynamic_entry_supports_namespace_extraction(
+    &self,
+    entry_module_idx: ModuleIdx,
+  ) -> bool {
     if self.link_output.module_table[entry_module_idx].as_normal().is_none() {
       return false;
     }
@@ -268,13 +404,13 @@ impl GenerateStage<'_> {
   /// Generates a definition for a fake module namespace for the inlined module, which is then
   /// exported. Dynamic importers of this atom from this chunk can then do `.then((n) => n.<ns>)`
   /// to get that namespace.
-  fn apply_dynamic_entry_namespace_extractions(
+  pub(super) fn apply_dynamic_entry_namespace_extractions<'a>(
     &mut self,
     chunk_graph: &mut ChunkGraph,
-    namespace_extractions: &FxHashSet<(ChunkIdx, ModuleIdx)>,
+    namespace_extractions: impl IntoIterator<Item = &'a (ChunkIdx, ModuleIdx)> + Copy,
     used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
   ) {
-    if namespace_extractions.is_empty() {
+    if namespace_extractions.into_iter().next().is_none() {
       return;
     }
 
@@ -283,23 +419,181 @@ impl GenerateStage<'_> {
     }
 
     self.replay_link_stage_inclusion(used_symbol_refs_builder, |context| {
-      let mut needs_export_all_helper = false;
-      for &(entry_chunk_idx, entry_module_idx) in namespace_extractions {
-        chunk_graph
-          .common_chunk_exported_facade_chunk_namespace
-          .entry(entry_chunk_idx)
-          .or_default()
-          .insert(entry_module_idx);
+      Self::include_dynamic_entry_namespace_extractions(context, chunk_graph, namespace_extractions)
+    });
+  }
 
-        if include_simulated_facade_namespace(context, entry_module_idx) {
-          chunk_graph.chunk_table[entry_chunk_idx]
-            .depended_runtime_helper
-            .insert(RuntimeHelper::ExportAll);
-          needs_export_all_helper = true;
+  /// Makes each entry chunk export the namespace of its entry module, in the closure of
+  /// `replay_link_stage_inclusion`. The closure returns the result: whether a namespace needs
+  /// `__exportAll`. Call `narrow_namespace_stmt_to_used_symbols` for each entry module before the
+  /// replay. `optimize_facade_entry_chunks` calls this function in the replay of its facade
+  /// changes, so that one replay does both changes.
+  ///
+  /// When a namespace needs `__exportAll`, the chunk gets the helper flag. The flag makes the chunk
+  /// a runtime consumer, so runtime placement needs no other record of the chunk.
+  pub(super) fn include_dynamic_entry_namespace_extractions<'a>(
+    context: &mut IncludeContext<'_>,
+    chunk_graph: &mut ChunkGraph,
+    namespace_extractions: impl IntoIterator<Item = &'a (ChunkIdx, ModuleIdx)>,
+  ) -> bool {
+    let mut needs_export_all_helper = false;
+    for &(entry_chunk_idx, entry_module_idx) in namespace_extractions {
+      chunk_graph
+        .common_chunk_exported_facade_chunk_namespace
+        .entry(entry_chunk_idx)
+        .or_default()
+        .insert(entry_module_idx);
+
+      if include_simulated_facade_namespace(context, entry_module_idx) {
+        chunk_graph.chunk_table[entry_chunk_idx]
+          .depended_runtime_helper
+          .insert(RuntimeHelper::ExportAll);
+        needs_export_all_helper = true;
+      }
+    }
+    needs_export_all_helper
+  }
+
+  /// Drops the rejected moves that would merge an atom holding a dynamic entry module into an entry
+  /// chunk at the cost of a facade file, when inline common chunks could keep the atom as a record
+  /// instead. See internal-docs/inline-common-chunks/design.md#chunks-an-import-loads.
+  fn keep_inlinable_dynamic_entry_atoms_shared(
+    &self,
+    rejected_moves: &mut Vec<RejectedMove>,
+    atoms: &[ChunkAtom],
+    module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
+    dynamic_entry_modules_by_entry: &[Option<ModuleIdx>],
+  ) {
+    let candidates = rejected_moves
+      .iter()
+      .filter(|rejected_move| {
+        rejected_move.reduced.bit_count() == 1
+          && self.prefers_inline_with_dynamic_entries(&atoms[rejected_move.atom_idx].modules)
+      })
+      .map(|rejected_move| rejected_move.atom_idx)
+      .collect::<FxHashSet<_>>();
+    if candidates.is_empty() {
+      return;
+    }
+    let importer_atoms = self.live_importer_atoms(atoms, module_to_atom_idx);
+    let targets_dynamic_entry = |reduced: &BitSet| {
+      reduced.index_of_one().next().is_some_and(|entry_bit| {
+        dynamic_entry_modules_by_entry.get(entry_bit as usize).copied().flatten().is_some()
+      })
+    };
+    let mut pending_moves = rejected_moves
+      .iter()
+      .map(|rejected_move| (rejected_move.atom_idx, rejected_move.reduced.clone()))
+      .collect::<FxHashMap<_, _>>();
+    // Dropping a move can leave another move's importer outside, so repeat until nothing changes.
+    loop {
+      let dropped = rejected_moves
+        .iter()
+        .filter(|rejected_move| {
+          candidates.contains(&rejected_move.atom_idx)
+            && pending_moves.contains_key(&rejected_move.atom_idx)
+            && (targets_dynamic_entry(&rejected_move.reduced)
+              || Self::imported_from_outside_entry_chunk(
+                atoms,
+                &importer_atoms,
+                &pending_moves,
+                rejected_move.atom_idx,
+                &rejected_move.reduced,
+              ))
+        })
+        .map(|rejected_move| rejected_move.atom_idx)
+        .collect::<Vec<_>>();
+      if dropped.is_empty() {
+        break;
+      }
+      for atom_idx in dropped {
+        pending_moves.remove(&atom_idx);
+      }
+    }
+    // An entry chunk that another chunk still imports is a facade anyway, so the moves into it go
+    // ahead.
+    let mut facade_entries = FxHashMap::default();
+    rejected_moves.retain(|rejected_move| {
+      let reduced = &rejected_move.reduced;
+      pending_moves.contains_key(&rejected_move.atom_idx)
+        || (!targets_dynamic_entry(reduced)
+          && *facade_entries.entry(reduced.clone()).or_insert_with(|| {
+            (0..atoms.len()).any(|idx| {
+              Self::ends_in_entry_chunk(atoms, &pending_moves, idx, reduced)
+                && Self::imported_from_outside_entry_chunk(
+                  atoms,
+                  &importer_atoms,
+                  &pending_moves,
+                  idx,
+                  reduced,
+                )
+            })
+          }))
+    });
+  }
+
+  /// Whether the atom ends in the chunk of `reduced`'s single entry: it has those bits, or
+  /// `pending_moves` moves it there.
+  fn ends_in_entry_chunk(
+    atoms: &[ChunkAtom],
+    pending_moves: &FxHashMap<usize, BitSet>,
+    atom_idx: usize,
+    reduced: &BitSet,
+  ) -> bool {
+    atoms[atom_idx].dependent_entries == *reduced || pending_moves.get(&atom_idx) == Some(reduced)
+  }
+
+  /// Whether another atom that does not end in the chunk of `reduced`'s single entry loads the atom.
+  fn imported_from_outside_entry_chunk(
+    atoms: &[ChunkAtom],
+    importer_atoms: &[FxHashSet<usize>],
+    pending_moves: &FxHashMap<usize, BitSet>,
+    atom_idx: usize,
+    reduced: &BitSet,
+  ) -> bool {
+    importer_atoms[atom_idx].iter().any(|&importer_atom_idx| {
+      !Self::ends_in_entry_chunk(atoms, pending_moves, importer_atom_idx, reduced)
+    })
+  }
+
+  /// The other atoms that load each atom through an import that tree shaking keeps. An `import()`
+  /// of an entry module runs that entry, so it does not split the entry's chunk and is left out.
+  fn live_importer_atoms(
+    &self,
+    atoms: &[ChunkAtom],
+    module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
+  ) -> Vec<FxHashSet<usize>> {
+    let mut importer_atoms = vec![FxHashSet::default(); atoms.len()];
+    let mut static_importees = vec![];
+    for (atom_idx, atom) in atoms.iter().enumerate() {
+      for &module_idx in &atom.modules {
+        let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+          continue;
+        };
+        let meta = &self.link_output.metas[module_idx];
+        static_importees.clear();
+        self.push_kept_static_importees(module_idx, &mut static_importees);
+        let dynamic_importees = module.import_records.iter().filter_map(|rec| {
+          let info = rec.dynamic_import_expr_info.as_deref()?;
+          let importee_idx = rec.resolved_module?;
+          (rec.kind == ImportKind::DynamicImport
+            && !rec.meta.contains(ImportRecordMeta::DeadDynamicImport)
+            && meta.stmt_info_included.has_bit(info.stmt_info_idx)
+            && !self.link_output.entries.get(&importee_idx).is_some_and(|entry_points| {
+              entry_points.iter().any(|entry| !entry.kind.is_dynamic_import())
+            }))
+          .then_some(importee_idx)
+        });
+        for importee_idx in static_importees.iter().copied().chain(dynamic_importees) {
+          if let Some(importee_atom_idx) = module_to_atom_idx[importee_idx]
+            && importee_atom_idx != atom_idx
+          {
+            importer_atoms[importee_atom_idx].insert(atom_idx);
+          }
         }
       }
-      needs_export_all_helper
-    });
+    }
+    importer_atoms
   }
 
   fn is_runtime_only_atom(&self, atom: &ChunkAtom) -> bool {
@@ -363,7 +657,7 @@ impl GenerateStage<'_> {
   // emission.
   //
   // Hosting-atom attribution over-approximates rather than misses only because of the facade edges
-  // `reduced_atom_graph_has_static_cycle` adds: the facade depends on the host, which is where
+  // `ReducedChunkGraph` adds: the facade depends on the host, which is where
   // these edges land, so anything emission hangs on the facade stays reachable as facade -> host ->
   // target. Before rolldown#10734 this rested on facades having zero static in-degree, which a
   // fold moving an atom into a facade broke — re-derive it before attributing them elsewhere.
@@ -524,7 +818,7 @@ impl GenerateStage<'_> {
         targets.push(served.owner);
       }
     }
-    // A re-export of a wrapped ESM module additionally imports the module's `init_*` wrapper.
+    // An unwrapped entry re-exporting a wrapped ESM module also imports its `init_*` wrapper.
     for init in collect_entry_reexported_wrapper_inits(
       module_idx,
       meta,
@@ -539,7 +833,7 @@ impl GenerateStage<'_> {
     }
   }
 
-  fn referenced_symbol_owners(&self, module_idx: ModuleIdx) -> FxHashSet<ModuleIdx> {
+  pub(super) fn referenced_symbol_owners(&self, module_idx: ModuleIdx) -> FxHashSet<ModuleIdx> {
     let meta = &self.link_output.metas[module_idx];
     let mut owners = FxHashSet::default();
     let note = |symbol_ref: SymbolRef, owners: &mut FxHashSet<ModuleIdx>| {
@@ -570,113 +864,6 @@ impl GenerateStage<'_> {
       }
     }
     owners
-  }
-
-  fn reduced_atom_graph_has_static_cycle(
-    atoms: &[ChunkAtom],
-    atom_dependencies: &[Vec<usize>],
-    host_atom_by_entry_bit: &[Option<usize>],
-  ) -> bool {
-    let mut chunk_idx_by_bits = FxHashMap::default();
-    let mut atom_to_chunk = Vec::with_capacity(atoms.len());
-    let mut facade_chunk_by_entry_bit = vec![None; host_atom_by_entry_bit.len()];
-    for atom in atoms {
-      let next_chunk_idx = chunk_idx_by_bits.len();
-      let chunk_idx = match chunk_idx_by_bits.entry(atom.dependent_entries.clone()) {
-        std::collections::hash_map::Entry::Occupied(occupied) => *occupied.get(),
-        std::collections::hash_map::Entry::Vacant(vacant) => {
-          vacant.insert(next_chunk_idx);
-          next_chunk_idx
-        }
-      };
-      atom_to_chunk.push(chunk_idx);
-      // An entry chunk's bits are exactly its own entry bit, so the singleton atoms seen here are
-      // the only facade candidates. Recording them keeps the facade lookup below an array index —
-      // this runs once per fold candidate, and hashing a `BitSet` per entry on every call would
-      // add `atoms * entries * entries / 8` bytes of hashing to the pass's quadratic hot spot.
-      if atom.dependent_entries.bit_count() == 1
-        && let Some(entry_bit) = atom.dependent_entries.index_of_one().next()
-      {
-        facade_chunk_by_entry_bit[entry_bit as usize] = Some(chunk_idx);
-      }
-    }
-
-    let mut chunk_dependencies = vec![FxHashSet::default(); chunk_idx_by_bits.len()];
-    for (atom_idx, dependencies) in atom_dependencies.iter().enumerate() {
-      let from_chunk_idx = atom_to_chunk[atom_idx];
-      for &dep_atom_idx in dependencies {
-        let to_chunk_idx = atom_to_chunk[dep_atom_idx];
-        if from_chunk_idx != to_chunk_idx {
-          chunk_dependencies[from_chunk_idx].insert(to_chunk_idx);
-        }
-      }
-    }
-
-    // The facade edges the atom graph cannot express: an entry whose module lands in a shared chunk
-    // keeps its own entry chunk as a facade, and `compute_chunk_imports` makes that facade import
-    // the host chunk — to run the module and to re-export its interface — but no module in the
-    // facade imports the entry module. Without them, folding an atom into a facade whose host
-    // statically depends on that atom yields a chunk cycle that evaluates in the wrong order
-    // (rolldown#10734). `cycle` over-approximates, so a redundant facade edge only costs a missed
-    // merge.
-    for (entry_bit, &host_atom_idx) in host_atom_by_entry_bit.iter().enumerate() {
-      // A `None` host means the entry module is external or excluded. Skipping is not a safe
-      // approximation in general — `cycle` may never miss an edge — but it drops no real edge:
-      // `split_chunks` assigns such a module to no chunk, so the facade has no host to import. An
-      // included normal entry module always has an atom — `determine_reachable_modules_for_entry`
-      // sets the entry's own bit on its module, and `split_chunks` asserts that an included
-      // module's bits are non-empty.
-      let Some(host_atom_idx) = host_atom_idx else {
-        continue;
-      };
-      // No facade chunk for this bit means the entry chunk holds nothing: a module-less facade
-      // declares no symbol, so nothing can depend back on it and the omitted node cannot sit on a
-      // cycle.
-      let Some(facade_chunk_idx) = facade_chunk_by_entry_bit[entry_bit] else {
-        continue;
-      };
-      let host_chunk_idx = atom_to_chunk[host_atom_idx];
-      if facade_chunk_idx != host_chunk_idx {
-        chunk_dependencies[facade_chunk_idx].insert(host_chunk_idx);
-      }
-    }
-
-    Self::chunk_dependency_graph_has_cycle(&chunk_dependencies)
-  }
-
-  fn chunk_dependency_graph_has_cycle(chunk_dependencies: &[FxHashSet<usize>]) -> bool {
-    let mut state = vec![0_u8; chunk_dependencies.len()];
-    for start_chunk_idx in 0..chunk_dependencies.len() {
-      if state[start_chunk_idx] != 0 {
-        continue;
-      }
-
-      let mut stack = vec![(start_chunk_idx, false)];
-      while let Some((chunk_idx, exiting)) = stack.pop() {
-        if exiting {
-          state[chunk_idx] = 2;
-          continue;
-        }
-
-        match state[chunk_idx] {
-          1 => return true,
-          2 => continue,
-          _ => {}
-        }
-
-        state[chunk_idx] = 1;
-        stack.push((chunk_idx, true));
-        for &dep_chunk_idx in &chunk_dependencies[chunk_idx] {
-          match state[dep_chunk_idx] {
-            1 => return true,
-            0 => stack.push((dep_chunk_idx, false)),
-            _ => {}
-          }
-        }
-      }
-    }
-
-    false
   }
 
   fn analyze_dynamic_entries(
@@ -735,7 +922,7 @@ impl GenerateStage<'_> {
     }
   }
 
-  fn is_included_dynamic_import_record(
+  pub(super) fn is_included_dynamic_import_record(
     &self,
     importer_idx: ModuleIdx,
     stmt_info_idx: StmtInfoIdx,
@@ -865,20 +1052,21 @@ impl GenerateStage<'_> {
 
     while let Some(dynamic_entry_idx) = queue.pop_front() {
       queued[dynamic_entry_idx] = false;
-      let known_loaded_atoms = already_loaded_atoms_by_entry[dynamic_entry_idx].clone();
-      let mut updated_loaded_atoms = known_loaded_atoms.clone();
+      // One copy per visit: the atoms loaded by each importer (its static dependencies plus
+      // what was already loaded before it) are intersected in place, not cloned and unioned.
+      let mut updated_loaded_atoms = already_loaded_atoms_by_entry[dynamic_entry_idx].clone();
 
       for importer_entry_idx in
         dynamically_dependent_entries_by_dynamic_entry[dynamic_entry_idx].index_of_one()
       {
         let importer_entry_idx = importer_entry_idx as usize;
-        let mut importer_loaded_atoms =
-          static_dependency_atoms_by_entry[importer_entry_idx].clone();
-        importer_loaded_atoms.union(&already_loaded_atoms_by_entry[importer_entry_idx]);
-        updated_loaded_atoms.intersect(&importer_loaded_atoms);
+        updated_loaded_atoms.intersect_with_union(
+          &static_dependency_atoms_by_entry[importer_entry_idx],
+          &already_loaded_atoms_by_entry[importer_entry_idx],
+        );
       }
 
-      if updated_loaded_atoms == known_loaded_atoms {
+      if updated_loaded_atoms == already_loaded_atoms_by_entry[dynamic_entry_idx] {
         continue;
       }
 

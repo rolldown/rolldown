@@ -1,0 +1,143 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## m.js
+
+```js
+import { a as __share_require, i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+__share("dep-gnAj5Hkf", ((exports) => {
+	// dep.js
+	function init_dep() {
+		return (init_dep = __esmMin((() => {
+			globalThis.events.push("dep body");
+		})))();
+	}
+	__share_export(exports, { t: () => init_dep });
+}));
+__share("m-JUauIEEf", ((exports) => {
+	var share_dep = __share_require("dep-gnAj5Hkf");
+	// m.js
+	var m_exports = /* @__PURE__ */ __exportAll({
+		count: () => count,
+		inc: () => inc
+	});
+	function inc() {
+		return ++count;
+	}
+	var count;
+	function init_m() {
+		return (init_m = __esmMin((() => {
+			share_dep.t();
+			globalThis.events.push("M body dep");
+			count = 0;
+		})))();
+	}
+	__share_export(exports, {
+		i: () => m_exports,
+		n: () => inc,
+		r: () => init_m,
+		t: () => count
+	});
+}));
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as a, __share_export as i, __exportAll as n, __share as r, __esmMin as t };
+
+```
+
+## x.js
+
+```js
+import { a as __share_require, i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+__share("dep-gnAj5Hkf", ((exports) => {
+	// dep.js
+	function init_dep() {
+		return (init_dep = __esmMin((() => {
+			globalThis.events.push("dep body");
+		})))();
+	}
+	__share_export(exports, { t: () => init_dep });
+}));
+__share("m-JUauIEEf", ((exports) => {
+	var share_dep = __share_require("dep-gnAj5Hkf");
+	// m.js
+	var m_exports = /* @__PURE__ */ __exportAll({
+		count: () => count,
+		inc: () => inc
+	});
+	function inc() {
+		return ++count;
+	}
+	var count;
+	function init_m() {
+		return (init_m = __esmMin((() => {
+			share_dep.t();
+			globalThis.events.push("M body dep");
+			count = 0;
+		})))();
+	}
+	__share_export(exports, {
+		i: () => m_exports,
+		n: () => inc,
+		r: () => init_m,
+		t: () => count
+	});
+}));
+var share_m = __share_require("m-JUauIEEf");
+// x.js
+function init_x() {
+	return (init_x = __esmMin((() => {
+		share_m.r();
+		(0, share_m.n)();
+		globalThis.events.push("X " + share_m.t);
+	})))();
+}
+init_x();
+
+```
+
+## y.js
+
+```js
+import { a as __share_require, t as __esmMin } from "./rolldown-runtime.js";
+// y.js
+function init_y() {
+	return (init_y = __esmMin((() => {
+		globalThis.loadM = () => import("./m.js").then((n) => (n = __share_require("m-JUauIEEf"), n.r(), n.i));
+	})))();
+}
+init_y();
+
+```
+
+## z.js
+
+```js
+import { a as __share_require, i as __share_export, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+__share("dep-gnAj5Hkf", ((exports) => {
+	// dep.js
+	function init_dep() {
+		return (init_dep = __esmMin((() => {
+			globalThis.events.push("dep body");
+		})))();
+	}
+	__share_export(exports, { t: () => init_dep });
+}));
+var share_dep = __share_require("dep-gnAj5Hkf");
+// z.js
+function init_z() {
+	return (init_z = __esmMin((() => {
+		share_dep.t();
+		globalThis.events.push("Z dep");
+	})))();
+}
+init_z();
+
+```

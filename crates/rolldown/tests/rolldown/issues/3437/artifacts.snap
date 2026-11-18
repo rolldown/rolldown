@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 import("./square.js").then(console.log);
-//#endregion
 export {};
 
 ```
@@ -16,10 +15,9 @@ export {};
 ## square.js
 
 ```js
-//#region square.json
+// square.json
 var hello = "world";
 var square_default = { hello };
-//#endregion
 export { square_default as default, hello };
 
 ```

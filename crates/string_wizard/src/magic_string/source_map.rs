@@ -73,7 +73,7 @@ impl MagicString<'_> {
 
     if self.ignore_list {
       // The source is always at index 0 for a single MagicString instance.
-      source_map.set_x_google_ignore_list(vec![0]);
+      source_map.set_ignore_list(vec![0]);
     }
 
     source_map
@@ -92,13 +92,7 @@ fn precompute_utf16_index_map(
   let mut map: FxHashMap<u32, u32> =
     FxHashMap::with_capacity_and_hasher(byte_indices.len(), Default::default());
   for &i in &byte_indices {
-    let slice = &source[index as usize..i as usize];
-    // Fast path: ASCII strings have 1:1 byte-to-UTF-16 mapping
-    index_utf16 += if slice.is_ascii() {
-      slice.len() as u32
-    } else {
-      slice.chars().map(|c| c.len_utf16() as u32).sum::<u32>()
-    };
+    index_utf16 += simd_utf16_len::utf16_len(&source[index as usize..i as usize]) as u32;
     index = i;
     map.insert(i, index_utf16);
   }

@@ -1,0 +1,6 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }]
+  },
+  "configVariants": [{ "_configName": "iife", "format": "iife", "name": "lib" }]
+}

@@ -333,6 +333,7 @@ This will run only tests whose names match "function". For more filtering option
 Our Rust test infra is powerful enough to cover most of the case of JavaScript (plugin, passing function inside config).
 But since JavaScript side user is still our first class user, try to put tests in JavaScript side if possible.
 Here are some experience about what test technique you should use.
+
 :::tip TLDR
 Add test in JavaScript side if you don't want to wasting time on deciding which way to use.
 :::

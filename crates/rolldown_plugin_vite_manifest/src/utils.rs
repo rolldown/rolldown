@@ -26,10 +26,6 @@ pub struct ManifestChunk {
   pub imports: Vec<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub dynamic_imports: Vec<String>,
-  #[serde(skip_serializing_if = "Option::is_none")]
-  pub css: Option<Vec<String>>,
-  #[serde(skip_serializing_if = "Option::is_none")]
-  pub assets: Option<Vec<String>>,
 }
 
 impl ViteManifestPlugin {
@@ -85,8 +81,6 @@ impl ViteManifestPlugin {
       is_dynamic_entry: chunk.is_dynamic_entry,
       imports: self.get_internal_imports(bundle, &chunk.imports, is_legacy),
       dynamic_imports: self.get_internal_imports(bundle, &chunk.dynamic_imports, is_legacy),
-      css: None,
-      assets: None,
       ..Default::default()
     }
   }

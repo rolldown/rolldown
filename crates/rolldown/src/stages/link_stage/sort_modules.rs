@@ -15,10 +15,8 @@ enum Status {
 
 impl LinkStage<'_> {
   /// Some notes about the module execution order:
-  /// - User-defined entries retain declaration order, and their reachable dynamic entries follow discovery order.
-  /// - Emitted entries follow in module-id order, keeping any earlier dynamic-discovery position.
-  /// - Dynamic entries reached only through emitted entries follow in discovery order.
-  /// - Unreached dynamic entries come last in module-id order.
+  /// - We assume user-defined entries are always executed orderly.
+  /// - Non-user-defined entries (dynamic-import and emitted entries) are ordered by `LinkStage::sort_entry_points`.
   /// - `require(...)` is treated as implicit static `import`, which required modules are executed before the module that requires them.
   /// - Since import statements are hoisted, `require(...)` is always placed after static `import` statements.
   /// - Order of `require(...)` is determined by who shows up first while scanning ast. For such code

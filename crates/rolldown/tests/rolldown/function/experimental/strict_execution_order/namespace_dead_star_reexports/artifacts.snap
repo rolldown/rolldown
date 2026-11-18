@@ -23,26 +23,26 @@ await init_main();
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
-// shadowed.js
-function mark$1() {
-	globalThis.shadowedValue = typeof globalThis.shadowedValue === "number" ? globalThis.shadowedValue + 1 : 0;
-	return 2;
-}
-var x;
-function init_shadowed() {
-	return (init_shadowed = __esmMin((() => {
-		x = /* @__PURE__ */ mark$1();
-	})))();
-}
 // default-only.js
-function mark() {
+function mark$1() {
 	globalThis.defaultValue = typeof globalThis.defaultValue === "number" ? globalThis.defaultValue + 1 : 0;
 	return 42;
 }
 var default_only_default;
 function init_default_only() {
 	return (init_default_only = __esmMin((() => {
-		default_only_default = /* @__PURE__ */ mark();
+		default_only_default = /* @__PURE__ */ mark$1();
+	})))();
+}
+// shadowed.js
+function mark() {
+	globalThis.shadowedValue = typeof globalThis.shadowedValue === "number" ? globalThis.shadowedValue + 1 : 0;
+	return 2;
+}
+var x;
+function init_shadowed() {
+	return (init_shadowed = __esmMin((() => {
+		x = /* @__PURE__ */ mark();
 	})))();
 }
 // page-a.js
@@ -112,26 +112,26 @@ await import("./page-a.js");
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
-// shadowed.js
-function mark$1() {
-	globalThis.shadowedValue = typeof globalThis.shadowedValue === "number" ? globalThis.shadowedValue + 1 : 0;
-	return 2;
-}
-var x;
-function init_shadowed() {
-	return (init_shadowed = __esmMin((() => {
-		x = /* @__PURE__ */ mark$1();
-	})))();
-}
 // default-only.js
-function mark() {
+function mark$1() {
 	globalThis.defaultValue = typeof globalThis.defaultValue === "number" ? globalThis.defaultValue + 1 : 0;
 	return 42;
 }
 var default_only_default;
 function init_default_only() {
 	return (init_default_only = __esmMin((() => {
-		default_only_default = /* @__PURE__ */ mark();
+		default_only_default = /* @__PURE__ */ mark$1();
+	})))();
+}
+// shadowed.js
+function mark() {
+	globalThis.shadowedValue = typeof globalThis.shadowedValue === "number" ? globalThis.shadowedValue + 1 : 0;
+	return 2;
+}
+var x;
+function init_shadowed() {
+	return (init_shadowed = __esmMin((() => {
+		x = /* @__PURE__ */ mark();
 	})))();
 }
 // page-a.js

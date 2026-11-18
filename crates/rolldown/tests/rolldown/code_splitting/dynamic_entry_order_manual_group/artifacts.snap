@@ -1,0 +1,56 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import "./grp.js";
+import "./z2.js";
+
+```
+
+## grp.js
+
+```js
+// grp-u.js
+(globalThis.log ??= []).push("u");
+// grp-r.js
+(globalThis.log ??= []).push("r");
+
+```
+
+## main.js
+
+```js
+// main.js
+await import("./w.js");
+const { later } = await import("./z.js");
+await later();
+
+```
+
+## w.js
+
+```js
+import "./grp.js";
+
+```
+
+## z.js
+
+```js
+export { t as later } from "./z2.js";
+
+```
+
+## z2.js
+
+```js
+import "./grp.js";
+// z.js
+const later = () => import("./a.js");
+export { later as t };
+
+```

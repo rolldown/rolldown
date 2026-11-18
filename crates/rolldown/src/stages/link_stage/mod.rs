@@ -1,14 +1,19 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
+use nodejs_built_in_modules::is_nodejs_builtin_module;
 use oxc::span::Span;
 use oxc_index::IndexVec;
+use petgraph::{
+  algo::dominators::simple_fast,
+  graph::{DiGraph, NodeIndex},
+};
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  ConstExportMeta, DependedRuntimeHelperMap, EntryPoint, EntryPointKind, FlatOptions, ImportKind,
-  ModuleIdx, ModuleTable, PreserveEntrySignatures, RetainedExportSymbols, RuntimeModuleBrief,
-  StmtInfoIdx, SymbolRef, SymbolRefDb, UsedExternalSymbols, UsedSymbolRefsBuilder,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  ConstExportMeta, DependedRuntimeHelperMap, EcmaModuleAstUsage, EntryPoint, EntryPointKind,
+  FlatOptions, ImportKind, IndexModules, ModuleIdx, ModuleTable, PreserveEntrySignatures,
+  RetainedExportSymbols, RuntimeModuleBrief, StmtInfoIdx, SymbolRef, SymbolRefDb,
+  UsedExternalSymbols, UsedSymbolRefsBuilder, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::Diagnostics;
 #[cfg(target_family = "wasm")]
@@ -173,80 +178,10 @@ impl<'a> LinkStage<'a> {
       FxHashMap::default()
     };
 
-    // We need to preserve the original order of user defined entry points.
-    let mut rest = scan_stage_output
-      .entry_points
-      .extract_if(0.., |item| !matches!(item.kind, EntryPointKind::UserDefined))
-      .collect_vec();
-
-    // Visit static dependencies before queuing a module's dynamic imports so cyclic
-    // dynamic entries follow their source modules' execution order.
-    // See internal-docs/linking/module-execution-order/implementation.md.
-    let reach_order = {
-      let modules = &scan_stage_output.module_table.modules;
-      let mut visited: FxHashSet<ModuleIdx> = FxHashSet::default();
-      let mut dynamic_order: FxIndexSet<ModuleIdx> = FxIndexSet::default();
-      let roots: Vec<ModuleIdx> = scan_stage_output.entry_points.iter().map(|e| e.idx).collect();
-      let mut emitted: Vec<ModuleIdx> = rest
-        .iter()
-        .filter(|item| matches!(item.kind, EntryPointKind::EmittedUserDefined))
-        .map(|item| item.idx)
-        .collect();
-      emitted.sort_by_cached_key(|idx| modules[*idx].id().as_str());
-      let mut emitted = Some(emitted);
-      let mut next_dynamic = 0usize;
-      let mut root_iter = roots.into_iter();
-      loop {
-        let root = if let Some(root) = root_iter.next() {
-          root
-        } else if next_dynamic < dynamic_order.len() {
-          next_dynamic += 1;
-          dynamic_order[next_dynamic - 1]
-        } else if let Some(emitted) = emitted.take() {
-          dynamic_order.extend(emitted);
-          continue;
-        } else {
-          break;
-        };
-        if !visited.insert(root) {
-          continue;
-        }
-        let mut stack: Vec<(ModuleIdx, usize)> = vec![(root, 0)];
-        while let Some(top) = stack.last_mut() {
-          let idx = top.0;
-          let recs = modules[idx].import_records();
-          if let Some(rec) = recs.iter().nth(top.1) {
-            top.1 += 1;
-            if rec.kind.is_static()
-              && let Some(dep) = rec.resolved_module
-              && visited.insert(dep)
-            {
-              stack.push((dep, 0));
-            }
-          } else {
-            for rec in recs {
-              if rec.kind.is_dynamic()
-                && let Some(dep) = rec.resolved_module
-              {
-                dynamic_order.insert(dep);
-              }
-            }
-            stack.pop();
-          }
-        }
-      }
-      dynamic_order.into_iter().enumerate().map(|(i, m)| (m, i)).collect::<FxHashMap<_, _>>()
-    };
-
-    rest.sort_by_cached_key(|item| {
-      (
-        // Entries the walk never reaches keep their path-ordered position.
-        reach_order.get(&item.idx).copied().unwrap_or(usize::MAX),
-        scan_stage_output.module_table.modules[item.idx].id().as_str(),
-      )
-    });
-
-    scan_stage_output.entry_points.extend(rest);
+    Self::sort_entry_points(
+      &mut scan_stage_output.entry_points,
+      &scan_stage_output.module_table.modules,
+    );
 
     let scan_time_side_effects = scan_stage_output
       .module_table
@@ -338,6 +273,171 @@ impl<'a> LinkStage<'a> {
       has_enum_inlining: false,
       promoted_constant_writers: Vec::new(),
     }
+  }
+
+  fn sort_entry_points(entry_points: &mut Vec<EntryPoint>, modules: &IndexModules) {
+    // Preserve declared input order.
+    let mut rest = entry_points
+      .extract_if(0.., |item| !matches!(item.kind, EntryPointKind::UserDefined))
+      .collect_vec();
+
+    rest.sort_by_cached_key(|entry| (entry.kind, modules[entry.idx].id().as_str()));
+    let entry_order: FxIndexSet<ModuleIdx> = rest.iter().map(|entry| entry.idx).collect();
+    if entry_order.len() > 1 {
+      // See internal-docs/linking/module-execution-order/implementation.md.
+      let mut graph = DiGraph::<(), ()>::with_capacity(modules.len() + 1, 0);
+      for _ in modules {
+        graph.add_node(());
+      }
+      let root = graph.add_node(());
+      let mut static_importers: IndexVec<ModuleIdx, Vec<ModuleIdx>> =
+        modules.iter().map(|_| Vec::new()).collect();
+      for module in modules {
+        for record in module.import_records() {
+          if let Some(dependency) = record.resolved_module {
+            graph.add_edge(
+              NodeIndex::new(module.idx().index()),
+              NodeIndex::new(dependency.index()),
+              (),
+            );
+            if record.kind.is_static() {
+              static_importers[dependency].push(module.idx());
+            }
+          }
+        }
+      }
+      for entry in entry_points
+        .iter()
+        .chain(rest.iter().filter(|entry| matches!(entry.kind, EntryPointKind::EmittedUserDefined)))
+      {
+        graph.add_edge(root, NodeIndex::new(entry.idx.index()), ());
+      }
+      let dominators = simple_fast(&graph, root);
+      let input_entries: FxHashSet<_> = entry_points.iter().map(|entry| entry.idx).collect();
+      let static_closure = |start: ModuleIdx| {
+        let mut visited = FxHashSet::default();
+        let mut stack = vec![start];
+        while let Some(importer) = stack.pop() {
+          if visited.insert(importer) {
+            for record in modules[importer].import_records() {
+              if record.kind.is_static()
+                && let Some(dependency) = record.resolved_module
+              {
+                stack.push(dependency);
+              }
+            }
+          }
+        }
+        visited
+      };
+      let mut evaluated = FxHashSet::default();
+      for entry in entry_points.iter() {
+        evaluated.extend(static_closure(entry.idx));
+      }
+      let mut placed = vec![false; entry_order.len()];
+      let mut order = Vec::with_capacity(entry_order.len());
+      for (index, &idx) in entry_order.iter().enumerate() {
+        if placed[index] {
+          continue;
+        }
+        let mut loaders = Vec::new();
+        let mut ancestor = dominators.immediate_dominator(NodeIndex::new(idx.index()));
+        while let Some(node) = ancestor {
+          if node == root {
+            break;
+          }
+          let dominator = ModuleIdx::new(node.index());
+          if input_entries.contains(&dominator) {
+            break;
+          }
+          if let Some(before) = entry_order.get_index_of(&dominator) {
+            loaders.push(before);
+          }
+          ancestor = dominators.immediate_dominator(node);
+        }
+        let mut imported = vec![false; loaders.len()];
+        let mut remaining = loaders.len();
+        let mut visited = FxHashSet::default();
+        let mut stack = vec![idx];
+        while remaining > 0
+          && let Some(importer) = stack.pop()
+        {
+          if visited.insert(importer) {
+            if let Some(position) =
+              loaders.iter().position(|&before| entry_order[before] == importer)
+            {
+              imported[position] = true;
+              remaining -= 1;
+            }
+            for record in modules[importer].import_records() {
+              if record.kind.is_static()
+                && let Some(dependency) = record.resolved_module
+              {
+                stack.push(dependency);
+              }
+            }
+          }
+        }
+        for (position, &before) in loaders.iter().enumerate().rev() {
+          let loader = entry_order[before];
+          if !imported[position] || evaluated.contains(&loader) {
+            continue;
+          }
+          let mut importers = FxHashSet::default();
+          let mut stack = static_closure(idx)
+            .into_iter()
+            .filter(|module| !evaluated.contains(module))
+            .collect::<Vec<_>>();
+          while let Some(importee) = stack.pop() {
+            if importers.insert(importee) {
+              stack.extend(static_importers[importee].iter().copied());
+            }
+          }
+          let exclusively_dominated = entry_points
+            .iter()
+            .chain(rest.iter())
+            .filter(|entry| importers.contains(&entry.idx))
+            .all(|entry| {
+              dominators
+                .dominators(NodeIndex::new(entry.idx.index()))
+                .is_some_and(|mut chain| chain.any(|node| node.index() == loader.index()))
+            });
+          if !exclusively_dominated {
+            continue;
+          }
+          let loader_closure = static_closure(loader);
+          let has_tla_or_external = loader_closure.iter().any(|&idx| {
+            let module = &modules[idx];
+            module
+              .as_normal()
+              .is_some_and(|module| module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait))
+              || module.import_records().iter().any(|record| {
+                record.kind.is_static()
+                  && record
+                    .resolved_module
+                    .and_then(|dependency| modules[dependency].as_external())
+                    .is_some_and(|external| !is_nodejs_builtin_module(external.id.as_str()))
+              })
+          });
+          if has_tla_or_external {
+            continue;
+          }
+          placed[before] = true;
+          order.push(before);
+          evaluated.extend(loader_closure);
+        }
+        placed[index] = true;
+        order.push(index);
+        evaluated.extend(static_closure(idx));
+      }
+      let mut position = vec![0; entry_order.len()];
+      for (at, &index) in order.iter().enumerate() {
+        position[index] = at;
+      }
+      rest.sort_by_cached_key(|entry| position[entry_order.get_index_of(&entry.idx).unwrap()]);
+    }
+
+    entry_points.extend(rest);
   }
 
   #[tracing::instrument(level = "debug", skip_all)]

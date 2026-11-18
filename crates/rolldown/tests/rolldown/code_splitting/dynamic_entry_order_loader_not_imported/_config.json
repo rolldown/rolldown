@@ -1,0 +1,6 @@
+{
+  "_comment": "`x.js` can only be reached through `zz-e.js` but does not import it, so it keeps its place by module id. Moving it after `zz-e.js` would also move it after `y.js`, and the `p.js`/`q.js` cycle would then run in the order `y.js` needs, while `main.js` loads `x.js` at startup.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }]
+  }
+}

@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## home.js
+
+```js
+// store.js
+var render = () => page || "home";
+// home.js
+var page = render();
+export { render as n, page as t };
+
+```
+
+## home2.js
+
+```js
+export { t as page } from "./home.js";
+
+```
+
+## main.js
+
+```js
+// main.js
+const routes = {
+	settings: () => import("./settings.js"),
+	home: () => import("./home2.js")
+};
+const page = (await routes.home()).page;
+export { page, routes };
+
+```
+
+## settings.js
+
+```js
+import { n as render } from "./home.js";
+// settings.js
+const settings = () => render();
+export { settings };
+
+```

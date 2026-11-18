@@ -16,7 +16,7 @@ export {};
 
 ```js
 // main.mjs
-const load2 = () => import("./route2.js").then((n) => (n.t(), n.n));
+const load2 = () => import("./route2.js").then((n) => n.t);
 globalThis.run = async () => {
 	(await import("./page.js")).read();
 	globalThis.route2 = await load2();
@@ -30,32 +30,15 @@ export {};
 ## page.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
-import { i as n, r as init_leaf0, t as init_route2 } from "./route2.js";
 import "./leaf1.js";
+import { n } from "./route2.js";
 // page.mjs
+const rows = [];
+rows.push(["leaf0", n]);
 function read() {
 	return rows;
 }
-var rows;
-function init_page() {
-	return (init_page = __esmMin((() => {
-		init_route2();
-		init_leaf0();
-		rows = [];
-		rows.push(["leaf0", n]);
-	})))();
-}
-init_page();
 export { read };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __esmMin as t };
 
 ```
 
@@ -70,29 +53,19 @@ export {};
 ## route2.js
 
 ```js
-import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
+// HIDDEN [\0rolldown/runtime.js]
 // leaf0.mjs
 var leaf0_exports = /* @__PURE__ */ __exportAll({
 	bump: () => bump,
 	n: () => n
 });
+let n = 5;
 function bump() {
 	return ++n;
 }
-var n;
-function init_leaf0() {
-	return (init_leaf0 = __esmMin((() => {
-		n = 5;
-		globalThis.__event("leaf0");
-	})))();
-}
+globalThis.__event("leaf0");
 // route2.mjs
 var route2_exports = /* @__PURE__ */ __exportAll({ leafNamespace: () => leaf0_exports });
-function init_route2() {
-	return (init_route2 = __esmMin((() => {
-		init_leaf0();
-	})))();
-}
-export { n as i, route2_exports as n, init_leaf0 as r, init_route2 as t };
+export { leaf0_exports as leafNamespace, n, route2_exports as t };
 
 ```

@@ -2301,8 +2301,6 @@ export interface BindingEsmExternalRequirePluginConfig {
 
 export interface BindingExperimentalDevModeOptions {
   implement: string
-  /** @deprecated Common runtime injection will be disabled by default in the future. */
-  skipCommonRuntimeInjection?: boolean
   lazy?: boolean
   hotUpdate?: boolean
 }

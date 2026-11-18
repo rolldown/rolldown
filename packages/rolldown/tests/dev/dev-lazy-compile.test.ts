@@ -581,7 +581,7 @@ test(
     const engine = await dev(
       {
         input: path.join(dir, 'main.js'),
-        experimental: { devMode: { lazy: true, implement: '', skipCommonRuntimeInjection: true } },
+        experimental: { devMode: { lazy: true, implement: '' } },
       },
       { dir: path.join(dir, 'dist'), format: 'esm' },
       {},
@@ -746,7 +746,7 @@ test(
     const engine = await dev(
       {
         input: path.join(dir, 'main.js'),
-        experimental: { devMode: { lazy: true, implement: '', skipCommonRuntimeInjection: true } },
+        experimental: { devMode: { lazy: true, implement: '' } },
       },
       { dir: path.join(dir, 'dist'), format: 'esm' },
       {},
@@ -815,7 +815,7 @@ test(
     const engine = await dev(
       {
         input: path.join(dir, 'main.js'),
-        experimental: { devMode: { lazy: true, implement: '', skipCommonRuntimeInjection: true } },
+        experimental: { devMode: { lazy: true, implement: '' } },
       },
       { dir: path.join(dir, 'dist'), format: 'esm' },
       {},
@@ -875,7 +875,7 @@ test(
     const engine = await dev(
       {
         input: path.join(dir, 'main.js'),
-        experimental: { devMode: { lazy: true, implement: '', skipCommonRuntimeInjection: true } },
+        experimental: { devMode: { lazy: true, implement: '' } },
       },
       { dir: path.join(dir, 'dist'), format: 'esm' },
       {},
@@ -960,7 +960,7 @@ test(
     const engine = await dev(
       {
         input: path.join(dir, 'main.js'),
-        experimental: { devMode: { lazy: true, implement: '', skipCommonRuntimeInjection: true } },
+        experimental: { devMode: { lazy: true, implement: '' } },
       },
       { dir: path.join(dir, 'dist'), format: 'esm' },
       {},

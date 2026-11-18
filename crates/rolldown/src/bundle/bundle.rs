@@ -192,19 +192,6 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       std::mem::take(&mut self.cache);
     }
 
-    // Drain before `buildEnd` so the hook receives an error thrown by `onLog` during the scan.
-    if let Err(errs) = self.merge_log_hook_errors(Ok(())).await {
-      self
-        .plugin_driver
-        .build_end(Some(&HookBuildEndArgs { errors: &errs, cwd: &self.options.cwd }))
-        .await?;
-      self
-        .plugin_driver
-        .close_bundle(Some(&HookCloseBundleArgs { errors: &errs, cwd: &self.options.cwd }))
-        .await?;
-      return Err(errs);
-    }
-
     if let Err(errors) = self.end_build_phase(&scan_stage_output).await {
       self.repair_cache_after_failed_build(
         is_full_scan_mode,
@@ -221,6 +208,19 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     scan_stage_output: &NormalizedScanStageOutput,
   ) -> BuildResult<()> {
     Self::trace_action_module_graph_ready(scan_stage_output);
+    // Drain before `buildEnd` so the hook receives an error thrown by `onLog` during the scan.
+    if let Err(errs) = self.merge_log_hook_errors(Ok(())).await {
+      self
+        .plugin_driver
+        .build_end(Some(&HookBuildEndArgs { errors: &errs, cwd: &self.options.cwd }))
+        .await?;
+      self
+        .plugin_driver
+        .close_bundle(Some(&HookCloseBundleArgs { errors: &errs, cwd: &self.options.cwd }))
+        .await?;
+      return Err(errs);
+    }
+
     self.plugin_driver.build_end(None).await?;
     trace_action!(action::BuildEnd { action: "BuildEnd" });
     Ok(())

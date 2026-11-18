@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc::span::Span;
@@ -181,41 +179,67 @@ impl<'a> LinkStage<'a> {
       .extract_if(0.., |item| !matches!(item.kind, EntryPointKind::UserDefined))
       .collect_vec();
 
-    // The order the graph first reaches each module, walking from the user-defined
-    // entries. `sort_modules` walks entries in this order, and for modules in an
-    // import cycle the entry the walk starts from is what decides which side of the
-    // cycle is executed first.
-    //
-    // A dynamic entry reached only through another one can never be evaluated before
-    // it at runtime, so ordering the two by path can pick an execution order that
-    // cannot happen, leaving a cyclic module to read a binding whose declaration has
-    // not run yet. Reach order models what the runtime does: the first dynamic import
-    // to fire is the first one the graph arrives at.
+    // Visit static dependencies before queuing a module's dynamic imports so cyclic
+    // dynamic entries follow their source modules' execution order.
+    // See internal-docs/linking/module-execution-order/implementation.md.
     let reach_order = {
       let modules = &scan_stage_output.module_table.modules;
-      let mut order = FxHashMap::default();
-      let mut queue = VecDeque::new();
-      for entry in &scan_stage_output.entry_points {
-        let next = order.len();
-        if order.insert(entry.idx, next).is_none() {
-          queue.push_back(entry.idx);
+      let mut visited: FxHashSet<ModuleIdx> = FxHashSet::default();
+      let mut dynamic_order: FxIndexSet<ModuleIdx> = FxIndexSet::default();
+      let roots: Vec<ModuleIdx> = scan_stage_output.entry_points.iter().map(|e| e.idx).collect();
+      let mut emitted: Vec<ModuleIdx> = rest
+        .iter()
+        .filter(|item| matches!(item.kind, EntryPointKind::EmittedUserDefined))
+        .map(|item| item.idx)
+        .collect();
+      emitted.sort_by_cached_key(|idx| modules[*idx].id().as_str());
+      let mut emitted = Some(emitted);
+      let mut next_dynamic = 0usize;
+      let mut root_iter = roots.into_iter();
+      loop {
+        let root = if let Some(root) = root_iter.next() {
+          root
+        } else if next_dynamic < dynamic_order.len() {
+          next_dynamic += 1;
+          dynamic_order[next_dynamic - 1]
+        } else if let Some(emitted) = emitted.take() {
+          dynamic_order.extend(emitted);
+          continue;
+        } else {
+          break;
+        };
+        if !visited.insert(root) {
+          continue;
         }
-      }
-      while let Some(idx) = queue.pop_front() {
-        for rec in modules[idx].import_records() {
-          let Some(dep) = rec.resolved_module else { continue };
-          if !order.contains_key(&dep) {
-            order.insert(dep, order.len());
-            queue.push_back(dep);
+        let mut stack: Vec<(ModuleIdx, usize)> = vec![(root, 0)];
+        while let Some(top) = stack.last_mut() {
+          let idx = top.0;
+          let recs = modules[idx].import_records();
+          if let Some(rec) = recs.iter().nth(top.1) {
+            top.1 += 1;
+            if rec.kind.is_static()
+              && let Some(dep) = rec.resolved_module
+              && visited.insert(dep)
+            {
+              stack.push((dep, 0));
+            }
+          } else {
+            for rec in recs {
+              if rec.kind.is_dynamic()
+                && let Some(dep) = rec.resolved_module
+              {
+                dynamic_order.insert(dep);
+              }
+            }
+            stack.pop();
           }
         }
       }
-      order
+      dynamic_order.into_iter().enumerate().map(|(i, m)| (m, i)).collect::<FxHashMap<_, _>>()
     };
 
     rest.sort_by_cached_key(|item| {
       (
-        item.kind,
         // Entries the walk never reaches keep their path-ordered position.
         reach_order.get(&item.idx).copied().unwrap_or(usize::MAX),
         scan_stage_output.module_table.modules[item.idx].id().as_str(),

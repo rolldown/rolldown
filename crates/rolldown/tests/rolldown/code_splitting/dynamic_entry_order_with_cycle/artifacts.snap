@@ -6,11 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 const { serverExports } = await import("./server2.js");
 if (serverExports.name !== "server") throw new Error(`expected the namespace to be built, got ${serverExports.name}`);
 console.log("ok");
-//#endregion
 
 ```
 
@@ -18,9 +17,8 @@ console.log("ok");
 
 ```js
 import { r as getRouter } from "./server.js";
-//#region routes.js
+// routes.js
 const route = () => `route(${getRouter()})`;
-//#endregion
 export { route };
 
 ```
@@ -28,7 +26,7 @@ export { route };
 ## server.js
 
 ```js
-//#region router.js
+// router.js
 var toNamespace = (all) => {
 	const target = {};
 	for (const key in all) Object.defineProperty(target, key, {
@@ -38,8 +36,7 @@ var toNamespace = (all) => {
 	return target;
 };
 const getRouter = () => `router(${getContext()})`;
-//#endregion
-//#region server.js
+// server.js
 function getContext() {
 	return "context";
 }
@@ -50,7 +47,6 @@ const serverExports = toNamespace({
 	name: "server",
 	loadRoutes
 });
-//#endregion
 export { serverExports as n, getRouter as r, getContext as t };
 
 ```
@@ -58,7 +54,6 @@ export { serverExports as n, getRouter as r, getContext as t };
 ## server2.js
 
 ```js
-import { n as serverExports } from "./server.js";
-export { serverExports };
+export { n as serverExports } from "./server.js";
 
 ```

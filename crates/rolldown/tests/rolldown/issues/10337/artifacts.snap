@@ -7,10 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // main.js
-import("./three-mesh-bvh.js").then((n) => n.t).then((res) => {
+import("./three-mesh-bvh.js").then((n) => n.n).then((res) => {
 	if (typeof res.MeshBVH !== "function") throw new Error("MeshBVH missing from dynamic namespace");
 });
-import("./three-mesh-bvh.js").then((n) => n.n).then((res) => {
+import("./three-mesh-bvh.js").then((n) => n.t).then((res) => {
 	if (res.extra !== "extra") throw new Error("extra missing from dynamic namespace");
 });
 
@@ -20,9 +20,6 @@ import("./three-mesh-bvh.js").then((n) => n.n).then((res) => {
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-// three-mesh-bvh/extra.js
-var extra_exports = /* @__PURE__ */ __exportAll({ extra: () => extra });
-const extra = "extra";
 // three-mesh-bvh/core/MeshBVH.js
 var MeshBVH = class {
 	constructor() {
@@ -31,6 +28,9 @@ var MeshBVH = class {
 };
 // three-mesh-bvh/index.js
 var three_mesh_bvh_exports = /* @__PURE__ */ __exportAll({ MeshBVH: () => MeshBVH });
-export { extra_exports as n, three_mesh_bvh_exports as t };
+// three-mesh-bvh/extra.js
+var extra_exports = /* @__PURE__ */ __exportAll({ extra: () => extra });
+const extra = "extra";
+export { three_mesh_bvh_exports as n, extra_exports as t };
 
 ```

@@ -1,0 +1,82 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+export { i as default, t as later, n as later2, r as value } from "./z.js";
+
+```
+
+## main.js
+
+```js
+
+```
+
+## routeA.js
+
+```js
+import { t as getRouter } from "./server.js";
+// routeA.js
+const A = () => "A:" + getRouter();
+export { A };
+
+```
+
+## server.js
+
+```js
+// router.js
+var __exportAll = (all) => {
+	const target = {};
+	for (const name in all) Object.defineProperty(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	return target;
+};
+const getRouter = () => `router(${getStartContext()})`;
+// server.js
+function getStartContext() {
+	return "ctx";
+}
+async function loadRoutes() {
+	return [(await import("./routeA.js")).A(), getRouter()];
+}
+const server_exports = /* @__PURE__ */ __exportAll({ default: () => loadRoutes });
+export { server_exports, getRouter as t };
+
+```
+
+## z-b.js
+
+```js
+export { a as wrap } from "./z.js";
+
+```
+
+## z.js
+
+```js
+// a.js
+var wrap = () => value || "ok";
+// z.js
+var value = wrap();
+const later = () => import("./z-b.js");
+const later2 = () => import("./zz-c.js");
+var z_default = { async fetch() {
+	return (await import("./server.js")).server_exports;
+} };
+export { wrap as a, z_default as i, later2 as n, value as r, later as t };
+
+```
+
+## zz-c.js
+
+```js
+export { r as value } from "./z.js";
+
+```

@@ -7,14 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as __exportAll, t as __commonJSMin } from "./main.js";
-// imp-other.js
-var imp_other_exports = /* @__PURE__ */ __exportAll({ other: () => other });
-const other = "other";
 // imp.js
 var require_imp = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.imp = 1;
 }));
-export { imp_other_exports as n, require_imp as t };
+// imp-other.js
+var imp_other_exports = /* @__PURE__ */ __exportAll({ other: () => other });
+const other = "other";
+export { require_imp as n, imp_other_exports as t };
 
 ```
 
@@ -25,10 +25,10 @@ import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // main.js
 const load = async () => {
-	import("./imp.js").then((n) => /* @__PURE__ */ __toESM(n.t())).then((m) => {
+	import("./imp.js").then((n) => /* @__PURE__ */ __toESM(n.n())).then((m) => {
 		assert.strictEqual(m.imp, 1);
 	});
-	import("./imp.js").then((n) => n.n).then((m) => {
+	import("./imp.js").then((n) => n.t).then((m) => {
 		assert.strictEqual(m.other, "other");
 	});
 };
@@ -45,13 +45,13 @@ export { __exportAll as n, __commonJSMin as t };
 
 ```js
 const require_main = require("./main.js");
-// imp-other.js
-var imp_other_exports = /* @__PURE__ */ require_main.__exportAll({ other: () => other });
-const other = "other";
 // imp.js
 var require_imp = /* @__PURE__ */ require_main.__commonJSMin(((exports) => {
 	exports.imp = 1;
 }));
+// imp-other.js
+var imp_other_exports = /* @__PURE__ */ require_main.__exportAll({ other: () => other });
+const other = "other";
 Object.defineProperty(exports, "imp_other_exports", {
 	enumerable: true,
 	get: function() {

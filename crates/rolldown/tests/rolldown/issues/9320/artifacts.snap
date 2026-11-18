@@ -3,21 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## action.js
+## form.js
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-// form.js
-var form_exports = /* @__PURE__ */ __exportAll({
-	callActionFromForm: () => callActionFromForm,
-	formImpl: () => formImpl
-});
-function formImpl() {
-	return "form-result";
-}
-function callActionFromForm() {
-	return actionImpl();
-}
 // action.js
 var action_exports = /* @__PURE__ */ __exportAll({
 	actionImpl: () => actionImpl,
@@ -29,7 +18,18 @@ function actionImpl() {
 function callFormFromAction() {
 	return formImpl();
 }
-export { form_exports as n, action_exports as t };
+// form.js
+var form_exports = /* @__PURE__ */ __exportAll({
+	callActionFromForm: () => callActionFromForm,
+	formImpl: () => formImpl
+});
+function formImpl() {
+	return "form-result";
+}
+function callActionFromForm() {
+	return actionImpl();
+}
+export { action_exports as n, form_exports as t };
 
 ```
 
@@ -38,8 +38,8 @@ export { form_exports as n, action_exports as t };
 ```js
 // main.js
 async function main() {
-	const formNs = await import("./action.js").then((n) => n.n);
-	const actionNs = await import("./action.js").then((n) => n.t);
+	const formNs = await import("./form.js").then((n) => n.t);
+	const actionNs = await import("./form.js").then((n) => n.n);
 	globalThis.__9320_formNs = formNs;
 	globalThis.__9320_actionNs = actionNs;
 }

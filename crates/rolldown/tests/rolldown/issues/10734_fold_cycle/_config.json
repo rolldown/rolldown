@@ -1,0 +1,11 @@
+{
+  "_comment": "A static dependency discovers the service dynamic entry. Folding shared into the service facade would close a cycle through the service host chunk.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

@@ -254,8 +254,8 @@ impl IntegrationTest {
             }))
           },
           watch: Some(DevWatchOptions {
-            disable_watcher: Some(true),
-            skip_write: Some(!self.test_meta.write_to_disk),
+            enabled: Some(false),
+            skip_write: !self.test_meta.write_to_disk,
             ..Default::default()
           }),
           ..Default::default()
@@ -753,7 +753,6 @@ impl IntegrationTest {
             include_str!("../../rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js"),
             include_str!("./hmr-runtime.js")
           ));
-          dev_mode.skip_common_runtime_injection = Some(true);
         }
       }
     }

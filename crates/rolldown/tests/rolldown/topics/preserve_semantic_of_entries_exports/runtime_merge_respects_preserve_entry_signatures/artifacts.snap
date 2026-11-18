@@ -24,8 +24,8 @@ exports.foo = foo;
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-const require_lib = require("./lib.js");
 let node_assert = require("node:assert");
+const require_lib = require("./lib.js");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
 // main.js
 node_assert.default.strictEqual(require_lib.foo, "foo_value");
@@ -73,8 +73,8 @@ exports.foo = foo;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_lib = require("./lib.js");
 let node_assert = require("node:assert");
+const require_lib = require("./lib.js");
 node_assert = require_lib.__toESM(node_assert);
 // main.js
 node_assert.default.strictEqual(require_lib.foo, "foo_value");
@@ -140,8 +140,8 @@ Object.defineProperty(exports, "init_lib", {
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-const require_lib = require("./lib2.js");
 let node_assert = require("node:assert");
+const require_lib = require("./lib2.js");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
 // main.js
 function init_main() {
@@ -232,8 +232,8 @@ Object.defineProperty(exports, "init_lib", {
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-const require_lib = require("./lib2.js");
 let node_assert = require("node:assert");
+const require_lib = require("./lib2.js");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
 // main.js
 function init_main() {

@@ -21,7 +21,7 @@ const bundle = await rolldown({
 await bundle.generate();
 ```
 
-The `devtools` option is `@experimental`. Setting `devtools: {}` is sufficient to enable tracing. The option flows through the binding layer as `BindingDevtoolsOptions` and normalizes to `DevtoolsOptions { session_id: Option<String> }` on the Rust side.
+The `devtools` option is `@experimental`. Setting `devtools: {}` is sufficient to enable tracing. The option flows through the binding layer as `BindingDevtoolsOptions` and normalizes to `DevtoolsOptions { session_id: Option<String>, mode: Option<String> }` on the Rust side.
 
 CLI equivalent: `--devtools.session-id <id>`, `--devtools.mode <full|report>`.
 
@@ -31,7 +31,7 @@ In the default `full` mode, rolldown writes JSON-lines files to:
 
 ```
 <InputOptions.cwd>/node_modules/.rolldown/<session_id>/
-  meta.json    # SessionMeta action (one JSON object per build; appended in watch/rebuild)
+  meta.json    # SessionMeta action (one JSON object per build; appended on each generate/write)
   logs.json    # All other actions, one JSON object per line
 ```
 
@@ -70,6 +70,36 @@ opens one report, so its first output picks the folder; a client and a server bu
 app get two folders. `report_dir_is_one_folder_per_output` in
 `crates/rolldown_devtools_metrics/src/tests.rs` pins the mapping. The two modes are
 exclusive today: a report build writes no event log.
+
+With `devtools: { mode: 'report' }`, the metrics sink also writes
+`chunk-graph.json` beside `metrics.json`. The graph contains every emitted chunk,
+including its final filename, size, facade module, static imports, and dynamic
+imports. `OutputChunkGraphReady` supplies this data after `generateBundle` hooks
+finish. The graph includes plugin changes to filenames, imports, and code. It
+excludes chunks that plugins delete. The graph has no top-N limit.
+An empty graph replaces the previous file when a new build has no chunk assets.
+
+perf-kit joins this graph to full browser resource timings. It checks
+late discovery across static imports before FCP and LCP separately. Each example
+keeps one run's timings and an import chain. Source modules and request initiators
+help an agent check whether the chunk contributes to visible content. Browser
+request priorities and their changes support preload experiments. Repeated URLs
+and redirects omit ambiguous request evidence. The report
+marks the paint dependency as unverified. It does not follow dynamic imports or
+predict a paint gain from a discovery delay. Vite's manifest supplies a fallback
+when the build does not emit this graph.
+The loader rejects a sidecar when an emitted chunk or the Vite manifest is newer.
+This check also applies when a rebuild reuses the same filenames.
+The runtime report also records `paintComparison`. It compares both FCP and LCP
+with the pinned baseline. A gain in one metric cannot hide a regression beyond
+noise in the other. Render-gap advice preserves concurrent resource evidence.
+
+The perf-kit CPU profile also uses emitted sourcemaps for every sampled
+same-origin chunk. Schema version 2 records explicit source, engine, and
+unattributed rows with chunk filenames. Missing maps cannot produce a clear CPU
+verdict. The profile ends when FCP is observed, so its polling tail can include
+post-paint work. Use the result to choose experiments, then compare timed FCP
+and LCP against the pinned baseline.
 
 ### Read-after-close contract
 
@@ -166,6 +196,10 @@ The system is built on the `tracing` crate. The core idea: **spans carry context
 
 Each hook call pair gets a unique `call_id` (UUID v4) via its enclosing span.
 
+A call that the plugin's own hook filter skips logs no events. In devtools mode the driver asks `Pluginable::call_hook_filter_matches` and skips the call, so the log and the report hold only calls whose handler ran. Every `transform` call emits a `HookTransformCallEnd`; a result without `code` ends with the unchanged code.
+
+A parallel plugin has one plugin per worker, and each worker can build a different filter from `threadNumber`. The driver asks before `run_single` selects a worker, so `ParallelJsPlugin::hook_filter_matches` passes when the filter of any worker accepts the call. A check of one worker only could skip a call that another worker runs, and the build output would then change in devtools mode. The selected worker checks its own filter again, so a call that it rejects can still appear as a no-op.
+
 ## Action Catalog
 
 | Action                       | When Emitted                              | Key Fields                                                                                                                     |
@@ -179,8 +213,10 @@ Each hook call pair gets a unique `call_id` (UUID v4) via its enclosing span.
 | `BuildEnd`                   | After scan stage + after write/generate   | —                                                                                                                              |
 | `ChunkGraphReady`            | After chunk graph construction            | chunks[]{chunk_id, name, reason, modules[], imports[], is_user_defined_entry, is_async_entry, entry_module}                    |
 | `PackageGraphReady`          | After chunk instantiation                 | packages[]{package_id, name, version, package_json_path, package_root, is_used, dependency_type, size, modules[], chunk_ids[]} |
+| `ModuleRenderedReady`        | After chunk instantiation                 | modules[]{id, bytes}                                                                                                           |
 | `HookRenderChunkStart/End`   | Per plugin per renderChunk call           | chunk_id, plugin_name, plugin_id, call_id, content                                                                             |
 | `AssetsReady`                | After final asset generation              | assets[]{chunk_id, content, size, filename}                                                                                    |
+| `OutputChunkGraphReady`      | After `generateBundle` hooks finish       | chunks[]{file_name, name, bytes, is_entry, facade_module_id, imports, dynamic_imports}                                         |
 | `StringRef`                  | Before any action with large strings      | id (blake3 hash), content                                                                                                      |
 
 All actions except `StringRef` carry injected `session_id`, `build_id`, and `timestamp` fields. `StringRef` entries contain only `action`, `id`, and `content`.

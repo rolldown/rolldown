@@ -2,6 +2,12 @@ use std::fmt::Write as _;
 
 use json_escape_simd::escape;
 use memchr::memmem;
+use oxc::{
+  ast::{StaticPropertyName, ast, builder::AstBuilder},
+  codegen::Codegen,
+  span::SPAN,
+};
+use rolldown_common::parse_json_to_ecma_ast;
 use rolldown_utils::concat_string;
 use serde_json::Value;
 
@@ -55,7 +61,18 @@ pub fn data_to_esm(data: &Value, named_exports: bool) -> String {
   let mut default_object_code = String::new();
   for (key, value) in data {
     let value = serialize_value(value).expect("Invalid JSON value");
-    if rolldown_utils::ecmascript::is_validate_assignee_identifier_name(key) {
+    if key == "JSON" {
+      // Keep the global JSON available to serialize_value's JSON.parse calls,
+      // including calls emitted before this property or in its initializer.
+      let mut suffix = 1;
+      let mut name = format!("JSON${suffix}");
+      while data.contains_key(&name) {
+        suffix += 1;
+        name = format!("JSON${suffix}");
+      }
+      writeln!(named_export_code, "const {name} = {value};\nexport {{ {name} as JSON }};").unwrap();
+      writeln!(default_object_code, "  JSON: {name},").unwrap();
+    } else if rolldown_utils::ecmascript::is_validate_assignee_identifier_name(key) {
       writeln!(named_export_code, "export const {key} = {value};").unwrap();
       if key == "__proto__" {
         writeln!(default_object_code, "  [\"__proto__\"]: __proto__,").unwrap();
@@ -72,6 +89,53 @@ pub fn data_to_esm(data: &Value, named_exports: bool) -> String {
   default_object_code.truncate(default_object_code.len() - 2);
 
   concat_string!(named_export_code, "export default {\n", default_object_code, "\n};")
+}
+
+/// Converts JSON text to ESM, preserving strings that cannot be represented by a Rust `String`.
+pub fn json_to_esm(source: &str, named_exports: bool) -> Result<String, serde_json::Error> {
+  match serde_json::from_str(source) {
+    Ok(value) => Ok(data_to_esm(&value, named_exports)),
+    Err(_) => json_with_surrogates_to_esm(source, named_exports),
+  }
+}
+
+#[cold]
+fn json_with_surrogates_to_esm(
+  source: &str,
+  named_exports: bool,
+) -> Result<String, serde_json::Error> {
+  let mut parsed = parse_json_to_ecma_ast(source)?;
+  Ok(parsed.program.with_mut(|fields| {
+    let builder = AstBuilder::new(fields.allocator);
+    let ast::Statement::ExpressionStatement(statement) = &mut fields.program.body[0] else {
+      unreachable!("JSON produces an expression statement");
+    };
+    let mut code = String::new();
+    if named_exports && let ast::Expression::ObjectExpression(object) = &mut statement.expression {
+      for property in &mut object.properties {
+        let ast::ObjectPropertyKind::ObjectProperty(property) = property else {
+          unreachable!("JSON objects only contain properties");
+        };
+        let Some(key) = property.key.static_name().and_then(StaticPropertyName::into_cow_str)
+        else {
+          continue;
+        };
+        if !rolldown_utils::ecmascript::is_validate_assignee_identifier_name(&key) {
+          continue;
+        }
+        let mut value = Codegen::new();
+        value.print_expression(&property.value);
+        writeln!(code, "export const {key} = {};", value.into_source_text()).unwrap();
+        // Reuse the value on the default export so named and default object values stay aliased.
+        property.value =
+          ast::Expression::new_identifier(SPAN, ast::Str::from_str_in(&key, &builder), &builder);
+      }
+    }
+    let mut value = Codegen::new();
+    value.print_expression(&statement.expression);
+    writeln!(code, "export default {};", value.into_source_text()).unwrap();
+    code
+  }))
 }
 
 #[cfg(test)]
@@ -123,6 +187,15 @@ mod test {
   }
 
   #[test]
+  fn to_esm_named_json_binding_avoids_collisions() {
+    let data = serde_json::json!({"JSON": null, "JSON$1": 1, "JSON$2": 2});
+    assert_eq!(
+      "const JSON$3 = null;\nexport { JSON$3 as JSON };\nexport const JSON$1 = 1;\nexport const JSON$2 = 2;\nexport default {\n  JSON: JSON$3,\n  JSON$1,\n  JSON$2\n};",
+      data_to_esm(&data, true)
+    );
+  }
+
+  #[test]
   fn to_esm_proto_data_properties() {
     for json in [
       r#"{"__proto__":null}"#,
@@ -155,7 +228,7 @@ mod test {
   fn to_esm_proto_does_not_reference_shadowed_json() {
     let data = serde_json::json!({"JSON": null, "nested": {"__proto__": 42}});
     let code = data_to_esm(&data, true);
-    assert!(code.contains("export const JSON = null;"));
+    assert!(code.contains("const JSON$1 = null;\nexport { JSON$1 as JSON };"));
     assert!(code.contains("export const nested = {[\"__proto__\"]:42};"));
     assert!(!code.contains("JSON.parse"));
   }

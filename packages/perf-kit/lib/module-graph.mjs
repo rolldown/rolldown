@@ -64,7 +64,62 @@ export function loadModuleGraph(candidates) {
   const file = candidates.find((candidate) => fs.existsSync(candidate));
   if (!file) return null;
   const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-  return { file, ...data, staticPreds: computeStaticPreds(data.modules) };
+  return {
+    file,
+    ...data,
+    staticPreds: computeStaticPreds(data.modules),
+    buildReport: readBuildReport(file),
+  };
+}
+
+/**
+ * The build report (`metrics.json`) next to a report-directory `module-graph.json`:
+ * the platform of the build and the output file of each entry. Null for a saved
+ * sidecar (a baseline snapshot has no sibling) or when the report is unreadable.
+ */
+function readBuildReport(graphFile) {
+  if (path.basename(graphFile) !== 'module-graph.json') return null;
+  const file = path.join(path.dirname(graphFile), 'metrics.json');
+  if (!fs.existsSync(file)) return null;
+  let report;
+  try {
+    report = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+  return {
+    file,
+    platform: report.session?.platform ?? null,
+    format: report.session?.format ?? null,
+    entryChunks: (report.entries ?? [])
+      .map((entry) => entry?.chunk)
+      .filter((chunk) => typeof chunk === 'string' && chunk !== ''),
+  };
+}
+
+/**
+ * Why a report discovered for `dist` does not describe the build in `dist`, or null
+ * when it does (or when nothing can be checked). Report mode writes one directory per
+ * output dir, so the report is the last report-mode build into that dir: a rebuild
+ * without the report leaves the old report behind, and a build that shares the outDir
+ * replaces it. The entry chunks decide: when none of them exists in `dist`, the report
+ * is another build's.
+ */
+export function reportDistMismatch(graph, dist) {
+  const report = graph?.buildReport;
+  if (!report || !dist || report.entryChunks.length === 0) return null;
+  if (report.entryChunks.some((chunk) => fs.existsSync(path.join(dist, chunk)))) return null;
+  const shown =
+    report.entryChunks.slice(0, 3).join(', ') + (report.entryChunks.length > 3 ? ', ...' : '');
+  let why = `the report at ${report.file} is not the build in ${dist}: none of its entry chunks (${shown}) exists there.`;
+  if (report.platform === 'node') {
+    // A client build (SSR frameworks write no index.html) is the usual victim, so the
+    // hint does not depend on the dist's layout.
+    why +=
+      '\nThe report comes from a node-platform build (a server), so the last report-mode build ' +
+      'into this output dir was a server build.';
+  }
+  return why;
 }
 
 /**
@@ -151,6 +206,39 @@ export function eagerSet(graph, overrides = [], extraRoots = null) {
   }
   if (bare) graph.__baseEager = seen;
   return seen;
+}
+
+/**
+ * The graph as the runtime loads it when `roots` (module indices) always load at
+ * startup: a Durable Object class the runtime loads by name, or a dynamic import the
+ * app runs on every boot (`import('./initReact')`). The roots join the entries, so the
+ * initial load becomes the static closure of entries + roots, and `staticReachable`,
+ * `dynamicOnly` and the static predecessor lists are recomputed for it. Every query
+ * (`whatIf`, `evalOverrides`, `minCut`) then answers for that startup load, also for a
+ * module that only dynamic imports reach in the build. Module objects are copied, never
+ * mutated; `retainedBytes` / `idom` keep the build's entry-only values. Returns the
+ * graph itself when no root adds anything.
+ */
+export function withRoots(graph, roots) {
+  const entries = new Set(entryIndices(graph));
+  const extra = [...new Set(roots ?? [])].filter((r) => !entries.has(r));
+  if (!extra.length) return graph;
+  const eager = eagerSet(graph, [], extra);
+  const modules = graph.modules.map((mod, i) => ({
+    ...mod,
+    staticReachable: eager.has(i),
+    // Reachable at all = statically reachable or dynamic-only in the build; the roots
+    // are reachable themselves, so nothing new becomes reachable, only eager.
+    dynamicOnly: !eager.has(i) && (mod.staticReachable === true || mod.dynamicOnly === true),
+  }));
+  const { __entryIdx, __baseEager, ...rest } = graph;
+  return {
+    ...rest,
+    entryModules: [...(graph.entryModules ?? []), ...extra.map((r) => graph.modules[r].id)],
+    rootModules: extra.map((r) => graph.modules[r].id),
+    modules,
+    staticPreds: computeStaticPreds(modules),
+  };
 }
 
 /**

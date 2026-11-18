@@ -1,6 +1,4 @@
-use rolldown_common::{
-  Chunk, ChunkIdx, ModuleRenderArgs, ModuleRenderOutput, SymbolRef, UsedSymbolRefs,
-};
+use rolldown_common::{Chunk, ChunkIdx, ModuleRenderOutput, SymbolRef, UsedSymbolRefs};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -119,7 +117,7 @@ impl GenerateStage<'_> {
             has_enum_inlining,
             inline_state: &self.inline_state,
           };
-          let (_, _, module_diagnostics) = ctx.finalize_normal_module(&mut ast, ast_scope);
+          let (_, module_diagnostics) = ctx.finalize_normal_module(&mut ast, ast_scope);
           diagnostics.extend(module_diagnostics);
           // The selection rules keep every shape the finalizer turns into an import or export
           // declaration as a file; a declaration that reaches a factory would be a syntax error
@@ -132,7 +130,7 @@ impl GenerateStage<'_> {
           }
           diagnostics.extend(bare_bridge_callee(ast.program(), &callees, &module.stable_id));
           // A factory body sits one level inside the `__share` arrow function.
-          module.render(self.options, &ModuleRenderArgs::Ecma { ast: &ast }, 1)
+          crate::utils::render_ecma_module::render_normal_module(module, self.options, &ast, 1)
         })
         .collect();
       (modules, diagnostics)

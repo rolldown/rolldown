@@ -63,7 +63,10 @@ use rolldown::{Bundle, BundleFactory, BundleFactoryOptions, BundleHandle, Bundle
 use rolldown_common::BundleMode;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::__inner::SharedPluginable;
-use std::sync::Arc;
+use rolldown_std_utils::{discard_panic_payload, panic_payload_message};
+use std::{panic::AssertUnwindSafe, sync::Arc};
+
+use futures::FutureExt;
 
 pub struct ClassicBundler {
   session_id: Arc<str>,
@@ -111,11 +114,12 @@ impl ClassicBundler {
 
   #[must_use = "Future must be awaited to do the actual cleanup work"]
   pub fn close(&mut self) -> impl Future<Output = anyhow::Result<()>> + Send + 'static {
-    let is_closed = self.closed;
-    let last_bundle_handle = self.last_bundle_handle.clone();
-    if !is_closed {
+    if !self.closed {
       self.closed = true;
     }
+    // Release the handle with the first close rather than retaining it until the N-API
+    // finalizer. A later close finds no handle, so `closeBundle` runs once.
+    let last_bundle_handle = self.last_bundle_handle.take();
     // When devtools is active, ask the writer thread to drain this session and
     // receive an ack. Consumers rely on "files are readable after
     // `bundle.close()` resolves" — see `internal-docs/devtools/implementation.md`.
@@ -128,8 +132,14 @@ impl ClassicBundler {
     // - Read `BindingBundler#close` in `crates/rolldown_binding/src/binding_bundler.rs` for more details.
     async move {
       if let Some(handle) = last_bundle_handle {
-        let plugin_driver = handle.plugin_driver();
-        plugin_driver.close_bundle(None).await?;
+        match AssertUnwindSafe(handle.plugin_driver().close_bundle(None)).catch_unwind().await {
+          Ok(result) => result?,
+          Err(payload) => {
+            let message = panic_payload_message(&*payload);
+            discard_panic_payload(payload);
+            return Err(anyhow::anyhow!("closeBundle hook panicked: {message}"));
+          }
+        }
       }
       if let Some(rx) = devtools_flush_rx {
         // Block on the writer-thread ack in a blocking task so we don't stall
@@ -268,6 +278,15 @@ fn invalid_session_id(reason: String) -> BuildDiagnostic {
 
 #[cfg(test)]
 mod tests {
+  use std::{
+    borrow::Cow,
+    sync::atomic::{AtomicUsize, Ordering},
+  };
+
+  use rolldown_plugin::{
+    HookCloseBundleArgs, HookNoopReturn, HookUsage, Plugin, PluginContext, Pluginable,
+  };
+
   use super::*;
 
   #[test]
@@ -367,5 +386,48 @@ mod tests {
         "{message}"
       );
     }
+  }
+
+  #[derive(Debug)]
+  struct CountingClosePlugin {
+    calls: Arc<AtomicUsize>,
+  }
+
+  impl Plugin for CountingClosePlugin {
+    fn name(&self) -> Cow<'static, str> {
+      "counting-close".into()
+    }
+
+    fn register_hook_usage(&self) -> HookUsage {
+      HookUsage::CloseBundle
+    }
+
+    async fn close_bundle(
+      &self,
+      _ctx: &PluginContext,
+      _args: Option<&HookCloseBundleArgs<'_>>,
+    ) -> HookNoopReturn {
+      self.calls.fetch_add(1, Ordering::SeqCst);
+      Ok(())
+    }
+  }
+
+  #[test]
+  fn second_close_finds_no_handle_and_skips_close_bundle() {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let mut bundler = ClassicBundler::new();
+    let _bundle = bundler
+      .create_bundle(
+        BundlerOptions::default(),
+        vec![Pluginable::new_shared(CountingClosePlugin { calls: Arc::clone(&calls) })],
+      )
+      .unwrap_or_else(|_| panic!("create bundle"));
+
+    futures::executor::block_on(bundler.close()).expect("first close");
+    futures::executor::block_on(bundler.close()).expect("second close");
+
+    assert!(bundler.closed());
+    assert!(bundler.last_bundle_handle.is_none());
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
   }
 }

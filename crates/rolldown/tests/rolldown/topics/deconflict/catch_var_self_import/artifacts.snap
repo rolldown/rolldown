@@ -1,0 +1,489 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// self.js
+var direct;
+var onlyCatch;
+var direct = 1;
+direct++;
+const results = [];
+try {
+	throw 0;
+} catch (direct$1) {
+	var direct$1 = 3;
+	results.push(direct, direct$1);
+}
+try {
+	throw 0;
+} catch (onlyCatch$1) {
+	for (var onlyCatch$1 of [4]) results.push(onlyCatch, onlyCatch$1);
+}
+results.push(onlyCatch);
+// cycle.js
+var cycle;
+var cycle = 10;
+cycle++;
+let result;
+try {
+	throw 0;
+} catch (cycle$1) {
+	result = cycle;
+}
+// renamed.js
+var e$1;
+var f$1;
+const log = [];
+var e$1 = "v";
+e$1 += "!";
+try {
+	throw 1;
+} catch (e$2) {
+	log.push(e$1);
+}
+{
+	let e = 3;
+	e++;
+	log.push(e$1, e);
+}
+var f$1 = "w";
+f$1 += "!";
+try {
+	throw 1;
+} catch (f$2) {
+	log.push(f$1);
+}
+{
+	let f = 5;
+	f++;
+	log.push(f$1, f);
+}
+var g$1 = 8;
+g$1++;
+try {
+	throw 0;
+} catch (g$1) {
+	var g$1 = 10;
+	log.push(g$1);
+}
+{
+	let g = 11;
+	g++;
+	log.push(g$1, g);
+}
+// main.js
+assert.deepStrictEqual(results, [
+	2,
+	3,
+	void 0,
+	4,
+	void 0
+]);
+assert.strictEqual(direct, 2);
+assert.strictEqual(onlyCatch, void 0);
+assert.strictEqual(result, 11);
+assert.strictEqual(cycle, 11);
+let e = "entry";
+e += "!";
+let f = "entry";
+f += "!";
+assert.strictEqual(e, "entry!");
+assert.strictEqual(f, "entry!");
+let g = 0;
+g++;
+assert.strictEqual(g, 1);
+assert.deepStrictEqual(log, [
+	"v!",
+	"v!",
+	4,
+	"w!",
+	"w!",
+	6,
+	10,
+	9,
+	12
+]);
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert_strict = require("node:assert/strict");
+node_assert_strict = __toESM(node_assert_strict);
+// self.js
+var direct;
+var onlyCatch;
+var direct = 1;
+direct++;
+const results = [];
+try {
+	throw 0;
+} catch (direct$1) {
+	var direct$1 = 3;
+	results.push(direct, direct$1);
+}
+try {
+	throw 0;
+} catch (onlyCatch$1) {
+	for (var onlyCatch$1 of [4]) results.push(onlyCatch, onlyCatch$1);
+}
+results.push(onlyCatch);
+// cycle.js
+var cycle;
+var cycle = 10;
+cycle++;
+let result;
+try {
+	throw 0;
+} catch (cycle$1) {
+	result = cycle;
+}
+// renamed.js
+var e$1;
+var f$1;
+const log = [];
+var e$1 = "v";
+e$1 += "!";
+try {
+	throw 1;
+} catch (e$2) {
+	log.push(e$1);
+}
+{
+	let e = 3;
+	e++;
+	log.push(e$1, e);
+}
+var f$1 = "w";
+f$1 += "!";
+try {
+	throw 1;
+} catch (f$2) {
+	log.push(f$1);
+}
+{
+	let f = 5;
+	f++;
+	log.push(f$1, f);
+}
+var g$1 = 8;
+g$1++;
+try {
+	throw 0;
+} catch (g$1) {
+	var g$1 = 10;
+	log.push(g$1);
+}
+{
+	let g = 11;
+	g++;
+	log.push(g$1, g);
+}
+// main.js
+node_assert_strict.default.deepStrictEqual(results, [
+	2,
+	3,
+	void 0,
+	4,
+	void 0
+]);
+node_assert_strict.default.strictEqual(direct, 2);
+node_assert_strict.default.strictEqual(onlyCatch, void 0);
+node_assert_strict.default.strictEqual(result, 11);
+node_assert_strict.default.strictEqual(cycle, 11);
+let e = "entry";
+e += "!";
+let f = "entry";
+f += "!";
+node_assert_strict.default.strictEqual(e, "entry!");
+node_assert_strict.default.strictEqual(f, "entry!");
+let g = 0;
+g++;
+node_assert_strict.default.strictEqual(g, 1);
+node_assert_strict.default.deepStrictEqual(log, [
+	"v!",
+	"v!",
+	4,
+	"w!",
+	"w!",
+	6,
+	10,
+	9,
+	12
+]);
+
+```
+
+# Variant: minified: [minify: true]
+
+## Assets
+
+### main.js
+
+```js
+import e from"node:assert/strict";var t,n,t=1;t++;const r=[];try{throw 0}catch(direct$1){var direct$1=3;r.push(t,direct$1)}try{throw 0}catch(onlyCatch$1){for(var onlyCatch$1 of[4])r.push(n,onlyCatch$1)}r.push(n);var i,i=10;i++;let a;try{throw 0}catch(e){a=i}var o,s;const c=[];var o=`v`;o+=`!`;try{throw 1}catch(e){c.push(o)}{let e=3;e++,c.push(o,e)}var s=`w`;s+=`!`;try{throw 1}catch(e){c.push(s)}{let e=5;e++,c.push(s,e)}var g$1=8;g$1++;try{throw 0}catch(g$1){var g$1=10;c.push(g$1)}{let e=11;e++,c.push(g$1,e)}e.deepStrictEqual(r,[2,3,void 0,4,void 0]),e.strictEqual(t,2),e.strictEqual(n,void 0),e.strictEqual(a,11),e.strictEqual(i,11);let l=`entry`;l+=`!`;let u=`entry`;u+=`!`,e.strictEqual(l,`entry!`),e.strictEqual(u,`entry!`);let d=0;d++,e.strictEqual(d,1),e.deepStrictEqual(c,[`v!`,`v!`,4,`w!`,`w!`,6,10,9,12]);
+```
+
+# Variant: wrapped: [on_demand_wrapping: false] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
+function init_self() {
+	return (init_self = __esmMin((() => {
+		init_self();
+		direct = 1;
+		direct++;
+		results = [];
+		try {
+			throw 0;
+		} catch (direct$1) {
+			direct$1 = 3;
+			results.push(direct, direct$1);
+		}
+		try {
+			throw 0;
+		} catch (onlyCatch$1) {
+			for (onlyCatch$1 of [4]) results.push(onlyCatch, onlyCatch$1);
+		}
+		results.push(onlyCatch);
+	})))();
+}
+// barrel.js
+function init_barrel() {
+	return (init_barrel = __esmMin((() => {
+		init_cycle();
+	})))();
+}
+// cycle.js
+var cycle, result;
+function init_cycle() {
+	return (init_cycle = __esmMin((() => {
+		init_barrel();
+		cycle = 10;
+		cycle++;
+		try {
+			throw 0;
+		} catch (cycle$1) {
+			cycle$1 = 20;
+			result = cycle;
+		}
+	})))();
+}
+// renamed.js
+var log, e$1, f$1, g$1;
+function init_renamed() {
+	return (init_renamed = __esmMin((() => {
+		init_renamed();
+		log = [];
+		e$1 = "v";
+		e$1 += "!";
+		try {
+			throw 1;
+		} catch (e$2) {
+			e$2 = 2;
+			log.push(e$1);
+		}
+		{
+			let e = 3;
+			e++;
+			log.push(e$1, e);
+		}
+		f$1 = "w";
+		f$1 += "!";
+		try {
+			throw 1;
+		} catch (f$2) {
+			f$2 = 4;
+			log.push(f$1);
+		}
+		{
+			let f = 5;
+			f++;
+			log.push(f$1, f);
+		}
+		g$1 = 8;
+		g$1++;
+		try {
+			throw 0;
+		} catch (g$1) {
+			g$1 = 10;
+			log.push(g$1);
+		}
+		{
+			let g = 11;
+			g++;
+			log.push(g$1, g);
+		}
+	})))();
+}
+// main.js
+var e, f, g;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_self();
+		init_cycle();
+		init_renamed();
+		assert.deepStrictEqual(results, [
+			2,
+			3,
+			void 0,
+			4,
+			void 0
+		]);
+		assert.strictEqual(direct, 2);
+		assert.strictEqual(onlyCatch, void 0);
+		assert.strictEqual(result, 11);
+		assert.strictEqual(cycle, 11);
+		e = "entry";
+		e += "!";
+		f = "entry";
+		f += "!";
+		assert.strictEqual(e, "entry!");
+		assert.strictEqual(f, "entry!");
+		g = 0;
+		g++;
+		assert.strictEqual(g, 1);
+		assert.deepStrictEqual(log, [
+			"v!",
+			"v!",
+			4,
+			"w!",
+			"w!",
+			6,
+			10,
+			9,
+			12
+		]);
+	})))();
+}
+init_main();
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert/strict";
+// self.js
+var direct;
+var onlyCatch;
+var direct = 1;
+direct++;
+const results = [];
+try {
+	throw 0;
+} catch (direct$1) {
+	var direct$1 = 3;
+	results.push(direct, direct$1);
+}
+try {
+	throw 0;
+} catch (onlyCatch$1) {
+	for (var onlyCatch$1 of [4]) results.push(onlyCatch, onlyCatch$1);
+}
+results.push(onlyCatch);
+// cycle.js
+var cycle;
+var cycle = 10;
+cycle++;
+let result;
+try {
+	throw 0;
+} catch (cycle$1) {
+	result = cycle;
+}
+// renamed.js
+var e$1;
+var f$1;
+const log = [];
+var e$1 = "v";
+e$1 += "!";
+try {
+	throw 1;
+} catch (e$2) {
+	log.push(e$1);
+}
+{
+	let e = 3;
+	e++;
+	log.push(e$1, e);
+}
+var f$1 = "w";
+f$1 += "!";
+try {
+	throw 1;
+} catch (f$2) {
+	log.push(f$1);
+}
+{
+	let f = 5;
+	f++;
+	log.push(f$1, f);
+}
+var g$1 = 8;
+g$1++;
+try {
+	throw 0;
+} catch (g$1) {
+	var g$1 = 10;
+	log.push(g$1);
+}
+{
+	let g = 11;
+	g++;
+	log.push(g$1, g);
+}
+// main.js
+assert.deepStrictEqual(results, [
+	2,
+	3,
+	void 0,
+	4,
+	void 0
+]);
+assert.strictEqual(direct, 2);
+assert.strictEqual(onlyCatch, void 0);
+assert.strictEqual(result, 11);
+assert.strictEqual(cycle, 11);
+let e = "entry";
+e += "!";
+let f = "entry";
+f += "!";
+assert.strictEqual(e, "entry!");
+assert.strictEqual(f, "entry!");
+let g = 0;
+g++;
+assert.strictEqual(g, 1);
+assert.deepStrictEqual(log, [
+	"v!",
+	"v!",
+	4,
+	"w!",
+	"w!",
+	6,
+	10,
+	9,
+	12
+]);
+
+```

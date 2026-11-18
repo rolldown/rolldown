@@ -2,9 +2,6 @@
   "language/module-code/parse-err-return.js": {
     "reason": "Rolldown treats files with top level return as CommonJS modules"
   },
-  "language/module-code/export-expname-binding-index.js": {
-    "reason": "Rolldown makes exported bindings non-writable, but does not throw on assignment"
-  },
   "language/module-code/instn-iee-bndng-cls.js": {
     "reason": "Rolldown does not preserve TDZ semantics"
   },
@@ -78,7 +75,7 @@
     "reason": "Rolldown treats assignments to const as bundle errors instead of runtime errors"
   },
   "language/module-code/namespace/internals/define-own-property.js": {
-    "reason": "Rolldown allows defining properties on module namespace objects"
+    "reason": "Rolldown uses a getter instead of a data property to support live bindings"
   },
   "language/module-code/namespace/internals/delete-exported-init.js": {
     "reason": "Rolldown treats deletions of export bindings as bundle errors instead of runtime errors"
@@ -98,17 +95,8 @@
   "language/module-code/namespace/internals/get-own-property-str-found-uninit.js": {
     "reason": "Rolldown does not preserve TDZ semantics"
   },
-  "language/module-code/namespace/internals/get-prototype-of.js": {
-    "reason": "Rolldown does not use null as the prototype of module namespace objects"
-  },
   "language/module-code/namespace/internals/get-str-found-uninit.js": {
     "reason": "Rolldown does not preserve TDZ semantics"
-  },
-  "language/module-code/namespace/internals/has-property-str-not-found.js": {
-    "reason": "Rolldown does not use null as the prototype of module namespace objects"
-  },
-  "language/module-code/namespace/internals/is-extensible.js": {
-    "reason": "Rolldown does not freeze module namespace objects"
   },
   "language/module-code/namespace/internals/object-hasOwnProperty-binding-uninit.js": {
     "reason": "Rolldown does not preserve TDZ semantics"
@@ -118,9 +106,6 @@
   },
   "language/module-code/namespace/internals/object-propertyIsEnumerable-binding-uninit.js": {
     "reason": "Rolldown does not preserve TDZ semantics"
-  },
-  "language/module-code/namespace/internals/set-prototype-of.js": {
-    "reason": "Rolldown allows setting the prototype of module namespace objects"
   },
   "language/module-code/namespace/internals/set.js": {
     "reason": "Rolldown treats assignments to const as bundle errors instead of runtime errors"

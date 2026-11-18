@@ -97,7 +97,7 @@ pub fn write_line(message: &str) {
 
   let message = terminal_size::terminal_size()
     .map(|(width, _)| width.0 as usize)
-    .map_or(message, |width| if message.len() < width { message } else { &message[..width] });
+    .map_or(message, |width| &message[..message.floor_char_boundary(width)]);
 
   let _ = write!(&mut lock, "{message}");
   let _ = lock.flush();

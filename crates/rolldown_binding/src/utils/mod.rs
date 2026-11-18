@@ -22,20 +22,38 @@ use rolldown_tracing::try_init_tracing;
 
 pub use normalize_binding_transform_options::normalize_binding_transform_options;
 
-/// Box a future before handing it to napi's [`Env::spawn_future`].
+/// Spawn the future of an async binding method and return its promise.
 ///
-/// `Env::spawn_future` is monomorphized over the concrete future type, so every
-/// distinct async body re-instantiates the tokio task harness (`poll_future`,
-/// `Core<T, S>`, the scheduler dispatch, ...). Binding entry points run once per
-/// operation, so erasing the future to a single `Pin<Box<dyn Future>>` collapses
-/// that machinery to one instantiation per output type, at the cost of one
-/// heap allocation per call. Do not use this for per-module/per-hook futures,
-/// where the extra allocation would be on a hot path.
+/// Boxing gives every async body one tokio task harness per output type, at one heap allocation
+/// per call.
+/// On wasm, the call also holds the shared runtime until its promise settles, so every async
+/// binding method that spawns, including the per-hook `this.resolve()` and `this.load()`, goes
+/// through here.
 pub fn spawn_boxed_future<T: 'static + Send + ToNapiValue>(
   env: &Env,
   fut: impl 'static + Send + Future<Output = napi::Result<T>>,
 ) -> napi::Result<PromiseRaw<'_, T>> {
   let fut: Pin<Box<dyn Future<Output = napi::Result<T>> + Send>> = Box::pin(fut);
+  #[cfg(all(target_family = "wasm", tokio_unstable))]
+  {
+    // Calls retain the runtime until their JS promise settles.
+    // See internal-docs/rust-classic-bundler/implementation.md.
+    crate::start_async_runtime();
+    let result = napi::bindgen_prelude::execute_tokio_future_with_finalize_callback(
+      env.raw(),
+      fut,
+      |env, value| unsafe { T::to_napi_value(env, value) },
+      Some(Box::new(|_| crate::shutdown_async_runtime())),
+    );
+    match result {
+      Ok(promise) => Ok(PromiseRaw::new(env.raw(), promise)),
+      Err(error) => {
+        crate::shutdown_async_runtime();
+        Err(error)
+      }
+    }
+  }
+  #[cfg(not(all(target_family = "wasm", tokio_unstable)))]
   env.spawn_future(fut)
 }
 
@@ -90,7 +108,7 @@ pub async fn handle_warnings(
   let diagnostic_options = DiagnosticOptions { cwd: options.cwd.clone() };
   let diagnostics: Vec<Diagnostic> =
     warnings.iter().map(|warning| warning.to_diagnostic_with(&diagnostic_options)).collect();
-  let rendered = Diagnostic::render_batch(&diagnostics, true);
+  let rendered = Diagnostic::render_batch(&diagnostics, rolldown_error::stderr_supports_color());
 
   // Dispatch the callbacks sequentially, awaiting each before invoking the next.
   // A warning handler is allowed to `throw` to abort the build, so we must stop at

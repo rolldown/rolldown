@@ -13,7 +13,7 @@ var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = 1;
 }));
 // proxy.js
-var proxy_exports = /* @__PURE__ */ __exportAll({});
+var proxy_exports = /* @__PURE__ */ __exportAll({}, 2);
 __reExport(proxy_exports, /* @__PURE__ */ __toESM(require_commonjs()));
 // main.js
 assert.equal(proxy_exports.a, 1);

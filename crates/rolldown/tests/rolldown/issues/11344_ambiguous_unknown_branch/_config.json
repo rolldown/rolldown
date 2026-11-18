@@ -1,0 +1,8 @@
+{
+  "_comment": "Same root cause as https://github.com/rolldown/rolldown/issues/11344, through star-ambiguity matching. `B.js` reaches `n` through `c.js` and `d.js`; both chains end at `x.js` (one binding). Lazy barrel skips the `c.js -> x.js` record and `e.js`'s `export *` record because nobody requests `n`, so both branches are unknown and must not be reported as AMBIGUOUS_EXTERNAL_NAMESPACES.",
+  "config": {
+    "experimental": {
+      "lazyBarrel": true
+    }
+  }
+}

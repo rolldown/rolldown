@@ -21,7 +21,7 @@ Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
   → cross_module_optimization → refine_stmt_side_effects_with_imported_constants
   → recompute_analyzed_side_effects
   → reference_needed_symbols   ← this pass
-  → include_statements → patch_module_dependencies
+  → prune_constant_branches → include_statements → patch_module_dependencies
 ```
 
 This position matters for three reasons:
@@ -29,6 +29,11 @@ This position matters for three reasons:
 1. **`wrap_kind` and `wrapper_ref` must already exist.** Every CJS/ESM-wrap arm reads `metas[importee.idx].wrap_kind()` and dereferences `wrapper_ref.unwrap()`. `wrap_modules` and `generate_lazy_export` populate them.
 2. **Module side effects must be final.** This pass copies the verdict `importee.side_effects` into the import-statement flags. `cross_module_optimization` and `refine_stmt_side_effects_with_imported_constants` relax statement flags after `determine_side_effects` runs. Thus `recompute_analyzed_side_effects` recalculates the module verdicts before this pass runs. Without this step, this pass keeps a side-effect-only `import './mod'` of a module that became side-effect free.
 3. **`include_statements` must run after this pass.** It traverses `stmt_info.referenced_symbols` and joins `depended_runtime_helper` against included statements. Without the data from this pass, it silently drops wrappers and helpers from the output.
+
+`prune_constant_branches` runs after this pass but skips statements containing import records,
+so import-lowering dependencies stay intact. It removes only references witnessed exclusively
+in dead subtrees and shares those branch decisions with finalization; see
+[constant branches](../../constant-branches/implementation.md).
 
 `determine_side_effects` propagates side effects from dependencies to their importers through a worklist. User-defined verdicts do not change. Re-exports that need wrapper initialization or a `__reExport` call also start propagation. Each module enters the worklist at most once, so each propagation takes O(modules + imports).
 

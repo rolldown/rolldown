@@ -3,22 +3,22 @@ use std::path::{Path, PathBuf};
 use arcstr::ArcStr;
 use futures::future::try_join_all;
 use oxc_index::IndexVec;
+use oxc_str::CompactStr;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_common::{
-  ChunkIdx, ChunkKind, InstantiationKind, ModuleIdx, OutputExports, PackageJson, PathsOutputOption,
-  UsedSymbolRefs, UsedSymbolRefsBuilder,
+  Chunk, ChunkIdx, ChunkKind, ModuleIdx, NormalModule, OutputExports, PackageJson,
+  PathsOutputOption, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{
   PathBufExt as _, absolutize_path_buf, path_buf_to_slash, relative_path_to_slash,
-  representative_file_name_for_preserve_modules, strip_path_prefix_to_slash,
+  strip_path_prefix_to_slash,
 };
 use rolldown_utils::{
-  concat_string, dashmap::FxDashMap, hash_placeholder::HashPlaceholderGenerator,
-  index_vec_ext::IndexVecExt as _, indexmap::FxIndexSet, node_style_absolute,
-  rayon::ParallelIterator as _,
+  dashmap::FxDashMap, hash_placeholder::HashPlaceholderGenerator, index_vec_ext::IndexVecExt as _,
+  indexmap::FxIndexSet, node_style_absolute, rayon::ParallelIterator as _, url::clean_url,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath as _;
@@ -30,17 +30,27 @@ use tracing::debug_span;
 /// https://github.com/rollup/rollup/blob/master/src/Chunk.ts (`NON_ASSET_EXTENSIONS`)
 const NON_ASSET_EXTENSIONS: &[&str] = &["js", "jsx", "ts", "tsx", "mjs", "mts", "cjs", "cts"];
 
+/// Removes the extension of the last path segment of `name` if it is in
+/// [`NON_ASSET_EXTENSIONS`]. Rollup reads the extension of the sanitized id the same way
+/// (`getPreserveModulesChunkNameFromModule`), so another extension (`card.json`) or a trailing
+/// dot (`card.`) stays in the name.
+fn strip_non_asset_extension(name: &str) -> &str {
+  match Path::new(name).extension().and_then(|ext| ext.to_str()) {
+    Some(ext) if NON_ASSET_EXTENSIONS.contains(&ext) => {
+      name.strip_suffix(ext).and_then(|rest| rest.strip_suffix('.')).unwrap_or(name)
+    }
+    _ => name,
+  }
+}
+
 #[derive(Debug)]
 struct PreGeneratedChunkName {
   /// The representative name used for symbol deconflicting and chunk binding references.
   representative_chunk_name: ArcStr,
   /// The full chunk name including directory structure relative to `preserveModulesRoot`.
-  /// This appears in `PreRenderedChunk.name` and hooks like `entryFileNames`.
+  /// This appears in `PreRenderedChunk.name` and hooks like `entryFileNames`, and it is the
+  /// input for the `[name]` placeholder of filename templates.
   chunk_name: ArcStr,
-  /// The input for the `[name]` placeholder of filename templates. For a preserved
-  /// module this is the same string as `chunk_name`: the sanitized relative path,
-  /// with only [`NON_ASSET_EXTENSIONS`] removed.
-  chunk_filename: ArcStr,
 }
 
 type DevtoolsPackageInfoEntry = (action::PackageInfo, FxIndexSet<String>, FxIndexSet<u32>);
@@ -116,12 +126,13 @@ mod compute_cross_chunk_links;
 mod compute_wrapped_esm_init_metadata;
 mod detect_ineffective_dynamic_imports;
 mod dynamic_already_loaded;
+mod dynamic_entry_namespace;
 mod entry_facades;
 mod finalize_chunk_plan;
 mod finalize_modules;
 mod inline_common_chunks;
 mod manual_code_splitting;
-mod minify_chunks;
+pub mod minify_chunks;
 mod order_analysis;
 pub mod order_wrap_state;
 mod order_wrapping;
@@ -202,7 +213,7 @@ impl<'a> GenerateStage<'a> {
     // live chunks throughout, so their own edges are derived like any other chunk's, and the
     // projection afterwards turns the logical edges into the physical file graph.
     // See internal-docs/inline-common-chunks/implementation.md.
-    if self.select_inline_common_chunks(&chunk_graph, &link_state, &mut order_state) {
+    if self.select_inline_common_chunks(&mut chunk_graph, &link_state, &mut order_state) {
       link_state = self.compute_cross_chunk_link_state(
         &chunk_graph,
         used_symbol_refs.view(),
@@ -276,13 +287,13 @@ impl<'a> GenerateStage<'a> {
         .module_table
         .modules
         .iter()
-        .filter_map(|m| m.as_external().map(|e| e.id.as_str()));
+        .filter_map(|m| m.as_external().map(|e| e.id.raw_id()));
       self.resolved_paths = Some(paths.resolve_all(ids).await);
     }
 
     let resolved_file_urls = self.resolve_file_urls(&chunk_graph).await?;
     self.finalize_modules(
-      &mut chunk_graph,
+      &chunk_graph,
       &mut ast_table,
       &resolved_file_urls,
       &used_symbol_refs,
@@ -307,6 +318,7 @@ impl<'a> GenerateStage<'a> {
     let chunk_table = &chunk_graph.chunk_table;
     let index_pre_generated_names_futures = chunk_table.iter_enumerated().map(|(idx, chunk)| {
       let is_record = self.inline_state.is_record(idx);
+      let loaded_record = self.inline_state.loaded_record(idx);
       let sanitize_filename = self.options.sanitize_filename.clone();
       let preserve_modules_root = self.options.preserve_modules_root.clone();
       let input_base = chunk.input_base.clone();
@@ -317,36 +329,29 @@ impl<'a> GenerateStage<'a> {
           let name = sanitize_filename.call(name).await?;
           return anyhow::Ok(PreGeneratedChunkName {
             representative_chunk_name: name.clone(),
-            chunk_name: name.clone(),
-            chunk_filename: name,
+            chunk_name: name,
           });
         }
         match chunk.kind {
           ChunkKind::EntryPoint { module: entry_module_id, meta, .. } => {
             let module = &modules[entry_module_id];
             let generated = if self.options.preserve_modules {
-              let module_id = module.id().as_str();
+              // Import attributes are not part of the file name.
+              let module_id = module.id().raw_id();
               // The representative name keeps the file stem of the full id, as before.
               // Rollup also derives the chunk variable name from the full id
               // (`getAliasName(module.id)`).
               let representative_chunk_name =
                 module_id.as_path().file_stem().and_then(|f| f.to_str()).unwrap_or(module_id);
-              // Rollup's `QUERY_HASH_REGEX` (`[#?]`) drops a query or hash before the
-              // extension check. Otherwise `odd.js?x` looks like a non-JS extension and
-              // `[name]` keeps the query.
-              let module_path = Path::new(match module_id.find(['?', '#']) {
-                Some(index) => &module_id[..index],
-                None => module_id,
-              });
-              let (_, absolute_chunk_file_name, ext) =
-                representative_file_name_for_preserve_modules(module_path);
 
-              // The relative path is built from the raw id and sanitized once at the end:
-              // `preserveModulesRoot` and the input base are raw paths, so a sanitized id may no
-              // longer start with them, or may start with another directory that sanitizes to
-              // the same name.
+              // Like Rollup, the name ignores the id after its first `?` or `#`, also in a
+              // directory name (`getPreserveModulesChunkNameFromModule`, `rollup/src/Chunk.ts`).
+              // The relative path is built from the raw id, with its extension, and sanitized
+              // once at the end: `preserveModulesRoot` and the input base are raw paths, so a
+              // sanitized id may no longer start with them, or may start with another directory
+              // that sanitizes to the same name.
               let relative_path = {
-                let p = PathBuf::from(absolute_chunk_file_name.as_str());
+                let p = PathBuf::from(clean_url(module_id));
                 // Besides genuinely absolute paths, `node_style_absolute` anchors
                 // a rooted-but-volume-less id (`/favicon`, `\favicon`) to the
                 // cwd volume root (a drive or UNC share): Node and Rollup treat
@@ -371,60 +376,47 @@ impl<'a> GenerateStage<'a> {
                   path_buf_to_slash(PathBuf::from(virtual_dirname.as_str()).join(p))
                 }
               };
-              // `relative_path` has had its final extension removed. Put a non-JS/TS
-              // extension back and use that string for both `chunk.name` and `[name]`,
-              // which is what Rollup's `getPreserveModulesChunkNameFromModule` does
-              // (rollup/rollup#4565). Feeding the stripped path to `[name]` makes
-              // `card.json` render as `card.js` and renames the real module to `card2.js`.
-              let chunk_name = match ext.as_deref() {
-                Some(e) if !e.is_empty() && !NON_ASSET_EXTENSIONS.contains(&e) => {
-                  sanitize_filename.call_relative(&concat_string!(relative_path, ".", e)).await?
-                }
-                _ => sanitize_filename.call_relative(&relative_path).await?,
+              // The chunk name is also the `[name]` placeholder. Like Rollup, it keeps the
+              // extension unless it is a JS/TS one, and it reads the extension after sanitize:
+              // https://github.com/rollup/rollup/pull/4565/files
+              let sanitized_path = sanitize_filename.call_relative(&relative_path).await?;
+              let chunk_name = match strip_non_asset_extension(&sanitized_path) {
+                name if name.len() == sanitized_path.len() => sanitized_path,
+                name => ArcStr::from(name),
               };
 
               let sanitized_representative_chunk_name =
                 sanitize_filename.call(representative_chunk_name).await?;
               PreGeneratedChunkName {
                 representative_chunk_name: sanitized_representative_chunk_name,
-                chunk_filename: chunk_name.clone(),
                 chunk_name,
               }
             } else if meta.contains(rolldown_common::ChunkMeta::UserDefinedEntry) {
               // try extract meaningful input name from path
               if let Some(file_stem) =
-                module.id().as_str().as_path().file_stem().and_then(|f| f.to_str())
+                module.id().raw_id().as_path().file_stem().and_then(|f| f.to_str())
               {
                 let name = sanitize_filename.call(file_stem).await?;
-                PreGeneratedChunkName {
-                  chunk_name: name.clone(),
-                  representative_chunk_name: name.clone(),
-                  chunk_filename: name,
-                }
+                PreGeneratedChunkName { chunk_name: name.clone(), representative_chunk_name: name }
               } else {
                 let name = arcstr::literal!("input");
-                PreGeneratedChunkName {
-                  representative_chunk_name: name.clone(),
-                  chunk_name: name.clone(),
-                  chunk_filename: name,
-                }
+                PreGeneratedChunkName { representative_chunk_name: name.clone(), chunk_name: name }
               }
             } else {
               let chunk_name = sanitize_filename.call(&module.id().representative_name()).await?;
 
-              PreGeneratedChunkName {
-                representative_chunk_name: chunk_name.clone(),
-                chunk_name: chunk_name.clone(),
-                chunk_filename: chunk_name,
-              }
+              PreGeneratedChunkName { representative_chunk_name: chunk_name.clone(), chunk_name }
             };
             Ok(generated)
           }
           ChunkKind::Common => {
             // - rollup use the first entered/last executed module as the `[name]` of common chunks.
             // - esbuild always use 'chunk' as the `[name]`. However we try to make the name more meaningful here.
+            // The file an `import()` loads for an inline common chunk record has no modules of its
+            // own and is named like the record.
+            let named_after = loaded_record.map_or(chunk, |record| &chunk_table[record]);
             if let Some(module_id) =
-              chunk.modules.iter().rev().find(|each| **each != self.link_output.runtime.id())
+              named_after.modules.iter().rev().find(|each| **each != self.link_output.runtime.id())
             {
               let module = &modules[*module_id];
               let name = module.id().representative_name();
@@ -436,15 +428,13 @@ impl<'a> GenerateStage<'a> {
               };
               Ok(PreGeneratedChunkName {
                 representative_chunk_name: sanitized_filename.clone(),
-                chunk_name: sanitized_filename.clone(),
-                chunk_filename: sanitized_filename,
+                chunk_name: sanitized_filename,
               })
             } else {
               let name = arcstr::literal!("chunk");
               Ok(PreGeneratedChunkName {
                 representative_chunk_name: name.clone(),
-                chunk_name: name.clone(),
-                chunk_filename: name,
+                chunk_name: name,
               })
             }
           }
@@ -512,7 +502,7 @@ impl<'a> GenerateStage<'a> {
         .generate_preliminary_filename(
           self.options,
           &pre_rendered_chunk,
-          &pre_generated_chunk_name.chunk_filename,
+          &pre_generated_chunk_name.chunk_name,
           &mut hash_placeholder_generator,
           &used_name_counts,
         )
@@ -530,7 +520,7 @@ impl<'a> GenerateStage<'a> {
         .generate_preliminary_sourcemap_filename(
           self.options,
           &pre_rendered_chunk,
-          &pre_generated_chunk_name.chunk_filename,
+          &pre_generated_chunk_name.chunk_name,
           &mut hash_placeholder_generator,
           &used_name_counts,
         )
@@ -548,10 +538,16 @@ impl<'a> GenerateStage<'a> {
     used_symbol_refs: &UsedSymbolRefs,
     order_state: &order_wrap_state::OrderWrapState,
   ) -> BuildResult<()> {
+    let cyclic_modules = if self.options.preserve_modules {
+      order_wrapping::synchronous_cycle_modules(&self.link_output.module_table.modules)
+    } else {
+      FxHashSet::default()
+    };
+
     // Collect all the chunk data we need first
     let mut chunk_export_data = Vec::new();
     for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
-      if let Some(entry_module) = chunk.user_defined_entry_module(&self.link_output.module_table) {
+      if let Some(entry_module) = self.export_mode_module(chunk, &cyclic_modules) {
         let export_names = get_chunk_export_names(chunk, self.link_output);
         chunk_export_data.push((chunk_idx, entry_module, export_names));
       }
@@ -584,12 +580,62 @@ impl<'a> GenerateStage<'a> {
 
     // Set common chunks to Named
     for chunk in chunk_graph.chunk_table.iter_mut() {
-      if chunk.user_defined_entry_module(&self.link_output.module_table).is_none() {
+      if self.export_mode_module(chunk, &cyclic_modules).is_none() {
         chunk.output_exports = OutputExports::Named;
       }
     }
 
     Ok(())
+  }
+
+  /// The module whose exports decide a chunk's `output.exports` mode.
+  ///
+  /// User-defined entries always resolve their own mode. Rollup also applies `output.exports` to
+  /// every other chunk when `preserveModules` is on, since each chunk is a facade for exactly one
+  /// module, so those chunks resolve their own mode as well, with exceptions that keep the
+  /// `Named` fallback:
+  ///
+  /// - The synthetic runtime module, an internal detail with named helpers.
+  /// - A CommonJS-wrapped module. In `Named` mode its chunk exports a lazy `default` getter, so
+  ///   the module runs when an importer reads it, as Node runs it at its `require()` call. A
+  ///   `default`-mode chunk would run it as soon as an importer's file loads.
+  /// - A chunk that also exposes bindings beyond its declared exports, because a `default`-mode
+  ///   chunk can carry nothing else: bundler-internal wrapper or namespace symbols that other
+  ///   chunks reach through it, or `export *` that reaches an external module, directly or
+  ///   through other preserved modules, whose names are installed on `exports` at runtime from
+  ///   the chunk's entry-level external list.
+  /// - A module on a static import or `require()` cycle. A `default`-mode chunk replaces
+  ///   `module.exports`, so an importer that runs while the module is still executing would keep
+  ///   the empty object `require()` returned.
+  fn export_mode_module(
+    &self,
+    chunk: &Chunk,
+    cyclic_modules: &FxHashSet<ModuleIdx>,
+  ) -> Option<&NormalModule> {
+    if let Some(module) = chunk.user_defined_entry_module(&self.link_output.module_table) {
+      return Some(module);
+    }
+    if !self.options.preserve_modules {
+      return None;
+    }
+    let module = chunk.entry_module(&self.link_output.module_table)?;
+    if module.idx == self.link_output.runtime.id() || cyclic_modules.contains(&module.idx) {
+      return None;
+    }
+    if !chunk.entry_level_external_module_idx.is_empty() {
+      return None;
+    }
+    let meta = &self.link_output.metas[module.idx];
+    if matches!(meta.wrap_kind(), WrapKind::Cjs) {
+      return None;
+    }
+    let is_declared_export =
+      |name: &CompactStr| meta.sorted_and_non_ambiguous_resolved_exports.contains_key(name);
+    chunk
+      .exports_to_other_chunks
+      .values()
+      .all(|aliases| aliases.iter().all(is_declared_export))
+      .then_some(module)
   }
 
   fn trace_action_chunks_infos(&self, chunk_graph: &ChunkGraph) {
@@ -641,9 +687,7 @@ impl<'a> GenerateStage<'a> {
     if trace_action_enabled!() {
       let mut bytes_by_module: FxHashMap<&str, u64> = FxHashMap::default();
       for chunk in instantiated_chunks {
-        let InstantiationKind::Ecma(ecma_meta) = &chunk.kind else {
-          continue;
-        };
+        let ecma_meta = &chunk.ecma_meta;
         for (module_id, rendered_module) in ecma_meta
           .rendered_chunk
           .modules
@@ -725,9 +769,7 @@ impl<'a> GenerateStage<'a> {
       }
 
       for chunk in instantiated_chunks {
-        let InstantiationKind::Ecma(ecma_meta) = &chunk.kind else {
-          continue;
-        };
+        let ecma_meta = &chunk.ecma_meta;
 
         for (module_id, rendered_module) in ecma_meta
           .rendered_chunk
@@ -770,4 +812,20 @@ fn rendered_module_set(chunk_graph: &ChunkGraph) -> FxHashSet<ModuleIdx> {
     .filter(|(chunk_idx, _)| chunk_graph.chunk_is_live(*chunk_idx))
     .flat_map(|(_, chunk)| chunk.modules.iter().copied())
     .collect()
+}
+
+#[cfg(test)]
+mod test {
+  use super::strip_non_asset_extension;
+
+  #[test]
+  fn strip_non_asset_extension_keeps_other_extensions() {
+    assert_eq!(strip_non_asset_extension("foo.js"), "foo");
+    assert_eq!(strip_non_asset_extension("a/b.mts"), "a/b");
+    // Rollup keeps each of these names: the extension is not one of the eight, or the last
+    // segment has no extension.
+    for name in ["card.json", "card.", "a/.js", "foo.JS", "a.js/b"] {
+      assert_eq!(strip_non_asset_extension(name), name);
+    }
+  }
 }

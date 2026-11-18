@@ -1,5 +1,5 @@
 use rolldown_common::{
-  ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
+  ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
   RuntimeModuleBrief, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::IndexBitSet;
@@ -43,9 +43,6 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
 
   module.import_records.iter().for_each(|rec| {
     let Some(module_idx) = rec.state.resolved_module else { return };
-    if matches!(rec.kind, ImportKind::Require) {
-      ctx.linking_infos[module_idx].required_by_other_module = true;
-    }
     wrap_module_recursively(ctx, module_idx);
   });
 }
@@ -119,9 +116,6 @@ impl LinkStage<'_> {
           let Module::Normal(importee) = &self.module_table[module_idx] else {
             return;
           };
-          if matches!(rec.kind, ImportKind::Require) {
-            self.metas[importee.idx].required_by_other_module = true;
-          }
           // Commonjs as a dependency must be wrapped. The wrapper is like a commonjs runtime to help initialize the commonjs module correctly.
           if matches!(importee.exports_kind, ExportsKind::CommonJs) {
             wrap_module_recursively(

@@ -20,8 +20,8 @@ exports.foo = foo;
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
-const require_lib = require("./lib.js");
 let node_assert = require("node:assert");
+const require_lib = require("./lib.js");
 node_assert = __toESM(node_assert);
 // main.js
 node_assert.default.strictEqual(require_lib.foo, "foo_value");

@@ -280,7 +280,6 @@ impl ManualSplitter<'_> {
           &self.link_output.metas,
           &self.link_output.module_table,
           self.module_to_assigned,
-          &mut FxHashSet::default(),
           include_dependencies_recursively,
         );
       }
@@ -855,7 +854,11 @@ fn derive_entries_aware_chunk_name(
         let entry_point = flattened_entries[idx];
         Some(entry_point.name.as_ref().map(ArcStr::to_string).unwrap_or_else(|| {
           let module = &link_output.module_table[entry_point.idx];
-          Path::new(module.stable_id().as_str())
+          let stable_id = module.stable_id().as_str();
+          // Import attributes are not part of the file name.
+          let stable_path =
+            stable_id.strip_suffix(module.id().attributes_suffix()).unwrap_or(stable_id);
+          Path::new(stable_path)
             .file_stem()
             .and_then(|s| s.to_str())
             .map(ToString::to_string)
@@ -886,21 +889,20 @@ fn derive_entries_aware_chunk_name(
   }
 }
 
-/// `visited` guards one walk against cycles and repeated paths, and nothing more. A set shared
-/// across matched modules gave no measured gain. It would also have to belong to one
-/// `ModuleGroup`, because a dynamic `name` splits one match group across several groups.
+/// A module already in `module_group` is skipped with its dependencies. Whether a module joins
+/// is decided only by the module itself, and a group's `recursively` never changes, so when it
+/// joined, its dependencies were walked by that same rule and need no second walk. This also
+/// ends cycles, because a module joins before its dependencies are walked. It replaces a fresh
+/// `visited` set per matched module, which re-walked every shared dependency for each one.
 fn add_module_and_dependencies_to_group_recursively(
   module_group: &mut ModuleGroup,
   module_idx: ModuleIdx,
   module_metas: &LinkingMetadataVec,
   module_table: &ModuleTable,
   module_to_assigned: &IndexBitSet<ModuleIdx>,
-  visited: &mut FxHashSet<ModuleIdx>,
   recursively: bool,
 ) {
-  let is_visited = !visited.insert(module_idx);
-
-  if is_visited {
+  if module_group.modules.contains(&module_idx) {
     return;
   }
 
@@ -925,7 +927,6 @@ fn add_module_and_dependencies_to_group_recursively(
         module_metas,
         module_table,
         module_to_assigned,
-        visited,
         recursively,
       );
     }

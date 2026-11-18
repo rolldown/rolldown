@@ -12,6 +12,12 @@ pub struct BindingSharedString {
   inner: SharedStringInner,
 }
 
+impl Default for BindingSharedString {
+  fn default() -> Self {
+    Self::from(ArcStr::default())
+  }
+}
+
 #[derive(Debug, Clone)]
 enum SharedStringInner {
   ArcStr(ArcStr),
@@ -40,6 +46,15 @@ impl From<Arc<String>> for BindingSharedString {
   }
 }
 
+impl From<BindingSharedString> for ArcStr {
+  fn from(value: BindingSharedString) -> Self {
+    match value.inner {
+      SharedStringInner::ArcStr(value) => value,
+      SharedStringInner::String(value) => Self::from(value.as_str()),
+    }
+  }
+}
+
 impl TypeName for BindingSharedString {
   fn type_name() -> &'static str {
     "String"
@@ -54,7 +69,7 @@ impl ValidateNapiValue for BindingSharedString {}
 
 impl FromNapiValue for BindingSharedString {
   unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> Result<Self> {
-    Ok(Self::from(Arc::new(unsafe { String::from_napi_value(env, napi_val)? })))
+    Ok(Self::from(ArcStr::from(unsafe { String::from_napi_value(env, napi_val)? })))
   }
 }
 

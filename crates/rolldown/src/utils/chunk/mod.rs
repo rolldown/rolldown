@@ -1,9 +1,8 @@
 use self::render_chunk_exports::get_chunk_export_names;
 use arcstr::ArcStr;
-use itertools::Itertools;
 use rolldown_common::{
-  Chunk, ChunkKind, ChunkMeta, ModuleId, ModuleIdx, ModuleTable, PreserveEntrySignatures,
-  RenderedModule, RollupPreRenderedChunk, RollupRenderedChunk, SharedNormalizedBundlerOptions,
+  Chunk, ChunkKind, ChunkMeta, ModuleId, ModuleIdx, PreserveEntrySignatures, RenderedModule,
+  RollupPreRenderedChunk, RollupRenderedChunk, SharedNormalizedBundlerOptions, StaticImport,
 };
 use rustc_hash::FxHashMap;
 
@@ -16,20 +15,6 @@ pub mod finalize_chunks;
 pub mod namespace_marker;
 pub mod render_chunk_exports;
 pub mod validate_options_for_multi_chunk_output;
-
-fn static_external_imports<'a>(
-  chunk: &'a Chunk,
-  module_table: &'a ModuleTable,
-) -> impl Iterator<Item = ModuleIdx> + 'a {
-  chunk
-    .direct_imports_from_external_modules
-    .iter()
-    .map(|(idx, _)| *idx)
-    .merge_by(chunk.entry_level_external_module_idx.iter().copied(), |a, b| {
-      module_table[*a].exec_order() <= module_table[*b].exec_order()
-    })
-    .dedup()
-}
 
 pub fn generate_pre_rendered_chunk(
   chunk: &Chunk,
@@ -80,21 +65,19 @@ pub fn generate_rendered_chunk(
       .clone(),
     modules: render_modules.into(),
     imports: chunk
-      .cross_chunk_imports
+      .static_imports
       .iter()
-      .map(|id| {
-        chunk_graph.chunk_table[*id]
+      .map(|static_import| match *static_import {
+        StaticImport::Chunk(chunk_idx) => chunk_graph.chunk_table[chunk_idx]
           .preliminary_filename
           .as_deref()
           .expect("should have preliminary_filename")
-          .clone()
-      })
-      .chain(static_external_imports(chunk, &link_output.module_table).map(|idx| {
-        link_output.module_table[idx]
+          .clone(),
+        StaticImport::External(module_idx) => link_output.module_table[module_idx]
           .as_external()
-          .expect("static external imports should only contain external modules")
-          .get_file_name(*resolved_paths)
-      }))
+          .expect("a static import that is not a chunk should be an external module")
+          .get_file_name(*resolved_paths),
+      })
       .collect(),
     dynamic_imports: chunk
       .cross_chunk_dynamic_imports

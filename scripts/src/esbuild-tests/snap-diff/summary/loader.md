@@ -41,8 +41,12 @@
 ## [require_custom_extension_data_url](../../../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_data_url)
 ## [require_custom_extension_prefer_longest](../../../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_prefer_longest)
 ## [require_custom_extension_string](../../../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_string)
-## [with_type_json_override_loader_glob](../../../../../crates/rolldown/tests/esbuild/loader/with_type_json_override_loader_glob)
+## [with_type_bytes_override_loader](../../../../../crates/rolldown/tests/esbuild/loader/with_type_bytes_override_loader)
+## [with_type_json_override_loader](../../../../../crates/rolldown/tests/esbuild/loader/with_type_json_override_loader)
+## [with_type_text_override_loader](../../../../../crates/rolldown/tests/esbuild/loader/with_type_text_override_loader)
 # Ignored Cases
+## [loader_bundle_with_import_attributes](../../../../../crates/rolldown/tests/esbuild/loader/loader_bundle_with_import_attributes)
+  Rolldown treats the legacy `assert` keyword as `with`, so the `assert` and `with` imports are one module. esbuild puts the `assert` import with the plain one
 ## [loader_data_url_base64_invalid_utf8](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_base64_invalid_utf8)
   esbuild's `charset=utf-8` comes from Go's `http.DetectContentType` and is applied to invalid UTF-8; Rolldown only adds it after validating the data as UTF-8
 ## [loader_data_url_hash_suffix_issue4370](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_hash_suffix_issue4370)
@@ -60,8 +64,6 @@
   empty loader is not supported in CSS files
 ## [extensionless_loader_css](../../../../../crates/rolldown/tests/esbuild/loader/extensionless_loader_css)
   extension less moduleTypes is not supported
-## [loader_bundle_with_import_attributes](../../../../../crates/rolldown/tests/esbuild/loader/loader_bundle_with_import_attributes)
-  import attributes is not supported
 ## [loader_bundle_with_unknown_import_attributes_and_copy_loader](../../../../../crates/rolldown/tests/esbuild/loader/loader_bundle_with_unknown_import_attributes_and_copy_loader)
   copy loader is not supported
 ## [loader_copy_entry_point_advanced](../../../../../crates/rolldown/tests/esbuild/loader/loader_copy_entry_point_advanced)
@@ -106,13 +108,9 @@
   stripping query parameter is not supported
 ## [loader_from_extension_with_query_parameter](../../../../../crates/rolldown/tests/esbuild/loader/loader_from_extension_with_query_parameter)
   stripping query parameter is not supported
-## [with_type_bytes_override_loader](../../../../../crates/rolldown/tests/esbuild/loader/with_type_bytes_override_loader)
-  import attributes is not supported
 ## [with_type_bytes_override_loader_glob](../../../../../crates/rolldown/tests/esbuild/loader/with_type_bytes_override_loader_glob)
   glob is not supported
-## [with_type_json_override_loader](../../../../../crates/rolldown/tests/esbuild/loader/with_type_json_override_loader)
-  import attributes is not supported
-## [with_type_text_override_loader](../../../../../crates/rolldown/tests/esbuild/loader/with_type_text_override_loader)
-  import attributes is not supported
+## [with_type_json_override_loader_glob](../../../../../crates/rolldown/tests/esbuild/loader/with_type_json_override_loader_glob)
+  glob is not supported
 ## [with_type_text_override_loader_glob](../../../../../crates/rolldown/tests/esbuild/loader/with_type_text_override_loader_glob)
   glob is not supported

@@ -1,0 +1,51 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dep.js
+
+```js
+// dep.cjs
+var require_dep = /* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports, module) => {
+	(globalThis.evaluated ??= []).push("dep");
+	module.exports = { x: 1 };
+}));
+module.exports = require_dep();
+
+```
+
+## main.js
+
+```js
+require("./rolldown-runtime.js");
+require("./dep.js");
+// main.js
+if (JSON.stringify(globalThis.evaluated) !== "[\"dep\"]") throw new Error(`unexpected evaluation: ${JSON.stringify(globalThis.evaluated)}`);
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
+Object.defineProperty(exports, "__reExport", {
+	enumerable: true,
+	get: function() {
+		return __reExport;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+
+```

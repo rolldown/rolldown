@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+const result = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	var define;
+	var __dirname = import.meta.dirname;
+	var __filename = import.meta.filename;
+	module.exports = {
+		dir: typeof __dirname,
+		file: typeof __filename,
+		amd: typeof define
+	};
+})))())).default;
+export { result };
+
+```

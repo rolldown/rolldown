@@ -118,7 +118,10 @@ const addLogToString = (log: RolldownLog): RolldownLog => {
 };
 
 const defaultPrintLog: LogHandler = (level, log) => {
-  const message = getExtendedLogMessage(log);
+  let message = getExtendedLogMessage(log);
+  if (log.url) {
+    message += `\n${log.url}`;
+  }
   switch (level) {
     case LOG_LEVEL_WARN: {
       return console.warn(message);

@@ -1,0 +1,138 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// assignment.cjs
+var require_assignment = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports = {};
+	exports.x = true;
+}));
+// destructuring.cjs
+var require_destructuring = /* @__PURE__ */ __commonJSMin(((exports) => {
+	({value: exports} = { value: {} });
+	exports.x = true;
+}));
+// logical_assignment.cjs
+var require_logical_assignment = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports &&= {};
+	exports.x = true;
+}));
+// loop.cjs
+var require_loop = /* @__PURE__ */ __commonJSMin(((exports) => {
+	for (exports of [{}]);
+	exports.x = true;
+}));
+// nested.cjs
+var require_nested = /* @__PURE__ */ __commonJSMin(((exports) => {
+	function rebind() {
+		exports = {};
+	}
+	rebind();
+	exports.x = true;
+}));
+// property.cjs
+var require_property = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.x = true;
+	exports["y"] = true;
+}));
+// shadowed.cjs
+var require_shadowed = /* @__PURE__ */ __commonJSMin(((exports) => {
+	function rebind(exports) {
+		exports = {};
+	}
+	rebind({});
+	exports.x = true;
+}));
+// main.js
+var import_assignment = require_assignment();
+var import_destructuring = require_destructuring();
+var import_logical_assignment = require_logical_assignment();
+var import_loop = require_loop();
+var import_nested = require_nested();
+require_property();
+require_shadowed();
+assert.strictEqual(import_assignment.x ? "truthy" : "falsy", "falsy");
+assert.strictEqual(import_destructuring.x ? "truthy" : "falsy", "falsy");
+assert.strictEqual(import_logical_assignment.x ? "truthy" : "falsy", "falsy");
+assert.strictEqual(import_loop.x ? "truthy" : "falsy", "falsy");
+assert.strictEqual(import_nested.x ? "truthy" : "falsy", "falsy");
+assert.strictEqual("truthy", "truthy");
+assert.strictEqual("truthy", "truthy");
+assert.strictEqual("truthy", "truthy");
+
+```
+
+# Variant: [inline_const: Config(InlineConstConfig { mode: Some(All), pass: 2 })]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// assignment.cjs
+var require_assignment = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports = {};
+	exports.x = true;
+}));
+// destructuring.cjs
+var require_destructuring = /* @__PURE__ */ __commonJSMin(((exports) => {
+	({value: exports} = { value: {} });
+	exports.x = true;
+}));
+// logical_assignment.cjs
+var require_logical_assignment = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports &&= {};
+	exports.x = true;
+}));
+// loop.cjs
+var require_loop = /* @__PURE__ */ __commonJSMin(((exports) => {
+	for (exports of [{}]);
+	exports.x = true;
+}));
+// nested.cjs
+var require_nested = /* @__PURE__ */ __commonJSMin(((exports) => {
+	function rebind() {
+		exports = {};
+	}
+	rebind();
+	exports.x = true;
+}));
+// property.cjs
+var require_property = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.x = true;
+	exports["y"] = true;
+}));
+// shadowed.cjs
+var require_shadowed = /* @__PURE__ */ __commonJSMin(((exports) => {
+	function rebind(exports) {
+		exports = {};
+	}
+	rebind({});
+	exports.x = true;
+}));
+// main.js
+var import_assignment = require_assignment();
+var import_destructuring = require_destructuring();
+var import_logical_assignment = require_logical_assignment();
+var import_loop = require_loop();
+var import_nested = require_nested();
+require_property();
+require_shadowed();
+assert.strictEqual(import_assignment.x ? "truthy" : "falsy", "falsy");
+assert.strictEqual(import_destructuring.x ? "truthy" : "falsy", "falsy");
+assert.strictEqual(import_logical_assignment.x ? "truthy" : "falsy", "falsy");
+assert.strictEqual(import_loop.x ? "truthy" : "falsy", "falsy");
+assert.strictEqual(import_nested.x ? "truthy" : "falsy", "falsy");
+assert.strictEqual("truthy", "truthy");
+assert.strictEqual("truthy", "truthy");
+assert.strictEqual("truthy", "truthy");
+
+```

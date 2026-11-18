@@ -1,8 +1,39 @@
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
-import { rolldown } from 'rolldown';
+import { build, rolldown } from 'rolldown';
 import { defineParallelPlugin } from 'rolldown/experimental';
+import { esmExternalRequirePlugin } from 'rolldown/plugins';
 import { expect, test, vi } from 'vitest';
+
+// One callback verifies eager invocation without asserting a build-wide backlog drain.
+test('native plugin context logs enqueue onLog at emission time', async () => {
+  const logs: string[] = [];
+  await build({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    write: false,
+    external: ['ext'],
+    plugins: [esmExternalRequirePlugin({ external: ['ext'] })],
+    onLog(level, log) {
+      logs.push(`${level}:${log.message}`);
+    },
+  });
+  expect(logs).toHaveLength(1);
+  expect(logs[0]).toContain('warn:Found 1 duplicate external: `ext`.');
+});
+
+test('warns when the `watch` option is passed to `build()`', async () => {
+  const consoleSpy = vi.spyOn(console, 'warn');
+  await build({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    write: false,
+    watch: {},
+  });
+  expect(consoleSpy).toHaveBeenCalledWith(
+    '`watch` option is ignored because `build()` does not support watch mode. Please use the `watch()` API instead.',
+  );
+});
 
 test('rolldown write twice', async () => {
   const bundle = await rolldown({

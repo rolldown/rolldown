@@ -14,6 +14,27 @@ use crate::{
   report::{DeltaSection, MetricValue, MetricsState, Report},
 };
 
+/// Output filenames join build-time static imports to browser resource timings.
+/// Keep this graph separate from the bounded human report.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ChunkGraphFile {
+  schema_version: u32,
+  chunks: Vec<ChunkGraphFileNode>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ChunkGraphFileNode {
+  file_name: String,
+  name: String,
+  bytes: u64,
+  is_entry: bool,
+  facade_module_id: Option<String>,
+  imports: Vec<String>,
+  dynamic_imports: Vec<String>,
+}
+
 impl MetricsAggregator {
   fn out_dir(&self) -> PathBuf {
     let dir = &self.config.dir;
@@ -67,6 +88,33 @@ impl MetricsAggregator {
 
     let json = serde_json::to_string_pretty(&report).map_err(std::io::Error::other)?;
     std::fs::write(dir.join("metrics.json"), json)?;
+    // OutputChunkGraphReady follows generateBundle, including plugin changes.
+    // This list is never top-N. See internal-docs/devtools/implementation.md.
+    let mut chunks: Vec<_> = self
+      .output_chunks
+      .iter()
+      .map(|chunk| {
+        let labels = |imports: &[String]| {
+          let mut files = imports.to_vec();
+          files.sort();
+          files.dedup();
+          files
+        };
+        ChunkGraphFileNode {
+          file_name: chunk.file_name.clone(),
+          name: chunk.name.clone(),
+          bytes: chunk.bytes,
+          is_entry: chunk.is_entry,
+          facade_module_id: chunk.facade_module_id.as_ref().map(|id| self.stabilize(id)),
+          imports: labels(&chunk.imports),
+          dynamic_imports: labels(&chunk.dynamic_imports),
+        }
+      })
+      .collect();
+    chunks.sort_by(|a, b| a.file_name.cmp(&b.file_name));
+    let chunk_graph = ChunkGraphFile { schema_version: 1, chunks };
+    let chunk_json = serde_json::to_string(&chunk_graph).map_err(std::io::Error::other)?;
+    std::fs::write(dir.join("chunk-graph.json"), chunk_json)?;
     // Full module graph with dominator/retained annotations: the machine substrate for
     // "what-if I deferred this module" queries (agent tooling reads this; the report's
     // `graph.retainedTop` is its top-N view). Compact JSON - it scales with module count.
@@ -195,12 +243,25 @@ pub(crate) fn render_entry(report: &Report) -> String {
     .unwrap();
   }
 
+  let noop_hooks = metric_u64(report, "plugins.noop_hook_count");
+  if noop_hooks > 0 {
+    writeln!(
+      out,
+      "{} did no work in any call — a hook filter would skip those calls (`timing.md`, \
+       \"Hooks that did no work\")\n",
+      plural(noop_hooks as usize, "plugin hook"),
+    )
+    .unwrap();
+  }
+
   out.push_str("## Details (load on demand)\n\n");
   out.push_str("| File | Load this when… |\n| --- | --- |\n");
   out.push_str(
     "| `metrics.json` | you need one precise number or the `delta`/`baselineDelta` sections — query it (jq/grep a metric id), don't read it wholesale |\n",
   );
-  out.push_str("| `timing.md` | investigating slow builds: stage split, plugin & hook cost |\n");
+  out.push_str(
+    "| `timing.md` | investigating slow builds: stage split, plugin & hook cost, hooks that did no work |\n",
+  );
   out.push_str(
     "| `chunks.md` | bundle size: chunk composition, reasons & cross-chunk duplication |\n",
   );
@@ -210,6 +271,14 @@ pub(crate) fn render_entry(report: &Report) -> String {
   out.push_str("| `packages.md` | dependency bloat: largest packages, direct/transitive, duplicate versions |\n");
   out.push_str(
     "| `graph.md` | code-splitting: entry points, chunk import graph & initial-load cost |\n",
+  );
+  if report.graph.is_some() {
+    out.push_str(
+      "| `module-graph.json` | what-if queries: the bytes one deferred import removes from the initial load — filter it, don't read it wholesale |\n",
+    );
+  }
+  out.push_str(
+    "| `chunk-graph.json` | joining output file names to browser request timings (every chunk, no top-N limit) |\n",
   );
   if report.delta.is_some() || report.baseline_delta.is_some() {
     out.push_str(
@@ -222,11 +291,16 @@ pub(crate) fn render_entry(report: &Report) -> String {
   out.push('\n');
   out.push_str(
     "> Derived in-memory from the rolldown devtools event stream (same data that feeds Vite \
-     DevTools). Durations are measured at event emission. Sizes are per-asset/chunk and \
-     per-package; per-module byte size is not yet in the devtools stream.\n",
+     DevTools). Durations are measured at event emission. Sizes are per asset/chunk, \
+     per package and per module (rendered bytes before minification).\n",
   );
   out
 }
+
+/// A hook at or above this no-op share is marked "most"; a share of 1 is marked "all".
+const NOOP_MOST_RATIO: f64 = 0.9;
+/// How many hooks with no-op calls the timing view lists, the highest share first.
+const NOOP_VIEW_LEN: usize = 10;
 
 pub(crate) fn render_timing(report: &Report) -> String {
   let mut out = String::new();
@@ -271,6 +345,39 @@ pub(crate) fn render_timing(report: &Report) -> String {
         row.calls,
         format_noop(row.noop_calls, row.calls),
         format_ms(row.ms),
+      )
+      .unwrap();
+    }
+    out.push('\n');
+  }
+
+  out.push_str("## Hooks that did no work\n\n");
+  let noop_rows: Vec<&crate::report::NoopHookRow> =
+    report.noop_hooks.iter().take(NOOP_VIEW_LEN).collect();
+  if noop_rows.is_empty() {
+    out.push_str("_None: no hook call was a no-op._\n\n");
+  } else {
+    writeln!(
+      out,
+      "Hooks with no-op calls, the highest share first (top {NOOP_VIEW_LEN}). A no-op call \
+       returned nothing, or returned the code unchanged, and still paid the plugin crossing. \
+       \"all\" = every call; \"most\" = at least nine calls in ten. The fix is a hook filter \
+       that skips the modules the hook does not change, or dropping the hook.\n",
+    )
+    .unwrap();
+    out.push_str("| Plugin | Hook | Calls | No-op | Share |\n| --- | --- | --- | --- | --- |\n");
+    for row in noop_rows {
+      let share = if row.noop_calls == row.calls {
+        "all".to_string()
+      } else if row.ratio >= NOOP_MOST_RATIO {
+        "most".to_string()
+      } else {
+        format!("{:.0}%", row.ratio * 100.0)
+      };
+      writeln!(
+        out,
+        "| `{}` | {} | {} | {} | {share} |",
+        row.plugin, row.hook, row.calls, row.noop_calls,
       )
       .unwrap();
     }
@@ -674,7 +781,7 @@ fn plural(n: usize, word: &str) -> String {
 const AGENTS_MD: &str = r#"# Rolldown build report — agent guide
 
 This directory is generated by Rolldown's devtools report mode
-(`devtools: { mode: 'report' }`). It summarizes one build session; every list is bounded
+(`devtools: { mode: 'report' }`). It summarizes one build session; report lists are bounded
 (top-N), so the directory stays small no matter how large the app is. Each build output has
 its own directory, `node_modules/.rolldown/report/<output dir>` (for example
 `report/dist/client` and `report/dist/server` for the two builds of one SSR app).
@@ -689,12 +796,13 @@ don't load the whole file into context.
 | --- | --- |
 | `entry.md` | One-paragraph summary + file index. Start here for orientation. |
 | `metrics.json` | Canonical machine-readable report (schema-versioned): flat `metrics` id map, sections, `delta`, `baselineDelta`. For tools and precise lookups. |
-| `timing.md` | Where build time went: scan/generate split, per-plugin hook cost, transform hotspots. |
+| `timing.md` | Where build time went: scan/generate split, per-plugin hook cost, hooks that did no work, transform hotspots. |
 | `chunks.md` | Output composition: chunk reasons/sizes, largest assets, cross-chunk duplication. |
 | `modules.md` | Module graph: import kinds, most-imported, shared-across-entries. |
 | `packages.md` | Dependency bloat: largest packages, duplicate versions. |
 | `graph.md` | Per-entry chunk graph, initial-load bytes, and the retained-size (dominator) top list. |
 | `module-graph.json` | Full module graph with dominator annotations: per module `bytes`, `retainedBytes` (what deferring its import edge removes from the initial load), `idom` (the single import chain in), `dynamicOnly`, and `imports` edges. The substrate for what-if queries — filter it, never load it whole. |
+| `chunk-graph.json` | Full output chunk graph: final `fileName`, `name`, `bytes`, `isEntry`, `facadeModuleId`, static `imports`, and `dynamicImports`. Join filenames to browser request timings to check late discovery. This file has no top-N limit. |
 | `delta.md` | This build vs the previous one — and vs the pinned baseline, if any. |
 | `history.jsonl` | One JSON line per build: `{schemaVersion, tsMs, build, metrics, entries}`. |
 | `.state.json` | Internal: previous-build snapshot used to compute the next `delta`. |
@@ -721,6 +829,7 @@ otherwise).
 | `packages.duplicate_version_count` | Packages shipped at multiple versions (dedupe = size win). |
 | `plugins.hook_call_count` / `plugins.hook_time_ms` | Plugin hook volume and cost (summed across concurrent calls). |
 | `plugins.hook_noop_call_count` | Hook calls that did no work (returned nothing, or transform returned the code unchanged). High share ⇒ plugins should declare hook filters; compare across builds to verify a filter change. |
+| `plugins.noop_hook_count` | Hooks whose every call was a no-op. Each one is a hook filter the plugin should declare; `metrics.json` → `noopHooks` lists the top-N hooks with no-op calls, highest share first. |
 
 Per-entry numbers live in `metrics.json` → `entries`, joined across builds by `entry`.
 

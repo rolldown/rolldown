@@ -180,10 +180,6 @@ impl ModuleSideEffects {
 }
 
 impl TreeshakeOptions {
-  pub fn enabled(&self) -> bool {
-    matches!(self, TreeshakeOptions::Option(_))
-  }
-
   pub fn into_normalized_options(self) -> NormalizedTreeshakeOptions {
     match self {
       TreeshakeOptions::Boolean(true) => InnerOptions::default().into(),

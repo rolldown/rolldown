@@ -1,0 +1,7 @@
+{
+  "configVariants": [
+    { "inlineConst": { "mode": "all", "pass": 2 } },
+    { "format": "cjs" },
+    { "preserveModules": true }
+  ]
+}

@@ -8,14 +8,14 @@ use arcstr::ArcStr;
 use rolldown_common::WatcherChangeKind;
 #[cfg(feature = "experimental")]
 use rolldown_common::{
-  ClientHmrInput, ClientHmrUpdate, HmrLazyChunkOutput, HmrStampTable, ImportKind, Module,
+  ClientHmrInput, ClientHmrUpdate, HmrLazyChunkOutput, HmrStampTable, ImportKind, Module, Output,
 };
 #[cfg(feature = "experimental")]
 use rolldown_error::BuildResult;
 #[cfg(feature = "experimental")]
 use rolldown_utils::indexmap::FxIndexMap;
 #[cfg(feature = "experimental")]
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 #[cfg(feature = "experimental")]
 use std::sync::{Arc, atomic::AtomicU32};
 
@@ -68,6 +68,9 @@ impl Bundler {
   /// These are the modules reachable from the user-defined entry through
   /// `ImportKind::Import` edges only — static `import` / `export … from` statements,
   /// whose init calls the renderer hoists unconditionally into the importer.
+  /// Only modules in the entry's emitted static chunk closure are retained: a source
+  /// import can reach a barrel whose chunk tree shaking left unloaded.
+  /// See internal-docs/hmr/design.md, principle 2.
   /// `Require` and dynamic edges are excluded: a `require()` site may be
   /// conditional, so counting it could mark a module "evaluated" that never ran —
   /// the one unsafe direction. Missing a module here only costs re-shipped bytes.
@@ -82,6 +85,7 @@ impl Bundler {
   pub fn compute_top_level_evaluated_modules(
     &self,
     stamp_table: &HmrStampTable,
+    output: &crate::BundleOutput,
   ) -> FxHashMap<ArcStr, u32> {
     let Some(snapshot) = self.cache.snapshot() else {
       return FxHashMap::default();
@@ -91,6 +95,29 @@ impl Bundler {
     }
 
     let modules = &snapshot.module_table.modules;
+    let entry_id = modules[*snapshot.user_defined_entry_modules.iter().next().unwrap()].id();
+    let chunks = output
+      .assets
+      .iter()
+      .filter_map(|asset| match asset {
+        Output::Chunk(chunk) => Some((chunk.filename.as_str(), chunk)),
+        Output::Asset(_) => None,
+      })
+      .collect::<FxHashMap<_, _>>();
+    let mut pending = chunks
+      .values()
+      .copied()
+      .filter(|chunk| chunk.is_entry && chunk.facade_module_id.as_ref() == Some(entry_id))
+      .collect::<Vec<_>>();
+    let mut loaded = FxHashSet::default();
+    let mut visited = FxHashSet::default();
+    while let Some(chunk) = pending.pop() {
+      if !visited.insert(chunk.filename.as_str()) {
+        continue;
+      }
+      loaded.extend(chunk.module_ids.iter().cloned());
+      pending.extend(chunk.imports.iter().filter_map(|id| chunks.get(id.as_str()).copied()));
+    }
     let mut evaluated = FxHashMap::default();
     let mut stack: Vec<_> = snapshot.user_defined_entry_modules.iter().copied().collect();
     while let Some(module_idx) = stack.pop() {
@@ -110,6 +137,13 @@ impl Bundler {
         }
       }
     }
+    evaluated.retain(|id, _| {
+      self
+        .cache
+        .module_idx_by_stable_id
+        .get(id.as_str())
+        .is_some_and(|idx| loaded.contains(modules[*idx].id()))
+    });
     evaluated
   }
 
@@ -122,7 +156,6 @@ impl Bundler {
   pub async fn compile_lazy_entry(
     &mut self,
     module_id: String,
-    client_id: &str,
     shipped: &FxHashMap<ArcStr, u32>,
     evaluated: &FxHashMap<ArcStr, u32>,
     stamp_table: &HmrStampTable,
@@ -144,6 +177,6 @@ impl Bundler {
       lost_hmr_update: &mut self.lost_hmr_update,
       next_hmr_patch_id,
     });
-    hmr_stage.compile_lazy_entry(&module_id, client_id, shipped, evaluated, stamp_table).await
+    hmr_stage.compile_lazy_entry(&module_id, shipped, evaluated, stamp_table).await
   }
 }

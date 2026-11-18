@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry1.js
+
+```js
+import "./foo.js";
+// entry1.js
+globalThis.entry1Foo = "foo";
+
+```
+
+## entry2.js
+
+```js
+import "./foo.js";
+// entry2.js
+globalThis.entry2Foo = "foo";
+
+```
+
+## foo.js
+
+```js
+// lib/effect.js
+globalThis.effectRuns = (globalThis.effectRuns ?? 0) + 1;
+
+```

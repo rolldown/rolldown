@@ -1,0 +1,6 @@
+{
+  "_comment": "With `codeSplitting: false`, the dynamic import target `m.js` is wrapped in `__esmMin`, so the finalizer changes each top-level declaration of `m.js` into an assignment. Each declaration has a default on an element of an array pattern inside an object pattern.",
+  "config": {
+    "codeSplitting": false
+  }
+}

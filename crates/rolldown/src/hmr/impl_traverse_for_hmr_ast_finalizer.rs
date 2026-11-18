@@ -9,7 +9,7 @@ use rolldown_ecmascript::{
   CJS_EXPORTS_REF_STR, CJS_MODULE_REF_STR, CJS_ROLLDOWN_EXPORTS_REF,
   CJS_ROLLDOWN_EXPORTS_REF_IDENT, CJS_ROLLDOWN_MODULE_REF, CJS_ROLLDOWN_MODULE_REF_IDENT,
 };
-use rolldown_ecmascript_utils::ExpressionFactoryExt as _;
+use rolldown_ecmascript_utils::{ExpressionFactoryExt as _, StatementFactoryExt as _};
 use rustc_hash::FxHashSet;
 
 use crate::hmr::{
@@ -117,7 +117,8 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     // Factories uniformly take only `__rolldown_module_id__`; for CommonJS the
     // module/exports objects become locals the body's rewritten `module`/`exports`
     // references resolve to.
-    let cjs_module_locals: Vec<ast::Statement<'ast>> = if self.module.exports_kind.is_commonjs() {
+    let mut cjs_module_locals: Vec<ast::Statement<'ast>> = if self.module.exports_kind.is_commonjs()
+    {
       let empty_exports_object = ast::Expression::new_object_expression(SPAN, [], self);
       let module_object = ast::Expression::new_object_expression(
         SPAN,
@@ -182,6 +183,12 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     } else {
       vec![]
     };
+    if self.module.exports_kind.is_commonjs()
+      && ctx.scoping().root_unresolved_references().contains_key("define")
+    {
+      // See internal-docs/renaming/design.md, principle 7.
+      cjs_module_locals.push(ast::Statement::new_var_decl_no_init("define", self));
+    }
 
     try_block.body.reserve_exact(
       cjs_module_locals.len()

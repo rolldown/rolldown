@@ -4,6 +4,7 @@ import { rolldown } from './api/rolldown';
 import type { RolldownBuild } from './api/rolldown/rolldown-build';
 import { watch } from './api/watch';
 import { RolldownMagicString } from './binding-magic-string';
+import type { ReplacementFunction } from './binding-magic-string';
 import type {
   RolldownWatcher,
   RolldownWatcherEvent,
@@ -65,6 +66,7 @@ import type {
   FunctionPluginHooks,
   HookFilterExtension,
   ImportKind,
+  LoadExtraOptions,
   LoadResult,
   ModuleOptions,
   ModuleType,
@@ -82,6 +84,7 @@ import type {
   SourceDescription,
   TransformResult,
 } from './plugin';
+import type { UniqueModuleId } from './utils/module-id';
 import type {
   BufferEncoding,
   RolldownDirectoryEntry,
@@ -167,6 +170,7 @@ export type {
   InputOption,
   InputOptions,
   InternalModuleFormat,
+  LoadExtraOptions,
   LoadResult,
   LoggingFunction,
   LogLevel,
@@ -201,6 +205,7 @@ export type {
   PreRenderedChunk,
   RenderedChunk,
   RenderedModule,
+  ReplacementFunction,
   ResolvedId,
   ResolveFileUrlArgs,
   ResolveIdExtraOptions,
@@ -230,6 +235,7 @@ export type {
   TransformPluginContext,
   TransformResult,
   TreeshakingOptions,
+  UniqueModuleId,
   WarningHandlerWithDefault,
   WatcherFileWatcherOptions,
   WatcherOptions,

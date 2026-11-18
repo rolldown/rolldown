@@ -12,6 +12,7 @@ pub mod hook_transform_call_end;
 pub mod hook_transform_call_start;
 pub mod module_graph_ready;
 pub mod module_rendered_ready;
+pub mod output_chunk_graph_ready;
 pub mod package_graph_ready;
 pub mod session_meta;
 
@@ -35,4 +36,5 @@ pub enum Meta {
   HookRenderChunkStart(hook_render_chunk_start::HookRenderChunkStart),
   HookRenderChunkEnd(hook_render_chunk_end::HookRenderChunkEnd),
   AssetsReady(assets_ready::AssetsReady),
+  OutputChunkGraphReady(output_chunk_graph_ready::OutputChunkGraphReady),
 }

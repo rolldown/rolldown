@@ -10,8 +10,9 @@
  - rollup@function@uses-supplied-ast: uses supplied AST
  - rollup@form@custom-ast: supports returning a custom AST from a plugin
 
-### The `resolveId` hook `resolvedBy` is not supported
+### The `resolveId` / `resolveDynamicImport` hook `resolvedBy` is not supported
  - rollup@function@validate-resolved-by-logic: validate resolvedBy logic
+ - rollup@function@resolve-dynamic-import-resolved-by: sets resolvedBy to the plugin that resolved a dynamic import
 
 ### The `shouldTransformCachedModule` hook is not supported
  - rollup@function@plugin-error-should-transform: errors in shouldTransformCachedModule abort the build
@@ -19,6 +20,10 @@
 ### The `resolveDynamicImport` hook `specifier: AstNode` not supported
  - rollup@form@dynamic-import-unresolvable: Returns the raw AST nodes for unresolvable dynamic imports@generates es
  - rollup@function@dynamic-import-expression: Dynamic import expression replacement
+ - rollup@form@import-attributes@keep-attribute-declarations-for-external-dynamic-imports: Keep the attribute declarations for external dynamic imports
+ - rollup@form@import-attributes@keep-dynamic-attributes-default: keep import attributes for dynamic imports@generates es
+ - rollup@form@import-attributes@keep-dynamic-attributes-with: keep import attributes for dynamic imports with "with" key@generates es
+ - rollup@form@import-attributes@plugin-attributes-resolvedynamicimport: allows plugins to read and write import attributes in resolveDynamicImport
 
 ### The plugin `sequential` is not supported
  - rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks
@@ -26,9 +31,13 @@
 
 ### The `renderDynamicImport/resolveImportMeta/shouldTransformCachedModule` hooks not supported
  - rollup@function@enforce-plugin-order: allows to enforce plugin hook order
+ - rollup@form@resolve-file-url-import-meta-attributes: adds attributes to file resolveFileUrl and resolveImportMeta hooks@generates es
+ - rollup@function@extend-more-hooks-to-include-import-attributes: extend load, transform and renderDynamicImport to include import attributes
  
 ### The `renderDynamicImport` hook not supported
  - rollup@form@custom-dynamic-import-no-interop: does not add any interop when using a custom dynamic import handler@generates es
+ - rollup@chunking form@render-dynamic-import-extended: supports extended custom rendering for dynamic imports@generates cjs
+ - rollup@chunking form@render-dynamic-import-extended: supports extended custom rendering for dynamic imports@generates es
 
 ### The `PluginContext.parse` does not support `allowReturnOutsideFunction` option
  - rollup@function@parse-return-outside-function: supports parsing return statements outside functions via options
@@ -80,6 +89,12 @@
  - rollup@function@emit-file@invalid-prebuilt-chunk-filename: throws for invalid prebuilt chunks filename
  - rollup@function@emit-file@invalid-prebuit-chunk-code: throws for invalid prebuilt chunks code
 
+### `needsCodeReference` property for `PluginContext.emitFile` is not supported
+ - rollup@chunking form@asset-needs-code-reference: does not emit unreferenced assets if needsCodeReference is true@generates es
+ - rollup@chunking form@asset-needs-code-reference: does not emit unreferenced assets if needsCodeReference is true@generates cjs
+ - rollup@chunking form@emit-file@generate-emission-names: updates asset names when emitting in generate phase@generates cjs
+ - rollup@chunking form@emit-file@generate-emission-names: updates asset names when emitting in generate phase@generates es
+
 ### The `PluginContext.setAssetSource` is not supported
  - rollup@function@emit-file@asset-source-invalid2: throws when setting an empty asset source
  - rollup@function@emit-file@asset-source-invalid3: throws when setting an empty asset source
@@ -90,6 +105,8 @@
  - rollup@function@emit-file@set-asset-source-twice: throws when setting the asset source twice
  - rollup@function@emit-file@invalid-set-asset-source-id: throws for invalid asset ids
  - rollup@hooks@keeps emitted ids stable between runs
+ - rollup@chunking form@emit-file@set-asset-source: supports setting the asset source during generate@generates cjs
+ - rollup@chunking form@emit-file@set-asset-source: supports setting the asset source during generate@generates es
 
 ### `originalFileName` / `originalFileNames` is not supported properly
 - rollup@function@deprecated@emit-file@original-file-name: forwards the original file name to other hooks
@@ -126,6 +143,21 @@
  - rollup@function@top-level-await-using-system: awaits disposal from top-level await using in System output
  - rollup@function@top-level-for-await-system: executes top-level for-await loops asynchronously in System output
  - rollup@function@top-level-for-await-using-system: awaits disposal from loop-head await using in System output
+ - rollup@function@system-export-catch-parameter-mixed-declarators: exports only the non-catch declarations in mixed declarators that shadow an exported var
+ - rollup@function@system-export-catch-parameter-nested: assigns the outer catch parameter from a var declaration in a nested catch
+ - rollup@function@system-export-catch-parameter-shadowed-nested: does not export an outer catch parameter assigned after a shadowed inner catch
+ - rollup@function@system-export-catch-parameter: does not export catch parameters that shadow an exported var
+ - rollup@function@system-export-destructuring-assignment: parenthesizes system export updates for destructuring assignments that start a statement
+ - rollup@function@system-export-for-loop-bindings: updates system exports for bindings assigned in for-of and for-in heads
+ - rollup@function@system-export-var-braceless-loop-bodies: updates system exports for multiple var declarations in braceless loop bodies
+ - rollup@function@system-export-var-for-init: updates system exports for multiple and destructured var declarations in for-loop initializers
+ - rollup@function@system-export-var-for-loops: updates system exports for var bindings in for-of and for-in heads
+ - rollup@function@system-export-var-for-of-body: updates system exports when a var declaration is the body of a for-of or for-in loop
+ - rollup@function@system-export-var-for-statement: updates system exports for a var binding declared in a for-loop head
+ - rollup@function@system-export-var-if-branches: updates system exports for multi-declarator var declarations in if and else branches
+ - rollup@function@system-export-var-shadowed-exports: renames a block binding that shadows exports when a var is hoisted through that block
+ - rollup@form@system-export-assignment-and-for-loops: renders system exports for destructuring assignment statements and for-of/for-in bindings
+ - rollup@form@export-var-loops: renders exported var declarations in single-statement positions@generates system
 
 ### The `input.perf` and `bundle.getTimings()` is not supported
  - rollup@function@adds-timings-to-bundle-when-codesplitting: Adds timing information to bundle when bundling with perf=true
@@ -214,6 +246,7 @@
  - rollup@function@preserve-modules@mixed-exports: warns for mixed exports in all chunks when preserving modules
  - rollup@function@synthetic-named-exports@preserve-modules: handles a dynamic import with synthetic named exports in preserveModules mode
  - rollup@function@circular-namespace-reexport-preserve-modules: correctly handles namespace reexports with circular dependencies when preserving modules
+ - rollup@function@namespace-member-mutation-synthetic: handles assignments to synthetic namespace members
 
 ### The `output.manualChunks` is not compatible
  - rollup@function@manual-chunks-conflict: Throws for conflicts between manual chunks
@@ -292,7 +325,8 @@
  - rollup@function@amd-auto-id-id: throws when using both the amd.autoId and the amd.id option
  - rollup@function@amd-base-path-id: throws when using both the amd.basePath and the amd.id option
  - rollup@function@amd-base-path: throws when using only amd.basePath option
-
+ - rollup@function@amd-export-var-loops: runs exported var loop assignments in AMD output
+ - rollup@form@export-var-loops: renders exported var declarations in single-statement positions@generates amd
 
 ### The `output.sourcemapBaseUrl` is not compatible yet
  - rollup@function@sourcemap-base-url-invalid: throws for invalid sourcemapBaseUrl
@@ -315,8 +349,17 @@
  - rollup@function@check-exports-exportedBindings-as-a-supplementary-test: check exports and exportedBindings in moduleParsed as a supplementary test
  - rollup@function@load-resolve-dependencies: allows to wait for dependency resolution in this.load to scan dependency trees (`importedIdResolutions`) 
  - rollup@function@resolve-relative-external-id: resolves relative external ids
+ - rollup@function@dynamically-imported-id-resolutions-from-hook: lists dynamic imports resolved by the resolveDynamicImport hook in dynamicallyImportedIdResolutions (`dynamicallyImportedIdResolutions`)
 
 ### `ModuleInfo.ast` is not supported
+ - rollup@chunking form@implicit-dependencies@implicitly-dependent-emitted-entry2: makes sure emitted entry points are never implicit dependencies@generates cjs
+ - rollup@chunking form@implicit-dependencies@implicitly-dependent-emitted-entry2: makes sure emitted entry points are never implicit dependencies@generates es
+ - rollup@chunking form@implicit-dependencies@implicitly-dependent-emitted-entry: makes sure emitted entry points are never implicit dependencies@generates cjs
+ - rollup@chunking form@implicit-dependencies@implicitly-dependent-emitted-entry: makes sure emitted entry points are never implicit dependencies@generates es
+ - rollup@chunking form@implicit-dependencies@implicitly-dependent-entry: makes sure actual entry points are never implicit dependencies@generates cjs
+ - rollup@chunking form@implicit-dependencies@implicitly-dependent-entry: makes sure actual entry points are never implicit dependencies@generates es
+ - rollup@chunking form@implicit-dependencies@multiple-dependencies: supports emitting the same chunk with different and multiple dependencies@generates cjs
+ - rollup@chunking form@implicit-dependencies@multiple-dependencies: supports emitting the same chunk with different and multiple dependencies@generates es
  - rollup@chunking form@implicit-dependencies@single-dependency: supports implicit dependencies when emitting files@generates cjs
  - rollup@chunking form@implicit-dependencies@single-dependency: supports implicit dependencies when emitting files@generates es
 
@@ -369,39 +412,23 @@
  - rollup@chunking form@synthetic-named-exports@multi-level: handles multiple levels of synthetic named exports@generates es
  - rollup@function@synthetic-named-exports@preserve-modules-static-namespace: includes synthetic named exports in static namespace imports in preserveModules mode
 
-### Import Assertions is not supported
- - rollup@function@import-assertions@plugin-assertions-this-resolve: allows plugins to provide assertions for this.resolve'
- - rollup@function@import-assertions@plugin-assertions-this-resolve: allows plugins to provide attributes for this.resolve
- - rollup@function@import-assertions@warn-assertion-conflicts: warns for conflicting import attributes
- - rollup@function@import-assertions@warn-unresolvable-assertions: warns for dynamic import attributes that cannot be resolved
+### The `output.externalImportAttributes` and `output.externalImportAssertions` options are not supported
  - rollup@form@deprecated@removes-dynamic-assertions: keep import assertions for dynamic imports
  - rollup@form@deprecated@removes-static-attributes: keeps any import assertions on input
-  
-### Import attributes is not supported
- - rollup@form@import-attributes@attribute-shapes: handles special shapes of attributes
- - rollup@form@import-attributes@escapes-attribute-values: serializes quotes, backslashes and line terminators in import attribute values
- - rollup@form@import-attributes@keep-dynamic-assertions: keep import attributes for dynamic imports@generates es
- - rollup@form@import-attributes@keep-dynamic-attributes: keep import attributes for dynamic imports@generates es
- - rollup@form@import-attributes@keeps-static-assertions: keeps any import assertions on input@generates es
- - rollup@form@import-attributes@keeps-static-attributes: keeps any import attributes on input@generates es
- - rollup@form@import-attributes@plugin-attributes-resolvedynamicimport: allows plugins to read and write import attributes in resolveDynamicImport
- - rollup@form@import-attributes@plugin-attributes-resolveid: allows plugins to read and write import attributes in resolveId
  - rollup@form@import-attributes@removes-dynamic-attributes: keep import attributes for dynamic imports
  - rollup@form@import-attributes@removes-static-attributes: keeps any import attributes on input
- - rollup@form@import-attributes@keep-attribute-declarations-for-external-dynamic-imports: Keep the attribute declarations for external dynamic imports
+
+### The `output.importAttributesKey` option is not supported
  - rollup@form@import-attributes@keep-dynamic-attributes-assert: keep import attributes for dynamic imports with "assert" key@generates es
- - rollup@form@import-attributes@keep-dynamic-attributes-default: keep import attributes for dynamic imports@generates es
- - rollup@form@import-attributes@keep-dynamic-attributes-with: keep import attributes for dynamic imports with "with" key@generates es
  - rollup@form@import-attributes@keeps-static-attributes-key-assert: keeps any import attributes on input using import attributes with "with" key@generates es
- - rollup@form@import-attributes@keeps-static-attributes-key-default: keeps any import attributes on input using import attributes with "with" key@generates es
- - rollup@form@import-attributes@keeps-static-attributes-key-with: keeps any import attributes on input using import attributes with "with" key@generates es
- - rollup@form@resolve-file-url-import-meta-attributes: adds attributes to file resolveFileUrl and resolveImportMeta hooks@generates es
+
+### The `attributes` argument of the `resolveFileUrl` hook is not supported
  - rollup@form@configure-file-url: allows to configure file urls@generates es
  - rollup@chunking form@resolve-file-url: allows to configure file urls@generates es
  - rollup@chunking form@resolve-file-url: allows to configure file urls@generates cjs
- - rollup@function@deprecated@load-attributes: does not allow returning attributes from the "load" hook
- - rollup@function@deprecated@transform-attributes: does not allow returning attributes from the "transform" hook
- - rollup@function@extend-more-hooks-to-include-import-attributes: extend load, transform and renderDynamicImport to include import attributes
+
+### Invalid attributes in the `import()` options of an external are kept instead of removed
+ - rollup@form@import-attributes@attribute-shapes: handles special shapes of attributes
 
 ### Source phase import is not supported
  - rollup@form@source-phase-imports-external: preserves source phase import externals
@@ -420,10 +447,6 @@
  - rollup@function@function-use-strict-directive-removed: should delete use strict from function body
 
 ### The namespace object is not compatible with rollup
- - rollup@function@namespaces-have-null-prototype: creates namespaces with null prototypes
- - rollup@function@namespaces-are-frozen: namespaces should be non-extensible and its properties immutatable and non-configurable
- - rollup@function@namespace-override: does not warn when overriding namespace reexports with explicit ones
- - rollup@function@escape-arguments: does not use "arguments" as a placeholder variable for a default export
  - rollup@function@dynamic-import-only-default: correctly imports dynamic namespaces with only a default export from entry- and non-entry-point chunks
  - rollup@function@dynamic-import-default-mode-facade: handles dynamic imports from facades using default export mode
  - rollup@function@chunking-duplicate-reexport: handles duplicate reexports when using dynamic imports
@@ -451,6 +474,8 @@
  - rollup@function@deprecations@asset-originalfilename-in-bundle: marks the "originalFileName" property of emitted assets as deprecated in generateBundle when emitted during generate phase
  - rollup@function@deprecations@asset-render-chunk-originalfilename-in-bundle: marks the "originalFileName" property of emitted assets as deprecated in generateBundle when emitted during generate phase
  - rollup@function@deprecations@asset-render-chunk-name-in-bundle: marks the "name" property of emitted assets as deprecated in generateBundle when emitted during generate phase
+ - rollup@function@deprecated@load-attributes: does not allow returning attributes from the "load" hook
+ - rollup@function@deprecated@transform-attributes: does not allow returning attributes from the "transform" hook
 
 ### The error/warning information is not compatible with rollup
  - rollup@function@banner-and-footer: adds a banner/footer (expects `ADDON_ERROR` but got `PLUGIN_ERROR`)
@@ -474,7 +499,6 @@
  - rollup@function@export-type-mismatch-b: export type must be auto, default, named or none (expected `INVALID_EXPORT_OPTION` error, but got `InvalidArg`)
  - rollup@function@assign-namespace-to-var: allows a namespace to be assigned to a variable (`EMPTY_BUNDLE` warning)
  - rollup@function@can-import-self-treeshake: direct self import (`EMPTY_BUNDLE` warning)
- - rollup@function@external-conflict: external paths from custom resolver remain external (#633) (`INVALID_EXTERNAL_ID` error)
  - rollup@function@conflicting-reexports@named-import-external: warns when a conflicting binding is imported via a named import from external namespaces (`AMBIGUOUS_EXTERNAL_NAMESPACES` warning)
  - rollup@function@cycles-pathological-2: resolves even more pathological cyclical dependencies gracefully
  - rollup@function@circular-missed-reexports: handles circular reexports (`MISSING_EXPORT` should be warning instead of error)

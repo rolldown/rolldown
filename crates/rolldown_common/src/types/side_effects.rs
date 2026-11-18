@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 /// represent the side-effects of module is derived from `side effect hook`, package.json or analyzed from source file
 pub enum DeterminedSideEffects {
   /// Including the side effects from package.json and hook side effects
@@ -19,11 +19,12 @@ impl DeterminedSideEffects {
     }
   }
 
-  /// `moduleSideEffects` reported to plugins (`boolean | 'no-treeshake'`).
+  /// `moduleSideEffects` for a settled inclusion verdict (`boolean | 'no-treeshake'`).
   ///
   /// `Analyzed` is the default inclusion algorithm. Plugins see that as `true`; the
-  /// statement-level result stays internal. Keep this aligned with
-  /// [`crate::reported_module_side_effects`].
+  /// statement-level result stays internal. `treeshake: false` and an external with no
+  /// hook value also report `true`, but those stay [`Self::NoTreeshake`] for inclusion
+  /// and are chosen in [`crate::module_side_effects_decision`], not here.
   pub fn to_module_side_effects(self) -> HookSideEffects {
     match self {
       DeterminedSideEffects::UserDefined(false) => HookSideEffects::False,

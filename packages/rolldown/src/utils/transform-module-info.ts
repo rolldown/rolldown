@@ -9,7 +9,8 @@ type AssignedModuleSideEffects = ReportedModuleSideEffects | undefined;
 /**
  * A hook or a direct write stores `moduleSideEffects` on `option`. `undefined` means
  * nothing was stored, so the native effective value (hook, `treeshake.moduleSideEffects`,
- * `package.json` `sideEffects`, then `true`) is used. An explicit `null` write stays `null`.
+ * `package.json` `sideEffects`, then `true`, including externals and `treeshake: false`)
+ * is used. An explicit `null` write stays `null`.
  */
 export function effectiveModuleSideEffects(
   assigned: AssignedModuleSideEffects,

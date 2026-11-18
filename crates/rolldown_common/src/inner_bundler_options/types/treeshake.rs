@@ -4,7 +4,10 @@ use derive_more::Debug;
 use rolldown_utils::js_regex::HybridRegex;
 use rustc_hash::FxHashSet;
 
-use crate::{ResolvedId, side_effects::HookSideEffects};
+use crate::{
+  ResolvedId,
+  side_effects::{DeterminedSideEffects, HookSideEffects},
+};
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
@@ -264,66 +267,129 @@ fn hook_side_effects_from_bool(value: bool) -> HookSideEffects {
   if value { HookSideEffects::True } else { HookSideEffects::False }
 }
 
-/// Fallback once hook side effects and `treeshake.moduleSideEffects` have been applied.
-/// Mirrors `lazy_check_side_effects`, with the analyzed-statement case reported as `true`.
-fn reported_side_effects_fallback(
+fn defined(value: bool) -> ModuleSideEffectsVerdict {
+  ModuleSideEffectsVerdict::Final {
+    determined: DeterminedSideEffects::UserDefined(value),
+    reported: hook_side_effects_from_bool(value),
+  }
+}
+
+/// Inclusion verdict and the `moduleSideEffects` value plugins see, before statement analysis.
+///
+/// `normalize_side_effects` and [`reported_module_side_effects`] both use this so the
+/// order cannot drift. `treeshake.moduleSideEffects` is consulted with [`crate::ModuleId::raw_id`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModuleSideEffectsVerdict {
+  /// A hook, `treeshake.moduleSideEffects`, `package.json#sideEffects`, or the external /
+  /// `treeshake: false` fallback settled both values.
+  Final { determined: DeterminedSideEffects, reported: HookSideEffects },
+  /// Statements still need to be analyzed. Plugins report `true`.
+  Analyze,
+}
+
+/// Shared side-effect order for inclusion and for `getModuleInfo` / `this.resolve`.
+///
+/// 1. Hook side effects. `true` means the default algorithm: it skips
+///    `treeshake.moduleSideEffects` and `package.json#sideEffects`.
+/// 2. `treeshake: false` (no hook value) includes the module and reports `true`.
+/// 3. `treeshake.moduleSideEffects`, passed the id's [`raw_id`](crate::ModuleId::raw_id).
+/// 4. Externals with no hook value. A pure external (`is_external_without_side_effects`)
+///    is `false`. Any other external stays included and reports `true`.
+/// 5. `package.json#sideEffects`.
+/// 6. [`ModuleSideEffectsVerdict::Analyze`]. Plugins report `true`.
+///
+/// An explicit hook `no-treeshake` stays `no-treeshake`. Hook `true` on an external still
+/// uses the external short-circuit, including `no-treeshake` when the external is not pure.
+pub async fn module_side_effects_decision(
+  treeshake: &NormalizedTreeshakeOptions,
   resolved_id: &ResolvedId,
-  check_package_json: bool,
-) -> HookSideEffects {
-  if resolved_id.external.is_external() {
-    return if resolved_id.is_external_without_side_effects {
-      HookSideEffects::False
-    } else {
-      HookSideEffects::NoTreeshake
-    };
+  hook_side_effects: Option<HookSideEffects>,
+) -> anyhow::Result<ModuleSideEffectsVerdict> {
+  match hook_side_effects {
+    Some(HookSideEffects::False) => return Ok(defined(false)),
+    Some(HookSideEffects::NoTreeshake) => {
+      return Ok(ModuleSideEffectsVerdict::Final {
+        determined: DeterminedSideEffects::NoTreeshake,
+        reported: HookSideEffects::NoTreeshake,
+      });
+    }
+    // `true` from a hook means "use the default algorithm".
+    Some(HookSideEffects::True) => {
+      return Ok(if resolved_id.external.is_external() {
+        external_without_option(resolved_id, true)
+      } else {
+        ModuleSideEffectsVerdict::Analyze
+      });
+    }
+    None => {}
   }
-  if check_package_json && let Some(value) = resolved_id.package_json_side_effects() {
-    return hook_side_effects_from_bool(value);
+
+  // Rollup uses `() => true` when `treeshake` is off (`ModuleLoader` constructor).
+  // Inclusion stays `NoTreeshake`, which is what disables statement treeshaking.
+  let Some(opt) = treeshake.as_ref() else {
+    return Ok(ModuleSideEffectsVerdict::Final {
+      determined: DeterminedSideEffects::NoTreeshake,
+      reported: HookSideEffects::True,
+    });
+  };
+
+  let is_external = resolved_id.external.is_external();
+  let from_option = if opt.module_side_effects.is_fn() {
+    opt.module_side_effects.ffi_resolve(resolved_id.id.raw_id(), is_external).await?
+  } else {
+    opt.module_side_effects.native_resolve(resolved_id.id.raw_id(), is_external)
+  };
+  if let Some(value) = from_option {
+    return Ok(defined(value));
   }
-  HookSideEffects::True
+  if is_external {
+    return Ok(external_without_option(resolved_id, false));
+  }
+  if let Some(value) = resolved_id.package_json_side_effects() {
+    return Ok(defined(value));
+  }
+  Ok(ModuleSideEffectsVerdict::Analyze)
+}
+
+/// External that `treeshake.moduleSideEffects` did not settle.
+///
+/// `hook_said_true` keeps the historical report of `no-treeshake`. With no hook value,
+/// Rollup's default `moduleSideEffects` reports `true` (`getResolvedIdWithDefaults`).
+/// Either way the module stays included, unless it is a pure external.
+fn external_without_option(
+  resolved_id: &ResolvedId,
+  hook_said_true: bool,
+) -> ModuleSideEffectsVerdict {
+  if resolved_id.is_external_without_side_effects {
+    return defined(false);
+  }
+  ModuleSideEffectsVerdict::Final {
+    determined: DeterminedSideEffects::NoTreeshake,
+    reported: if hook_said_true { HookSideEffects::NoTreeshake } else { HookSideEffects::True },
+  }
 }
 
 /// `moduleSideEffects` value `this.resolve` should report for `resolved_id`.
 ///
-/// Precedence matches module creation (`normalize_side_effects`): hook value, then
-/// `treeshake.moduleSideEffects`, then `package.json#sideEffects`, then `true`.
-/// Statement-level analysis is not part of the reported value. `Analyzed` modules
-/// therefore show up as `true`. Keep this aligned with
-/// [`crate::side_effects::DeterminedSideEffects::to_module_side_effects`].
+/// Uses [`module_side_effects_decision`]. Statement-level analysis is reported as `true`.
 pub async fn reported_module_side_effects(
   treeshake: &NormalizedTreeshakeOptions,
   resolved_id: &ResolvedId,
 ) -> anyhow::Result<HookSideEffects> {
-  match resolved_id.side_effects {
-    Some(HookSideEffects::False) => return Ok(HookSideEffects::False),
-    Some(HookSideEffects::NoTreeshake) => return Ok(HookSideEffects::NoTreeshake),
-    // `true` from a hook means "use the default algorithm", and it skips both the
-    // treeshake option and `package.json#sideEffects`. Externals still take the
-    // external short-circuit inside the fallback.
-    Some(HookSideEffects::True) => return Ok(reported_side_effects_fallback(resolved_id, false)),
-    None => {}
-  }
-
-  let Some(opt) = treeshake.as_ref() else {
-    return Ok(HookSideEffects::NoTreeshake);
-  };
-  let from_option = if opt.module_side_effects.is_fn() {
-    opt.module_side_effects.ffi_resolve(&resolved_id.id, resolved_id.external.is_external()).await?
-  } else {
-    opt.module_side_effects.native_resolve(&resolved_id.id, resolved_id.external.is_external())
-  };
-  if let Some(value) = from_option {
-    return Ok(hook_side_effects_from_bool(value));
-  }
-  Ok(reported_side_effects_fallback(resolved_id, true))
+  Ok(match module_side_effects_decision(treeshake, resolved_id, resolved_id.side_effects).await? {
+    ModuleSideEffectsVerdict::Final { reported, .. } => reported,
+    ModuleSideEffectsVerdict::Analyze => HookSideEffects::True,
+  })
 }
 
 #[cfg(test)]
 mod reported_module_side_effects_tests {
-  use std::{path::PathBuf, task::Context};
+  use std::{future::Future, path::PathBuf, task::Context};
+
+  use rustc_hash::FxHashSet;
 
   use super::*;
-  use crate::{PackageJson, side_effects::SideEffects};
+  use crate::{ImportAttributes, ModuleId, PackageJson, side_effects::SideEffects};
 
   fn block_on_ready<T>(fut: impl Future<Output = T>) -> T {
     let mut fut = std::pin::pin!(fut);
@@ -397,10 +463,20 @@ mod reported_module_side_effects_tests {
       .unwrap(),
       HookSideEffects::True,
     );
+    // `treeshake: false` with no hook value reports `true`. Inclusion stays `NoTreeshake`.
+    assert_eq!(
+      block_on_ready(module_side_effects_decision(&disabled, &bare, None)).unwrap(),
+      ModuleSideEffectsVerdict::Final {
+        determined: DeterminedSideEffects::NoTreeshake,
+        reported: HookSideEffects::True,
+      },
+    );
+    bare.side_effects = Some(HookSideEffects::NoTreeshake);
     assert_eq!(
       block_on_ready(reported_module_side_effects(&disabled, &bare)).unwrap(),
       HookSideEffects::NoTreeshake,
     );
+    bare.side_effects = None;
 
     bare.external = true.into();
     bare.is_external_without_side_effects = true;
@@ -412,14 +488,60 @@ mod reported_module_side_effects_tests {
       .unwrap(),
       HookSideEffects::False,
     );
+    // No hook value: a normal external reports `true` and stays included.
     bare.is_external_without_side_effects = false;
     assert_eq!(
-      block_on_ready(reported_module_side_effects(
+      block_on_ready(module_side_effects_decision(
         &options(ModuleSideEffects::Boolean(true)),
+        &bare,
+        None
+      ))
+      .unwrap(),
+      ModuleSideEffectsVerdict::Final {
+        determined: DeterminedSideEffects::NoTreeshake,
+        reported: HookSideEffects::True,
+      },
+    );
+    // Hook `true` still takes the external short-circuit and reports `no-treeshake`.
+    assert_eq!(
+      block_on_ready(module_side_effects_decision(
+        &options(ModuleSideEffects::Boolean(true)),
+        &bare,
+        Some(HookSideEffects::True)
+      ))
+      .unwrap(),
+      ModuleSideEffectsVerdict::Final {
+        determined: DeterminedSideEffects::NoTreeshake,
+        reported: HookSideEffects::NoTreeshake,
+      },
+    );
+    // An explicit option value wins over the external fallback.
+    assert_eq!(
+      block_on_ready(reported_module_side_effects(
+        &options(ModuleSideEffects::Boolean(false)),
         &bare
       ))
       .unwrap(),
-      HookSideEffects::NoTreeshake,
+      HookSideEffects::False,
+    );
+
+    let attributes = ImportAttributes::from_entries([("type", "json")]);
+    let attributed = ResolvedId {
+      id: ModuleId::with_attributes("/src/local.js", &attributes),
+      ..Default::default()
+    };
+    assert_ne!(attributed.id.raw_id(), attributed.id.as_str());
+    let raw_only =
+      options(ModuleSideEffects::IdSet(FxHashSet::from_iter(["/src/local.js".into()])));
+    assert_eq!(
+      block_on_ready(reported_module_side_effects(&raw_only, &attributed)).unwrap(),
+      HookSideEffects::True,
+    );
+    let full_only =
+      options(ModuleSideEffects::IdSet(FxHashSet::from_iter([attributed.id.as_str().into()])));
+    assert_eq!(
+      block_on_ready(reported_module_side_effects(&full_only, &attributed)).unwrap(),
+      HookSideEffects::False,
     );
   }
 }

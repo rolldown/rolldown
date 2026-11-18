@@ -415,7 +415,8 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
           : res.external,
       ...info,
       // A value recorded by resolveId/load/transform wins. Otherwise use the effective
-      // value for this id (treeshake option, package.json `sideEffects`, then `true`).
+      // value for this id (treeshake option, package.json `sideEffects`, then `true`,
+      // including externals and `treeshake: false`).
       moduleSideEffects:
         info.moduleSideEffects === undefined
           ? (res.moduleSideEffects ?? null)

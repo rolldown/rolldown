@@ -15,7 +15,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   ExportsKind, HmrInfo, ImportRecordIdx, ImporterRecord, LocalExport, ModuleDefFormat, ModuleId,
   ModuleIdx, NamedImport, ResolvedImportRecord, StmtInfoIdx, SymbolRef,
-  side_effects::DeterminedSideEffects,
+  side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 
 bitflags! {
@@ -157,6 +157,10 @@ pub struct EcmaView {
   // the module ids imported by this module via dynamic import()
   pub dynamically_imported_ids: FxIndexSet<ModuleId>,
   pub side_effects: DeterminedSideEffects,
+  /// Plugin-facing `moduleSideEffects`. Produced with `side_effects` by
+  /// [`crate::module_side_effects_decision`]. `treeshake: false` and an external with no
+  /// hook value stay [`DeterminedSideEffects::NoTreeshake`] for inclusion and report `true`.
+  pub reported_side_effects: HookSideEffects,
   pub ast_usage: EcmaModuleAstUsage,
   pub self_referenced_class_decl_symbol_ids: FxHashSet<SymbolId>,
   // the range of hashbang in source

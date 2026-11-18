@@ -155,7 +155,8 @@ interface SpecifiedModuleOptions {
    *
    * `this.getModuleInfo(id).moduleSideEffects` and `this.resolve(id).moduleSideEffects` report
    * this effective value. `true` is the normal per-statement treeshake, not a statement-level
-   * analysis result.
+   * analysis result. With no hook value, an external and every module built with `treeshake: false`
+   * also report `true`. An explicit `"no-treeshake"` from a hook stays `"no-treeshake"`.
    */
   moduleSideEffects?: ModuleSideEffects | null;
 }

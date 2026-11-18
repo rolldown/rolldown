@@ -27,7 +27,7 @@ impl LinkStage<'_> {
     context: &mut IncludeContext,
     unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
   ) -> (FxHashSet<ModuleIdx>, Vec<(ModuleIdx, ImportRecordIdx)>) {
-    self.sort_dynamic_entries_by_topological_order(dynamic_entries);
+    let cycled_idx = self.sort_dynamic_entries_by_topological_order(dynamic_entries);
     let dynamic_entries_by_idx =
       dynamic_entries.iter().map(|entry| (entry.idx, entry)).collect::<FxHashMap<_, _>>();
     context.pending_dynamic_entries = dynamic_entries.iter().map(|entry| entry.idx).collect();
@@ -52,6 +52,7 @@ impl LinkStage<'_> {
         };
         if self.process_and_retain_dynamic_entry(
           entry,
+          cycled_idx.contains(&idx),
           context,
           unreachable_import_expression_node_ids,
         ) {
@@ -65,6 +66,7 @@ impl LinkStage<'_> {
       if !included_dynamic_entry.contains(&entry.idx)
         && let Some(unused) = self.is_dynamic_entry_alive(
           entry,
+          cycled_idx.contains(&entry.idx),
           context.is_included_vec,
           unreachable_import_expression_node_ids,
         )
@@ -80,12 +82,14 @@ impl LinkStage<'_> {
   pub(super) fn process_and_retain_dynamic_entry(
     &self,
     entry: &EntryPoint,
+    in_cycle: bool,
     context: &mut IncludeContext,
     unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
   ) -> bool {
     if self
       .is_dynamic_entry_alive(
         entry,
+        in_cycle,
         context.is_included_vec,
         unreachable_import_expression_node_ids,
       )
@@ -145,7 +149,7 @@ impl LinkStage<'_> {
   pub(super) fn sort_dynamic_entries_by_topological_order(
     &self,
     dynamic_entries: &mut [EntryPoint],
-  ) {
+  ) -> FxHashSet<ModuleIdx> {
     let mut graph: DiGraphMap<ModuleIdx, ()> = DiGraphMap::new();
 
     // TODO: Since we don't skip visited node, If a project has a lot of dynamic entries,
@@ -159,7 +163,9 @@ impl LinkStage<'_> {
     }
     // https://docs.rs/petgraph/latest/petgraph/algo/fn.tarjan_scc.html
     // the order of struct connected component is sorted by reverse topological sort.
-    let idx_to_order_map = petgraph::algo::tarjan_scc(&graph)
+    let sccs = petgraph::algo::tarjan_scc(&graph);
+    let cycled_idx = sccs.iter().filter(|scc| scc.len() > 1).flatten().copied().collect();
+    let idx_to_order_map = sccs
       .into_iter()
       .enumerate()
       .filter(|(_idx, scc)| scc.len() == 1)
@@ -170,6 +176,7 @@ impl LinkStage<'_> {
     dynamic_entries.sort_by_key(|item| {
       idx_to_order_map.get(&item.idx).map_or(Reverse(usize::MAX), |&order| Reverse(order))
     });
+    cycled_idx
   }
 
   fn construct_dynamic_entry_graph(
@@ -215,6 +222,7 @@ impl LinkStage<'_> {
   fn is_dynamic_entry_alive(
     &self,
     entry_point: &EntryPoint,
+    in_cycle: bool,
     is_stmt_included_vec: &StmtInclusionVec,
     unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
   ) -> Option<Vec<(ModuleIdx, ImportRecordIdx)>> {
@@ -241,9 +249,10 @@ impl LinkStage<'_> {
                 .side_effects()
                 .has_side_effects();
 
-              // Only consider it is unused if it is a top level pure dynamic import and the
+              // A top level pure dynamic import is unused only outside a cycle and when the
               // importee module has no side effects.
-              !importee_side_effects
+              !in_cycle
+                && !importee_side_effects
                 && import_record.meta.contains(ImportRecordMeta::TopLevelPureDynamicImport)
             };
             let is_stmt_included = is_stmt_included_vec[*module_idx].has_bit(*stmt_idx);

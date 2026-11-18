@@ -525,20 +525,28 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         }
       }
 
-      if !added_static_deps.is_empty() {
-        let held = ClientHeldCopies {
-          shipped: client.shipped,
-          evaluated: client.top_level_evaluated,
-          stamp_table,
-        };
-        self.collect_unheld_sync_deps(
-          &[],
-          added_static_deps.iter().copied(),
-          None,
-          &held,
-          &mut carried,
-        );
-      }
+      // See internal-docs/hmr/design.md, principle 2.
+      let walk_from = carried
+        .iter()
+        .copied()
+        .filter(|module_idx| {
+          let stable_id = self.module_table().modules[*module_idx].stable_id().as_str();
+          client.shipped.contains_key(stable_id)
+            || client.top_level_evaluated.contains_key(stable_id)
+        })
+        .collect::<Vec<_>>();
+      let held = ClientHeldCopies {
+        shipped: client.shipped,
+        evaluated: client.top_level_evaluated,
+        stamp_table,
+      };
+      self.collect_unheld_sync_deps(
+        &walk_from,
+        added_static_deps.iter().copied(),
+        None,
+        &held,
+        &mut carried,
+      );
 
       let update = self.render_hmr_patch(carried, changed_ids.clone(), stamp_table).await?;
       client_updates.push(ClientHmrUpdate { client_id: client.client_id.to_string(), update });

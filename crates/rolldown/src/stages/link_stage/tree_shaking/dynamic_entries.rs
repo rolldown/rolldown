@@ -1,6 +1,6 @@
 //! Dynamic-entry handling for the inclusion fixpoint: topological ordering of dynamic
 //! entries (so ancestors include before descendants), aliveness determination (a dead
-//! pure dynamic import must not retain its entry), and per-iteration processing.
+//! pure dynamic import must not retain its entry), and entry inclusion.
 
 use std::cmp::Reverse;
 
@@ -18,23 +18,79 @@ use super::include_statements::{
   IncludeContext, StmtInclusionVec, SymbolIncludeReason, include_declaring_statements,
   include_module, include_symbol_and_check_cjs_bailout,
 };
+use super::passes::include_cjs_bailout_exports;
 
 impl LinkStage<'_> {
+  pub(super) fn include_dynamic_entries(
+    &self,
+    dynamic_entries: &mut [EntryPoint],
+    context: &mut IncludeContext,
+    unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
+  ) -> (FxHashSet<ModuleIdx>, Vec<(ModuleIdx, ImportRecordIdx)>) {
+    self.sort_dynamic_entries_by_topological_order(dynamic_entries);
+    let dynamic_entries_by_idx =
+      dynamic_entries.iter().map(|entry| (entry.idx, entry)).collect::<FxHashMap<_, _>>();
+    context.pending_dynamic_entries = dynamic_entries.iter().map(|entry| entry.idx).collect();
+    let mut included_dynamic_entry = FxHashSet::default();
+    let mut processed_bailout_modules = FxHashSet::default();
+    while !context.pending_dynamic_entries.is_empty()
+      || !context.bailout_cjs_tree_shaking_modules.is_empty()
+    {
+      let bailout_modules = std::mem::take(&mut context.bailout_cjs_tree_shaking_modules);
+      include_cjs_bailout_exports(
+        context,
+        &self.metas,
+        bailout_modules.into_iter().filter(|idx| processed_bailout_modules.insert(*idx)),
+      );
+
+      for idx in std::mem::take(&mut context.pending_dynamic_entries) {
+        if included_dynamic_entry.contains(&idx) {
+          continue;
+        }
+        let Some(entry) = dynamic_entries_by_idx.get(&idx) else {
+          continue;
+        };
+        if self.process_and_retain_dynamic_entry(
+          entry,
+          context,
+          unreachable_import_expression_node_ids,
+        ) {
+          included_dynamic_entry.insert(idx);
+        }
+      }
+    }
+
+    let mut unused_record_idxs = vec![];
+    for entry in dynamic_entries {
+      if !included_dynamic_entry.contains(&entry.idx)
+        && let Some(unused) = self.is_dynamic_entry_alive(
+          entry,
+          context.is_included_vec,
+          unreachable_import_expression_node_ids,
+        )
+      {
+        unused_record_idxs.extend(unused);
+      }
+    }
+    (included_dynamic_entry, unused_record_idxs)
+  }
+
   /// Process a dynamic entry and determine if it should be retained.
   /// Returns `true` if the entry should be kept, `false` if it should be filtered out.
   pub(super) fn process_and_retain_dynamic_entry(
     &self,
     entry: &EntryPoint,
     context: &mut IncludeContext,
-    unused_record_idxs: &mut Vec<(ModuleIdx, ImportRecordIdx)>,
     unreachable_import_expression_node_ids: &FxHashSet<(ModuleIdx, NodeId)>,
   ) -> bool {
-    if let Some(item) = self.is_dynamic_entry_alive(
-      entry,
-      context.is_included_vec,
-      unreachable_import_expression_node_ids,
-    ) {
-      unused_record_idxs.extend(item);
+    if self
+      .is_dynamic_entry_alive(
+        entry,
+        context.is_included_vec,
+        unreachable_import_expression_node_ids,
+      )
+      .is_some()
+    {
       return false;
     }
     let module = match &self.module_table[entry.idx] {
@@ -109,8 +165,8 @@ impl LinkStage<'_> {
       .filter(|(_idx, scc)| scc.len() == 1)
       .map(|(idx, scc)| (scc[0], idx))
       .collect::<FxHashMap<ModuleIdx, usize>>();
-    // Entries in an `import()` cycle have no topological order; the inclusion loop re-checks them
-    // until nothing changes.
+    // Entries in an `import()` cycle have no topological order; statement inclusion queues
+    // their targets for another liveness check.
     dynamic_entries.sort_by_key(|item| {
       idx_to_order_map.get(&item.idx).map_or(Reverse(usize::MAX), |&order| Reverse(order))
     });

@@ -58,6 +58,12 @@ bitflags::bitflags! {
     /// for facade (generated) symbols — user-defined names are left unchanged
     /// because `<obj.Foo>` is already a valid component reference in JSX.
     const UsedAsJSXMemberExprRoot = 1 << 6;
+    /// Set with `SideEffectsFreeFunction` when `export { fn }` or `export default fn` exports the
+    /// function instead of its declaration. A call to such a function is removed only where the
+    /// binding is initialized and no code can run on the result. The declaration forms
+    /// (`export function fn`, `export const fn`) do not have these checks yet. See
+    /// `is_separately_exported_call_removable` in `cross_module_optimization.rs`.
+    const ExportedSeparately = 1 << 7;
   }
 }
 

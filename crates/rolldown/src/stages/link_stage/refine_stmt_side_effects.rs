@@ -18,15 +18,23 @@ use crate::{
 use super::LinkStage;
 
 /// Static-import components, shared by the link-time analyzer runs. Build them only when a
-/// lookup needs to check an imported constant, and use iterative DFS to handle deep graphs.
+/// lookup needs to check an imported binding, and use iterative DFS to handle deep graphs.
 #[derive(Debug, Default)]
 pub(super) struct ImportCycles {
-  components: OnceLock<IndexVec<ModuleIdx, ModuleIdx>>,
+  components: OnceLock<Components>,
+}
+
+#[derive(Debug)]
+struct Components {
+  /// One module of the component of each module.
+  representatives: IndexVec<ModuleIdx, ModuleIdx>,
+  /// Whether the component of each module has more than one module.
+  in_cycle: IndexVec<ModuleIdx, bool>,
 }
 
 impl ImportCycles {
-  fn same_cycle(&self, modules: &IndexModules, importer: ModuleIdx, exporter: ModuleIdx) -> bool {
-    let components = self.components.get_or_init(|| {
+  fn components(&self, modules: &IndexModules) -> &Components {
+    self.components.get_or_init(|| {
       let mut graph = DiGraph::<(), ()>::with_capacity(modules.len(), 0);
       for _ in modules {
         graph.add_node(());
@@ -42,16 +50,30 @@ impl ImportCycles {
           }
         }
       }
-      let mut components = (0..modules.len()).map(ModuleIdx::new).collect::<IndexVec<_, _>>();
+      let mut representatives = (0..modules.len()).map(ModuleIdx::new).collect::<IndexVec<_, _>>();
+      let mut in_cycle = (0..modules.len()).map(|_| false).collect::<IndexVec<ModuleIdx, _>>();
       for component in petgraph::algo::kosaraju_scc(&graph) {
         let representative = ModuleIdx::new(component[0].index());
+        let is_cycle = component.len() > 1;
         for node in component {
-          components[ModuleIdx::new(node.index())] = representative;
+          representatives[ModuleIdx::new(node.index())] = representative;
+          in_cycle[ModuleIdx::new(node.index())] = is_cycle;
         }
       }
-      components
-    });
-    components[importer] == components[exporter]
+      Components { representatives, in_cycle }
+    })
+  }
+
+  fn same_cycle(&self, modules: &IndexModules, importer: ModuleIdx, exporter: ModuleIdx) -> bool {
+    let representatives = &self.components(modules).representatives;
+    representatives[importer] == representatives[exporter]
+  }
+
+  /// Returns whether `module` is in an import cycle with other modules. All static imports of a
+  /// module outside every cycle finish running before its own code, whichever entry loads first.
+  /// See `internal-docs/linking/module-execution-order/implementation.md`.
+  pub(super) fn in_cycle(&self, modules: &IndexModules, module: ModuleIdx) -> bool {
+    self.components(modules).in_cycle[module]
   }
 }
 

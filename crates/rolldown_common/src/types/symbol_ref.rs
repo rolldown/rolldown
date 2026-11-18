@@ -41,6 +41,12 @@ impl SymbolRef {
     db.local_db(self.owner).ast_scopes.scoping().symbol_flags(self.symbol).is_const_variable()
   }
 
+  /// Whether a function declaration declares the binding, so it is initialized before any code
+  /// of its module runs.
+  pub fn is_declared_by_function(&self, db: &SymbolRefDb) -> bool {
+    db.local_db(self.owner).ast_scopes.scoping().symbol_flags(self.symbol).is_function()
+  }
+
   /// Whether the binding is guaranteed never reassigned. A missing flag means we don't know,
   /// which is treated conservatively as "possibly reassigned" (`false`).
   pub fn is_not_reassigned(&self, db: &SymbolRefDb) -> bool {

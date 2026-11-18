@@ -1,0 +1,9 @@
+{
+  "_comment": "Calls to a function that `export { fn }` exports must stay when removing them changes behavior: direct `eval` or a second `var` declaration replaces the function, a rest parameter default runs code, and array destructuring runs the iterator of the result. The second entry puts the modules in a shared chunk, so the per-chunk minifier cannot remove the calls. Only the last call in entry.js should be eliminated.",
+  "config": {
+    "input": [
+      { "name": "entry", "import": "./entry.js" },
+      { "name": "other", "import": "./other.js" }
+    ]
+  }
+}

@@ -352,6 +352,10 @@ impl LinkStage<'_> {
     let mut included_dynamic_entry = FxHashSet::default();
     loop {
       context.module_inclusion_changed = false;
+      // An entry that is dead in one pass can come alive in a later one, so only the last pass
+      // decides which dynamic imports are dead.
+      unused_record_idxs.clear();
+      let included_entry_count = included_dynamic_entry.len();
 
       // It could be safely take since it is no more used.
       // We extract bailout_modules first to avoid borrowing conflict:
@@ -375,7 +379,9 @@ impl LinkStage<'_> {
         }
       });
 
-      if !context.module_inclusion_changed {
+      // Including an entry can make another entry live through a module that is already
+      // included, which leaves module inclusion unchanged.
+      if !context.module_inclusion_changed && included_dynamic_entry.len() == included_entry_count {
         break;
       }
     }

@@ -22,7 +22,7 @@ impl Plugin for EmitChunkPlugin {
     ctx: &PluginContext,
     _args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> Result<(), anyhow::Error> {
-    for id in ["./seg_dynamic.js", "./seg_static.js"] {
+    for id in ["./seg_dynamic.js", "./seg_static.js", "./seg_local.js"] {
       ctx.emit_chunk(EmittedChunk {
         id: id.to_string(),
         preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
@@ -38,12 +38,12 @@ impl Plugin for EmitChunkPlugin {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn allow_extension_merge_cross_chunk_reexport() {
-  // Both emitted AllowExtension entries lose their facades to the `group` chunk, but the
-  // bindings they re-export live in the `task.js` chunk. The group chunk must import them and
-  // export them under the entries' names. `seg_dynamic.js` is also dynamically imported, so its
-  // namespace object already imports `task`; `seg_static.js` has nothing else that imports
-  // `helper` into the group (issue #11767).
+async fn allow_extension_cross_chunk_reexport_keeps_facade() {
+  // The `group` chunk holds the modules of all three emitted AllowExtension entries.
+  // `seg_dynamic.js` and `seg_static.js` re-export bindings that are in the `task.js` chunk, so
+  // they keep their facades (issue #11767). `seg_dynamic.js` is also an `import()` target, and
+  // `seg_static.js` is not. `seg_local.js` exports only its own binding, so the chunk optimizer
+  // removes its facade, and the group chunk exports `s_local`.
   manual_integration_test!()
     .build(TestMeta { expect_executed: true, ..Default::default() })
     .run_with_plugins(

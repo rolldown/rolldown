@@ -1253,12 +1253,6 @@ impl GenerateStage<'_> {
           }
         }
 
-        self.add_merged_emitted_entry_export_deps(
-          chunk_graph,
-          order_state,
-          depended_symbols,
-          chunk_id,
-        );
         self.add_absorbed_entry_init_deps(chunk_graph, order_state, depended_symbols, chunk_id);
 
         for synthetic in order_state.synthetic_statements_for_chunk(chunk_id) {
@@ -1337,62 +1331,8 @@ impl GenerateStage<'_> {
     entry_idx: ModuleIdx,
     entry_meta: &crate::types::linking_metadata::LinkingMetadata,
   ) {
-    self.register_export_signature_depended_symbols(
-      chunk_graph,
-      order_state,
-      depended_symbols,
-      entry_meta,
-    );
-    if !self.options.is_strict_execution_order_enabled() {
-      for init in collect_entry_reexported_wrapper_inits(
-        entry_idx,
-        entry_meta,
-        &self.link_output.metas,
-        &self.link_output.module_table.modules,
-        &self.link_output.symbol_db,
-        None,
-      ) {
-        depended_symbols.insert(init.wrapper_ref);
-      }
-    }
-  }
-
-  /// An emitted `allow-extension` entry whose facade was removed keeps its export signature in
-  /// the chunk that holds its module, so that chunk imports what the entry re-exports from other
-  /// chunks (issue #11767). See internal-docs/code-splitting/implementation.md.
-  fn add_merged_emitted_entry_export_deps(
-    &self,
-    chunk_graph: &ChunkGraph,
-    order_state: &super::order_wrap_state::OrderWrapState,
-    depended_symbols: &mut FxIndexSet<SymbolRef>,
-    chunk_idx: ChunkIdx,
-  ) {
-    for module_idx in merged_emitted_entries(chunk_graph, chunk_idx) {
-      let meta = &self.link_output.metas[module_idx];
-      if !matches!(meta.wrap_kind(), WrapKind::Cjs) {
-        self.register_export_signature_depended_symbols(
-          chunk_graph,
-          order_state,
-          depended_symbols,
-          meta,
-        );
-      }
-    }
-  }
-
-  /// Register the canonical symbol of every binding in a module's export signature, so that the
-  /// chunk imports the bindings that live in other chunks. Unlike
-  /// [`Self::register_entry_export_depended_symbols`], this registers no `init_*` wrapper: only an
-  /// entry chunk renders those calls.
-  fn register_export_signature_depended_symbols(
-    &self,
-    chunk_graph: &ChunkGraph,
-    order_state: &super::order_wrap_state::OrderWrapState,
-    depended_symbols: &mut FxIndexSet<SymbolRef>,
-    meta: &crate::types::linking_metadata::LinkingMetadata,
-  ) {
     let symbols = &self.link_output.symbol_db;
-    let sorted_export_refs = meta
+    let sorted_export_refs = entry_meta
       .resolved_exports
       .iter()
       .sorted_unstable_by_key(|(name, _)| *name)
@@ -1400,17 +1340,28 @@ impl GenerateStage<'_> {
       // A chunk should always consume a cjs export symbol by property access, so filter
       // out a exported symbol that came from a cjs module.
       .filter(|resolved_export| !resolved_export.came_from_commonjs);
-    for export_ref in sorted_export_refs {
-      let symbol_ref = symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref);
-      if self.options.is_strict_execution_order_enabled() {
+    if self.options.is_strict_execution_order_enabled() {
+      for export_ref in sorted_export_refs {
         self.add_depended_symbol_with_wrapped_esm_init(
           chunk_graph,
           order_state,
           depended_symbols,
-          symbol_ref,
+          symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref),
         );
-      } else {
-        depended_symbols.insert(symbol_ref);
+      }
+    } else {
+      for export_ref in sorted_export_refs {
+        depended_symbols.insert(symbols.canonical_ref_resolving_namespace(export_ref.symbol_ref));
+      }
+      for init in collect_entry_reexported_wrapper_inits(
+        entry_idx,
+        entry_meta,
+        &self.link_output.metas,
+        &self.link_output.module_table.modules,
+        symbols,
+        None,
+      ) {
+        depended_symbols.insert(init.wrapper_ref);
       }
     }
   }
@@ -1832,33 +1783,6 @@ impl GenerateStage<'_> {
               }
               index_chunk_exported_symbols[chunk_id].entry(symbol).or_default().push(name.clone());
             }
-          }
-        }
-
-        // An emitted `allow-extension` entry whose facade was removed keeps its export signature
-        // in this chunk, also for a binding that lives in another chunk (issue #11767).
-        // `deconflict_exported_names` gives each binding the entry's export name.
-        // See internal-docs/code-splitting/implementation.md.
-        for module_idx in merged_emitted_entries(chunk_graph, chunk_id) {
-          for (_, export) in self.link_output.metas[module_idx]
-            .referenced_canonical_exports_symbols(
-              module_idx,
-              EntryPointKind::UserDefined,
-              &self.link_output.dynamic_import_exports_usage_map,
-              false,
-            )
-          {
-            let symbol_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
-            if self.is_inlined_json_key(symbol_ref)
-              || !self.cross_chunk_symbol_is_live(
-                used_symbol_refs_view,
-                order_live_symbols,
-                symbol_ref,
-              )
-            {
-              continue;
-            }
-            index_chunk_exported_symbols[chunk_id].entry(symbol_ref).or_default();
           }
         }
 
@@ -2370,26 +2294,6 @@ impl GenerateStage<'_> {
       )
     })
   }
-}
-
-/// The emitted `allow-extension` entries whose facade the chunk optimizer removed in favor of
-/// `chunk_idx`, in module order. Strict execution order can restore such a facade
-/// (`restore_order_wrap_entry_facades`), which makes the facade the entry's chunk again, so that
-/// entry is skipped.
-fn merged_emitted_entries(
-  chunk_graph: &ChunkGraph,
-  chunk_idx: ChunkIdx,
-) -> impl Iterator<Item = ModuleIdx> + '_ {
-  chunk_graph
-    .common_chunk_preserve_export_names_modules
-    .get(&chunk_idx)
-    .into_iter()
-    .flatten()
-    .copied()
-    .filter(move |module_idx| {
-      chunk_graph.entry_module_to_entry_chunk.get(module_idx) == Some(&chunk_idx)
-    })
-    .sorted_unstable()
 }
 
 /// Sorts the importees of a chunk by `exec_order`. Then the importees that `ranks` contains get

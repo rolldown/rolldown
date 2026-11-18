@@ -1038,8 +1038,39 @@ impl GenerateStage<'_> {
     (facade_eliminations, common_chunk_merges, emitted_chunk_groups)
   }
 
-  /// Batch process emitted chunk groups to detect export name conflicts.
-  /// Chunks with conflicting export names need to keep their facade chunks.
+  /// Tells if the module exports a binding that is in a chunk other than `chunk_idx`. The chunk
+  /// `chunk_idx` does not export such a binding with the export name of the module. Thus an
+  /// emitted entry with such an export keeps its facade (issue #11767).
+  ///
+  /// The function does not count these exports:
+  /// - A binding of an external module, because the chunk imports it directly.
+  /// - A property of a namespace, for example an import from a CommonJS module. In CJS output, a
+  ///   facade for such an export reads a namespace that it does not declare.
+  /// - The exports of a CommonJS module and the exports that come from CommonJS. The function
+  ///   skips them, as `register_entry_export_depended_symbols` does.
+  ///
+  /// See internal-docs/code-splitting/implementation.md.
+  fn exports_binding_from_other_chunk(
+    &self,
+    chunk_graph: &ChunkGraph,
+    module_meta: &LinkingMetadata,
+    chunk_idx: ChunkIdx,
+  ) -> bool {
+    if matches!(module_meta.wrap_kind(), WrapKind::Cjs) {
+      return false;
+    }
+    let symbol_db = &self.link_output.symbol_db;
+    module_meta.canonical_exports(false).any(|(_, export)| {
+      let binding = symbol_db.canonical_ref_for(export.symbol_ref);
+      symbol_db.get(binding).namespace_alias.is_none()
+        && chunk_graph.module_to_chunk[binding.owner]
+          .is_some_and(|owner_chunk| owner_chunk != chunk_idx)
+    })
+  }
+
+  /// Finds the emitted entries in each group chunk that keep their facade chunks. An entry keeps
+  /// its facade if one of its export names conflicts with an export name of another emitted entry
+  /// in the same group, or if it exports a binding from another chunk.
   fn resolve_emitted_chunk_group_conflicts(
     &self,
     chunk_graph: &ChunkGraph,
@@ -1068,6 +1099,9 @@ impl GenerateStage<'_> {
       // its facade chunk cannot be removed.
       for (chunk_idx, entry_module_idx) in emitted_entry_modules {
         let module_meta = &self.link_output.metas[entry_module_idx];
+        // The name check runs first, so it allocates the same export names as it does without the
+        // second check. Thus the second check only keeps more facades. It does not change which
+        // entry gets an export name.
         let needs_facade =
           module_meta.resolved_exports.iter().any(|(export_name, resolved_export)| {
             let canonical_ref =
@@ -1079,7 +1113,7 @@ impl GenerateStage<'_> {
                 false
               }
             }
-          });
+          }) || self.exports_binding_from_other_chunk(chunk_graph, module_meta, target_chunk_idx);
         if !needs_facade {
           facade_eliminations.push(FacadeChunkElimination {
             reason: FacadeChunkEliminationReason::EmittedChunkMergedIntoManualGroup,

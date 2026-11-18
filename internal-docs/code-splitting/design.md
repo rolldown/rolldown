@@ -366,6 +366,18 @@ Two input classes are outside the ordering promise, yet the emitted code must st
 
 ## Rejected Alternatives
 
+### Group chunk re-exports for merged emitted entries
+
+An emitted `allow-extension` entry can re-export a binding from another chunk. Rollup then lets the group chunk import that binding and export it with the export name of the entry (`ensureReexportsAreAvailableForModule`). A trial of this approach for [#11767](https://github.com/rolldown/rolldown/issues/11767) caused these failures:
+
+- A CommonJS entry that forwards ESM exports put an undeclared export into the group chunk, so Node rejected the whole group.
+- A re-exported `then` made the namespace of the group chunk thenable, so `import()` of a sibling entry returned the wrong value.
+- A binding of an ESM-wrapped module was exported before its `init_*()` call, so its value was `undefined`.
+- An ambiguous `export *` name added an import that the debug assertion in `compute_cross_chunk_links` did not predict.
+- Two export names of one binding kept only one name.
+
+Each failure needs its own guard, and the import prediction must also know the new imports. Thus the chunk optimizer keeps the facade of such an entry instead (see [implementation.md](./implementation.md#facade-elimination-optimize_facade_entry_chunks)). The cost is one more chunk for each such entry.
+
 ### Late `WrapKind` override
 
 This was the original proof-of-concept bridge. It reused mature wrapper code, but it conflated representation with scheduling and required generate-stage code to repair link-owned metadata. Keeping the bridge would preserve the architectural problem even if every known fixture passed.

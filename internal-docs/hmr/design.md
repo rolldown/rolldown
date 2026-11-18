@@ -160,9 +160,15 @@ modules ran, so it walks static imports (`collect_unheld_sync_deps`,
 
 A lazy chunk walks from its entry. A patch walks from carried modules
 present in the client's shipped or boot-evaluated map at any stamp, and
-from newly added static imports. Carrying a module absent from both maps
-does not itself start a dependency walk: a later lazy chunk walks from
-its requested entry. Current boot-evaluated copies stop the walk.
+from newly added static imports.
+
+The maps do not record modules a client ran from a plain dynamic chunk,
+or from any entry when there are several (emitted chunks count as
+entries, and the boot-evaluated map is then empty). A walk from such a
+module would count the modules it ran as missing and ship them again, so
+a carried module absent from both maps starts no walk. If that module
+imports a barrel whose chunk never loaded, the update still lacks the
+barrel's factory and throws `MissingFactoryError`.
 
 ### 3. The module graph ships as compiler data
 

@@ -525,8 +525,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         }
       }
 
-      // Walk carried modules the client may have run. Newly added static imports
-      // are targets even when their importer is absent from the client's maps.
       // See internal-docs/hmr/design.md, principle 2.
       let walk_from = carried
         .iter()

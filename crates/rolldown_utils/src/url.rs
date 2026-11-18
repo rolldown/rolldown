@@ -20,9 +20,9 @@ pub fn get_query(v: &str) -> &str {
   }
 }
 
-/// Decode the path of a URL-like specifier the way `decodeURI` does, so `my%20file.txt` refers
-/// to `my file.txt` as it would at runtime. The query and fragment are left as written, and so
-/// are escapes of reserved characters such as `%2F`, which would otherwise change the path.
+/// Decode valid percent escapes in the path of a URL-like specifier.
+/// Escapes for reserved characters and backslashes stay encoded to preserve path structure.
+/// The query and fragment stay unchanged.
 /// Returns `None` when nothing changes or the decoded bytes are not valid UTF-8.
 pub fn decode_uri_path(v: &str) -> Option<String> {
   let path = clean_url(v);
@@ -34,10 +34,11 @@ pub fn decode_uri_path(v: &str) -> Option<String> {
   while i < bytes.len() {
     let byte = bytes[i];
     if byte == b'%'
-      && let Some(value) = bytes.get(i + 1..i + 3).and_then(|hex| {
-        std::str::from_utf8(hex).ok().and_then(|hex| u8::from_str_radix(hex, 16).ok())
-      })
-      && !b";/?:@&=+$,#".contains(&value)
+      && let Some(value) =
+        bytes.get(i + 1..i + 3).filter(|hex| hex.iter().all(u8::is_ascii_hexdigit)).and_then(
+          |hex| std::str::from_utf8(hex).ok().and_then(|hex| u8::from_str_radix(hex, 16).ok()),
+        )
+      && !b";/?:@&=+$,#\\".contains(&value)
     {
       decoded.push(value);
       i += 3;
@@ -79,5 +80,15 @@ mod tests {
     assert_eq!(decode_uri_path("./%zz.txt"), None);
     // A lone UTF-8 continuation byte is not valid UTF-8.
     assert_eq!(decode_uri_path("./%80.txt"), None);
+  }
+
+  #[test]
+  fn leaves_plus_prefixed_escape() {
+    assert_eq!(decode_uri_path("./a%+5.txt"), None);
+  }
+
+  #[test]
+  fn leaves_encoded_backslash() {
+    assert_eq!(decode_uri_path("./a%5Cb.txt"), None);
   }
 }

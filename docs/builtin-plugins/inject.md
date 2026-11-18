@@ -49,7 +49,7 @@ injectPlugin({
 });
 ```
 
-A module gets an import only for the names it uses as values and does not declare or import itself.
+A module gets an import only for the names it uses as values and does not declare or import itself. Modules whose id contains a null byte (`\0`), such as virtual modules and Rolldown's runtime, are always skipped, like Rollup's `createFilter`.
 
 ## Options
 
@@ -64,8 +64,6 @@ Only inject into modules whose id matches one of these patterns. Strings are glo
 - **Type:** `string | RegExp | (string | RegExp)[]`
 
 Never inject into modules whose id matches one of these patterns, even if they match `include`.
-
-When `include` or `exclude` is set, modules whose id contains a null byte (`\0`), such as virtual modules, are skipped, like Rollup's `createFilter`.
 
 ## Different values per module
 
@@ -85,5 +83,10 @@ export default defineConfig({
 ## Differences from `transform.inject`
 
 `injectPlugin` skips `.cjs` and `.cts` modules, since Rolldown parses them as CommonJS and an `import` statement isn't valid there. Use `transform.inject` if those modules need the names.
+
+`injectPlugin` sees the code before JSX and TypeScript are lowered:
+
+- With the classic JSX runtime, injecting `React` has no effect, since `<div />` is not yet `React.createElement(...)`.
+- In a TS module, an ambient declaration such as `declare const useKey: () => string` counts as a declaration, so `useKey` is not injected. `transform.inject` runs after it is stripped, so it injects `useKey`.
 
 `injectPlugin` runs in the `transform` hook, so it sees the code before Rolldown applies [`transform.define`](/reference/InputOptions.transform#define). If you inject an object that a `define` key starts with, such as `process` and `process.env.NODE_ENV`, the define no longer matches, since `process` is no longer a global. Use [`replacePlugin`](/builtin-plugins/replace) for those values, or put the plugin that replaces them before `injectPlugin`.

@@ -69,6 +69,29 @@ test('skips CommonJS modules', async () => {
   }
 });
 
+test('injects into modules with a top-level `return`', async () => {
+  const plugin = inject({ Buffer: ['buffer', 'Buffer'] });
+  const code = `if (typeof window !== 'undefined') {
+  module.exports = null
+  return
+}
+module.exports = Buffer.from('abc')`;
+
+  const result = await plugin.transform(code, '/src/main.js', { moduleType: 'js' });
+  expect(result?.code).toContain('import { Buffer } from "buffer";');
+});
+
+test('skips virtual modules without a filter', async () => {
+  const plugin = inject({ 'Object.getPrototypeOf': 'get-prototype-of' });
+
+  const result = await plugin.transform(
+    'export var __getProtoOf = Object.getPrototypeOf;',
+    '\0rolldown/runtime.js',
+    { moduleType: 'js' },
+  );
+  expect(result).toBeNull();
+});
+
 test('leaves invalid code to Rolldown', async () => {
   const plugin = inject({ useKey: ['#app', 'useKey'] });
 

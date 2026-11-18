@@ -56,12 +56,12 @@ impl InjectPlugin {
   }
 
   fn filter(&self, id: &str, ctx: &PluginContext) -> bool {
-    if self.include.is_empty() && self.exclude.is_empty() {
-      return true;
-    }
-    // Like Rollup's `createFilter`, a filter never matches an id with a null byte.
+    // Like Rollup's `createFilter`, skip virtual modules such as `\0rolldown/runtime.js`.
     if id.contains('\0') {
       return false;
+    }
+    if self.include.is_empty() && self.exclude.is_empty() {
+      return true;
     }
     let exclude = (!self.exclude.is_empty()).then_some(self.exclude.as_slice());
     let include = (!self.include.is_empty()).then_some(self.include.as_slice());

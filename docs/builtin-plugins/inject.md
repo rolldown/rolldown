@@ -82,7 +82,7 @@ export default defineConfig({
 
 ## Differences from `transform.inject`
 
-`injectPlugin` skips `.cjs` and `.cts` modules, since Rolldown parses them as CommonJS and an `import` statement isn't valid there. Use `transform.inject` if those modules need the names.
+`injectPlugin` skips `.cjs` modules, since Rolldown parses them as CommonJS and an `import` statement isn't valid there. Use `transform.inject` if those modules need the names.
 
 `injectPlugin` sees the code before JSX and TypeScript are lowered:
 

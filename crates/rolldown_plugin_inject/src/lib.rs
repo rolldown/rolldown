@@ -22,6 +22,8 @@ pub struct InjectPluginOptions {
   pub injects: Vec<InjectImport>,
   pub include: Vec<StringOrRegex>,
   pub exclude: Vec<StringOrRegex>,
+  /// Resolves relative globs when the plugin is called outside a Rolldown build, e.g. by Vite.
+  pub cwd: Option<String>,
 }
 
 /// Same transform as `transform.inject`, as a plugin with `include`/`exclude`,
@@ -35,6 +37,7 @@ pub struct InjectPlugin {
   names: FxHashSet<String>,
   include: Vec<StringOrRegex>,
   exclude: Vec<StringOrRegex>,
+  cwd: Option<String>,
 }
 
 impl InjectPlugin {
@@ -52,6 +55,7 @@ impl InjectPlugin {
       names,
       include: options.include,
       exclude: options.exclude,
+      cwd: options.cwd,
     }
   }
 
@@ -66,11 +70,11 @@ impl InjectPlugin {
     let exclude = (!self.exclude.is_empty()).then_some(self.exclude.as_slice());
     let include = (!self.include.is_empty()).then_some(self.include.as_slice());
     let cwd = match ctx {
-      // Called from JS, e.g. by Vite, there is no bundler `cwd`. Rollup's `createFilter` uses `process.cwd()` too.
-      PluginContext::Napi(_) => std::env::current_dir().unwrap_or_default(),
-      PluginContext::Native(_) => ctx.cwd().clone(),
+      // Called from JS, e.g. by Vite, there is no bundler `cwd`.
+      PluginContext::Napi(_) => Cow::Borrowed(self.cwd.as_deref().unwrap_or_default()),
+      PluginContext::Native(_) => ctx.cwd().to_string_lossy(),
     };
-    pattern_filter::filter(exclude, include, id, &cwd.to_string_lossy()).inner()
+    pattern_filter::filter(exclude, include, id, &cwd).inner()
   }
 
   fn mentions_any_name(&self, code: &str) -> bool {
@@ -118,10 +122,9 @@ impl Plugin for InjectPlugin {
       ModuleType::Tsx => SourceType::mjs().with_typescript(true).with_jsx(true),
       _ => return Ok(None),
     };
-    // Rolldown parses these as CommonJS, where an `import` statement is a syntax error.
+    // Rolldown parses `.cjs` as CommonJS, where an `import` statement is a syntax error.
     // Only the query is stripped, since a file name may contain `#`.
-    let path = args.id.split('?').next().unwrap_or_default();
-    if path.ends_with(".cjs") || path.ends_with(".cts") {
+    if args.id.split('?').next().unwrap_or_default().ends_with(".cjs") {
       return Ok(None);
     }
     if !self.filter(args.id, &ctx) || !self.mentions_any_name(args.code) {

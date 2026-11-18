@@ -11,6 +11,7 @@ pub struct BindingInjectPluginConfig {
   pub values: Vec<BindingInjectImport>,
   pub include: Option<Vec<BindingStringOrRegex>>,
   pub exclude: Option<Vec<BindingStringOrRegex>>,
+  pub cwd: Option<String>,
 }
 
 impl From<BindingInjectPluginConfig> for InjectPlugin {
@@ -19,6 +20,7 @@ impl From<BindingInjectPluginConfig> for InjectPlugin {
       injects: config.values.into_iter().map(normalize_binding_inject_import).collect(),
       include: config.include.map(bindingify_string_or_regex_array).unwrap_or_default(),
       exclude: config.exclude.map(bindingify_string_or_regex_array).unwrap_or_default(),
+      cwd: config.cwd,
     })
   }
 }

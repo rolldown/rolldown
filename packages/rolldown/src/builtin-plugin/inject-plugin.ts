@@ -40,6 +40,8 @@ export function injectPlugin(
     values: bindingifyInject(values) ?? [],
     include: normalizedStringOrRegex(options.include),
     exclude: normalizedStringOrRegex(options.exclude),
+    // Rollup's `createFilter` resolves relative globs against `process.cwd()` too.
+    cwd: import.meta.browserBuild ? '/' : process.cwd(),
   };
   return makeBuiltinPluginCallable(new BuiltinPlugin('builtin:inject', config));
 }

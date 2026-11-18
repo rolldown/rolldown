@@ -2510,6 +2510,7 @@ export interface BindingInjectPluginConfig {
   values: Array<BindingInjectImport>
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
+  cwd?: string
 }
 
 /**

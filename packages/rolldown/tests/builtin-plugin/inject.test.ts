@@ -57,16 +57,17 @@ test('skips names used only as types', async () => {
   expect(value?.code).toContain('import { Foo } from "#types";');
 });
 
-test('skips CommonJS modules', async () => {
+test('skips `.cjs` modules', async () => {
   const plugin = inject({ useKey: ['#app', 'useKey'] });
   const code = 'module.exports = useKey();';
 
-  for (const id of ['/src/main.cjs', '/src/main.cts?raw', '/src/has#hash.cjs']) {
-    const result = await plugin.transform(code, id, {
-      moduleType: id.includes('.cts') ? 'ts' : 'js',
-    });
+  for (const id of ['/src/main.cjs', '/src/main.cjs?raw', '/src/has#hash.cjs']) {
+    const result = await plugin.transform(code, id, { moduleType: 'js' });
     expect(result).toBeNull();
   }
+
+  const cts = await plugin.transform(code, '/src/main.cts', { moduleType: 'ts' });
+  expect(cts?.code).toContain('import { useKey } from "#app";');
 });
 
 test('injects into modules with a top-level `return`', async () => {

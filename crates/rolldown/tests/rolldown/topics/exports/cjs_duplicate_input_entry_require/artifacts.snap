@@ -1,0 +1,110 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// lib.cjs
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { value: 42 };
+}));
+module.exports = require_lib();
+
+```
+
+## b.js
+
+```js
+const require_a = require("./a.js");
+module.exports = require_a;
+
+```
+
+## u.js
+
+```js
+const require_a = require("./a.js");
+// user.cjs
+module.exports = require_a.value + 1;
+
+```
+
+# Variant: [exports: Default]
+
+## Assets
+
+### a.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// lib.cjs
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { value: 42 };
+}));
+module.exports = require_lib();
+
+```
+
+### b.js
+
+```js
+const require_a = require("./a.js");
+module.exports = require_a;
+
+```
+
+### u.js
+
+```js
+const require_a = require("./a.js");
+// user.cjs
+module.exports = require_a.value + 1;
+
+```
+
+# Variant: [minify: true]
+
+## Assets
+
+### a.js
+
+```js
+var e=/* @__PURE__ */ ((e,t)=>()=>(t||(e((t={exports:{}}).exports,t,t.exports),e=null),t.exports))(((e,t)=>{t.exports={value:42}}));module.exports=e();
+```
+
+### b.js
+
+```js
+const e=require("./a.js");module.exports=e;
+```
+
+### u.js
+
+```js
+const e=require("./a.js");module.exports=e.value+1;
+```
+
+# Variant: [exports: Default] [minify: true]
+
+## Assets
+
+### a.js
+
+```js
+var e=/* @__PURE__ */ ((e,t)=>()=>(t||(e((t={exports:{}}).exports,t,t.exports),e=null),t.exports))(((e,t)=>{t.exports={value:42}}));module.exports=e();
+```
+
+### b.js
+
+```js
+const e=require("./a.js");module.exports=e;
+```
+
+### u.js
+
+```js
+const e=require("./a.js");module.exports=e.value+1;
+```

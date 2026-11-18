@@ -49,16 +49,14 @@ pub async fn load_source<Fs: FileSystem + Clone + 'static>(
   // (e.g. the asset module plugin returns Js after handling the asset), we trust the plugin's
   // decision, even if it also returned source.
   if let Some(asserted) = asserted_module_type {
-    if maybe_module_type.is_none() {
-      if matches!(asserted, ModuleType::Asset) && maybe_source.is_some() {
-        // A plugin returned code for a `new URL()` asset without a module type, e.g. a wasm
-        // loader that handles every `.wasm` file. Keep the code as the module, and still emit
-        // the file itself so `new URL()` points at a real asset.
+    if matches!(asserted, ModuleType::Asset) {
+      if plugin_driver.file_emitter.file_ref_for_module(&resolved_id.id).is_none() {
+        // A plugin can load a `new URL()` target as code; the URL still needs its file.
         // See internal-docs/plugin-asset-module/implementation.md
         emit_new_url_asset(plugin_driver, options, &resolved_id.id, fs.clone()).await?;
-      } else {
-        maybe_module_type = Some(asserted.clone());
       }
+    } else if maybe_module_type.is_none() {
+      maybe_module_type = Some(asserted.clone());
     }
   }
   // A `type` attribute with a built-in meaning beats the file extension, but not the plugin.

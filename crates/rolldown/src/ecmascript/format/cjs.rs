@@ -149,6 +149,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
               matches!(entry.exports_kind, ExportsKind::CommonJs)
                 && ctx.link_output.metas[entry.idx].wrap_kind().is_none()
                 && ctx.chunk_graph.module_to_chunk[entry.idx] == Some(exporter_id)
+                && importee_chunk.entry_module_idx() == Some(entry.idx)
             });
           if forwards_cjs_entry {
             s.push_str("module.exports = ");

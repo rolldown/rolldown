@@ -62,6 +62,7 @@ impl PluginContext {
         module_infos: Arc::clone(&ctx.module_infos),
         tx: Arc::clone(&ctx.tx),
         session: ctx.session.clone(),
+        log_hook_tasks: Arc::clone(&ctx.log_hook_tasks),
         bundle_span: ctx.bundle_span.clone(),
         manual_resolve_span: ctx.manual_resolve_span.clone(),
       })),

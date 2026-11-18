@@ -563,8 +563,8 @@ impl BindingMagicString<'_> {
     #[expect(clippy::cast_possible_truncation)]
     let overwrites: Vec<(u32, u32, String)> = match reg.as_optimized() {
       Some(r) => {
-        // The `regex` crate path is only used for non-sticky patterns (the `y` flag
-        // causes `regex::Regex::new` to fail, selecting the ECMAScript fallback).
+        // The `regex` crate path is only used for non-sticky patterns
+        // (`HybridRegex::with_flags` sends the `y` flag to the ECMAScript engine).
         // For non-sticky regexes, JS resets `lastIndex` before matching, so we
         // always start from the beginning.
         let iter = r.captures_iter(source);

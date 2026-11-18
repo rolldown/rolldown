@@ -223,6 +223,45 @@ test('call transformContext error', async () => {
   expect(error!.message).toContain('transform hook error');
 });
 
+// Under the wasm binding the plugin error is reconstructed as a plain `Error`, losing its `url`.
+test.skipIf(isWasiTest)('includes the url of a plugin error in the message', async () => {
+  const error: any = await buildWithPlugin({
+    name: 'test',
+    transform() {
+      this.error({ message: 'transform hook error', url: 'https://example.com/docs' });
+    },
+  });
+  expect(error.message).toContain('transform hook error\nhttps://example.com/docs');
+  // Same as Rollup, the error object itself keeps the url out of its message.
+  expect(error.errors[0].message).toBe('transform hook error');
+  expect(error.errors[0].url).toBe('https://example.com/docs');
+});
+
+test('prints the url of a plugin warning', async () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  try {
+    const build = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [
+        {
+          name: 'test',
+          transform() {
+            this.warn({ message: 'transform hook warning', url: 'https://example.com/docs' });
+          },
+        },
+      ],
+    });
+    await build.generate();
+    await build.close();
+    expect(warn).toHaveBeenCalledWith(
+      '(test plugin) transform hook warning\nhttps://example.com/docs',
+    );
+  } finally {
+    warn.mockRestore();
+  }
+});
+
 // #4141
 // Under the wasm binding the `structuredClone` failure degrades to a plain `Error`, losing the `DataCloneError` name.
 test.skipIf(isWasiTest)('should print original error if it can not be assigned', async () => {

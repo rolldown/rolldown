@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## pagea.js
+
+```js
+import { t as flag } from "./shared.js";
+// pagea.js
+console.log("page-a", flag);
+
+```
+
+## pageb.js
+
+```js
+import { t as flag } from "./shared.js";
+// pageb.js
+console.log("page-b", flag);
+
+```
+
+## shared.js
+
+```js
+// shared.js
+const flag = false;
+export { flag as t };
+
+```

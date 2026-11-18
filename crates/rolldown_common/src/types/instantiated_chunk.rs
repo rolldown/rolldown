@@ -1,16 +1,15 @@
 use arcstr::ArcStr;
 use rolldown_sourcemap::SourceMap;
 
-use crate::{Asset, ChunkIdx, InstantiationKind, PreliminaryFilename, StrOrBytes};
+use crate::{Asset, ChunkIdx, EcmaAssetMeta, InstantiationKind, PreliminaryFilename, StrOrBytes};
 
-/// `InstantiatedChunk`s are derived from `Chunk`s. Different `InstantiatedChunk`s can be derived from the same `Chunk`
-/// by different `Generator`s.
+/// The rendered form of a `Chunk`.
 #[derive(Debug)]
 pub struct InstantiatedChunk {
   pub originate_from: ChunkIdx,
   pub content: StrOrBytes,
   pub map: Option<SourceMap>,
-  pub kind: InstantiationKind,
+  pub ecma_meta: Box<EcmaAssetMeta>,
   pub augment_chunk_hash: Option<String>,
   pub preliminary_filename: PreliminaryFilename,
   pub preliminary_sourcemap_filename: Option<PreliminaryFilename>,
@@ -25,7 +24,7 @@ impl InstantiatedChunk {
       originate_from: Some(self.originate_from),
       content: self.content,
       map: self.map,
-      meta: self.kind,
+      meta: InstantiationKind::Ecma(self.ecma_meta),
       filename,
     }
   }

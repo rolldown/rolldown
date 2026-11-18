@@ -402,7 +402,6 @@ impl DevEngine {
     let mut result = bundler
       .compile_lazy_entry(
         proxy_module_id.clone(),
-        &client_id,
         &shipped,
         &top_level_evaluated,
         &stamp_table,

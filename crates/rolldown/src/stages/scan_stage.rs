@@ -216,8 +216,12 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
           match msg {
             SourceMapGenMsg::MagicString(v) => {
               let (module_idx, plugin_idx, id, magic_string) = *v;
+              // A line-level map loses every column and name behind it once the chain is
+              // composed, so the default keeps the word boundaries. The `hires` option of the
+              // MagicString overrides it.
               let generated_sourcemap = magic_string.source_map(string_wizard::SourceMapOptions {
                 source: id.as_str().into(),
+                hires: magic_string.hires().unwrap_or(string_wizard::Hires::Boundary),
                 ..Default::default()
               });
               map
@@ -257,14 +261,16 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
         else {
           continue;
         };
-        module.sourcemap_chain.extend(sourcemaps);
+        // A freshly scanned module is the chain's only owner, so this does not copy it.
+        let sourcemap_chain = Arc::make_mut(&mut module.sourcemap_chain);
+        sourcemap_chain.extend(sourcemaps);
         // Partition sourcemap chain into Load and Transform elements (O(n) instead of O(n log n) sort)
         // Load elements come first, then Transform elements sorted by plugin order
-        let chain_len = module.sourcemap_chain.len();
+        let chain_len = sourcemap_chain.len();
         let mut load_elements = Vec::with_capacity(chain_len);
         let mut transform_elements = Vec::with_capacity(chain_len);
 
-        for element in module.sourcemap_chain.drain(..) {
+        for element in sourcemap_chain.drain(..) {
           match element {
             SourcemapChainElement::Load(_) => load_elements.push(element),
             SourcemapChainElement::Transform(_)
@@ -295,8 +301,8 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
         });
 
         // Reconstruct: Load elements first, then sorted Transform elements
-        module.sourcemap_chain = load_elements;
-        module.sourcemap_chain.extend(transform_elements);
+        *sourcemap_chain = load_elements;
+        sourcemap_chain.extend(transform_elements);
       }
     }
   }

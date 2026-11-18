@@ -149,7 +149,7 @@ pub fn to_binding_error(diagnostic: &BuildDiagnostic, cwd: std::path::PathBuf) -
 
       BindingError::NativeError(super::error::native_error::NativeError {
         kind: error.kind().to_string(),
-        message: diag.to_color_string(),
+        message: diag.to_stderr_string(),
         id: error.id(),
         plugin: error.plugin(),
         frame,

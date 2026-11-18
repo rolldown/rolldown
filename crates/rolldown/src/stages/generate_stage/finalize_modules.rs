@@ -1,6 +1,5 @@
-use std::sync::Arc;
-
-use rolldown_common::{ChunkIdx, PrependRenderedImport, UsedSymbolRefs};
+use oxc::allocator::CloneIn as _;
+use rolldown_common::{ChunkIdx, UsedSymbolRefs};
 use rolldown_error::{BuildResult, Severity};
 use rolldown_utils::{index_vec_ext::IndexVecExt as _, rayon::ParallelIterator as _};
 use rustc_hash::FxHashMap;
@@ -21,7 +20,7 @@ impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn finalize_modules(
     &mut self,
-    chunk_graph: &mut ChunkGraph,
+    chunk_graph: &ChunkGraph,
     ast_table: &mut IndexEcmaAst,
     resolved_file_urls: &ResolvedFileUrls,
     used_symbol_refs: &UsedSymbolRefs,
@@ -120,16 +119,16 @@ impl GenerateStage<'_> {
         .collect::<Vec<_>>()
     });
 
-    let mut normalized_transfer_parts_rendered_maps = FxHashMap::default();
+    let mut transferred_imports = FxHashMap::default();
     let mut diagnostics = vec![];
     for (payload, module_diagnostics) in finalized {
       diagnostics.extend(module_diagnostics);
       let Some((idx, transferred_import_record)) = payload else {
         continue;
       };
-      for (rec_idx, rendered_string) in transferred_import_record {
-        normalized_transfer_parts_rendered_maps.insert((idx, rec_idx), rendered_string);
-      }
+      transferred_imports.extend(
+        transferred_import_record.into_iter().map(|(rec_idx, fragment)| ((idx, rec_idx), fragment)),
+      );
     }
 
     let has_error = diagnostics.iter().any(|diagnostic| diagnostic.severity() == Severity::Error);
@@ -148,24 +147,28 @@ impl GenerateStage<'_> {
       final_esm_init_metadata,
     )?;
 
-    if normalized_transfer_parts_rendered_maps.is_empty() {
+    if transferred_imports.is_empty() {
       return Ok(());
     }
-    for chunk in chunk_graph.chunk_table.iter_mut() {
+    // Runs after every finalizer (including `finalize_inline_copies` above): the fragments
+    // already carry canonical names, so the recipients are never re-finalized, and donor IDs
+    // never meet recipient side tables. See internal-docs/ast-mutation/implementation.md.
+    for chunk in chunk_graph.chunk_table.iter() {
       for (module_idx, recs) in &chunk.insert_map {
-        let Some(module) = self.link_output.module_table[*module_idx].as_normal_mut() else {
+        let Some(ast) = ast_table[*module_idx].as_mut() else {
           continue;
         };
-        for (importer_idx, rec_idx) in recs {
-          if let Some(rendered_string) =
-            normalized_transfer_parts_rendered_maps.get(&(*importer_idx, *rec_idx))
-          {
-            module
-              .ecma_view
-              .mutations
-              .push(Arc::new(PrependRenderedImport { intro: rendered_string.clone() }));
-          }
-        }
+        // Prepend in `insert_map` order.
+        ast.program.with_mut(|fields| {
+          fields.program.body.splice(
+            0..0,
+            recs
+              .iter()
+              .filter_map(|key| transferred_imports.get(key))
+              .flat_map(|fragment| fragment.program().body.iter())
+              .map(|stmt| stmt.clone_in(fields.allocator)),
+          );
+        });
       }
     }
 

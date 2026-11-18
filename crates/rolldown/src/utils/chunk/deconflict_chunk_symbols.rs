@@ -72,6 +72,11 @@ pub fn deconflict_chunk_symbols(
       .collect(),
   );
   let mut renamer = Renamer::new(&link_output.symbol_db, format, inner_binding_names);
+  for &module_idx in modules {
+    if let Some(db) = &link_output.symbol_db[module_idx] {
+      renamer.add_catch_var_name_groups(module_idx, db.ast_scopes.scoping());
+    }
+  }
   reserve_fixed_names(&mut renamer, modules, link_output, format);
 
   if matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
@@ -109,17 +114,6 @@ pub fn deconflict_chunk_symbols(
       );
     }
     ChunkKind::Common => {}
-  }
-  if matches!(format, OutputFormat::Esm) {
-    chunk.direct_imports_from_external_modules.iter().for_each(|(module, _)| {
-      let db = link_output.symbol_db.local_db(*module);
-      db.classic_data.iter_enumerated().for_each(|(symbol, _)| {
-        let symbol_ref = (*module, symbol).into();
-        if link_output.used_external_symbols.contains(&symbol_ref) {
-          renamer.add_symbol_in_root_scope(symbol_ref, RootBindingKind::Authored);
-        }
-      });
-    });
   }
 
   // The renamer relies on `modules` being in ascending exec_order so that
@@ -208,11 +202,19 @@ pub fn deconflict_chunk_symbols(
     }
   }
 
-  // Though, those symbols in `imports_from_other_chunks` doesn't belong to this chunk, but in the final output, they still behave
-  // like declared in this chunk. This is because we need to generate import statements in this chunk to import symbols from other
-  // statements. Those `import {...} from './other-chunk.js'` will declared these outside symbols in this chunk, so symbols that
-  // point to them can be resolved in runtime.
-  // So we add them in the deconflict process to generate conflict-less names in this chunk.
+  // Import bindings are top-level bindings too. They are named after the modules' declarations,
+  // as in Rollup: a declaration's name shows in `.name` and .d.ts output; an import alias does not.
+  if matches!(format, OutputFormat::Esm) {
+    chunk.direct_imports_from_external_modules.iter().for_each(|(module, _)| {
+      let db = link_output.symbol_db.local_db(*module);
+      db.classic_data.iter_enumerated().for_each(|(symbol, _)| {
+        let symbol_ref = (*module, symbol).into();
+        if link_output.used_external_symbols.contains(&symbol_ref) {
+          renamer.add_symbol_in_root_scope(symbol_ref, RootBindingKind::Authored);
+        }
+      });
+    });
+  }
   chunk.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {
     renamer
       .add_symbol_in_root_scope(item.import_ref, root_binding_kind(link_output, item.import_ref));

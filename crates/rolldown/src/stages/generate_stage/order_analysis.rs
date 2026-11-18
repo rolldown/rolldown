@@ -706,6 +706,7 @@ impl GenerateStage<'_> {
         .link_output
         .star_reexport_records_by_imported_symbol,
       member_read_star_reexport_paths: &self.link_output.member_read_star_reexport_paths,
+      kept_inlined_constant_reads: &self.link_output.kept_inlined_constant_reads,
       used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
@@ -744,7 +745,6 @@ impl GenerateStage<'_> {
       &input,
       &reexport_usage,
       &mut probe_state,
-      self.options.code_splitting.is_disabled(),
       reverse_static_imports,
     );
     probe_state

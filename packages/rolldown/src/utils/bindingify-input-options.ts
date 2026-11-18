@@ -79,7 +79,7 @@ export function bindingifyInputOptions(
   return {
     input: bindingifyInput(inputOptions.input),
     plugins,
-    cwd: inputOptions.cwd ?? process.cwd(),
+    cwd: inputOptions.cwd ?? (import.meta.browserBuild ? '/' : process.cwd()),
     external: bindingifyExternal(inputOptions.external, timings),
     resolve: bindingifyResolve(inputOptions.resolve),
     platform: inputOptions.platform,
@@ -120,6 +120,7 @@ export function bindingifyInputOptions(
     ),
     devtools: inputOptions.devtools,
     invalidateJsSideCache: pluginContextData.clear.bind(pluginContextData),
+    resetJsModuleOptions: pluginContextData.resetModuleOptions.bind(pluginContextData),
     preserveEntrySignatures: bindingifyPreserveEntrySignatures(
       inputOptions.preserveEntrySignatures,
     ),
@@ -132,15 +133,12 @@ export function bindingifyInputOptions(
 function bindingifyDevMode(devMode?: DevModeOptions): BindingExperimentalOptions['devMode'] {
   if (devMode) {
     if (typeof devMode === 'boolean') {
-      return devMode
-        ? { implement: getDefaultDevRuntime(), skipCommonRuntimeInjection: true }
-        : undefined;
+      return devMode ? { implement: getDefaultDevRuntime() } : undefined;
     }
-    const usesDefaultRuntime = devMode.implement == null;
+    const { host, port, ...rest } = devMode;
     return {
-      ...devMode,
-      implement: devMode.implement ?? getDefaultDevRuntime(devMode.host, devMode.port),
-      skipCommonRuntimeInjection: usesDefaultRuntime ? true : devMode.skipCommonRuntimeInjection,
+      ...rest,
+      implement: rest.implement ?? getDefaultDevRuntime(host, port),
     };
   }
 }
@@ -193,13 +191,17 @@ function bindingifyExperimental(
         throw new Error(`Unexpected chunkModulesOrder: ${experimental.chunkModulesOrder}`);
     }
   }
+  const chunkImportMap = experimental?.chunkImportMap;
   return {
     viteMode: experimental?.viteMode,
     resolveNewUrlToAsset: experimental?.resolveNewUrlToAsset,
     devMode: bindingifyDevMode(experimental?.devMode),
     attachDebugInfo: bindingifyAttachDebugInfo(experimental?.attachDebugInfo),
     chunkModulesOrder,
-    chunkImportMap: experimental?.chunkImportMap,
+    chunkImportMap:
+      typeof chunkImportMap === 'object'
+        ? { ...chunkImportMap, include: normalizedStringOrRegex(chunkImportMap.include) }
+        : chunkImportMap,
     onDemandWrapping: experimental?.onDemandWrapping,
     incrementalBuild: experimental?.incrementalBuild,
     nativeMagicString: experimental?.nativeMagicString,

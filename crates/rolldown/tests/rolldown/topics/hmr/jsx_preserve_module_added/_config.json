@@ -1,0 +1,14 @@
+{
+  "config": {
+    "transform": {
+      "jsx": "preserve"
+    },
+    "experimental": {
+      "devMode": {}
+    }
+  },
+  "dev": {
+    "ensureLatestBuildOutputForEachStep": true
+  },
+  "expectExecuted": false
+}

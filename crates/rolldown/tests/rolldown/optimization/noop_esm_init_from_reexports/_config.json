@@ -1,0 +1,6 @@
+{
+  "config": {
+    "codeSplitting": false,
+    "external": ["node:assert"]
+  }
+}

@@ -45,12 +45,16 @@ export interface OutputCodeCacheEntry {
 
 export class PluginContextData {
   moduleOptionMap: Map<string, ModuleOptions> = new Map();
+  /** The module options set by `resolveId` and `this.load`. */
+  private resolvedModuleOptionMap: Map<string, ModuleOptions> = new Map();
   /**
    * The cache is `null` in parallel plugin workers. In a worker, each plugin has its own
    * `PluginContextData`, so the cache never finds a match. See `parallel-plugin-worker.ts`.
    */
   outputCodeCache: Map<string, OutputCodeCacheEntry> | null;
   resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map();
+  /** The next `this.resolve` receipt. See `saveResolveOptions`. */
+  private nextResolveOptionsReceipt = 0;
   loadModulePromiseMap: Map<string, Promise<void>> = new Map();
   renderedChunkMeta: RenderedChunkMeta | null = null;
   normalizedInputOptions: NormalizedInputOptions | null = null;
@@ -84,8 +88,19 @@ export class PluginContextData {
     return this.importAttributes ? id : parseModuleId(id).rawId;
   }
 
-  updateModuleOption(id: string, option: ModuleOptions): ModuleOptions {
+  /** Set `isResolution` for the options from `resolveId` and `this.load`. */
+  updateModuleOption(id: string, option: ModuleOptions, isResolution = false): ModuleOptions {
     id = this.moduleOptionKey(id);
+    if (isResolution) {
+      const resolved = this.resolvedModuleOptionMap.get(id);
+      if (resolved) {
+        resolved.moduleSideEffects = option.moduleSideEffects ?? resolved.moduleSideEffects;
+        Object.assign(resolved.meta, option.meta);
+      } else {
+        // Copy `meta`, because merges change it in place.
+        this.resolvedModuleOptionMap.set(id, { ...option, meta: { ...option.meta } });
+      }
+    }
     const existing = this.moduleOptionMap.get(id);
     if (existing) {
       if (option.moduleSideEffects != null) {
@@ -150,10 +165,23 @@ export class PluginContextData {
     return moduleIds.values();
   }
 
+  /**
+   * Saves the options of one `this.resolve` call and returns its receipt. The receipt goes to Rust
+   * as `BindingPluginContextResolveOptions.custom` (`Option<u32>`), and `bindingifyResolveId`
+   * gets it back and looks the options up when a `resolveId` hook runs. Calls can overlap, so a
+   * receipt must stay unique while its call is in flight. The map size cannot be the receipt: it
+   * shrinks when an earlier call finishes, and the next call would get a live receipt.
+   */
   saveResolveOptions(options: PluginContextResolveOptions): number {
-    const index = this.resolveOptionsMap.size;
-    this.resolveOptionsMap.set(index, options);
-    return index;
+    let receipt = this.nextResolveOptionsReceipt;
+    // The counter wraps at 2^32 so the receipt stays a valid `u32`. After a wrap, skip receipts
+    // that are still in flight.
+    while (this.resolveOptionsMap.has(receipt)) {
+      receipt = (receipt + 1) >>> 0;
+    }
+    this.nextResolveOptionsReceipt = (receipt + 1) >>> 0;
+    this.resolveOptionsMap.set(receipt, options);
+    return receipt;
   }
 
   getSavedResolveOptions(receipt: number): PluginContextResolveOptions | undefined {
@@ -190,10 +218,33 @@ export class PluginContextData {
     return this.normalizedOutputOptions;
   }
 
+  /**
+   * `null` clears the options of all modules (a full scan). Otherwise the given modules go back to
+   * the options set when they were resolved, because their importers do not resolve them again.
+   */
+  resetModuleOptions(ids: string[] | null): void {
+    if (!ids) {
+      this.moduleOptionMap.clear();
+      this.resolvedModuleOptionMap.clear();
+      return;
+    }
+    for (const id of ids) {
+      const key = this.moduleOptionKey(id);
+      const resolved = this.resolvedModuleOptionMap.get(key);
+      if (resolved) {
+        this.moduleOptionMap.set(key, { ...resolved, meta: { ...resolved.meta } });
+      } else {
+        this.moduleOptionMap.delete(key);
+      }
+    }
+  }
+
   clear(): void {
     this.renderedChunkMeta = null;
     this.loadModulePromiseMap.clear();
     // Watch mode reuses this object across rebuilds; entries hold the previous build's chunk data.
     this.outputCodeCache?.clear();
+    // `resolveOptionsMap` and its receipt counter stay as they are: a `this.resolve` call of the
+    // previous build may still be in flight, and its receipt must not be given out again.
   }
 }

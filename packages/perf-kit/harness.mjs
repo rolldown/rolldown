@@ -19,6 +19,8 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { spawnSync } from 'node:child_process';
 
+import { parse as parseHtml } from 'parse5';
+
 import { launchBrowser } from './lib/cdp.mjs';
 import { startServer } from './lib/serve.mjs';
 import { buildApp } from './lib/build.mjs';
@@ -361,28 +363,35 @@ function requireEntry(target, opts = {}) {
   return entry;
 }
 
-/** The entry chunk of a built app, read from its index.html module script. */
+/** Detect an entry chunk from script tags or Astro island attributes in index.html. */
 function detectEntry(distDir) {
   const indexFile = path.join(distDir, 'index.html');
   if (!fs.existsSync(indexFile)) return null;
-  const html = fs.readFileSync(indexFile, 'utf8');
+  // parse5 reads quoted and unquoted attribute values using HTML parsing rules.
+  // Its default scriptingEnabled: true makes <noscript> contents text.
+  // htmlElements skips comments, script text and <template> contents.
+  const elements = htmlElements(parseHtml(fs.readFileSync(indexFile, 'utf8')));
   const locals = [];
-  for (const tag of html.match(/<script\b[^>]*>/g) ?? []) {
-    const src = tag.match(/\bsrc="([^"]+)"/)?.[1];
+  for (const el of elements) {
+    if (el.tagName !== 'script') continue;
+    const src = attrValue(el, 'src');
     if (!src || src.startsWith('http')) continue;
     // webpack emits cache-busting queries (main.bundle.js?abc123) - strip them
     // or every existsSync/readFile on the entry fails.
     locals.push({
       src: src.split('?')[0].replace(/^\.?\//, ''),
-      module: tag.includes('type="module"'),
+      module: attrValue(el, 'type') === 'module',
     });
   }
-  // Astro islands have no script tag: each <astro-island> names its chunks in
-  // component-url / renderer-url attributes. They load as modules.
+  // When no local script is found, use component-url / renderer-url attributes
+  // on <astro-island> elements as a fallback.
   if (!locals.length) {
-    for (const [, src] of html.matchAll(/\b(?:component|renderer)-url="([^"]+)"/g)) {
-      if (!src.startsWith('http')) {
-        locals.push({ src: src.split('?')[0].replace(/^\.?\//, ''), module: false });
+    for (const el of elements) {
+      if (el.tagName !== 'astro-island') continue;
+      for (const src of [attrValue(el, 'component-url'), attrValue(el, 'renderer-url')]) {
+        if (src && !src.startsWith('http')) {
+          locals.push({ src: src.split('?')[0].replace(/^\.?\//, ''), module: false });
+        }
       }
     }
   }
@@ -400,6 +409,23 @@ function detectEntry(distDir) {
     if (size >= 0 && (!best || size > best.size)) best = { ...s, size };
   }
   return best?.src ?? locals[0]?.src ?? null;
+}
+
+/**
+ * Collect descendant elements in document order. parse5 stores template contents
+ * in `content`, outside `childNodes`, so this walk skips them.
+ */
+function htmlElements(node, out = []) {
+  for (const child of node.childNodes) {
+    if (!child.tagName) continue;
+    out.push(child);
+    htmlElements(child, out);
+  }
+  return out;
+}
+
+function attrValue(element, name) {
+  return element.attrs.find((a) => a.name === name)?.value;
 }
 
 /**
@@ -1572,7 +1598,7 @@ function printVerdict(target, opts = {}) {
       'unknown',
       'static module graph',
       'not collected - this app builds with rolldown, so one config line enables static split-candidate ranking',
-      `vite >= 8: add build.rolldownOptions.devtools = { mode: "report" } to the vite config, rebuild, re-scan - \`${CLI} graph\` then ranks every candidate by the bytes a deferral frees, \`${CLI} what-if\` prices one cut, no browser run needed`,
+      `vite >= 8 with rolldown >= 1.2.16: add build.rolldownOptions.devtools = { mode: "report" } to the vite config, rebuild, re-scan - \`${CLI} graph\` then ranks every candidate by the bytes a deferral frees, \`${CLI} what-if\` prices one cut, no browser run needed`,
     );
   }
 
@@ -2893,7 +2919,7 @@ function printGraphSection(target, builtAtMs = null) {
   }
   if (mg.state === 'absent-rolldown') {
     console.log(
-      `static module graph: not collected - this app builds with rolldown. vite >= 8: add build.rolldownOptions.devtools = { mode: "report" } to the vite config, rebuild, re-scan (unlocks \`${CLI} graph\` / \`${CLI} what-if\`)\n`,
+      `static module graph: not collected - this app builds with rolldown. vite >= 8 with rolldown >= 1.2.16: add build.rolldownOptions.devtools = { mode: "report" } to the vite config, rebuild, re-scan (unlocks \`${CLI} graph\` / \`${CLI} what-if\`)\n`,
     );
     return;
   }
@@ -3021,7 +3047,7 @@ function requireModuleGraph(opts) {
     throw new Error(
       (cause ? `${cause}\n\n` : '') +
         'no module-graph.json found - it is written by rolldown devtools report builds.\n' +
-        'vite >= 8: add `build.rolldownOptions.devtools = { mode: "report" }` to the vite config\n' +
+        'vite >= 8 with rolldown >= 1.2.16: add `build.rolldownOptions.devtools = { mode: "report" }` to the vite config\n' +
         '(report lands in node_modules/.rolldown/report/<output dir>), rebuild, then re-run.\n' +
         `For a Cloudflare Worker: \`${CLI} worker-config --app <appDir>\` writes a config that puts the report\n` +
         'on every environment. Or point at an existing report with --report <dir>.',
@@ -3378,7 +3404,7 @@ async function cmdGraphDiff(argv) {
     throw new Error(
       (cause ? `${cause}\n\n` : '') +
         'no current module-graph.json found - it is written by rolldown devtools report builds.\n' +
-        'vite >= 8: add `build.rolldownOptions.devtools = { mode: "report" }` to the vite config,\n' +
+        'vite >= 8 with rolldown >= 1.2.16: add `build.rolldownOptions.devtools = { mode: "report" }` to the vite config,\n' +
         'rebuild, then re-run. Or point at an existing report with --report <dir>.',
     );
   }
@@ -5580,8 +5606,8 @@ individual commands (same target rules):
   coverage | profile                        one signal each
   graph                                     STATIC split candidates ranked by retained size (what
                                             deferring each module removes from the initial load) -
-                                            needs a rolldown devtools report build (vite >= 8:
-                                            build.rolldownOptions.devtools = { mode: "report" })
+                                            needs a rolldown devtools report build (rolldown >= 1.2.16;
+                                            vite >= 8: build.rolldownOptions.devtools = { mode: "report" })
   what-if <module> [<module>...] [--keep a,b] [--root a,b]  exact modules+bytes one deferral frees;
                                             sentries stay eager. TWO+ modules = one combined plan, priced
                                             with a single overlay + a vs-summed-individually line
@@ -5665,6 +5691,7 @@ server startup mode (node/deno - a process coming up, not a page loading):
   graph | what-if | cut | graph-diff       work unchanged on a server build - pass
                             --dist <builtDir> or --report <dir>. A top-level import and a
                             render-blocking import are the same edge in the module graph.
+                            A server pin saves no module graph: graph-diff needs --against.
   There is no throttle in this mode: server startup does no network I/O, so a throttle
   would invent a dimension the measurement does not have.
 
@@ -5691,8 +5718,8 @@ Cloudflare Worker startup mode (a V8 isolate coming up under the app's own worke
                             the copy the app's vite resolves; the default source is the
                             rolldown package next to this one (an installed perf-kit has none:
                             pass --from a checkout built with \`just build-rolldown-release\`).
-                            The npm release has no report mode, so without this no build
-                            writes the report; worker-config says when that is the case. The
+                            A rolldown release before 1.2.16 has no report mode, so on one
+                            no build writes the report; worker-config says when that is the case. The
                             swap is not a config change. Rebuild and re-pin afterwards.
                             \`<package manager> install --force\` restores the release.
   --request <path>          a route to hit after startup on the real entry; the first hit

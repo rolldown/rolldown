@@ -1,0 +1,11 @@
+{
+  "_comment": "A group with `includeDependenciesRecursively: false` takes `b.js` and leaves its dependency `indicator.js` in the chunk of the dynamic entry `b.js`. That chunk exports `indicator` to the group chunk, so `import()` of `b.js` gives an extra key, as the manual code splitting guide documents. The check for dynamic entry namespaces covers only a chunk that holds its entry module, so the debug assertion skips this chunk. Rolldown sets `allow-extension` for this option combination when the config does not set it.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [{ "name": "plugin", "test": "[\\\\/]11155[\\\\/](a|b|menu)\\.js$" }]
+    }
+  }
+}

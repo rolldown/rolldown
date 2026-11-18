@@ -150,7 +150,7 @@ const e=require("./rolldown-runtime.js"),t=require("./shared.js");var n;function
 ### main.js
 
 ```js
-Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=require("./rolldown-runtime.js"),t=require("./shared.js");async function n(){return[t.t,(await Promise.resolve().then(()=>require("./shared.js")).then(e=>(e.i(),e.n(),e.r))).A.value,(await Promise.resolve().then(()=>require("./lazy.js")).then(e=>(e.t(),e.n))).read()]}function r(){return(r=e.t((()=>{t.n()})))()}r(),exports.read=n;
+Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=require("./rolldown-runtime.js"),t=require("./shared.js");function n(){return(n=e.t((()=>{t.n()})))()}n(),exports.read=async function(){return[t.t,(await Promise.resolve().then(()=>require("./shared.js")).then(e=>(e.i(),e.n(),e.r))).A.value,(await Promise.resolve().then(()=>require("./lazy.js")).then(e=>(e.t(),e.n))).read()]};
 ```
 
 ### rolldown-runtime.js

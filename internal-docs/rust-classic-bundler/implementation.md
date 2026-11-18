@@ -72,7 +72,11 @@ This is fundamentally different from `Bundler.closed`:
 
 `close()` takes the last `BundleHandle` (`take`, not `clone`), so the first close releases it instead of retaining it until the N-API finalizer. A second native close finds no handle and does not run `closeBundle` again. `closeBundle` runs under `catch_unwind`, so a panicking hook becomes an error.
 
-A second native close does not wait for the first one's `closeBundle`. The JS side guarantees one call: `RolldownBuild.close()` in `packages/rolldown/src/api/rolldown/rolldown-build.ts` keeps the first close promise, and a repeated `close()` only waits for it (the first caller gets any error). Inside that first close every cleanup step runs exactly once, even when an earlier one fails: it stops the parallel-plugin workers, then always calls `BindingBundler.close()`, then releases the async runtime holder (`shutdownAsyncRuntime`), and only then rethrows a worker shutdown error. On wasm, once the last holder is gone, a second `BindingBundler.close()` would spawn onto the released runtime and trap.
+A second native close does not wait for the first one's `closeBundle`. The JS side guarantees one call: `RolldownBuild.close()` in `packages/rolldown/src/api/rolldown/rolldown-build.ts` keeps the first close promise, and a repeated `close()` only waits for it (the first caller gets any error). Inside that first close every cleanup step runs exactly once, even when an earlier one fails: it stops the parallel-plugin workers, then always calls `BindingBundler.close()`, then releases the async runtime holder (`shutdownAsyncRuntime`), and only then rethrows a worker shutdown error.
+
+On wasm with `tokio_unstable`, each `spawn_boxed_future()` call also holds the shared runtime; napi's finalize callback releases it on the JavaScript thread once the call's promise resolves or rejects. So a method called after its object's `close()` reaches its closed-state check instead of spawning onto a stopped runtime. `BindingPluginContext.resolve()` and `.load()` use the same helper, so a plugin context kept past its owner's close behaves the same way.
+
+At the end of its close future, `BindingBundler.close()` also requests the release of the JS functions of the options. The release waits for each build that started before the close. See [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md#js-callback-lifetime).
 
 ## Related
 

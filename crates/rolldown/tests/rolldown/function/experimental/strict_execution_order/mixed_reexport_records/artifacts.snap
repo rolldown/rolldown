@@ -281,13 +281,13 @@ export { LOCAL as t };
 ### lazy-a.js
 
 ```js
-const e=require("./rolldown-runtime.js"),t=require("./shared.js");var n;function r(){return(r=e.t((()=>{n={value:`a`}})))()}function i(){return n}function a(){return(a=e.t((()=>{r(),t.n()})))()}a(),exports.read=i;
+const e=require("./rolldown-runtime.js"),t=require("./shared.js");var n;function r(){return(r=e.t((()=>{n={value:`a`}})))()}function i(){return(i=e.t((()=>{r(),t.n()})))()}i(),exports.read=function(){return n};
 ```
 
 ### lazy-b.js
 
 ```js
-const e=require("./rolldown-runtime.js"),t=require("./shared.js");var n;function r(){return(r=e.t((()=>{n={value:`b`}})))()}function i(){return n}function a(){return(a=e.t((()=>{r(),t.n()})))()}a(),exports.read=i;
+const e=require("./rolldown-runtime.js"),t=require("./shared.js");var n;function r(){return(r=e.t((()=>{n={value:`b`}})))()}function i(){return(i=e.t((()=>{r(),t.n()})))()}i(),exports.read=function(){return n};
 ```
 
 ### main.js

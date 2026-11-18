@@ -34,13 +34,3 @@ impl From<HookSideEffects> for BindingHookSideEffects {
     })
   }
 }
-
-impl PartialEq for BindingHookSideEffects {
-  fn eq(&self, other: &Self) -> bool {
-    match (&self.0, &other.0) {
-      (Either::A(a), Either::A(b)) => a == b,
-      (Either::B(a), Either::B(b)) => a == b,
-      _ => false,
-    }
-  }
-}

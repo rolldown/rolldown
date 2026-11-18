@@ -13,6 +13,7 @@ use crate::types::binding_error_stage::BindingErrorStage;
 use crate::types::binding_module_info::BindingModuleInfo;
 use crate::types::binding_outputs::{BindingOutputs, to_binding_error};
 use crate::types::error::{BindingErrors, BindingResult};
+use crate::types::js_callback_release::{RequestReleaseOnDrop, SharedJsCallbackRelease};
 use crate::utils::{
   create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
   spawn_boxed_future,
@@ -26,33 +27,32 @@ pub struct BindingDevEngine {
   cwd: Arc<Path>,
   _session_id: Arc<str>,
   _session: rolldown_devtools::Session,
+  /// The JS functions of the options. `close` requests their release.
+  /// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
+  option_callbacks: SharedJsCallbackRelease,
 }
 
 #[napi]
 impl BindingDevEngine {
   #[napi(constructor)]
-  pub fn new(
-    _env: Env,
-    options: BindingBundlerOptions,
-    dev_options: Option<BindingDevOptions>,
-  ) -> napi::Result<Self> {
+  pub fn new(options: BindingBundlerOptions, dev_options: BindingDevOptions) -> napi::Result<Self> {
     let session_id = rolldown_devtools::generate_session_id();
     let session = rolldown_devtools::Session::dummy();
 
-    let on_hmr_updates_callback = dev_options.as_ref().and_then(|opts| opts.on_hmr_updates.clone());
-    let on_output_callback = dev_options.as_ref().and_then(|opts| opts.on_output.clone());
-    let on_additional_assets_callback =
-      dev_options.as_ref().and_then(|opts| opts.on_additional_assets.clone());
+    let on_hmr_updates_callback = dev_options.on_hmr_updates;
+    let on_output_callback = dev_options.on_output;
+    let on_additional_assets_callback = dev_options.on_additional_assets;
 
     let cwd: Arc<Path> = Arc::from(PathBuf::from(options.input_options.cwd.clone()));
 
-    let rebuild_strategy =
-      dev_options.as_ref().and_then(|opts| opts.rebuild_strategy).map(Into::into);
-    let hot_update = dev_options.as_ref().and_then(|opts| opts.hot_update);
-    let dev_watch_options = dev_options.and_then(|opts| opts.watch).map(Into::into);
+    let rebuild_strategy = dev_options.rebuild_strategy.map(Into::into);
+    let hot_update = dev_options.hot_update;
+    let dev_watch_options = dev_options.watch.map(Into::into);
 
     // Create bundler config
-    let bundler_config = create_bundler_config_from_binding_options(options)?;
+    let normalized = create_bundler_config_from_binding_options(options)?;
+    let (bundler_config, option_callbacks) =
+      (normalized.config, SharedJsCallbackRelease::new(vec![normalized.callbacks]));
 
     // If callback is provided, wrap it to convert BuildResult<(Vec<ClientHmrUpdate>, Vec<String>)> to BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)>
     let on_hmr_updates = on_hmr_updates_callback.map(|js_callback| {
@@ -122,7 +122,13 @@ impl BindingDevEngine {
     let inner = rolldown_dev::DevEngine::new(bundler_config, rolldown_dev_options)
       .map_err(|e| napi::Error::from_reason(format!("Fail to create dev engine: {e:#?}")))?;
 
-    Ok(Self { inner: Arc::new(inner), cwd, _session_id: session_id, _session: session })
+    Ok(Self {
+      inner: Arc::new(inner),
+      cwd,
+      _session_id: session_id,
+      _session: session,
+      option_callbacks,
+    })
   }
 
   #[napi(ts_return_type = "Promise<void>")]
@@ -237,7 +243,17 @@ impl BindingDevEngine {
   #[napi(ts_return_type = "Promise<void>")]
   pub fn close<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
     let inner = Arc::clone(&self.inner);
+    // A repeated `DevEngine::close` returns at once. This is also true inside a `closeBundle`
+    // hook of the first close. So each call takes a hold before the spawn. The release waits for
+    // the last hold, so it runs when the first close ends. The repeated close does not wait,
+    // because a wait deadlocks when `closeBundle` awaits `engine.close()`.
+    let hold = self.option_callbacks.hold();
+    let option_callbacks = self.option_callbacks.clone();
     spawn_boxed_future(env, async move {
+      // Rust drops locals in reverse order. So the hold drops first, and then the release
+      // request runs.
+      let _release = RequestReleaseOnDrop(option_callbacks);
+      let _hold = hold;
       inner.close().await.map_err(|_e| napi::Error::from_reason("Failed to close dev engine"))?;
       Ok(())
     })

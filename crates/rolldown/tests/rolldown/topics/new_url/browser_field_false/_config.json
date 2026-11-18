@@ -1,0 +1,8 @@
+{
+  "config": {
+    "platform": "browser",
+    "experimental": {
+      "resolveNewUrlToAsset": true
+    }
+  }
+}

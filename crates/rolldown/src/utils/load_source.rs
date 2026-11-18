@@ -44,13 +44,15 @@ pub async fn load_source<Fs: FileSystem + Clone + 'static>(
       .unwrap_or_default()
   };
 
-  // If we're given a specific module type to use and the load hook did not provide a
+  // If we're given a specific module type other than `asset` and the load hook did not provide a
   // module_type, apply the asserted type. When a plugin's load hook returns a module_type
   // (e.g. the asset module plugin returns Js after handling the asset), we trust the plugin's
   // decision, even if it also returned source.
   if let Some(asserted) = asserted_module_type {
     if matches!(asserted, ModuleType::Asset) {
-      if plugin_driver.file_emitter.file_ref_for_module(&resolved_id.id).is_none() {
+      if !resolved_id.id.starts_with('\0')
+        && plugin_driver.file_emitter.file_ref_for_module(&resolved_id.id).is_none()
+      {
         // A plugin can load a `new URL()` target as code; the URL still needs its file.
         // See internal-docs/plugin-asset-module/implementation.md
         emit_new_url_asset(plugin_driver, options, &resolved_id.id, fs.clone()).await?;

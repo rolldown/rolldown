@@ -1,6 +1,8 @@
 use num_bigint::BigInt;
-use oxc::{ast::ast::Expression, span::SPAN};
+use oxc::{ast::ast::Expression, semantic::SymbolId, span::SPAN};
 use oxc_ecmascript::constant_evaluation;
+
+use crate::StmtInfoIdx;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ConstantValue {
@@ -33,6 +35,17 @@ impl ConstExportMeta {
     };
     Self { value, commonjs_export, safe_to_inline }
   }
+}
+
+/// An exported root `let` with a literal initializer whose every write is inside a function.
+/// The link stage makes it a constant when no code can call those functions.
+/// See internal-docs/constant-branches/implementation.md.
+#[derive(Debug, Clone)]
+pub struct DeferredWriteConstant {
+  pub symbol: SymbolId,
+  pub meta: ConstExportMeta,
+  /// The top-level statements that contain the writes.
+  pub writer_stmts: Vec<StmtInfoIdx>,
 }
 
 impl<'a> From<&'a ConstantValue> for constant_evaluation::ConstantValue<'a> {

@@ -3,9 +3,9 @@ use oxc::semantic::NodeId;
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
-  ConcatenateWrappedModuleKind, EntryPointKind, ImportRecordIdx, ImportRecordMeta,
-  MemberExprRefResolutionMap, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType, NormalModule,
-  OutputFormat, ResolvedExport, RuntimeHelper, StmtInfoIdx, SymbolRef, SymbolRefDb, WrapKind,
+  EntryPointKind, ImportRecordIdx, ImportRecordMeta, IndexModules, MemberExprRefResolutionMap,
+  ModuleIdx, ModuleNamespaceIncludedReason, ModuleType, NormalModule, OutputFormat, ResolvedExport,
+  RuntimeHelper, StmtInfoIdx, SymbolRef, SymbolRefDb, WrapKind,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::IndexBitSet;
@@ -56,7 +56,6 @@ pub struct LinkingMetadata {
   // esbuild add it to `ExportKind`, but the linker shouldn't mutate the module.
   pub has_dynamic_exports: bool,
   pub shimmed_missing_exports: FxHashMap<CompactStr, SymbolRef>,
-  pub required_by_other_module: bool,
 
   // Entry chunks need to generate code that doesn't belong to any module. This is the list of symbols are referenced by the
   // generated code. Tree-shaking will cares about these symbols to make sure they are not removed.
@@ -90,7 +89,6 @@ pub struct LinkingMetadata {
   pub folded_namespace_in_checks: FxHashMap<NodeId, bool>,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
   pub is_tla_or_contains_tla_dependency: bool,
-  pub concatenated_wrapped_module_kind: ConcatenateWrappedModuleKind,
   /// Used to to track a facade binding referenced cjs module
   /// included reexport symbol from commonjs module
   pub named_import_to_cjs_module: FxHashMap<SymbolRef, ModuleIdx>,
@@ -112,11 +110,22 @@ pub struct LinkingMetadata {
   /// Tracks which statements in this module are included after tree-shaking.
   /// Each entry corresponds to a statement in the module's `stmt_infos`.
   pub stmt_info_included: IndexBitSet<StmtInfoIdx>,
+  /// Known branch decisions shared by dependency pruning and AST finalization.
+  /// `if`/ternary: whether the consequent executes; logical expression: whether the RHS executes.
+  pub constant_branches: FxHashMap<NodeId, bool>,
   /// Tracks whether the module is included after tree-shaking.
   pub is_included: bool,
 }
 
 impl LinkingMetadata {
+  /// Whether a dependency of the module, including an external one, has side effects.
+  pub fn has_side_effectful_dependency(&self, modules: &IndexModules) -> bool {
+    self
+      .dependencies
+      .iter()
+      .any(|&dependency_idx| modules[dependency_idx].side_effects().has_side_effects())
+  }
+
   pub fn canonical_exports(
     &self,
     needs_commonjs_export: bool,

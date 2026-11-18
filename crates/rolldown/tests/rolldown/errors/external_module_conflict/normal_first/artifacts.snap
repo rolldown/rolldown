@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## INVALID_EXTERNAL_ID
+
+```text
+[INVALID_EXTERNAL_ID] "lib.js" is imported as an external by "main.js", but is already an existing non-external module id.
+   ╭─[ main.js:3:40 ]
+   │
+ 3 │ import { value as externalValue } from './lib.js'
+   │                                        ─────┬────  
+   │                                             ╰────── This import resolves to an external module.
+   │ 
+   │ Help: Make all imports of this module resolve the same way: all as external, or all as non-external.
+───╯
+
+```

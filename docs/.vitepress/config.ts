@@ -31,6 +31,7 @@ const sidebarForGuide: DefaultTheme.SidebarItem[] = [
         link: '/in-depth/why-plugin-hook-filter.md',
       },
       { text: 'Module Types', link: '/in-depth/module-types.md' },
+      { text: 'Import Attributes', link: '/in-depth/import-attributes.md' },
       { text: 'External Modules', link: '/in-depth/external-modules.md' },
       { text: 'Directives', link: '/in-depth/directives.md' },
       { text: 'Automatic Code Splitting', link: '/in-depth/automatic-code-splitting.md' },
@@ -45,6 +46,8 @@ const sidebarForGuide: DefaultTheme.SidebarItem[] = [
       { text: 'Dead Code Elimination', link: '/in-depth/dead-code-elimination.md' },
       { text: 'Lazy Barrel Optimization', link: '/in-depth/lazy-barrel-optimization.md' },
       { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
+      { text: 'Build Report', link: '/in-depth/build-report.md' },
+      { text: 'Perf Kit', link: '/in-depth/perf-kit.md' },
     ],
   },
   {

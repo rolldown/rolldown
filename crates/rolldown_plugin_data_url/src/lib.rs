@@ -82,7 +82,7 @@ impl Plugin for DataUrlPlugin {
   }
 
   async fn load(&self, _ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    let Some(resolved) = self.resolved_data_url.get(args.id) else {
+    let Some(resolved) = self.resolved_data_url.get(args.raw_id) else {
       return Ok(None);
     };
 

@@ -9,7 +9,10 @@
         "name": "ts-entry",
         "import": "ts-entry.ts"
       }
-    ]
+    ],
+    "experimental": {
+      "importAttributes": true
+    }
   },
-  "expectError": true // TODO(hyf0): Remove this line after supporting import attributes
+  "expectExecuted": false
 }

@@ -4,15 +4,10 @@ import {
   shutdownAsyncRuntime,
   startAsyncRuntime,
 } from '../../binding.cjs';
-import { LOG_LEVEL_WARN } from '../../log/logging';
-import { logMultipleWatcherOption } from '../../log/logs';
 import { aggregateBindingErrorsIntoJsError } from '../../utils/error';
 import type { WatchOptions } from '../../options/watch-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
-import {
-  type BundlerOptionWithStopWorker,
-  createBundlerOptions,
-} from '../../utils/create-bundler-option';
+import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { arraify } from '../../utils/misc';
 import type { WatcherEmitter } from './watch-emitter';
 
@@ -123,7 +118,6 @@ export async function createWatcher(
       )
       .flat(),
   );
-  warnMultiplePollingOptions(bundlerOptions);
   const callback = createEventCallback(emitter);
   const bindingWatcher = new BindingWatcher(
     bundlerOptions.map((option) => option.bundlerOptions),
@@ -134,19 +128,4 @@ export async function createWatcher(
     bindingWatcher,
     bundlerOptions.map((option) => option.stopWorkers),
   );
-}
-
-function warnMultiplePollingOptions(bundlerOptions: BundlerOptionWithStopWorker[]) {
-  let found = false;
-  for (const option of bundlerOptions) {
-    const watch = option.inputOptions.watch;
-    const watcher = watch && typeof watch === 'object' ? watch.watcher : undefined;
-    if (watcher && (watcher.usePolling != null || watcher.pollInterval != null)) {
-      if (found) {
-        option.onLog(LOG_LEVEL_WARN, logMultipleWatcherOption());
-        return;
-      }
-      found = true;
-    }
-  }
 }

@@ -1,0 +1,6 @@
+{
+  "config": {
+    "platform": "node",
+    "input": [{ "name": "main", "import": "./main.mjs" }]
+  }
+}

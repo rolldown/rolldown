@@ -2,6 +2,8 @@ When `'auto'` is used, Rolldown will automatically determine the export mode bas
 
 `'default'` can only be used when the `input` modules have a single default export. `'none'` can only be used when the `input` modules have no exports. Otherwise, Rolldown will throw an error.
 
+With [`output.preserveModules`](/reference/OutputOptions.preserveModules), this also applies to each preserved module that is not an `input` module: `'auto'` picks the mode for each module, and `'default'` or `'none'` requires every such module to match, including modules without exports. Such a module always uses `'named'` mode if it is a CommonJS module, if it is in an import cycle, if its `export *` reaches an external module, or if other modules use bundler-internal bindings through it, such as the wrappers that [`output.strictExecutionOrder`](/reference/OutputOptions.strictExecutionOrder) adds.
+
 The difference between `'default'` and `'named'` affects how other people can consume your bundle. If you use `'default'`, a CommonJS user could do this, for example:
 
 ```js

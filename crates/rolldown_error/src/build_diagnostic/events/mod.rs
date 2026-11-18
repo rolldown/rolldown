@@ -21,10 +21,12 @@ pub mod circular_reexport;
 pub mod commonjs_variable_in_esm;
 pub mod configuration_field_conflict;
 pub mod could_not_clean_directory;
+pub mod deprecated_import_assertion;
 pub mod duplicate_shebang;
 pub mod empty_import_meta;
 pub mod eval;
 pub mod external_entry;
+pub mod external_module_conflict;
 pub mod file_not_found;
 pub mod filename_conflict;
 pub mod filename_outside_output_directory;
@@ -35,10 +37,12 @@ pub mod ineffective_dynamic_import;
 pub mod invalid_annotation;
 pub mod invalid_define_config;
 pub mod invalid_export_option;
+pub mod invalid_import_attribute;
 pub mod invalid_option;
 pub mod invalid_tla_format;
 pub mod json_parse;
 pub mod large_barrel_modules;
+pub mod lazy_barrel_unloaded_binding;
 pub mod missing_export;
 pub mod missing_global_name;
 pub mod missing_name_option_for_iife_export;
@@ -62,7 +66,7 @@ pub mod unsupported_feature;
 pub mod unsupported_tsconfig_option;
 pub mod untranspiled_syntax;
 
-pub trait BuildEvent: Sync + Send + AsAny + AsAnyMut {
+pub trait BuildEvent: Sync + Send + AsAnyMut {
   fn kind(&self) -> EventKind;
 
   fn message(&self, opts: &DiagnosticOptions) -> String;
@@ -103,16 +107,6 @@ where
 {
   fn from(e: T) -> Self {
     Box::new(e)
-  }
-}
-
-pub trait AsAny {
-  fn as_any(&self) -> &dyn Any;
-}
-
-impl<T: 'static + BuildEvent> AsAny for T {
-  fn as_any(&self) -> &dyn Any {
-    self
   }
 }
 

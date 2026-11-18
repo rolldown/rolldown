@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_plugin_replace"
-version = "1.2.16"
+version = "1.3.2"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
@@ -26,5 +26,5 @@ string_wizard = { workspace = true }
 
 [dev-dependencies]
 rolldown = { workspace = true }
-rolldown_testing = { path = '../rolldown_testing' }
+rolldown_testing = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }

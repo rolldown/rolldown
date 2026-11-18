@@ -62,6 +62,7 @@ impl PluginContext {
         module_infos: Arc::clone(&ctx.module_infos),
         tx: Arc::clone(&ctx.tx),
         session: ctx.session.clone(),
+        log_hook_tasks: Arc::clone(&ctx.log_hook_tasks),
         bundle_span: ctx.bundle_span.clone(),
         manual_resolve_span: ctx.manual_resolve_span.clone(),
       })),
@@ -70,11 +71,12 @@ impl PluginContext {
 
   pub async fn load(
     &self,
-    specifier: &str,
+    raw_id: &str,
+    attributes: rolldown_common::ImportAttributes,
     side_effects: Option<HookSideEffects>,
     module_def_format: ModuleDefFormat,
   ) -> anyhow::Result<()> {
-    call_native_only!(self, "load", ctx => ctx.load(specifier, side_effects, module_def_format).await)
+    call_native_only!(self, "load", ctx => ctx.load(raw_id, attributes, side_effects, module_def_format).await)
   }
 
   pub async fn resolve(
@@ -118,10 +120,6 @@ impl PluginContext {
     call_native_only!(self, "get_module_info", ctx => ctx.get_module_info(module_id))
   }
 
-  pub fn get_module_ids(&self) -> Vec<ArcStr> {
-    call_native_only!(self, "get_module_ids", ctx => ctx.get_module_ids())
-  }
-
   pub fn cwd(&self) -> &PathBuf {
     call_native_only!(self, "cwd", ctx => ctx.cwd())
   }
@@ -137,10 +135,6 @@ impl PluginContext {
 
   pub fn options(&self) -> &rolldown_common::NormalizedBundlerOptions {
     call_native_only!(self, "options", ctx => &ctx.options)
-  }
-
-  pub fn resolver(&self) -> &rolldown_resolver::Resolver {
-    call_native_only!(self, "resolver", ctx => &ctx.resolver)
   }
 
   pub fn file_emitter(&self) -> &rolldown_common::SharedFileEmitter {

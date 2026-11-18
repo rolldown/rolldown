@@ -19,16 +19,6 @@ pub enum PreserveEntrySignatures {
   False,
 }
 
-impl PreserveEntrySignatures {
-  /// Returns `true` if the preserve entry signatures is [`AllowExtension`].
-  ///
-  /// [`AllowExtension`]: PreserveEntrySignatures::AllowExtension
-  #[must_use]
-  pub fn is_allow_extension(&self) -> bool {
-    matches!(self, Self::AllowExtension)
-  }
-}
-
 impl Display for PreserveEntrySignatures {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     let s = match self {

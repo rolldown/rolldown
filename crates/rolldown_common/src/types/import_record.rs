@@ -6,7 +6,7 @@ use std::{
 use oxc::{semantic::NodeId, span::Span};
 use oxc_str::CompactStr;
 
-use crate::{ImportKind, ModuleIdx, ModuleType, StmtInfoIdx, SymbolRef};
+use crate::{ImportAttributes, ImportKind, ModuleIdx, ModuleType, StmtInfoIdx, SymbolRef};
 
 oxc_index::define_index_type! {
   pub struct ImportRecordIdx = u32;
@@ -93,6 +93,8 @@ pub struct ImportRecord<State: Debug + Clone> {
   /// `namespace_ref` represent the potential `import_foo` in above example. It's useless if we imported n esm module.
   pub namespace_ref: SymbolRef,
   pub meta: ImportRecordMeta,
+  /// `{ type: 'json' }` in `import data from './data.json' with { type: 'json' }`.
+  pub attributes: ImportAttributes,
   /// Information about the dynamic import expression, if this is a dynamic import.
   /// Contains the statement index and AST node ID for tracking purposes.
   ///
@@ -143,6 +145,7 @@ impl RawImportRecord {
         importer_span,
         asserted_module_type: assert_module_type,
       },
+      attributes: ImportAttributes::default(),
       dynamic_import_expr_info,
     }
   }
@@ -159,6 +162,7 @@ impl RawImportRecord {
       kind: self.kind,
       namespace_ref: self.namespace_ref,
       meta: self.meta,
+      attributes: self.attributes,
       dynamic_import_expr_info: self.dynamic_import_expr_info,
     }
   }

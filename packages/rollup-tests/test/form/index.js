@@ -31,9 +31,10 @@ runTestSuiteWithSamples(
 			() => {
 				let bundle;
 				const logs = [];
+				const warnings = [];
 
 				const runRollupTest = async (inputFile, bundleFile, defaultFormat) => {
-					const warnings = [];
+					warnings.length = 0;
 					if (config.before) {
 						await config.before();
 					}
@@ -46,6 +47,8 @@ runTestSuiteWithSamples(
 								// Disable inlineConst for rollup tests, see https://github.com/rolldown/rolldown/issues/8100
 								optimization: { inlineConst: false },
 								onLog: (level, log) => {
+									// Rollup does not emit this Rolldown-specific diagnostic.
+									if (log.code === 'INEFFECTIVE_DYNAMIC_IMPORT') return;
 									logs.push({ level, ...log });
 									if (level === 'warn' && !config.expectedWarnings?.includes(log.code)) {
 										warnings.push(log);

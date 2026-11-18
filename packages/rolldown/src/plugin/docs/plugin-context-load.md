@@ -1,4 +1,4 @@
-This allows you to inspect the final content of modules before deciding how to resolve them in the [`resolveId`](/reference/Interface.Plugin#resolveid) hook and e.g. resolve to a proxy module instead. If the module becomes part of the graph later, there is no additional overhead from using this context function as the module will not be parsed again. The signature allows you to directly pass the return value of [`this.resolve`](/reference/Interface.PluginContext#resolve) to this function as long as it is neither `null` nor external.
+This allows you to inspect the final content of modules before deciding how to resolve them in the [`resolveId`](/reference/Interface.Plugin#resolveid) hook and e.g. resolve to a proxy module instead. If the module becomes part of the graph later, there is no additional overhead from using this context function as the module will not be parsed again. The signature allows you to directly pass the return value of [`this.resolve`](/reference/Interface.PluginContext#resolve) to this function as long as it is neither `null` nor external, but this loads the module without its import attributes. To keep the import attributes, pass `{ ...resolution, id: { rawId: resolution.id, attributes: resolution.attributes } }` instead. This works with or without `experimental.importAttributes`, so a plugin can use it before turning the option on.
 
 The returned Promise will resolve once the module has been fully transformed and parsed but before any imports have been resolved. That means that the resulting [`ModuleInfo`](/reference/Interface.ModuleInfo) will have empty [`importedIds`](/reference/Interface.ModuleInfo#importedids) and [`dynamicallyImportedIds`](/reference/Interface.ModuleInfo#dynamicallyimportedids). This helps to avoid deadlock situations when awaiting `this.load` in a [`resolveId`](/reference/Interface.Plugin#resolveid) hook. If you are interested in [`importedIds`](/reference/Interface.ModuleInfo#importedids) and [`dynamicallyImportedIds`](/reference/Interface.ModuleInfo#dynamicallyimportedids), you can either implement a [`moduleParsed`](/reference/Interface.Plugin#moduleparsed) hook or pass the `resolveDependencies` flag, which will make the Promise returned by `this.load` wait until all dependency ids have been resolved.
 
@@ -47,6 +47,12 @@ export default function addProxyPlugin() {
 ```
 
 If the module was already loaded, `this.load` will just wait for the parsing to complete and then return its module information. If the module was not yet imported by another module, it will not automatically trigger loading other modules imported by this module. Instead, static and dynamic dependencies will only be loaded once this module has actually been imported at least once.
+
+::: warning Not supported in `buildStart`
+
+Modules start loading only after the [`buildStart`](/reference/Interface.Plugin#buildstart) hook finishes, so calling `this.load` in `buildStart` rejects with an error.
+
+:::
 
 ::: warning Deadlocks caused by awaiting `this.load` in cyclic dependencies
 

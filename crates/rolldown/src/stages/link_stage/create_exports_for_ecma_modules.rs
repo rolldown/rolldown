@@ -2,6 +2,7 @@ use rolldown_common::{
   DeclaredSymbols, EntryPoint, ExportsKind, ImportKind, ImportRecordMeta, Module, ModuleIdx,
   OutputFormat, PreserveEntrySignatures, SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta,
   SymbolRefFlags, TaggedSymbolRef, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
+  side_effects::DeterminedSideEffects,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::smallvec;
@@ -70,6 +71,13 @@ impl LinkStage<'_> {
       self.dynamic_import_exports_usage_map.insert(importee, DynamicImportExportsUsage::Complete);
     }
 
+    let declared_side_effect_free = self
+      .module_table
+      .modules
+      .iter()
+      .filter(|module| matches!(module.side_effects(), DeterminedSideEffects::UserDefined(false)))
+      .map(Module::idx)
+      .collect::<FxHashSet<_>>();
     for module in &mut self.module_table.modules {
       let Some(module) = module.as_normal_mut() else { continue };
       for record in &mut module.import_records {
@@ -77,6 +85,13 @@ impl LinkStage<'_> {
           continue;
         }
         let Some(importee) = record.resolved_module else { continue };
+        // An unused top-level import of a module declared side-effect free is removed even when the
+        // module exports `then`.
+        if record.meta.contains(ImportRecordMeta::TopLevelPureDynamicImport)
+          && declared_side_effect_free.contains(&importee)
+        {
+          continue;
+        }
         let meta = &self.metas[importee];
         // Promise resolution calls `then` with the namespace as its receiver.
         if meta.has_dynamic_exports || meta.resolved_exports.contains_key("then") {

@@ -6,6 +6,39 @@ After the first call in either helper, `mod` is set and `cb` is never accessed a
 
 Reference: https://github.com/rolldown/rolldown/issues/9063
 
+## `__exportAll`: namespace objects with the native shape
+
+`__exportAll(all, flags)` creates the namespace object of a module. `all` maps each export name to a getter, so code that reads an export sees the live binding. The object has the shape of a native module namespace:
+
+- It has a null prototype. So `'constructor' in ns` is `false`, unless the module exports `constructor`.
+- It has `Symbol.toStringTag` with the value `'Module'`, unless the flag `1` is set (`generatedCode.symbols: false`).
+- It accepts no new properties (`Object.preventExtensions`). In the specification, [[IsExtensible]] of a module namespace object returns `false`.
+
+The flag `2` keeps the object open: the object accepts new properties. A later `__reExport` adds properties to the namespace object of a module with dynamic exports or with an external `export *`. On an object that is not extensible, `Object.defineProperty` throws a `TypeError` for a new property. `namespace_object_is_open` in `module_finalizers/mod.rs` decides which namespace objects stay open. The HMR finalizer passes the flag `2` for a module with `export * from`. An open object also has a null prototype.
+
+A writer is a place in the module finalizer that emits a `__reExport` call into a namespace object. Each writer checks `namespace_object_is_open` with a debug assertion. `namespace_object_is_open` has one condition for each kind of writer:
+
+- The writer for an ESM importee with dynamic exports and the writer for a CommonJS importee read the current flags. They emit `__reExport` only for an `export *` of a module with dynamic exports. Each pass that gives a module dynamic exports also gives dynamic exports to each module that has an `export *` of that module. These passes are `determine_has_dynamic_exports` in `link_stage/wrapping.rs` and `find_entry_level_external_module` in `generate_stage/code_splitting.rs`.
+- The writer for an external `export *` reads `star_exports_from_external_modules`, not `has_dynamic_exports`. `find_entry_level_external_module` ignores the records that it marks with `EntryLevelExternal`. So a module can lose its dynamic exports while this writer still emits `__reExport(ns, <external>)`. The fixture `misc/namespace_object_shape_open_flattened_external_star` shows this case.
+- The overlay writer of strict execution order reads `reexports_dynamic_exports`, a copy that `apply_order_wraps` makes of the `has_dynamic_exports` flag of the importee. `namespace_object_is_open` also returns `true` when an overlay of the module has `reexports_dynamic_exports`. So the object stays open when the overlay writer emits `__reExport`. Today two facts make this condition not necessary:
+  - When tree shaking keeps a module, it keeps each `export *` of a module with dynamic exports. `reference_needed_symbols` gives such a statement a side effect, and `is_gated_side_effect_stmt` is always `false` for a statement with an import record. The overlay writer runs only for an `export *` that tree shaking removes, so it never emits `__reExport`.
+  - `finalize_chunk_plan` runs `find_entry_level_external_module` again after `apply_order_wraps`, but each later call gives the same flags as the copy. No pass removes an `EntryLevelExternal` mark or an `Unknown` namespace reason, and no pass after the first call adds an entry module. So `has_dynamic_exports` also covers the overlay writer.
+
+No build runs the overlay writer. So the unit tests in `module_finalizers/mod.rs` call `is_namespace_object_open` with an `OrderWrapState` that they make. In this state, the flags of the module say that the object is closed, and an overlay of the module has `reexports_dynamic_exports`.
+
+An empty namespace with `generatedCode.symbols: false` does not call `__exportAll`, because the link stage does not always include the helper in this case. Its value is `Object.freeze({ __proto__: null })`. When the object is open, its value is `Object.setPrototypeOf({}, null)`.
+
+`__exportAll` creates the object with `Object.setPrototypeOf({}, null)`, not with `{ __proto__: null }` or `__create(null)`. V8 keeps the properties of an object from `{ __proto__: null }` or `Object.create(null)` in a hash table (dictionary mode). So code that reads an export from such a namespace object runs slowly. V8 does not put an object from `Object.setPrototypeOf({}, null)` in dictionary mode, also after `__reExport` adds getters. The frozen empty object still uses `{ __proto__: null }`, because it has no properties.
+
+In Node 26, a loop of 5e7 iterations that reads two exports took about 700 ms with `{ __proto__: null }`. The same loop took about 50 ms with `Object.setPrototypeOf({}, null)` or with an ordinary object. JavaScriptCore gives the same speed for all three forms.
+
+These differences from a native namespace object stay:
+
+- Each export is a getter, not a data property with `writable: true`. So `Object.getOwnPropertyDescriptor(ns, name)` returns a getter. `Object.isFrozen(ns)` returns `true`, but it returns `false` for a native namespace object with exports.
+- An open object accepts new properties.
+
+These fixtures check the shape: `misc/namespace_object_shape`, `misc/namespace_object_shape_empty`, `misc/namespace_object_shape_open` and `misc/namespace_object_shape_open_flattened_external_star`. The Rust test `test262_module_code` runs the test262 tests of `language/module-code`, and the tests in `namespace/internals` also check the shape. `crates/rolldown/tests/test262_failures.json` lists each namespace test that still fails, with its reason.
+
 ## `__share`, `__share_require`, `__share_export`: the inline common chunk registry
 
 `experimentalInlineCommonChunks` (see `internal-docs/inline-common-chunks/`) prints a common chunk's modules into the files that read them, wrapped in a factory. The registry makes those copies one module instance:

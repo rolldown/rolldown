@@ -13,15 +13,16 @@ use oxc_index::{IndexVec, index_vec};
 use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
-  ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, ResolvedImportRecord, RuntimeHelper, SymbolRef,
-  SymbolRefDb, TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView,
-  WrapKind,
+  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, NamedImport, NormalModule, OutputFormat,
+  PostChunkOptimizationOperation, PreserveEntrySignatures, RUNTIME_HELPER_NAMES,
+  ResolvedImportRecord, RuntimeHelper, StaticImport, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
 };
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
+use std::hash::Hash;
 
 type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxIndexSet<SymbolRef>>;
 type IndexChunkImportsFromExternalModules =
@@ -33,6 +34,14 @@ type IndexCrossChunkDynamicImports = IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>;
 type IndexChunkDynamicImportsFromExternalModules = IndexVec<ChunkIdx, FxIndexSet<ModuleIdx>>;
 type IndexImportsFromOtherChunks =
   IndexVec<ChunkIdx, FxHashMap<ChunkIdx, Vec<CrossChunkImportItem>>>;
+
+/// The ranks that the source order walk of a chunk gives the chunks and the external modules that
+/// it imports, in one sequence (`GenerateStage::chunk_import_ranks`).
+#[derive(Default)]
+struct ChunkImportRanks {
+  chunks: FxHashMap<ChunkIdx, u32>,
+  externals: FxHashMap<ModuleIdx, u32>,
+}
 
 /// A chunk is loaded through `import('./chunk.js')`, whose promise resolves with the chunk's
 /// namespace object. Promise resolution assimilates any value with a callable `then` as a
@@ -182,21 +191,27 @@ impl GenerateStage<'_> {
       &order_live_symbols,
     );
 
-    // The strict path keeps the `exec_order` sort: its order analysis models chunk evaluation with
-    // that order, and the plan's wrappers fix the module order.
-    let index_importee_ranks = if self.options.is_strict_execution_order_enabled() {
-      vec![None; chunk_graph.chunk_table.len()]
-    } else {
-      chunk_graph
-        .chunk_table
-        .par_iter_enumerated()
-        .map(|(chunk_idx, chunk)| {
-          // Only a chunk with two or more importees has an order to choose.
-          (index_cross_chunk_imports[chunk_idx].len() + chunk.imports_from_other_chunks.len() > 1)
-            .then(|| self.chunk_importee_ranks(chunk_graph, chunk_idx))
-        })
-        .collect::<Vec<_>>()
-    };
+    // The strict path keeps the `exec_order` sort of chunk importees: its order analysis models
+    // chunk evaluation with that order, and the plan's wrappers fix the module order. The analysis
+    // does not model external imports, so they get ranks on both paths. On the strict path the ranks
+    // of the chunk importees only place the external imports among the chunk imports.
+    let is_strict_execution_order = self.options.is_strict_execution_order_enabled();
+    let index_import_ranks = chunk_graph
+      .chunk_table
+      .par_iter_enumerated()
+      .map(|(chunk_idx, chunk)| {
+        // Only a chunk with two or more static imports has an order to choose.
+        let import_count = index_cross_chunk_imports[chunk_idx].len()
+          + chunk.imports_from_other_chunks.len()
+          + index_chunk_direct_imports_from_external_modules[chunk_idx].len()
+          + chunk.entry_level_external_module_idx.len();
+        (import_count > 1).then(|| self.chunk_import_ranks(chunk_graph, chunk_idx))
+      })
+      .collect::<Vec<_>>();
+    let index_importee_ranks = index_import_ranks
+      .iter()
+      .map(|ranks| ranks.as_ref().filter(|_| !is_strict_execution_order).map(|ranks| &ranks.chunks))
+      .collect::<Vec<_>>();
 
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
       .par_iter_enumerated()
@@ -212,7 +227,7 @@ impl GenerateStage<'_> {
         sort_chunk_importees(
           chunk_graph,
           &mut cross_chunk_imports,
-          index_importee_ranks[chunk_idx.index()].as_ref(),
+          index_importee_ranks[chunk_idx.index()],
         );
         cross_chunk_imports
       })
@@ -232,11 +247,7 @@ impl GenerateStage<'_> {
           importee_map.entry(*idx).or_default().extend_from_slice(items);
         }
         let mut importees = importee_map.keys().copied().collect::<Vec<_>>();
-        sort_chunk_importees(
-          chunk_graph,
-          &mut importees,
-          index_importee_ranks[chunk_idx.index()].as_ref(),
-        );
+        sort_chunk_importees(chunk_graph, &mut importees, index_importee_ranks[chunk_idx.index()]);
         importees
           .into_iter()
           .map(|importee| {
@@ -247,23 +258,57 @@ impl GenerateStage<'_> {
       })
       .collect::<Vec<_>>();
 
-    let index_sorted_imports_from_external_modules =
-      index_chunk_direct_imports_from_external_modules
-        .into_iter()
-        .map(|imports_from_external_modules| {
-          imports_from_external_modules
-            .into_iter()
-            .sorted_unstable_by_key(|(external_module_id, _)| {
-              self.link_output.module_table[*external_module_id].exec_order()
-            })
-            .collect_vec()
-        })
-        .collect::<Vec<_>>();
+    let (index_sorted_imports_from_external_modules, index_static_external_imports): (
+      Vec<_>,
+      Vec<_>,
+    ) = index_chunk_direct_imports_from_external_modules
+      .into_iter_enumerated()
+      .map(|(chunk_idx, mut imports_from_external_modules)| {
+        let entry_level = &chunk_graph.chunk_table[chunk_idx].entry_level_external_module_idx;
+        let mut static_imports = imports_from_external_modules
+          .keys()
+          .copied()
+          .chain(
+            entry_level
+              .iter()
+              .copied()
+              .filter(|module_idx| !imports_from_external_modules.contains_key(module_idx)),
+          )
+          .collect_vec();
+        sort_chunk_importees_by(
+          &mut static_imports,
+          |module_idx| self.link_output.module_table[module_idx].exec_order(),
+          index_import_ranks[chunk_idx.index()].as_ref().map(|ranks| &ranks.externals),
+        );
+        let sorted_imports = static_imports
+          .iter()
+          .filter_map(|importee| {
+            imports_from_external_modules
+              .remove(importee)
+              .map(|named_imports| (*importee, named_imports))
+          })
+          .collect_vec();
+        (sorted_imports, static_imports)
+      })
+      .unzip();
+
+    let index_static_imports = index_static_external_imports
+      .into_iter()
+      .enumerate()
+      .map(|(index, external_imports)| {
+        interleave_static_imports(
+          &index_sorted_cross_chunk_imports[index],
+          &external_imports,
+          index_import_ranks[index].as_ref(),
+        )
+      })
+      .collect::<Vec<_>>();
 
     multizip((
       chunk_graph.chunk_table.iter_mut(),
       index_sorted_imports_from_other_chunks,
       index_sorted_imports_from_external_modules,
+      index_static_imports,
       index_sorted_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
       index_chunk_dynamic_imports_from_external_modules,
@@ -275,6 +320,7 @@ impl GenerateStage<'_> {
         chunk,
         sorted_imports_from_other_chunks,
         imports_from_external_modules,
+        static_imports,
         cross_chunk_imports,
         cross_chunk_dynamic_imports,
         dynamic_imports_from_external_modules,
@@ -286,6 +332,7 @@ impl GenerateStage<'_> {
         }
         chunk.imports_from_other_chunks = sorted_imports_from_other_chunks;
         chunk.direct_imports_from_external_modules = imports_from_external_modules;
+        chunk.static_imports = static_imports;
         chunk.cross_chunk_imports = cross_chunk_imports;
         chunk.cross_chunk_dynamic_imports =
           cross_chunk_dynamic_imports.into_iter().collect::<Vec<_>>();
@@ -368,10 +415,25 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
     chunk_idx: ChunkIdx,
   ) -> FxHashMap<ChunkIdx, u32> {
+    self.chunk_import_ranks(chunk_graph, chunk_idx).chunks
+  }
+
+  /// The ranks of `chunk_importee_ranks`, plus ranks for the external modules that the walk
+  /// reaches. The chunks and the external modules take their ranks from one sequence, so that
+  /// `interleave_static_imports` can write the chunk imports and the external imports in one order.
+  /// See internal-docs/code-splitting/implementation.md#chunk-import-order.
+  fn chunk_import_ranks(&self, chunk_graph: &ChunkGraph, chunk_idx: ChunkIdx) -> ChunkImportRanks {
     let chunk = &chunk_graph.chunk_table[chunk_idx];
     let module_table = &self.link_output.module_table;
     let runtime_idx = self.link_output.runtime.id();
     let mut ranks = FxHashMap::default();
+    let mut external_ranks = FxHashMap::default();
+    let mut next_rank = 0u32;
+    let mut take_rank = || {
+      let rank = next_rank;
+      next_rank = next_rank.checked_add(1).expect("Too many importees, u32 overflowed.");
+      rank
+    };
     // The stack pops the lead module first.
     let mut stack = match chunk.kind {
       ChunkKind::EntryPoint { module, .. } => {
@@ -386,7 +448,7 @@ impl GenerateStage<'_> {
           .filter(|&module_idx| module_idx != runtime_idx)
           .max_by_key(|&module_idx| module_table[module_idx].exec_order())
         else {
-          return ranks;
+          return ChunkImportRanks::default();
         };
         vec![lead_module]
       }
@@ -400,26 +462,32 @@ impl GenerateStage<'_> {
       }
       match chunk_graph.module_to_chunk[module_idx] {
         Some(importee) if importee != chunk_idx => {
-          let rank = u32::try_from(ranks.len()).expect("Too many chunks, u32 overflowed.");
-          ranks.entry(importee).or_insert(rank);
+          ranks.entry(importee).or_insert_with(&mut take_rank);
         }
         Some(_) => {
           walked += 1;
-          self.push_kept_static_importees(module_idx, &mut importees);
-          stack.extend(importees.drain(..).rev());
+          // The runtime only imports helper externals such as `node:module`, which keep their
+          // `exec_order` position.
+          if module_idx != runtime_idx {
+            self.push_kept_static_importees(module_idx, &mut importees);
+            stack.extend(importees.drain(..).rev());
+          }
         }
-        // An external module.
-        None => {}
+        None => {
+          if module_table[module_idx].is_external() {
+            external_ranks.insert(module_idx, take_rank());
+          }
+        }
       }
     }
     if matches!(chunk.kind, ChunkKind::Common) {
       let module_count =
         chunk.modules.iter().filter(|&&module_idx| module_idx != runtime_idx).count();
       if walked < module_count {
-        return FxHashMap::default();
+        return ChunkImportRanks::default();
       }
     }
-    ranks
+    ChunkImportRanks { chunks: ranks, externals: external_ranks }
   }
 
   /// Whether the code of a chunk imports another chunk: a module of the chunk has a static import
@@ -437,6 +505,84 @@ impl GenerateStage<'_> {
         .drain(..)
         .any(|importee| chunk_graph.module_to_chunk[importee] == Some(importee_chunk_idx))
     })
+  }
+
+  /// The modules that declare the constants that the included statements of a module read, by name
+  /// or as a namespace member such as `ns.SIZE`, in source order.
+  fn read_constant_owners(&self, module_idx: ModuleIdx) -> FxIndexSet<ModuleIdx> {
+    let meta = &self.link_output.metas[module_idx];
+    let mut owners = FxIndexSet::default();
+    for (stmt_idx, stmt_info) in self.link_output.stmt_infos[module_idx].iter_enumerated() {
+      if !meta.stmt_info_included.has_bit(stmt_idx) {
+        continue;
+      }
+      for reference in &stmt_info.referenced_symbols {
+        let symbol_ref = match reference {
+          SymbolOrMemberExprRef::Symbol(symbol_ref) => Some(*symbol_ref),
+          SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+            member_expr.represent_symbol_ref(&meta.resolved_member_expr_refs)
+          }
+        };
+        let Some(symbol_ref) = symbol_ref else { continue };
+        let canonical_ref = self.link_output.symbol_db.canonical_ref_for(symbol_ref);
+        if self.link_output.global_constant_symbol_map.contains_key(&canonical_ref) {
+          owners.insert(canonical_ref.owner);
+        }
+      }
+    }
+    owners
+  }
+
+  /// Whether the output keeps the module that declares an inlined constant, because the module or
+  /// one of its dependencies has side effects.
+  fn keeps_constant_owner(&self, owner: ModuleIdx) -> bool {
+    self.link_output.module_table[owner].side_effects().has_side_effects()
+      || self.link_output.metas[owner]
+        .has_side_effectful_dependency(&self.link_output.module_table.modules)
+  }
+
+  /// The inlined constants that the included statements of a module read through a namespace
+  /// import, such as `ns.SIZE` for `import * as ns from './ui.js'`, each with the record of that
+  /// import. Only constants whose module the output keeps count, because the output imports the
+  /// chunk of such a module for them. They are sorted by the `exec_order` of their modules, the
+  /// order that the chunks have without ranks.
+  fn namespace_constant_reads(&self, module: &NormalModule) -> Vec<(ImportRecordIdx, SymbolRef)> {
+    if !module.named_imports.values().any(|named_import| named_import.imported.is_star()) {
+      return vec![];
+    }
+    let meta = &self.link_output.metas[module.idx];
+    let mut reads = vec![];
+    for (stmt_idx, stmt_info) in self.link_output.stmt_infos[module.idx].iter_enumerated() {
+      if !meta.stmt_info_included.has_bit(stmt_idx) {
+        continue;
+      }
+      for reference in &stmt_info.referenced_symbols {
+        let SymbolOrMemberExprRef::MemberExpr(member_expr) = reference else {
+          continue;
+        };
+        let Some(named_import) = module.named_imports.get(&member_expr.object_ref) else {
+          continue;
+        };
+        if !named_import.imported.is_star() {
+          continue;
+        }
+        let Some(symbol_ref) = member_expr.represent_symbol_ref(&meta.resolved_member_expr_refs)
+        else {
+          continue;
+        };
+        let canonical_ref = self.link_output.symbol_db.canonical_ref_for(symbol_ref);
+        if self.link_output.global_constant_symbol_map.contains_key(&canonical_ref)
+          && self.keeps_constant_owner(canonical_ref.owner)
+        {
+          reads.push((named_import.record_idx, symbol_ref));
+        }
+      }
+    }
+    let symbol_db = &self.link_output.symbol_db;
+    reads.sort_by_key(|&(_, symbol_ref)| {
+      self.link_output.module_table[symbol_db.canonical_ref_for(symbol_ref).owner].exec_order()
+    });
+    reads
   }
 
   /// Pushes the modules that the static imports of a module lead to, in source order. Only the
@@ -479,16 +625,20 @@ impl GenerateStage<'_> {
         importees.push(importee);
         continue;
       }
-      // The modules that declare the bindings of each import record, sorted by record. The runtime
-      // chunk is not ranked, so that it keeps its position.
+      // The modules that declare the bindings of each import record, sorted by record: the bindings
+      // that it imports by name, and the inlined constants read through it as a namespace whose
+      // modules the output keeps, such as `ns.SIZE`. The runtime chunk is not ranked, so that it
+      // keeps its position.
       let binding_owners = binding_owners.get_or_insert_with(|| {
         let symbol_db = &self.link_output.symbol_db;
         let runtime_idx = self.link_output.runtime.id();
         let mut owners = module
           .named_imports
           .values()
-          .flat_map(|named_import| {
-            let canonical_ref = symbol_db.canonical_ref_for(named_import.imported_as);
+          .map(|named_import| (named_import.record_idx, named_import.imported_as))
+          .chain(self.namespace_constant_reads(module))
+          .flat_map(|(record_idx, symbol_ref)| {
+            let canonical_ref = symbol_db.canonical_ref_for(symbol_ref);
             let namespace_owner = symbol_db
               .get(canonical_ref)
               .namespace_alias
@@ -496,7 +646,7 @@ impl GenerateStage<'_> {
               .map(|ns| ns.namespace_ref.owner);
             std::iter::once(canonical_ref.owner)
               .chain(namespace_owner)
-              .map(|owner| (named_import.record_idx, owner))
+              .map(move |owner| (record_idx, owner))
           })
           .filter(|&(_, owner)| owner != module_idx && owner != runtime_idx)
           .collect::<Vec<_>>();
@@ -584,7 +734,7 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &ChunkGraph,
     index_sorted_cross_chunk_imports: &[Vec<ChunkIdx>],
-    index_importee_ranks: &[Option<FxHashMap<ChunkIdx, u32>>],
+    index_importee_ranks: &[Option<&FxHashMap<ChunkIdx, u32>>],
   ) {
     if self.options.is_strict_execution_order_enabled() {
       return;
@@ -603,7 +753,10 @@ impl GenerateStage<'_> {
     let standalone_key = |chunk_idx: ChunkIdx| {
       let chunk = &chunk_graph.chunk_table[chunk_idx];
       match chunk.kind {
-        ChunkKind::EntryPoint { module, .. } => (module_table[module].exec_order(), false),
+        ChunkKind::EntryPoint { module, .. } => (
+          self.entry_chunk_exec_order(&chunk_graph.module_to_chunk, chunk_idx, chunk, module),
+          false,
+        ),
         ChunkKind::Common => {
           let lead = chunk
             .modules
@@ -623,7 +776,7 @@ impl GenerateStage<'_> {
         sort_chunk_importees_by(
           &mut importees,
           standalone_key,
-          index_importee_ranks[chunk_idx.index()].as_ref(),
+          index_importee_ranks[chunk_idx.index()],
         );
       }
       importees
@@ -665,9 +818,10 @@ impl GenerateStage<'_> {
   ///   reachability truthful; this direction validates that the gate mirrors emission. The base
   ///   prediction is exempt from this direction: it filters `load_dependencies`, the same edges
   ///   the pre-prediction bits reachability trusted, so its over-predictions are exactly
-  ///   main-parity — e.g. constant inlining drops a symbol's import (and can even orphan an
-  ///   annotated-side-effectful chunk, see `rollup@chunking form@namespace-reexport-side-effect-cache`)
-  ///   without touching `load_dependencies`, on main just as here.
+  ///   main-parity — e.g. constant inlining drops a symbol's import without touching
+  ///   `load_dependencies`, and can still orphan an annotated-side-effectful chunk: a
+  ///   side-effectful module between a removed barrel and a side-effect-free declaring module ends
+  ///   up in a chunk that no entry imports (#10688).
   ///
   /// Service imports hang on the entry (possibly facade) chunk, so entry chunks predict them via
   /// their `entry_module_idx` — hosted or not — plus the facade edge to the chunk hosting a
@@ -904,6 +1058,11 @@ impl GenerateStage<'_> {
       .copied()
       .or(chunk_graph.module_to_chunk[importee_module_idx])
       .expect("importee chunk should exist");
+    if chunk_graph.module_to_chunk[importer_idx]
+      .is_some_and(|importer_chunk| importer_chunk == importee_chunk)
+    {
+      return;
+    }
     cross_chunk_dynamic_imports.insert(importee_chunk);
   }
 
@@ -923,7 +1082,6 @@ impl GenerateStage<'_> {
     final_esm_init_metadata: FinalEsmInitMetadataAvailability<'_>,
   ) -> SymbolChunkTable {
     let symbols = &self.link_output.symbol_db;
-    let chunk_id_to_symbols_vec = append_only_vec::AppendOnlyVec::new();
 
     let chunks_iter = multizip((
       chunk_graph.chunk_table.iter_enumerated(),
@@ -933,7 +1091,8 @@ impl GenerateStage<'_> {
       index_chunk_dynamic_imports_from_external_modules.iter_mut(),
     ));
 
-    chunks_iter.par_bridge().for_each(
+    // Chunks arrive in no fixed order; `build_symbol_chunk_table` does not depend on it.
+    let chunk_symbols = chunks_iter.par_bridge().map(
       |(
         (chunk_id, chunk),
         depended_symbols,
@@ -1120,17 +1279,17 @@ impl GenerateStage<'_> {
           depended_symbols.insert(self.link_output.runtime.resolve_symbol(name));
         }
 
-        chunk_id_to_symbols_vec.push((chunk_id, symbol_needs_to_assign));
+        (chunk_id, symbol_needs_to_assign)
       },
     );
-    self.build_symbol_chunk_table(chunk_id_to_symbols_vec)
+    self.build_symbol_chunk_table(chunk_symbols.collect())
   }
 
   /// Record which chunk owns each declared symbol, so [`Self::compute_chunk_imports`] can resolve a
   /// depended symbol to the chunk it must be imported from.
   fn build_symbol_chunk_table(
     &self,
-    chunk_id_to_symbols_vec: append_only_vec::AppendOnlyVec<(ChunkIdx, Vec<TaggedSymbolRef>)>,
+    chunk_id_to_symbols_vec: Vec<(ChunkIdx, Vec<TaggedSymbolRef>)>,
   ) -> SymbolChunkTable {
     let mut map = FxHashMap::default();
     for (chunk_idx, symbol_list) in chunk_id_to_symbols_vec {
@@ -1158,8 +1317,8 @@ impl GenerateStage<'_> {
   }
 
   /// Register what a non-CJS entry's export signature makes the chunk depend on: the canonical
-  /// symbol of every re-exported binding, plus — off-strict — the `init_*` wrapper of every
-  /// ESM-wrapped module backing one. The wrappers come from the same walk entry emission
+  /// symbol of every re-exported binding, plus — off-strict, for unwrapped entries — the `init_*`
+  /// wrapper of every ESM-wrapped module backing one. The wrappers come from the same walk emission
   /// consumes (`collect_entry_reexported_wrapper_inits`), so everything the entry chunk may call
   /// is imported by construction; `None` for the names because registration runs before chunk
   /// names exist — it is what makes a wrapper reachable. The entry's own wrapper is not part of
@@ -1841,6 +2000,43 @@ impl GenerateStage<'_> {
             imports_from_other_chunks.entry(importee_chunk_idx).or_default();
           }
 
+          // Constant inlining drops the import of a constant, whether it is imported directly,
+          // through a barrel, or read as a namespace member; the module that declares it still has
+          // to be loaded when it or a dependency has side effects.
+          let mut predicted_targets = None;
+          for owner in self.read_constant_owners(module_idx) {
+            // A module behind an order wrapper runs when its init is called, so a bare import of
+            // its chunk would only load that chunk earlier.
+            if self.options.is_strict_execution_order_enabled()
+              && order_state.esm_init_target(owner, &self.link_output.metas[owner]).is_some()
+            {
+              continue;
+            }
+            if !self.keeps_constant_owner(owner) {
+              continue;
+            }
+            let Some(owner_chunk_idx) = chunk_graph.module_to_chunk[owner] else {
+              continue;
+            };
+            if owner_chunk_idx == chunk_id {
+              continue;
+            }
+            // The already-loaded cycle check sees only predicted edges.
+            if !predicted_targets
+              .get_or_insert_with(|| {
+                self
+                  .predicted_static_import_targets(module_idx)
+                  .into_iter()
+                  .collect::<FxHashSet<_>>()
+              })
+              .contains(&owner)
+            {
+              continue;
+            }
+            index_cross_chunk_imports[chunk_id].insert(owner_chunk_idx);
+            index_imports_from_other_chunks[chunk_id].entry(owner_chunk_idx).or_default();
+          }
+
           // Runtime module may have side effects (e.g. dev/HMR mode) without an import record.
           if self.link_output.metas[module_idx].has_side_effectful_runtime_dep {
             let runtime_idx = self.link_output.runtime.id();
@@ -2118,26 +2314,69 @@ fn sort_chunk_importees(
 
 /// The sort of `sort_chunk_importees` with any order key in the place of `exec_order`. The runtime
 /// host check `runtime_host_keeps_evaluation_order` sorts with the key that a host would get.
-pub(super) fn sort_chunk_importees_by<K: Ord>(
-  importees: &mut [ChunkIdx],
-  key: impl Fn(ChunkIdx) -> K,
-  ranks: Option<&FxHashMap<ChunkIdx, u32>>,
+pub(super) fn sort_chunk_importees_by<T: Copy + Eq + Hash, K: Ord>(
+  importees: &mut [T],
+  key: impl Fn(T) -> K,
+  ranks: Option<&FxHashMap<T, u32>>,
 ) {
-  importees.sort_unstable_by_key(|chunk_idx| key(*chunk_idx));
+  importees.sort_unstable_by_key(|importee| key(*importee));
   let Some(ranks) = ranks else {
     return;
   };
   let mut ranked =
-    importees.iter().copied().filter(|chunk_idx| ranks.contains_key(chunk_idx)).collect::<Vec<_>>();
+    importees.iter().copied().filter(|importee| ranks.contains_key(importee)).collect::<Vec<_>>();
   if ranked.len() < 2 {
     return;
   }
-  ranked.sort_unstable_by_key(|chunk_idx| ranks[chunk_idx]);
-  for (slot, chunk_idx) in
-    importees.iter_mut().filter(|chunk_idx| ranks.contains_key(*chunk_idx)).zip(ranked)
+  ranked.sort_unstable_by_key(|importee| ranks[importee]);
+  for (slot, importee) in
+    importees.iter_mut().filter(|importee| ranks.contains_key(*importee)).zip(ranked)
   {
-    *slot = chunk_idx;
+    *slot = importee;
   }
+}
+
+/// Writes the chunk imports and the external imports of a chunk as one list. Each group keeps its
+/// own order, and `ranks` place the importees among each other: an importee goes before the
+/// importees of the other group with a later rank. An importee without a rank goes right after the
+/// importee before it in its group, or first when it starts its group. Between equal ranks a chunk
+/// import goes first, so the runtime chunk, which keeps its first place among the chunk imports
+/// without a rank, stays first. An importee that a list has twice is written once, at its first
+/// place.
+/// See internal-docs/code-splitting/implementation.md#chunk-import-order.
+fn interleave_static_imports(
+  chunk_imports: &[ChunkIdx],
+  external_imports: &[ModuleIdx],
+  ranks: Option<&ChunkImportRanks>,
+) -> Vec<StaticImport> {
+  let chunk_key = |chunk_idx| ranks.and_then(|ranks| ranks.chunks.get(&chunk_idx).copied());
+  let external_key = |module_idx| ranks.and_then(|ranks| ranks.externals.get(&module_idx).copied());
+  let mut static_imports = Vec::with_capacity(chunk_imports.len() + external_imports.len());
+  let (mut chunk_imports, mut external_imports) = (
+    chunk_imports.iter().copied().unique().peekable(),
+    external_imports.iter().copied().unique().peekable(),
+  );
+  // The key of the importee last written of each group, for an importee without a key.
+  let (mut last_chunk_key, mut last_external_key) = (None, None);
+  loop {
+    let next_chunk = chunk_imports.peek().map(|&chunk_idx| chunk_key(chunk_idx).or(last_chunk_key));
+    let next_external =
+      external_imports.peek().map(|&module_idx| external_key(module_idx).or(last_external_key));
+    let take_chunk = match (next_chunk, next_external) {
+      (None, None) => break,
+      (Some(_), None) => true,
+      (None, Some(_)) => false,
+      (Some(chunk_key), Some(external_key)) => chunk_key <= external_key,
+    };
+    if take_chunk {
+      last_chunk_key = next_chunk.flatten();
+      static_imports.push(StaticImport::Chunk(chunk_imports.next().expect("peeked above")));
+    } else {
+      last_external_key = next_external.flatten();
+      static_imports.push(StaticImport::External(external_imports.next().expect("peeked above")));
+    }
+  }
+  static_imports
 }
 
 /// The chunks in the order in which they evaluate when `root` loads and no other chunk has run: a

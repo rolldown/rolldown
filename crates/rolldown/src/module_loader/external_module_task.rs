@@ -6,44 +6,36 @@ use rolldown_common::{
   ResolvedId,
 };
 use rolldown_error::BuildResult;
-use rolldown_utils::{commondir, ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
+use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 use sugar_path::SugarPath;
 
 use rolldown_fs::FileSystem;
 
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 
-use super::task_context::TaskContext;
+use super::task_context::{TaskContext, TaskMessageGuard};
 
-#[expect(clippy::rc_buffer)]
 pub struct ExternalModuleTask<Fs: FileSystem> {
   ctx: Arc<TaskContext<Fs>>,
   module_idx: ModuleIdx,
   resolved_id: ResolvedId,
-  user_defined_entries: Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
   // The module is asserted to be this specific module type.
 }
 
-#[expect(clippy::rc_buffer)]
 impl<Fs: FileSystem> ExternalModuleTask<Fs> {
-  pub fn new(
-    ctx: Arc<TaskContext<Fs>>,
-    idx: ModuleIdx,
-    resolved_id: ResolvedId,
-    user_defined_entries: Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
-  ) -> Self {
-    Self { ctx, module_idx: idx, resolved_id, user_defined_entries }
+  pub fn new(ctx: Arc<TaskContext<Fs>>, idx: ModuleIdx, resolved_id: ResolvedId) -> Self {
+    Self { ctx, module_idx: idx, resolved_id }
   }
 
   #[tracing::instrument(name="ExternalModuleTask::run", level = "trace", skip_all, fields(module_id = %self.resolved_id.id))]
   pub async fn run(self) {
+    let guard = TaskMessageGuard::new(&self.ctx, self.resolved_id.id.clone());
     if let Err(errs) = self.run_inner().await {
-      self
-        .ctx
-        .tx
-        .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
-        .expect("ModuleLoader: failed to send external module build errors - main thread terminated while processing errors");
+      // The send fails only when the build was dropped before this task finished.
+      // Then nothing reads the result, so ignore the error.
+      let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
+    guard.mark_sent();
   }
 
   async fn run_inner(&self) -> BuildResult<()> {
@@ -70,35 +62,27 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
     let need_renormalize_render_path =
       !matches!(resolved_id.external, ResolvedExternal::Absolute) && resolved_id.id.is_path();
 
-    let file_name: ArcStr = if need_renormalize_render_path {
-      let entries_common_dir = commondir::common_dir(
-        self.user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.as_str()),
-      )
-      .expect("should have common dir for entries");
-      let relative_path = Path::new(resolved_id.id.as_str()).relative(&entries_common_dir);
-      ArcStr::from(relative_path.to_slash())
-    } else {
-      resolved_id.id.as_arc_str().clone()
-    };
+    let raw_id = resolved_id.id.raw_id();
 
     let identifier_name: ArcStr = if need_renormalize_render_path {
-      let relative_path = Path::new(resolved_id.id.as_str()).relative(&self.ctx.options.cwd);
+      let relative_path = Path::new(raw_id).relative(&self.ctx.options.cwd);
       ArcStr::from(relative_path.to_slash())
     } else {
-      resolved_id.id.as_arc_str().clone()
+      raw_id.into()
     };
     let legitimized_identifier_name = legitimize_identifier_name(&identifier_name);
     let msg = ModuleLoaderMsg::ExternalModuleDone(Box::new(ExternalModuleTaskResult {
       idx: self.module_idx,
       id: resolved_id.id.clone(),
-      name: file_name,
+      name: raw_id.into(),
       identifier_name: legitimized_identifier_name.into(),
       side_effects: external_module_side_effects,
       need_renormalize_render_path,
+      attributes: resolved_id.attributes.clone(),
     }));
-    self.ctx.tx.send(msg).expect(
-      "ModuleLoader channel closed while sending external module completion - main thread terminated unexpectedly"
-    );
+    // The send fails only when the build was dropped before this task finished.
+    // Then nothing reads the result, so ignore the error.
+    let _ = self.ctx.tx.send(msg);
     Ok(())
   }
 }

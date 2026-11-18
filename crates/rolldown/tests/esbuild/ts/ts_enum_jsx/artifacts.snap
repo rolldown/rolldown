@@ -40,7 +40,7 @@ let x;
 		_y.Foo = /* @__PURE__ */ function(Foo) {
 			Foo["Div"] = "div";
 			return Foo;
-		}({});
+		}(_y.Foo || {});
 	})(y || (y = _x.y || (_x.y = {})));
 })(x || (x = {}));
 (function(_x2) {
@@ -63,7 +63,7 @@ let x;
 		_y.React = /* @__PURE__ */ function(React) {
 			React["Fragment"] = "div";
 			return React;
-		}({});
+		}(_y.React || {});
 	})(y || (y = _x.y || (_x.y = {})));
 })(x || (x = {}));
 (function(_x2) {

@@ -15,7 +15,7 @@
 const INF = 1e12;
 
 /** Entry module indices (the flow sources). */
-function entryIdx(graph) {
+export function entryIdx(graph) {
   const idOf = new Map(graph.modules.map((m, i) => [m.id, i]));
   return (graph.entryModules ?? []).map((id) => idOf.get(id)).filter((i) => i != null);
 }

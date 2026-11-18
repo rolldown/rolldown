@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
 // main.js
-var main_exports = /* @__PURE__ */ __exportAll({ main: () => main });
+var main_exports = /* @__PURE__ */ __exportAll({ main: () => main }, 2);
 __reExport(main_exports, require("node:fs"));
 var main;
 var init_main = __esmMin((() => {

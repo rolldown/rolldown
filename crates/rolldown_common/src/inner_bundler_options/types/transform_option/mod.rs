@@ -64,28 +64,6 @@ impl From<crate::utils::enhanced_transform::EnhancedTransformOptions> for Transf
   }
 }
 
-impl From<TransformOptions> for crate::utils::enhanced_transform::EnhancedTransformOptions {
-  fn from(options: TransformOptions) -> Self {
-    Self {
-      jsx: options.jsx,
-      target: options.target,
-      assumptions: options.assumptions,
-      decorator: options.decorator,
-      typescript: options.typescript,
-      plugins: options.plugins,
-      helpers: options.helpers,
-      // These fields are not present in TransformOptions
-      cwd: None,
-      source_type: None,
-      tsconfig: None,
-      sourcemap: false,
-      input_map: None,
-      define: None,
-      inject: None,
-    }
-  }
-}
-
 impl TryFrom<TransformOptions> for oxc::transformer::TransformOptions {
   type Error = String;
 

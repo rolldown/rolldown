@@ -20,9 +20,3 @@ impl DerefMut for ChunkTable {
     &mut self.chunks
   }
 }
-
-impl ChunkTable {
-  pub fn new(chunks: IndexChunks) -> Self {
-    Self { chunks }
-  }
-}

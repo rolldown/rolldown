@@ -1,0 +1,198 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## app.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// base.ts
+var Base;
+var init_base = __esmMin((() => {
+	init_app();
+	Base = class {
+		get app() {
+			return App;
+		}
+	};
+}));
+// child.ts
+var Child;
+var init_child = __esmMin((() => {
+	init_base();
+	Child = class extends Base {};
+}));
+// app.ts
+var App;
+var init_app = __esmMin((() => {
+	init_child();
+	App = class {
+		static create() {
+			return new Child();
+		}
+	};
+}));
+export { Base as a, __esmMin as c, init_child as i, __exportAll as l, init_app as n, init_base as o, Child as r, __commonJSMin as s, App as t, __toCommonJS as u };
+
+```
+
+## consumer.js
+
+```js
+import { s as __commonJSMin, u as __toCommonJS } from "./app.js";
+import { n as lib_exports, t as init_lib } from "./lib2.js";
+// consumer.cts
+var require_consumer = /* @__PURE__ */ __commonJSMin(((exports) => {
+	const lib = (init_lib(), __toCommonJS(lib_exports));
+	exports.create = () => lib.App.create();
+}));
+export default require_consumer();
+
+```
+
+## lib.js
+
+```js
+export { t as App, a as Base, r as Child } from "./app.js";
+import { t as init_lib } from "./lib2.js";
+init_lib();
+
+```
+
+## lib2.js
+
+```js
+import { a as Base, c as __esmMin, i as init_child, l as __exportAll, n as init_app, o as init_base, r as Child, t as App } from "./app.js";
+// lib.ts
+var lib_exports = /* @__PURE__ */ __exportAll({
+	App: () => App,
+	Base: () => Base,
+	Child: () => Child
+});
+var init_lib = __esmMin((() => {
+	init_app();
+	init_base();
+	init_child();
+}));
+export { lib_exports as n, init_lib as t };
+
+```
+
+## other.js
+
+```js
+import { a as Base, o as init_base } from "./app.js";
+// other.ts
+init_base();
+const other = () => Base;
+export { other };
+
+```
+
+# Variant: strict: [strict_execution_order: true]
+
+## Assets
+
+### app.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+// base.ts
+var Base;
+var init_base = __esmMin((() => {
+	init_app();
+	Base = class {
+		get app() {
+			return App;
+		}
+	};
+}));
+// child.ts
+var Child;
+var init_child = __esmMin((() => {
+	init_base();
+	Child = class extends Base {};
+}));
+// app.ts
+var App;
+var init_app = __esmMin((() => {
+	init_child();
+	App = class {
+		static create() {
+			return new Child();
+		}
+	};
+}));
+export { Base as a, init_child as i, init_app as n, init_base as o, Child as r, App as t };
+
+```
+
+### consumer.js
+
+```js
+import { i as __toCommonJS, t as __commonJSMin } from "./rolldown-runtime.js";
+import { n as lib_exports, t as init_lib } from "./lib2.js";
+// consumer.cts
+var require_consumer = /* @__PURE__ */ __commonJSMin(((exports) => {
+	const lib = (init_lib(), __toCommonJS(lib_exports));
+	exports.create = () => lib.App.create();
+}));
+export default require_consumer();
+
+```
+
+### lib.js
+
+```js
+export { t as App, a as Base, r as Child } from "./app.js";
+import { t as init_lib } from "./lib2.js";
+init_lib();
+
+```
+
+### lib2.js
+
+```js
+import { n as __esmMin, r as __exportAll } from "./rolldown-runtime.js";
+import { a as Base, i as init_child, n as init_app, o as init_base, r as Child, t as App } from "./app.js";
+// lib.ts
+var lib_exports = /* @__PURE__ */ __exportAll({
+	App: () => App,
+	Base: () => Base,
+	Child: () => Child
+});
+var init_lib = __esmMin((() => {
+	init_app();
+	init_base();
+	init_child();
+}));
+export { lib_exports as n, init_lib as t };
+
+```
+
+### other.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+import { a as Base, o as init_base } from "./app.js";
+// other.ts
+var other;
+function init_other() {
+	return (init_other = __esmMin((() => {
+		init_base();
+		other = () => Base;
+	})))();
+}
+init_other();
+export { other };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+
+```

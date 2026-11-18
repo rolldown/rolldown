@@ -9,6 +9,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { t as compute } from "./shared.js";
 // HIDDEN [\0rolldown/runtime.js]
 // app.js
+(/* @__PURE__ */ __commonJSMin(((exports) => {
+	const key = "then";
+	exports[key] = function(resolve) {
+		resolve("intercepted");
+	};
+})))();
 const own = compute(21) + 1;
 const lazyLoaded = import("./lazy.js").then((m) => m.lazyValue);
 export { lazyLoaded, own };

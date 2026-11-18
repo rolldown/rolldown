@@ -1,0 +1,52 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// tag.js
+const Tag = "div";
+const Ns = 1;
+const Derived = "p";
+// main.jsx
+var Import_cjs = (/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.CjsTag = "div";
+})))();
+const Local = "span";
+const a = <Tag />;
+const b = <Ns.x />;
+const c = <Local>text</Local>;
+const d = <Derived />;
+const e = <Import_cjs.CjsTag />;
+export { Local, a, b, c, d, e };
+
+```
+
+# Variant: inlineConstAllPass2: [inline_const: Config(InlineConstConfig { mode: Some(All), pass: 2 })]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// tag.js
+const Tag = "div";
+const Ns = 1;
+const Derived = "p";
+// main.jsx
+var Import_cjs = (/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.CjsTag = "div";
+})))();
+const Local = "span";
+const a = <Tag />;
+const b = <Ns.x />;
+const c = <Local>text</Local>;
+const d = <Derived />;
+const e = <Import_cjs.CjsTag />;
+export { Local, a, b, c, d, e };
+
+```

@@ -1,0 +1,8 @@
+{
+  "_comment": "With `experimental.importAttributes`, the same file imported with different attributes is a different module, while the key order of the attributes does not matter.",
+  "config": {
+    "experimental": {
+      "importAttributes": true
+    }
+  }
+}

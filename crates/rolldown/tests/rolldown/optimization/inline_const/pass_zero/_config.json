@@ -1,0 +1,20 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "pagea",
+        "import": "./pagea.js"
+      },
+      {
+        "name": "pageb",
+        "import": "./pageb.js"
+      }
+    ],
+    "optimization": {
+      "inlineConst": {
+        "mode": "all",
+        "pass": 0
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { createRequire } from "node:module";
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// main.js
+function foo(id, req) {
+	return [id, typeof req];
+}
+assert.deepStrictEqual(foo("./missing.js", __require), ["./missing.js", "function"]);
+export {};
+
+```

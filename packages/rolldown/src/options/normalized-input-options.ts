@@ -2,7 +2,7 @@ import type { InputOptions, RolldownPlugin } from '..';
 import type { BindingNormalizedOptions } from '../binding.cjs';
 import { lazyProp } from '../decorators/lazy';
 import type { LogHandler } from '../log/log-handler';
-import { PlainObjectLike } from '../types/plain-object-like';
+import { getLazyFields, PlainObjectLike } from '../types/plain-object-like';
 
 /** @category Plugin APIs */
 export interface NormalizedInputOptions {
@@ -30,6 +30,13 @@ export class NormalizedInputOptionsImpl extends PlainObjectLike implements Norma
   ) {
     super();
     this.inner = inner;
+    // Read every option once, then drop the native object, which would keep the plugins alive.
+    // See internal-docs/bundler-data-lifecycle/implementation.md ("Normalized options objects").
+    for (const key of getLazyFields(this)) {
+      Reflect.get(this, key);
+    }
+    // A getter that reads `inner` must be a `@lazyProp`: nothing may read `inner` after this line.
+    this.inner = null as unknown as BindingNormalizedOptions;
   }
 
   @lazyProp

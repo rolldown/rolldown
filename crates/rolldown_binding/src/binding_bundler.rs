@@ -27,8 +27,11 @@ pub struct BindingBundler {
   /// Only the latest build's handle is kept. A handle pins its build's `PluginDriver`, and with
   /// it every module's transformed source.
   last_bundle_handle: Option<BundleHandle>,
-  /// `(total_micros, link_stage_micros)` of the builds before `last_bundle_handle`.
-  finished_timings: (u64, u64),
+  /// The clocks of every build, in order. Each one is shared with its build's `PluginDriver`, so
+  /// keeping it does not keep the driver. The plugin-timing report reads them at `close`, not
+  /// when the next build starts, because a build writes its clocks only when it ends, and builds
+  /// on one bundle can overlap.
+  build_timings: Vec<Arc<BuildTimings>>,
   /// The JS functions of the options of each build. `close` requests their release. Each
   /// `generate`, `write` and `scan` keeps a hold until it ends, because `close` does not wait for
   /// a build that started before it.
@@ -44,17 +47,14 @@ impl BindingBundler {
     Self {
       inner,
       last_bundle_handle: None,
-      finished_timings: (0, 0),
+      build_timings: Vec::new(),
       option_callbacks: SharedJsCallbackRelease::new(Vec::new()),
     }
   }
 
   fn track_bundle_handle(&mut self, handle: BundleHandle) {
-    if let Some(previous) = self.last_bundle_handle.replace(handle) {
-      let timings = &previous.plugin_driver().build_timings;
-      self.finished_timings.0 += timings.total_micros();
-      self.finished_timings.1 += timings.link_stage_micros();
-    }
+    self.build_timings.push(Arc::clone(&handle.plugin_driver().build_timings));
+    self.last_bundle_handle = Some(handle);
   }
 
   #[napi]
@@ -220,7 +220,7 @@ impl BindingBundler {
   pub fn close<'env>(&mut self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
     let cleanup_fut = self.inner.close();
     let last_handle = self.last_bundle_handle.take();
-    let finished_timings = std::mem::take(&mut self.finished_timings);
+    let build_timings = std::mem::take(&mut self.build_timings);
     let option_callbacks = self.option_callbacks.clone();
     spawn_boxed_future(env, async move {
       // Request the release when this future ends. The end comes after `closeBundle` and after
@@ -231,7 +231,7 @@ impl BindingBundler {
       let res = cleanup_fut.await;
       handle_result(res)?;
       // After the cleanup, so `closeBundle` is part of what the other side reports.
-      handle_result(report_plugin_timings(last_handle.as_ref(), finished_timings).await)?;
+      handle_result(report_plugin_timings(last_handle.as_ref(), &build_timings).await)?;
       Ok(())
     })
   }
@@ -259,7 +259,7 @@ impl BindingBundler {
 /// like any other.
 async fn report_plugin_timings(
   last: Option<&BundleHandle>,
-  finished_timings: (u64, u64),
+  build_timings: &[Arc<BuildTimings>],
 ) -> anyhow::Result<()> {
   let Some(last) = last else {
     return Ok(());
@@ -272,9 +272,8 @@ async fn report_plugin_timings(
   // Summed over every output, because the measurement on the other side is: one
   // `RolldownBuild` may generate more than once, and judging a cumulative measurement
   // against only the last output's clocks would both suppress and inflate reports.
-  let last_timings = &last.plugin_driver().build_timings;
-  let total_micros = finished_timings.0 + last_timings.total_micros();
-  let link_micros = finished_timings.1 + last_timings.link_stage_micros();
+  let total_micros: u64 = build_timings.iter().map(|timings| timings.total_micros()).sum();
+  let link_micros: u64 = build_timings.iter().map(|timings| timings.link_stage_micros()).sum();
   if !BuildTimings::is_plugin_bound(total_micros, link_micros) {
     return Ok(());
   }

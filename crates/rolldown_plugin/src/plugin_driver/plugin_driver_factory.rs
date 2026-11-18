@@ -102,7 +102,7 @@ impl PluginDriverFactory {
         tx,
         // The JavaScript side registers this callback only when it is measuring, so its
         // presence is what says a report is coming and the clocks are worth keeping.
-        build_timings: BuildTimings::new(options.plugin_timings.is_some()),
+        build_timings: Arc::new(BuildTimings::new(options.plugin_timings.is_some())),
         log_hook_tasks,
       }
     })

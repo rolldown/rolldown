@@ -15,7 +15,6 @@ use rolldown_plugin::{
   SharedTransformPluginContext,
 };
 use rolldown_utils::pattern_filter::{self, StringOrRegex};
-use rolldown_utils::url::clean_url;
 use rustc_hash::FxHashSet;
 
 #[derive(Debug, Default)]
@@ -79,9 +78,7 @@ impl InjectPlugin {
     code.contains("\\u")
       || code.split(|c: char| !is_identifier_part(c)).any(|word| self.names.contains(word))
   }
-}
 
-impl InjectPlugin {
   /// `transform.inject` runs after TypeScript is stripped, so a name used only as a type gets no import there.
   fn config_without_type_only_names(&self, scoping: &Scoping) -> InjectGlobalVariablesConfig {
     let unresolved = scoping.root_unresolved_references();
@@ -121,8 +118,9 @@ impl Plugin for InjectPlugin {
       ModuleType::Tsx => SourceType::mjs().with_typescript(true).with_jsx(true),
       _ => return Ok(None),
     };
-    let path = clean_url(args.id);
     // Rolldown parses these as CommonJS, where an `import` statement is a syntax error.
+    // Only the query is stripped, since a file name may contain `#`.
+    let path = args.id.split('?').next().unwrap_or_default();
     if path.ends_with(".cjs") || path.ends_with(".cts") {
       return Ok(None);
     }

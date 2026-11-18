@@ -61,7 +61,7 @@ test('skips CommonJS modules', async () => {
   const plugin = inject({ useKey: ['#app', 'useKey'] });
   const code = 'module.exports = useKey();';
 
-  for (const id of ['/src/main.cjs', '/src/main.cts?raw']) {
+  for (const id of ['/src/main.cjs', '/src/main.cts?raw', '/src/has#hash.cjs']) {
     const result = await plugin.transform(code, id, {
       moduleType: id.includes('.cts') ? 'ts' : 'js',
     });

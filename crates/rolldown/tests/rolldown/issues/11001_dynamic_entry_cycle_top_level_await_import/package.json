@@ -1,3 +1,6 @@
 {
-  "sideEffects": ["./z.mjs", "./entry.mjs"]
+  "sideEffects": [
+    "./z.mjs",
+    "./entry.mjs"
+  ]
 }

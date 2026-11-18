@@ -919,17 +919,17 @@ impl GenerateStage<'_> {
 
       if meta.intersects(ChunkMeta::UserDefinedEntry)
         || (is_emitted_entry_chunk
-          && !self.options.is_strict_execution_order_enabled()
           && !is_target_manual_chunk
           && matches!(target_chunk.kind, ChunkKind::Common))
       {
         if matches!(target_chunk.kind, ChunkKind::Common) {
           // Execution-isolation guard (issue #9463).
+          // See internal-docs/code-splitting/implementation.md#facade-elimination-optimize_facade_entry_chunks.
           //
-          // Folding the common chunk *into* this user-defined entry chunk makes the
+          // Folding the common chunk *into* this entry chunk makes the
           // entry chunk eagerly run this entry's top-level (its `init_*` call)
-          // whenever the chunk is loaded. If the common chunk also holds another
-          // incompatible entry's module, that other entry would be forced to import
+          // whenever the chunk is loaded. If the common chunk also holds *another*
+          // entry's module, that other entry would be forced to import
           // this entry chunk just to reach its own module — and would then run this
           // entry's side effects. e.g. loading entry `b` would trigger entry `a`'s
           // side effects. This happens when manual code splitting (a `codeSplitting`
@@ -976,8 +976,8 @@ impl GenerateStage<'_> {
 
       let is_target_pure_user_entry_chunk = matches!(target_chunk.kind, ChunkKind::EntryPoint { meta, module: _ } if meta.is_pure_user_defined_entry());
       let is_target_common_chunk = matches!(target_chunk.kind, ChunkKind::Common);
-      // Six optimization scenarios (scenario 1 is handled above for user-defined entries):
-      // 1. User-defined facade entry chunk merged with common chunk
+      // Six optimization scenarios (scenario 1 is handled above):
+      // 1. User-defined or emitted facade entry chunk merged with common chunk
       //    → Common chunk modules are moved into the entry chunk (handled above)
       // 2. Emitted chunk (AllowExtension) merged into manual code splitting group
       //    → Group by target chunk to detect export name conflicts before merging

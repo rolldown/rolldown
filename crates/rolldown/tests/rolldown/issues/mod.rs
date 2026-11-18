@@ -2,6 +2,8 @@
 mod _10183;
 #[path = "./10991/mod.rs"]
 mod _10991;
+#[path = "./10991_strict/mod.rs"]
+mod _10991_strict;
 #[path = "./11176/mod.rs"]
 mod _11176;
 #[path = "./11253/mod.rs"]

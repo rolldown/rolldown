@@ -1,0 +1,70 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## base.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// shared.js
+var shared;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		shared = 1;
+	})))();
+}
+// base.js
+function init_base() {
+	return (init_base = __esmMin((() => {
+		init_shared();
+	})))();
+}
+init_base();
+export { shared };
+
+```
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// main.js
+function init_main() {
+	return (init_main = __esmMin((() => {})))();
+}
+init_main();
+
+```
+
+## middle.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// middle.js
+function init_middle() {
+	return (init_middle = __esmMin((() => {})))();
+}
+init_middle();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+## top.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// top.js
+function init_top() {
+	return (init_top = __esmMin((() => {})))();
+}
+init_top();
+
+```

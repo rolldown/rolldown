@@ -6,9 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## base.js
 
 ```js
-//#region shared.js
+// shared.js
 const shared = 1;
-//#endregion
 export { shared };
 
 ```

@@ -993,6 +993,21 @@ impl GenerateStage<'_> {
     // The pure dynamic entry chunks that a merge gives modules of other entries. See
     // `find_leaking_dynamic_entry_namespaces`.
     let mut dynamic_entry_merge_targets = FxHashSet::default();
+    let own_side_effect_exec_orders =
+      if allow_merge_common_chunks || allow_avoid_redundant_chunk_loads {
+        self.own_side_effect_exec_orders()
+      } else {
+        IndexVec::new()
+      };
+    // Strict execution order needs neither the fold's predictions nor the merge's order check.
+    let mut predicted_import_targets = if (allow_merge_common_chunks
+      || allow_avoid_redundant_chunk_loads)
+      && !self.options.is_strict_execution_order_enabled()
+    {
+      self.predicted_static_import_targets_by_module()
+    } else {
+      IndexVec::new()
+    };
     // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
     if allow_avoid_redundant_chunk_loads {
       let entries_len: u32 = self
@@ -1009,6 +1024,8 @@ impl GenerateStage<'_> {
         entries_len,
         used_symbol_refs_builder,
         &mut dynamic_entry_merge_targets,
+        &own_side_effect_exec_orders,
+        &mut predicted_import_targets,
       );
     }
     self.extract_standalone_runtime_chunk(
@@ -1036,6 +1053,7 @@ impl GenerateStage<'_> {
       chunk_graph,
       bits_to_chunk,
       &self.link_output.module_table,
+      &own_side_effect_exec_orders,
     );
 
     // 1. Assign modules to corresponding chunks
@@ -1071,6 +1089,7 @@ impl GenerateStage<'_> {
             normal_module.idx,
             chunk_id,
             &self.link_output.module_table,
+            &own_side_effect_exec_orders,
           );
         }
       } else if allow_merge_common_chunks {
@@ -1078,6 +1097,7 @@ impl GenerateStage<'_> {
           normal_module.idx,
           bits,
           &self.link_output.module_table,
+          &own_side_effect_exec_orders,
         );
       } else {
         let mut chunk =
@@ -1097,7 +1117,7 @@ impl GenerateStage<'_> {
     }
 
     if allow_merge_common_chunks {
-      temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas);
+      temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas, &predicted_import_targets);
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,
         bits_to_chunk,

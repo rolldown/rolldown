@@ -56,9 +56,11 @@ test('shares module info across groups and releases it before rendering', async 
             expect(info.moduleSideEffects).toBe(false);
             info.moduleSideEffects = true;
             expect(getPluginModuleInfo('dep')!.moduleSideEffects).toBe(true);
+            // `null` means "not decided": `dep` has no hook value, no option and no
+            // `package.json`, so it shows `true`.
             info.moduleSideEffects = null;
-            expect(info.moduleSideEffects).toBeNull();
-            expect(getPluginModuleInfo('dep')!.moduleSideEffects).toBeNull();
+            expect(info.moduleSideEffects).toBe(true);
+            expect(getPluginModuleInfo('dep')!.moduleSideEffects).toBe(true);
             expect(info.meta).toBe(getPluginModuleInfo('dep')!.meta);
             info.meta.group = 'shared';
             expect(getPluginModuleInfo('dep')!.meta.group).toBe('shared');
@@ -90,14 +92,16 @@ test.each(['name throws', 'name returns invalid type', 'later test throws'])(
           resolveId: (id) => id,
           load: (id) => modules[id],
           renderError() {
-            checkedError = true;
             const info = context.getModuleInfo('dep')!;
             expect(info === cached).toBe(false);
             expect(context.getModuleInfo('dep') === info).toBe(false);
             info.moduleSideEffects = null;
-            expect(this.getModuleInfo('dep')!.moduleSideEffects).toBeNull();
+            expect(this.getModuleInfo('dep')!.moduleSideEffects).toBe(true);
             this.getModuleInfo('dep')!.moduleSideEffects = false;
             expect(info.moduleSideEffects).toBe(false);
+            // Set last: a failed check here only joins the build error, which the test does not
+            // read in full.
+            checkedError = true;
           },
         },
       ],

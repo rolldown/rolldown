@@ -113,9 +113,6 @@ export interface ModuleOptions {
    * ```
    */
   description?: string;
-  // flag used to check if user directly modified the `ModuleInfo`
-  // this is used to sync state between Rust and JavaScript
-  invalidate?: boolean;
   packageJsonPath?: string;
 }
 
@@ -149,7 +146,9 @@ interface SpecifiedModuleOptions {
    * 2. {@linkcode Plugin.load | load} hook's returned `moduleSideEffects` option
    * 3. {@linkcode Plugin.resolveId | resolveId} hook's returned `moduleSideEffects` option
    * 4. {@linkcode TreeshakingOptions.moduleSideEffects | treeshake.moduleSideEffects} option
-   * 5. `sideEffects` field in the `package.json` file
+   * 5. `sideEffects` field in the `package.json` file, only when Rolldown has the `package.json`
+   *    data of the module: when Rolldown's own resolver resolved it, or when the resolution that
+   *    created it returned `packageJsonPath`
    * 6. `true` (default)
    *
    * `this.getModuleInfo(id).moduleSideEffects` and `this.resolve(id).moduleSideEffects` report

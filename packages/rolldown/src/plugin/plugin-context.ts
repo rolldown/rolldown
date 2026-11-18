@@ -338,21 +338,17 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     if (moduleInfo && moduleInfo.code !== null /* module already parsed */) {
       return moduleInfo;
     }
-    const rawOptions: ModuleOptions = {
-      meta: options.meta || {},
-      moduleSideEffects: options.moduleSideEffects || null,
-      invalidate: false,
-    };
-    this.data.updateModuleOption(id, rawOptions, true);
-
     let loadPromise = this.data.loadModulePromiseMap.get(id);
     if (!loadPromise) {
+      // The options apply only when this call creates the module.
+      const moduleOptionsReceipt = this.data.saveResolutionOptions({ meta: options.meta || {} });
       loadPromise = this.context
         .load(
           rawId,
           attributes,
           options.moduleSideEffects ?? undefined,
           options.packageJsonPath ?? undefined,
+          moduleOptionsReceipt,
         )
         .catch(() => {
           // avoid reusing the promise if it's an error
@@ -404,23 +400,17 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     }
 
     if (res == null) return null;
-    const info =
-      this.data.getModuleOption(this.data.toModuleId(res.id, res.attributes)) ||
-      ({} as ModuleOptions);
+    // Only this resolution's own options, as in Rollup. It does not change the module.
+    const { moduleOptionsReceipt, ...resolved } = res;
+    const own = this.data.takeResolutionOptions(moduleOptionsReceipt);
     return {
-      ...res,
+      ...resolved,
       external:
         res.external === 'relative'
           ? unreachable(`The PluginContext resolve result external couldn't be 'relative'`)
           : res.external,
-      ...info,
-      // A value recorded by resolveId/load/transform wins. Otherwise use the effective
-      // value for this id (treeshake option, package.json `sideEffects`, then `true`,
-      // including externals and `treeshake: false`).
-      moduleSideEffects:
-        info.moduleSideEffects === undefined
-          ? (res.moduleSideEffects ?? null)
-          : info.moduleSideEffects,
+      meta: own?.meta ?? {},
+      moduleSideEffects: res.moduleSideEffects ?? null,
       packageJsonPath: res.packageJsonPath,
     };
   }

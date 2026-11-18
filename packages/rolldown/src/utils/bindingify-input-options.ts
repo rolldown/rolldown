@@ -6,7 +6,6 @@ import {
   BindingPropertyWriteSideEffects,
 } from '../binding.cjs';
 import type {
-  BindingDeferSyncScanData,
   BindingExperimentalOptions,
   BindingInjectImportNamed,
   BindingInjectImportNamespace,
@@ -71,6 +70,9 @@ export function bindingifyInputOptions(
 
   // Normalize transform options to extract define, inject, and oxc transform options
   const normalizedTransform = normalizeTransformOptions(inputOptions);
+  const treeshake = bindingifyTreeshakeOptions(inputOptions.treeshake, timings);
+  pluginContextData.moduleSideEffectsOption =
+    typeof treeshake?.moduleSideEffects === 'function' ? treeshake.moduleSideEffects : undefined;
 
   return {
     input: bindingifyInput(inputOptions.input),
@@ -85,7 +87,7 @@ export function bindingifyInputOptions(
     // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned
     // Because it is hard to represent Enum in napi, ref: https://github.com/napi-rs/napi-rs/issues/507
     // So we use `undefined | NormalizedTreeshakingOptions` (or Option<NormalizedTreeshakingOptions> in Rust side), to represent `false | NormalizedTreeshakingOptions`
-    treeshake: bindingifyTreeshakeOptions(inputOptions.treeshake, timings),
+    treeshake,
     moduleTypes: inputOptions.moduleTypes,
     define: normalizedTransform.define,
     inject: bindingifyInject(normalizedTransform.inject),
@@ -99,24 +101,13 @@ export function bindingifyInputOptions(
     // Pulled by the core while the build closes, so what it returns includes `closeBundle`.
     // Only registered when measuring; its absence is how Rust knows to stay quiet.
     pluginTimings: timings ? () => summarizePluginTimings(inputOptions) : undefined,
-    deferSyncScanData: () => {
-      let ret: BindingDeferSyncScanData[] = [];
-      pluginContextData.moduleOptionMap.forEach((value, key) => {
-        if (value.invalidate) {
-          ret.push({
-            id: key,
-            sideEffects: value.moduleSideEffects ?? undefined,
-          });
-        }
-      });
-      return ret;
-    },
     makeAbsoluteExternalsRelative: bindingifyMakeAbsoluteExternalsRelative(
       inputOptions.makeAbsoluteExternalsRelative,
     ),
     devtools: inputOptions.devtools,
     invalidateJsSideCache: pluginContextData.clear.bind(pluginContextData),
     resetJsModuleOptions: pluginContextData.resetModuleOptions.bind(pluginContextData),
+    createJsModuleOptions: pluginContextData.createModuleOptions.bind(pluginContextData),
     preserveEntrySignatures: bindingifyPreserveEntrySignatures(
       inputOptions.preserveEntrySignatures,
     ),
@@ -374,7 +365,8 @@ function bindingifyTreeshakeOptions(
       { external: false, sideEffects: true },
     ];
   } else {
-    // The function form runs once per module.
+    // The function form runs only when the value is needed, once per module task. See
+    // internal-docs/cache/implementation.md.
     normalizedConfig.moduleSideEffects = measureIfFunction(
       timings,
       INPUT_OPTIONS_OWNER,

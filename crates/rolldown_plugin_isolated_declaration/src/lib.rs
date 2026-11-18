@@ -41,12 +41,15 @@ impl Plugin for IsolatedDeclarationPlugin {
       for specifier in type_import_specifiers {
         let resolved_id = ctx.resolve(&to_usv_str(specifier), Some(args.id), None).await??;
         if matches!(resolved_id.external, ResolvedExternal::Bool(false)) {
+          // Like Rollup's `this.load({ ...resolved })`: a module that this call creates starts
+          // with the module options of the resolution.
           ctx
             .load(
               resolved_id.id.raw_id(),
               resolved_id.attributes.clone(),
-              None,
+              resolved_id.side_effects,
               resolved_id.module_def_format,
+              resolved_id.module_options_receipt,
             )
             .await?;
         }

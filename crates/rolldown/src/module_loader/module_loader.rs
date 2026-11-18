@@ -357,11 +357,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
 
   fn try_spawn_new_task(
     &mut self,
-    resolved_id: ResolvedId,
+    mut resolved_id: ResolvedId,
     owner: Option<ModuleTaskOwner>,
     is_user_defined_entry: bool,
     assert_module_type: Option<&ModuleType>,
   ) -> ModuleIdx {
+    let mut is_new_module = true;
     let idx = match self.cache.module_id_to_idx.get(&resolved_id.id).copied() {
       Some(VisitState::Seen(idx)) => {
         self.check_external_conflict(idx, &resolved_id, owner.as_ref());
@@ -371,6 +372,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         return idx;
       }
       Some(VisitState::Invalidate(idx)) => {
+        is_new_module = false;
+        // An incremental rebuild resolves a changed file again without an importer, but the
+        // module keeps the `moduleSideEffects` of the resolution that created it.
+        if let Some(Module::Normal(module)) =
+          self.cache.snapshot().and_then(|snapshot| snapshot.module_table.modules.get(idx))
+        {
+          resolved_id.side_effects = module.originative_resolved_id.side_effects;
+        }
         // Full scan mode the idx will never be invalidated right?
         self.intermediate_normal_modules.alloc_ecma_module_idx_sparse(idx);
         self.cache.module_id_to_idx.insert(resolved_id.id.clone(), VisitState::Seen(idx));
@@ -394,10 +403,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     if self.flat_options.is_lazy_barrel_enabled() && owner.is_none() {
       self.request_all_exports_for_entry(idx);
     }
+    // A full scan starts with no JS module options, so JS needs the call only for a module that a
+    // JS resolution created. A partial scan may still hold options for the id.
+    let create_js_module_options =
+      is_new_module && (resolved_id.module_options_receipt.is_some() || !self.is_full_scan);
     let ctx = Arc::clone(&self.shared_context);
     if resolved_id.external.is_external() {
       self.external_module_idxs.insert(idx);
-      let task = ExternalModuleTask::new(ctx, idx, resolved_id);
+      let task = ExternalModuleTask::new(ctx, idx, resolved_id, create_js_module_options);
       tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task")));
     } else {
       let task = ModuleTask::new(
@@ -409,6 +422,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         assert_module_type.cloned(),
         self.flat_options,
         self.magic_string_tx.clone(),
+        create_js_module_options,
       );
       tokio::spawn(task.run().instrument(tracing::info_span!("normal_module_task")));
     }
@@ -491,6 +505,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     }
     // Keep only the module options set when the changed modules were resolved, because their
     // importers do not resolve them again.
+    for resolved_id in &changed_resolved_ids {
+      self
+        .shared_context
+        .plugin_driver
+        .module_side_effects_overrides
+        .remove(resolved_id.id.as_str());
+    }
     if !changed_resolved_ids.is_empty()
       && let Some(reset_js_module_options) = &self.shared_context.options.reset_js_module_options
     {
@@ -714,6 +735,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             idx,
             identifier_name,
             side_effects,
+            side_effects_without_option,
             need_renormalize_render_path,
             attributes,
           } = *task_result;
@@ -729,6 +751,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             name,
             identifier_name,
             side_effects,
+            side_effects_without_option,
             symbol_ref,
             need_renormalize_render_path,
             attributes,
@@ -934,9 +957,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       let Some(module) = module.and_then(Module::as_normal) else {
         return;
       };
-      self.shared_context.plugin_driver.set_module_info(
+      let plugin_driver = &self.shared_context.plugin_driver;
+      plugin_driver.set_module_info(
         &module.id,
-        Arc::new(module.to_module_info(None, user_defined_entry_ids.contains(&module.idx))),
+        Arc::new(module.to_module_info(
+          None,
+          user_defined_entry_ids.contains(&module.idx),
+          plugin_driver.module_info_side_effects(&module.id),
+        )),
       );
     });
 
@@ -1309,12 +1337,22 @@ mod tests {
 
     let normal = ResolvedId { id: ModuleId::new_empty("empty"), ..Default::default() };
     let flat_options = FlatOptions::from_shared_options(&ctx.options);
-    ModuleTask::new(Arc::clone(&ctx), 0.into(), normal, None, false, None, flat_options, None)
-      .run()
-      .await;
+    ModuleTask::new(
+      Arc::clone(&ctx),
+      0.into(),
+      normal,
+      None,
+      false,
+      None,
+      flat_options,
+      None,
+      false,
+    )
+    .run()
+    .await;
 
     let external =
       ResolvedId { id: ModuleId::new("external"), external: true.into(), ..Default::default() };
-    ExternalModuleTask::new(Arc::clone(&ctx), 1.into(), external).run().await;
+    ExternalModuleTask::new(Arc::clone(&ctx), 1.into(), external, false).run().await;
   }
 }

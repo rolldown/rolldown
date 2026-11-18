@@ -7,7 +7,11 @@ use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::{Deserialize, Deserializer};
 
-use crate::{InvalidateJsSideCache, ModuleInfo, ModuleTag, SharedModuleInfoDashMap};
+use crate::{
+  InvalidateJsSideCache, ModuleInfo, ModuleTag, SharedModuleInfoDashMap,
+  SharedModuleSideEffectsOverrides,
+  side_effects::{DeterminedSideEffects, HookSideEffects},
+};
 
 use super::inline_common_chunks_options::InlineCommonChunksOptions;
 
@@ -175,8 +179,11 @@ where
 pub struct ChunkingContext(Arc<ChunkingContextImpl>);
 
 impl ChunkingContext {
-  pub fn new(module_infos: SharedModuleInfoDashMap) -> Self {
-    Self(Arc::new(ChunkingContextImpl { module_infos }))
+  pub fn new(
+    module_infos: SharedModuleInfoDashMap,
+    module_side_effects_overrides: SharedModuleSideEffectsOverrides,
+  ) -> Self {
+    Self(Arc::new(ChunkingContextImpl { module_infos, module_side_effects_overrides }))
   }
 }
 
@@ -191,10 +198,39 @@ impl Deref for ChunkingContext {
 #[derive(Debug)]
 pub struct ChunkingContextImpl {
   module_infos: SharedModuleInfoDashMap,
+  module_side_effects_overrides: SharedModuleSideEffectsOverrides,
 }
 
 impl ChunkingContextImpl {
   pub fn get_module_info(&self, module_id: &str) -> Option<Arc<ModuleInfo>> {
-    self.module_infos.get(module_id).map(|v| Arc::<ModuleInfo>::clone(v.value()))
+    let info = self.module_infos.get(module_id).map(|v| Arc::<ModuleInfo>::clone(v.value()))?;
+    Some(self.module_side_effects_overrides.apply_to_info(info))
+  }
+
+  /// `get_module_info(module_id)?.side_effects?.shown()`, without copying the info. It does not
+  /// run a `treeshake.moduleSideEffects` function, so it is `None` in the one case that needs a
+  /// call that has not run: a `null` write from Rust, here or in an output hook, for a module
+  /// whose value a hook decided.
+  pub fn get_module_side_effects(&self, module_id: &str) -> Option<DeterminedSideEffects> {
+    let info = self.module_infos.get(module_id)?;
+    self.module_side_effects_overrides.shown(&info)
+  }
+
+  /// Like `get_module_side_effects`, but runs `call_option(raw_id, external)` when the value
+  /// needs the option function. The binding passes the JS function.
+  pub fn get_module_side_effects_or_call(
+    &self,
+    module_id: &str,
+    call_option: impl FnOnce(&str, bool) -> anyhow::Result<Option<bool>>,
+  ) -> anyhow::Result<Option<DeterminedSideEffects>> {
+    let Some(info) = self.module_infos.get(module_id).map(|v| Arc::clone(v.value())) else {
+      return Ok(None);
+    };
+    self.module_side_effects_overrides.shown_or_call(&info, call_option)
+  }
+
+  /// A write to `getModuleInfo(module_id).moduleSideEffects`. `None` is a write of `null`.
+  pub fn set_module_side_effects(&self, module_id: &str, side_effects: Option<HookSideEffects>) {
+    self.module_side_effects_overrides.set(module_id, side_effects);
   }
 }

@@ -4,20 +4,22 @@ use arcstr::ArcStr;
 use oxc::span::Span;
 
 use rolldown_common::{
-  ExportsKind, FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType,
-  NormalModule, NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, SourcemapChainElement,
-  StrOrBytes, try_extract_lazy_barrel_info,
+  FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleInfoSideEffects, ModuleLoaderMsg,
+  ModuleType, NormalModule, NormalModuleTaskResult, ResolvedId, SourceMapGenMsg,
+  SourcemapChainElement, StrOrBytes, side_effects::HookSideEffects, try_extract_lazy_barrel_info,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosticOptions, EventKindSwitcher,
   ExternalModuleConflictImporter, UnloadableDependencyContext, downcast_napi_error_diagnostics,
 };
-use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
+use rolldown_utils::ecmascript::legitimize_identifier_name;
 
 use rolldown_fs::FileSystem;
 
 use crate::{
-  ecmascript::ecma_module_view_factory::{CreateEcmaViewReturn, create_ecma_view},
+  ecmascript::ecma_module_view_factory::{
+    CreateEcmaViewReturn, create_ecma_view, declared_side_effects_without_hook,
+  },
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
   utils::{load_source::load_source, transform_source::transform_source},
 };
@@ -61,6 +63,7 @@ pub struct ModuleTask<Fs: FileSystem + Clone + 'static> {
   asserted_module_type: Option<ModuleType>,
   flat_options: FlatOptions,
   magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
+  create_js_module_options: bool,
 }
 
 impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
@@ -74,6 +77,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     assert_module_type: Option<ModuleType>,
     flat_options: FlatOptions,
     magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
+    create_js_module_options: bool,
   ) -> Self {
     Self {
       ctx,
@@ -84,11 +88,12 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       asserted_module_type: assert_module_type,
       flat_options,
       magic_string_tx,
+      create_js_module_options,
     }
   }
 
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = %self.resolved_id.id))]
-  pub async fn run(mut self) {
+  pub async fn run(self) {
     let guard = TaskMessageGuard::new(&self.ctx, self.resolved_id.id.clone());
     if let Err(errs) = self.run_inner().await {
       self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
@@ -99,29 +104,33 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     guard.mark_sent();
   }
 
-  async fn run_inner(&mut self) -> BuildResult<()> {
+  async fn run_inner(&self) -> BuildResult<()> {
     let id = self.resolved_id.id.clone();
 
+    if self.create_js_module_options {
+      self.ctx.create_js_module_options(&self.resolved_id).await?;
+    }
+
+    let side_effects_without_hook =
+      declared_side_effects_without_hook(&self.ctx.options, &self.resolved_id);
+    // `getModuleInfo` shows the declared value from the start, so `load` already sees it, as in
+    // Rollup.
     self.ctx.plugin_driver.set_module_info(
       &id,
-      Arc::new(ModuleInfo {
-        code: None,
-        id: id.clone(),
-        is_entry: self.is_user_defined_entry,
-        importers: FxIndexSet::default(),
-        dynamic_importers: FxIndexSet::default(),
-        imported_ids: FxIndexSet::default(),
-        dynamically_imported_ids: FxIndexSet::default(),
-        exports: vec![],
-        input_format: ExportsKind::None,
-        // Filled in once the module has been parsed. Hook values recorded on the JS side
-        // are still visible before that.
-        module_side_effects: None,
-      }),
+      Arc::new(ModuleInfo::placeholder(
+        id.clone(),
+        self.is_user_defined_entry,
+        Some(ModuleInfoSideEffects {
+          decided: self.resolved_id.side_effects.map(HookSideEffects::declared),
+          without_hook: side_effects_without_hook,
+        }),
+      )),
     );
 
     let mut sourcemap_chain = vec![];
-    let mut hook_side_effects = self.resolved_id.side_effects.take();
+    // Do not take the value out: `resolved_id` becomes `originative_resolved_id`, and a refetch
+    // (for example in the HMR stage) loads the module from it again.
+    let mut hook_side_effects = self.resolved_id.side_effects;
     let (source, module_type) = self
       .load_source(&mut sourcemap_chain, &mut hook_side_effects, self.magic_string_tx.clone())
       .await?;
@@ -233,8 +242,14 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       originative_resolved_id: self.resolved_id.clone(),
     };
 
-    let module_info =
-      Arc::new(module.to_module_info(Some(&raw_import_records), self.is_user_defined_entry));
+    let module_info = Arc::new(module.to_module_info(
+      Some(&raw_import_records),
+      self.is_user_defined_entry,
+      Some(ModuleInfoSideEffects {
+        decided: hook_side_effects.map(HookSideEffects::declared),
+        without_hook: side_effects_without_hook,
+      }),
+    ));
     self.ctx.plugin_driver.set_module_info(&module.id, Arc::clone(&module_info));
     self.ctx.plugin_driver.module_parsed(Arc::clone(&module_info), &module).await?;
     self.ctx.plugin_driver.mark_context_load_modules_loaded(module.id.clone());

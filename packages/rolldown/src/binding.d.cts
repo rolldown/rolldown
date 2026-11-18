@@ -1585,6 +1585,16 @@ export declare class BindingCallableBuiltinPlugin {
 
 export declare class BindingChunkingContext {
   getModuleInfo(moduleId: string): BindingModuleInfo | null
+  /**
+   * `getModuleInfo(moduleId)?.moduleSideEffects`, without copying the rest of the info. See
+   * `BindingPluginContext.getModuleSideEffects` for `callOption`.
+   */
+  getModuleSideEffects(moduleId: string, callOption?: (id: string, external: boolean) => boolean | undefined | null): boolean | 'no-treeshake' | null
+  /**
+   * A write to `getModuleInfo(moduleId).moduleSideEffects`. `null` and `undefined` mean
+   * "not decided". See `BindingPluginContext.setModuleSideEffects` for `callOption`.
+   */
+  setModuleSideEffects(moduleId: string, sideEffects: boolean | 'no-treeshake' | null | undefined, callOption?: (id: string, external: boolean) => boolean | undefined | null): void
 }
 
 /** A decoded source map with mappings as an array of arrays instead of VLQ-encoded string. */
@@ -1756,8 +1766,6 @@ export declare class BindingModuleInfo {
   isEntry: boolean
   inputFormat: 'es' | 'cjs' | 'unknown'
   get code(): string | null
-  /** Effective `moduleSideEffects` (`boolean | 'no-treeshake'`). `null` until the module has been parsed. */
-  get moduleSideEffects(): boolean | 'no-treeshake' | null
 }
 
 export declare class BindingNormalizedOptions {
@@ -1839,13 +1847,25 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
-  load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
+  load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string, moduleOptionsReceipt?: number): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
   emitPrebuiltChunk(file: BindingEmittedPrebuiltChunk): string
   getFileName(referenceId: string): string
   getModuleInfo(moduleId: string): BindingModuleInfo | null
+  /**
+   * `getModuleInfo(moduleId)?.moduleSideEffects`, without copying the rest of the info.
+   * `callOption` is the `treeshake.moduleSideEffects` function, if the option is one. It runs
+   * only when the value needs it and no earlier call for the module left a result.
+   */
+  getModuleSideEffects(moduleId: string, callOption?: (id: string, external: boolean) => boolean | undefined | null): boolean | 'no-treeshake' | null
+  /**
+   * A write to `getModuleInfo(moduleId).moduleSideEffects`. `null` and `undefined` mean
+   * "not decided". After such a write, the module shows the value without hooks, so
+   * `callOption` runs here if that value needs it. Tree shaking then reuses the result.
+   */
+  setModuleSideEffects(moduleId: string, sideEffects: boolean | 'no-treeshake' | null | undefined, callOption?: (id: string, external: boolean) => boolean | undefined | null): void
   getModuleIds(): Array<string>
   addWatchFile(file: string): void
 }
@@ -2082,12 +2102,6 @@ export interface BindingCompilerOptions {
   module?: string
   allowJs?: boolean
   rootDirs?: Array<string>
-}
-
-export interface BindingDeferSyncScanData {
-  /** ModuleId */
-  id: string
-  sideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingDevOptions {
@@ -2461,6 +2475,8 @@ export interface BindingHookResolveIdOutput {
    * `experimental.importAttributes`.
    */
   attributes?: Record<string, string>
+  /** @internal See `ResolvedId::module_options_receipt`. */
+  moduleOptionsReceipt?: number
 }
 
 export type BindingHookSideEffects = boolean | string
@@ -2543,13 +2559,13 @@ export interface BindingInputOptions {
   watch?: BindingWatchOption
   keepNames?: boolean
   checks?: BindingChecksOptions
-  deferSyncScanData?: undefined | (() => BindingDeferSyncScanData[])
   /** Asked for while the build is closing, so what it returns includes `closeBundle`. */
   pluginTimings?: undefined | (() => BindingPluginTimingsMeasurement)
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
   devtools?: BindingDevtoolsOptions
   invalidateJsSideCache?: () => void
   resetJsModuleOptions?: (moduleIds: string[] | null) => void
+  createJsModuleOptions?: (moduleId: string, moduleOptionsReceipt: number | null) => void
   preserveEntrySignatures?: BindingPreserveEntrySignatures
   optimization?: BindingOptimization
   context?: string
@@ -2771,6 +2787,8 @@ export interface BindingPluginContextResolvedId {
   packageJsonPath?: string
   external: boolean | 'absolute' | 'relative'
   moduleSideEffects?: boolean | 'no-treeshake'
+  /** @internal See `ResolvedId::module_options_receipt`. */
+  moduleOptionsReceipt?: number
 }
 
 export interface BindingPluginContextResolveOptions {

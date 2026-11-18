@@ -919,6 +919,7 @@ impl GenerateStage<'_> {
 
       if meta.intersects(ChunkMeta::UserDefinedEntry)
         || (is_emitted_entry_chunk
+          && !self.options.is_strict_execution_order_enabled()
           && !is_target_manual_chunk
           && matches!(target_chunk.kind, ChunkKind::Common))
       {

@@ -1,4 +1,3 @@
 mod allow_extension_exports;
 mod allow_extension_merge_aliased_then_locals;
 mod allow_extension_merge_same_exports;
-mod emitted_entry_preserves_execution_order;

@@ -49,13 +49,13 @@ rolldown_std_utils = { workspace = true }
 rustc-hash = { workspace = true }
 simdutf8 = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["rt"] }
 uuid = { workspace = true, features = ["v4"] }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-async-scoped = { workspace = true, features = ["use-tokio"] }
 rayon = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [dev-dependencies]
 criterion2 = { workspace = true }

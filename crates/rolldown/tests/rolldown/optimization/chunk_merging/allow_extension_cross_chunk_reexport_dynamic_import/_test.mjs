@@ -1,5 +1,4 @@
 import assert from 'node:assert';
-import { existsSync } from 'node:fs';
 import {
   loadBarrel,
   loadDynamic,
@@ -11,6 +10,7 @@ import {
 import * as segBarrel from './dist/seg_barrel.js';
 import * as segDynamic from './dist/seg_dynamic.js';
 import * as segExternal from './dist/seg_external.js';
+import * as segGetter from './dist/seg_getter.js';
 import * as segNamespaceFacade from './dist/seg_namespace.js';
 import { s_foreign } from './dist/seg_static.js';
 
@@ -22,8 +22,9 @@ assert.strictEqual(segBarrel.own, 1);
 assert.strictEqual(segExternal.s_foreign(), 'foreign');
 assert.strictEqual(typeof segExternal.join, 'function');
 assert.strictEqual(segNamespaceFacade.s_foreign(), 'foreign');
-// The facade of `seg_getter.js` reads `boom` when it loads, so the test does not load it.
-assert.ok(existsSync(new URL('./dist/seg_getter.js', import.meta.url)));
+// The getter of `boom` throws. The facade still loads, and `boom` is `undefined`, as in Node.
+assert.strictEqual(segGetter.s_foreign(), 'foreign');
+assert.strictEqual(segGetter.boom, undefined);
 
 // An `import()` in the bundle reads the namespace object of the entry from the `group` chunk.
 const dynamic = await loadDynamic();

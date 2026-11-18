@@ -238,15 +238,31 @@ pub fn render_chunk_exports(
               .symbol_db
               .canonical_name_for_or_original(ns_alias.namespace_ref, &chunk.canonical_names);
             let property_name = &ns_alias.property_name;
-            s.push_str("var ");
-            s.push_str(&rendered_canonical_name);
-            s.push_str(" = ");
-            s.push_str(&property_access_str_with_ascii(
+            let property_read = property_access_str_with_ascii(
               &escape_non_ascii(canonical_ns_name, ascii_only),
               property_name,
               ascii_only,
-            ));
-            s.push_str(";\n");
+            );
+            if chunk.is_cross_chunk_export_facade {
+              // Without the cross-chunk export, the group chunk replaces this facade, and no file
+              // reads this property when it loads. A getter that throws must not stop the load of
+              // the other exports. Node also ignores an error from a getter when it reads the
+              // exports of a CommonJS module for an ESM import. See
+              // internal-docs/code-splitting/implementation.md.
+              s.push_str("var ");
+              s.push_str(&rendered_canonical_name);
+              s.push_str(";\ntry {\n\t");
+              s.push_str(&rendered_canonical_name);
+              s.push_str(" = ");
+              s.push_str(&property_read);
+              s.push_str(";\n} catch (e) {}\n");
+            } else {
+              s.push_str("var ");
+              s.push_str(&rendered_canonical_name);
+              s.push_str(" = ");
+              s.push_str(&property_read);
+              s.push_str(";\n");
+            }
           }
 
           if canonical_name == exported_name {

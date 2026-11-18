@@ -1,0 +1,75 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+# Assets
+
+## app.js
+
+```js
+export { n as own } from "./group.js";
+
+```
+
+## dep.js
+
+```js
+// dep.js
+const foreign = 5;
+export { foreign };
+
+```
+
+## group.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+// seg.js
+var import_lib = (/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.x = 37;
+	Object.defineProperty(exports, "x", {
+		enumerable: true,
+		get() {
+			throw new Error("read of x");
+		}
+	});
+})))();
+const own = 17;
+export { own as n, import_lib as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __commonJSMin as t };
+
+```
+
+## seg.js
+
+```js
+import { foreign } from "./dep.js";
+import { n as own, t as import_lib } from "./group.js";
+var x;
+try {
+	x = import_lib.x;
+} catch (e) {}
+export { foreign, own, x };
+
+```

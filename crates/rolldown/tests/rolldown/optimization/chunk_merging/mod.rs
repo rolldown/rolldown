@@ -2,6 +2,7 @@ mod allow_extension_cross_chunk_reexport_cjs_namespace;
 mod allow_extension_cross_chunk_reexport_dynamic_import;
 mod allow_extension_cross_chunk_reexport_keeps_facade;
 mod allow_extension_cross_chunk_reexport_strict_order;
+mod allow_extension_cross_chunk_reexport_throwing_getter;
 mod allow_extension_exports;
 mod allow_extension_merge_aliased_then_locals;
 mod allow_extension_merge_same_exports;

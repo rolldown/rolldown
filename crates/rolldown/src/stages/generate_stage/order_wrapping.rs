@@ -1173,7 +1173,14 @@ impl GenerateStage<'_> {
     // (`ChunkGraph::entry_module_to_dynamic_import_chunk`). The loop below restores the removed
     // facade of each wrapped emitted entry, and `import()` then loads that facade. Send `import()`
     // to the kept facade in the same case, so the two layouts load the same file.
+    // The loop below restores a removed facade of each wrapped emitted entry. Thus the bundle has
+    // the facade of such an entry also without the cross-chunk check, and a kept facade renders
+    // the same as a restored facade (`Chunk::is_cross_chunk_export_facade`).
     for entry_module_idx in &entries_to_restore {
+      if let Some(&facade_chunk_idx) = chunk_graph.entry_module_to_entry_chunk.get(entry_module_idx)
+      {
+        chunk_graph.chunk_table[facade_chunk_idx].is_cross_chunk_export_facade = false;
+      }
       let Some(host_chunk_idx) =
         chunk_graph.entry_module_to_dynamic_import_chunk.remove(entry_module_idx)
       else {

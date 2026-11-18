@@ -1079,7 +1079,8 @@ impl GenerateStage<'_> {
   /// - Name check: an entry that the function checked before has the same export name for a
   ///   different binding.
   /// - Cross-chunk check: the entry exports a binding that is in another chunk
-  ///   (`exports_binding_from_other_chunk`).
+  ///   (`exports_binding_from_other_chunk`). The function sets
+  ///   `Chunk::is_cross_chunk_export_facade` on such a facade.
   ///
   /// The function returns the entries that keep their facades only because of the cross-chunk
   /// check and that the bundle also loads with `import()`. Each item is the group chunk and the
@@ -1087,13 +1088,14 @@ impl GenerateStage<'_> {
   /// the group chunk and reads the namespace object of the entry, as it does when the facade is
   /// removed (`ChunkGraph::entry_module_to_dynamic_import_chunk`). The facade does not give the
   /// same value: in CJS output its exports object is writable, ESM output reads each CommonJS
-  /// export when the facade loads, and a facade has no names of an `export *` from CommonJS. Also,
-  /// a static namespace import of the entry gets the namespace object of the group chunk.
+  /// export one time when the facade loads, and a facade has no names of an `export *` from
+  /// CommonJS. Also, a static namespace import of the entry gets the namespace object of the
+  /// group chunk.
   ///
   /// See internal-docs/code-splitting/implementation.md.
   fn resolve_emitted_chunk_group_conflicts(
     &self,
-    chunk_graph: &ChunkGraph,
+    chunk_graph: &mut ChunkGraph,
     emitted_chunks_by_target: FxHashMap<ChunkIdx, Vec<ChunkIdx>>,
     facade_eliminations: &mut Vec<FacadeChunkElimination>,
   ) -> Vec<(ChunkIdx, ModuleIdx)> {
@@ -1141,6 +1143,8 @@ impl GenerateStage<'_> {
           continue;
         }
         if self.exports_binding_from_other_chunk(chunk_graph, module_meta, target_chunk_idx) {
+          // The facade stays for this reason only. See `Chunk::is_cross_chunk_export_facade`.
+          chunk_graph.chunk_table[chunk_idx].is_cross_chunk_export_facade = true;
           if chunk_graph.chunk_table[chunk_idx].is_async_entry() {
             dynamic_import_redirects.push((target_chunk_idx, entry_module_idx));
           }

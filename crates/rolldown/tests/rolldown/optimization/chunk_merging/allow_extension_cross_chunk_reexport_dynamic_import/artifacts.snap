@@ -161,7 +161,10 @@ export * from "node:path";
 ```js
 import { t as foreign } from "./dep.js";
 import { t as import_getter } from "./group.js";
-var boom = import_getter.boom;
+var boom;
+try {
+	boom = import_getter.boom;
+} catch (e) {}
 export { boom, foreign as s_foreign };
 
 ```

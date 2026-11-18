@@ -67,7 +67,7 @@ process.on("beforeExit", (code) => {
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["bridge.js","esm.js"],localCount:2,edges:[[1],[]],stamps:{0:1}});
+__rolldown_runtime__.registerGraph({ids:["bridge.js","esm.js"],localCount:1,edges:[[1]],stamps:{0:1}});
 //#region bridge.js
 __rolldown_runtime__.registerFactory("bridge.js", (function(__rolldown_module_id__) {
 	try {
@@ -79,17 +79,6 @@ __rolldown_runtime__.registerFactory("bridge.js", (function(__rolldown_module_id
 		void "force-output-change";
 	} finally {}
 }), 1);
-
-//#endregion
-//#region esm.js
-__rolldown_runtime__.registerFactory("esm.js", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ default: () => __rolldown_default__ });
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		const hot_esm = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		var __rolldown_default__ = "esm-default";
-	} finally {}
-}));
 
 //#endregion
 ```

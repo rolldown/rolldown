@@ -288,6 +288,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     };
 
     let modules = &self.module_table().modules;
+    let pre_rebuild_static_deps = changed_modules
+      .iter()
+      .filter_map(|module_idx| {
+        let module = modules[*module_idx].as_normal()?;
+        let deps = static_deps(module).map(|dep_idx| modules[dep_idx].id().clone());
+        Some((*module_idx, deps.collect::<FxHashSet<_>>()))
+      })
+      .collect::<FxHashMap<_, _>>();
     let pre_rebuild_interop = changed_modules
       .iter()
       .filter_map(|module_idx| {
@@ -451,6 +459,19 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       })
       .collect::<Vec<_>>();
 
+    // A re-run importer needs a factory for each import the rebuild added.
+    let modules = &self.module_table().modules;
+    let added_static_deps = changed_modules
+      .iter()
+      .chain(new_added_modules.iter())
+      .filter_map(|module_idx| modules[*module_idx].as_normal())
+      .flat_map(|module| {
+        let before = pre_rebuild_static_deps.get(&module.idx);
+        static_deps(module)
+          .filter(move |dep| before.is_none_or(|before| !before.contains(modules[*dep].id())))
+      })
+      .collect::<FxIndexSet<_>>();
+
     let mut affected = self.collect_client_update_superset(&changed_modules);
     affected.extend(new_added_modules.iter().copied());
     affected.extend(rerendered_importers.iter().copied());
@@ -504,15 +525,30 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         }
       }
 
-      // Initial tree shaking can omit an unchanged dependency's factory. Walk every
-      // carried module; see internal-docs/hmr/design.md, principle 2.
-      let walk_from = carried.iter().copied().collect::<Vec<_>>();
+      // Walk carried modules the client may have run. Newly added static imports
+      // are targets even when their importer is absent from the client's maps.
+      // See internal-docs/hmr/design.md, principle 2.
+      let walk_from = carried
+        .iter()
+        .copied()
+        .filter(|module_idx| {
+          let stable_id = self.module_table().modules[*module_idx].stable_id().as_str();
+          client.shipped.contains_key(stable_id)
+            || client.top_level_evaluated.contains_key(stable_id)
+        })
+        .collect::<Vec<_>>();
       let held = ClientHeldCopies {
         shipped: client.shipped,
         evaluated: client.top_level_evaluated,
         stamp_table,
       };
-      self.collect_unheld_sync_deps(&walk_from, [], None, &held, &mut carried);
+      self.collect_unheld_sync_deps(
+        &walk_from,
+        added_static_deps.iter().copied(),
+        None,
+        &held,
+        &mut carried,
+      );
 
       let update = self.render_hmr_patch(carried, changed_ids.clone(), stamp_table).await?;
       client_updates.push(ClientHmrUpdate { client_id: client.client_id.to_string(), update });
@@ -1057,6 +1093,14 @@ impl ClientHeldCopies<'_> {
 /// `def_format`, which comes from the path and `package.json`, not from the module's source.
 fn importee_interop(module: &NormalModule) -> (ExportsKind, bool) {
   (module.exports_kind, module.meta.has_lazy_export())
+}
+
+fn static_deps(module: &NormalModule) -> impl Iterator<Item = ModuleIdx> + '_ {
+  module
+    .import_records
+    .iter()
+    .filter(|rec| rec.kind.is_static())
+    .filter_map(|rec| rec.resolved_module)
 }
 
 fn importers(module: &NormalModule) -> impl Iterator<Item = ModuleIdx> + '_ {

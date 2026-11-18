@@ -114,7 +114,7 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["hmr.js","modules/dep-cjs-default.js","modules/dep-cjs-named.js","modules/dep-cjs-namespace.js","modules/dep-cjs.js","modules/dep-esm-default.js","modules/dep-esm-named.js","modules/dep-esm-namespace.js","modules/dep-esm.js","modules/new-dep-cjs.js","modules/new-dep-esm.js"],localCount:11,edges:[[4,8,1,5,2,6,3,7,9,10],[],[],[],[],[],[],[],[],[],[]],stamps:{0:1,9:1,10:1}});
+__rolldown_runtime__.registerGraph({ids:["hmr.js","modules/new-dep-cjs.js","modules/new-dep-esm.js","modules/dep-cjs.js","modules/dep-esm.js","modules/dep-cjs-default.js","modules/dep-esm-default.js","modules/dep-cjs-named.js","modules/dep-esm-named.js","modules/dep-cjs-namespace.js","modules/dep-esm-namespace.js"],localCount:3,edges:[[3,4,5,6,7,8,9,10,1,2],[],[]],stamps:{0:1,1:1,2:1}});
 //#region hmr.js
 import * as import_node_assert_strict_00 from "node:assert/strict";
 __rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__) {
@@ -161,98 +161,6 @@ __rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__)
 		});
 	} finally {}
 }), 1);
-
-//#endregion
-//#region modules/dep-cjs-default.js
-__rolldown_runtime__.registerFactory("modules/dep-cjs-default.js", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_module__ = { exports: {} };
-		var __rolldown_exports__ = __rolldown_module__.exports;
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__, 1);
-		const hot_dep_cjs_default = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		__rolldown_module__.exports = "cjs-default";
-	} finally {}
-}));
-
-//#endregion
-//#region modules/dep-cjs-named.js
-__rolldown_runtime__.registerFactory("modules/dep-cjs-named.js", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_module__ = { exports: {} };
-		var __rolldown_exports__ = __rolldown_module__.exports;
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__, 1);
-		const hot_dep_cjs_named = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		__rolldown_exports__.named = "cjs-named";
-	} finally {}
-}));
-
-//#endregion
-//#region modules/dep-cjs-namespace.js
-__rolldown_runtime__.registerFactory("modules/dep-cjs-namespace.js", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_module__ = { exports: {} };
-		var __rolldown_exports__ = __rolldown_module__.exports;
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__, 1);
-		const hot_dep_cjs_namespace = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		__rolldown_module__.exports = { value: "cjs-namespace" };
-	} finally {}
-}));
-
-//#endregion
-//#region modules/dep-cjs.js
-__rolldown_runtime__.registerFactory("modules/dep-cjs.js", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_module__ = { exports: {} };
-		var __rolldown_exports__ = __rolldown_module__.exports;
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__, 1);
-		const hot_dep_cjs = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		__rolldown_exports__.value = "cjs";
-	} finally {}
-}));
-
-//#endregion
-//#region modules/dep-esm-default.js
-__rolldown_runtime__.registerFactory("modules/dep-esm-default.js", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ default: () => __rolldown_default__ });
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		const hot_dep_esm_default = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		var __rolldown_default__ = "esm-default";
-	} finally {}
-}));
-
-//#endregion
-//#region modules/dep-esm-named.js
-__rolldown_runtime__.registerFactory("modules/dep-esm-named.js", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ named: () => named });
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		const hot_dep_esm_named = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		const named = "esm-named";
-	} finally {}
-}));
-
-//#endregion
-//#region modules/dep-esm-namespace.js
-__rolldown_runtime__.registerFactory("modules/dep-esm-namespace.js", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		const hot_dep_esm_namespace = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		const value = "esm-namespace";
-	} finally {}
-}));
-
-//#endregion
-//#region modules/dep-esm.js
-__rolldown_runtime__.registerFactory("modules/dep-esm.js", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		const hot_dep_esm = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		const value = "esm";
-	} finally {}
-}));
 
 //#endregion
 //#region modules/new-dep-cjs.js

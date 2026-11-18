@@ -158,12 +158,11 @@ modules ran, so it walks static imports (`collect_unheld_sync_deps`,
   may be missing.
 - **Anything else** — carried, and the walk goes through it.
 
-A lazy chunk walks from its entry. A patch walks from every carried
-module: even an unchanged dependency may lack a factory when initial
-tree shaking omitted its chunk. The boot-evaluated map stops the walk
-at modules the entry ran. When that map is empty (several user entries),
-the first patch can carry the whole static closure, including modules
-the client already ran. The ship map covers those factories afterwards.
+A lazy chunk walks from its entry. A patch walks from carried modules
+present in the client's shipped or boot-evaluated map at any stamp, and
+from newly added static imports. Carrying a module absent from both maps
+does not itself start a dependency walk: a later lazy chunk walks from
+its requested entry. Current boot-evaluated copies stop the walk.
 
 ### 3. The module graph ships as compiler data
 

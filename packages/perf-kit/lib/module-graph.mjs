@@ -122,33 +122,67 @@ export function reportDistMismatch(graph, dist) {
   return why;
 }
 
+const moduleIndicesCache = new WeakMap();
+
+function moduleIndicesById(graph) {
+  let byId = moduleIndicesCache.get(graph);
+  if (!byId) {
+    byId = Map.groupBy(graph.modules.keys(), (i) => graph.modules[i].id);
+    moduleIndicesCache.set(graph, byId);
+  }
+  return byId;
+}
+
+/** A query that selects this module even when multiple modules share its display ID. */
+export function moduleQuery(graph, module) {
+  const byId = moduleIndicesById(graph);
+  const matches = byId.get(module.id);
+  if (matches.length === 1) return module.id;
+  let digits = String(matches.find((i) => graph.modules[i] === module));
+  // Exact IDs take precedence over index queries. Keep the generated query distinct.
+  while (byId.has(`index:${digits}`)) digits = `0${digits}`;
+  return `index:${digits}`;
+}
+
+export function moduleLabel(graph, module) {
+  const query = moduleQuery(graph, module);
+  return query === module.id ? module.id : `${module.id} [${query}]`;
+}
+
 /**
- * Find a module by query: exact id, then unique suffix, then unique substring
- * (case-insensitive). Returns `{ index }`, `{ ambiguous: [...] }`, or `null`.
+ * Find a module by exact ID, report-local index, suffix, or substring. The latter two
+ * are case insensitive. Returns `{ index }`, `{ ambiguous: [...] }`, or `null`.
  */
 export function resolveModule(graph, query) {
   const q = query.replaceAll('\\', '/');
-  const ids = graph.modules.map((m) => m.id);
-  const exact = ids.findIndex((id) => id === q);
-  if (exact >= 0) return { index: exact };
+  const byId = moduleIndicesById(graph);
+  const matchResult = (hits) =>
+    hits.length === 1
+      ? { index: hits[0] }
+      : {
+          ambiguous: hits
+            .map((i) => graph.modules[i])
+            .sort((a, b) => b.retainedBytes - a.retainedBytes || a.id.localeCompare(b.id))
+            .slice(0, 8)
+            .map((m) => moduleLabel(graph, m)),
+        };
+  const exact = byId.get(query) ?? byId.get(q);
+  if (exact) return matchResult(exact);
+  const digits = /^index:(\d+)$/.exec(q)?.[1];
+  if (digits != null) {
+    const index = Number(digits);
+    return index < graph.modules.length ? { index } : null;
+  }
   const lower = q.toLowerCase();
   for (const match of [
     (id) => id.toLowerCase().endsWith(lower),
     (id) => id.toLowerCase().includes(lower),
   ]) {
     const hits = [];
-    ids.forEach((id, i) => {
-      if (match(id)) hits.push(i);
-    });
-    if (hits.length === 1) return { index: hits[0] };
-    if (hits.length > 1) {
-      const rows = hits
-        .map((i) => graph.modules[i])
-        .sort((a, b) => b.retainedBytes - a.retainedBytes || a.id.localeCompare(b.id))
-        .slice(0, 8)
-        .map((m) => m.id);
-      return { ambiguous: rows };
+    for (const [id, indices] of byId) {
+      if (match(id)) for (const i of indices) hits.push(i);
     }
+    if (hits.length) return matchResult(hits);
   }
   return null;
 }
@@ -160,13 +194,81 @@ export function resolveModule(graph, query) {
 // no graph mutation. This is the read-only overlay unigraph's EdgeOverrides provides,
 // and the substrate `cut` and `graph-diff` price their answers with.
 
-/** Indices of the entry modules (cached on the graph). Ids not present are skipped. */
-function entryIndices(graph) {
-  if (graph.__entryIdx) return graph.__entryIdx;
-  const idOf = new Map(graph.modules.map((m, i) => [m.id, i]));
-  const idx = (graph.entryModules ?? []).map((id) => idOf.get(id)).filter((i) => i != null);
-  graph.__entryIdx = idx;
-  return idx;
+const legacyEntryIndices = new WeakMap();
+
+/** Find the top-level dominator, caching the result along the visited path. */
+function dominatorRoot(modules, roots, index) {
+  let ancestor = index;
+  while (!roots.has(ancestor)) {
+    const parent = modules[ancestor].idom;
+    if (parent == null || parent < 0 || parent === ancestor) break;
+    ancestor = parent;
+  }
+  const root = roots.get(ancestor) ?? ancestor;
+  for (let i = index; i !== ancestor; i = modules[i].idom) roots.set(i, root);
+  return root;
+}
+
+/** Entry module indices, with a cached lookup for older reports. */
+export function entryIndices(graph) {
+  if (graph.entryModuleIndices != null) return graph.entryModuleIndices;
+  // Older reports name the entries only by label. See internal-docs/devtools/implementation.md.
+  const cached = legacyEntryIndices.get(graph);
+  if (cached) return cached;
+  const byId = moduleIndicesById(graph);
+  const entries = [];
+  const counts = new Map();
+  const dominatorRoots = new Map();
+  let staticPreds = graph.staticPreds;
+  for (const id of graph.entryModules ?? []) counts.set(id, (counts.get(id) ?? 0) + 1);
+  for (const [id, count] of counts) {
+    const matches = byId.get(id) ?? [];
+    // Entries and modules shared by several entries can both hang off the virtual root.
+    const possibleEntries = matches.filter((i) => {
+      const m = graph.modules[i];
+      return m.staticReachable !== false && (m.idom ?? -1) < 0;
+    });
+    if (possibleEntries.length > count) {
+      // A path through a dominated importer has already reached the candidate.
+      // Without an independent importer, the candidate must be an entry.
+      const preds = (staticPreds ??= computeStaticPreds(graph.modules));
+      const required = new Set(
+        possibleEntries.filter((i) =>
+          preds[i].every((p) => dominatorRoot(graph.modules, dominatorRoots, p) === i),
+        ),
+      );
+      // Prefer definite entries, keeping the legacy last-match order for ties.
+      possibleEntries.sort((a, b) => Number(required.has(a)) - Number(required.has(b)));
+    }
+    const candidates = possibleEntries.length >= count ? possibleEntries : matches;
+    for (const i of candidates.slice(-count)) entries.push(i);
+  }
+  legacyEntryIndices.set(graph, entries);
+  return entries;
+}
+
+/**
+ * Returns a lookup from a module index to the shortest chain of static imports that reaches
+ * it: entry first, last importer last, empty for an entry or a module outside the initial
+ * load. A walk up `idom` does not give this, because a module's dominator need not import it.
+ */
+export function importChainResolver(graph) {
+  const parent = new Int32Array(graph.modules.length).fill(-1);
+  const queue = [...entryIndices(graph)];
+  const seen = new Set(queue);
+  for (const v of queue) {
+    for (const [to, isDynamic] of graph.modules[v].imports ?? []) {
+      if (isDynamic || seen.has(to)) continue;
+      seen.add(to);
+      parent[to] = v;
+      queue.push(to);
+    }
+  }
+  return (index) => {
+    const chain = [];
+    for (let up = parent[index]; up !== -1; up = parent[up]) chain.push(up);
+    return chain.reverse();
+  };
 }
 
 /**
@@ -231,10 +333,11 @@ export function withRoots(graph, roots) {
     // are reachable themselves, so nothing new becomes reachable, only eager.
     dynamicOnly: !eager.has(i) && (mod.staticReachable === true || mod.dynamicOnly === true),
   }));
-  const { __entryIdx, __baseEager, ...rest } = graph;
+  const { __baseEager, ...rest } = graph;
   return {
     ...rest,
     entryModules: [...(graph.entryModules ?? []), ...extra.map((r) => graph.modules[r].id)],
+    entryModuleIndices: [...entries, ...extra],
     rootModules: extra.map((r) => graph.modules[r].id),
     modules,
     staticPreds: computeStaticPreds(modules),

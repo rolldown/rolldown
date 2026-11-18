@@ -6,16 +6,21 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   deferAllInto,
   eagerSet,
   evalOverrides,
+  importChainResolver,
   loadModuleGraph,
+  moduleQuery,
   reportDistMismatch,
+  resolveModule,
   whatIf,
   withRoots,
 } from '../lib/module-graph.mjs';
@@ -450,6 +455,127 @@ function reportDir(t, { metrics, graph = { entryModules: ['src/main.ts'], module
     dist: path.join(dir, 'dist'),
   };
 }
+
+function duplicateLabelGraph() {
+  const built = makeGraph(
+    [
+      {
+        id: 'ace/index.js',
+        bytes: 10,
+        imports: [
+          [1, false],
+          [2, false],
+          [3, true],
+        ],
+      },
+      { id: 'node_modules/ace/index.js', bytes: 20 },
+      { id: 'ace/power.js', bytes: 30 },
+      { id: 'boot.js', bytes: 40, imports: [[4, false]] },
+      { id: 'late.js', bytes: 50 },
+    ],
+    ['ace/index.js'],
+  );
+  built.modules[1].id = 'ace/index.js';
+  return built;
+}
+
+test('reported entry indices distinguish duplicate module labels, including with --root', (t) => {
+  const { reportFile } = reportDir(t, {
+    graph: { ...duplicateLabelGraph(), entryModuleIndices: [0] },
+  });
+  const graph = loadModuleGraph([reportFile]);
+  assert.deepEqual(importChainResolver(graph)(2), [0]);
+  assert.equal(whatIf(graph, 0).isEntry, true);
+  assert.equal(whatIf(graph, 1).isEntry, false);
+
+  const rooted = withRoots(graph, [3]);
+  assert.deepEqual(importChainResolver(rooted)(2), [0]);
+  assert.deepEqual(importChainResolver(rooted)(4), [3]);
+  assert.deepEqual(importChainResolver(graph)(4), []);
+});
+
+function runGraphCommand(reportFile, ...args) {
+  const harness = fileURLToPath(new URL('../harness.mjs', import.meta.url));
+  const cwd = path.dirname(reportFile);
+  return spawnSync(process.execPath, [harness, ...args, '--report', reportFile], {
+    cwd,
+    env: { ...process.env, ROLLDOWN_PERF_KIT_STATE: path.join(cwd, 'state') },
+    encoding: 'utf8',
+    timeout: 20_000,
+  });
+}
+
+test('why recovers the entry from the dominator data in an older report', (t) => {
+  const { reportFile } = reportDir(t, { graph: duplicateLabelGraph() });
+  const run = runGraphCommand(reportFile, 'why', 'ace/power.js');
+  assert.equal(run.status, 0, run.stderr);
+  assert.match(run.stdout, /<- ace\/index\.js \[index:0\]/);
+  assert.match(run.stdout, /chain from the entry: ace\/index\.js \[index:0\] -> ace\/power\.js/);
+});
+
+for (const withCycle of [false, true]) {
+  test(`why recovers a legacy entry with a namesake shared dependency${withCycle ? ' and an import cycle' : ''}`, (t) => {
+    const entryImports = [
+      [1, false],
+      [2, false],
+    ];
+    if (withCycle) entryImports.push([4, false]);
+    const graph = makeGraph(
+      [
+        { id: 'ace/index.js', bytes: 10, imports: entryImports },
+        { id: 'node_modules/ace/index.js', bytes: 20 },
+        { id: 'ace/power.js', bytes: 30 },
+        { id: 'other-entry.js', bytes: 40, imports: [[1, false]] },
+        { id: 'ace/bridge.js', bytes: 50, imports: [[5, false]] },
+        { id: 'ace/cycle.js', bytes: 60, imports: [[0, false]] },
+      ],
+      ['ace/index.js', 'other-entry.js'],
+    );
+    graph.modules[1].id = 'ace/index.js';
+    assert.equal(graph.modules[0].idom, null);
+    assert.equal(graph.modules[1].idom, null);
+    if (withCycle) {
+      assert.deepEqual(graph.staticPreds[0], [5]);
+      assert.equal(graph.modules[5].idom, 4);
+      assert.equal(graph.modules[4].idom, 0);
+    }
+    const { reportFile } = reportDir(t, { graph });
+    const run = runGraphCommand(reportFile, 'why', 'ace/power.js');
+    assert.equal(run.status, 0, run.stderr);
+    assert.match(run.stdout, /chain from the entry: ace\/index\.js \[index:0\] -> ace\/power\.js/);
+  });
+}
+
+test('the graph selector for a duplicate label works in what-if and cut', (t) => {
+  const { reportFile } = reportDir(t, {
+    graph: { ...duplicateLabelGraph(), entryModuleIndices: [0] },
+  });
+  const ranking = runGraphCommand(reportFile, 'graph');
+  assert.equal(ranking.status, 0, ranking.stderr);
+  // The row label, not a `via` label: `via` names the dominator.
+  const selector = ranking.stdout.match(/ace\/index\.js \[(index:\d+)\]  \(own/)?.[1];
+  assert.equal(selector, 'index:1');
+  assert.match(ranking.stdout, /ace\/power\.js .*via ace\/index\.js \[index:0\]/);
+
+  const deferral = runGraphCommand(reportFile, 'what-if', selector);
+  assert.equal(deferral.status, 0, deferral.stderr);
+  assert.match(deferral.stdout, /removes .* \/ 1 module\(s\) from the initial load/);
+  const cut = runGraphCommand(reportFile, 'cut', selector);
+  assert.equal(cut.status, 0, cut.stderr);
+  assert.match(cut.stdout, /ace\/index\.js \[index:0\]  ->  ace\/index\.js \[index:1\]/);
+
+  const ambiguous = runGraphCommand(reportFile, 'what-if', 'ace/index.js');
+  assert.notEqual(ambiguous.status, 0);
+  assert.match(ambiguous.stderr, /is ambiguous/);
+  assert.match(ambiguous.stderr, /ace\/index\.js \[index:1\]/);
+});
+
+test('a generated index selector leaves an exact module ID selectable', () => {
+  const graph = duplicateLabelGraph();
+  graph.modules[4].id = 'index:1';
+  assert.deepEqual(resolveModule(graph, 'index:1'), { index: 4 });
+  assert.deepEqual(resolveModule(graph, moduleQuery(graph, graph.modules[1])), { index: 1 });
+});
 
 const clientMetrics = {
   session: { platform: 'browser', format: 'es' },

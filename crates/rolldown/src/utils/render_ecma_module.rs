@@ -16,7 +16,7 @@ pub struct RenderEcmaModuleOutput {
 }
 
 /// Prints `ast` and collapses the module sourcemap chain against the
-/// borrowed codegen map. A non-empty chain is remapped without first
+/// codegen map. A non-empty chain is remapped without first
 /// `into_owned`-ing the codegen map (that copy is discarded by the collapse).
 /// An empty chain still owns the codegen map, which is the final module map.
 pub fn render_normal_module(
@@ -49,7 +49,7 @@ pub fn render_normal_module(
   let map = if enable_sourcemap && !printed.code.is_empty() {
     collapse_module_sourcemap(
       &module.sourcemap_chain,
-      printed.map.as_ref(),
+      printed.map,
       module.id.as_str(),
       &mut warnings,
     )
@@ -116,20 +116,20 @@ pub fn render_ecma_module(
 ///
 /// A `SOURCEMAP_BROKEN` warning is pushed onto `warnings` for every plugin that
 /// omitted its sourcemap, since that breaks the mapping chain for `module_id`.
-pub fn collapse_module_sourcemap<'a>(
+pub fn collapse_module_sourcemap(
   sourcemap_chain: &[SourcemapChainElement],
-  codegen_map: Option<&'a rolldown_sourcemap::SourceMapRef<'a>>,
+  codegen_map: Option<rolldown_sourcemap::SourceMapRef<'_>>,
   module_id: &str,
   warnings: &mut Vec<BuildDiagnostic>,
 ) -> Option<SourceMap> {
   if sourcemap_chain.is_empty() {
-    return codegen_map.map(|map| map.clone().into_owned());
+    return codegen_map.map(rolldown_sourcemap::SourceMapRef::into_owned);
   }
 
   let empty = empty_sourcemap();
   // Plugin/load maps are already `'static`. Keep them as `'static` refs and
-  // only widen to `SourceMapRef<'a>` at the traced-collapse call, together
-  // with the borrowed codegen map.
+  // only widen to `SourceMapRef<'_>` at the traced-collapse call, together
+  // with the codegen map.
   let mut static_chain: Vec<&SourceMap> = Vec::with_capacity(sourcemap_chain.len());
 
   let mut original_content: Option<&str> = None;
@@ -168,7 +168,7 @@ pub fn collapse_module_sourcemap<'a>(
     // map's positions but swap in the pre-transform source content so the
     // transformed/injected code does not leak into `sourcesContent`.
     return codegen_map.map(|map| {
-      let mut map = map.clone().into_owned();
+      let mut map = map.into_owned();
       if let Some(content) = original_content {
         map.set_source_contents(vec![Some(content)]);
       }
@@ -179,15 +179,12 @@ pub fn collapse_module_sourcemap<'a>(
   // Borrow the codegen map directly. `collapse_sourcemaps_traced` copies
   // only the strings it keeps, so an `into_owned` of the codegen map
   // first would duplicate sourcesContent/names and then drop them.
-  //
-  // The vec's lifetime is this stack frame (chain maps + `resolved_first`
-  // + `empty` + the codegen borrow), not the caller's `'a`.
   let mut chain: Vec<&rolldown_sourcemap::SourceMapRef<'_>> =
     Vec::with_capacity(static_chain.len() + 1);
   for map in &static_chain {
     chain.push(coerce_static_map_ref(map));
   }
-  if let Some(sourcemap) = codegen_map {
+  if let Some(sourcemap) = codegen_map.as_ref() {
     chain.push(sourcemap);
   }
   Some(collapse_sourcemaps_traced(&chain))
@@ -246,7 +243,7 @@ mod tests {
   fn empty_chain_returns_codegen_map_unchanged() {
     let mut warnings = vec![];
     let codegen = codegen_map("const a = 1;\n");
-    let result = collapse_module_sourcemap(&[], Some(&codegen), MODULE_ID, &mut warnings).unwrap();
+    let result = collapse_module_sourcemap(&[], Some(codegen), MODULE_ID, &mut warnings).unwrap();
     assert_snapshot!(result.to_json_string(), @r#"{"version":3,"names":[],"sources":["/project/src/index.js"],"sourcesContent":["const a = 1;\n"],"mappings":"AAAA,MAAM"}"#);
     assert!(warnings.is_empty());
 
@@ -258,7 +255,7 @@ mod tests {
     let mut warnings = vec![];
     let codegen = codegen_map("const a = 1;\n");
     let result =
-      collapse_module_sourcemap(&[omitted()], Some(&codegen), MODULE_ID, &mut warnings).unwrap();
+      collapse_module_sourcemap(&[omitted()], Some(codegen), MODULE_ID, &mut warnings).unwrap();
     assert_snapshot!(result.to_json_string(), @r#"{"version":3,"names":[],"sources":[],"mappings":""}"#);
     // An omitted sourcemap breaks the chain, so a `SOURCEMAP_BROKEN` warning is emitted.
     assert_eq!(warnings.len(), 1);
@@ -270,13 +267,9 @@ mod tests {
     // source content so the transformed code does not leak into `sourcesContent`.
     let mut warnings = vec![];
     let codegen = codegen_map("a(1);\n");
-    let result = collapse_module_sourcemap(
-      &[null("const a = 1;\n")],
-      Some(&codegen),
-      MODULE_ID,
-      &mut warnings,
-    )
-    .unwrap();
+    let result =
+      collapse_module_sourcemap(&[null("const a = 1;\n")], Some(codegen), MODULE_ID, &mut warnings)
+        .unwrap();
     assert_snapshot!(result.to_json_string(), @r#"{"version":3,"names":[],"sources":["/project/src/index.js"],"sourcesContent":["const a = 1;\n"],"mappings":"AAAA,MAAM"}"#);
     assert!(warnings.is_empty());
   }
@@ -298,7 +291,7 @@ mod tests {
     let load = SourcemapChainElement::Load(map("/project/src/loaded.js", "const a = 1;\n"));
     let codegen = codegen_map("a(1);\n");
     let result =
-      collapse_module_sourcemap(&[load], Some(&codegen), MODULE_ID, &mut warnings).unwrap();
+      collapse_module_sourcemap(&[load], Some(codegen), MODULE_ID, &mut warnings).unwrap();
     assert_snapshot!(result.to_json_string(), @r#"{"version":3,"names":[],"sources":["/project/src/loaded.js"],"sourcesContent":["const a = 1;\n"],"mappings":"AAAA,MAAM"}"#);
     assert!(warnings.is_empty());
   }
@@ -318,7 +311,7 @@ mod tests {
       let codegen = codegen_map("proxy();\n");
       let result = collapse_module_sourcemap(
         &[earlier.clone(), last],
-        Some(&codegen),
+        Some(codegen),
         MODULE_ID,
         &mut warnings,
       )
@@ -341,7 +334,7 @@ mod tests {
     let mut warnings = vec![];
     let codegen = codegen_map("const a = 1;\n");
     let result =
-      collapse_module_sourcemap(&chain, Some(&codegen), MODULE_ID, &mut warnings).unwrap();
+      collapse_module_sourcemap(&chain, Some(codegen), MODULE_ID, &mut warnings).unwrap();
     assert_eq!(
       result.get_sources().collect::<Vec<_>>(),
       [Some("/project/lib/a.ts"), Some("/project/lib/b.ts")]

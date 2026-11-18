@@ -1,0 +1,50 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+# Assets
+
+## group.js
+
+```js
+import { n as task, t as helper } from "./task.js";
+// HIDDEN [\0rolldown/runtime.js]
+// seg_dynamic.js
+var seg_dynamic_exports = /* @__PURE__ */ __exportAll({ s_task: () => task });
+export { helper as s_helper, task as s_task, seg_dynamic_exports as t };
+
+```
+
+## index.js
+
+```js
+import { n as task, t as helper } from "./task.js";
+// index.js
+const load = () => import("./group.js").then((n) => n.t);
+export { helper, load, task };
+
+```
+
+## task.js
+
+```js
+// task.js
+const task = () => "task";
+const helper = () => "helper";
+export { task as n, helper as t };
+
+```

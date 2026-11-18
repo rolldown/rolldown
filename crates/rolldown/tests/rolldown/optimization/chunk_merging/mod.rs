@@ -1,3 +1,4 @@
 mod allow_extension_exports;
 mod allow_extension_merge_aliased_then_locals;
+mod allow_extension_merge_cross_chunk_reexport;
 mod allow_extension_merge_same_exports;

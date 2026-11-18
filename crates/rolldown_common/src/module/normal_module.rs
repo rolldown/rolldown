@@ -1,9 +1,8 @@
 use std::fmt::Debug;
 
-use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
   EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta, ModuleId, ModuleIdx,
-  ModuleInfo, NormalizedBundlerOptions, RawImportRecord, ResolvedId, StableModuleId,
+  ModuleInfo, RawImportRecord, ResolvedId, StableModuleId,
 };
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -11,7 +10,6 @@ use std::ops::{Deref, DerefMut};
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
-use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 
 #[derive(Debug, Clone)]
 pub struct NormalModule {
@@ -141,58 +139,6 @@ impl NormalModule {
     self.ecma_view.def_format.is_esm() || self.ecma_view.def_format.is_commonjs()
   }
 
-  pub fn render(
-    &self,
-    options: &NormalizedBundlerOptions,
-    args: &ModuleRenderArgs,
-    initial_indent: u32,
-  ) -> ModuleRenderOutput {
-    match args {
-      ModuleRenderArgs::Ecma { ast } => {
-        let enable_sourcemap = options.sourcemap.is_some() && !self.is_virtual();
-
-        // Because oxc codegen sourcemap is last of sourcemap chain,
-        // If here no extra sourcemap need remapping, we using it as final module sourcemap.
-        // So here make sure using correct `source_name` and `source_content.
-        let render_output = EcmaCompiler::print_with(
-          ast,
-          PrintOptions {
-            sourcemap: enable_sourcemap,
-            filename: self.id.to_string(),
-            comments: {
-              let mut c: rolldown_ecmascript::PrintCommentsOptions = options.comments.into();
-              // Annotation comments must survive into the rendered text because
-              // `minify_chunks` re-parses it; without them the parser won't set
-              // `expr.pure` and DCE can't eliminate unused pure calls.
-              // `minify_chunks` codegen will honour the user's `comments.annotation`
-              // setting when it emits the final output.
-              // Only `annotation` needs this override — `legal` and `jsdoc` comments
-              // have no effect on DCE behaviour.
-              c.annotation = true;
-              c
-            },
-            initial_indent,
-            ascii_only: options.charset.is_ascii(),
-          },
-        );
-        // The codegen map borrows this module's source. Callers that collapse
-        // it with `sourcemap_chain` must do so before this render returns;
-        // `render` itself only owns the map when it is the final module map
-        // (empty chain) or when sourcemaps are off (`None`).
-        // See `render_ecma_module::render_normal_module`, which collapses a
-        // non-empty chain against the borrowed map and skips this copy.
-        ModuleRenderOutput {
-          code: render_output.code,
-          map: render_output.map.map(oxc_sourcemap::SourceMap::into_owned),
-          // Chain collapse is done by `render_normal_module` on the borrowed
-          // codegen map. This method owns the map for callers that do not
-          // collapse; it does not walk the chain.
-          warnings: Vec::new(),
-        }
-      }
-    }
-  }
-
   #[expect(clippy::cast_precision_loss)]
   pub fn size(&self) -> f64 {
     self.ecma_view.source.len() as f64
@@ -223,8 +169,4 @@ impl DerefMut for NormalModule {
   fn deref_mut(&mut self) -> &mut Self::Target {
     &mut self.ecma_view
   }
-}
-
-pub enum ModuleRenderArgs<'any> {
-  Ecma { ast: &'any EcmaAst },
 }

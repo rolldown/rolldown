@@ -572,3 +572,80 @@ function createTestWithMultiFiles(
   }
   return { dir };
 }
+
+// https://github.com/rolldown/rolldown/issues/11223
+test.concurrent(
+  'a partial scan resets the module options of a changed module to those of its resolution',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput('dev-module-options', retryCount);
+    const source = path.join(dir, 'mod-source.js');
+    fs.writeFileSync(input, `import 'virtual:mod'`);
+    fs.writeFileSync(source, 'export const value = 1');
+
+    const infos: unknown[] = [];
+    const outputs: RolldownOutput[] = [];
+    const outputCode = () =>
+      outputs
+        .at(-1)
+        ?.output.map((chunk) => (chunk.type === 'chunk' ? chunk.code : ''))
+        .join('\n');
+
+    const engine = await dev(
+      {
+        input,
+        plugins: [
+          {
+            name: 'toggle-side-effects',
+            resolveId: (id) =>
+              id === 'virtual:mod' ? { id: '\0virtual:mod', meta: { resolved: true } } : undefined,
+            load(id) {
+              if (id !== '\0virtual:mod') return;
+              this.addWatchFile(source);
+              return fs.readFileSync(source, 'utf8');
+            },
+            transform(code, id) {
+              if (id !== '\0virtual:mod') return;
+              return code.includes('EFFECT') ? { code } : { code, moduleSideEffects: false };
+            },
+            moduleParsed({ id }) {
+              if (id !== '\0virtual:mod') return;
+              const { meta, moduleSideEffects } = this.getModuleInfo(id)!;
+              infos.push({ meta: { ...meta }, moduleSideEffects });
+            },
+          },
+        ],
+      },
+      { dir: outputDir },
+      {
+        // Without `devMode`, an edit only rebuilds when the strategy is `always`.
+        rebuildStrategy: 'always',
+        onOutput: (result) => {
+          if (!(result instanceof Error)) outputs.push(result);
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await expect.poll(() => outputs.length).toBeGreaterThan(0);
+    expect(outputCode()).not.toContain('EFFECT');
+    expect(infos).toEqual([{ meta: { resolved: true }, moduleSideEffects: false }]);
+
+    await editFile(source, 'globalThis.EFFECT = true\nexport const value = 1');
+    await expect
+      .poll(async () => {
+        await engine.ensureLatestBuildOutput();
+        return outputCode();
+      })
+      .toContain('EFFECT');
+    // Only the options from `resolveId` stay.
+    expect(infos.at(-1)).toEqual({ meta: { resolved: true }, moduleSideEffects: null });
+  },
+);

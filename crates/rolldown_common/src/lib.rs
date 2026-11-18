@@ -74,6 +74,7 @@ pub mod bundler_options {
       },
       platform::Platform,
       plugin_timings_option::PluginTimingsOption,
+      reset_js_module_options::ResetJsModuleOptions,
       resolve_options::ResolveOptions,
       sanitize_filename::SanitizeFilename,
       source_map_type::SourceMapType,

@@ -382,6 +382,25 @@ fn normalize_invalidate_js_side_cache_option(
   })
 }
 
+fn normalize_reset_js_module_options_option(
+  reset_js_module_options: Option<UntrackedJsCallback<FnArgs<(Option<Vec<String>>,)>, ()>>,
+  callbacks: &JsCallbackRelease,
+) -> Option<rolldown::ResetJsModuleOptions> {
+  reset_js_module_options.map(|ts_fn| {
+    let ts_fn = callbacks.track(ts_fn);
+    rolldown::ResetJsModuleOptions::new(Arc::new(move |module_ids| {
+      let ts_fn = ts_fn.clone();
+      Box::pin(async move {
+        ts_fn
+          .invoke_async(FnArgs { data: (module_ids,) })
+          .await
+          .context("resetJsModuleOptions option")
+          .map_err(anyhow::Error::from)
+      })
+    }))
+  })
+}
+
 fn normalize_on_log_option(
   on_log: BindingOnLog,
   callbacks: &JsCallbackRelease,
@@ -573,6 +592,8 @@ pub fn normalize_binding_options(
     "invalidateJsSideCache option",
     &callbacks,
   );
+  let reset_js_module_options =
+    normalize_reset_js_module_options_option(input_options.reset_js_module_options, &callbacks);
   let on_log = normalize_on_log_option(input_options.on_log, &callbacks);
 
   let mut module_types = None;
@@ -876,6 +897,7 @@ pub fn normalize_binding_options(
       mode: inner.mode,
     }),
     invalidate_js_side_cache,
+    reset_js_module_options,
     log_level: Some(input_options.log_level.into()),
     on_log,
     preserve_modules: output_options.preserve_modules,

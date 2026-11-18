@@ -81,3 +81,9 @@ impl From<rolldown_sourcemap::JSONSourceMap> for BindingSourcemap {
     Self(Either::B(value.into()))
   }
 }
+
+impl From<String> for BindingSourcemap {
+  fn from(value: String) -> Self {
+    Self(Either::A(value))
+  }
+}

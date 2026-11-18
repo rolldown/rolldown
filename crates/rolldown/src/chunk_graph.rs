@@ -85,18 +85,21 @@ impl ChunkGraph {
     self.module_to_chunk[module_idx].is_some_and(|chunk_idx| self.chunk_is_live(chunk_idx))
   }
 
-  /// Render order: user-defined entry chunks first (stable by index), everything else by
-  /// execution order.
+  /// Render order: user-defined entries, then emitted entries, each by index and only when
+  /// absent from post-chunk operations; other chunks follow execution order.
   pub fn rebuild_sorted_chunk_idx_vec(&mut self, only_live: bool) {
     self.sorted_chunk_idx_vec = self
       .chunk_table
       .iter_enumerated()
       .filter(|(chunk_idx, _)| !only_live || self.chunk_is_live(*chunk_idx))
       .sorted_unstable_by_key(|(index, chunk)| match &chunk.kind {
-        ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) => {
-          (0, index.raw())
+        ChunkKind::EntryPoint { meta, .. }
+          if !self.post_chunk_optimization_operations.contains_key(index)
+            && meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk) =>
+        {
+          (u8::from(!meta.contains(ChunkMeta::UserDefinedEntry)), index.raw())
         }
-        _ => (1, chunk.exec_order),
+        _ => (2, chunk.exec_order),
       })
       .map(|(idx, _)| idx)
       .collect();

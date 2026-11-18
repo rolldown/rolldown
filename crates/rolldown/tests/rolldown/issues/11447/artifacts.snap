@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## common.js
+
+```js
+import { t as value } from "./common2.js";
+// one.js
+const one = [value];
+export { one };
+
+```
+
+## common2.js
+
+```js
+// lib/common.js
+const value = [];
+export { value as t };
+
+```
+
+## noop.js
+
+```js
+
+```
+
+## other.js
+
+```js
+import { t as value } from "./common2.js";
+// two.js
+const two = [value];
+export { two };
+
+```

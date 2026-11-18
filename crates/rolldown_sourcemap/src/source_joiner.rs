@@ -187,7 +187,7 @@ fn test_concat_mixed_owned_and_borrowed_sourcemaps() {
   assert_eq!(map.get_sources().collect::<Vec<_>>(), [Some("borrowed.js"), Some("owned.js")]);
   assert_eq!(map.get_source_content(0), Some("borrowed source"));
   assert_eq!(map.get_source_content(1), Some("owned source"));
-  assert_eq!(map.get_token(0).and_then(|token| token.get_source_id()), Some(0));
-  assert_eq!(map.get_token(1).map(|token| token.get_dst_line()), Some(1));
-  assert_eq!(map.get_token(1).and_then(|token| token.get_source_id()), Some(1));
+  assert_eq!(map.get_tokens().next().and_then(|token| token.get_source_id()), Some(0));
+  assert_eq!(map.get_tokens().nth(1).map(|token| token.get_dst_line()), Some(1));
+  assert_eq!(map.get_tokens().nth(1).and_then(|token| token.get_source_id()), Some(1));
 }

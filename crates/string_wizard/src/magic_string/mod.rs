@@ -289,6 +289,11 @@ impl<'text> MagicString<'text> {
     }
   }
 
+  /// Whether `text` is the original text of a range replaced with `keep_original`.
+  pub(crate) fn is_stored_name(&self, text: &str) -> bool {
+    self.stored_names.contains_key(text)
+  }
+
   /// Stored names in `names`-array order, paired with their index.
   pub(super) fn stored_names_ordered(&self) -> Vec<(&str, u32)> {
     let mut ordered: Vec<(&str, u32)> =

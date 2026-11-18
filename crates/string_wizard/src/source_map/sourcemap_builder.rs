@@ -126,6 +126,22 @@ impl<'a> SourcemapBuilder<'a> {
     }
   }
 
+  /// Adds a token with no original position at the current position, then advances past
+  /// `content`. A lookup after the token on the same line finds no mapping.
+  pub fn add_unmapped(&mut self, content: &str) {
+    if !content.is_empty() {
+      self.source_map_builder.add_token(
+        self.generated_code_line,
+        self.generated_code_column,
+        0,
+        0,
+        None,
+        None,
+      );
+    }
+    self.advance(content);
+  }
+
   pub fn advance(&mut self, content: &str) {
     if content.is_empty() {
       return;

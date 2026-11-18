@@ -260,7 +260,8 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
               }
 
               let open = chains.entry(module_idx).or_insert_with(|| OpenMagicStringChain {
-                chain: string_wizard::MagicStringChain::new(magic_string.source().to_string()),
+                chain: string_wizard::MagicStringChain::new(magic_string.source().to_string())
+                  .with_hires(hires),
                 plugin_idx,
                 id,
                 hires,

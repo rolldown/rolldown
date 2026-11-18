@@ -3,7 +3,10 @@ use std::borrow::Cow;
 use nodejs_built_in_modules::is_nodejs_builtin_module;
 use rolldown_common::{ImportKind, OutputFormat, ResolvedExternal};
 use rolldown_plugin::{HookLoadOutput, HookResolveIdOutput, HookUsage, Plugin};
-use rolldown_utils::{concat_string, pattern_filter::StringOrRegex, rustc_hash::FxHashSetExt as _};
+use rolldown_utils::{
+  concat_string, ecmascript::to_ecma_string_literal, pattern_filter::StringOrRegex,
+  rustc_hash::FxHashSetExt as _,
+};
 use rustc_hash::FxHashSet;
 
 const CJS_EXTERNAL_FACADE_PREFIX: &str = "builtin:esm-external-require-";
@@ -137,9 +140,9 @@ impl Plugin for EsmExternalRequirePlugin {
   ) -> rolldown_plugin::HookLoadReturn {
     Ok(args.id.strip_prefix(CJS_EXTERNAL_FACADE_PREFIX).map(|module_id| {
       let code = concat_string!(
-        "import * as m from '",
-        module_id,
-        "';module.exports = ",
+        "import * as m from ",
+        to_ecma_string_literal(module_id, false),
+        ";module.exports = ",
         if is_nodejs_builtin_module(module_id) {
           "m.default"
         } else {

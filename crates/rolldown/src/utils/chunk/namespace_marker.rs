@@ -18,10 +18,9 @@ pub fn render_namespace_markers(
   es_module_flag: EsModuleFlag,
   has_default_export: bool,
   generated_code: &GeneratedCodeOptions,
-  namespace_to_string_tag: bool,
 ) -> Option<&'static str> {
   let es_module = determine_es_module(es_module_flag, has_default_export);
-  let use_symbols = generated_code.symbols && namespace_to_string_tag;
+  let use_symbols = generated_code.symbols;
 
   if es_module && use_symbols {
     Some(

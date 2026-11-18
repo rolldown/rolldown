@@ -453,6 +453,18 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when a missing export is replaced with an undefined binding',
     ),
   ),
+  deprecatedImportAssertion: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when an import uses the legacy `assert` keyword instead of `with`',
+    ),
+  ),
+  invalidImportAttribute: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when the options of a dynamic import are not statically analyzable while `experimental.importAttributes` is on',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 
@@ -707,6 +719,7 @@ const InputOptionsSchema = v.strictObject({
         ]),
       ),
       lazyBarrel: v.optional(v.boolean()),
+      importAttributes: v.optional(v.boolean()),
     }),
   ),
   transform: v.optional(TransformOptionsSchema),
@@ -730,12 +743,12 @@ const InputOptionsSchema = v.strictObject({
               ),
             ),
           ),
-          v.description('Used to name the build.'),
+          v.description("Name of the 'full' mode log folder, node_modules/.rolldown/<sessionId>/."),
         ),
         mode: v.pipe(
           v.optional(v.union([v.literal('full'), v.literal('report')])),
           v.description(
-            "'full' (default): write JSON-lines devtools logs. 'report': aggregate the same event stream in-memory and emit an agent-readable report (metrics.json + markdown views) instead.",
+            "'full' (default): write JSON-lines devtools logs. 'report': write a small build report to node_modules/.rolldown/report/ instead.",
           ),
         ),
       }),
@@ -776,7 +789,7 @@ const InputCliOverrideSchema = v.strictObject({
   treeshake: v.pipe(v.optional(v.boolean()), v.description('enable treeshaking')),
   makeAbsoluteExternalsRelative: v.pipe(
     v.optional(v.boolean()),
-    v.description('Prevent normalization of external imports'),
+    v.description('normalization of external imports'),
   ),
   preserveEntrySignatures: v.pipe(
     v.optional(v.literal(false)),
@@ -967,7 +980,7 @@ const OutputOptionsSchema = v.strictObject({
       `Output format of the generated bundle (supports ${styleText(
         'underline',
         'esm',
-      )}, cjs, and iife)`,
+      )}, cjs, iife, and umd)`,
     ),
   ),
   sourcemap: v.pipe(
@@ -1050,10 +1063,7 @@ const OutputOptionsSchema = v.strictObject({
     v.description('Control comments in the output'),
   ),
   plugins: v.optional(v.custom<RolldownOutputPluginOption>(() => true)),
-  polyfillRequire: v.pipe(
-    v.optional(v.boolean()),
-    v.description('Disable require polyfill injection'),
-  ),
+  polyfillRequire: v.pipe(v.optional(v.boolean()), v.description('require polyfill injection')),
   hoistTransitiveImports: v.optional(v.literal(false)),
   preserveModules: v.pipe(v.optional(v.boolean()), v.description('Preserve module structure')),
   preserveModulesRoot: v.pipe(
@@ -1241,7 +1251,7 @@ export function validateOption<T>(key: 'input' | 'output', options: T): void {
           );
           if (subIssue) {
             if (subIssue.path) {
-              issuePaths.push(subIssue.path.map((path) => path.key));
+              issuePaths.push(...subIssue.path.map((path) => path.key));
             }
             issueMsg = subIssue.message;
           }

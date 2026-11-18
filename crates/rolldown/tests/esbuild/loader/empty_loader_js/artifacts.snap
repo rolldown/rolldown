@@ -15,7 +15,7 @@ var _default = void 0;
 // d.empty
 var named = void 0;
 // entry.js
-assert.deepEqual(b_exports, Object.defineProperty({}, Symbol.toStringTag, { value: "Module" }));
+assert.deepEqual(b_exports, Object.defineProperty({ __proto__: null }, Symbol.toStringTag, { value: "Module" }));
 assert.deepEqual(_default, void 0);
 assert.equal(named, void 0);
 

@@ -613,6 +613,16 @@ impl OrderWrapState {
       .filter_map(|key| self.import_overlay(*key).map(|overlay| (*key, overlay)))
   }
 
+  /// Returns `true` when an overlay of `importer_idx` has `reexports_dynamic_exports`: the overlay
+  /// re-exports an importee with dynamic exports. The overlay writer in the module finalizer reads
+  /// this field to decide if it emits `__reExport` into the namespace object of `importer_idx`. So
+  /// that object must stay open.
+  pub(crate) fn has_dynamic_reexport_overlay(&self, importer_idx: ModuleIdx) -> bool {
+    self
+      .import_overlays_for_importer(importer_idx)
+      .any(|(_, overlay)| overlay.reexports_dynamic_exports)
+  }
+
   pub(crate) fn import_overlays_for_statement(
     &self,
     importer_idx: ModuleIdx,

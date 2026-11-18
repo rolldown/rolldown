@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## annotations.js
+
+```js
+import { AnnotationQuery as AnnotationQuery$1 } from "ext-schema";
+// annotations.js
+var AnnotationQuery = class extends AnnotationQuery$1 {};
+export { AnnotationQuery };
+
+```
+
+## index.js
+
+```js
+export { AnnotationQuery } from "./annotations.js";
+
+```

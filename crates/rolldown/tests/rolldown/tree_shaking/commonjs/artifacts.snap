@@ -22,8 +22,8 @@ var require_cjs$2 = /* @__PURE__ */ __commonJSMin(((exports) => {
 }));
 require_basic_ns();
 require_basic_ref_with_named_default();
-__reExport(/* @__PURE__ */ __exportAll({}), /* @__PURE__ */ __toESM(require_cjs$2()));
-__reExport(/* @__PURE__ */ __exportAll({}), /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
+__reExport(/* @__PURE__ */ __exportAll({}, 2), /* @__PURE__ */ __toESM(require_cjs$2()));
+__reExport(/* @__PURE__ */ __exportAll({}, 2), /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "nested-export-star-from-cjs-a";
 })))()));
 // src/named_import_export_star_from_cjs/cjs.js
@@ -31,7 +31,7 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "named-import-export-star-from-cjs-a";
 }));
 // src/named_import_export_star_from_cjs/index.js
-var named_import_export_star_from_cjs_exports = /* @__PURE__ */ __exportAll({});
+var named_import_export_star_from_cjs_exports = /* @__PURE__ */ __exportAll({}, 2);
 __reExport(named_import_export_star_from_cjs_exports, /* @__PURE__ */ __toESM(require_cjs()));
 // src/indirect_common_js/lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {

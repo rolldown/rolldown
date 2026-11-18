@@ -1,0 +1,7 @@
+{
+  "config": {
+    "format": "cjs",
+    "preserveModules": true
+  },
+  "configVariants": [{ "_configName": "minify", "minify": true, "_snapshot": false }]
+}

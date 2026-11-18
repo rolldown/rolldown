@@ -1,11 +1,47 @@
 # Release Rolldown
 
-## Publish Latest
+## Release lines
 
-1. Visit https://github.com/rolldown/rolldown/actions/workflows/prepare-release.yml
-2. Trigger "Run workflow" manually, or wait for the weekly cron run.
-3. `prepare-release.yml` auto-bumps `packages/rolldown/package.json` from `x.y.z-rc.n` to `x.y.z-rc.(n+1)` and opens a release PR. This workflow assumes the current version already has an `-rc.n` suffix and fails if it does not match that pattern.
-4. Merge the release PR, then wait for https://github.com/rolldown/rolldown/actions/workflows/publish-to-npm.yml to finish.
+| Branch | Releases                                             | npm dist-tag | Latest on GitHub |
+| ------ | ---------------------------------------------------- | ------------ | ---------------- |
+| `main` | New minors and majors, patches for the current minor | `latest`     | Yes              |
+| `vX.Y` | Patches for `X.Y`                                    | `previous`   | No               |
+
+Maintenance branches are created from the last release tag of a minor:
+
+```sh
+git push origin v1.1.5:refs/heads/v1.1
+```
+
+Each maintenance branch also needs its own Vite branch for the Vite and dev server tests, because Vite's `rolldown-canary` follows `main` and can fail on an older line. These branches are named after their Vite minor, for example `v1.2` uses `rolldown-canary-8.3`:
+
+1. In vitejs/vite, create `rolldown-canary-A.B`, where `A.B` is the latest Vite minor that ships rolldown `X.Y`. Base it on that Vite release line, plus any test fixes it needs.
+2. On `vX.Y`, set `viteBranch` in `scripts/src/setup-vite/checkout.ts` to that branch and `viteBase` to Vite's `vA.B`. The tests rebase it onto the latest `vA.B`. Until Vite has a `vA.B` branch, they use it as-is.
+3. On `main`, add `vX.Y` and that branch to `maintenanceViteBranches` in `.github/workflows/vite-ecosystem-ci-trigger.yml`.
+
+A maintenance branch can only release stable versions within `X.Y` that are lower than the current npm `latest`. Prepare Release, Publish to NPM and Release Crates all check this with `scripts/misc/release-line.mjs`.
+
+## Publishing
+
+1. Run the [Prepare Release](https://github.com/rolldown/rolldown/actions/workflows/prepare-release.yml) workflow from `main` with the version to release, e.g. `1.1.6`. A version lower than npm `latest` is prepared on its `vX.Y` branch, any other on `main`.
+2. Review the generated `release: vX.Y.Z` pull request and squash-merge it without changing the title.
+3. Approve the `release` environment deployment in the [Publish to NPM](https://github.com/rolldown/rolldown/actions/workflows/publish-to-npm.yml) run.
+
+Merging the release pull request triggers:
+
+- [Publish to NPM](https://github.com/rolldown/rolldown/actions/workflows/publish-to-npm.yml), which publishes the npm packages and creates the `vX.Y.Z` tag and GitHub release.
+- [Release Crates](https://github.com/rolldown/rolldown/actions/workflows/release-crates.yml), which publishes the crates to crates.io.
+
+The changelog covers the commits since the last tag reachable from the target branch.
+
+## Backporting
+
+1. Merge the fix into `main`.
+2. Create a branch from `vX.Y` and apply the fix with `git cherry-pick -x <commit>`.
+3. Open a pull request against `vX.Y` with the original title. Add the `ci: windows` label if the change affects platform-specific code, then rerun all jobs of the pull request's latest `CI` run. Adding the label alone does not start a run.
+4. Squash-merge the pull request.
+
+`/ecosystem-ci run` on a pull request against `vX.Y` builds Vite from the branch listed for `vX.Y` in `maintenanceViteBranches`.
 
 ## perf-kit
 

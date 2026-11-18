@@ -11,18 +11,23 @@ The clock starts and stops **inside the JavaScript callback**, not around the ca
 
 2. **Detection threshold**: a warning is triggered when plugin time (total build time minus link stage time) exceeds 100x the link stage time. This threshold was determined by studying plugin impact on real-world projects. The link stage is the one part of a build that runs no plugins at all, which is what makes it a usable baseline.
 
-3. **Rows**: The report lists up to 12 callbacks. It sorts the callbacks by measured time. Each row shows its build-time share and call count. Only callbacks that cost at least 1 second get a row. Option callbacks appear under `input options` or `output options`.
+3. **Rows**: The report is a table. It lists up to 12 callbacks that cost at least 1 second, sorted by total time. Up to 3 callbacks whose calls overlapped come after them, with `-` in the time columns.
+   - `total` is the time of all calls added up.
+   - `%build` is `total` as a share of the build time.
+   - `calls` is how many times the callback ran.
+   - `avg` and `max` are the average call and the longest single call. When `max` is close to `total`, one call took most of the time.
+   - `callback` names the plugin and the hook. Option callbacks appear under `input options` or `output options`.
 
    These callbacks include `external`, `treeshake.moduleSideEffects`, file-name callbacks, and addon callbacks. They also include `manualChunks` and the group callbacks in [`output.codeSplitting`](/reference/OutputOptions.codeSplitting). The deprecated [`output.advancedChunks`](/reference/OutputOptions.advancedChunks) option uses the same group callbacks.
 
    Code-splitting rows include the group index and an available label. Rolldown uses `debugName` first. It uses a string `name` when `debugName` is absent. Set `debugName` when `name` is a function. When the group has no label, Rolldown warns once for that group.
 
-   The headline figure is the wall time in which at least one measured callback ran. Overlap counts once. The figure can be more than the build time, because `closeBundle` runs after the build clock stops. The message says so when that happens. The rows can add up to more than the headline figure, because callbacks can overlap. One callback can run inside another: `this.emitFile()` in `buildStart` runs your `assetFileNames`, and that time counts for both. Two `async` callbacks can also run at the same time.
+   The headline figure is the wall time in which at least one measured callback ran. Overlap counts once. The figure can be more than the build time, because `closeBundle` runs after the build clock stops. The message says so when that happens. The rows can add up to more than the headline figure, because callbacks can overlap. One callback can run inside another: `this.emitFile()` in `buildStart` runs your `assetFileNames`, and that time counts for both. Two `async` callbacks can also overlap. The message says so when the rows add up to more.
 
 > [!IMPORTANT]
 > **The message lists some callbacks without a time.**
 >
-> Only plugin hooks appear here. Every option callback is synchronous, so it cannot overlap itself.
+> Their time columns show `-`. Only plugin hooks appear here. Every option callback is synchronous, so it cannot overlap itself.
 >
 > A span from hook entry to hook exit can be added to another span only if the two never overlap. A synchronous hook cannot overlap — it holds the thread until it returns. An `async` one can: it may suspend at an `await` and let another call of the same hook begin, and then both spans cover the same wall clock and adding them counts it twice. Overlap also changes what the span means — a hook that awaits Rolldown itself, via `this.resolve` or `this.load`, spends most of its span waiting for the bundler, so its elapsed time describes the bundler rather than your plugin.
 >

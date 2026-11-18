@@ -15,7 +15,7 @@ use oxc::transformer_plugins::{
 };
 use oxc_str::CompactStr;
 
-use rolldown_common::{ConstExportMeta, ConstantValue, NormalizedBundlerOptions};
+use rolldown_common::{ConstExportMeta, ConstantValue, ModuleId, NormalizedBundlerOptions};
 use rolldown_ecmascript::{EcmaAst, WithMutFields, semantic_builder_for_transform};
 use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
@@ -38,13 +38,14 @@ impl PreProcessEcmaAst {
     &mut self,
     mut ast: EcmaAst,
     stable_id: &str,
-    resolved_id: &str,
+    module_id: &ModuleId,
     should_warn_on_invalid_annotation: bool,
     parsed_type: &OxcParseType,
     replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
     bundle_options: &NormalizedBundlerOptions,
     has_lazy_export: bool,
   ) -> BuildResult<ParseToEcmaAstResult> {
+    let resolved_id = module_id.as_str();
     let source = ast.source().clone();
 
     // Step 0: Move directive comments attached to 0 so that it's not removed when the directives are removed
@@ -70,26 +71,26 @@ impl PreProcessEcmaAst {
       semantic_builder_for_transform().with_check_syntax_error(true).build(&dep.program)
     });
 
-    let (errors, warnings): (Vec<_>, Vec<_>) =
-      semantic_ret.diagnostics.into_iter().partition(|w| w.severity == OxcSeverity::Error);
-
-    let mut warnings = if errors.is_empty() {
-      BuildDiagnostic::from_oxc_diagnostics(
-        warnings,
-        &source,
-        resolved_id,
-        Severity::Warning,
-        EventKind::ParseError,
-      )
-    } else {
-      return Err(BuildDiagnostic::from_oxc_diagnostics(
-        errors,
-        &source,
-        resolved_id,
-        Severity::Error,
-        EventKind::ParseError,
-      ))?;
-    };
+    let diagnostics = semantic_ret.diagnostics;
+    if diagnostics.has_errors() {
+      return Err(
+        BuildDiagnostic::from_oxc_diagnostics(
+          diagnostics.into_iter().filter(|d| d.severity == OxcSeverity::Error),
+          &source,
+          resolved_id,
+          Severity::Error,
+          EventKind::ParseError,
+        )
+        .into(),
+      );
+    }
+    let mut warnings = BuildDiagnostic::from_oxc_diagnostics(
+      diagnostics,
+      &source,
+      resolved_id,
+      Severity::Warning,
+      EventKind::ParseError,
+    );
     // Surface invalid annotations flagged by oxc (issue #8898).
     // oxc marks misplaced `PURE` and `NO_SIDE_EFFECTS` comments with their
     // respective `NotApplied` variants when the parser cannot apply them.
@@ -179,20 +180,22 @@ impl PreProcessEcmaAst {
         // For plain JS files, we skip tsconfig lookup since they don't need TS-specific transformations.
         let transform_options = bundle_options
           .transform_options
-          .options_for_file(is_not_js.then_some(Path::new(resolved_id)), &mut warnings)?;
+          .options_for_file(is_not_js.then_some(Path::new(module_id.raw_id())), &mut warnings)?;
         if !transform_options.jsx.jsx_plugin {
           preserve_jsx = true;
         }
 
         let scoping = self.recreate_scoping(&mut scoping, program);
-        let ret = Transformer::new(allocator, Path::new(stable_id), &transform_options)
+        // Import attributes are not part of the file name, e.g. `_jsxFileName`.
+        let stable_path =
+          stable_id.strip_suffix(module_id.attributes_suffix()).unwrap_or(stable_id);
+        let ret = Transformer::new(allocator, Path::new(stable_path), &transform_options)
           .build_with_scoping(scoping, program);
 
-        let (errors, transformer_warnings): (Vec<_>, Vec<_>) =
-          ret.diagnostics.into_iter().partition(|error| error.severity == OxcSeverity::Error);
-        if !errors.is_empty() {
+        let diagnostics = ret.diagnostics;
+        if diagnostics.has_errors() {
           return Err(BatchedBuildDiagnostic::from(BuildDiagnostic::from_oxc_diagnostics(
-            errors,
+            diagnostics.into_iter().filter(|d| d.severity == OxcSeverity::Error),
             &source,
             resolved_id,
             Severity::Error,
@@ -200,7 +203,7 @@ impl PreProcessEcmaAst {
           )));
         }
         warnings.extend(BuildDiagnostic::from_oxc_diagnostics(
-          transformer_warnings,
+          diagnostics,
           &source,
           resolved_id,
           Severity::Warning,

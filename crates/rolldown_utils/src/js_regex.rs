@@ -10,7 +10,11 @@ pub struct HybridRegex(HybridRegexInner);
 #[derive(Clone)]
 enum HybridRegexInner {
   Optimized(regex::Regex),
-  Ecma(regress::Regex),
+  /// `sticky` holds the `y` flag, which `regress` ignores. Only `matches` honors it.
+  Ecma {
+    regex: regress::Regex,
+    sticky: bool,
+  },
 }
 
 impl fmt::Debug for HybridRegex {
@@ -21,7 +25,7 @@ impl fmt::Debug for HybridRegex {
       }
       // `regress::Regex`'s derived formatter walks its compiled instruction program. Apart from
       // producing noisy output, calling it retains every instruction's formatter in release builds.
-      HybridRegexInner::Ecma(_) => f.write_str("Ecma(..)"),
+      HybridRegexInner::Ecma { .. } => f.write_str("Ecma(..)"),
     }
   }
 }
@@ -81,25 +85,30 @@ impl HybridRegex {
 
   #[inline(never)]
   pub fn new_ecma(pattern: &str) -> anyhow::Result<Self> {
-    regress::Regex::new(pattern).map(HybridRegexInner::Ecma).map(Self).map_err(anyhow::Error::from)
+    let regex = regress::Regex::new(pattern)?;
+    Ok(Self(HybridRegexInner::Ecma { regex, sticky: false }))
   }
 
   #[inline(never)]
   pub fn with_flags(pattern: &str, flags: &str) -> anyhow::Result<Self> {
-    let regex_pattern = Self::get_regex_pattern(pattern, flags);
-    match regex::Regex::new(&regex_pattern).map(Self::from_optimized) {
-      Ok(reg) => Ok(reg),
-      Err(_) => regress::Regex::with_flags(pattern, flags)
-        .map(HybridRegexInner::Ecma)
-        .map(Self)
-        .map_err(anyhow::Error::from),
+    // `g` and `d` do not change what `matches` / `replace` / `replace_all` return
+    // (`regress` ignores them too), but they make `regex::Regex::new` fail. Drop
+    // them so that patterns such as Vite's `/…/dg` code filters use the `regex`
+    // crate. `y`, `v` and unknown flags stay on `regress`.
+    if let Some(engine_flags) = flags_for_regex_crate(flags) {
+      let regex_pattern = Self::get_regex_pattern(pattern, &engine_flags);
+      if let Ok(reg) = regex::Regex::new(&regex_pattern) {
+        return Ok(Self::from_optimized(reg));
+      }
     }
+    let regex = regress::Regex::with_flags(pattern, flags)?;
+    Ok(Self(HybridRegexInner::Ecma { regex, sticky: flags.contains('y') }))
   }
 
   pub fn as_optimized(&self) -> Option<&regex::Regex> {
     match &self.0 {
       HybridRegexInner::Optimized(regex) => Some(regex),
-      HybridRegexInner::Ecma(_) => None,
+      HybridRegexInner::Ecma { .. } => None,
     }
   }
 
@@ -116,14 +125,14 @@ impl HybridRegex {
   ) -> Option<HybridMatches<'regex, 'text>> {
     match &self.0 {
       HybridRegexInner::Optimized(_) => None,
-      HybridRegexInner::Ecma(regex) => Some(HybridMatches(regex.find_from(text, start))),
+      HybridRegexInner::Ecma { regex, .. } => Some(HybridMatches(regex.find_from(text, start))),
     }
   }
 
   pub fn regex_pattern(&self) -> Option<&str> {
     match &self.0 {
       HybridRegexInner::Optimized(regex) => Some(regex.as_str()),
-      HybridRegexInner::Ecma(_) => None,
+      HybridRegexInner::Ecma { .. } => None,
     }
   }
 
@@ -137,14 +146,14 @@ impl HybridRegex {
   pub fn matches(&self, text: &str) -> bool {
     match &self.0 {
       HybridRegexInner::Optimized(regex) => regex.is_match(text),
-      HybridRegexInner::Ecma(_) => self.matches_ecma(text),
+      HybridRegexInner::Ecma { .. } => self.matches_ecma(text),
     }
   }
 
   pub fn replace<'a>(&self, haystack: &'a str, replacement: &str) -> Cow<'a, str> {
     match &self.0 {
       HybridRegexInner::Optimized(regex) => regex.replace(haystack, replacement),
-      HybridRegexInner::Ecma(_) => {
+      HybridRegexInner::Ecma { .. } => {
         // `regress` uses regex-crate-style replacement tokens, not full
         // `String.prototype.replace` semantics. Numbered captures match JS and
         // are what Vite aliases rely on.
@@ -156,18 +165,22 @@ impl HybridRegex {
   pub fn replace_all<'a>(&self, haystack: &'a str, replacement: &str) -> Cow<'a, str> {
     match &self.0 {
       HybridRegexInner::Optimized(regex) => regex.replace_all(haystack, replacement),
-      HybridRegexInner::Ecma(_) => self.replace_all_ecma(haystack, replacement),
+      HybridRegexInner::Ecma { .. } => self.replace_all_ecma(haystack, replacement),
     }
   }
 
   #[inline(never)]
   fn matches_ecma(&self, text: &str) -> bool {
-    self.find_from(text, 0).is_some_and(|mut matches| matches.next().is_some())
+    let HybridRegexInner::Ecma { sticky, .. } = self.0 else { unreachable!() };
+    self
+      .find_from(text, 0)
+      .and_then(|mut matches| matches.next())
+      .is_some_and(|m| !sticky || m.range().start == 0)
   }
 
   #[inline(never)]
   fn replace_ecma<'a>(&self, haystack: &'a str, replacement: &str) -> Cow<'a, str> {
-    let HybridRegexInner::Ecma(regex) = &self.0 else { unreachable!() };
+    let HybridRegexInner::Ecma { regex, .. } = &self.0 else { unreachable!() };
     let Some(mut matches) = self.find_from(haystack, 0) else { unreachable!() };
     if matches.next().is_none() {
       return Cow::Borrowed(haystack);
@@ -177,7 +190,7 @@ impl HybridRegex {
 
   #[inline(never)]
   fn replace_all_ecma<'a>(&self, haystack: &'a str, replacement: &str) -> Cow<'a, str> {
-    let HybridRegexInner::Ecma(regex) = &self.0 else { unreachable!() };
+    let HybridRegexInner::Ecma { regex, .. } = &self.0 else { unreachable!() };
     let Some(mut matches) = self.find_from(haystack, 0) else { unreachable!() };
     if matches.next().is_none() {
       return Cow::Borrowed(haystack);
@@ -187,8 +200,22 @@ impl HybridRegex {
 
   #[cfg(test)]
   fn uses_ecma(&self) -> bool {
-    matches!(self.0, HybridRegexInner::Ecma(_))
+    matches!(self.0, HybridRegexInner::Ecma { .. })
   }
+}
+
+/// Flags to hand to the `regex` crate, or `None` when the ECMAScript engine
+/// is required. See [`HybridRegex::with_flags`].
+fn flags_for_regex_crate(flags: &str) -> Option<String> {
+  let mut out = String::with_capacity(flags.len());
+  for c in flags.chars() {
+    match c {
+      'g' | 'd' => {}
+      'i' | 'm' | 's' | 'u' => out.push(c),
+      _ => return None,
+    }
+  }
+  Some(out)
 }
 
 #[cfg(test)]
@@ -202,6 +229,14 @@ mod test {
 
     let reg = HybridRegex::new("a").unwrap();
     assert!(!reg.matches("A"));
+  }
+
+  #[test]
+  fn sticky_matches_only_at_start() {
+    let reg = HybridRegex::with_flags("external-", "y").unwrap();
+    assert!(reg.uses_ecma());
+    assert!(reg.matches("external-first"));
+    assert!(!reg.matches("prefix-external-fourth"));
   }
 
   #[test]
@@ -248,5 +283,52 @@ mod test {
     let reg = HybridRegex::with_flags("a$", "m").unwrap();
     assert!(reg.matches("a\n"));
     assert!(reg.matches("a\r\n"));
+  }
+
+  #[test]
+  fn global_and_has_indices_flags_use_the_fast_engine() {
+    // Vite's build-import-analysis / worker filters are `/…/dg`. `g` and `d`
+    // must not push an otherwise-supported pattern onto `regress`.
+    let reg = HybridRegex::with_flags("import\\.meta\\.url", "dg").unwrap();
+    assert!(!reg.uses_ecma());
+    assert!(reg.matches("new URL('./x', import.meta.url)"));
+    assert!(!reg.matches("no meta url here"));
+
+    // `i` still applies when combined with the irrelevant flags.
+    let reg = HybridRegex::with_flags("abc", "gid").unwrap();
+    assert!(!reg.uses_ecma());
+    assert!(reg.matches("ABC"));
+  }
+
+  #[test]
+  fn vite_import_meta_url_code_filters_use_the_fast_engine() {
+    // Exact patterns from Vite's `assetImportMetaUrlRE` / `workerImportMetaUrlRE`.
+    let asset = HybridRegex::with_flags(
+      "\\bnew\\s+URL\\s*\\(\\s*('[^']+'|\"[^\"]+\"|`[^`]+`)\\s*,\\s*import\\.meta\\.url\\s*(?:,\\s*)?\\)",
+      "dg",
+    )
+    .unwrap();
+    assert!(!asset.uses_ecma());
+    assert!(asset.matches("const u = new URL('./a.png', import.meta.url)"));
+    assert!(asset.matches("new URL(`./a.png`, import.meta.url)"));
+    assert!(!asset.matches("const u = new URL('./a.png', other.url)"));
+    assert!(!asset.matches("function newURL() { return import.meta.url }"));
+
+    let worker = HybridRegex::with_flags(
+      "\\bnew\\s+(?:Worker|SharedWorker)\\s*\\(\\s*(new\\s+URL\\s*\\(\\s*('[^']+'|\"[^\"]+\"|`[^`]+`)\\s*,\\s*import\\.meta\\.url\\s*(?:,\\s*)?\\))",
+      "dg",
+    )
+    .unwrap();
+    assert!(!worker.uses_ecma());
+    assert!(worker.matches("new Worker(new URL('./w.js', import.meta.url))"));
+    assert!(worker.matches("new SharedWorker(new URL('./w.js', import.meta.url))"));
+    assert!(!worker.matches("new Worker('./w.js')"));
+  }
+
+  #[test]
+  fn sticky_and_unicode_sets_still_use_ecma() {
+    assert!(HybridRegex::with_flags("a", "y").unwrap().uses_ecma());
+    assert!(HybridRegex::with_flags("a", "dy").unwrap().uses_ecma());
+    assert!(HybridRegex::with_flags("[\\p{ASCII}]", "v").unwrap().uses_ecma());
   }
 }

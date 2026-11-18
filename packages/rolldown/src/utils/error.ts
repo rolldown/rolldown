@@ -34,6 +34,8 @@ export function normalizeBindingError(e: BindingError): Error {
         kind: e.field0.kind,
         message: e.field0.message,
         id: e.field0.id,
+        plugin: e.field0.plugin,
+        frame: e.field0.frame,
         exporter: e.field0.exporter,
         loc: e.field0.loc,
         pos: e.field0.pos,
@@ -116,6 +118,9 @@ function getErrorMessage(e: RolldownError): string {
   }
   const message = `${e.name ?? 'Error'}: ${e.message}`;
   s += message;
+  if (e.url) {
+    s = joinNewLine(s, e.url);
+  }
   if (e.frame) {
     s = joinNewLine(s, e.frame);
   }

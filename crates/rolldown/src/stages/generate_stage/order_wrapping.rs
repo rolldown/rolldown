@@ -59,6 +59,7 @@ pub(super) struct OrderLoweringInput<'a> {
   pub(super) star_reexport_records_by_imported_symbol:
     &'a FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
   pub(super) member_read_star_reexport_paths: &'a [MemberReadStarReexportPath],
+  pub(super) kept_inlined_constant_reads: &'a FxHashSet<SymbolRef>,
   pub(super) used_symbol_refs_builder: &'a UsedSymbolRefsBuilder,
   pub(super) cyclic_modules: &'a FxHashSet<ModuleIdx>,
   pub(super) tree_shaking: bool,
@@ -104,10 +105,7 @@ pub(super) fn order_wrapper_is_reexport_transparent(
   ast: Option<&EcmaAst>,
   keep_names: bool,
 ) -> bool {
-  matches!(
-    meta.concatenated_wrapped_module_kind,
-    rolldown_common::ConcatenateWrappedModuleKind::None
-  ) && meta.shimmed_missing_exports.is_empty()
+  meta.shimmed_missing_exports.is_empty()
     && meta.execution_dependencies.is_empty()
     && ast.is_some_and(|ast| {
       ast.program().body.iter().all(|stmt| statement_has_no_local_wrapper_body(stmt, keep_names))
@@ -214,10 +212,6 @@ pub(super) fn consumer_local_reexport_plan(
       let meta = &input.linking[module_idx];
       if meta.has_dynamic_exports
         || meta.is_tla_or_contains_tla_dependency
-        || !matches!(
-          meta.concatenated_wrapped_module_kind,
-          rolldown_common::ConcatenateWrappedModuleKind::None
-        )
         || !meta.shimmed_missing_exports.is_empty()
       {
         continue;
@@ -372,10 +366,6 @@ fn consumer_local_reexport_records(
       && !meta.has_dynamic_exports
       && !meta.is_tla_or_contains_tla_dependency
       && meta.shimmed_missing_exports.is_empty()
-      && matches!(
-        meta.concatenated_wrapped_module_kind,
-        rolldown_common::ConcatenateWrappedModuleKind::None
-      )
       && !input.cyclic_modules.contains(&module_idx)
       && !required_modules.contains(&module_idx)
   };
@@ -490,10 +480,6 @@ fn independently_initialized_esm_modules(input: &OrderLoweringInput<'_>) -> FxHa
     }) && !matches!(meta.wrap_kind(), WrapKind::Cjs)
       && !meta.is_tla_or_contains_tla_dependency
       && meta.shimmed_missing_exports.is_empty()
-      && matches!(
-        meta.concatenated_wrapped_module_kind,
-        rolldown_common::ConcatenateWrappedModuleKind::None
-      )
       && !input.cyclic_modules.contains(&module_idx)
     {
       independent.insert(module_idx);
@@ -655,6 +641,7 @@ impl GenerateStage<'_> {
         .link_output
         .star_reexport_records_by_imported_symbol,
       member_read_star_reexport_paths: &self.link_output.member_read_star_reexport_paths,
+      kept_inlined_constant_reads: &self.link_output.kept_inlined_constant_reads,
       used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
@@ -673,13 +660,7 @@ impl GenerateStage<'_> {
 
     let mut output =
       OrderLoweringOutput { symbols: &mut self.link_output.symbol_db, state: order_state };
-    lower_order_state(
-      &input,
-      &mut output,
-      runtime_helper,
-      code_splitting_disabled,
-      &consumer_local_plan,
-    );
+    lower_order_state(&input, &mut output, runtime_helper, &consumer_local_plan);
     self.populate_consumer_local_namespace_targets(order_state);
     let runtime_idx = self.link_output.runtime.id();
     order_state.compute_runtime_symbol_closure(
@@ -871,7 +852,14 @@ impl GenerateStage<'_> {
         chunk_graph.module_to_chunk[module_idx].expect("order-wrapped module should have a chunk");
       order_state.assign_order_wrapper_chunk(module_idx, chunk_idx);
     }
-    let carriers = order_state.order_cjs_carrier_keys().collect_vec();
+    // carrier registration feeds symbol deconfliction too. module indices reflect load
+    // completion, so hash-map iteration would assign suffixes in a different order per build.
+    let carriers = order_state
+      .order_cjs_carrier_keys()
+      .sorted_unstable_by_key(|key| {
+        (self.link_output.module_table[key.importer].exec_order(), key.record)
+      })
+      .collect_vec();
     for key in carriers {
       let importee =
         order_state.order_cjs_carrier(key).expect("order CJS carrier should exist").importee;
@@ -1568,7 +1556,6 @@ fn lower_order_state(
   input: &OrderLoweringInput<'_>,
   output: &mut OrderLoweringOutput<'_>,
   runtime_helper: RuntimeHelper,
-  code_splitting_disabled: bool,
   consumer_local_plan: &ConsumerLocalReexportPlan,
 ) {
   for module_idx in
@@ -1601,13 +1588,7 @@ fn lower_order_state(
   // Real lowering runs once per bundle, so it builds its own reverse index here; the fixpoint
   // projector passes the analysis-owned one instead of rebuilding per round.
   let reverse_static_imports = super::order_analysis::reverse_static_import_index(input.modules);
-  populate_order_import_overlays(
-    input,
-    &reexport_usage,
-    output.state,
-    code_splitting_disabled,
-    &reverse_static_imports,
-  );
+  populate_order_import_overlays(input, &reexport_usage, output.state, &reverse_static_imports);
 }
 
 /// Mint the per-record [`OrderImportOverlay`]s for the current plan: a wrapper-referencing overlay
@@ -1624,7 +1605,6 @@ pub(super) fn populate_order_import_overlays(
   input: &OrderLoweringInput<'_>,
   reexport_usage: &FrozenReexportUsage,
   state: &mut OrderWrapState,
-  code_splitting_disabled: bool,
   reverse_static_imports: &oxc_index::IndexVec<ModuleIdx, Vec<ModuleIdx>>,
 ) {
   // Backward closure of the plan over the reverse static-import index: one walk answers every
@@ -1687,7 +1667,7 @@ pub(super) fn populate_order_import_overlays(
           importee.namespace_object_ref,
           input.linking[importee_idx].has_dynamic_exports,
           execution_dependencies.contains(&importee_idx),
-          code_splitting_disabled,
+          input.code_splitting_disabled,
         );
         if let Some(overlay) = &mut overlay
           && let Some(retained_reexport_path) = retained_reexport_path
@@ -1748,6 +1728,8 @@ pub(super) fn collect_frozen_reexport_usage(
     } else {
       input.used_symbol_refs_builder.contains(&imported_as_ref)
         || consumed_facades.contains(&imported_as_ref)
+        // An inlined constant read keeps no binding, but it still runs its declaring module.
+        || input.kept_inlined_constant_reads.contains(&imported_as_ref)
         || input.linking[root.0]
           .referenced_symbols_by_entry_point_chunk
           .iter()

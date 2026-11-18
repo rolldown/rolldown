@@ -1,0 +1,56 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "barrel.js" re-exports "clash" from one of the modules "ambiguous-left.js" and "ambiguous-right.js" (will be ignored).
+   ╭─[ ambiguous-left.js:1:14 ]
+   │
+ 1 │ export const clash = 1;
+   │              ──┬──  
+   │                ╰──── One matching export is here.
+   │
+   ├─[ ambiguous-right.js:1:14 ]
+   │
+ 1 │ export const clash = 2;
+   │              ──┬──  
+   │                ╰──── One matching export is here.
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// dep.cjs
+var require_dep = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.x = 1;
+}));
+var import_dep;
+function init_barrel_cjs_0() {
+	return (init_barrel_cjs_0 = __esmMin((() => {
+		import_dep = require_dep();
+	})))();
+}
+// consumer.js
+var consumer_exports = /* @__PURE__ */ __exportAll({ out: () => out });
+var out;
+var init_consumer = __esmMin((() => {
+	init_barrel_cjs_0();
+	out = import_dep.x;
+}));
+// main.js
+function init_main() {
+	return (init_main = __esmMin((() => {
+		globalThis.out = (init_consumer(), __toCommonJS(consumer_exports)).out;
+	})))();
+}
+init_main();
+
+```

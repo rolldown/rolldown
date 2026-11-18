@@ -122,7 +122,6 @@ impl Bundler {
   pub async fn compile_lazy_entry(
     &mut self,
     module_id: String,
-    client_id: &str,
     shipped: &FxHashMap<ArcStr, u32>,
     evaluated: &FxHashMap<ArcStr, u32>,
     stamp_table: &HmrStampTable,
@@ -144,6 +143,6 @@ impl Bundler {
       lost_hmr_update: &mut self.lost_hmr_update,
       next_hmr_patch_id,
     });
-    hmr_stage.compile_lazy_entry(&module_id, client_id, shipped, evaluated, stamp_table).await
+    hmr_stage.compile_lazy_entry(&module_id, shipped, evaluated, stamp_table).await
   }
 }

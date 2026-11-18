@@ -65,7 +65,7 @@ pub struct NormalizedDevOptions {
   pub use_polling: bool,
   pub poll_interval: u64,
   pub use_debounce: bool,
-  pub debounce_duration: u64,
+  pub debounce_delay: u64,
   pub compare_contents_for_polling: bool,
   pub debounce_tick_rate: Option<u64>,
   pub watch_include: Option<Vec<StringOrRegex>>,
@@ -75,19 +75,20 @@ pub struct NormalizedDevOptions {
 
 pub fn normalize_dev_options(options: DevOptions) -> NormalizedDevOptions {
   let watch_options = options.watch.unwrap_or_default();
+  let watcher_options = watch_options.watcher.unwrap_or_default();
   NormalizedDevOptions {
     on_hmr_updates: options.on_hmr_updates,
     on_output: options.on_output,
     on_additional_assets: options.on_additional_assets,
-    disable_watcher: watch_options.disable_watcher.unwrap_or_default(),
-    skip_write: watch_options.skip_write.unwrap_or_default(),
+    disable_watcher: !watch_options.enabled.unwrap_or(true),
+    skip_write: watch_options.skip_write,
     rebuild_strategy: options.rebuild_strategy.unwrap_or_default(),
-    use_polling: watch_options.use_polling.unwrap_or(false),
-    poll_interval: watch_options.poll_interval.unwrap_or(100),
-    use_debounce: watch_options.use_debounce.unwrap_or(true),
-    debounce_duration: watch_options.debounce_duration.unwrap_or(10),
-    compare_contents_for_polling: watch_options.compare_contents_for_polling.unwrap_or(false),
-    debounce_tick_rate: watch_options.debounce_tick_rate,
+    use_polling: watcher_options.use_polling.unwrap_or(false),
+    poll_interval: watcher_options.poll_interval.unwrap_or(100),
+    use_debounce: watcher_options.use_debounce.unwrap_or(true),
+    debounce_delay: watcher_options.debounce_delay.unwrap_or(10),
+    compare_contents_for_polling: watcher_options.compare_contents_for_polling.unwrap_or(false),
+    debounce_tick_rate: watcher_options.debounce_tick_rate,
     watch_include: watch_options.include,
     watch_exclude: watch_options.exclude,
     hot_update: options.hot_update.unwrap_or(false),

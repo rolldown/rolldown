@@ -10,10 +10,10 @@ pub use crate::plugin::{
   HookTransformReturn,
 };
 use crate::{
-  HookAddonArgs, HookBuildEndArgs, HookBuildStartArgs, HookCloseBundleArgs, HookGenerateBundleArgs,
-  HookInjectionOutputReturn, HookLoadArgs, HookRenderChunkArgs, HookRenderStartArgs,
-  HookResolveFileUrlArgs, HookResolveIdArgs, HookTransformArgs, HookUsage, Plugin, PluginHookMeta,
-  SharedLoadPluginContext, SharedTransformPluginContext,
+  HookAddonArgs, HookBuildEndArgs, HookBuildStartArgs, HookCloseBundleArgs, HookFilterArgs,
+  HookGenerateBundleArgs, HookInjectionOutputReturn, HookLoadArgs, HookRenderChunkArgs,
+  HookRenderStartArgs, HookResolveFileUrlArgs, HookResolveIdArgs, HookTransformArgs, HookUsage,
+  Plugin, PluginHookMeta, SharedLoadPluginContext, SharedTransformPluginContext,
   types::{
     hook_hot_update_args::HookHotUpdateArgs, hook_render_error::HookRenderErrorArgs,
     hook_transform_ast_args::HookTransformAstArgs, hook_write_bundle_args::HookWriteBundleArgs,
@@ -114,6 +114,7 @@ macro_rules! define_hooks {
 pub struct Pluginable {
   plugin: Box<ErasedPlugin>,
   name: fn(&ErasedPlugin) -> Cow<'static, str>,
+  hook_filter_matches: fn(&ErasedPlugin, &PluginContext, HookFilterArgs<'_>) -> bool,
   hook_usage: HookUsage,
   hooks: PluginHooks,
 }
@@ -346,7 +347,13 @@ impl Pluginable {
   pub fn new<T: Plugin>(plugin: T) -> Self {
     let hook_usage = Plugin::register_hook_usage(&plugin);
     let hooks = PluginHooks::new::<T>(hook_usage);
-    Self { plugin: Box::new(plugin), name: name::<T>, hook_usage, hooks }
+    Self {
+      plugin: Box::new(plugin),
+      name: name::<T>,
+      hook_filter_matches: hook_filter_matches::<T>,
+      hook_usage,
+      hooks,
+    }
   }
 
   #[inline]
@@ -356,6 +363,10 @@ impl Pluginable {
 
   pub fn call_name(&self) -> Cow<'static, str> {
     (self.name)(self.plugin.as_ref())
+  }
+
+  pub fn call_hook_filter_matches(&self, ctx: &PluginContext, args: HookFilterArgs<'_>) -> bool {
+    (self.hook_filter_matches)(self.plugin.as_ref(), ctx, args)
   }
 
   pub fn call_hook_usage(&self) -> HookUsage {
@@ -379,6 +390,14 @@ fn plugin_ref<T: Plugin>(plugin: &ErasedPlugin) -> &T {
 
 fn name<T: Plugin>(plugin: &ErasedPlugin) -> Cow<'static, str> {
   Plugin::name(plugin_ref::<T>(plugin))
+}
+
+fn hook_filter_matches<T: Plugin>(
+  plugin: &ErasedPlugin,
+  ctx: &PluginContext,
+  args: HookFilterArgs<'_>,
+) -> bool {
+  Plugin::hook_filter_matches(plugin_ref::<T>(plugin), ctx, args)
 }
 
 fn default_meta(_plugin: &ErasedPlugin) -> Option<PluginHookMeta> {

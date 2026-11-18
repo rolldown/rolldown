@@ -60,19 +60,6 @@ impl PathExt for Path {
   }
 }
 
-/// The first one is for chunk name, the second element is used for generate absolute file name
-pub fn representative_file_name_for_preserve_modules(
-  path: &Path,
-) -> (Cow<'_, str>, String, Option<Cow<'_, str>>) {
-  // As above: `path` is a module id (valid UTF-8), so `to_str()` is infallible
-  // and we avoid `to_string_lossy()`.
-  let file_name = Cow::Borrowed(
-    path.file_stem().and_then(OsStr::to_str).or_else(|| path.to_str()).unwrap_or_default(),
-  );
-  let ab_path = path.with_extension("").to_str().unwrap_or_default().to_owned();
-  (file_name, ab_path, path.extension().and_then(OsStr::to_str).map(Cow::Borrowed))
-}
-
 pub fn strip_path_prefix_to_slash(path: &Path, prefix: &Path) -> Option<String> {
   path.strip_prefix(prefix).ok().map(PathExt::expect_to_slash)
 }
@@ -191,16 +178,6 @@ fn test_representative_file_name() {
 
   let path = cwd.join("foo.bar").join("index.js");
   assert_eq!(path.representative_file_name(), "foo.bar");
-
-  let path = cwd.join("x.jsx");
-  let (_, ab_path, _) = representative_file_name_for_preserve_modules(&path);
-  assert_eq!(Path::new(&ab_path).file_name().unwrap().to_string_lossy(), "x");
-
-  #[cfg(not(target_os = "windows"))]
-  {
-    let path = cwd.join("src").join("vue.js");
-    assert_eq!(representative_file_name_for_preserve_modules(&path).1, "./project/src/vue");
-  }
 }
 
 #[test]

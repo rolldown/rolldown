@@ -6,8 +6,7 @@ const { basename, join, resolve } = require('node:path');
  */
 // @ts-expect-error not included in types
 const { rollup } = require('../../dist/rollup');
-const { compareLogs } = require('../utils');
-const { runTestSuiteWithSamples } = require('../utils.js');
+const { compareLogs, runTestSuiteWithSamples, adaptPluginForRolldown } = require('../utils.js');
 
 // `amd` and `system` formats are not supported by Rolldown yet
 // (bindingifyFormat in packages/rolldown/src/utils/bindingify-output-options.ts
@@ -30,25 +29,29 @@ runTestSuiteWithSamples('chunking form', resolve(__dirname, '../../../../rollup/
 				after(config.after);
 			}
 			const logs = [];
+			const warnings = [];
 			after(() => config.logs && compareLogs(logs, config.logs));
 
 			const formats = config.formats?.filter(f => FORMATS.includes(f)) ?? FORMATS
 			for (const format of formats) {
 				it('generates ' + format, async () => {
 					process.chdir(directory);
-					const warnings = [];
+					warnings.length = 0;
 					bundle =
 						bundle ||
 						(await rollup({
 							input: [directory + '/main.js'],
 							onLog: (level, log) => {
+								// Rollup does not emit this Rolldown-specific diagnostic.
+								if (log.code === 'INEFFECTIVE_DYNAMIC_IMPORT') return;
 								logs.push({ level, ...log });
 								if (level === 'warn' && !config.expectedWarnings?.includes(log.code)) {
 									warnings.push(log);
 								}
 							},
 							strictDeprecations: true,
-							...config.options
+							...config.options,
+							plugins: adaptPluginForRolldown(config.options?.plugins)
 						}));
 					await generateAndTestBundle(
 						bundle,

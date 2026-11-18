@@ -95,7 +95,7 @@ let ns$3;
 (function(_ns) {
 	_ns.Foo = /* @__PURE__ */ function(Foo) {
 		return Foo;
-	}({});
+	}(_ns.Foo || {});
 })(ns$3 || (ns$3 = {}));
 console.log(void 0);
 // es6-ns-export-const-enum.ts
@@ -103,7 +103,7 @@ let ns$2;
 (function(_ns) {
 	_ns.Foo = /* @__PURE__ */ function(Foo) {
 		return Foo;
-	}({});
+	}(_ns.Foo || {});
 })(ns$2 || (ns$2 = {}));
 console.log(void 0);
 // es6-ns-export-module.ts

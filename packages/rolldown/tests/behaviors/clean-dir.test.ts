@@ -1,4 +1,13 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import type { RolldownPlugin } from 'rolldown';
 import { rolldown } from 'rolldown';
@@ -62,6 +71,42 @@ test('clean default outdir', async () => {
 
   rmSync(defaultOutdir, { recursive: true });
 });
+
+test.each(['output directory', 'output directory with trailing separator', 'directory entry'])(
+  'clean outdir removes a symlink at the %s without deleting its target contents',
+  async (location) => {
+    const testDir = join(root, 'dist/clean-dir-symlink');
+    const projectDir = join(testDir, 'project');
+    const outdir = join(projectDir, 'dist');
+    const targetDir = join(testDir, 'target');
+    const targetFile = join(targetDir, 'nested/file.txt');
+    const content = 'Keep this file.';
+
+    rmSync(testDir, { recursive: true, force: true });
+    try {
+      mkdirSync(projectDir, { recursive: true });
+      mkdirSync(join(targetDir, 'nested'), { recursive: true });
+      writeFileSync(targetFile, content);
+      if (location === 'directory entry') mkdirSync(outdir, { recursive: true });
+      const link = location === 'directory entry' ? join(outdir, 'link') : outdir;
+      symlinkSync(targetDir, link, process.platform === 'win32' ? 'junction' : 'dir');
+
+      const bundler = await rolldown({ input, cwd: projectDir });
+      await bundler.write({
+        dir: location === 'output directory with trailing separator' ? 'dist/' : 'dist',
+        entryFileNames: 'index.js',
+        cleanDir: true,
+      });
+
+      expect(readFileSync(targetFile, 'utf-8')).toBe(content);
+      expect(lstatSync(outdir).isSymbolicLink()).toBe(false);
+      expect(readdirSync(outdir)).toEqual(['index.js']);
+      expect(readdirSync(targetDir)).toEqual(['nested']);
+    } finally {
+      rmSync(testDir, { recursive: true, force: true });
+    }
+  },
+);
 
 // When cleanDir is true, and there are file output in
 // the `generateBundle` hook, the file should not be cleaned.

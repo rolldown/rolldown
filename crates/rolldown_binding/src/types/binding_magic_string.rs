@@ -1,7 +1,7 @@
 #![expect(clippy::inherent_to_string)]
 use std::borrow::Cow;
 
-use napi::bindgen_prelude::{Either, This};
+use napi::bindgen_prelude::{Either, This, Undefined};
 use napi::{Env, JsString};
 use napi_derive::napi;
 use oxc_napi::JsRegExp;
@@ -76,7 +76,7 @@ struct SerializableSourceMap<'a> {
   version: u32,
   #[serde(skip_serializing_if = "Option::is_none")]
   file: Option<&'a String>,
-  sources: &'a Vec<String>,
+  sources: &'a Vec<Option<String>>,
   #[serde(skip_serializing_if = "Option::is_none")]
   sources_content: Option<&'a Vec<Option<String>>>,
   names: &'a Vec<String>,
@@ -211,6 +211,12 @@ pub struct BindingMagicStringOptions {
   pub offset: Option<i64>,
   pub indent_exclusion_ranges: Option<Either<Vec<Vec<i64>>, Vec<i64>>>,
   pub ignore_list: Option<bool>,
+  /// The resolution of the sourcemaps generated from this instance: `true`, `false` or
+  /// `"boundary"`. It applies to the map that Rolldown generates when a hook returns this
+  /// instance without a `map`, and to `generateMap()` without `hires`. When it is not set,
+  /// Rolldown uses `"boundary"` and `generateMap()` uses `false`.
+  #[napi(ts_type = "boolean | 'boundary'")]
+  pub hires: Option<Either<bool, String>>,
 }
 
 #[napi(object)]
@@ -280,7 +286,7 @@ impl BindingSourceMap {
   /// The list of original source files.
   #[napi(getter)]
   pub fn sources(&self) -> Vec<String> {
-    self.json.sources.clone()
+    self.json.sources.iter().map(|source| source.clone().unwrap_or_default()).collect()
   }
 
   /// The original source contents (if `includeContent` was true).
@@ -301,10 +307,11 @@ impl BindingSourceMap {
     self.json.mappings.clone()
   }
 
-  /// The list of source indices that should be excluded from debugging.
+  /// The list of source indices that should be excluded from debugging, or `undefined` when
+  /// the map has none. `magic-string` leaves the field out in that case.
   #[napi(getter, js_name = "x_google_ignoreList")]
-  pub fn x_google_ignore_list(&self) -> Option<Vec<u32>> {
-    self.json.ignore_list.clone()
+  pub fn x_google_ignore_list(&self) -> Either<Vec<u32>, Undefined> {
+    self.json.ignore_list.clone().map_or(Either::B(()), Either::A)
   }
 
   /// Returns the source map as a JSON string.
@@ -348,7 +355,7 @@ impl BindingDecodedMap {
   /// The list of original source files.
   #[napi(getter)]
   pub fn sources(&self) -> Vec<String> {
-    self.json.sources.clone()
+    self.json.sources.iter().map(|source| source.clone().unwrap_or_default()).collect()
   }
 
   /// The original source contents (if `includeContent` was true).
@@ -395,10 +402,11 @@ impl BindingDecodedMap {
     lines
   }
 
-  /// The list of source indices that should be excluded from debugging.
+  /// The list of source indices that should be excluded from debugging, or `undefined` when
+  /// the map has none. `magic-string` leaves the field out in that case.
   #[napi(getter, js_name = "x_google_ignoreList")]
-  pub fn x_google_ignore_list(&self) -> Option<Vec<u32>> {
-    self.json.ignore_list.clone()
+  pub fn x_google_ignore_list(&self) -> Either<Vec<u32>, Undefined> {
+    self.json.ignore_list.clone().map_or(Either::B(()), Either::A)
   }
 }
 
@@ -423,6 +431,10 @@ impl<'a> BindingMagicString<'a> {
   pub(crate) fn take_inner(&mut self) -> napi::Result<MagicString<'a>> {
     self.ensure_live()?;
     self.consumed = true;
+    // Every method that reads the UTF-16 mapping table refuses a consumed instance, so free it
+    // now rather than when the JS wrapper is garbage collected: it holds 8 bytes per byte of the
+    // original source.
+    self.utf16_to_byte_mapper.entries = Vec::new();
     Ok(std::mem::take(&mut self.inner))
   }
 
@@ -437,27 +449,51 @@ impl<'a> BindingMagicString<'a> {
     }
     Ok(())
   }
+
+  /// Resolves the `hires` of a `generateMap()` call: the value of the call, else the `hires`
+  /// option of this instance, else `false`. A string other than `"boundary"` counts as `false`.
+  fn resolve_hires(&self, hires: Option<&Either<bool, String>>) -> string_wizard::Hires {
+    match hires {
+      None => self.inner.hires().unwrap_or(string_wizard::Hires::False),
+      Some(Either::A(true)) => string_wizard::Hires::True,
+      Some(Either::B(s)) if s == "boundary" => string_wizard::Hires::Boundary,
+      Some(_) => string_wizard::Hires::False,
+    }
+  }
 }
 
 #[napi]
 impl BindingMagicString<'_> {
   #[napi(constructor)]
-  pub fn new(source: String, options: Option<BindingMagicStringOptions>) -> Self {
+  pub fn new(source: String, options: Option<BindingMagicStringOptions>) -> napi::Result<Self> {
     let utf16_to_byte_mapper = Utf16ToByteMapper::new(&source);
     let opts = options.unwrap_or_default();
     let offset = opts.offset.unwrap_or(0);
     let indent_exclusion_ranges =
       opts.indent_exclusion_ranges.map(IndentExclusionRanges::from_either);
     let ignore_list = opts.ignore_list.unwrap_or(false);
-    let magic_string_options = MagicStringOptions { filename: opts.filename, ignore_list };
-    Self {
+    // Unlike the `hires` of `generateMap()`, an unknown string is an error here: the value
+    // stays on the instance, so a typo would silently change every map generated from it.
+    let hires = match opts.hires {
+      None => None,
+      Some(Either::A(true)) => Some(string_wizard::Hires::True),
+      Some(Either::A(false)) => Some(string_wizard::Hires::False),
+      Some(Either::B(s)) if s == "boundary" => Some(string_wizard::Hires::Boundary),
+      Some(Either::B(s)) => {
+        return Err(napi::Error::from_reason(format!(
+          "Invalid `hires` option {s:?}. Expected `true`, `false` or `\"boundary\"`."
+        )));
+      }
+    };
+    let magic_string_options = MagicStringOptions { filename: opts.filename, ignore_list, hires };
+    Ok(Self {
       inner: MagicString::with_options(source, magic_string_options),
       utf16_to_byte_mapper,
       offset,
       indent_exclusion_ranges,
       ignore_list,
       consumed: false,
-    }
+    })
   }
 
   #[napi(getter)]
@@ -480,6 +516,17 @@ impl BindingMagicString<'_> {
   #[napi(getter)]
   pub fn ignore_list(&self) -> bool {
     self.ignore_list
+  }
+
+  /// The `hires` option of this instance, or `null` when it is not set.
+  #[napi(getter, ts_return_type = "boolean | 'boundary' | null")]
+  pub fn hires(&self) -> napi::Result<Option<Either<bool, &'static str>>> {
+    self.ensure_live()?;
+    Ok(self.inner.hires().map(|hires| match hires {
+      string_wizard::Hires::True => Either::A(true),
+      string_wizard::Hires::False => Either::A(false),
+      string_wizard::Hires::Boundary => Either::B("boundary"),
+    }))
   }
 
   #[napi(getter)]
@@ -516,8 +563,8 @@ impl BindingMagicString<'_> {
     #[expect(clippy::cast_possible_truncation)]
     let overwrites: Vec<(u32, u32, String)> = match reg.as_optimized() {
       Some(r) => {
-        // The `regex` crate path is only used for non-sticky patterns (the `y` flag
-        // causes `regex::Regex::new` to fail, selecting the ECMAScript fallback).
+        // The `regex` crate path is only used for non-sticky patterns
+        // (`HybridRegex::with_flags` sends the `y` flag to the ECMAScript engine).
         // For non-sticky regexes, JS resets `lastIndex` before matching, so we
         // always start from the beginning.
         let iter = r.captures_iter(source);
@@ -1236,11 +1283,7 @@ impl BindingMagicString<'_> {
   ) -> napi::Result<BindingSourceMap> {
     self.ensure_live()?;
     let opts = options.unwrap_or_default();
-    let hires = match &opts.hires {
-      Some(Either::A(true)) => string_wizard::Hires::True,
-      Some(Either::B(s)) if s == "boundary" => string_wizard::Hires::Boundary,
-      _ => string_wizard::Hires::False,
-    };
+    let hires = self.resolve_hires(opts.hires.as_ref());
     let source_map = self.inner.source_map(SourceMapOptions {
       source: opts.source.map(Into::into).unwrap_or_else(|| "".into()),
       include_content: opts.include_content.unwrap_or(false),
@@ -1253,7 +1296,7 @@ impl BindingMagicString<'_> {
         Some(Cow::Owned(file)),
         source_map.get_names().map(|n| Cow::Owned(n.to_owned())).collect(),
         None,
-        source_map.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
+        source_map.get_sources().map(|s| s.map(|s| Cow::Owned(s.to_owned()))).collect(),
         source_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
         source_map.get_tokens().collect::<Vec<_>>().into_boxed_slice(),
         None,
@@ -1278,11 +1321,7 @@ impl BindingMagicString<'_> {
   ) -> napi::Result<BindingDecodedMap> {
     self.ensure_live()?;
     let opts = options.unwrap_or_default();
-    let hires = match &opts.hires {
-      Some(Either::A(true)) => string_wizard::Hires::True,
-      Some(Either::B(s)) if s == "boundary" => string_wizard::Hires::Boundary,
-      _ => string_wizard::Hires::False,
-    };
+    let hires = self.resolve_hires(opts.hires.as_ref());
     let source_map = self.inner.source_map(SourceMapOptions {
       source: opts.source.map(Into::into).unwrap_or_else(|| "".into()),
       include_content: opts.include_content.unwrap_or(false),
@@ -1295,7 +1334,7 @@ impl BindingMagicString<'_> {
         Some(Cow::Owned(file)),
         source_map.get_names().map(|n| Cow::Owned(n.to_owned())).collect(),
         None,
-        source_map.get_sources().map(|s| Cow::Owned(s.to_owned())).collect(),
+        source_map.get_sources().map(|s| s.map(|s| Cow::Owned(s.to_owned()))).collect(),
         source_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
         source_map.get_tokens().collect::<Vec<_>>().into_boxed_slice(),
         None,

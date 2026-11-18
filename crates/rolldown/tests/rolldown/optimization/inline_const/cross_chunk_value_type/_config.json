@@ -1,0 +1,9 @@
+{
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "test", "import": "./test.js" }
+    ],
+    "minify": true
+  }
+}

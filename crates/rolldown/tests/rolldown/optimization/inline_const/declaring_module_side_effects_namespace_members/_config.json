@@ -1,0 +1,9 @@
+{
+  "config": {
+    "input": [
+      { "name": "x", "import": "./x.js" },
+      { "name": "y", "import": "./y.js" },
+      { "name": "z", "import": "./z.js" }
+    ]
+  }
+}

@@ -260,6 +260,56 @@ describe('storeName', () => {
   });
 });
 
+describe('hires option', () => {
+  // JS magic-string has no such constructor option. It sets the resolution of the maps that
+  // are generated from the instance: `generateMap()` without `hires` here, and the map that
+  // Rolldown generates when a hook returns the instance without a `map` (see the
+  // `native-magic-string-hires` fixtures).
+  const source = 'var answer = 42;';
+  const values = [true, false, 'boundary'] as const;
+
+  it('is null when it is not set', () => {
+    assert.strictEqual(new MagicString(source).hires, null);
+  });
+
+  it('is the default of generateMap() and generateDecodedMap()', () => {
+    const plain = new MagicString(source);
+    // The three values give three different maps for this source, so the test can see them.
+    assert.strictEqual(
+      new Set(values.map((hires) => plain.generateMap({ hires }).mappings)).size,
+      3,
+    );
+    for (const hires of values) {
+      const s = new MagicString(source, { hires });
+      assert.strictEqual(s.hires, hires);
+      assert.strictEqual(s.generateMap().mappings, plain.generateMap({ hires }).mappings);
+      assert.deepStrictEqual(
+        s.generateDecodedMap().mappings,
+        plain.generateDecodedMap({ hires }).mappings,
+      );
+    }
+  });
+
+  it('loses to the hires of the generateMap() call', () => {
+    const s = new MagicString(source, { hires: true });
+    const plain = new MagicString(source);
+    assert.strictEqual(s.generateMap({ hires: false }).mappings, plain.generateMap({}).mappings);
+  });
+
+  it('is kept by clone() and snip()', () => {
+    const s = new MagicString(source, { hires: 'boundary' });
+    assert.strictEqual(s.clone().hires, 'boundary');
+    assert.strictEqual(s.snip(4, 10).hires, 'boundary');
+  });
+
+  it('rejects an unknown string', () => {
+    assert.throws(
+      () => new MagicString(source, { hires: 'true' as never }),
+      /Invalid `hires` option "true"/,
+    );
+  });
+});
+
 describe('offset', () => {
   describe('underflow guard — negative (index + offset) must throw, not panic', () => {
     it('remove() throws when offset causes index underflow', () => {
@@ -515,6 +565,70 @@ describe('regex replace', () => {
   });
 });
 
+describe('function replacer', () => {
+  it('uses UTF-16 lastIndex for sticky regexes with emoji before the match', () => {
+    const s = new MagicString('\u{1F937}a');
+    const regex = /a/y;
+
+    // JS lastIndex is in UTF-16 code units: the emoji occupies indices 0-2.
+    regex.lastIndex = 2;
+    s.replace(regex, () => 'x');
+
+    assert.strictEqual(s.toString(), '\u{1F937}x');
+    assert.strictEqual(regex.lastIndex, 3);
+  });
+
+  it('writes at user-space indices with a non-zero offset', () => {
+    const s = new MagicString('hello world', { offset: 6 });
+    s.replace(/world/, (matched) => matched.toUpperCase());
+    assert.strictEqual(s.toString(), 'hello WORLD');
+  });
+
+  it('replaces a regex match before the offset', () => {
+    const s = new MagicString('hello world', { offset: 6 });
+    s.replace(/hello/, () => 'bye');
+    assert.strictEqual(s.toString(), 'bye world');
+  });
+
+  it('replaces a string match before the offset', () => {
+    const s = new MagicString('hello world', { offset: 6 });
+    s.replace('hello', () => 'bye');
+    assert.strictEqual(s.toString(), 'bye world');
+  });
+
+  it('inserts for a zero-length regex match before the offset', () => {
+    const s = new MagicString('hello world', { offset: 6 });
+    s.replace(/^/, () => '> ');
+    assert.strictEqual(s.toString(), '> hello world');
+  });
+
+  it('inserts for an empty string pattern before the offset', () => {
+    const s = new MagicString('ab', { offset: 1 });
+    s.replaceAll('', () => '-');
+    assert.strictEqual(s.toString(), '-a-b-');
+  });
+
+  it('does not mark the string as changed when the replacer returns the match', () => {
+    const s = new MagicString('abc');
+    s.replace(/b/, (matched) => matched);
+    assert.strictEqual(s.toString(), 'abc');
+    assert.strictEqual(s.hasChanged(), false);
+  });
+
+  it('inserts for zero-length matches', () => {
+    const s = new MagicString('ab');
+    s.replaceAll(/x*/g, () => '-');
+    assert.strictEqual(s.toString(), '-a-b-');
+  });
+
+  it('throws for non-global regex in replaceAll', () => {
+    assert.throws(() => new MagicString('123').replaceAll(/./, () => ''), {
+      name: 'TypeError',
+      message: 'MagicString.prototype.replaceAll called with a non-global RegExp argument',
+    });
+  });
+});
+
 describe('lastLine', () => {
   it('returns the content after the last newline', () => {
     assert.strictEqual(new MagicString('abc\ndef').lastLine(), 'def');
@@ -576,5 +690,21 @@ describe('string_wizard: replace', () => {
       s.replaceAll('12', '21');
       assert.strictEqual(s.toString(), '212121');
     });
+  });
+});
+
+describe('x_google_ignoreList', () => {
+  // `magic-string` leaves the field out when the map has no ignore list. Code that checks
+  // only for `undefined` must work with both maps.
+  it('is undefined when the map has no ignore list', () => {
+    const s = new MagicString('var answer = 42;');
+    assert.strictEqual(s.generateMap().x_google_ignoreList, undefined);
+    assert.strictEqual(s.generateDecodedMap().x_google_ignoreList, undefined);
+  });
+
+  it('lists the source with the ignoreList option', () => {
+    const s = new MagicString('var answer = 42;', { ignoreList: true });
+    assert.deepStrictEqual(s.generateMap().x_google_ignoreList, [0]);
+    assert.deepStrictEqual(s.generateDecodedMap().x_google_ignoreList, [0]);
   });
 });

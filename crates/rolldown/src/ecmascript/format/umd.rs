@@ -98,13 +98,11 @@ pub async fn render_umd<'code>(
     source_joiner.append_source(intro);
   }
 
-  if named_exports && entry_module.exports_kind.is_esm() {
-    // Symbol.toStringTag should only be added to module facades (chunks that represent a specific module)
+  if named_exports && has_exports && entry_module.exports_kind.is_esm() {
     if let Some(marker) = render_namespace_markers(
       ctx.options.es_module,
       has_default_export,
       &ctx.options.generated_code,
-      ctx.chunk.is_entry_point(),
     ) {
       source_joiner.append_source(marker.to_string());
     }
@@ -192,7 +190,7 @@ async fn render_iife_export(
   let mut dependencies = Vec::with_capacity(externals.len());
 
   for external in externals {
-    let global = ctx.options.globals.call(external.id.as_str()).await?;
+    let global = ctx.options.globals.call(external.id.raw_id()).await?;
     let target = match &global {
       Some(global_name) => global_name
         .split('.')

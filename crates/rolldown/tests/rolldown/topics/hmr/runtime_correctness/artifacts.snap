@@ -11,6 +11,7 @@ import assert from "node:assert";
 __rolldown_runtime__.registerGraph({
 	ids: [
 		"trigger-dep.js",
+		"cases/require/cjs-lib-assign-exports.js",
 		"cases/require/cjs-lib-reassign-module-exports.js",
 		"cases/require/cjs-lib.js",
 		"cases/require/umd-lib.js",
@@ -28,9 +29,10 @@ __rolldown_runtime__.registerGraph({
 		"cases/imported_callee_this/index.js",
 		"main.js"
 	],
-	localCount: 17,
+	localCount: 18,
 	edges: [
 		[],
+		[0],
 		[0],
 		[0],
 		[0],
@@ -38,36 +40,37 @@ __rolldown_runtime__.registerGraph({
 			0,
 			1,
 			2,
-			3
+			3,
+			4
 		],
 		[0],
-		[5, 0],
 		[6, 0],
+		[7, 0],
 		[0],
 		[0],
 		[
-			8,
 			9,
-			0
-		],
-		[0],
-		[11, 0],
-		[
-			11,
-			12,
-			0
-		],
-		[0],
-		[14, 0],
-		[
-			4,
-			7,
 			10,
+			0
+		],
+		[0],
+		[12, 0],
+		[
+			12,
 			13,
-			15
+			0
+		],
+		[0],
+		[15, 0],
+		[
+			5,
+			8,
+			11,
+			14,
+			16
 		]
 	],
-	entries: [16]
+	entries: [17]
 });
 // trigger-dep.js
 var trigger_dep_exports = /* @__PURE__ */ __exportAll({});
@@ -76,11 +79,18 @@ var init_trigger_dep = __esmMin((() => {
 	__rolldown_runtime__.registerModule("trigger-dep.js", { exports: trigger_dep_exports });
 	console.log();
 }));
+// cases/require/cjs-lib-assign-exports.js
+var require_cjs_lib_assign_exports = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	init_trigger_dep();
+	__rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib-assign-exports.js");
+	__rolldown_runtime__.registerModule("cases/require/cjs-lib-assign-exports.js", module, 1);
+	exports = "exports";
+}));
 // cases/require/cjs-lib-reassign-module-exports.js
 var require_cjs_lib_reassign_module_exports = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	init_trigger_dep();
 	__rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib-reassign-module-exports.js");
-	__rolldown_runtime__.registerModule("cases/require/cjs-lib-reassign-module-exports.js", module);
+	__rolldown_runtime__.registerModule("cases/require/cjs-lib-reassign-module-exports.js", module, 1);
 	module.exports = function() {
 		return "exports";
 	};
@@ -90,7 +100,7 @@ var require_cjs_lib_reassign_module_exports = /* @__PURE__ */ __commonJSMin(((ex
 var require_cjs_lib = /* @__PURE__ */ __commonJSMin(((exports, module, this$2) => {
 	init_trigger_dep();
 	__rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib.js");
-	__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", module);
+	__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", module, 1);
 	exports.foo = "foo";
 	this$2.bar = "bar";
 	var Noop = class {
@@ -106,7 +116,7 @@ var require_cjs_lib = /* @__PURE__ */ __commonJSMin(((exports, module, this$2) =
 var require_umd_lib = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
 	init_trigger_dep();
 	__rolldown_runtime__.createModuleHotContext("cases/require/umd-lib.js");
-	__rolldown_runtime__.registerModule("cases/require/umd-lib.js", module);
+	__rolldown_runtime__.registerModule("cases/require/umd-lib.js", module, 1);
 	(function(root, umdLib) {
 		if (typeof __require === "function" && typeof exports === "object" && typeof module === "object") module.exports = umdLib();
 		else if (typeof define === "function" && define.amd) define(function() {
@@ -126,6 +136,8 @@ var require_exports = /* @__PURE__ */ __exportAll({});
 init_trigger_dep();
 __rolldown_runtime__.createModuleHotContext("cases/require/index.js");
 __rolldown_runtime__.registerModule("cases/require/index.js", { exports: require_exports });
+const requiredAssignExports = require_cjs_lib_assign_exports();
+assert.deepStrictEqual(requiredAssignExports, {});
 const requiredCjsLibReassignModuleExports = require_cjs_lib_reassign_module_exports();
 assert.strictEqual(requiredCjsLibReassignModuleExports(), "exports");
 assert.strictEqual(requiredCjsLibReassignModuleExports.foo, "foo");
@@ -239,7 +251,7 @@ if (main_hot) main_hot.accept();
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["cases/deconflict_import_bindings/foo.mjs","cases/deconflict_import_bindings/foo/index.mjs","cases/deconflict_import_bindings/index.js","cases/imported_callee_this/index.js","cases/imported_callee_this/lib.js","cases/manual_reexport/barrel.js","cases/manual_reexport/index.js","cases/manual_reexport/lib.js","cases/require/cjs-lib-reassign-module-exports.js","cases/require/cjs-lib.js","cases/require/index.js","cases/require/umd-lib.js","cases/string_import_name/index.js","cases/string_import_name/lib.js","cases/string_import_name/reexport.js","main.js","trigger-dep.js"],localCount:17,edges:[[16],[16],[0,1,16],[4,16],[16],[7,16],[5,16],[16],[16],[16],[16,8,9,11],[16],[13,14,16],[16],[13,16],[10,6,2,12,3],[]],stamps:{16:1},entries:[15]});
+__rolldown_runtime__.registerGraph({ids:["cases/deconflict_import_bindings/foo.mjs","cases/deconflict_import_bindings/foo/index.mjs","cases/deconflict_import_bindings/index.js","cases/imported_callee_this/index.js","cases/imported_callee_this/lib.js","cases/manual_reexport/barrel.js","cases/manual_reexport/index.js","cases/manual_reexport/lib.js","cases/require/cjs-lib-assign-exports.js","cases/require/cjs-lib-reassign-module-exports.js","cases/require/cjs-lib.js","cases/require/index.js","cases/require/umd-lib.js","cases/string_import_name/index.js","cases/string_import_name/lib.js","cases/string_import_name/reexport.js","main.js","trigger-dep.js"],localCount:18,edges:[[17],[17],[0,1,17],[4,17],[17],[7,17],[5,17],[17],[17],[17],[17],[17,8,9,10,12],[17],[14,15,17],[17],[14,17],[11,6,2,13,3],[]],stamps:{17:1},entries:[16]});
 //#region cases/deconflict_import_bindings/foo.mjs
 __rolldown_runtime__.registerFactory("cases/deconflict_import_bindings/foo.mjs", (function(__rolldown_module_id__) {
 	try {
@@ -378,14 +390,28 @@ __rolldown_runtime__.registerFactory("cases/manual_reexport/lib.js", (function(_
 }));
 
 //#endregion
+//#region cases/require/cjs-lib-assign-exports.js
+__rolldown_runtime__.registerFactory("cases/require/cjs-lib-assign-exports.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_module__ = { exports: {} };
+		var __rolldown_exports__ = __rolldown_module__.exports;
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__, 1);
+		__rolldown_runtime__.initModule("trigger-dep.js");
+		var import_trigger_dep_80 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		const hot_cjs_lib_assign_exports = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		__rolldown_exports__ = "exports";
+	} finally {}
+}));
+
+//#endregion
 //#region cases/require/cjs-lib-reassign-module-exports.js
 __rolldown_runtime__.registerFactory("cases/require/cjs-lib-reassign-module-exports.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_module__ = { exports: {} };
 		var __rolldown_exports__ = __rolldown_module__.exports;
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__, 1);
 		__rolldown_runtime__.initModule("trigger-dep.js");
-		var import_trigger_dep_80 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		var import_trigger_dep_90 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const hot_cjs_lib_reassign_module_exports = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		__rolldown_module__.exports = function() {
 			return "exports";
@@ -400,9 +426,9 @@ __rolldown_runtime__.registerFactory("cases/require/cjs-lib.js", (function(__rol
 	try {
 		var __rolldown_module__ = { exports: {} };
 		var __rolldown_exports__ = __rolldown_module__.exports;
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__, 1);
 		__rolldown_runtime__.initModule("trigger-dep.js");
-		var import_trigger_dep_90 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		var import_trigger_dep_100 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const hot_cjs_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		__rolldown_exports__.foo = "foo";
 		__rolldown_exports__.bar = "bar";
@@ -422,29 +448,31 @@ __rolldown_runtime__.registerFactory("cases/require/cjs-lib.js", (function(__rol
 
 //#endregion
 //#region cases/require/index.js
-import * as import_node_assert_100 from "node:assert";
+import * as import_node_assert_110 from "node:assert";
 __rolldown_runtime__.registerFactory("cases/require/index.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("trigger-dep.js");
-		var import_trigger_dep_101 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		var import_trigger_dep_111 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const hot_require = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const requiredAssignExports = (__rolldown_runtime__.initModule("cases/require/cjs-lib-assign-exports.js"), __rolldown_runtime__.loadExports("cases/require/cjs-lib-assign-exports.js"));
+		import_node_assert_110.default.deepStrictEqual(requiredAssignExports, {});
 		const requiredCjsLibReassignModuleExports = (__rolldown_runtime__.initModule("cases/require/cjs-lib-reassign-module-exports.js"), __rolldown_runtime__.loadExports("cases/require/cjs-lib-reassign-module-exports.js"));
-		import_node_assert_100.default.strictEqual(requiredCjsLibReassignModuleExports(), "exports");
-		import_node_assert_100.default.strictEqual(requiredCjsLibReassignModuleExports.foo, "foo");
+		import_node_assert_110.default.strictEqual(requiredCjsLibReassignModuleExports(), "exports");
+		import_node_assert_110.default.strictEqual(requiredCjsLibReassignModuleExports.foo, "foo");
 		const requireCjsLib = (__rolldown_runtime__.initModule("cases/require/cjs-lib.js"), __rolldown_runtime__.loadExports("cases/require/cjs-lib.js"));
-		import_node_assert_100.default.strictEqual(requireCjsLib.foo, "foo");
-		import_node_assert_100.default.strictEqual(requireCjsLib.bar, "bar");
-		import_node_assert_100.default.strictEqual(requireCjsLib.baz, undefined);
-		import_node_assert_100.default.strictEqual(requireCjsLib.baz3, undefined);
-		import_node_assert_100.default.strictEqual(requireCjsLib.qux, "qux");
+		import_node_assert_110.default.strictEqual(requireCjsLib.foo, "foo");
+		import_node_assert_110.default.strictEqual(requireCjsLib.bar, "bar");
+		import_node_assert_110.default.strictEqual(requireCjsLib.baz, undefined);
+		import_node_assert_110.default.strictEqual(requireCjsLib.baz3, undefined);
+		import_node_assert_110.default.strictEqual(requireCjsLib.qux, "qux");
 		const requiredUmdLib = (__rolldown_runtime__.initModule("cases/require/umd-lib.js"), __rolldown_runtime__.loadExports("cases/require/umd-lib.js"));
-		import_node_assert_100.default.strictEqual(requiredUmdLib(), "exports");
-		import_node_assert_100.default.strictEqual(requiredUmdLib.foo, "foo");
+		import_node_assert_110.default.strictEqual(requiredUmdLib(), "exports");
+		import_node_assert_110.default.strictEqual(requiredUmdLib.foo, "foo");
 		{
 			const require = () => 1;
-			import_node_assert_100.default.strictEqual(require(), 1);
+			import_node_assert_110.default.strictEqual(require(), 1);
 		}
 	} finally {}
 }));
@@ -455,9 +483,9 @@ __rolldown_runtime__.registerFactory("cases/require/umd-lib.js", (function(__rol
 	try {
 		var __rolldown_module__ = { exports: {} };
 		var __rolldown_exports__ = __rolldown_module__.exports;
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__);
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, __rolldown_module__, 1);
 		__rolldown_runtime__.initModule("trigger-dep.js");
-		var import_trigger_dep_110 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		var import_trigger_dep_120 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const hot_umd_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		(function(root, umdLib) {
 			if (typeof __rolldown_runtime__.loadExports === "function" && typeof __rolldown_exports__ === "object" && typeof __rolldown_module__ === "object") {
@@ -481,20 +509,20 @@ __rolldown_runtime__.registerFactory("cases/require/umd-lib.js", (function(__rol
 
 //#endregion
 //#region cases/string_import_name/index.js
-import * as import_node_assert_120 from "node:assert";
+import * as import_node_assert_130 from "node:assert";
 __rolldown_runtime__.registerFactory("cases/string_import_name/index.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("cases/string_import_name/lib.js");
-		var import_lib_121 = __rolldown_runtime__.loadExports("cases/string_import_name/lib.js");
+		var import_lib_131 = __rolldown_runtime__.loadExports("cases/string_import_name/lib.js");
 		__rolldown_runtime__.initModule("cases/string_import_name/reexport.js");
-		var import_reexport_122 = __rolldown_runtime__.loadExports("cases/string_import_name/reexport.js");
+		var import_reexport_132 = __rolldown_runtime__.loadExports("cases/string_import_name/reexport.js");
 		__rolldown_runtime__.initModule("trigger-dep.js");
-		var import_trigger_dep_123 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		var import_trigger_dep_133 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const hot_string_import_name = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		import_node_assert_120.default.strictEqual(import_lib_121["a-b"], "lib");
-		import_node_assert_120.default.strictEqual(import_reexport_122.value, "lib");
+		import_node_assert_130.default.strictEqual(import_lib_131["a-b"], "lib");
+		import_node_assert_130.default.strictEqual(import_reexport_132.value, "lib");
 	} finally {}
 }));
 
@@ -505,7 +533,7 @@ __rolldown_runtime__.registerFactory("cases/string_import_name/lib.js", (functio
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ ["a-b"]: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("trigger-dep.js");
-		var import_trigger_dep_130 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		var import_trigger_dep_140 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const hot_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const value = "lib";
 	} finally {}
@@ -515,12 +543,12 @@ __rolldown_runtime__.registerFactory("cases/string_import_name/lib.js", (functio
 //#region cases/string_import_name/reexport.js
 __rolldown_runtime__.registerFactory("cases/string_import_name/reexport.js", (function(__rolldown_module_id__) {
 	try {
-		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => import_lib_140["a-b"] });
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => import_lib_150["a-b"] });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("cases/string_import_name/lib.js");
-		var import_lib_140 = __rolldown_runtime__.loadExports("cases/string_import_name/lib.js");
+		var import_lib_150 = __rolldown_runtime__.loadExports("cases/string_import_name/lib.js");
 		__rolldown_runtime__.initModule("trigger-dep.js");
-		var import_trigger_dep_141 = __rolldown_runtime__.loadExports("trigger-dep.js");
+		var import_trigger_dep_151 = __rolldown_runtime__.loadExports("trigger-dep.js");
 		const hot_reexport = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 	} finally {}
 }));
@@ -532,15 +560,15 @@ __rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("cases/require/index.js");
-		var import_require_150 = __rolldown_runtime__.loadExports("cases/require/index.js");
+		var import_require_160 = __rolldown_runtime__.loadExports("cases/require/index.js");
 		__rolldown_runtime__.initModule("cases/manual_reexport/index.js");
-		var import_manual_reexport_151 = __rolldown_runtime__.loadExports("cases/manual_reexport/index.js");
+		var import_manual_reexport_161 = __rolldown_runtime__.loadExports("cases/manual_reexport/index.js");
 		__rolldown_runtime__.initModule("cases/deconflict_import_bindings/index.js");
-		var import_deconflict_import_bindings_152 = __rolldown_runtime__.loadExports("cases/deconflict_import_bindings/index.js");
+		var import_deconflict_import_bindings_162 = __rolldown_runtime__.loadExports("cases/deconflict_import_bindings/index.js");
 		__rolldown_runtime__.initModule("cases/string_import_name/index.js");
-		var import_string_import_name_153 = __rolldown_runtime__.loadExports("cases/string_import_name/index.js");
+		var import_string_import_name_163 = __rolldown_runtime__.loadExports("cases/string_import_name/index.js");
 		__rolldown_runtime__.initModule("cases/imported_callee_this/index.js");
-		var import_imported_callee_this_154 = __rolldown_runtime__.loadExports("cases/imported_callee_this/index.js");
+		var import_imported_callee_this_164 = __rolldown_runtime__.loadExports("cases/imported_callee_this/index.js");
 		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		if (hot_main) {
 			hot_main.accept();

@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// main.ts
+let N;
+(function(_N) {
+	_N.E = /* @__PURE__ */ function(E) {
+		E[E["A"] = 0] = "A";
+		return E;
+	}(_N.E || {});
+})(N || (N = {}));
+const original = N.E;
+(function(_N2) {
+	_N2.E = /* @__PURE__ */ function(E) {
+		E[E["B"] = 1] = "B";
+		return E;
+	}(_N2.E || {});
+})(N || (N = {}));
+assert.strictEqual(N.E, original);
+assert.deepStrictEqual(N.E, {
+	0: "A",
+	1: "B",
+	A: 0,
+	B: 1
+});
+let Outer;
+(function(_Outer) {
+	let Inner;
+	(function(_Inner) {
+		_Inner.E = /* @__PURE__ */ function(E) {
+			E[E["A"] = 0] = "A";
+			return E;
+		}(_Inner.E || {});
+	})(Inner || (Inner = _Outer.Inner || (_Outer.Inner = {})));
+})(Outer || (Outer = {}));
+const nested = Outer.Inner.E;
+(function(_Outer2) {
+	let Inner;
+	(function(_Inner2) {
+		_Inner2.E = /* @__PURE__ */ function(E) {
+			E[E["B"] = 1] = "B";
+			return E;
+		}(_Inner2.E || {});
+	})(Inner || (Inner = _Outer2.Inner || (_Outer2.Inner = {})));
+})(Outer || (Outer = {}));
+assert.strictEqual(Outer.Inner.E, nested);
+assert.deepStrictEqual(Outer.Inner.E, {
+	0: "A",
+	1: "B",
+	A: 0,
+	B: 1
+});
+
+```

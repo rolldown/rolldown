@@ -1,4 +1,10 @@
-use std::{borrow::Cow, sync::Arc};
+use std::{
+  borrow::Cow,
+  sync::{
+    Arc,
+    atomic::{AtomicUsize, Ordering},
+  },
+};
 
 use arcstr::ArcStr;
 use rolldown::{AssetFilenamesOutputOption, Bundler, BundlerOptions, InputItem};
@@ -29,6 +35,11 @@ impl Emit {
   /// An asset with an explicit file name, which is never deduplicated.
   fn explicit(file_name: &str) -> Self {
     Self { file_name: Some(file_name.into()), source: SHARED_SOURCE.into(), ..Default::default() }
+  }
+
+  /// An asset whose content differs from the deduplicated ones.
+  fn distinct(name: &str, source: &str) -> Self {
+    Self { name: Some(name.into()), source: source.into(), ..Default::default() }
   }
 
   fn with_original(mut self, original_file_name: &str) -> Self {
@@ -79,6 +90,37 @@ impl Plugin for EmitPlugin {
     } else {
       for emit in &self.emits {
         ctx.emit_file(emit.to_emitted(), None, None)?;
+      }
+    }
+    Ok(())
+  }
+}
+
+/// Emits the configured assets from `build_start` and ignores emit errors, like a plugin that
+/// catches the error `this.emitFile` throws. `failed` counts the ignored errors.
+#[derive(Debug)]
+struct EmitIgnoringErrorsPlugin {
+  emits: Vec<Emit>,
+  failed: Arc<AtomicUsize>,
+}
+
+impl Plugin for EmitIgnoringErrorsPlugin {
+  fn name(&self) -> Cow<'static, str> {
+    "emit-ignoring-errors".into()
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::BuildStart
+  }
+
+  async fn build_start(
+    &self,
+    ctx: &PluginContext,
+    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    for emit in &self.emits {
+      if ctx.emit_file(emit.to_emitted(), None, None).is_err() {
+        self.failed.fetch_add(1, Ordering::Relaxed);
       }
     }
     Ok(())
@@ -183,6 +225,13 @@ impl Plugin for CrossPhaseEmitPlugin {
 
 /// Bundles a dummy entry with `plugin` and returns the emitted output assets.
 async fn bundle(plugin: SharedPluginable) -> Vec<Arc<OutputAsset>> {
+  bundle_with_asset_filenames(plugin, "assets/[name]-[hash][extname]").await
+}
+
+async fn bundle_with_asset_filenames(
+  plugin: SharedPluginable,
+  asset_filenames: &str,
+) -> Vec<Arc<OutputAsset>> {
   let mut bundler = Bundler::with_plugins(
     BundlerOptions {
       input: Some(vec![InputItem {
@@ -192,9 +241,7 @@ async fn bundle(plugin: SharedPluginable) -> Vec<Arc<OutputAsset>> {
       cwd: Some(
         concat!(env!("CARGO_MANIFEST_DIR"), "/tests/rolldown/function/asset_dedup_filename").into(),
       ),
-      asset_filenames: Some(AssetFilenamesOutputOption::String(
-        "assets/[name]-[hash][extname]".into(),
-      )),
+      asset_filenames: Some(AssetFilenamesOutputOption::String(asset_filenames.into())),
       ..Default::default()
     },
     vec![plugin],
@@ -367,4 +414,72 @@ async fn build_then_output_phase_duplicate_keeps_build_name() {
   );
   let names: Vec<&str> = assets[0].names.iter().map(String::as_str).collect();
   assert_eq!(names, ["z.txt", "aaaa.txt"], "both names collected on the survivor");
+}
+
+/// rolldown#11395: with a template that has no `[name]`, re-picking the shorter name renders the
+/// same filename. It must not collide with its own reservation and gain a `2` suffix, which made
+/// the filename depend on which `load` hook emitted first.
+#[tokio::test(flavor = "multi_thread")]
+async fn repicked_name_without_name_placeholder_keeps_filename() {
+  let emit = |emits| {
+    bundle_with_asset_filenames(
+      Plugin::new_shared(EmitPlugin { emits, concurrent: false }),
+      "assets/[hash][extname]",
+    )
+  };
+  let longer_first = emit(vec![Emit::dedup("long-name.svg"), Emit::dedup("a.svg")]).await;
+  let shorter_first = emit(vec![Emit::dedup("a.svg"), Emit::dedup("long-name.svg")]).await;
+
+  assert_eq!(longer_first.len(), 1, "identical content deduplicates into one asset");
+  assert_eq!(
+    longer_first[0].filename, shorter_first[0].filename,
+    "filename must not depend on emission order"
+  );
+}
+
+/// rolldown#11395: re-picking a different filename must release the abandoned one, so a later
+/// asset with different content can take it without a suffix.
+#[tokio::test(flavor = "multi_thread")]
+async fn repicked_name_releases_abandoned_filename() {
+  let mut assets = bundle_with_asset_filenames(
+    Plugin::new_shared(EmitPlugin {
+      emits: vec![
+        Emit::dedup("long-name.svg"),
+        Emit::dedup("a.svg"),
+        Emit::distinct("long-name.svg", "other"),
+      ],
+      concurrent: false,
+    }),
+    "assets/[name][extname]",
+  )
+  .await;
+
+  assets.sort_by(|a, b| a.filename.cmp(&b.filename));
+  let filenames: Vec<&str> = assets.iter().map(|asset| asset.filename.as_str()).collect();
+  assert_eq!(filenames, ["assets/a.svg", "assets/long-name.svg"]);
+}
+
+/// A re-pick whose shorter name fails to render must keep the current filename reserved, so a
+/// later asset with that name and different content still gets a suffix.
+#[tokio::test(flavor = "multi_thread")]
+async fn failed_repick_keeps_current_filename_reserved() {
+  let failed = Arc::new(AtomicUsize::new(0));
+  let mut assets = bundle_with_asset_filenames(
+    Plugin::new_shared(EmitIgnoringErrorsPlugin {
+      failed: Arc::clone(&failed),
+      emits: vec![
+        Emit::dedup("long-name-asset.svg"),
+        // Shorter, but it normalizes to `../a`, which the template rejects.
+        Emit::dedup("x/../../a.svg"),
+        Emit::distinct("long-name-asset.svg", "other"),
+      ],
+    }),
+    "assets/[name][extname]",
+  )
+  .await;
+
+  assert_eq!(failed.load(Ordering::Relaxed), 1, "only the re-pick to `x/../../a.svg` fails");
+  assets.sort_by(|a, b| a.filename.cmp(&b.filename));
+  let filenames: Vec<&str> = assets.iter().map(|asset| asset.filename.as_str()).collect();
+  assert_eq!(filenames, ["assets/long-name-asset.svg", "assets/long-name-asset2.svg"]);
 }

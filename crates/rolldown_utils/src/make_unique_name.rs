@@ -84,6 +84,16 @@ pub fn make_unique_name(name: &ArcStr, used_name_counts: &FxDashMap<ArcStr, u32>
   }
 }
 
+/// Releases a name previously returned by [`make_unique_name`], so it can be handed out again.
+///
+/// Only the released name's own key is removed; other names stay reserved. When the released
+/// name is a base that other names were suffixed from (`foo.js` with `foo2.js` still in use),
+/// its suffix counter resets, but `make_unique_name` still skips `foo2.js`, because every name
+/// it returns is reserved under its own key.
+pub fn release_unique_name(name: &ArcStr, used_name_counts: &FxDashMap<ArcStr, u32>) {
+  used_name_counts.remove(&case_insensitive_key(name));
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -114,6 +124,21 @@ mod tests {
 
     let unique_name = make_unique_name(&ArcStr::from("foo.js"), &used_name_counts);
     assert_eq!(unique_name.as_str(), "foo3.js");
+  }
+
+  #[test]
+  fn released_name_is_reusable_and_names_stay_unique() {
+    let used_name_counts = FxDashMap::default();
+
+    assert_eq!(make_unique_name(&ArcStr::from("Foo.js"), &used_name_counts).as_str(), "Foo.js");
+    assert_eq!(make_unique_name(&ArcStr::from("foo.js"), &used_name_counts).as_str(), "foo2.js");
+
+    // Released case-insensitively, like the reservation.
+    release_unique_name(&ArcStr::from("Foo.js"), &used_name_counts);
+    assert_eq!(make_unique_name(&ArcStr::from("foo.js"), &used_name_counts).as_str(), "foo.js");
+
+    // The counter for `foo.js` was reset, but `foo2.js` is still in use and must be skipped.
+    assert_eq!(make_unique_name(&ArcStr::from("foo.js"), &used_name_counts).as_str(), "foo3.js");
   }
 
   #[test]

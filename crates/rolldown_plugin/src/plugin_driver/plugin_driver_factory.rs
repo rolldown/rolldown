@@ -40,6 +40,7 @@ impl PluginDriverFactory {
     let watch_files = Arc::new(FxDashSet::default());
     let meta = Arc::new(PluginContextMeta::default());
     let tx = Arc::new(std::sync::Mutex::new(None));
+    let log_hook_tasks = crate::plugin_driver::SharedLogHookTasks::default();
     let mut plugin_usage_vec = IndexVec::new();
 
     let bundle_span = initial_bundle_span.clone();
@@ -83,6 +84,7 @@ impl PluginDriverFactory {
           session: session.clone(),
           bundle_span: bundle_span.clone(),
           manual_resolve_span: manual_resolve_span.clone(),
+          log_hook_tasks: Arc::clone(&log_hook_tasks),
         })));
       });
 
@@ -101,6 +103,7 @@ impl PluginDriverFactory {
         // The JavaScript side registers this callback only when it is measuring, so its
         // presence is what says a report is coming and the clocks are worth keeping.
         build_timings: BuildTimings::new(options.plugin_timings.is_some()),
+        log_hook_tasks,
       }
     })
   }

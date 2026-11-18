@@ -16,6 +16,16 @@ Durations are measured at event emission and summed across concurrent calls, so 
 | `test-plugin` | resolveId | 2 | 1 (50%) | 3.0 ms |
 | `test-plugin` | load | 1 | 1 (100%) | 1.0 ms |
 
+## Hooks that did no work
+
+Hooks with no-op calls, the highest share first (top 10). A no-op call returned nothing, or returned the code unchanged, and still paid the plugin crossing. "all" = every call; "most" = at least nine calls in ten. The fix is a hook filter that skips the modules the hook does not change, or dropping the hook.
+
+| Plugin | Hook | Calls | No-op | Share |
+| --- | --- | --- | --- | --- |
+| `test-plugin` | load | 1 | 1 | all |
+| `test-plugin` | resolveId | 2 | 1 | 50% |
+| `test-plugin` | transform | 2 | 1 | 50% |
+
 ## Slowest plugins (all hooks)
 
 | Plugin | Calls | Time |

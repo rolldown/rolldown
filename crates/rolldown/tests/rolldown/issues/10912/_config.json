@@ -1,0 +1,18 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.jsx" }],
+    "transform": {
+      "jsx": "preserve"
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "inlineConstAllPass2",
+      "inlineConst": {
+        "mode": "all",
+        "pass": 2
+      }
+    }
+  ],
+  "expectExecuted": false
+}

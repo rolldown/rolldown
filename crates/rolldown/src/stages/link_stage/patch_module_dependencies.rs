@@ -1,4 +1,4 @@
-use rolldown_common::{Module, ModuleIdx, RuntimeHelper, SymbolRef};
+use rolldown_common::{Module, ModuleIdx, ModuleType, RuntimeHelper, SymbolRef};
 use rolldown_utils::{
   index_vec_ext::IndexVecRefExt, indexmap::FxIndexSet, rayon::ParallelIterator,
 };
@@ -86,7 +86,7 @@ impl LinkStage<'_> {
           },
         );
 
-        let Module::Normal(_) = &self.module_table[module_idx] else {
+        let Module::Normal(module) = &self.module_table[module_idx] else {
           // External modules are not rendered, so they never need a runtime-helper edge.
           return (module_idx, extended_dependencies, RuntimeHelper::default());
         };
@@ -128,6 +128,28 @@ impl LinkStage<'_> {
               }
             });
           });
+        // `eval` can read any imported binding, so tree shaking keeps every import of a module that
+        // calls it (see `include_module`). The modules that declare those bindings are its
+        // dependencies too, so they get a chunk even when no statement names a binding.
+        if meta.is_included
+          && module.meta.has_eval()
+          && matches!(module.module_type, ModuleType::Js | ModuleType::Jsx)
+        {
+          for &local_ref in module.named_imports.keys() {
+            let canonical_ref = self.symbols.canonical_ref_for(local_ref);
+            let namespace_owner = self
+              .symbols
+              .get(canonical_ref)
+              .namespace_alias
+              .as_ref()
+              .map(|ns| ns.namespace_ref.owner);
+            for owner in std::iter::once(canonical_ref.owner).chain(namespace_owner) {
+              if self.metas[owner].is_included {
+                extended_dependencies.insert(owner);
+              }
+            }
+          }
+        }
         let needs_inherit_to_esm_runtime = meta.dependencies.iter().any(|dep_module_idx| {
           let Some(_) = self.module_table[*dep_module_idx].as_normal() else {
             return false;

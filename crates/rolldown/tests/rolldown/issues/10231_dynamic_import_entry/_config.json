@@ -1,0 +1,20 @@
+{
+  "_comment": "Test for issue #10231: a CJS `import()` of an entry chunk rendered with `output.exports: 'default'` must resolve to a namespace with `default`, not to the raw `module.exports` value, for both an ES module and a CommonJS module",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "lazy",
+        "import": "./lazy.js"
+      },
+      {
+        "name": "lazy-cjs",
+        "import": "./lazy-cjs.cjs"
+      }
+    ],
+    "format": "cjs"
+  }
+}

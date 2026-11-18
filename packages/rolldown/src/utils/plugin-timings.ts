@@ -81,6 +81,8 @@ interface HookCost {
   hookName: string;
   calls: number;
   ms: number;
+  /** The longest single span. */
+  maxMs: number;
   inFlight: number;
   maxInFlight: number;
   /**
@@ -152,6 +154,7 @@ function costFor(recorder: PluginTimingsRecorder, owner: TimingOwner, hookName: 
       hookName,
       calls: 0,
       ms: 0,
+      maxMs: 0,
       inFlight: 0,
       maxInFlight: 0,
       overlapMs: 0,
@@ -183,7 +186,11 @@ function settle(recorder: PluginTimingsRecorder, cost: HookCost, started: number
   const ended = performance.now();
   markInFlightChange(cost, ended);
   cost.inFlight -= 1;
-  cost.ms += ended - started;
+  const span = ended - started;
+  cost.ms += span;
+  if (span > cost.maxMs) {
+    cost.maxMs = span;
+  }
   recorder.inFlight -= 1;
   if (recorder.inFlight === 0) {
     recorder.busyMs += ended - recorder.busyStart;
@@ -224,24 +231,23 @@ export function measureHookCost<T extends (...args: never[]) => unknown>(
     let result: unknown;
     try {
       result = handler.apply(this, args);
+
+      // Only a thenable defers completion; a plain return value is already done.
+      if (typeof (result as { then?: unknown } | undefined)?.then === 'function') {
+        return Promise.resolve(result).then(
+          (value) => {
+            settle(recorder, cost, started);
+            return value;
+          },
+          (error: unknown) => {
+            settle(recorder, cost, started);
+            throw error;
+          },
+        );
+      }
     } catch (error) {
       settle(recorder, cost, started);
       throw error;
-    }
-
-    // Only a thenable defers completion; a plain return value is already done, and treating
-    // it as pending would leave `inFlight` permanently raised.
-    if (typeof (result as { then?: unknown } | undefined)?.then === 'function') {
-      return (result as Promise<unknown>).then(
-        (value) => {
-          settle(recorder, cost, started);
-          return value;
-        },
-        (error: unknown) => {
-          settle(recorder, cost, started);
-          throw error;
-        },
-      );
     }
 
     settle(recorder, cost, started);
@@ -300,6 +306,8 @@ export interface PluginTimingRow {
   calls: number;
   /** Summed spans. Meaningful as a cost only when {@link PluginTimingRow.rankable}. */
   ms: number;
+  /** The longest single span. Meaningful only when {@link PluginTimingRow.rankable}. */
+  maxMs: number;
   /** Peak concurrent calls. Informational — {@link PluginTimingRow.rankable} is the verdict. */
   maxInFlight: number;
   /** How much of {@link PluginTimingRow.ms} is double counted, in ms. */
@@ -365,6 +373,7 @@ export function summarizePluginTimings(key: object): PluginTimingsMeasurement {
         hook: cost.hookName,
         calls: cost.calls,
         ms: cost.ms,
+        maxMs: cost.maxMs,
         maxInFlight: cost.maxInFlight,
         overlapMs: cost.overlapMs,
         rankable: cost.overlapMs <= cost.ms * OVERLAP_TOLERANCE,

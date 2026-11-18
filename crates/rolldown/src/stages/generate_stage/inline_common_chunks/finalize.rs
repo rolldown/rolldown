@@ -119,7 +119,7 @@ impl GenerateStage<'_> {
             has_enum_inlining,
             inline_state: &self.inline_state,
           };
-          let (_, _, module_diagnostics) = ctx.finalize_normal_module(&mut ast, ast_scope);
+          let (_, module_diagnostics) = ctx.finalize_normal_module(&mut ast, ast_scope);
           diagnostics.extend(module_diagnostics);
           // The selection rules keep every shape the finalizer turns into an import or export
           // declaration as a file; a declaration that reaches a factory would be a syntax error

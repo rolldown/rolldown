@@ -1,0 +1,10 @@
+{
+  "_comment": "Imports of the same external with different attributes are different external modules. Each import keeps the path without attributes and renders the module's own `with` clause.",
+  "config": {
+    "external": ["ext", "ext-ns"],
+    "experimental": {
+      "importAttributes": true
+    }
+  },
+  "expectExecuted": false
+}

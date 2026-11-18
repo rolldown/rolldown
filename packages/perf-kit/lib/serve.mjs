@@ -129,7 +129,13 @@ export function startServer(root, port = 0) {
       resolve({
         port: actualPort,
         origin: `http://127.0.0.1:${actualPort}`,
-        close: () => new Promise((r) => server.close(r)),
+        // Chrome can keep a socket open with no finished request; server.close()
+        // alone waits for it until requestTimeout (300 s).
+        close: () =>
+          new Promise((r) => {
+            server.close(r);
+            server.closeAllConnections();
+          }),
       });
     });
   });

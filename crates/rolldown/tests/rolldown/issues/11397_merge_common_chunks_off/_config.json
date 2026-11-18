@@ -1,0 +1,10 @@
+{
+  "_comment": "With `mergeCommonChunks: false`, the already-loaded analysis still moves `form.js` into the chunk of its dynamic entry, and `page.js` imports the namespace object of `form.js` from that chunk. The namespace check and the extraction must also run without the merge of common chunks.",
+  "config": {
+    "experimental": {
+      "chunkOptimization": {
+        "mergeCommonChunks": false
+      }
+    }
+  }
+}

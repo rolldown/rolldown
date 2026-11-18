@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_sourcemap"
-version = "1.2.3"
+version = "1.3.2"
 publish = true
 description = "Source map generation and manipulation for Rolldown"
 readme = "../../README.md"
@@ -23,6 +23,7 @@ doctest = false
 memchr = { workspace = true }
 oxc = { workspace = true }
 oxc_sourcemap = { workspace = true }
+sugar_path = { workspace = true }
 
 [dev-dependencies]
 criterion2 = { workspace = true, default-features = false }

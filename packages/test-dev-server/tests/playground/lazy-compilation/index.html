@@ -28,6 +28,9 @@
       <button id="shared-module-btn">load</button>
       <div id="shared-module-status">pending</div>
       <pre id="shared-module-log"></pre>
+      <button id="shared-module-a-btn">load route a</button>
+      <button id="shared-module-b-btn">load route b</button>
+      <div id="shared-module-stores"></div>
     </section>
 
     <section id="nested-dynamic-import">
@@ -52,6 +55,67 @@
       <div id="lazy-init-error-status">pending</div>
       <pre id="lazy-init-error-log"></pre>
       <pre id="lazy-init-error-unhandled"></pre>
+    </section>
+
+    <section id="late-lazy-chunk">
+      <h2>late-lazy-chunk</h2>
+      <button id="late-lazy-chunk-a-btn">load a</button>
+      <button id="late-lazy-chunk-b-btn">load b</button>
+      <div id="late-lazy-chunk-lib"></div>
+      <div id="late-lazy-chunk-b"></div>
+    </section>
+
+    <section id="circular-named-reexport">
+      <h2>circular-named-reexport</h2>
+      <button id="circular-named-reexport-btn">load</button>
+      <div id="circular-named-reexport-status">pending</div>
+    </section>
+
+    <section id="circular-namespace-reexport">
+      <h2>circular-namespace-reexport</h2>
+      <button id="circular-namespace-reexport-btn">load</button>
+      <div id="circular-namespace-reexport-status">pending</div>
+    </section>
+
+    <section id="circular-reexport">
+      <h2>circular-reexport</h2>
+      <button id="circular-reexport-btn">load</button>
+      <div id="circular-reexport-status">pending</div>
+    </section>
+
+    <section id="circular-import-binding">
+      <h2>circular-import-binding</h2>
+      <button id="circular-import-binding-btn">load</button>
+      <div id="circular-import-binding-status">pending</div>
+    </section>
+
+    <section id="cjs-interop">
+      <h2>cjs-interop</h2>
+      <button id="cjs-interop-btn">load</button>
+      <div id="cjs-interop-status">pending</div>
+      <pre id="cjs-interop-log"></pre>
+    </section>
+
+    <section id="star-reexport-order">
+      <h2>star-reexport-order</h2>
+      <button id="star-reexport-order-btn">load</button>
+      <div id="star-reexport-order-status">pending</div>
+    </section>
+
+    <section id="walk-through-shipped">
+      <h2>walk-through-shipped</h2>
+      <button id="walk-through-shipped-holder-btn">load holder</button>
+      <button id="walk-through-shipped-route-btn">load route</button>
+      <div id="walk-through-shipped-holder"></div>
+      <div id="walk-through-shipped-route"></div>
+    </section>
+
+    <section id="top-level-await">
+      <h2>top-level-await</h2>
+      <button id="top-level-await-btn">load</button>
+      <div id="top-level-await-status">pending</div>
+      <button id="top-level-await-tdz-btn">load importer</button>
+      <div id="top-level-await-tdz-status">pending</div>
     </section>
 
     <script type="module" src="/main.js"></script>

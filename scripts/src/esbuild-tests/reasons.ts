@@ -29,7 +29,6 @@ export const failedReasons: Record<string, string> = {
     'oxc minifier does not support JSX (https://github.com/oxc-project/oxc/issues/13248)',
   'loader/jsx_preserve_capital_letter_minify_nested':
     'oxc minifier does not support JSX (https://github.com/oxc-project/oxc/issues/13248)',
-  'loader/loader_data_url_base64_invalid_utf8': 'mime type should be `data:text/plain`',
   'loader/loader_file_one_source_two_different_output_paths_css':
     'generate wrong output when css as entry and has shared css',
   'packagejson/common_js_variable_in_esm_type_module':
@@ -113,6 +112,7 @@ export const notSupportedReasons: Record<string, string> = {
   'default/require_and_dynamic_import_invalid_template': 'glob is not supported',
   'loader/with_type_bytes_override_loader_glob': 'glob is not supported',
   'loader/with_type_text_override_loader_glob': 'glob is not supported',
+  'loader/with_type_json_override_loader_glob': 'glob is not supported',
 
   'loader/loader_file_public_path_js': 'publicPath equivalent option is not supported',
   'loader/loader_file_public_path_css': 'publicPath equivalent option is not supported',
@@ -124,17 +124,7 @@ export const notSupportedReasons: Record<string, string> = {
   'loader/loader_file_relative_path_css': 'bug?: file reference URL difference',
   'loader/loader_file_relative_path_js': 'bug?: file reference URL difference',
 
-  'default/comment_preservation_import_assertions': 'import attributes is not supported',
-  'default/metafile_import_with_type_json': 'import attributes is not supported',
-  'default/output_for_assert_type_json': 'import attributes is not supported',
-  'loader/loader_bundle_with_import_attributes': 'import attributes is not supported',
-  'loader/loader_bundle_with_unknown_import_attributes_and_js_loader':
-    'import attributes is not supported',
-  'loader/with_bad_attribute': 'import attributes is not supported',
-  'loader/with_bad_type': 'import attributes is not supported',
-  'loader/with_type_bytes_override_loader': 'import attributes is not supported',
-  'loader/with_type_text_override_loader': 'import attributes is not supported',
-  'loader/with_type_json_override_loader': 'import attributes is not supported',
+  'default/output_for_assert_type_json': 'copy loader is not supported',
 
   'default/conditional_require_resolve':
     'converting conditional `require.resolve` is not supported',
@@ -206,6 +196,27 @@ export const ignoreReasons: Record<string, string> = {
 
   'default/line_limit_minified': 'irrelevant: lineLimit option will not be supported',
   'default/line_limit_not_minified': 'irrelevant: lineLimit option will not be supported',
+
+  'loader/loader_data_url_base64_invalid_utf8':
+    "esbuild's `charset=utf-8` comes from Go's `http.DetectContentType` and is applied to invalid UTF-8; Rolldown only adds it after validating the data as UTF-8",
+
+  'default/comment_preservation_import_assertions':
+    'Rolldown renders the legacy `assert` keyword as `with` and does not keep comments inside import attributes',
+  'default/metafile_import_with_type_json':
+    'Rolldown treats the legacy `assert` keyword as `with`, so the `assert` and `with` imports are one module. esbuild puts the `assert` import with the plain one',
+  'loader/loader_bundle_with_import_attributes':
+    'Rolldown treats the legacy `assert` keyword as `with`, so the `assert` and `with` imports are one module. esbuild puts the `assert` import with the plain one',
+  'loader/loader_bundle_with_unknown_import_attributes_and_js_loader':
+    'esbuild rejects unknown import attributes. Rolldown passes them to plugins, like Rollup',
+  'loader/with_bad_attribute':
+    'esbuild rejects unknown import attributes. Rolldown passes them to plugins, like Rollup',
+  'loader/with_bad_type':
+    'esbuild rejects unknown import attributes. Rolldown passes them to plugins, like Rollup',
+
+  'default/require_fs_node':
+    'Rolldown runs a CommonJS entry with a top-level `return` in an arrow function, so the `return` does not skip what the chunk prints after the module',
+  'default/require_fs_node_minify':
+    'Rolldown runs a CommonJS entry with a top-level `return` in an arrow function, so the `return` does not skip what the chunk prints after the module',
 
   'dce/tree_shaking_js_with_associated_css':
     'CSS bundling is not supported (https://github.com/rolldown/rolldown/issues/4271)',

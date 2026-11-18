@@ -1,6 +1,5 @@
-use std::sync::Arc;
-
 use rolldown::{BundlerOptions, TreeshakeOptions};
+use rolldown_plugin::Plugin;
 
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
@@ -16,7 +15,7 @@ async fn process_check() {
         treeshake: TreeshakeOptions::Boolean(false),
         ..Default::default()
       },
-      vec![Arc::new(
+      vec![Plugin::new_shared(
         ReplacePlugin::with_options(ReplaceOptions {
           values: std::iter::once((
             "process.env.NODE_ENV".to_string(),

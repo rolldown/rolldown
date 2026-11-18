@@ -6,12 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 var BaseNode = class extends Callable {
 	referencesById = children.reduce((result, child) => Object.assign(result, child.referencesById), { [this.id]: this });
 	[(void 0).id] = this;
 };
 console.log(`BaseNode: `, BaseNode);
-//#endregion
 
 ```

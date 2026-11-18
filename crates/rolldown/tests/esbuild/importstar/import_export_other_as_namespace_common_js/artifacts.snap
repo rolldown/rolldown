@@ -8,13 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
-//#region foo.js
-//#endregion
-//#region entry.js
+// entry.js
 var import_foo = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = 123;
 })))());
-//#endregion
 Object.defineProperty(exports, "ns", {
 	enumerable: true,
 	get: function() {

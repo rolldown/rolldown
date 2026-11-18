@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// main.js
+var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports["\ud800"] = "assigned";
+	Object.defineProperty(exports, "\udc00", {
+		enumerable: true,
+		value: "defined"
+	});
+	exports.foo = "foo";
+})))());
+assert.strictEqual(import_cjs["\ud800"], "assigned");
+assert.strictEqual(import_cjs["\udc00"], "defined");
+assert.strictEqual("foo", "foo");
+
+```

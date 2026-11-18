@@ -11,7 +11,7 @@ Object.defineProperties(exports, {
 	[Symbol.toStringTag]: { value: "Module" }
 });
 // HIDDEN [\0rolldown/runtime.js]
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({
 	default: () => main_default,
 	foo: () => "foo"
@@ -22,7 +22,6 @@ var init_main = __esmMin((() => {
 	main_default = "main";
 	console.log((init_main(), __toCommonJS(main_exports)));
 }));
-//#endregion
 init_main();
 exports.default = main_default;
 exports.foo = foo;

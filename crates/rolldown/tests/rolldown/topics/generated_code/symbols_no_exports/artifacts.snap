@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+(function() {
+	// main.js
+	console.log("hello");
+})();
+
+```
+
+# Variant: [format: Umd]
+
+## Assets
+
+### main.js
+
+```js
+(function(global, factory) {
+	typeof exports === "object" && typeof module !== "undefined" ? factory() : typeof define === "function" && define.amd ? define([], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory());
+})(this, function() {
+	// main.js
+	console.log("hello");
+});
+
+```

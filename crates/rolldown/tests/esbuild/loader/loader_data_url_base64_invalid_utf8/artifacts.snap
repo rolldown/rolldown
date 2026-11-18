@@ -6,10 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region binary.txt
-//#endregion
-//#region entry.js
+// entry.js
 console.log("data:application/octet-stream;base64,/w==");
-//#endregion
 
 ```

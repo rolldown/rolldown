@@ -7,27 +7,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as foo } from "./main.js";
-//#region lazy-chunk.js
+// lazy-chunk.js
 foo();
-//#endregion
 
 ```
 
 ## main.js
 
 ```js
-//#region polyfill.js
+// polyfill.js
 Object.somePolyfilledFunction = () => {};
-//#endregion
-//#region user-lib.js
+// user-lib.js
 Object.somePolyfilledFunction();
 async function foo() {
 	return import("./lazy-chunk.js");
 }
-//#endregion
-//#region main.js
+// main.js
 foo();
-//#endregion
 export { foo as t };
 
 ```
@@ -39,16 +35,15 @@ export { foo as t };
 ### lazy-chunk.js
 
 ```js
-import { n as foo, r as init_user_lib } from "./main2.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region lazy-chunk.js
+import { n as foo, r as init_user_lib } from "./main2.js";
+// lazy-chunk.js
 function init_lazy_chunk() {
 	return (init_lazy_chunk = __esmMin((() => {
 		init_user_lib();
 		foo();
 	})))();
 }
-//#endregion
 init_lazy_chunk();
 
 ```
@@ -65,14 +60,13 @@ init_main();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region polyfill.js
+// polyfill.js
 function init_polyfill() {
 	return (init_polyfill = __esmMin((() => {
 		Object.somePolyfilledFunction = () => {};
 	})))();
 }
-//#endregion
-//#region user-lib.js
+// user-lib.js
 async function foo() {
 	return import("./lazy-chunk.js");
 }
@@ -81,8 +75,7 @@ function init_user_lib() {
 		Object.somePolyfilledFunction();
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_polyfill();
@@ -90,7 +83,6 @@ function init_main() {
 		foo();
 	})))();
 }
-//#endregion
 export { init_polyfill as i, foo as n, init_user_lib as r, init_main as t };
 
 ```
@@ -110,16 +102,15 @@ export { __esmMin as t };
 ### lazy-chunk.js
 
 ```js
-import { n as foo, r as init_user_lib } from "./main2.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region lazy-chunk.js
+import { n as foo, r as init_user_lib } from "./main2.js";
+// lazy-chunk.js
 function init_lazy_chunk() {
 	return (init_lazy_chunk = __esmMin((() => {
 		init_user_lib();
 		foo();
 	})))();
 }
-//#endregion
 init_lazy_chunk();
 
 ```
@@ -136,14 +127,13 @@ init_main();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region polyfill.js
+// polyfill.js
 function init_polyfill() {
 	return (init_polyfill = __esmMin((() => {
 		Object.somePolyfilledFunction = () => {};
 	})))();
 }
-//#endregion
-//#region user-lib.js
+// user-lib.js
 async function foo() {
 	return import("./lazy-chunk.js");
 }
@@ -152,8 +142,7 @@ function init_user_lib() {
 		Object.somePolyfilledFunction();
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_polyfill();
@@ -161,7 +150,6 @@ function init_main() {
 		foo();
 	})))();
 }
-//#endregion
 export { init_polyfill as i, foo as n, init_user_lib as r, init_main as t };
 
 ```

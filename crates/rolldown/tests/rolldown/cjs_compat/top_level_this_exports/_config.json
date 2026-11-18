@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.cjs" }],
+    "format": "esm"
+  },
+  "configVariants": [
+    { "format": "cjs", "_snapshot": false },
+    { "format": "iife", "name": "test", "_snapshot": false },
+    { "format": "umd", "name": "test", "_snapshot": false },
+    { "profilerNames": true, "_snapshot": false },
+    { "minify": true, "_snapshot": false }
+  ]
+}

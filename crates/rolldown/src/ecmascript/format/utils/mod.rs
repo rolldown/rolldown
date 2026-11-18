@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use rolldown_common::ExternalModule;
 use rolldown_sourcemap::SourceJoiner;
+use rolldown_utils::ecmascript::escape_non_ascii;
 
 use crate::{
   ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
@@ -36,13 +37,13 @@ pub fn render_factory_parameters(
   externals: &[&ExternalModule],
   has_exports: bool,
 ) -> String {
-  let mut parameters: Vec<&str> = if has_exports { vec!["exports"] } else { vec![] };
+  let mut parameters: Vec<String> = if has_exports { vec!["exports".to_string()] } else { vec![] };
   externals.iter().for_each(|external| {
     let symbol_name = ctx
       .link_output
       .symbol_db
       .canonical_name_for_or_original(external.namespace_ref, &ctx.chunk.canonical_names);
-    parameters.push(symbol_name);
+    parameters.push(escape_non_ascii(symbol_name, ctx.options.charset.is_ascii()).into_owned());
   });
   parameters.join(", ")
 }
@@ -65,6 +66,8 @@ pub fn render_chunk_external_imports<'a>(
         .link_output
         .symbol_db
         .canonical_name_for_or_original(importee.namespace_ref, &ctx.chunk.canonical_names);
+      let external_module_symbol_name =
+        escape_non_ascii(external_module_symbol_name, ctx.options.charset.is_ascii());
 
       if ctx.link_output.used_external_symbols.contains(&importee.namespace_ref) {
         // `named_imports` only covers imports written by modules that live in this chunk, so the
@@ -87,29 +90,29 @@ pub fn render_chunk_external_imports<'a>(
           if let Some(node_mode_name) = ctx.chunk.node_mode_external_ns_names.get(&canonical_ref) {
             // Mixed-mode: emit two __toESM bindings
             import_code.push_str("let ");
-            import_code.push_str(node_mode_name);
+            import_code.push_str(&escape_non_ascii(node_mode_name, ctx.options.charset.is_ascii()));
             import_code.push_str(" = ");
             import_code.push_str(to_esm_fn_name);
             import_code.push('(');
-            import_code.push_str(external_module_symbol_name);
+            import_code.push_str(&external_module_symbol_name);
             import_code.push_str(", 1);\n");
 
-            import_code.push_str(external_module_symbol_name);
+            import_code.push_str(&external_module_symbol_name);
             import_code.push_str(" = ");
             import_code.push_str(to_esm_fn_name);
             import_code.push('(');
-            import_code.push_str(external_module_symbol_name);
+            import_code.push_str(&external_module_symbol_name);
             import_code.push_str(");\n");
           } else {
             // Single-mode. Both flags can still be set: deconflicting suppresses the node binding
             // when no ESM-format module in the chunk would read it (`chunk_has_node_esm_reader`).
             // Those readers take this plain binding, so non-Node is the mode that matches them.
             let is_node_esm = interop_modes.node_esm && !interop_modes.non_node_esm;
-            import_code.push_str(external_module_symbol_name);
+            import_code.push_str(&external_module_symbol_name);
             import_code.push_str(" = ");
             import_code.push_str(to_esm_fn_name);
             import_code.push('(');
-            import_code.push_str(external_module_symbol_name);
+            import_code.push_str(&external_module_symbol_name);
             if is_node_esm {
               import_code.push_str(", 1");
             }

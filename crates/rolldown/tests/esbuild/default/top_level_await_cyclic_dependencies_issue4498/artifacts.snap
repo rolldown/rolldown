@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_mjs.js
+
+```js
+// entry.mjs
+await import("./main.js");
+
+```
+
+## main.js
+
+```js
+// b.mjs
+function b() {
+	return typeof a;
+}
+// dep.mjs
+const tla = await Promise.resolve("x");
+// a.mjs
+function a() {
+	return b() + tla;
+}
+// main.mjs
+console.log(a());
+
+```

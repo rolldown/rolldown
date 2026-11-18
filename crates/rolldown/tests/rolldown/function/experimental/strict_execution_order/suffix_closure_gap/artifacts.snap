@@ -7,9 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as setup } from "./main2.js";
-//#region dyn.js
+// dyn.js
 console.log("dyn", typeof setup);
-//#endregion
 
 ```
 
@@ -25,24 +24,21 @@ init_main();
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region setup.js
+// setup.js
 const setup = () => {
 	globalThis.foo = "foo";
 };
 setup();
-//#endregion
-//#region reader.js
+// reader.js
 const captured = globalThis.foo;
 console.log("captured", captured);
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		setup();
 		import("./dyn.js");
 	})))();
 }
-//#endregion
 export { setup as n, init_main as t };
 
 ```
@@ -54,9 +50,9 @@ export { setup as n, init_main as t };
 ### dyn.js
 
 ```js
-import { i as setup, n as init_intermediate, r as init_setup } from "./main2.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region dyn.js
+import { i as setup, n as init_intermediate, r as init_setup } from "./main2.js";
+// dyn.js
 function init_dyn() {
 	return (init_dyn = __esmMin((() => {
 		init_setup();
@@ -64,7 +60,6 @@ function init_dyn() {
 		console.log("dyn", typeof setup);
 	})))();
 }
-//#endregion
 init_dyn();
 
 ```
@@ -81,7 +76,7 @@ init_main();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region setup.js
+// setup.js
 var setup;
 function init_setup() {
 	return (init_setup = __esmMin((() => {
@@ -91,8 +86,7 @@ function init_setup() {
 		setup();
 	})))();
 }
-//#endregion
-//#region reader.js
+// reader.js
 var captured;
 function init_reader() {
 	return (init_reader = __esmMin((() => {
@@ -100,15 +94,13 @@ function init_reader() {
 		console.log("captured", captured);
 	})))();
 }
-//#endregion
-//#region intermediate.js
+// intermediate.js
 function init_intermediate() {
 	return (init_intermediate = __esmMin((() => {
 		init_reader();
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
 		init_setup();
@@ -117,7 +109,6 @@ function init_main() {
 		import("./dyn.js");
 	})))();
 }
-//#endregion
 export { setup as i, init_intermediate as n, init_setup as r, init_main as t };
 
 ```

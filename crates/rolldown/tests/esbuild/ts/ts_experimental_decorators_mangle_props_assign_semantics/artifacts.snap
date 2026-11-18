@@ -7,15 +7,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
-//#region entry.ts
+// entry.ts
 var Foo = class {
 	constructor() {
 		this.prop1 = null;
 		this.prop2_ = null;
 		this["prop3"] = null;
 		this["prop4_"] = null;
-		this["prop5"] = null;
-		this["prop6_"] = null;
+		this[/* @__KEY__ */ "prop5"] = null;
+		this[/* @__KEY__ */ "prop6_"] = null;
 	}
 };
 __decorate([dec(1)], Foo.prototype, "prop1", void 0);
@@ -24,6 +24,5 @@ __decorate([dec(3)], Foo.prototype, null, void 0);
 __decorate([dec(4)], Foo.prototype, null, void 0);
 __decorate([dec(5)], Foo.prototype, null, void 0);
 __decorate([dec(6)], Foo.prototype, null, void 0);
-//#endregion
 
 ```

@@ -21,6 +21,11 @@ impl GenerateStage<'_> {
       ) {
         continue;
       }
+      // An inline common chunk record is no file; its modules are checked through the files that
+      // carry them, whose `module_ids` list them.
+      if self.inline_state.is_record(chunk_idx) {
+        continue;
+      }
       let pre_rendered_chunk =
         chunk.pre_rendered_chunk.as_ref().expect("Should have pre_rendered_chunk");
 

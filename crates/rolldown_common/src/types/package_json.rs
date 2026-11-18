@@ -58,3 +58,54 @@ impl PackageJson {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn package_with_side_effects(side_effects: SideEffects) -> PackageJson {
+    PackageJson {
+      name: None,
+      version: None,
+      r#type: None,
+      side_effects: Some(side_effects),
+      realpath: PathBuf::from("/package/package.json"),
+    }
+  }
+
+  #[test]
+  fn negative_side_effect_patterns_do_not_include_unrelated_modules() {
+    let package = package_with_side_effects(SideEffects::Array(
+      [
+        "**/*.css",
+        "**/tokens/*.{js,ts,ts.esnext}",
+        "!**/@scope/excluded/**/tokens/*.{js,ts,ts.esnext}",
+        "**/configure.{js,mjs}",
+      ]
+      .map(str::to_string)
+      .to_vec(),
+    ));
+
+    assert_eq!(package.check_side_effects_for("src/index.mjs"), Some(false));
+    assert_eq!(package.check_side_effects_for("src/configure.mjs"), Some(true));
+    assert_eq!(package.check_side_effects_for("src/styles.css"), Some(true));
+    assert_eq!(package.check_side_effects_for("src/tokens/colors.js"), Some(true));
+
+    let only_negative =
+      package_with_side_effects(SideEffects::Array(vec!["!**/excluded/**".to_string()]));
+    assert_eq!(only_negative.check_side_effects_for("src/index.mjs"), Some(false));
+
+    let negative_string =
+      package_with_side_effects(SideEffects::String("!**/excluded/**".to_string()));
+    assert_eq!(negative_string.check_side_effects_for("src/index.mjs"), Some(false));
+  }
+
+  #[test]
+  fn leading_bang_patterns_match_literally() {
+    let package =
+      package_with_side_effects(SideEffects::Array(vec!["!weird/dir/effect.js".to_string()]));
+
+    assert_eq!(package.check_side_effects_for("!weird/dir/effect.js"), Some(true));
+    assert_eq!(package.check_side_effects_for("weird/dir/effect.js"), Some(false));
+  }
+}

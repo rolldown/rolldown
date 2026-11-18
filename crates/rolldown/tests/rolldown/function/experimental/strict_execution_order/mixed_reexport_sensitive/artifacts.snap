@@ -1,0 +1,331 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared, r as SNAPSHOT } from "./shared.js";
+// pure.js
+var PURE;
+function init_pure() {
+	return (init_pure = __esmMin((() => {
+		PURE = "pure";
+	})))();
+}
+// lazy.js
+function read() {
+	return [SNAPSHOT, PURE];
+}
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		init_pure(), init_shared();
+	})))();
+}
+init_lazy();
+export { read };
+
+```
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { a as bump, n as init_shared, o as init_state, t as LOCAL } from "./shared.js";
+// main.js
+var local, load;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_shared();
+		init_state();
+		local = LOCAL;
+		bump();
+		load = () => import("./lazy.js").then((module) => module.read());
+	})))();
+}
+init_main();
+export { load, local };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+## shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// state.js
+function bump() {
+	state++;
+}
+var state;
+function init_state() {
+	return (init_state = __esmMin((() => {
+		state = 0;
+	})))();
+}
+// snapshots/value.js
+var SNAPSHOT;
+function init_value() {
+	return (init_value = __esmMin((() => {
+		init_state();
+		SNAPSHOT = state;
+	})))();
+}
+// shared.js
+var LOCAL;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		init_value();
+		LOCAL = "local";
+	})))();
+}
+export { bump as a, init_value as i, init_shared as n, init_state as o, SNAPSHOT as r, LOCAL as t };
+
+```
+
+# Variant: no-optimization: [chunk_optimization: Bool(false)]
+
+## Assets
+
+### lazy.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared, r as SNAPSHOT } from "./shared.js";
+// pure.js
+var PURE;
+function init_pure() {
+	return (init_pure = __esmMin((() => {
+		PURE = "pure";
+	})))();
+}
+// lazy.js
+function read() {
+	return [SNAPSHOT, PURE];
+}
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		init_pure(), init_shared();
+	})))();
+}
+init_lazy();
+export { read };
+
+```
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { a as bump, n as init_shared, o as init_state, t as LOCAL } from "./shared.js";
+// main.js
+var local, load;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_shared();
+		init_state();
+		local = LOCAL;
+		bump();
+		load = () => import("./lazy.js").then((module) => module.read());
+	})))();
+}
+init_main();
+export { load, local };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// state.js
+function bump() {
+	state++;
+}
+var state;
+function init_state() {
+	return (init_state = __esmMin((() => {
+		state = 0;
+	})))();
+}
+// snapshots/value.js
+var SNAPSHOT;
+function init_value() {
+	return (init_value = __esmMin((() => {
+		init_state();
+		SNAPSHOT = state;
+	})))();
+}
+// shared.js
+var LOCAL;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		init_value();
+		LOCAL = "local";
+	})))();
+}
+export { bump as a, init_value as i, init_shared as n, init_state as o, SNAPSHOT as r, LOCAL as t };
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true]
+
+## Assets
+
+### lazy.js
+
+```js
+import { n as SNAPSHOT } from "./shared.js";
+// pure.js
+const PURE = "pure";
+// lazy.js
+function read() {
+	return [SNAPSHOT, PURE];
+}
+export { read };
+
+```
+
+### main.js
+
+```js
+import { r as bump, t as LOCAL } from "./shared.js";
+// main.js
+const local = LOCAL;
+bump();
+const load = () => import("./lazy.js").then((module) => module.read());
+export { load, local };
+
+```
+
+### shared.js
+
+```js
+// state.js
+let state = 0;
+function bump() {
+	state++;
+}
+// snapshots/value.js
+const SNAPSHOT = state;
+// shared.js
+const LOCAL = "local";
+export { SNAPSHOT as n, bump as r, LOCAL as t };
+
+```
+
+# Variant: on-demand-manual-groups: [code_splitting: enabled] [on_demand_wrapping: true] [preserve_entry_signatures: AllowExtension]
+
+## Assets
+
+### lazy.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_shared } from "./shared.js";
+import { t as SNAPSHOT } from "./snapshot.js";
+// pure.js
+const PURE = "pure";
+// lazy.js
+function read() {
+	return [SNAPSHOT, PURE];
+}
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		init_shared();
+	})))();
+}
+init_lazy();
+export { read };
+
+```
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { i as init_state, n as init_shared, r as bump, t as LOCAL } from "./shared.js";
+// main.js
+var local, load;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_shared();
+		init_state();
+		local = LOCAL;
+		bump();
+		load = () => import("./lazy.js").then((module) => module.read());
+	})))();
+}
+init_main();
+export { load, local };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```
+
+### shared.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_value } from "./snapshot.js";
+// state.js
+function bump() {
+	state++;
+}
+var state;
+function init_state() {
+	return (init_state = __esmMin((() => {
+		state = 0;
+	})))();
+}
+// shared.js
+var LOCAL;
+function init_shared() {
+	return (init_shared = __esmMin((() => {
+		init_value();
+		LOCAL = "local";
+	})))();
+}
+export { state as a, init_state as i, init_shared as n, bump as r, LOCAL as t };
+
+```
+
+### snapshot.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { a as state, i as init_state } from "./shared.js";
+// snapshots/value.js
+var SNAPSHOT;
+function init_value() {
+	return (init_value = __esmMin((() => {
+		init_state();
+		SNAPSHOT = state;
+	})))();
+}
+export { init_value as n, SNAPSHOT as t };
+
+```

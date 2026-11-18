@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 (() => {
 	firstImportantSideEffect(void 0);
 })();
@@ -14,6 +14,5 @@ source: crates/rolldown_testing/src/integration_test.rs
 	debugger;
 	secondImportantSideEffect(void 0);
 })();
-//#endregion
 
 ```

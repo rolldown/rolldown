@@ -12,10 +12,9 @@ class A {
 this.test = this.test || {};
 this.test.module = (function() {
 
-//#region main.js
+// main.js
 	var main_default = "default";
 
-//#endregion
 return main_default;
 })();
   }

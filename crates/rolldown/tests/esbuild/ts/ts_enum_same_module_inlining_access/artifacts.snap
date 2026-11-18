@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.ts
+// entry.ts
 var e_num = /* @__PURE__ */ function(e_num) {
 	e_num[e_num["x"] = 123] = "x";
 	return e_num;
@@ -29,6 +29,5 @@ not_inlined = [
 	"abc",
 	e_str
 ];
-//#endregion
 
 ```

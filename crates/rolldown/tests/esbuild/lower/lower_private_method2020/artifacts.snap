@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 var Foo = class {
 	#field;
 	#method() {}
@@ -34,7 +34,6 @@ var Foo = class {
 		f()?.foo.#method(x).bar();
 	}
 };
-//#endregion
 export { Foo };
 
 ```

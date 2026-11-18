@@ -3,11 +3,10 @@ use napi::{
   sys,
 };
 use napi_derive::napi;
+use oxc_napi::JsRegExp;
 use rolldown_utils::{
   filter_expression::Token, js_regex::HybridRegex, pattern_filter::StringOrRegex,
 };
-
-use crate::types::js_regex::JsRegExp;
 
 #[derive(Debug, Clone)]
 pub enum BindingFilterTokenPayloadInner {
@@ -35,13 +34,6 @@ impl BindingFilterTokenPayloadInner {
     match self {
       BindingFilterTokenPayloadInner::Number(v) => Ok(v),
       other => anyhow::bail!("expected a number payload, but got {other:?}"),
-    }
-  }
-
-  pub fn try_into_regex(self) -> anyhow::Result<HybridRegex> {
-    match self {
-      BindingFilterTokenPayloadInner::StringOrRegex(inner) => inner.try_into_regex(),
-      other => anyhow::bail!("expected a regex payload, but got {other:?}"),
     }
   }
 }

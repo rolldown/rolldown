@@ -9,9 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
-//#region main.js
+// main.js
 node_assert.default.strictEqual(42, 42);
-//#endregion
 
 ```
 
@@ -25,13 +24,12 @@ node_assert.default.strictEqual(42, 42);
 const require_rolldown_runtime = require("./rolldown-runtime.js");
 let node_assert = require("node:assert");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = require_rolldown_runtime.__esmMin((() => {
 		node_assert.default.strictEqual(42, 42);
 	})))();
 }
-//#endregion
 init_main();
 
 ```

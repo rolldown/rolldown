@@ -1,6 +1,6 @@
-import type { InputCliOptions } from '../../options/input-options';
-import type { OutputCliOptions } from '../../options/output-options';
-import type { ConfigLoader } from '../../utils/load-config';
+import type { InputCliOptions } from '../../options/input-options.ts';
+import type { OutputCliOptions } from '../../options/output-options.ts';
+import type { ConfigLoader } from '../../utils/load-config.ts';
 
 export interface CliOptions extends InputCliOptions, OutputCliOptions {
   config?: string | boolean;
@@ -79,6 +79,12 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
     hint: 'name',
   },
   externalLiveBindings: {
+    reverse: true,
+  },
+  makeAbsoluteExternalsRelative: {
+    reverse: true,
+  },
+  polyfillRequire: {
     reverse: true,
   },
   treeshake: {

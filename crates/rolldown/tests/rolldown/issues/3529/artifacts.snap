@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region b.cjs
+// b.cjs
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const a = require_a();
 	Object.defineProperty(module.exports, "b", {
@@ -15,8 +15,7 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		get: () => () => ({ a })
 	});
 }));
-//#endregion
-//#region a.cjs
+// a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const b = require_b();
 	Object.defineProperty(module.exports, "a", {
@@ -24,14 +23,12 @@ var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		get: () => () => ({ b })
 	});
 }));
-//#endregion
-//#region main.mjs
+// main.mjs
 var import_a = /* @__PURE__ */ __toESM(require_a(), 1);
 var import_b = /* @__PURE__ */ __toESM(require_b(), 1);
 console.log({
 	a: import_a.default,
 	b: import_b.default
 });
-//#endregion
 
 ```

@@ -1,0 +1,99 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { t as log } from "./logger.js";
+import { n as snapshot } from "./common.js";
+// a.js
+const a = log(snapshot);
+export { a };
+
+```
+
+## b.js
+
+```js
+// b.js
+async function b() {
+	const { log } = await import("./logger.js").then((n) => n.n);
+	return log("b");
+}
+export { b };
+
+```
+
+## c.js
+
+```js
+import { t as namespace_exports } from "./namespace.js";
+import { n as snapshot, t as getData } from "./common.js";
+// c.js
+const c = namespace_exports;
+export { c, getData, snapshot };
+
+```
+
+## common.js
+
+```js
+// marker.js
+const data = { fallback: "unset" };
+// common.js
+const snapshot = globalThis.ready ?? data[globalThis.key ?? "fallback"];
+function getData() {
+	return data;
+}
+export { snapshot as n, getData as t };
+
+```
+
+## d.js
+
+```js
+import { t as namespace_exports } from "./namespace.js";
+import { n as snapshot, t as getData } from "./common.js";
+// d.js
+const d = namespace_exports;
+export { d, getData, snapshot };
+
+```
+
+## logger.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+import { n as snapshot } from "./common.js";
+// logger.js
+var logger_exports = /* @__PURE__ */ __exportAll({ log: () => log });
+function log(value) {
+	return `${value} ${snapshot}`;
+}
+export { logger_exports as n, log as t };
+
+```
+
+## namespace.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+// dead.js
+globalThis.deadEffect = true;
+// namespace.js
+var namespace_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+globalThis.ready = "ready";
+const value = "namespace";
+export { namespace_exports as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
+
+```

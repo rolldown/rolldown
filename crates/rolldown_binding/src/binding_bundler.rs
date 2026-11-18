@@ -6,9 +6,11 @@ use crate::{
     binding_bundler_options::BindingBundlerOptions,
     binding_outputs::{BindingOutputs, to_binding_error},
     error::{BindingError, BindingErrors, BindingResult},
+    js_callback_release::{RequestReleaseOnDrop, SharedJsCallbackRelease},
   },
   utils::{
-    handle_result, handle_warnings, normalize_binding_options::normalize_binding_options,
+    handle_result, handle_warnings,
+    normalize_binding_options::{NormalizedBindingOptions, normalize_binding_options},
     spawn_boxed_future,
   },
 };
@@ -22,10 +24,16 @@ use std::sync::Arc;
 #[napi]
 pub struct BindingBundler {
   inner: ClassicBundler,
-  /// Every build this bundler has run, in order. A `RolldownBuild` may `generate` more
-  /// than once, and the plugin-timing measurement accumulates across all of them, so the
-  /// clocks it is judged against are summed over all of them too.
-  bundle_handles: Vec<BundleHandle>,
+  /// Only the latest build's handle is kept. A handle pins its build's `PluginDriver`, and with
+  /// it every module's transformed source.
+  last_bundle_handle: Option<BundleHandle>,
+  /// `(total_micros, link_stage_micros)` of the builds before `last_bundle_handle`.
+  finished_timings: (u64, u64),
+  /// The JS functions of the options of each build. `close` requests their release. Each
+  /// `generate`, `write` and `scan` keeps a hold until it ends, because `close` does not wait for
+  /// a build that started before it.
+  /// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
+  option_callbacks: SharedJsCallbackRelease,
 }
 
 #[napi]
@@ -33,7 +41,20 @@ impl BindingBundler {
   #[napi(constructor)]
   pub fn new() -> Self {
     let inner = ClassicBundler::new();
-    Self { inner, bundle_handles: Vec::new() }
+    Self {
+      inner,
+      last_bundle_handle: None,
+      finished_timings: (0, 0),
+      option_callbacks: SharedJsCallbackRelease::new(Vec::new()),
+    }
+  }
+
+  fn track_bundle_handle(&mut self, handle: BundleHandle) {
+    if let Some(previous) = self.last_bundle_handle.replace(handle) {
+      let timings = &previous.plugin_driver().build_timings;
+      self.finished_timings.0 += timings.total_micros();
+      self.finished_timings.1 += timings.link_stage_micros();
+    }
   }
 
   #[napi]
@@ -42,7 +63,10 @@ impl BindingBundler {
     env: &'env Env,
     options: BindingBundlerOptions<'env>,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
-    let normalized = Self::normalize_binding_options(options)?;
+    let NormalizedBindingOptions { config: normalized, callbacks } =
+      Self::normalize_binding_options(options)?;
+    // The build future keeps this hold until it ends. See `option_callbacks`.
+    let hold = self.option_callbacks.hold_with_group(callbacks);
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "generate") {
       return spawn_boxed_future(env, async move { Ok(result) });
     }
@@ -50,10 +74,11 @@ impl BindingBundler {
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
-      self.bundle_handles.push(bundle.context());
+      self.track_bundle_handle(bundle.context());
     }
 
     let fut = async move {
+      let _hold = hold;
       // TODO: we probably advance error handling here instead of waiting for an async call
       let bundle = maybe_bundle.map_err(|err| {
         napi::Error::new(
@@ -63,7 +88,7 @@ impl BindingBundler {
       })?;
       let cwd = bundle.options().cwd.clone();
       let options = Arc::clone(bundle.options());
-      let bundle_output = match bundle.generate().await {
+      let mut bundle_output = match bundle.generate().await {
         Ok(output) => output,
         Err(errs) => {
           let errors: Vec<BindingError> = errs
@@ -75,12 +100,13 @@ impl BindingBundler {
         }
       };
 
-      if let Err(err) = handle_warnings(bundle_output.warnings, &options).await {
+      if let Err(err) = handle_warnings(std::mem::take(&mut bundle_output.warnings), &options).await
+      {
         let error = to_binding_error(&err.into(), cwd.clone());
         return Ok(napi::Either::A(BindingErrors::new(vec![error])));
       }
 
-      Ok(napi::Either::B(bundle_output.assets.into()))
+      Ok(napi::Either::B(bundle_output.into()))
     };
     spawn_boxed_future(env, fut)
   }
@@ -91,7 +117,10 @@ impl BindingBundler {
     env: &'env Env,
     options: BindingBundlerOptions<'env>,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
-    let normalized = Self::normalize_binding_options(options)?;
+    let NormalizedBindingOptions { config: normalized, callbacks } =
+      Self::normalize_binding_options(options)?;
+    // The build future keeps this hold until it ends. See `option_callbacks`.
+    let hold = self.option_callbacks.hold_with_group(callbacks);
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "write") {
       return spawn_boxed_future(env, async move { Ok(result) });
     }
@@ -99,10 +128,11 @@ impl BindingBundler {
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
-      self.bundle_handles.push(bundle.context());
+      self.track_bundle_handle(bundle.context());
     }
 
     let fut = async move {
+      let _hold = hold;
       let bundle = maybe_bundle.map_err(|err| {
         napi::Error::new(
           napi::Status::GenericFailure,
@@ -111,7 +141,7 @@ impl BindingBundler {
       })?;
       let cwd = bundle.options().cwd.clone();
       let options = Arc::clone(bundle.options());
-      let bundle_output = match bundle.write().await {
+      let mut bundle_output = match bundle.write().await {
         Ok(output) => output,
         Err(errs) => {
           let errors: Vec<BindingError> = errs
@@ -123,12 +153,13 @@ impl BindingBundler {
         }
       };
 
-      if let Err(err) = handle_warnings(bundle_output.warnings, &options).await {
+      if let Err(err) = handle_warnings(std::mem::take(&mut bundle_output.warnings), &options).await
+      {
         let error = to_binding_error(&err.into(), cwd.clone());
         return Ok(napi::Either::A(BindingErrors::new(vec![error])));
       }
 
-      Ok(napi::Either::B(bundle_output.assets.into()))
+      Ok(napi::Either::B(bundle_output.into()))
     };
     spawn_boxed_future(env, fut)
   }
@@ -139,7 +170,10 @@ impl BindingBundler {
     env: &'env Env,
     options: BindingBundlerOptions<'env>,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<()>>> {
-    let normalized = Self::normalize_binding_options(options)?;
+    let NormalizedBindingOptions { config: normalized, callbacks } =
+      Self::normalize_binding_options(options)?;
+    // The build future keeps this hold until it ends. See `option_callbacks`.
+    let hold = self.option_callbacks.hold_with_group(callbacks);
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "scan") {
       return spawn_boxed_future(env, async move { Ok(result) });
     }
@@ -147,10 +181,11 @@ impl BindingBundler {
     let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
-      self.bundle_handles.push(bundle.context());
+      self.track_bundle_handle(bundle.context());
     }
 
     let fut = async move {
+      let _hold = hold;
       let bundle = maybe_bundle.map_err(|err| {
         napi::Error::new(
           napi::Status::GenericFailure,
@@ -184,12 +219,19 @@ impl BindingBundler {
   // - This also affects how the code is written in `Bundler::close()/inner.close()`, see the implementation there for more details.
   pub fn close<'env>(&mut self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
     let cleanup_fut = self.inner.close();
-    let handles = std::mem::take(&mut self.bundle_handles);
+    let last_handle = self.last_bundle_handle.take();
+    let finished_timings = std::mem::take(&mut self.finished_timings);
+    let option_callbacks = self.option_callbacks.clone();
     spawn_boxed_future(env, async move {
+      // Request the release when this future ends. The end comes after `closeBundle` and after
+      // the plugin timings report. The request also runs when one of them fails. The release
+      // waits for the builds that still run.
+      // See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
+      let _release = RequestReleaseOnDrop(option_callbacks);
       let res = cleanup_fut.await;
       handle_result(res)?;
       // After the cleanup, so `closeBundle` is part of what the other side reports.
-      handle_result(report_plugin_timings(&handles).await)?;
+      handle_result(report_plugin_timings(last_handle.as_ref(), finished_timings).await)?;
       Ok(())
     })
   }
@@ -202,8 +244,8 @@ impl BindingBundler {
   #[napi]
   pub fn get_watch_files(&self) -> Vec<String> {
     self
-      .bundle_handles
-      .last()
+      .last_bundle_handle
+      .as_ref()
       .map(|handle| handle.watch_files().iter().map(|s| s.to_string()).collect())
       .unwrap_or_default()
   }
@@ -213,10 +255,13 @@ impl BindingBundler {
 ///
 /// The gate lives here because the clocks it needs — the build and the link stage — are only
 /// visible on this side; what the callbacks actually cost is only visible on the other. The
-/// diagnostic then goes out through the usual path, so `checks.pluginTimings` filters it
+/// diagnostic then goes out through the usual path, so `checks.bundlerTimings` filters it
 /// like any other.
-async fn report_plugin_timings(handles: &[BundleHandle]) -> anyhow::Result<()> {
-  let Some(last) = handles.last() else {
+async fn report_plugin_timings(
+  last: Option<&BundleHandle>,
+  finished_timings: (u64, u64),
+) -> anyhow::Result<()> {
+  let Some(last) = last else {
     return Ok(());
   };
   let options = last.options();
@@ -227,10 +272,9 @@ async fn report_plugin_timings(handles: &[BundleHandle]) -> anyhow::Result<()> {
   // Summed over every output, because the measurement on the other side is: one
   // `RolldownBuild` may generate more than once, and judging a cumulative measurement
   // against only the last output's clocks would both suppress and inflate reports.
-  let total_micros: u64 =
-    handles.iter().map(|handle| handle.plugin_driver().build_timings.total_micros()).sum();
-  let link_micros: u64 =
-    handles.iter().map(|handle| handle.plugin_driver().build_timings.link_stage_micros()).sum();
+  let last_timings = &last.plugin_driver().build_timings;
+  let total_micros = finished_timings.0 + last_timings.total_micros();
+  let link_micros = finished_timings.1 + last_timings.link_stage_micros();
   if !BuildTimings::is_plugin_bound(total_micros, link_micros) {
     return Ok(());
   }
@@ -246,8 +290,15 @@ async fn report_plugin_timings(handles: &[BundleHandle]) -> anyhow::Result<()> {
 }
 
 impl BindingBundler {
-  fn normalize_binding_options(option: BindingBundlerOptions) -> napi::Result<BundlerConfig> {
+  fn normalize_binding_options(
+    option: BindingBundlerOptions,
+  ) -> napi::Result<NormalizedBindingOptions> {
     let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;
+    // Only the parallel-plugin worker pool reads the registry, and wasm has no
+    // threads for that pool. Borrow it so the binding counts as used. Do not
+    // bind it to `_`: that would drop it here instead of at the end of scope.
+    #[cfg(target_family = "wasm")]
+    let _ = &parallel_plugins_registry;
 
     #[cfg(not(target_family = "wasm"))]
     let worker_count =

@@ -1,0 +1,19 @@
+{
+  "_comment": "`lib/index.js` is a dynamic entry (main1 reads only `X` from it) whose facade is merged into the common chunk holding `x.js`. `y.js`, shared by main2 and main3, lands in its own common chunk that imports `X` from the host. The namespace object rebuilt in the host must hold only what the dynamic import reads: a getter for `Y` would make the host import the `y.js` chunk, closing a cycle that, entered through main1, runs `y.js` before `X` is initialized.",
+  "config": {
+    "input": [
+      {
+        "name": "main1",
+        "import": "./main1.js"
+      },
+      {
+        "name": "main2",
+        "import": "./main2.js"
+      },
+      {
+        "name": "main3",
+        "import": "./main3.js"
+      }
+    ]
+  }
+}

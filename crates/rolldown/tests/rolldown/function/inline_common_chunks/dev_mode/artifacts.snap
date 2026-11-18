@@ -1,0 +1,187 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { a as __share_require, i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+import assert from "node:assert";
+__share("shared-NCqPxS0n", ((exports) => {
+	__rolldown_runtime__.registerGraph({
+		ids: ["leaf.js", "shared.js"],
+		localCount: 2,
+		edges: [[], [0]]
+	});
+	// leaf.js
+	var leaf_exports = /* @__PURE__ */ __exportAll({ leaf: () => leaf });
+	function leaf() {
+		return "leaf-v0";
+	}
+	function init_leaf() {
+		return (init_leaf = __esmMin((() => {
+			__rolldown_runtime__.createModuleHotContext("leaf.js");
+			__rolldown_runtime__.registerModule("leaf.js", { exports: leaf_exports });
+		})))();
+	}
+	// shared.js
+	var shared_exports = /* @__PURE__ */ __exportAll({ shared: () => shared });
+	function shared() {
+		return "shared+" + leaf();
+	}
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			init_leaf();
+			__rolldown_runtime__.createModuleHotContext("shared.js");
+			__rolldown_runtime__.registerModule("shared.js", { exports: shared_exports });
+		})))();
+	}
+	__share_export(exports, {
+		n: () => shared,
+		t: () => init_shared
+	});
+}));
+var share_shared = __share_require("shared-NCqPxS0n");
+__rolldown_runtime__.registerGraph({
+	ids: ["main.js", "shared.js"],
+	localCount: 1,
+	edges: [[1]],
+	entries: [0]
+});
+// main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+var main_hot, latest;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		share_shared.t();
+		main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+		__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+		latest = (0, share_shared.n)();
+		assert.strictEqual(latest, "shared+leaf-v0");
+		assert.deepStrictEqual(__rolldown_runtime__.getImporters("leaf.js"), ["shared.js"]);
+		main_hot.accept("shared.js", (mod) => {
+			latest = mod.shared();
+		});
+		process.on("beforeExit", (code) => {
+			if (code !== 0) return;
+			assert.strictEqual(latest, "shared+leaf-v1");
+		});
+	})))();
+}
+init_main();
+
+```
+
+## other.js
+
+```js
+import { a as __share_require, i as __share_export, n as __exportAll, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+__share("shared-NCqPxS0n", ((exports) => {
+	__rolldown_runtime__.registerGraph({
+		ids: ["leaf.js", "shared.js"],
+		localCount: 2,
+		edges: [[], [0]]
+	});
+	// leaf.js
+	var leaf_exports = /* @__PURE__ */ __exportAll({ leaf: () => leaf });
+	function leaf() {
+		return "leaf-v0";
+	}
+	function init_leaf() {
+		return (init_leaf = __esmMin((() => {
+			__rolldown_runtime__.createModuleHotContext("leaf.js");
+			__rolldown_runtime__.registerModule("leaf.js", { exports: leaf_exports });
+		})))();
+	}
+	// shared.js
+	var shared_exports = /* @__PURE__ */ __exportAll({ shared: () => shared });
+	function shared() {
+		return "shared+" + leaf();
+	}
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			init_leaf();
+			__rolldown_runtime__.createModuleHotContext("shared.js");
+			__rolldown_runtime__.registerModule("shared.js", { exports: shared_exports });
+		})))();
+	}
+	__share_export(exports, {
+		n: () => shared,
+		t: () => init_shared
+	});
+}));
+var share_shared = __share_require("shared-NCqPxS0n");
+__rolldown_runtime__.registerGraph({
+	ids: ["other.js", "shared.js"],
+	localCount: 1,
+	edges: [[1]],
+	entries: [0]
+});
+// other.js
+var other_exports = /* @__PURE__ */ __exportAll({});
+var other_hot;
+function init_other() {
+	return (init_other = __esmMin((() => {
+		share_shared.t();
+		other_hot = __rolldown_runtime__.createModuleHotContext("other.js");
+		__rolldown_runtime__.registerModule("other.js", { exports: other_exports });
+		(0, share_shared.n)();
+		other_hot.accept("shared.js", () => {});
+	})))();
+}
+init_other();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as a, __share_export as i, __exportAll as n, __share as r, __esmMin as t };
+
+```
+
+# HMR Step 0
+
+## Code
+
+```js
+__rolldown_runtime__.registerGraph({ids:["leaf.js","shared.js"],localCount:2,edges:[[],[0]],stamps:{0:1}});
+//#region leaf.js
+__rolldown_runtime__.registerFactory("leaf.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ leaf: () => leaf });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_leaf = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		function leaf() {
+			return "leaf-v1";
+		}
+	} finally {}
+}), 1);
+
+//#endregion
+//#region shared.js
+__rolldown_runtime__.registerFactory("shared.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ shared: () => shared });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("leaf.js");
+		var import_leaf_10 = __rolldown_runtime__.loadExports("leaf.js");
+		const hot_shared = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		function shared() {
+			return "shared+" + (0, import_leaf_10.leaf)();
+		}
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Meta
+
+- update type: patch
+
+### Changed Ids
+
+- leaf.js

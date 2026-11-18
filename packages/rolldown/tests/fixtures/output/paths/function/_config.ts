@@ -18,9 +18,8 @@ export default defineTest({
     expect(output.output[0].code).toMatchInlineSnapshot(`
       "import { a } from "https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js";
       import { b } from "d4";
-      //#region main.js
+      // main.js
       console.log(a, b);
-      //#endregion
       "
     `);
   },

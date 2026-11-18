@@ -7,12 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { i as __commonJSMin, n as init_s1 } from "./b2.js";
-//#region a.cjs
+// a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin((() => {
 	init_s1();
 	console.log("A");
 }));
-//#endregion
 export default require_a();
 
 ```
@@ -29,18 +28,16 @@ export default require_b();
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region s1.mjs
+// s1.mjs
 var s1_exports = /* @__PURE__ */ __exportAll({});
 var init_s1 = __esmMin((() => {
 	console.log("S");
 }));
-//#endregion
-//#region b.cjs
+// b.cjs
 var require_b = /* @__PURE__ */ __commonJSMin((() => {
 	init_s1();
 	console.log("B");
 }));
-//#endregion
 export { __commonJSMin as i, init_s1 as n, s1_exports as r, require_b as t };
 
 ```
@@ -53,12 +50,11 @@ export { __commonJSMin as i, init_s1 as n, s1_exports as r, require_b as t };
 
 ```js
 import { i as __commonJSMin, n as init_s1 } from "./b2.js";
-//#region a.cjs
+// a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin((() => {
 	init_s1();
 	console.log("A");
 }));
-//#endregion
 export default require_a();
 
 ```
@@ -75,18 +71,16 @@ export default require_b();
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region s1.mjs
+// s1.mjs
 var s1_exports = /* @__PURE__ */ __exportAll({});
 var init_s1 = __esmMin((() => {
 	console.log("S");
 }));
-//#endregion
-//#region b.cjs
+// b.cjs
 var require_b = /* @__PURE__ */ __commonJSMin((() => {
 	init_s1();
 	console.log("B");
 }));
-//#endregion
 export { __commonJSMin as i, init_s1 as n, s1_exports as r, require_b as t };
 
 ```

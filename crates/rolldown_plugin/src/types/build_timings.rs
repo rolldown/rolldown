@@ -15,7 +15,7 @@ use std::{
 ///
 /// A build nobody is measuring keeps no clock at all: [`Self::start`] hands back `None`,
 /// and every recorder is a no-op on it. Whether it is measured is decided once, where the
-/// driver is built, from the same `checks.pluginTimings` that turns the JavaScript side's
+/// driver is built, from the same `checks.bundlerTimings` that turns the JavaScript side's
 /// measurement on — the two have to agree, because a report needs both halves.
 #[derive(Debug, Default)]
 pub struct BuildTimings {

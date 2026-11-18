@@ -1,0 +1,16 @@
+exports.add += 1;
+exports.subtract -= 1;
+exports.multiply *= 2;
+exports.divide /= 2;
+exports.remainder %= 2;
+exports.exponent **= 2;
+exports.shiftLeft <<= 1;
+exports.shiftRight >>= 1;
+exports.unsignedShiftRight >>>= 1;
+exports.bitAnd &= 1;
+exports.bitOr |= 1;
+exports.bitXor ^= 1;
+exports.logicalAnd &&= true;
+exports.logicalOr ||= 2;
+exports.nullish ??= 3;
+exports.constant = true;

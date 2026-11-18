@@ -11,13 +11,11 @@ __rolldown_runtime__.registerGraph({
 	ids: ["entry.js"],
 	localCount: 1,
 	edges: [[]],
-	dynamicEdges: [[]]
+	entries: [0]
 });
-//#region entry.js
 __rolldown_runtime__.createModuleHotContext("entry.js");
-__rolldown_runtime__.registerModule("entry.js", {});
+__rolldown_runtime__.registerModule("entry.js");
 console.log("input\n");
-//#endregion
 
 ```
 
@@ -26,16 +24,16 @@ console.log("input\n");
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["entry.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["entry.js"],localCount:1,edges:[[]],stamps:{0:1},entries:[0]});
 //#region entry.js
-__rolldown_runtime__.registerFactory("entry.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("entry.js", (function(__rolldown_module_id__) {
 	try {
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, {});
+		__rolldown_runtime__.registerModule(__rolldown_module_id__);
 		const hot_entry = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const content = "input2\n";
 		console.log(content);
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```

@@ -20,20 +20,24 @@ jobs:
         with:
           persist-credentials: false
 
+      - uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
+        id: vp-setup
+        background: true
+        with:
+          version: '1.7.0'
+          cache: true
+
       - name: Setup Rust
-        uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        uses: oxc-project/setup-rust@12a52e3caf7bac9d8b9ca550a82c425ed6343aee # v1.0.18
         with:
           tools: just
           cache-key: debug-build-wasi
           save-cache: ${{ github.ref_name == 'main' }}
 
-      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1.15.0
-        with:
-          version: '0.2.1'
-          cache: true
-
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
+
+      - wait: vp-setup
 
       - name: Build Rolldown with WASI Binding
         run: just build-rolldown-wasi

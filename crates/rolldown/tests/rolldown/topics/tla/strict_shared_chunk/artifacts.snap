@@ -7,9 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { t as shared } from "./shared.js";
-//#region a.js
+// a.js
 const a = `a:${shared}`;
-//#endregion
 export { a };
 
 ```
@@ -18,9 +17,8 @@ export { a };
 
 ```js
 import { t as shared } from "./shared.js";
-//#region b.js
+// b.js
 const b = `b:${shared}`;
-//#endregion
 export { b };
 
 ```
@@ -28,9 +26,8 @@ export { b };
 ## shared.js
 
 ```js
-//#region shared.js
+// shared.js
 const shared = await Promise.resolve("shared");
-//#endregion
 export { shared as t };
 
 ```
@@ -42,9 +39,9 @@ export { shared as t };
 ### a.js
 
 ```js
-import { n as shared, t as init_shared } from "./shared.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region a.js
+import { n as shared, t as init_shared } from "./shared.js";
+// a.js
 var a;
 function init_a() {
 	return (init_a = __esmMin((async () => {
@@ -52,7 +49,6 @@ function init_a() {
 		a = `a:${shared}`;
 	})))();
 }
-//#endregion
 await init_a();
 export { a };
 
@@ -61,9 +57,9 @@ export { a };
 ### b.js
 
 ```js
-import { n as shared, t as init_shared } from "./shared.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region b.js
+import { n as shared, t as init_shared } from "./shared.js";
+// b.js
 var b;
 function init_b() {
 	return (init_b = __esmMin((async () => {
@@ -71,7 +67,6 @@ function init_b() {
 		b = `b:${shared}`;
 	})))();
 }
-//#endregion
 await init_b();
 export { b };
 
@@ -89,14 +84,13 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region shared.js
+// shared.js
 var shared;
 function init_shared() {
 	return (init_shared = __esmMin((async () => {
 		shared = await Promise.resolve("shared");
 	})))();
 }
-//#endregion
 export { shared as n, init_shared as t };
 
 ```
@@ -109,9 +103,8 @@ export { shared as n, init_shared as t };
 
 ```js
 import { t as shared } from "./shared.js";
-//#region a.js
+// a.js
 const a = `a:${shared}`;
-//#endregion
 export { a };
 
 ```
@@ -120,9 +113,8 @@ export { a };
 
 ```js
 import { t as shared } from "./shared.js";
-//#region b.js
+// b.js
 const b = `b:${shared}`;
-//#endregion
 export { b };
 
 ```
@@ -130,9 +122,8 @@ export { b };
 ### shared.js
 
 ```js
-//#region shared.js
+// shared.js
 const shared = await Promise.resolve("shared");
-//#endregion
 export { shared as t };
 
 ```

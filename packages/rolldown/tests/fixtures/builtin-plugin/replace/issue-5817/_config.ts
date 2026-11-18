@@ -27,7 +27,7 @@ export default defineTest({
   afterTest(output) {
     const code = output.output[0].code;
     expect(code).toMatchInlineSnapshot(`
-      "//#region main.js
+      "// main.js
       console.log(42);
       console.log("hello world");
       console.log(true);
@@ -35,7 +35,6 @@ export default defineTest({
       console.log(null);
       console.log(void 0);
       console.log(123);
-      //#endregion
       "
     `);
   },

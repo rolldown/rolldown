@@ -6,18 +6,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-//#region a.js
+// a.js
 import("./b.js");
-//#endregion
 
 ```
 
 ## b.js
 
 ```js
-//#region b.js
+// b.js
 var b_default = 1;
-//#endregion
 export { b_default as default };
 
 ```

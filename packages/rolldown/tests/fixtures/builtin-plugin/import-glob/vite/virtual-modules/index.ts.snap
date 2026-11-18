@@ -1,5 +1,4 @@
-//#endregion
-//#region index.ts
+// index.ts
 console.log(/* @__PURE__ */ Object.assign({
 	"/modules/a.ts": () => import("/modules/a.ts"),
 	"/modules/b.ts": () => import("/modules/b.ts"),
@@ -9,4 +8,3 @@ console.log(/* @__PURE__ */ Object.assign({
 	"/../b/b.ts": () => import("/../b/b.ts"),
 	"/../b/index.ts": () => import("/../b/index.ts")
 }));
-//#endregion

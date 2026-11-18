@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region sheets.cjs
+// sheets.cjs
 var require_sheets = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var GC;
 	(function() {
@@ -18,8 +18,7 @@ var require_sheets = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		module.exports = t;
 	})(GC || {});
 }));
-//#endregion
-//#region resource.cjs
+// resource.cjs
 var require_resource = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	(function(factory) {
 		if (typeof module === "object" && typeof module.exports === "object") module.exports = factory(require_sheets());
@@ -33,8 +32,7 @@ var require_resource = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		return {};
 	});
 }));
-//#endregion
-//#region designer.cjs
+// designer.cjs
 var require_designer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	(function(factory) {
 		if (typeof module === "object" && typeof module.exports === "object") {
@@ -50,10 +48,7 @@ var require_designer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		GC.Spread.Sheets.Designer = GC.Spread.Sheets.Designer || {};
 	});
 }));
-//#endregion
-//#region noop.js
 require_resource();
 require_designer();
-//#endregion
 
 ```

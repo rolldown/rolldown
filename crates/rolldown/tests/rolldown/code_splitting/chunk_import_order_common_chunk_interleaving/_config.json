@@ -1,0 +1,11 @@
+{
+  "_comment": "Entry `a` imports `y.js` before `m1.js` and `m2.js`, so the global execution order is `y` before `x`. The common chunk of `m1.js` and `m2.js` imports the chunks of `x.js` and `y.js`. Its own modules do not say which comes first: `m1.js` imports `x.js` and `m2.js` imports `y.js`. Entry `b` loads `m2.js` before `m1.js`, so `y.js` must set the global before `x.js` reads it. Reported in https://github.com/rolldown/rolldown/pull/11298#issuecomment-6435570021.",
+  "config": {
+    "input": [
+      { "name": "a", "import": "a.js" },
+      { "name": "b", "import": "b.js" },
+      { "name": "x", "import": "x.js" },
+      { "name": "y", "import": "y.js" }
+    ]
+  }
+}

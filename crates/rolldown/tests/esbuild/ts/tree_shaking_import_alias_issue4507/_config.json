@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry_ts",
+        "import": "entry.ts"
+      }
+    ]
+  }
+}

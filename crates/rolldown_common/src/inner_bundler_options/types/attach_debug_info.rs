@@ -13,10 +13,6 @@ pub enum AttachDebugInfo {
 }
 
 impl AttachDebugInfo {
-  pub fn is_enabled(&self) -> bool {
-    !matches!(self, AttachDebugInfo::None)
-  }
-
   pub fn is_full(&self) -> bool {
     matches!(self, AttachDebugInfo::Full)
   }

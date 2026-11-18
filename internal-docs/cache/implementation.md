@@ -19,7 +19,7 @@ and will drift; treat them as starting points.
 
 ## Cache inventory
 
-Counting types literally named `*Cache`, there are 14. Grouped by purpose:
+Counting types literally named `*Cache`, there are 13. Grouped by purpose:
 
 ### 1. Incremental-build cache
 
@@ -39,14 +39,13 @@ incremental build knows what to invalidate / can answer plugin queries.
 
 ### 3. Within-build memoization
 
-| Type                                | Location                                                                         | Stores                                                                                                              |
-| ----------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `SideEffectCache` (enum)            | `crates/rolldown/src/stages/link_stage/tree_shaking/determine_side_effects.rs:9` | `None` / `Visited` / `Cache(DeterminedSideEffects)`; a transient local memo during the link-stage side-effect walk. |
-| `PackageJsonCache`                  | `crates/rolldown_plugin_vite_resolve/src/package_json_cache.rs:9`                | `side_effects_cache: FxDashMap<PathBuf, Arc<PackageJson>>`, `optional_peer_dep_cache: FxDashMap<PathBuf, Arc<…>>`.  |
-| `ResolverCaches`                    | `crates/rolldown_plugin_vite_resolve/src/resolver.rs:77`                         | `package_json: PackageJsonCache`, `importer_exists: FxDashSet<String>`.                                             |
-| `TsconfigCache`                     | `crates/rolldown_binding/src/transform_cache.rs:12`                              | `resolver: Arc<Resolver>`, `cache: FxDashMap<PathBuf, Arc<TsConfig>>`. NAPI-exposed (`#[napi]`).                    |
-| `RawTransformOptions` `cache` field | `crates/rolldown_common/src/inner_bundler_options/types/transform_options.rs`    | tsconfig → compiled Oxc transform options.                                                                          |
-| oxc_resolver internal cache         | external crate, held by the bundler-level `SharedResolver`                       | filesystem/path metadata.                                                                                           |
+| Type                                | Location                                                                      | Stores                                                                                                             |
+| ----------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `PackageJsonCache`                  | `crates/rolldown_plugin_vite_resolve/src/package_json_cache.rs:9`             | `side_effects_cache: FxDashMap<PathBuf, Arc<PackageJson>>`, `optional_peer_dep_cache: FxDashMap<PathBuf, Arc<…>>`. |
+| `ResolverCaches`                    | `crates/rolldown_plugin_vite_resolve/src/resolver.rs:77`                      | `package_json: PackageJsonCache`, `importer_exists: FxDashSet<String>`.                                            |
+| `TsconfigCache`                     | `crates/rolldown_binding/src/transform_cache.rs:12`                           | `resolver: Arc<Resolver>`, `cache: FxDashMap<PathBuf, Arc<TsConfig>>`. NAPI-exposed (`#[napi]`).                   |
+| `RawTransformOptions` `cache` field | `crates/rolldown_common/src/inner_bundler_options/types/transform_options.rs` | tsconfig → compiled Oxc transform options.                                                                         |
+| oxc_resolver internal cache         | external crate, held by the bundler-level `SharedResolver`                    | filesystem/path metadata.                                                                                          |
 
 ### 4. Plugin scratch state (in `PluginContext.meta()`)
 
@@ -68,15 +67,19 @@ Related non-`Cache`-named structures in the same file: `ViteMetadata`,
 
 ### 5. JS-side cache
 
-| Type                    | Location                                                                                | Stores                                                                                                                                    |
-| ----------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `PluginContextData`     | `packages/rolldown/src/plugin/plugin-context-data.ts:18`                                | `moduleOptionMap`, `resolveOptionsMap`, `loadModulePromiseMap`, `renderedChunkMeta`, `normalizedInputOptions`, `normalizedOutputOptions`. |
-| `InvalidateJsSideCache` | `crates/rolldown_common/src/inner_bundler_options/types/invalidate_js_side_cache.rs:11` | `Arc<InvalidateJsSideCacheFn>` — a Rust-held callback into JS.                                                                            |
-| `FilterExprCache`       | `crates/rolldown_binding/src/options/plugin/binding_plugin_options.rs:218`              | Pre-compiled plugin-hook filter expressions (NAPI binding, per-plugin).                                                                   |
+| Type                    | Location                                                                                | Stores                                                                                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PluginContextData`     | `packages/rolldown/src/plugin/plugin-context-data.ts:45`                                | `moduleOptionMap`, `resolveOptionsMap`, `loadModulePromiseMap`, `renderedChunkMeta`, `outputCodeCache`, `normalizedInputOptions`, `normalizedOutputOptions`. |
+| `InvalidateJsSideCache` | `crates/rolldown_common/src/inner_bundler_options/types/invalidate_js_side_cache.rs:11` | `Arc<InvalidateJsSideCacheFn>` — a Rust-held callback into JS.                                                                                               |
+| `FilterExprCache`       | `crates/rolldown_binding/src/options/plugin/binding_plugin_options.rs:218`              | Pre-compiled plugin-hook filter expressions (NAPI binding, per-plugin).                                                                                      |
 
 `InvalidateJsSideCache` is wired in `crates/rolldown_binding/src/utils/normalize_binding_options.rs`; on the JS side
 (`packages/rolldown/src/utils/bindingify-input-options.ts`) it is bound to
-`PluginContextData.clear`. Calling it clears the JS-side `PluginContextData`.
+`PluginContextData.clear`. Calling it clears `renderedChunkMeta`,
+`loadModulePromiseMap` and `outputCodeCache`, not the other `PluginContextData` maps.
+`Bundle::bundle_write` and `Bundle::bundle_generate` call it on every exit, and
+`Bundler::with_cached_bundle` calls it again before creating the next bundle, because a
+failed scan never reaches the output stage.
 
 ### 6. Watch-mode filesystem cache
 
@@ -113,6 +116,7 @@ pub struct ScanStageCache {
   pub modules_with_changed_importers: FxHashSet<ModuleIdx>,
   pub pending_rescans: Vec<ResolvedId>,
   pub user_defined_entry: FxHashSet<ModuleId>,
+  pub user_defined_entry_common_dir: Option<Arc<Path>>,
   pub module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
   pub module_idx_by_stable_id: FxHashMap<StableModuleId, ModuleIdx>,
 }
@@ -127,6 +131,7 @@ pub struct ScanStageCache {
 | `modules_with_changed_importers` | Modules whose `importers` records were mutated by a partial scan; `merge` drains it to re-derive their materialized importer sets (see below).                                        |
 | `pending_rescans`                | Work queue: files of an aborted partial scan, whose mutations were reverted (`ModuleLoader::revert_partial_scan`); the next partial scan retries them so their errors keep surfacing. |
 | `user_defined_entry`             | The set of configured root entry `ModuleId`s.                                                                                                                                         |
+| `user_defined_entry_common_dir`  | Common directory of the entries of the last full scan, configured and emitted. The path externals a partial scan adds render relative to it.                                          |
 | `module_idx_by_abs_path`         | Absolute-path → `ModuleIdx`, used by the watcher. Paths are slash-normalized.                                                                                                         |
 | `module_idx_by_stable_id`        | `StableModuleId` → `ModuleIdx`, used by HMR.                                                                                                                                          |
 
@@ -243,6 +248,29 @@ produces only the changed + newly discovered modules → sparse `Map`.
    same value as the scan-output `Map` key, the `Module.idx` field, and the
    `module_id_to_idx` value (see `try_spawn_new_task`). These three are
    therefore equal for any given module.
+7. The first resolution of an id sets the kind of its module (external or not
+   external), like its `ModuleIdx`. A later resolution of the same id to the
+   other kind does not change the module. Instead, `check_external_conflict`
+   (in the `Seen(idx)` arm of `try_spawn_new_task`) records
+   `INVALID_EXTERNAL_ID` or `EXTERNAL_MODULES_CANNOT_BE_TRANSFORMED_TO_MODULES`,
+   and the scan fails (#11417).
+
+   In a partial scan, the kind of a module comes from one of two places:
+
+   - A module that the scan re-scans or adds gets its kind from this scan.
+     Thus a changed file that was external can become a normal module.
+   - An unchanged module keeps its kind from the snapshot.
+
+   Known gap: a partial scan also reports this error when an edit only
+   switches the kind of an unchanged module. An example is an edit that
+   changes the specifier of the last importer of the old kind. A fresh build
+   accepts this edit. The error stays until the next full scan, because the
+   dev engine runs partial scans again after a failed partial scan.
+
+   If the kind comes from the snapshot, the error has a second help line: a
+   full rebuild fixes the error if all imports already resolve the same way.
+   Two fixes for the gap are possible: check the final `importers[idx]` at the
+   end of the scan, or make the next scan a full scan.
 
 ---
 
@@ -263,7 +291,7 @@ inserts into it.
 | ------------------------ | ----------------------------------- | --------------------------------------------------------------------------------------------- |
 | Runtime module           | `fetch_modules`, `:304`–`:308`      | `Entry::Vacant` → insert `Seen(idx)` (once).                                                  |
 | Invalidate changed files | `fetch_modules`, `:348`–`:350`      | For each watcher-reported file: `Entry::Occupied` → `insert(Invalidate(idx))`. idx unchanged. |
-| `Seen(idx)` arm          | `try_spawn_new_task`, `:230`–`:244` | No write; returns idx, module not re-scanned.                                                 |
+| `Seen(idx)` arm          | `try_spawn_new_task`, `:230`–`:244` | No write. Checks the module kind (invariant 7) and returns idx. Does not re-scan the module.  |
 | `Invalidate(idx)` arm    | `try_spawn_new_task`, `:246`–`:251` | `insert(Seen(idx))` — module is being re-scanned.                                             |
 | `None`, partial scan     | `try_spawn_new_task`, `:252`–`:259` | New module: `insert(id, Seen(len))`, `len = module_id_to_idx.len()`.                          |
 | `None`, full scan        | `try_spawn_new_task`, `:260`–`:264` | New module: `insert(id, Seen(alloc()))`.                                                      |
@@ -340,9 +368,11 @@ arm is `unreachable!()`.
    `EcmaView::rebuild_importer_sets`. The scan does this only for modules it
    produced; a cached module whose importer added/removed/re-kinded an import
    of it is refreshed here (issue #7416).
-5. **Merge entry points** — for a matching existing entry
-   point, drop `related_stmt_infos` for re-scanned modules and extend with the
-   new ones; otherwise push the new entry point.
+5. **Merge entry points** — collect every module present in the partial scan,
+   remove those modules' references from every cached dynamic entry, then merge
+   the new rows. The cleanup is global because deleting or retargeting an import
+   produces no row for the old target. Drop stale entries left without call
+   sites; the merge can re-add an unspanned import with empty `related_stmt_infos`.
 6. **Patch barrel modules** — drain
    `barrel_state.resolved_barrel_modules` and write the resolved import records
    back into the cached modules.
@@ -369,7 +399,7 @@ as the `module_id_to_idx` lookup and is infallible.
 | Writer                                                   | Location                                                                                | What it writes                                                                                                                                                                                                                                         |
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `ScanStage::scan(scan_mode, &mut self.cache)`            | called at `bundle.rs:104`                                                               | Non-snapshot fields via the loader.                                                                                                                                                                                                                    |
-| `ModuleLoader` (`cache: &'a mut ScanStageCache`)         | `module_loader.rs:117` and methods                                                      | `module_id_to_idx`, `barrel_state` (e.g. removes `barrel_infos` on invalidate), `importers`, `modules_with_changed_importers`, `user_defined_entry` (full incremental scan).                                                                           |
+| `ModuleLoader` (`cache: &'a mut ScanStageCache`)         | `module_loader.rs:117` and methods                                                      | `module_id_to_idx`, `barrel_state` (e.g. removes `barrel_infos` on invalidate), `importers`, `modules_with_changed_importers`, `user_defined_entry` (full incremental scan), `user_defined_entry_common_dir` (every full scan).                        |
 | `ScanStageCache::merge`                                  | `scan_stage_cache.rs:80`; called at `bundle.rs:256`, `hmr_stage.rs:299/410`             | `snapshot`, `module_idx_by_abs_path`, `module_idx_by_stable_id`, `barrel_state.resolved_barrel_modules` (drained), `modules_with_changed_importers` (drained), `tla_*` fields in the snapshot; refreshes plugin `module_infos` for re-derived modules. |
 | `ModuleLoader::revert_partial_scan`                      | `module_loader.rs` scan error exit                                                      | Restores `module_id_to_idx` / `importers` / `barrel_state` / importer marks to their pre-scan state and fills `pending_rescans`.                                                                                                                       |
 | `ScanStageCache::set_snapshot`                           | `scan_stage_cache.rs:44`; called at `bundle.rs:250` and inside `update_defer_sync_data` | `snapshot` + rebuilds `module_idx_by_abs_path` / `module_idx_by_stable_id`.                                                                                                                                                                            |
@@ -380,12 +410,12 @@ as the `module_id_to_idx` lookup and is infallible.
 
 ### Readers of `ScanStageCache`
 
-| Reader                 | Location                              | What it reads                                                                                                                                                        |
-| ---------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `HmrStage`             | `hmr_stage.rs:48`, `:52`              | `get_snapshot().module_table`, `get_snapshot().index_ecma_ast`; also uses the module index maps. HMR is also a writer (it calls `merge` / `update_defer_sync_data`). |
-| `ModuleLoader`         | `module_loader.rs:410`, `:983`        | `get_snapshot()` (e.g. `module_table.modules.get(..)`). Also reads `module_id_to_idx` (`:229`, `:869`), `barrel_state`, `user_defined_entry`.                        |
-| `defer_sync_scan_data` | `module_loader/deferred_scan_data.rs` | Reads `module_id_to_idx` (passed as `&FxHashMap<ModuleId, VisitState>`); mutates the snapshot's per-module side effects.                                             |
-| `merge`                | `scan_stage_cache.rs:80`              | Reads `module_id_to_idx`, `user_defined_entry`, and `importers` (re-derives importer sets).                                                                          |
+| Reader                 | Location                              | What it reads                                                                                                                                                                  |
+| ---------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `HmrStage`             | `hmr_stage.rs:48`, `:52`              | `get_snapshot().module_table`, `get_snapshot().index_ecma_ast`; also uses the module index maps. HMR is also a writer (it calls `merge` / `update_defer_sync_data`).           |
+| `ModuleLoader`         | `module_loader.rs:410`, `:983`        | `get_snapshot()` (e.g. `module_table.modules.get(..)`). Also reads `module_id_to_idx` (`:229`, `:869`), `barrel_state`, `user_defined_entry`, `user_defined_entry_common_dir`. |
+| `defer_sync_scan_data` | `module_loader/deferred_scan_data.rs` | Reads `module_id_to_idx` (passed as `&FxHashMap<ModuleId, VisitState>`); mutates the snapshot's per-module side effects.                                                       |
+| `merge`                | `scan_stage_cache.rs:80`              | Reads `module_id_to_idx`, `user_defined_entry`, and `importers` (re-derives importer sets).                                                                                    |
 
 ---
 

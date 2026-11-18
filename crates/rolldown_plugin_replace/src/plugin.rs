@@ -6,6 +6,7 @@ use anyhow::Result;
 use rolldown_plugin::{
   HookRenderChunkOutput, HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin,
 };
+use rolldown_utils::js_regex::HybridRegex;
 use rustc_hash::FxHashMap;
 use string_wizard::{MagicString, SourceMapOptions};
 
@@ -19,14 +20,6 @@ pub struct ReplaceOptions {
   pub prevent_assignment: bool,
   pub object_guards: bool,
   pub sourcemap: bool,
-}
-
-// We don't reuse `HybridRegex` in `rolldown_utils`, since
-// only the enum is needed
-#[derive(Debug)]
-enum HybridRegex {
-  Optimize(regex::Regex),
-  Ecma(regress::Regex),
 }
 
 #[derive(Debug)]
@@ -48,13 +41,11 @@ fn is_variable_declaration_prefix(s: &str) -> bool {
   // Trim the trailing whitespace
   let s = s.trim_end();
 
-  // Check for word boundary before the keywords
-  (s.ends_with("const")
-    && (s.len() == 5 || !s.chars().nth(s.len() - 6).unwrap_or(' ').is_alphanumeric()))
-    || (s.ends_with("let")
-      && (s.len() == 3 || !s.chars().nth(s.len() - 4).unwrap_or(' ').is_alphanumeric()))
-    || (s.ends_with("var")
-      && (s.len() == 3 || !s.chars().nth(s.len() - 4).unwrap_or(' ').is_alphanumeric()))
+  // Inspect the preceding character without mixing byte offsets and character indices.
+  s.strip_suffix("const")
+    .or_else(|| s.strip_suffix("let"))
+    .or_else(|| s.strip_suffix("var"))
+    .is_some_and(|prefix| prefix.chars().next_back().is_none_or(|c| !c.is_alphanumeric()))
 }
 
 impl ReplacePlugin {
@@ -78,9 +69,9 @@ impl ReplacePlugin {
     // https://rustexp.lpil.uk/
     let matcher = if let Some((delimiter_left, delimiter_right)) = options.delimiters {
       let pattern = format!("{delimiter_left}({joined_keys}){delimiter_right}{lookahead}");
-      HybridRegex::Ecma(regress::Regex::new(&pattern)?)
+      HybridRegex::new_ecma(&pattern)?
     } else {
-      HybridRegex::Optimize(
+      HybridRegex::from_optimized(
         regex::Regex::new(&format!("\\b({joined_keys})\\b"))
           .expect("to be a valid regex because we escape the keys"),
       )
@@ -98,9 +89,10 @@ impl ReplacePlugin {
     code: &'text str,
     magic_string: &mut MagicString<'text>,
   ) -> bool {
-    match self.matcher {
-      HybridRegex::Optimize(ref regex) => self.optimized_replace(code, magic_string, regex),
-      HybridRegex::Ecma(ref regex) => self.fallback_replace(code, magic_string, regex),
+    if let Some(regex) = self.matcher.as_optimized() {
+      self.optimized_replace(code, magic_string, regex)
+    } else {
+      self.fallback_replace(code, magic_string)
     }
   }
 
@@ -157,12 +149,13 @@ impl ReplacePlugin {
     &'text self,
     code: &'text str,
     magic_string: &mut MagicString<'text>,
-    regex: &regress::Regex,
   ) -> bool {
     let mut changed = false;
-    for captures in regex.find_iter(code) {
+    let matches =
+      self.matcher.find_from(code, 0).expect("fallback regex should use the ECMAScript engine");
+    for captures in matches {
       // We expect the regex we used will always have one `Captures`.
-      let Some(Some(matched)) = captures.captures.first() else {
+      let Some(matched) = captures.group(1) else {
         break;
       };
       if self.prevent_assignment && is_variable_declaration_prefix(&code[0..matched.start]) {
@@ -232,5 +225,45 @@ impl Plugin for ReplacePlugin {
 
   fn register_hook_usage(&self) -> HookUsage {
     HookUsage::Transform | HookUsage::RenderChunk
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::{ReplaceOptions, ReplacePlugin};
+  use string_wizard::MagicString;
+
+  #[test]
+  fn prevent_assignment_after_unicode() {
+    for delimiters in [None, Some((r"\b".to_string(), r"\b(?!\.)".to_string()))] {
+      let plugin = ReplacePlugin::with_options(ReplaceOptions {
+        values: std::iter::once(("FOO".to_string(), "123".to_string())).collect(),
+        delimiters,
+        prevent_assignment: true,
+        ..Default::default()
+      })
+      .unwrap();
+
+      for prefix in ["", "/*e*/ ", "/*é*/ ", "/*😀*/ "] {
+        for declaration in ["let FOO;", "var FOO;", "for (const FOO of []) {}"] {
+          let code = format!("{prefix}{declaration} console.log(FOO);");
+          let mut magic_string = MagicString::new(&code);
+          assert!(plugin.try_replace(&code, &mut magic_string));
+          assert_eq!(
+            magic_string.to_string(),
+            format!("{prefix}{declaration} console.log(123);"),
+            "input: {code}"
+          );
+        }
+
+        // A keyword suffix in a longer word does not begin a declaration.
+        for word in ["outlet", "myvar", "myconst", "élet"] {
+          let code = format!("{prefix}{word} FOO");
+          let mut magic_string = MagicString::new(&code);
+          assert!(plugin.try_replace(&code, &mut magic_string));
+          assert_eq!(magic_string.to_string(), format!("{prefix}{word} 123"));
+        }
+      }
+    }
   }
 }

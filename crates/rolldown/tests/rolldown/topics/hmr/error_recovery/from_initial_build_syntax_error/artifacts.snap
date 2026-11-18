@@ -32,12 +32,10 @@ __rolldown_runtime__.registerGraph({
 	ids: ["main.js"],
 	localCount: 1,
 	edges: [[]],
-	dynamicEdges: [[]]
+	entries: [0]
 });
-//#region main.js
 __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", {});
+__rolldown_runtime__.registerModule("main.js");
 console.log("main.js");
-//#endregion
 
 ```

@@ -8,9 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 (function() {
 	// HIDDEN [\0rolldown/runtime.js]
-	//#region umd-dep.cjs
-	//#endregion
-	//#region main.js
+	// main.js
 	var import_umd_dep = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 		var define;
 		(function(root, factory) {
@@ -24,7 +22,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 		});
 	})))());
 	globalThis.result = import_umd_dep.default.hello();
-	//#endregion
 })();
 
 ```

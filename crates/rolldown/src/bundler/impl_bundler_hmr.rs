@@ -32,6 +32,7 @@ impl Bundler {
     stamp_table: &mut HmrStampTable,
     next_hmr_patch_id: Arc<AtomicU32>,
     last_build_errored: bool,
+    hot_update_hook_enabled: bool,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     // HMR partial scans use the shared rayon pool without passing through
     // `BundleFactory::build_bundle`; wait for any deferred drops here too.
@@ -48,6 +49,7 @@ impl Bundler {
       resolver: Arc::clone(&self.bundle_factory.resolver),
       plugin_driver: Arc::clone(plugin_driver),
       cache: &mut self.cache,
+      lost_hmr_update: &mut self.lost_hmr_update,
       next_hmr_patch_id,
     });
     hmr_stage
@@ -56,6 +58,7 @@ impl Bundler {
         clients,
         stamp_table,
         last_build_errored,
+        hot_update_hook_enabled,
       )
       .await
   }
@@ -119,7 +122,6 @@ impl Bundler {
   pub async fn compile_lazy_entry(
     &mut self,
     module_id: String,
-    client_id: &str,
     shipped: &FxHashMap<ArcStr, u32>,
     evaluated: &FxHashMap<ArcStr, u32>,
     stamp_table: &HmrStampTable,
@@ -138,8 +140,9 @@ impl Bundler {
       resolver: Arc::clone(&self.bundle_factory.resolver),
       plugin_driver: Arc::clone(plugin_driver),
       cache: &mut self.cache,
+      lost_hmr_update: &mut self.lost_hmr_update,
       next_hmr_patch_id,
     });
-    hmr_stage.compile_lazy_entry(&module_id, client_id, shipped, evaluated, stamp_table).await
+    hmr_stage.compile_lazy_entry(&module_id, shipped, evaluated, stamp_table).await
   }
 }

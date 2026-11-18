@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
-//#region entry.ts
+// entry.ts
 let foo = 1;
 var Foo = class {
 	method1(foo = 2) {}
@@ -16,7 +16,7 @@ var Foo = class {
 };
 __decorate([__decorateParam(0, dec(foo))], Foo.prototype, "method1", null);
 __decorate([__decorateParam(0, dec(() => foo))], Foo.prototype, "method2", null);
-(class {
+var Bar = class {
 	static {
 		this.x = class {
 			static {
@@ -38,7 +38,6 @@ __decorate([__decorateParam(0, dec(() => foo))], Foo.prototype, "method2", null)
 			}
 		};
 	}
-});
-//#endregion
+};
 
 ```

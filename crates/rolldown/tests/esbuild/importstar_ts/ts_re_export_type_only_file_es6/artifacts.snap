@@ -1,22 +1,27 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## SHIMMED_EXPORT
+
+```text
+[SHIMMED_EXPORT] Missing export "Foo" has been shimmed in module "type.ts".
+
+```
+
 # Assets
 
 ## entry.js
 
 ```js
-//#region types1.ts
+// types1.ts
 console.log("some code");
-//#endregion
-//#region types2.ts
+// types2.ts
 console.log("some code");
-//#endregion
-//#region types3.ts
+// types3.ts
 console.log("some code");
-//#endregion
-//#region entry.ts
+// entry.ts
 console.log(123);
-//#endregion
 
 ```

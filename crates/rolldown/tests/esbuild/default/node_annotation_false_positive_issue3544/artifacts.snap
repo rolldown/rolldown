@@ -7,11 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-//#region entry.mjs
+// entry.mjs
 function confuseNode(exports) {
 	exports.notAnExport = function() {};
 }
-//#endregion
 exports.confuseNode = confuseNode;
 
 ```

@@ -40,7 +40,7 @@ impl TryFrom<&str> for ImportKind {
       "url-token" => Self::UrlImport,
       "new-url" => Self::NewUrl,
       "hot-accept" => Self::HotAccept,
-      _ => return Err(format!("Invalid import kind: {value:?}")),
+      _ => return Err(format!("Invalid import kind: {value}")),
     })
   }
 }

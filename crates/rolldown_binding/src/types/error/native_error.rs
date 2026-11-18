@@ -8,6 +8,10 @@ pub struct NativeError {
   pub message: String,
   /// The id of the file associated with the error
   pub id: Option<String>,
+  /// The name of the plugin that threw the error
+  pub plugin: Option<String>,
+  /// Code frame around the error location
+  pub frame: Option<String>,
   /// The exporter associated with the error (for import/export errors)
   pub exporter: Option<String>,
   /// Location information (line, column, file)

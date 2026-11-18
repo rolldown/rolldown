@@ -105,7 +105,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 console.log({}.hello);
 console.log({}.dirname);
 console.log({}.filename);
@@ -113,6 +113,5 @@ console.log({}.url);
 console.log({}.url);
 console.log({}["url"]);
 console.log({});
-//#endregion
 
 ```

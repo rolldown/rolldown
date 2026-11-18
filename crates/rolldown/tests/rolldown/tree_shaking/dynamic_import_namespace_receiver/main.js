@@ -1,0 +1,16 @@
+export { value } from './merged.js';
+export const merged = () => import('./merged.js').then((ns) => ns.read());
+export const method = async () => import('./method.js').then((ns) => ns.read());
+export const computed = async () => import('./computed.js').then((ns) => ns['read']());
+export const optional = async () => import('./optional.js').then((ns) => ns?.read?.());
+export const parenthesized = async () => import('./parenthesized.js').then((ns) => ns.read());
+export const tagged = async () => import('./tagged.js').then((ns) => ns.read``);
+export const awaited = async () => (await import('./awaited.js')).read();
+export const nestedArrow = async () => import('./nested-arrow.js').then((ns) => ns.read());
+export const evaluated = async () => import('./evaluated.js').then((ns) => ns.read());
+export const reassigned = async () => import('./reassigned.js').then((ns) => ns.read());
+export const plain = async () => import('./plain.js').then((ns) => ns.read());
+export const redeclared = async () => import('./redeclared.js').then((ns) => ns.read());
+export const defaultThis = async () => import('./default-this.js').then((ns) => ns.default());
+export const defaultArrow = async () => import('./default-arrow.js').then((ns) => ns.default());
+export const defaultNamed = async () => import('./default-named.js').then((ns) => ns.default());

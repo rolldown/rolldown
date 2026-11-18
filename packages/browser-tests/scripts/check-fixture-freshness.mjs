@@ -26,21 +26,26 @@ const BROWSER_TARBALL_CHECKS = [
   },
 ];
 
+const NODE_TARBALL_CHECKS = [
+  {
+    artifact: join(fixtures, 'node/rolldown.tgz'),
+    source: join(repoRoot, 'packages/rolldown/dist/index.mjs'),
+  },
+  {
+    artifact: join(fixtures, 'node/rolldown-binding-wasm32-wasi.tgz'),
+    source: join(repoRoot, 'packages/rolldown/src/rolldown-binding.wasm32-wasi.wasm'),
+  },
+];
+
 // each artifact must be at least as new as the thing it was produced from
 const SUITES = {
   webcontainer: {
     command: 'just test-webcontainer',
-    checks: [
-      ...BROWSER_TARBALL_CHECKS,
-      {
-        artifact: join(fixtures, 'node/rolldown.tgz'),
-        source: join(repoRoot, 'packages/rolldown/dist/index.mjs'),
-      },
-      {
-        artifact: join(fixtures, 'node/rolldown-binding-wasm32-wasi.tgz'),
-        source: join(repoRoot, 'packages/rolldown/src/rolldown-binding.wasm32-wasi.wasm'),
-      },
-    ],
+    checks: [...BROWSER_TARBALL_CHECKS, ...NODE_TARBALL_CHECKS],
+  },
+  'webcontainer-fallback': {
+    command: 'just test-webcontainer-fallback',
+    checks: NODE_TARBALL_CHECKS,
   },
   browser: {
     command: 'just test-browser',

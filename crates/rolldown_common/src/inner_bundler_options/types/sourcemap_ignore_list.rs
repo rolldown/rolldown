@@ -4,7 +4,14 @@ use std::{future::Future, pin::Pin};
 use derive_more::Debug;
 use rolldown_utils::pattern_filter::StringOrRegex;
 
-pub type SourceMapIgnoreListFn = dyn Fn(&str, &str) -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send + 'static>>
+/// Decides a whole batch of sources in one call.
+///
+/// A JS callback implements this function, and every call crosses the napi boundary. The returned
+/// `Vec` must match the source list by index. The caller rejects any other length.
+pub type SourceMapIgnoreListFn = dyn Fn(
+    /* sources */ Vec<String>,
+    /* sourcemap path */ &str,
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<bool>>> + Send + 'static>>
   + Send
   + Sync;
 
@@ -42,12 +49,16 @@ impl SourceMapIgnoreList {
     }
   }
 
-  pub async fn exec_dynamic(&self, source: &str, sourcemap_path: &str) -> anyhow::Result<bool> {
+  pub async fn exec_dynamic(
+    &self,
+    sources: Vec<String>,
+    sourcemap_path: &str,
+  ) -> anyhow::Result<Vec<bool>> {
     match self {
       Self::Boolean(_) | Self::StringOrRegex(_) => {
         unreachable!("exec_dynamic should only be called for Fn variant")
       }
-      Self::Fn(f) => f(source, sourcemap_path).await,
+      Self::Fn(f) => f(sources, sourcemap_path).await,
     }
   }
 }

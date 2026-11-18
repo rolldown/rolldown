@@ -1,0 +1,120 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//! User-defined Entry: [Entry-Module-Id: main.js] [Name: main]
+import assert from "node:assert";
+// main.js
+const modules = await Promise.all([
+	import("./odd.js"),
+	import("./odd2.js"),
+	import("./odd3.js"),
+	import("./odd4.js")
+]);
+for (const module of modules) assert.strictEqual(module.odd(), "odd");
+
+```
+
+## odd.js
+
+```js
+//! Dynamic Entry: [Entry-Module-Id: odd.js?x\ny] [Name: <none>]
+// odd.js?x\ny
+const odd = () => "odd";
+export { odd };
+
+```
+
+## odd2.js
+
+```js
+//! Dynamic Entry: [Entry-Module-Id: odd.js?x\ry] [Name: <none>]
+// odd.js?x\ry
+const odd = () => "odd";
+export { odd };
+
+```
+
+## odd3.js
+
+```js
+//! Dynamic Entry: [Entry-Module-Id: odd.js?x\u2028y] [Name: <none>]
+// odd.js?x\u2028y
+const odd = () => "odd";
+export { odd };
+
+```
+
+## odd4.js
+
+```js
+//! Dynamic Entry: [Entry-Module-Id: odd.js?x\u2029y] [Name: <none>]
+// odd.js?x\u2029y
+const odd = () => "odd";
+export { odd };
+
+```
+
+# Variant: preserveModules
+
+## Assets
+
+### main.js
+
+```js
+//! Enabling Preserve Module: [User-defined: true] [Module-Id: main.js]
+import assert from "node:assert";
+// main.js
+const modules = await Promise.all([
+	import("./odd.js"),
+	import("./odd2.js"),
+	import("./odd3.js"),
+	import("./odd4.js")
+]);
+for (const module of modules) assert.strictEqual(module.odd(), "odd");
+
+```
+
+### odd.js
+
+```js
+//! Enabling Preserve Module: [User-defined: false] [Module-Id: odd.js?x\ny]
+// odd.js?x\ny
+const odd = () => "odd";
+export { odd };
+
+```
+
+### odd2.js
+
+```js
+//! Enabling Preserve Module: [User-defined: false] [Module-Id: odd.js?x\ry]
+// odd.js?x\ry
+const odd = () => "odd";
+export { odd };
+
+```
+
+### odd3.js
+
+```js
+//! Enabling Preserve Module: [User-defined: false] [Module-Id: odd.js?x\u2028y]
+// odd.js?x\u2028y
+const odd = () => "odd";
+export { odd };
+
+```
+
+### odd4.js
+
+```js
+//! Enabling Preserve Module: [User-defined: false] [Module-Id: odd.js?x\u2029y]
+// odd.js?x\u2029y
+const odd = () => "odd";
+export { odd };
+
+```

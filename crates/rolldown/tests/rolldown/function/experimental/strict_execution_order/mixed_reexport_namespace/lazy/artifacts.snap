@@ -1,0 +1,72 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_mixed, t as LOCAL } from "./mixed.js";
+// ../leaf.js
+var VALUE;
+function init_leaf() {
+	return (init_leaf = __esmMin((() => {
+		VALUE = "leaf";
+	})))();
+}
+// lazy.js
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		init_leaf();
+		init_mixed();
+	})))();
+}
+init_lazy();
+export { LOCAL, VALUE };
+
+```
+
+## main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_mixed, t as LOCAL } from "./mixed.js";
+// main.js
+async function read() {
+	return Object.entries(await import("./lazy.js"));
+}
+var result;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_mixed();
+		result = LOCAL;
+	})))();
+}
+init_main();
+export { read, result };
+
+```
+
+## mixed.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// ../mixed.js
+var LOCAL;
+function init_mixed() {
+	return (init_mixed = __esmMin((() => {
+		LOCAL = "local";
+	})))();
+}
+export { init_mixed as n, LOCAL as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

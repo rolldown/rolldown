@@ -6,11 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// main.js
 import("./shared.js").then((n) => n.t).then(({ func }) => {
 	func();
 });
-//#endregion
 
 ```
 
@@ -24,12 +23,11 @@ import("./shared.js").then((n) => n.t).then(({ func }) => {
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region shared.js
+// shared.js
 var shared_exports = /* @__PURE__ */ __exportAll({ func: () => func });
 function func() {
 	return "This is a shared function";
 }
-//#endregion
 export { shared_exports as t };
 
 ```

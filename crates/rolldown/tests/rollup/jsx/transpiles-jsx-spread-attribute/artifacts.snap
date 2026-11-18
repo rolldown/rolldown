@@ -6,17 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region dep1.js
 console.log({ value1: true });
-//#endregion
-//#region dep2.js
+// dep2.js
 const obj$1 = { value2: true };
 console.log(obj$1);
-//#endregion
-//#region dep3.js
 console.log({ value3: true });
-//#endregion
-//#region main.js
+// main.js
 const Foo = () => {};
 const result1 = /* @__PURE__ */ React.createElement(Foo, obj$1);
 const result2 = /* @__PURE__ */ React.createElement(Foo, {
@@ -29,7 +24,6 @@ const result3 = /* @__PURE__ */ React.createElement(Foo, {
 	...obj$1,
 	...obj$1
 });
-//#endregion
 export { result1, result2, result3 };
 
 ```

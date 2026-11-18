@@ -20,9 +20,8 @@ export { foo } from "./foo";
 ## main.js
 
 ```js
-//#region foo.tsx
+// foo.tsx
 const foo = "foo";
-//#endregion
 export { foo };
 
 ```

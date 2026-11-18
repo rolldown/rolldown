@@ -2,8 +2,9 @@ use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 
 use super::plugin_context::PluginContext;
 use crate::{
-  HookAddonArgs, HookBuildEndArgs, HookCloseBundleArgs, HookGenerateBundleArgs, HookLoadArgs,
-  HookLoadOutput, HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs,
+  __inner::{Pluginable, SharedPluginable},
+  HookAddonArgs, HookBuildEndArgs, HookCloseBundleArgs, HookFilterArgs, HookGenerateBundleArgs,
+  HookLoadArgs, HookLoadOutput, HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs,
   HookResolveIdOutput, HookTransformArgs, HookUsage, HookWriteBundleArgs, PluginHookMeta,
   SharedLoadPluginContext, SharedTransformPluginContext,
   types::{
@@ -30,6 +31,13 @@ pub type HookInjectionOutputReturn = Result<Option<String>>;
 pub type HookHotUpdateReturn = Result<Option<Vec<ArcStr>>>;
 
 pub trait Plugin: Any + Debug + Send + Sync + 'static {
+  fn new_shared(plugin: Self) -> SharedPluginable
+  where
+    Self: Sized,
+  {
+    Pluginable::new_shared(plugin)
+  }
+
   fn name(&self) -> Cow<'static, str>;
 
   // The `option` hook consider call at node side.
@@ -322,4 +330,10 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   }
 
   fn register_hook_usage(&self) -> HookUsage;
+
+  /// Returns `false` when the plugin's own hook filter skips this call, so the hook returns
+  /// `None` without running. Devtools asks before it logs a call, to log only calls that ran.
+  fn hook_filter_matches(&self, _ctx: &PluginContext, _args: HookFilterArgs<'_>) -> bool {
+    true
+  }
 }

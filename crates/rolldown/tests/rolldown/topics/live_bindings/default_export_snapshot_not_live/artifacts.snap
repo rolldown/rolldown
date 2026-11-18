@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region file.js
+// file.js
 var file_exports = /* @__PURE__ */ __exportAll({
 	default: () => file_default,
 	inc: () => inc
@@ -17,7 +17,6 @@ function inc() {
 	x += 1;
 }
 var file_default = x;
-//#endregion
 export { file_exports as file };
 
 ```

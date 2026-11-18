@@ -19,28 +19,21 @@ __rolldown_runtime__.registerGraph({
 		[0],
 		[1]
 	],
-	dynamicEdges: [
-		[],
-		[],
-		[]
-	]
+	entries: [2]
 });
-//#region b.js
+// b.js
 var b_exports = /* @__PURE__ */ __exportAll({ b: () => "b" });
 __rolldown_runtime__.createModuleHotContext("b.js");
 __rolldown_runtime__.registerModule("b.js", { exports: b_exports });
-//#endregion
-//#region a.js
+// a.js
 var a_exports = /* @__PURE__ */ __exportAll({ a: () => "a" });
 const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
 __rolldown_runtime__.registerModule("a.js", { exports: a_exports });
 a_hot.accept();
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-//#endregion
 
 ```
 
@@ -87,9 +80,9 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ## Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["a.js"],localCount:1,edges:[[]],dynamicEdges:[[]]});
+__rolldown_runtime__.registerGraph({ids:["a.js"],localCount:1,edges:[[]],stamps:{0:1}});
 //#region a.js
-__rolldown_runtime__.registerFactory("a.js", "esm", (function(__rolldown_module_id__) {
+__rolldown_runtime__.registerFactory("a.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ a: () => a });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -97,7 +90,7 @@ __rolldown_runtime__.registerFactory("a.js", "esm", (function(__rolldown_module_
 		const a = "a-edited-after-recovery";
 		hot_a.accept();
 	} finally {}
-}));
+}), 1);
 
 //#endregion
 ```
@@ -122,19 +115,17 @@ __rolldown_runtime__.registerGraph({
 	ids: ["a.js", "main.js"],
 	localCount: 2,
 	edges: [[], [0]],
-	dynamicEdges: [[], []]
+	entries: [1]
 });
-//#region a.js
+// a.js
 var a_exports = /* @__PURE__ */ __exportAll({ a: () => a });
 const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
 __rolldown_runtime__.registerModule("a.js", { exports: a_exports });
 const a = "a-edited-after-recovery";
 a_hot.accept();
-//#endregion
-//#region main.js
+// main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-//#endregion
 
 ```

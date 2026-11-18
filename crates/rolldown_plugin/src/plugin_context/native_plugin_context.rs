@@ -8,9 +8,9 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  FilenameTemplate, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleId, ModuleLoaderMsg,
+  FilenameTemplate, ImportAttributes, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleLoaderMsg,
   PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
-  SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
+  SharedNormalizedBundlerOptions, WatchPath, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::FxDashSet;
@@ -42,6 +42,8 @@ pub struct NativePluginContextImpl {
   pub(crate) module_infos: SharedModuleInfoDashMap,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   pub(crate) session: rolldown_devtools::Session,
+  /// Shared handle to the owning `PluginDriver`'s `onLog` task collector
+  pub(crate) log_hook_tasks: crate::plugin_driver::SharedLogHookTasks,
   pub(crate) bundle_span: tracing::Span,
   // `resolve_id` hook not only will be triggered by the rolldown's resolve process, but also could be triggered
   // by manual calls of `PluginContext.resolve()`. We use a dedicated span here to distinguish whether the call is
@@ -52,7 +54,8 @@ pub struct NativePluginContextImpl {
 impl NativePluginContextImpl {
   pub async fn load(
     &self,
-    specifier: &str,
+    raw_id: &str,
+    attributes: ImportAttributes,
     side_effects: Option<HookSideEffects>,
     module_def_format: ModuleDefFormat,
   ) -> anyhow::Result<()> {
@@ -61,19 +64,23 @@ impl NativePluginContextImpl {
       let guard = self.tx.lock().ok().context("Failed to acquire PluginDriver tx lock")?.clone();
       guard.context("The `PluginContext.load` only work at `resolveId/load/transform/moduleParsed` hooks. If you using it at resolveId hook, please make sure it could not load the entry module.")?
     };
+    let resolved_id = ResolvedId {
+      id: raw_id.into(),
+      side_effects,
+      module_def_format,
+      attributes,
+      ..Default::default()
+    }
+    .finalize_attributes(self.options.experimental.is_import_attributes_enabled());
+    let id = resolved_id.id.as_arc_str().clone();
     sender
-      .send(ModuleLoaderMsg::FetchModule(Box::new(ResolvedId {
-        id: ModuleId::new(specifier),
-        side_effects,
-        module_def_format,
-        ..Default::default()
-      })))
+      .send(ModuleLoaderMsg::FetchModule(Box::new(resolved_id)))
       .map_err(|e| anyhow::Error::new(e).context("PluginContext: failed to send FetchModule message - module loader shut down during plugin execution"))?;
     let plugin_driver = self
       .plugin_driver
       .upgrade()
       .ok_or_else(|| anyhow::anyhow!("Plugin driver is already dropped."))?;
-    plugin_driver.wait_for_module_load_completion(specifier).await;
+    plugin_driver.wait_for_module_load_completion(&id).await;
     Ok(())
   }
 
@@ -93,6 +100,17 @@ impl NativePluginContextImpl {
       .ok_or_else(|| anyhow::anyhow!("Plugin driver is already dropped."))?;
 
     let normalized_extra_options = extra_options.unwrap_or_default();
+    if normalized_extra_options.skip_self
+      && self.skipped_resolve_calls.iter().any(|call| {
+        call.plugin_idx == self.plugin_idx
+          && call.specifier == specifier
+          && call.importer.as_deref() == importer
+      })
+    {
+      // This means that the plugin recursively called itself
+      return Ok(Err(ResolveError::NotFound(specifier.to_string())));
+    }
+
     let skipped_resolve_calls = if normalized_extra_options.skip_self {
       let mut skipped_resolve_calls = Vec::with_capacity(self.skipped_resolve_calls.len() + 1);
       skipped_resolve_calls.extend(self.skipped_resolve_calls.clone());
@@ -107,6 +125,13 @@ impl NativePluginContextImpl {
     } else {
       None
     };
+
+    // A forwarded `importer` carries the importer's attributes in its id.
+    let (importer_raw_id, importer_attributes) =
+      match importer.and_then(ImportAttributes::parse_module_id) {
+        Some((raw_id, attributes)) => (Some(raw_id), attributes),
+        None => (importer, ImportAttributes::default()),
+      };
 
     // Use the pre-created manual resolve span.
     // When PluginContext.resolve() is called from JavaScript via NAPI, the tracing span
@@ -126,6 +151,9 @@ impl NativePluginContextImpl {
         normalized_extra_options.custom,
         false,
         &self.options,
+        &normalized_extra_options.attributes,
+        importer_raw_id,
+        &importer_attributes,
       )
       .await
     }
@@ -190,18 +218,19 @@ impl NativePluginContextImpl {
     self.resolver.cwd()
   }
 
+  /// The path is resolved against `cwd`, so the watch files are absolute and normalized.
   pub fn add_watch_file(&self, file: &str) {
-    self.watch_files.insert(file.into());
+    self.watch_files.insert(WatchPath::new(file, &self.options.cwd).to_string().into());
   }
 
   fn log(&self, level: LogLevel, log: LogWithoutPlugin) {
     if let Some(on_log) = &self.options.on_log {
-      let on_log = on_log.clone();
       let log = log.into_log(Some(self.plugin_name.to_string()));
-      rolldown_utils::futures::spawn(async move {
-        // FIXME: should collect error happened here and cause the build to fail later
-        let _ = on_log.call(level, log).await;
-      });
+      // Call now so the log is enqueued before any later work; only its result is awaited.
+      let result = on_log.call(level, log);
+      // Keep the handle so the build can await it at a barrier and fail if the callback errored.
+      let handle = rolldown_utils::futures::spawn(result);
+      self.log_hook_tasks.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push(handle);
     }
   }
 

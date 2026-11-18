@@ -10,6 +10,10 @@ class TestHotContext {
   moduleId;
   /** @type {{ deps: string, cb: Function }[]} */
   callbacks = [];
+  /** @type {Set<string> | null} */
+  acceptedExports = null;
+  /** @type {WeakSet<Function>} */
+  partialCallbacks = new WeakSet();
 
   /**
    * @param {string} moduleId
@@ -25,11 +29,26 @@ class TestHotContext {
    * @returns {void}
    */
   accept(...args) {
-    if (args.length === 0 || typeof args[0] === 'function') {
-      this.callbacks.push({ deps: this.moduleId, cb: args[0] ?? (() => {}) });
+    // Like Vite's client, a falsy first argument self-accepts and drops the callback.
+    if (typeof args[0] === 'function' || !args[0]) {
+      this.callbacks.push({ deps: this.moduleId, cb: args[0] || (() => {}) });
       return;
     }
     this.callbacks.push({ deps: args[0], cb: args[1] ?? (() => {}) });
+  }
+
+  /**
+   * @param {string | readonly string[]} exportNames
+   * @param {Function} [cb]
+   */
+  acceptExports(exportNames, cb) {
+    this.acceptedExports ??= new Set();
+    for (const name of typeof exportNames === 'string' ? [exportNames] : exportNames) {
+      this.acceptedExports.add(name);
+    }
+    const callback = cb ?? (() => {});
+    this.partialCallbacks.add(callback);
+    this.callbacks.push({ deps: this.moduleId, cb: callback });
   }
 }
 
@@ -65,6 +84,28 @@ class TestDevRuntime extends BaseDevRuntime {
     return ctx.callbacks.some(({ deps }) =>
       Array.isArray(deps) ? deps.includes(dep) : deps === dep,
     );
+  }
+
+  /**
+   * @param {string} id
+   */
+  isSelfAccepting(id) {
+    const ctx = this.contexts.get(id);
+    if (!ctx) return false;
+    const plainSelfAccept = ctx.callbacks.some(
+      ({ deps, cb }) => deps === id && !ctx.partialCallbacks.has(cb),
+    );
+    if (plainSelfAccept || !ctx.acceptedExports) return plainSelfAccept;
+    const accepted = ctx.acceptedExports;
+    return Object.keys(this.loadExports(id)).every((name) => accepted.has(name));
+  }
+
+  /**
+   * @param {string} id
+   * @returns {Set<string> | null}
+   */
+  acceptedExportsOf(id) {
+    return this.contexts.get(id)?.acceptedExports ?? null;
   }
 
   /**
@@ -127,18 +168,29 @@ class TestDevRuntime extends BaseDevRuntime {
     if (traversedModules.has(id)) return;
     traversedModules.add(id);
     updateSet.add(id);
-    if (this.acceptsDepOf(id, id)) {
+    if (this.isSelfAccepting(id)) {
       boundaries.push([id, id]);
       return;
     }
+    const acceptedExports = this.acceptedExportsOf(id);
+    if (acceptedExports) {
+      boundaries.push([id, id]);
+    }
     const parents = this.getImporters(id).filter((p) => this.isExecuted(p));
     if (!parents.length) {
-      return `no hmr boundary found for module \`${id}\``;
+      return acceptedExports ? undefined : `no hmr boundary found for module \`${id}\``;
     }
     for (const parent of parents) {
+      if (acceptedExports && parent === id) continue;
       if (this.acceptsDepOf(parent, id)) {
         boundaries.push([parent, id]);
         continue;
+      }
+      if (acceptedExports) {
+        const bindings = this.getImportedBindings(parent, id);
+        if (bindings && bindings.every((name) => acceptedExports.has(name))) {
+          continue;
+        }
       }
       if (stack.includes(parent)) {
         return `circular import chain between \`${id}\` and \`${parent}\``;

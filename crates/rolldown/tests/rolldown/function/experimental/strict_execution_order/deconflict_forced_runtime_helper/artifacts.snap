@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region helper.js
+// helper.js
 var __esmMin, helper;
 function init_helper() {
 	return (init_helper = __esmMin$1((() => {
@@ -15,16 +15,14 @@ function init_helper() {
 		helper = "H:" + __esmMin;
 	})))();
 }
-//#endregion
-//#region late.js
+// late.js
 var late;
 function init_late() {
 	return (init_late = __esmMin$1((() => {
 		late = "LATE:" + (globalThis.__y ?? "z");
 	})))();
 }
-//#endregion
-//#region main.js
+// main.js
 function init_main() {
 	return (init_main = __esmMin$1((() => {
 		init_helper();
@@ -35,7 +33,6 @@ function init_main() {
 		};
 	})))();
 }
-//#endregion
 init_main();
 
 ```

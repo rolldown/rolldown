@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets/g�-CqaqmF3f.bin
+
+## d�.js
+
+```js
+// d�.js
+const d = "d";
+export { d };
+
+```
+
+## main.js
+
+```js
+import assert from "node:assert";
+import fs from "node:fs";
+// HIDDEN [\0rolldown/runtime.js]
+// b�.js
+const b = "b";
+// c�.js
+const c = "c";
+// e�.cjs
+var require_e_ = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "e";
+}));
+// f�.cjs
+var require_f_ = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "f";
+}));
+// main.js
+assert.strictEqual("a", "a");
+assert.strictEqual((await import("./d�.js")).d, "d");
+assert.strictEqual(require_e_(), "e");
+let f;
+try {
+	f = require_f_();
+} catch {}
+assert.strictEqual(f, "f");
+assert.ok(fs.existsSync(new URL("assets/g�-CqaqmF3f.bin", import.meta.url)));
+const ignored = () => import(
+	/* @vite-ignore */
+	"./h\ud800.js"
+);
+const ignoredUrl = new URL(
+	/* @vite-ignore */
+	"./i\ud800.bin",
+	import.meta.url
+);
+const dataUrl = new URL("data:text/plain,\ud800", import.meta.url);
+export { b, c, dataUrl, ignored, ignoredUrl };
+
+```

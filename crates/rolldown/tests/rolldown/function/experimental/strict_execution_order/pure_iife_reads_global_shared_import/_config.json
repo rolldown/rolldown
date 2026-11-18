@@ -1,0 +1,16 @@
+{
+  "_comment": "Exercises setup and evaluation order when an imported value is shared across modules, in both wrapping modes.",
+  "configName": "on-demand",
+  "config": {
+    "strictExecutionOrder": true,
+    "experimental": {
+      "onDemandWrapping": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "wrap-all",
+      "onDemandWrapping": false
+    }
+  ]
+}

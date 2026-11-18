@@ -5,8 +5,9 @@ assert.deepEqual(
   foo_ns,
   Object.defineProperty(
     {
+      __proto__: null,
       bar_ns: Object.defineProperty(
-        { bar: 123 },
+        { __proto__: null, bar: 123 },
         Symbol.toStringTag,
         { value: "Module" },
       )

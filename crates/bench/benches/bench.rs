@@ -1,5 +1,13 @@
+#[cfg(not(feature = "tracking_allocator"))]
 #[global_allocator]
 static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
+
+// `--features tracking_allocator` benches the counting wrapper that
+// `rolldown_binding` installs behind its own `tracking_allocator` feature.
+#[cfg(feature = "tracking_allocator")]
+#[global_allocator]
+static ALLOC: rolldown_tracking_allocator::TrackingAllocator =
+  rolldown_tracking_allocator::TrackingAllocator;
 
 use std::fmt::Write as _;
 

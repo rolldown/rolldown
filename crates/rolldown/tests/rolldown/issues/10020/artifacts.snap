@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## data.js
+## data.json.js
 
 ```js
-//#region data.json
+// data.json
 var data_default = {
 	aBeeZee: [
 		0,
@@ -25,7 +25,6 @@ var data_default = {
 		500
 	]
 };
-//#endregion
 export { data_default as default };
 
 ```
@@ -33,12 +32,11 @@ export { data_default as default };
 ## index.js
 
 ```js
-import data_default from "./data.js";
-//#region index.js
+import data_default from "./data.json.js";
+// index.js
 function get(name) {
 	return data_default[name];
 }
-//#endregion
 export { get };
 
 ```

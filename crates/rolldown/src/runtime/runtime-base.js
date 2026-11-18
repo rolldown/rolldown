@@ -25,21 +25,28 @@ export var __esmMin = (fn, res, err) => () => {
 export var __commonJS = (cb, mod) =>
   function () {
     return (
-      mod || ((0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), cb = null), mod.exports
+      mod || ((0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports
     );
   };
 export var __commonJSMin = (cb, mod) => () => (
-  mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports
+  mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports
 );
-export var __exportAll = (all, no_symbols) => {
-  let target = {};
+// `__exportAll` creates a module namespace object with the shape of a native one. The object has
+// a null prototype, and it accepts no new properties. If `flags & 1` is set, the object has no
+// `Symbol.toStringTag`. If `flags & 2` is set, the object stays open (it accepts new properties),
+// because a later `__reExport` adds properties to it.
+// `__exportAll` creates the object with `Object.setPrototypeOf({}, null)`. V8 keeps the properties
+// of an object from `{ __proto__: null }` in a hash table (dictionary mode), which is slow to read.
+// See internal-docs/runtime-helpers/implementation.md
+export var __exportAll = (all, flags) => {
+  let target = Object.setPrototypeOf({}, null);
   for (var name in all) {
     __defProp(target, name, { get: all[name], enumerable: true });
   }
-  if (!no_symbols) {
+  if (!(flags & 1)) {
     __defProp(target, Symbol.toStringTag, { value: 'Module' });
   }
-  return target;
+  return flags & 2 ? target : Object.preventExtensions(target);
 };
 export var __copyProps = (to, from, except, desc) => {
   if ((from && typeof from === 'object') || typeof from === 'function') {
@@ -72,6 +79,38 @@ export var __toCommonJS = (mod) =>
   __hasOwnProp.call(mod, 'module.exports')
     ? mod['module.exports']
     : __copyProps(__defProp({}, '__esModule', { value: true }), mod);
+// `__share*`: the registry behind `codeSplitting.experimentalInlineCommonChunks`. A chunk factory
+// is registered under its record id by every file that carries it; the first registration wins,
+// `__share_require` runs the winning factory once and hands every reader the same exports object.
+// See internal-docs/inline-common-chunks/implementation.md.
+export var __share_factories = /* @__PURE__ */ __create(null);
+export var __share_records = /* @__PURE__ */ __create(null);
+export var __share = (id, factory) => {
+  if (!(id in __share_factories)) __share_factories[id] = factory;
+};
+export var __share_require = (id) => {
+  var record = __share_records[id];
+  if (record) {
+    // A failed factory rethrows the same value on every read, including `undefined`; a factory
+    // that is still running hands back its partially filled exports object.
+    if (record.failed) throw record.error;
+    return record.exports;
+  }
+  var factory = __share_factories[id];
+  if (!factory) throw new Error('Shared chunk "' + id + '" was not registered before it was required.');
+  record = __share_records[id] = { exports: {}, failed: false, error: void 0 };
+  try {
+    factory(record.exports);
+  } catch (error) {
+    record.failed = true;
+    record.error = error;
+    throw error;
+  }
+  return record.exports;
+};
+export var __share_export = (target, all) => {
+  for (var name in all) __defProp(target, name, { get: all[name], enumerable: true });
+};
 export var __toBinaryNode = (base64) => new Uint8Array(Buffer.from(base64, 'base64'));
 export var __toBinary = /* @__PURE__ */ (() => {
   var table = new Uint8Array(128);

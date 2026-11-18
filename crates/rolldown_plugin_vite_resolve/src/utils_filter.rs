@@ -4,20 +4,14 @@ use crate::utils::normalize_path;
 
 #[derive(Debug)]
 pub struct UtilsFilter {
-  include: UtilsSingleFilter,
   exclude: UtilsSingleFilter,
-  has_include_matcher: bool,
 }
 
 impl UtilsFilter {
-  /// works like `createFilter` from `@rollup/pluginutils`
+  /// works like `createFilter` from `@rollup/pluginutils` without `include`
   /// only supports `options.resolve: false`
-  pub fn new(include: Vec<StringOrRegex>, exclude: Vec<StringOrRegex>) -> Self {
-    Self {
-      has_include_matcher: !include.is_empty(),
-      include: UtilsSingleFilter::new(include),
-      exclude: UtilsSingleFilter::new(exclude),
-    }
+  pub fn new(exclude: Vec<StringOrRegex>) -> Self {
+    Self { exclude: UtilsSingleFilter::new(exclude) }
   }
 
   pub fn is_match(&self, id: &str) -> bool {
@@ -25,14 +19,7 @@ impl UtilsFilter {
       return false;
     }
 
-    let normalized = normalize_path(id);
-    if self.exclude.is_match(&normalized) {
-      return false;
-    }
-    if self.include.is_match(&normalized) {
-      return true;
-    }
-    !self.has_include_matcher
+    !self.exclude.is_match(&normalize_path(id))
   }
 }
 

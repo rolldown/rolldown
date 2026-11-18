@@ -81,6 +81,8 @@ interface HookCost {
   hookName: string;
   calls: number;
   ms: number;
+  /** The longest single span. */
+  maxMs: number;
   inFlight: number;
   maxInFlight: number;
   /**
@@ -99,10 +101,13 @@ export interface PluginTimingsRecorder {
    * collision would silently merge two plugins' rows.
    */
   costs: Map<unknown, Map<string, HookCost>>;
+  /** This set prevents duplicate missing-label warnings across outputs. */
+  warnedMissingGroupLabels: Set<unknown>;
   /**
-   * Wall time during which *any* measured callback was running — the union of every span,
-   * so overlapping calls are counted once. Unlike a sum of spans this cannot outrun the
-   * build, which is what makes it usable as a share.
+   * Wall time in which at least one measured callback ran: the union of every span, so
+   * overlapping calls count once. The value cannot be more than the window the callbacks
+   * ran in. That is what makes it usable as a share. It can be more than the core build
+   * clock, because `closeBundle` runs after that clock stops.
    */
   busyMs: number;
   /** Across all hooks, for maintaining {@link PluginTimingsRecorder.busyMs}. */
@@ -125,6 +130,7 @@ export function pluginTimingsRecorderFor(key: object): PluginTimingsRecorder {
   if (recorder === undefined) {
     recorder = {
       costs: new Map(),
+      warnedMissingGroupLabels: new Set(),
       busyMs: 0,
       inFlight: 0,
       busyStart: 0,
@@ -148,6 +154,7 @@ function costFor(recorder: PluginTimingsRecorder, owner: TimingOwner, hookName: 
       hookName,
       calls: 0,
       ms: 0,
+      maxMs: 0,
       inFlight: 0,
       maxInFlight: 0,
       overlapMs: 0,
@@ -179,7 +186,11 @@ function settle(recorder: PluginTimingsRecorder, cost: HookCost, started: number
   const ended = performance.now();
   markInFlightChange(cost, ended);
   cost.inFlight -= 1;
-  cost.ms += ended - started;
+  const span = ended - started;
+  cost.ms += span;
+  if (span > cost.maxMs) {
+    cost.maxMs = span;
+  }
   recorder.inFlight -= 1;
   if (recorder.inFlight === 0) {
     recorder.busyMs += ended - recorder.busyStart;
@@ -220,24 +231,23 @@ export function measureHookCost<T extends (...args: never[]) => unknown>(
     let result: unknown;
     try {
       result = handler.apply(this, args);
+
+      // Only a thenable defers completion; a plain return value is already done.
+      if (typeof (result as { then?: unknown } | undefined)?.then === 'function') {
+        return Promise.resolve(result).then(
+          (value) => {
+            settle(recorder, cost, started);
+            return value;
+          },
+          (error: unknown) => {
+            settle(recorder, cost, started);
+            throw error;
+          },
+        );
+      }
     } catch (error) {
       settle(recorder, cost, started);
       throw error;
-    }
-
-    // Only a thenable defers completion; a plain return value is already done, and treating
-    // it as pending would leave `inFlight` permanently raised.
-    if (typeof (result as { then?: unknown } | undefined)?.then === 'function') {
-      return (result as Promise<unknown>).then(
-        (value) => {
-          settle(recorder, cost, started);
-          return value;
-        },
-        (error: unknown) => {
-          settle(recorder, cost, started);
-          throw error;
-        },
-      );
     }
 
     settle(recorder, cost, started);
@@ -246,8 +256,9 @@ export function measureHookCost<T extends (...args: never[]) => unknown>(
 }
 
 /**
- * The owner shown for user callbacks the core invokes directly rather than through a
- * plugin. One shared identity: they are all configured on the same options object.
+ * The shared owner for callbacks that users configure directly on the output options.
+ * Code-splitting groups use their group objects as owner keys. Each group then has separate
+ * timing rows.
  */
 export const OUTPUT_OPTIONS_OWNER: TimingOwner = {
   key: Symbol('output options'),
@@ -295,6 +306,8 @@ export interface PluginTimingRow {
   calls: number;
   /** Summed spans. Meaningful as a cost only when {@link PluginTimingRow.rankable}. */
   ms: number;
+  /** The longest single span. Meaningful only when {@link PluginTimingRow.rankable}. */
+  maxMs: number;
   /** Peak concurrent calls. Informational — {@link PluginTimingRow.rankable} is the verdict. */
   maxInFlight: number;
   /** How much of {@link PluginTimingRow.ms} is double counted, in ms. */
@@ -318,7 +331,11 @@ export interface PluginTimingRow {
  * as `BindingPluginTimingsMeasurement`.
  */
 export interface PluginTimingsMeasurement {
-  /** Union of every span, so it counts overlap once and cannot outrun the build. */
+  /**
+   * Union of every span, so overlap counts once. The value cannot be more than the window
+   * the callbacks ran in. It can be more than the core build clock, because `closeBundle`
+   * runs after that clock stops.
+   */
   busyMs: number;
   /**
    * First-call order. No significance — ordering is the renderer's call, and this side does
@@ -356,6 +373,7 @@ export function summarizePluginTimings(key: object): PluginTimingsMeasurement {
         hook: cost.hookName,
         calls: cost.calls,
         ms: cost.ms,
+        maxMs: cost.maxMs,
         maxInFlight: cost.maxInFlight,
         overlapMs: cost.overlapMs,
         rankable: cost.overlapMs <= cost.ms * OVERLAP_TOLERANCE,

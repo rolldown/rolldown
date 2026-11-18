@@ -3,12 +3,31 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
+## 9446.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// client-only.js
+var client_only_exports = /* @__PURE__ */ __exportAll({
+	default: () => client_only_default,
+	sym: () => sym
+});
+const sym = Symbol("client-only");
+var client_only_default = "default export";
+// index.ts
+function entry() {
+	return "server-entry-default " + String(sym);
+}
+const routes = { "/": () => import("./route.js") };
+export { routes as n, client_only_exports as r, entry as t };
+
+```
+
 ## route.js
 
 ```js
-//#region route.js
-var route_default = { loadString: () => import("./server.js").then((n) => n.t).then((r) => r.default || r) };
-//#endregion
+// route.js
+var route_default = { loadString: () => import("./9446.js").then((n) => n.r).then((r) => r.default || r) };
 export { route_default as default };
 
 ```
@@ -16,21 +35,6 @@ export { route_default as default };
 ## server.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
-//#region client-only.js
-var client_only_exports = /* @__PURE__ */ __exportAll({
-	default: () => client_only_default,
-	sym: () => sym
-});
-const sym = Symbol("client-only");
-var client_only_default = "default export";
-//#endregion
-//#region index.ts
-function entry() {
-	return "server-entry-default " + String(sym);
-}
-const routes = { "/": () => import("./route.js") };
-//#endregion
-export { entry as default, routes, client_only_exports as t };
+export { t as default, n as routes } from "./9446.js";
 
 ```

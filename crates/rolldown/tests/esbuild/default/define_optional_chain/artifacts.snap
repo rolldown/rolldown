@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.js
+// entry.js
 console.log([
 	1,
 	1,
@@ -20,6 +20,5 @@ console.log([
 	a?.[b][c],
 	a[b]?.[c]
 ]);
-//#endregion
 
 ```

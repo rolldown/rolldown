@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// esm.js
+(/* @__PURE__ */ __commonJSMin((() => {
+	(globalThis.evaluated ??= []).push("dep");
+})))();
+(globalThis.evaluated ??= []).push("esm");
+// main.js
+assert.strictEqual(1, 1);
+assert.deepStrictEqual(globalThis.evaluated, ["dep", "esm"]);
+
+```

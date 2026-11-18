@@ -3,7 +3,8 @@ use std::path::Path;
 use crate::inner_bundler_options::types::output_option::PathsOutputOption;
 use crate::side_effects::DeterminedSideEffects;
 use crate::{
-  Chunk, ImportRecordIdx, ModuleId, ModuleIdx, ResolvedImportRecord, StableModuleId, SymbolRef,
+  Chunk, ImportAttributes, ImportRecordIdx, ModuleId, ModuleIdx, ResolvedImportRecord,
+  StableModuleId, SymbolRef,
 };
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
@@ -21,6 +22,7 @@ pub struct ExternalModule {
   // The resolved id of the external module. It could be an absolute path or a relative path.
   // If resolved id `external` is `true`, the absolute ids will be converted to relative ids based on the `makeAbsoluteExternalsRelative` option
   pub id: ModuleId,
+  pub attributes: ImportAttributes,
   pub stable_id: StableModuleId,
   // Similar to the rollup `ExternalChunk#get_file_name`, It could be an absolute path or a normalized relative path.
   pub name: ArcStr,
@@ -31,6 +33,7 @@ pub struct ExternalModule {
 }
 
 impl ExternalModule {
+  #[expect(clippy::too_many_arguments)]
   pub fn new(
     idx: ModuleIdx,
     id: ModuleId,
@@ -39,12 +42,14 @@ impl ExternalModule {
     side_effects: DeterminedSideEffects,
     namespace_ref: SymbolRef,
     need_renormalize_render_path: bool,
+    attributes: ImportAttributes,
   ) -> Self {
     Self {
       idx,
       // External modules' id is already stable, so we can directly use it here.
       stable_id: StableModuleId::from_module_id(id.clone()),
       id,
+      attributes,
       exec_order: u32::MAX,
       namespace_ref,
       name,
@@ -58,7 +63,7 @@ impl ExternalModule {
   pub fn get_file_name(&self, paths: Option<&PathsOutputOption>) -> ArcStr {
     // Try to apply paths mapping first
     if let Some(paths_option) = paths {
-      if let Some(mapped_path) = paths_option.call(self.id.as_str()) {
+      if let Some(mapped_path) = paths_option.call(self.id.raw_id()) {
         return mapped_path.into();
       }
     }

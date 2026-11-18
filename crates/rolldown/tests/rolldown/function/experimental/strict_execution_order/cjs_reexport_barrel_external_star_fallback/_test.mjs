@@ -39,14 +39,15 @@ globalThis.__events = [];
 
 const entry = await import('./dist/main.js');
 
-// The external import's position differs between the plans (wrap-all hoists the deferred chunk's
-// static imports ahead of every wrapper; on-demand keeps the eager barrel body at its source
-// position), but both keep the whole monolithic barrel — external included — in the eager phase.
-const entryEvents =
-  globalThis.__configName === 'on-demand'
-    ? ['cn', 'ext-lib', 'clone-deep', 'main:a b']
-    : ['ext-lib', 'cn', 'clone-deep', 'main:a b'];
-assert.deepStrictEqual(globalThis.__events, entryEvents);
+// External ESM imports execute at chunk load, so chunk placement determines their position.
+// See internal-docs/code-splitting/design.md#contract-boundaries-no-ordering-promise-but-always-valid-output.
+const entryEvents = [...globalThis.__events];
+assert.deepStrictEqual(
+  entryEvents.filter((event) => event !== 'ext-lib'),
+  ['cn', 'clone-deep', 'main:a b'],
+);
+assert.strictEqual(entryEvents.filter((event) => event === 'ext-lib').length, 1);
+assert.ok(entryEvents.indexOf('ext-lib') < entryEvents.indexOf('main:a b'));
 
 const route = await entry.loadRoute();
 

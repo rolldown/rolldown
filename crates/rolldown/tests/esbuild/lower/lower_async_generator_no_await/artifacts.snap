@@ -12,7 +12,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
-//#region entry.ts
+// entry.ts
 function foo() {
 	return _foo.apply(this, arguments);
 }
@@ -171,6 +171,5 @@ foo = { bar() {
 		}
 	})();
 } };
-//#endregion
 
 ```

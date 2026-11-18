@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## expr-fn.js
 
 ```js
-//#region expr-fn.js
+// expr-fn.js
 const f = /* @__NO_SIDE_EFFECTS__ */ function(y) {
 	sideEffect(y);
 };
@@ -17,21 +17,19 @@ onlyKeepThisIdentifier;
 onlyKeepThisIdentifier;
 x(/* @__PURE__ */ f("keepThisCall"));
 x(/* @__PURE__ */ g("keepThisCall"));
-//#endregion
 
 ```
 
 ## stmt-export-default-fn.js
 
 ```js
-//#region stmt-export-default-fn.js
+// stmt-export-default-fn.js
 /* @__NO_SIDE_EFFECTS__ */
 function f(y) {
 	sideEffect(y);
 }
 onlyKeepThisIdentifier;
 x(/* @__PURE__ */ f("keepThisCall"));
-//#endregion
 export { f as default };
 
 ```
@@ -39,7 +37,7 @@ export { f as default };
 ## stmt-fn.js
 
 ```js
-//#region stmt-fn.js
+// stmt-fn.js
 /* @__NO_SIDE_EFFECTS__ */
 function f(y) {
 	sideEffect(y);
@@ -52,14 +50,13 @@ onlyKeepThisIdentifier;
 onlyKeepThisIdentifier;
 x(/* @__PURE__ */ f("keepThisCall"));
 x(/* @__PURE__ */ g("keepThisCall"));
-//#endregion
 
 ```
 
 ## stmt-local.js
 
 ```js
-//#region stmt-local.js
+// stmt-local.js
 const f = /* @__NO_SIDE_EFFECTS__ */ function(y) {
 	sideEffect(y);
 };
@@ -70,6 +67,5 @@ onlyKeepThisIdentifier;
 onlyKeepThisIdentifier;
 x(/* @__PURE__ */ f("keepThisCall"));
 x(/* @__PURE__ */ g("keepThisCall"));
-//#endregion
 
 ```

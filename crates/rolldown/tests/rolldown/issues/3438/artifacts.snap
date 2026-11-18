@@ -30,19 +30,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-//#region repro1.js
+// repro1.js
 var repro1_exports = /* @__PURE__ */ __exportAll({ clear: () => clear$4 });
 const clear$4 = "repro1_clear";
-//#endregion
-//#region repro2.js
+// repro2.js
 var repro2_exports = /* @__PURE__ */ __exportAll({
 	clear: () => clear$3,
 	clear$1: () => clear$1$1
 });
 const clear$1$1 = "repro2_clear$1";
 const clear$3 = "repro2_clear";
-//#endregion
-//#region repro3.js
+// repro3.js
 var repro3_exports = /* @__PURE__ */ __exportAll({
 	clear: () => clear,
 	clear$1: () => clear$1,
@@ -51,8 +49,7 @@ var repro3_exports = /* @__PURE__ */ __exportAll({
 const clear$2 = "repro3_clear$2";
 const clear$1 = "repro3_clear$1";
 const clear = "repro3_clear";
-//#endregion
-//#region main.js
+// main.js
 var main_default = [
 	clear$4,
 	clear$3,
@@ -64,7 +61,6 @@ var main_default = [
 	() => Promise.resolve().then(() => repro2_exports).then(console.log),
 	() => Promise.resolve().then(() => repro3_exports).then(console.log)
 ];
-//#endregion
 export { main_default as default };
 
 ```

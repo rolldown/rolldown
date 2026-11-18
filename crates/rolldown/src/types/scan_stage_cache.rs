@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use arcstr::ArcStr;
 use itertools::Itertools;
@@ -34,7 +34,15 @@ pub struct ScanStageCache {
   /// Only files the graph still needs are queued; see
   /// [`ModuleLoader::revert_partial_scan`](crate::module_loader::module_loader::ModuleLoader).
   pub pending_rescans: Vec<ResolvedId>,
+  /// Files of a build that failed after its scan had updated the cache, in `buildEnd` for example;
+  /// every build fetches them again until one gets through its scan, so the error keeps surfacing
+  /// until the files are fixed. HMR updates leave them queued: they do not run `buildEnd`. Only
+  /// files the graph still needs are queued; see [`Self::still_needed`].
+  pub pending_build_rescans: Vec<ResolvedId>,
   pub user_defined_entry: FxHashSet<ModuleId>,
+  /// Common directory of the entries of the last full scan, configured and emitted. A partial scan
+  /// does not see every entry, so the path externals it adds render relative to this directory.
+  pub user_defined_entry_common_dir: Option<Arc<Path>>,
   // Usage: Map file path emitted by watcher to corresponding module index
   pub module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
   // Usage: Map module stable id injected to client code to corresponding module index
@@ -120,6 +128,34 @@ impl ScanStageCache {
     importers
   }
 
+  /// Of `resolved_ids`, the files to fetch again after a failed build: entries, or files something
+  /// still imports on `importers`, the freshest edge state. A broken file whose last import was
+  /// removed must not fail every later build; a fresh build of the same tree would succeed without
+  /// it.
+  ///
+  /// # Panic
+  /// - if the snapshot is unset
+  pub fn still_needed(
+    &self,
+    importers: &IndexVec<ModuleIdx, Vec<ImporterRecord>>,
+    resolved_ids: Vec<ResolvedId>,
+  ) -> Vec<ResolvedId> {
+    resolved_ids
+      .into_iter()
+      .filter(|resolved_id| {
+        if self.user_defined_entry.contains(&resolved_id.id) {
+          return true;
+        }
+        let Some(state) = self.module_id_to_idx.get(&resolved_id.id) else {
+          return false;
+        };
+        let idx = state.idx();
+        self.get_snapshot().user_defined_entry_modules.contains(&idx)
+          || importers.get(idx).is_some_and(|records| !records.is_empty())
+      })
+      .collect()
+  }
+
   pub fn merge(
     &mut self,
     mut scan_stage_output: ScanStageOutput,
@@ -147,6 +183,11 @@ impl ScanStageCache {
         modules
       }
     };
+    // A rebuild can add the first module that preserves JSX.
+    if scan_stage_output.symbol_ref_db.has_module_preserve_jsx() {
+      cache.symbol_ref_db.set_has_module_preserve_jsx();
+    }
+    let rescanned_module_idxs = modules.iter().map(|(idx, _)| *idx).collect::<FxHashSet<_>>();
     // merge module_table, index_ast_scope, index_ecma_ast
     for (new_idx, new_module) in modules {
       let idx = self.module_id_to_idx[new_module.id()].idx();
@@ -227,23 +268,24 @@ impl ScanStageCache {
       module.ecma_view.rebuild_importer_sets(&self.importers[*idx]);
     }
 
-    // merge entries
+    // Deleted or retargeted imports have no incoming row, so clean every cached dynamic entry.
+    // See internal-docs/cache/implementation.md (`ScanStageCache::merge` — the write path).
+    cache.entry_points.retain_mut(|entry_point| {
+      if !entry_point.kind.is_dynamic_import() {
+        return true;
+      }
+      entry_point
+        .related_stmt_infos
+        .retain(|(importer_idx, _, _, _)| !rescanned_module_idxs.contains(importer_idx));
+      !entry_point.related_stmt_infos.is_empty()
+    });
+
     for entry_point in scan_stage_output.entry_points {
       if let Some(old_entry_point) = cache
         .entry_points
         .iter_mut()
         .find(|old_entry| old_entry.kind == entry_point.kind && old_entry.idx == entry_point.idx)
       {
-        let removed_module_idxs = entry_point
-          .related_stmt_infos
-          .iter()
-          .map(|(module_idx, _, _, _)| *module_idx)
-          .collect::<FxHashSet<_>>();
-        _ = old_entry_point
-          .related_stmt_infos
-          .extract_if(.., |(module_idx, _stmt_info_idx, _node_id, _)| {
-            removed_module_idxs.contains(module_idx)
-          });
         old_entry_point.related_stmt_infos.extend(entry_point.related_stmt_infos);
       } else {
         cache.entry_points.push(entry_point);

@@ -8,9 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 // HIDDEN [\0rolldown/runtime.js]
-//#region main.js
+// main.js
 const loaded = import("external-data.json", { with: { type: "json" } });
-//#endregion
 exports.loaded = loaded;
 
 ```
@@ -22,9 +21,8 @@ exports.loaded = loaded;
 ### main.js
 
 ```js
-//#region main.js
+// main.js
 const loaded = import("external-data.json", { with: { type: "json" } });
-//#endregion
 export { loaded };
 
 ```

@@ -1,0 +1,9 @@
+{
+  "config": {
+    "format": "umd",
+    "experimental": {
+      "devMode": {}
+    }
+  },
+  "expectError": true
+}

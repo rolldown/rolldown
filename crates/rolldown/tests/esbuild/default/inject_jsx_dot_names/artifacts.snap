@@ -6,16 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region inject.js
+// inject.js
 function el() {
 	console.log();
 }
 function frag() {
 	console.log();
 }
-//#endregion
-//#region entry.jsx
+// entry.jsx
 console.log(/* @__PURE__ */ el(frag, null, /* @__PURE__ */ el("div", null)));
-//#endregion
 
 ```

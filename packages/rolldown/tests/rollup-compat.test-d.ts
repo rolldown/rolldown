@@ -3,9 +3,19 @@ import {
   type InputOptions,
   type OutputOptions,
   type Plugin as RolldownRawPlugin,
+  type PreRenderedChunk,
+  type RenderedChunk,
 } from 'rolldown';
 import type { Plugin as RollupPlugin } from 'rollup';
 import { describe, expectTypeOf, test } from 'vitest';
+
+describe('chunk type compatibility', () => {
+  // https://github.com/rolldown/rolldown/issues/10804
+  test('`RenderedChunk` is assignable to `PreRenderedChunk`', () => {
+    const renderedChunk = undefined as unknown as RenderedChunk;
+    expectTypeOf(renderedChunk).toExtend<PreRenderedChunk>();
+  });
+});
 
 describe('plugin type compatibility', () => {
   type PluginsOption = InputOptions['plugins'];

@@ -20,12 +20,11 @@ pub struct DiagnosableResolveError {
 
 impl DiagnosableResolveError {
   fn importee_str(&self) -> &str {
+    // Use the resolved specifier. Do not recover it by trimming the span: a const-folded
+    // `import(id)` keeps the identifier span, which has no quotes to trim.
+    // https://github.com/rolldown/rolldown/issues/11013
     match &self.importee {
-      DiagnosableArcstr::String(str) => str.as_str(),
-      DiagnosableArcstr::Span(span) => {
-        let s = &self.source.as_str()[*span];
-        &s[1..s.len() - 1]
-      }
+      DiagnosableArcstr::String(text) | DiagnosableArcstr::Span { text, .. } => text.as_str(),
     }
   }
 }
@@ -51,8 +50,8 @@ impl BuildEvent for DiagnosableResolveError {
     let stable_id = opts.stabilize_path(self.importer_id.as_str());
     let importer_file = diagnostic.add_file(&stable_id, self.source.clone());
 
-    match self.importee {
-      DiagnosableArcstr::Span(span) if !span.is_unspanned() => {
+    match &self.importee {
+      DiagnosableArcstr::Span { span, .. } if !span.is_unspanned() => {
         diagnostic.add_label(&importer_file, span.start..span.end, self.reason.clone());
       }
       _ => {}

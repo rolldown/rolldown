@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{
@@ -48,7 +48,7 @@ async fn should_rewrite_dynamic_imports_that_import_external_modules() {
         }]),
         ..Default::default()
       },
-      vec![Arc::new(ExternalCss)],
+      vec![Plugin::new_shared(ExternalCss)],
     )
     .await;
 }

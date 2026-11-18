@@ -2,7 +2,7 @@ use crate::chunk::Chunk;
 
 use super::locator::Locator;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum Hires {
   #[default]
   False,
@@ -139,12 +139,7 @@ impl<'a> SourcemapBuilder<'a> {
     for _ in lines {
       self.bump_line();
     }
-    // Fast path: ASCII strings have 1:1 byte-to-UTF-16 mapping
-    self.generated_code_column += if last_line.is_ascii() {
-      last_line.len() as u32
-    } else {
-      last_line.chars().map(|c| c.len_utf16() as u32).sum::<u32>()
-    };
+    self.generated_code_column += simd_utf16_len::utf16_len(last_line) as u32;
   }
 
   fn bump_line(&mut self) {

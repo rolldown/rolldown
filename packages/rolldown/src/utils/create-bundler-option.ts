@@ -1,5 +1,4 @@
 import type { BindingBundlerOptions } from '../binding.cjs';
-import type { LogHandler } from '../log/log-handler';
 import { getLogger, getOnLog } from '../log/logger';
 import { LOG_LEVEL_INFO } from '../log/logging';
 import type { InputOptions } from '../options/input-options';
@@ -70,7 +69,8 @@ export async function createBundlerOptions(
   // separately from the build that spawned it, and so repeated `generate`/`write` calls on
   // one build share a recorder — `close()` flushes it once, keyed on the same object.
   const timings =
-    measureTimings && inputOptions.checks?.pluginTimings !== false
+    measureTimings &&
+    (inputOptions.checks?.bundlerTimings ?? inputOptions.checks?.pluginTimings ?? true)
       ? pluginTimingsRecorderFor(inputOptions)
       : undefined;
 
@@ -114,6 +114,7 @@ export async function createBundlerOptions(
       normalizedInputPlugins,
       normalizedOutputPlugins,
     );
+    pluginContextData.importAttributes = inputOptions.experimental?.importAttributes ?? false;
 
     // Convert `InputOptions` to `BindingInputOptions`
     const bindingInputOptions = bindingifyInputOptions(
@@ -129,7 +130,12 @@ export async function createBundlerOptions(
     );
 
     // Convert `OutputOptions` to `BindingOutputOptions`
-    const bindingOutputOptions = bindingifyOutputOptions(outputOptions, pluginContextData, timings);
+    const bindingOutputOptions = await bindingifyOutputOptions(
+      outputOptions,
+      pluginContextData,
+      onLog,
+      timings,
+    );
 
     return {
       bundlerOptions: {
@@ -137,8 +143,6 @@ export async function createBundlerOptions(
         outputOptions: bindingOutputOptions,
         parallelPluginsRegistry: parallelPluginInitResult?.registry,
       },
-      inputOptions,
-      onLog,
       stopWorkers: parallelPluginInitResult?.stopWorkers,
     };
   } catch (e) {
@@ -149,7 +153,5 @@ export async function createBundlerOptions(
 
 export interface BundlerOptionWithStopWorker {
   bundlerOptions: BindingBundlerOptions;
-  inputOptions: InputOptions;
-  onLog: LogHandler;
   stopWorkers?: () => Promise<void>;
 }

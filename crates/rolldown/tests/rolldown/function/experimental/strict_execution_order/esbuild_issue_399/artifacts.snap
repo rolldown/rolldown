@@ -7,9 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import "./run-dep.js";
-//#region init-dep-1.js
+// init-dep-1.js
 global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
-//#endregion
 
 ```
 
@@ -17,18 +16,16 @@ global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
 
 ```js
 import "./run-dep.js";
-//#region init-dep-2.js
+// init-dep-2.js
 global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
-//#endregion
 
 ```
 
 ## run-dep.js
 
 ```js
-//#region run-dep.js
+// run-dep.js
 global.foo.log();
-//#endregion
 
 ```
 
@@ -39,23 +36,21 @@ global.foo.log();
 ### entry1.js
 
 ```js
-import { t as init_run_dep } from "./run-dep.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region init-dep-1.js
+import { t as init_run_dep } from "./run-dep.js";
+// init-dep-1.js
 function init_init_dep_1() {
 	return (init_init_dep_1 = __esmMin((() => {
 		global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
 	})))();
 }
-//#endregion
-//#region entry1.js
+// entry1.js
 function init_entry1() {
 	return (init_entry1 = __esmMin((() => {
 		init_init_dep_1();
 		init_run_dep();
 	})))();
 }
-//#endregion
 init_entry1();
 
 ```
@@ -63,23 +58,21 @@ init_entry1();
 ### entry2.js
 
 ```js
-import { t as init_run_dep } from "./run-dep.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region init-dep-2.js
+import { t as init_run_dep } from "./run-dep.js";
+// init-dep-2.js
 function init_init_dep_2() {
 	return (init_init_dep_2 = __esmMin((() => {
 		global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
 	})))();
 }
-//#endregion
-//#region entry2.js
+// entry2.js
 function init_entry2() {
 	return (init_entry2 = __esmMin((() => {
 		init_init_dep_2();
 		init_run_dep();
 	})))();
 }
-//#endregion
 init_entry2();
 
 ```
@@ -96,13 +89,12 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region run-dep.js
+// run-dep.js
 function init_run_dep() {
 	return (init_run_dep = __esmMin((() => {
 		global.foo.log();
 	})))();
 }
-//#endregion
 export { init_run_dep as t };
 
 ```
@@ -114,18 +106,16 @@ export { init_run_dep as t };
 ### entry1.js
 
 ```js
-import { t as init_run_dep } from "./run-dep.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region init-dep-1.js
+import { t as init_run_dep } from "./run-dep.js";
+// init-dep-1.js
 global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
-//#endregion
-//#region entry1.js
+// entry1.js
 function init_entry1() {
 	return (init_entry1 = __esmMin((() => {
 		init_run_dep();
 	})))();
 }
-//#endregion
 init_entry1();
 
 ```
@@ -133,18 +123,16 @@ init_entry1();
 ### entry2.js
 
 ```js
-import { t as init_run_dep } from "./run-dep.js";
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region init-dep-2.js
+import { t as init_run_dep } from "./run-dep.js";
+// init-dep-2.js
 global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
-//#endregion
-//#region entry2.js
+// entry2.js
 function init_entry2() {
 	return (init_entry2 = __esmMin((() => {
 		init_run_dep();
 	})))();
 }
-//#endregion
 init_entry2();
 
 ```
@@ -161,13 +149,12 @@ export { __esmMin as t };
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-//#region run-dep.js
+// run-dep.js
 function init_run_dep() {
 	return (init_run_dep = __esmMin((() => {
 		global.foo.log();
 	})))();
 }
-//#endregion
 export { init_run_dep as t };
 
 ```

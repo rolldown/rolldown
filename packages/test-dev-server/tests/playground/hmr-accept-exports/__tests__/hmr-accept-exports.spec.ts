@@ -7,23 +7,14 @@ import {
   waitForBuildStable,
 } from '~utils';
 
-// Ports Vite's `hmr` acceptExports behavior. On the client `acceptExports(names, cb)` is a
-// self-accept (export-name filtering is a server-side concern), so editing the module should
-// run the callback with the fresh module rather than full-reloading.
-
 describe('hmr-accept-exports', () => {
   test('renders the initial value', async () => {
     await waitForBuildStable();
     await expect.poll(() => page.textContent('.value')).toBe('exports-v1');
+    await expect.poll(() => page.textContent('.main-runs')).toBe('1');
   });
 
-  // KNOWN GAP: rolldown's scanner recognizes `import.meta.hot.accept(...)` as self-accepting
-  // but not `acceptExports(...)`, so the module's compile-side `HmrSelfAccept` flag is unset.
-  // The server-side propagation walk (`crates/rolldown/src/hmr/hmr_stage.rs` —
-  // `is_hmr_self_accepting_module`) then treats the edit as having no boundary and sends a
-  // full reload, even though the client already registered the self-accept at runtime.
-  // Verified: this currently full-reloads. Unskip once the compiler recognizes acceptExports.
-  test.skip('acceptExports hot-updates via its callback', async () => {
+  test('an importer that reads only accepted exports is not re-run', async () => {
     await waitForBuildStable();
     await plantReloadMarker();
 
@@ -31,6 +22,30 @@ describe('hmr-accept-exports', () => {
     await expect.poll(() => page.textContent('.value')).toBe('exports-v2');
 
     expect(await readReloadMarker()).toBe('alive');
+    expect(await page.textContent('.main-runs')).toBe('1');
+    expect(await page.textContent('.main-saw')).toBe('exports-v1');
+    await waitForBuildStable();
+  });
+
+  // needs the Vite client half of rolldown#10061 (`acceptExports` in `bundledDevHmrClient.ts`)
+  test.skip('an importer that reads a non-accepted export reloads the page', async () => {
+    await waitForBuildStable();
+    await plantReloadMarker();
+    editFile('main.js', (code) =>
+      code
+        .replace("import { value } from './app.js';", "import { value, other } from './app.js';")
+        .replace('String(globalThis.__mainRuns);', 'String(globalThis.__mainRuns) + other;'),
+    );
+    await expect.poll(() => readReloadMarker()).toBe(null);
+    await expect.poll(() => page.textContent('.main-runs')).toBe('1other');
+    await waitForBuildStable();
+
+    await plantReloadMarker();
+    editFile('app.js', (code) => code.replace("'exports-v2'", "'exports-v3'"));
+    await expect.poll(() => page.textContent('.value')).toBe('exports-v3');
+    await expect.poll(() => readReloadMarker()).toBe(null);
+    await expect.poll(() => page.textContent('.main-runs')).toBe('1other');
+    await expect.poll(() => page.textContent('.main-saw')).toBe('exports-v3');
     await waitForBuildStable();
   });
 });

@@ -2,7 +2,8 @@ use arcstr::ArcStr;
 use rustc_hash::FxHashMap;
 
 /// Dev-engine-wide rebuild-stamp table backing the versioned shipped map: the server numbers
-/// every rebuild and blind-stamps `latest[m] = rebuild_seq` for each changed module, so
+/// every rebuild and blind-stamps `latest[m] = rebuild_seq` for each module whose rendered
+/// factory changed (a changed module, or an importer of a module whose interop changed), so
 /// `latest[m] > shipped[C][m]` reads exactly "this client's copy of `m` is stale".
 ///
 /// A module that never changed since dev-server start has no entry; its stamp is 0

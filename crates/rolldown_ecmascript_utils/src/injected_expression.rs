@@ -78,7 +78,7 @@ mod tests {
     let allocator = Allocator::default();
     let expr = parse_injected_expression(&allocator, "'resolved'").expect("should parse");
     let Expression::StringLiteral(lit) = expr else { panic!("expected a string literal") };
-    assert_eq!(lit.value.as_str(), "resolved");
+    assert_eq!(lit.value.as_str(), Some("resolved"));
   }
 
   #[test]

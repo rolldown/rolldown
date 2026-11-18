@@ -78,6 +78,10 @@ impl BuildDiagnostic {
     self.inner.exporter()
   }
 
+  pub fn binding(&self) -> Option<String> {
+    self.inner.binding()
+  }
+
   pub fn ids(&self) -> Option<Vec<String>> {
     self.inner.ids()
   }
@@ -340,5 +344,22 @@ mod tests {
       debug_output.contains("the underlying failure text"),
       "expected non-empty underlying message in Debug output, got: {debug_output}"
     );
+  }
+
+  #[test]
+  fn plugin_error_preserves_id_and_plugin() {
+    let inner = BuildDiagnostic::missing_global_name(
+      "/project/src/main.tsx".to_string(),
+      "main".into(),
+      "Main".into(),
+    );
+    assert_eq!(inner.id().as_deref(), Some("/project/src/main.tsx"));
+
+    let plugin_diag = BuildDiagnostic::plugin_error(
+      CausedPlugin::new("builtin:vite-transform".into()),
+      inner.into(),
+    );
+    assert_eq!(plugin_diag.id().as_deref(), Some("/project/src/main.tsx"));
+    assert_eq!(plugin_diag.plugin().as_deref(), Some("builtin:vite-transform"));
   }
 }

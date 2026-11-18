@@ -60,6 +60,7 @@ describe('measureHookCost', () => {
 
     const cost = costOf(recorder, 'my-plugin', 'transform');
     expect(cost.ms).toBe(40);
+    expect(cost.maxMs).toBe(40);
     expect(cost.calls).toBe(1);
     expect(cost.maxInFlight).toBe(1);
     expect(cost.inFlight).toBe(0);
@@ -150,6 +151,7 @@ describe('measureHookCost', () => {
     const cost = costOf(recorder, 'my-plugin', 'transform');
     expect(cost.maxInFlight).toBe(1);
     expect(cost.ms).toBe(60);
+    expect(cost.maxMs).toBe(30);
   });
 
   it('marks a hook whose calls overlap', async () => {
@@ -316,7 +318,11 @@ describe('busy time', () => {
 /** Build a recorder holding exactly `rows`, and hand back what it measured. */
 function summaryWith(
   rows: Array<
-    [string, string, { ms: number; calls: number; maxInFlight: number; overlapMs?: number }]
+    [
+      string,
+      string,
+      { ms: number; calls: number; maxInFlight: number; maxMs?: number; overlapMs?: number },
+    ]
   > = [],
   busyMs = 8_000,
 ) {
@@ -335,6 +341,7 @@ function summaryWith(
       kind: 'plugin',
       inFlight: 0,
       lastChange: 0,
+      maxMs: 0,
       overlapMs: 0,
       ...row,
     });
@@ -351,7 +358,7 @@ describe('summarizePluginTimings', () => {
     // Ungated on purpose: whether a build is worth reporting on is decided from clocks this
     // side does not hold, so it is not this side's question to ask.
     const summary = summaryWith(
-      [['my-plugin', 'transform', { ms: 4, calls: 2, maxInFlight: 1 }]],
+      [['my-plugin', 'transform', { ms: 4, calls: 2, maxInFlight: 1, maxMs: 3 }]],
       4,
     );
 
@@ -362,6 +369,7 @@ describe('summarizePluginTimings', () => {
         hook: 'transform',
         calls: 2,
         ms: 4,
+        maxMs: 3,
         kind: 'plugin',
         maxInFlight: 1,
         overlapMs: 0,

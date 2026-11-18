@@ -37,7 +37,9 @@ use crate::{
 };
 
 use super::{
-  resolve_utils::{DependencyCache, resolve_dependencies, restore_resolved_ids},
+  resolve_utils::{
+    DependencyCache, RestoredResolveMap, resolve_dependencies, restore_resolved_ids,
+  },
   task_context::{TaskContext, TaskMessageGuard},
 };
 
@@ -63,6 +65,27 @@ impl ModuleTaskOwner {
       importee_span: self.importee_span,
     }
   }
+}
+
+/// A copy of the state of a module after `transform`. The persistent cache saves it once the
+/// module task succeeds.
+struct StateAfterTransform {
+  source: StrOrBytes,
+  module_type: ModuleType,
+  sourcemap_chain: Vec<SourcemapChainElement>,
+  is_read_from_disk: bool,
+  /// The number of actions that `load` and `transform` recorded. The actions after this number
+  /// come from the resolve hooks.
+  action_count: usize,
+}
+
+#[derive(Default)]
+struct CacheLookup {
+  /// Key 1. `None` when the module cannot get a saved result.
+  key: Option<u128>,
+  /// The file contents that were read to make the key.
+  contents: Option<Vec<u8>>,
+  saved: Option<(SavedResult, RestoredResolveMap)>,
 }
 
 pub struct ModuleTask<Fs: FileSystem + Clone + 'static> {
@@ -125,8 +148,14 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
   async fn run_inner(&self) -> BuildResult<()> {
     let id = self.resolved_id.id.clone();
 
-    if self.create_js_module_options {
-      self.ctx.create_js_module_options(&self.resolved_id).await?;
+    let cache = self.ctx.persistent_cache.clone();
+    let CacheLookup { key: cache_key, contents: preloaded, saved: saved_result } =
+      self.lookup_saved_result(cache.as_deref()).await;
+
+    let saved_own_meta =
+      saved_result.as_ref().map(|(saved, _)| &saved.js_meta).filter(|meta| !meta.is_empty());
+    if self.create_js_module_options || saved_own_meta.is_some() {
+      self.ctx.create_js_module_options(&self.resolved_id, saved_own_meta).await?;
     }
 
     let side_effects_without_hook =
@@ -142,32 +171,8 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       }),
     ));
 
-    let cache = self.ctx.persistent_cache.clone();
-    let cache_key = match &cache {
-      Some(cache) => {
-        cache
-          .module_key(&self.ctx.fs, &self.resolved_id.id, self.asserted_module_type.as_ref())
-          .await
-      }
-      None => None,
-    };
-    let (cache_key, preloaded) = match cache_key {
-      Some(ModuleKey { key, contents }) => (Some(key), contents),
-      None => (None, None),
-    };
-    let saved_result = match (&cache, cache_key) {
-      (Some(cache), Some(key)) if cache.reads_saved_results() => {
-        cache.lookup(&self.ctx.fs, key).await.and_then(|mut saved| {
-          // A saved result is reused as a whole or not at all.
-          let resolved =
-            restore_resolved_ids(std::mem::take(&mut saved.resolved), &self.ctx.resolver)?;
-          Some((saved, resolved))
-        })
-      }
-      _ => None,
-    };
     let cache_recorder = (cache_key.is_some() && saved_result.is_none())
-      .then(|| Arc::new(ModuleCacheRecorder::default()));
+      .then(|| Arc::new(ModuleCacheRecorder::new(id.as_arc_str().clone())));
 
     let mut sourcemap_chain = vec![];
     // Do not take the value out: `resolved_id` becomes `originative_resolved_id`, and a refetch
@@ -175,8 +180,11 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     let mut hook_side_effects = self.resolved_id.side_effects;
     let mut declared_module_size = None;
     let mut saved_resolves = None;
-    let (source, module_type, is_read_from_disk) = if let Some((saved, resolved)) = saved_result {
+    let mut saved_resolve_actions = None;
+    let (source, module_type, is_read_from_disk) = if let Some((mut saved, resolved)) = saved_result
+    {
       saved_resolves = Some(resolved);
+      saved_resolve_actions = Some(std::mem::take(&mut saved.resolve_actions));
       self.reuse_saved_result(saved, &mut sourcemap_chain, &mut hook_side_effects).await?
     } else {
       self
@@ -191,10 +199,13 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
         .await?
     };
 
-    // A copy of the state after `transform`, to save once the module task succeeds.
-    let state_to_save = cache_recorder
-      .as_ref()
-      .map(|_| (source.clone(), module_type.clone(), sourcemap_chain.clone(), is_read_from_disk));
+    let state_to_save = cache_recorder.as_ref().map(|recorder| StateAfterTransform {
+      source: source.clone(),
+      module_type: module_type.clone(),
+      sourcemap_chain: sourcemap_chain.clone(),
+      is_read_from_disk,
+      action_count: recorder.action_count(),
+    });
 
     let stable_id = id.stabilize(&self.ctx.options.cwd);
 
@@ -272,6 +283,12 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       dependency_cache,
     )
     .await?;
+
+    if let Some(actions) = saved_resolve_actions {
+      // A `transform_ast` hook must not see what a resolve hook did: without the cache, the
+      // resolve hooks run after it.
+      self.ctx.plugin_driver.replay_cache_actions(self.module_idx, actions).await?;
+    }
 
     if let (Some(cache), Some(key), Some(recorder), Some(state)) =
       (&cache, cache_key, &cache_recorder, state_to_save)
@@ -382,6 +399,27 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     }
   }
 
+  async fn lookup_saved_result(&self, cache: Option<&ScanCacheSession>) -> CacheLookup {
+    let Some(cache) = cache else { return CacheLookup::default() };
+    let Some(ModuleKey { key, contents }) = cache
+      .module_key(&self.ctx.fs, &self.resolved_id.id, self.asserted_module_type.as_ref())
+      .await
+    else {
+      return CacheLookup::default();
+    };
+    let saved = if cache.reads_saved_results() {
+      cache.lookup(&self.ctx.fs, key).await.and_then(|mut saved| {
+        // A saved result is reused as a whole or not at all.
+        let resolved =
+          restore_resolved_ids(std::mem::take(&mut saved.resolved), &self.ctx.resolver)?;
+        Some((saved, resolved))
+      })
+    } else {
+      None
+    };
+    CacheLookup { key: Some(key), contents, saved }
+  }
+
   /// The saved result replaces `load`, `transform` and `resolveId`.
   async fn reuse_saved_result(
     &self,
@@ -418,17 +456,21 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     cache: &ScanCacheSession,
     key: u128,
     recorder: &ModuleCacheRecorder,
-    (source, module_type, sourcemap_chain, is_read_from_disk): (
-      StrOrBytes,
-      ModuleType,
-      Vec<SourcemapChainElement>,
-      bool,
-    ),
+    state: StateAfterTransform,
     resolved: Vec<SavedResolve>,
   ) {
-    let RecordedEffects { actions, hook_side_effects } = recorder.take_effects();
+    let StateAfterTransform {
+      source,
+      module_type,
+      sourcemap_chain,
+      is_read_from_disk,
+      action_count,
+    } = state;
+    let RecordedEffects { mut actions, hook_side_effects, js_meta } = recorder.take_effects();
+    let resolve_actions = actions.split_off(action_count.min(actions.len()));
     let mut dependencies: Vec<String> = actions
       .iter()
+      .chain(&resolve_actions)
       .filter_map(|action| match action {
         RecordedAction::TransformDependency(path) => Some(path.to_string()),
         _ => None,
@@ -441,10 +483,12 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       source,
       module_type,
       hook_side_effects,
+      js_meta,
       sourcemap_chain,
       is_read_from_disk,
       resolved,
       actions,
+      resolve_actions,
     };
     cache.save(&self.ctx.fs, key, dependencies, &saved).await;
   }

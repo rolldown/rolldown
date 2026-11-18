@@ -70,6 +70,7 @@ fn resolved_id_from_hook_output<Fs: FileSystem>(
     package_json,
     attributes: r.attributes.unwrap_or_else(|| attributes.clone()),
     module_options_receipt: r.module_options_receipt,
+    js_meta: r.js_meta,
     ..Default::default()
   })
 }

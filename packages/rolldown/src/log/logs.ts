@@ -10,6 +10,7 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   MODULE_SIDE_EFFECTS_WRITE_AFTER_BUILD_END = 'MODULE_SIDE_EFFECTS_WRITE_AFTER_BUILD_END',
   PARSE_ERROR = 'PARSE_ERROR',
   NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER',
+  PERSISTENT_CACHE_UNSAVABLE_META = 'PERSISTENT_CACHE_UNSAVABLE_META',
   VALIDATION_ERROR = 'VALIDATION_ERROR';
 
 export function logParseError(message: string, id: string | undefined, pos?: number): RolldownLog {
@@ -62,6 +63,24 @@ export function logModuleSideEffectsWriteAfterBuildEnd(moduleId: string): Rolldo
     code: MODULE_SIDE_EFFECTS_WRITE_AFTER_BUILD_END,
     id: moduleId,
     message: `A write to \`moduleSideEffects\` of "${moduleId}" after the \`buildEnd\` hook was ignored, because tree shaking has already used the value. Rolldown warns only about the first such write in a build.`,
+  };
+}
+
+export function logPersistentCacheUnsavableMeta(
+  pluginName: string,
+  hookName: string,
+  moduleId: string,
+): RolldownLog {
+  return {
+    code: PERSISTENT_CACHE_UNSAVABLE_META,
+    plugin: pluginName,
+    hook: hookName,
+    id: moduleId,
+    message:
+      `The "${hookName}" hook of the plugin "${pluginName}" returned a \`meta\` value that the persistent cache cannot save. ` +
+      `The first module with this problem is "${moduleId}". Rolldown saves no result for such a module, so its hooks run again in every build. ` +
+      `The cache saves \`meta\` as JSON. Use only strings, finite numbers, booleans, \`null\`, arrays and plain objects. ` +
+      `For example, use an array in place of a \`Set\`.`,
   };
 }
 

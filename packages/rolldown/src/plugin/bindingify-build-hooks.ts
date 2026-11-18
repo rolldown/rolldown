@@ -132,8 +132,6 @@ function bindingifyResolveIdResult(
     return { id: ret, normalizeExternalId: false };
   }
 
-  markNotCacheableIfMeta(args, ctx, 'resolveId', ret.meta);
-
   return {
     id: ret.id,
     external: ret.external,
@@ -142,6 +140,7 @@ function bindingifyResolveIdResult(
     packageJsonPath: ret.packageJsonPath,
     attributes: ret.attributes,
     moduleOptionsReceipt: args.pluginContextData.saveResolutionOptions({ meta: ret.meta || {} }),
+    metaEntries: args.pluginContextData.metaToSave(ctx, args.plugin.name, 'resolveId', ret.meta),
   };
 }
 
@@ -187,14 +186,18 @@ function bindingifyResolveDynamicImportResult(
     };
   }
 
-  markNotCacheableIfMeta(args, ctx, 'resolveDynamicImport', ret.meta);
-
   const result: BindingHookResolveIdOutput = {
     id: ret.id,
     external: ret.external,
     packageJsonPath: ret.packageJsonPath,
     attributes: ret.attributes,
     moduleOptionsReceipt: args.pluginContextData.saveResolutionOptions({ meta: ret.meta || {} }),
+    metaEntries: args.pluginContextData.metaToSave(
+      ctx,
+      args.plugin.name,
+      'resolveDynamicImport',
+      ret.meta,
+    ),
   };
 
   if (ret.moduleSideEffects !== null) {
@@ -286,7 +289,7 @@ function bindingifyTransformResult(
     return { code: ret };
   }
 
-  markNotCacheableIfMeta(args, ctx.inner(), 'transform', ret.meta);
+  recordModuleMeta(args, ctx.inner(), 'transform', ret.meta);
   args.pluginContextData.updateModuleMeta(id, ret.meta ?? {});
 
   let normalizedCode: string | undefined = undefined;
@@ -368,7 +371,7 @@ function bindingifyLoadResult(
     return { code: ret };
   }
 
-  markNotCacheableIfMeta(args, ctx, 'load', ret.meta);
+  recordModuleMeta(args, ctx, 'load', ret.meta);
   args.pluginContextData.updateModuleMeta(id, ret.meta || {});
 
   let map = preProcessSourceMap(ret, rawId);
@@ -383,19 +386,18 @@ function bindingifyLoadResult(
 }
 
 /**
- * `meta` lives only in `moduleOptionMap` on the JavaScript side, so a skipped hook would lose it.
+ * `meta` lives only on the JavaScript side, so the persistent cache saves it with the result of
+ * the module.
  */
-function markNotCacheableIfMeta(
+function recordModuleMeta(
   args: BindingifyPluginArgs,
   context: BindingPluginContext,
   hookName: string,
   meta: CustomPluginOptions | null | undefined,
 ): void {
-  if (meta != null && Object.keys(meta).length > 0) {
-    args.pluginContextData.markNotCacheable(
-      context,
-      () => `hook \`${hookName}\` of plugin \`${args.plugin.name}\` returned \`meta\``,
-    );
+  const entries = args.pluginContextData.metaToSave(context, args.plugin.name, hookName, meta);
+  if (entries) {
+    context.recordModuleMeta(entries);
   }
 }
 

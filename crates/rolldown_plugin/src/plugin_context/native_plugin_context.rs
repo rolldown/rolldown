@@ -8,10 +8,10 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  FilenameTemplate, ImportAttributes, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleLoaderMsg,
-  PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
-  SharedModuleSideEffectsOverrides, SharedNormalizedBundlerOptions, WatchPath,
-  log_module_side_effects_write_after_build_end,
+  FilenameTemplate, ImportAttributes, JsModuleMetaEntry, LogLevel, LogWithoutPlugin,
+  ModuleDefFormat, ModuleLoaderMsg, PackageJson, PluginIdx, ResolvedId, SharedFileEmitter,
+  SharedModuleInfoDashMap, SharedModuleSideEffectsOverrides, SharedNormalizedBundlerOptions,
+  WatchPath, log_module_side_effects_write_after_build_end,
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_resolver::{ResolveError, Resolver};
@@ -24,6 +24,7 @@ use crate::{
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped,
     module_cache_recorder::{RecordedAction, SharedModuleCacheRecorder},
+    module_meta_store::SharedModuleMetaStore,
     plugin_context_resolve_options::PluginContextResolveOptions,
   },
   utils::resolve_id_check_external::resolve_id_check_external,
@@ -57,6 +58,9 @@ pub struct NativePluginContextImpl {
   /// Set on the contexts that the plugin driver forks for the hook calls of a module task
   /// while the persistent cache records that task.
   pub(crate) cache_recorder: Option<SharedModuleCacheRecorder>,
+  pub(crate) module_meta: SharedModuleMetaStore,
+  /// The number of this build in `module_meta`.
+  pub(crate) module_meta_build: u64,
 }
 
 impl NativePluginContextImpl {
@@ -194,6 +198,51 @@ impl NativePluginContextImpl {
     self.record(|| RecordedAction::JsLog { level, json });
   }
 
+  /// Whether the persistent cache records this hook call, and the module task can still get a
+  /// saved result.
+  pub fn is_cache_recording(&self) -> bool {
+    self.cache_recorder.as_ref().is_some_and(|recorder| recorder.is_cacheable())
+  }
+
+  /// The module of the task that this hook call belongs to, when the persistent cache records
+  /// the call. In a nested `this.resolve` call, it is not the importer of the call.
+  pub fn cache_module_id(&self) -> Option<&ArcStr> {
+    self.cache_recorder.as_ref().map(|recorder| recorder.module_id())
+  }
+
+  /// Records the `meta` that a JavaScript `load` or `transform` hook returned for the module of
+  /// its task.
+  pub fn record_js_module_meta(&self, entries: Vec<JsModuleMetaEntry>) {
+    if let Some(recorder) = &self.cache_recorder {
+      recorder.record_js_meta(entries);
+    }
+  }
+
+  pub fn set_module_meta(&self, module_id: &str, key: &str, value: Arc<[u8]>) {
+    self.record(|| RecordedAction::RustModuleMeta {
+      module_id: module_id.into(),
+      key: key.into(),
+      value: Arc::clone(&value),
+    });
+    self.module_meta.set(module_id, key, value, self.module_meta_build);
+  }
+
+  pub fn get_module_meta(&self, module_id: &str, key: &str) -> Option<Arc<[u8]>> {
+    self.module_meta.get(module_id, key)
+  }
+
+  pub fn has_module_meta_in_this_build(&self, module_id: &str, key: &str) -> bool {
+    self.module_meta.has_key_in_build(module_id, key, self.module_meta_build)
+  }
+
+  pub fn module_ids_with_meta(&self, key: &str) -> Vec<ArcStr> {
+    self.module_meta.module_ids_with_key(key, self.module_meta_build)
+  }
+
+  pub fn count_modules_with_meta(&self, key: &str) -> usize {
+    self.module_meta.count_modules_with_key(key, self.module_meta_build)
+  }
+
   fn record(&self, action: impl FnOnce() -> RecordedAction) {
     if let Some(recorder) = &self.cache_recorder {
       recorder.record(action());
@@ -298,6 +347,7 @@ impl NativePluginContextImpl {
     &self,
     module_id: &str,
   ) -> anyhow::Result<Option<DeterminedSideEffects>> {
+    self.mark_module_side_effects_read(module_id);
     let Some(info) = self.module_infos.get(module_id).map(|v| Arc::clone(v.value())) else {
       return Ok(None);
     };
@@ -312,10 +362,16 @@ impl NativePluginContextImpl {
     module_id: &str,
     call_option: impl FnOnce(&str, bool) -> anyhow::Result<Option<bool>>,
   ) -> anyhow::Result<Option<DeterminedSideEffects>> {
+    self.mark_module_side_effects_read(module_id);
     let Some(info) = self.module_infos.get(module_id).map(|v| Arc::clone(v.value())) else {
       return Ok(None);
     };
     self.module_side_effects_overrides.shown_or_call(&info, call_option)
+  }
+
+  /// Other hooks and writes can change the value, and the persistent cache does not track them.
+  fn mark_module_side_effects_read(&self, module_id: &str) {
+    self.mark_not_cacheable(|| format!("`moduleSideEffects` of `{module_id}` was read"));
   }
 
   /// A write to `getModuleInfo(module_id).moduleSideEffects`. `None` is a write of `null`. A write

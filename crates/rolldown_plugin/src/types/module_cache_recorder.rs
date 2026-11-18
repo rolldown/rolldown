@@ -5,7 +5,8 @@ use std::sync::{
 
 use arcstr::ArcStr;
 use rolldown_common::{
-  EmittedAsset, EmittedChunk, EmittedPrebuiltChunk, Log, LogLevel, side_effects::HookSideEffects,
+  EmittedAsset, EmittedChunk, EmittedPrebuiltChunk, JsModuleMeta, JsModuleMetaEntry, Log, LogLevel,
+  side_effects::HookSideEffects,
 };
 
 pub type SharedModuleCacheRecorder = Arc<ModuleCacheRecorder>;
@@ -15,8 +16,11 @@ pub type SharedModuleCacheRecorder = Arc<ModuleCacheRecorder>;
 ///
 /// The plugin driver passes it to every `resolveId`, `resolveDynamicImport`, `load` and
 /// `transform` call of the task, including nested `this.resolve` calls.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ModuleCacheRecorder {
+  /// The module of the task. The hooks of a nested `this.resolve` call belong to this task too,
+  /// whatever importer they get.
+  module_id: ArcStr,
   not_cacheable: AtomicBool,
   not_cacheable_reason: Mutex<Option<String>>,
   effects: Mutex<RecordedEffects>,
@@ -28,6 +32,8 @@ pub struct RecordedEffects {
   pub actions: Vec<RecordedAction>,
   /// The last `moduleSideEffects` that a `load` or `transform` hook returned.
   pub hook_side_effects: Option<HookSideEffects>,
+  /// The `meta` that the JS `load` and `transform` hooks of the task returned, merged.
+  pub js_meta: JsModuleMeta,
 }
 
 #[derive(Debug)]
@@ -58,9 +64,28 @@ pub enum RecordedAction {
     level: LogLevel,
     json: String,
   },
+  /// A Rust plugin set the value under `key` in its meta of the module `module_id`.
+  RustModuleMeta {
+    module_id: ArcStr,
+    key: ArcStr,
+    value: Arc<[u8]>,
+  },
 }
 
 impl ModuleCacheRecorder {
+  pub fn new(module_id: ArcStr) -> Self {
+    Self {
+      module_id,
+      not_cacheable: AtomicBool::new(false),
+      not_cacheable_reason: Mutex::new(None),
+      effects: Mutex::new(RecordedEffects::default()),
+    }
+  }
+
+  pub fn module_id(&self) -> &ArcStr {
+    &self.module_id
+  }
+
   /// The module gets no saved result. The first reason is kept for debugging.
   pub fn mark_not_cacheable(&self, reason: impl FnOnce() -> String) {
     if !self.not_cacheable.swap(true, Ordering::Relaxed) {
@@ -91,6 +116,18 @@ impl ModuleCacheRecorder {
     if let Ok(mut effects) = self.effects.lock() {
       effects.hook_side_effects = Some(value);
     }
+  }
+
+  pub fn record_js_meta(&self, entries: Vec<JsModuleMetaEntry>) {
+    if let Ok(mut effects) = self.effects.lock() {
+      effects.js_meta.merge(entries);
+    }
+  }
+
+  /// The number of actions recorded so far. The module task reads it when `transform` has
+  /// ended, to tell the actions of `load` and `transform` from the actions of the resolve hooks.
+  pub fn action_count(&self) -> usize {
+    self.effects.lock().map_or(0, |effects| effects.actions.len())
   }
 
   pub fn take_effects(&self) -> RecordedEffects {

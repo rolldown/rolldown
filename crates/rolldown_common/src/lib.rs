@@ -177,6 +177,7 @@ pub use crate::{
   types::ins_chunk_idx::InsChunkIdx,
   types::instantiated_chunk::InstantiatedChunk,
   types::interop::Interop,
+  types::js_module_meta::{JsModuleMeta, JsModuleMetaEntry},
   types::lazy_barrel::{
     BarrelInfo, BarrelState, ExportSource, ImportedExports, LazyBarrelInfo,
     try_extract_lazy_barrel_info,

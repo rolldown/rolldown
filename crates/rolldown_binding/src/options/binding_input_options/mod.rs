@@ -112,8 +112,11 @@ pub struct BindingInputOptions<'env> {
   #[napi(ts_type = "(moduleIds: string[] | null) => void")]
   pub reset_js_module_options: Option<UntrackedJsCallback<FnArgs<(Option<Vec<String>>,)>, ()>>,
   #[debug(skip)]
-  #[napi(ts_type = "(moduleId: string, moduleOptionsReceipt: number | null) => void")]
-  pub create_js_module_options: Option<UntrackedJsCallback<FnArgs<(String, Option<u32>)>, ()>>,
+  #[napi(
+    ts_type = "(moduleId: string, moduleOptionsReceipt: number | null, savedMeta: string | null, savedOwnMeta: string | null) => void"
+  )]
+  pub create_js_module_options:
+    Option<UntrackedJsCallback<FnArgs<(String, Option<u32>, Option<String>, Option<String>)>, ()>>,
   pub preserve_entry_signatures: Option<BindingPreserveEntrySignatures>,
   pub optimization: Option<BindingOptimization>,
   pub context: Option<String>,

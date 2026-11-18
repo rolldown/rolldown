@@ -490,9 +490,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       self.request_all_exports_for_entry(idx);
     }
     // A full scan starts with no JS module options, so JS needs the call only for a module that a
-    // JS resolution created. A partial scan may still hold options for the id.
-    let create_js_module_options =
-      is_new_module && (resolved_id.module_options_receipt.is_some() || !self.is_full_scan);
+    // JS resolution created, live or reused. A partial scan may still hold options for the id.
+    let create_js_module_options = is_new_module
+      && (resolved_id.module_options_receipt.is_some()
+        || resolved_id.js_meta.is_some()
+        || !self.is_full_scan);
     let ctx = Arc::clone(&self.shared_context);
     let tx = self.shared_context.tx.clone();
     let plugin_driver = Arc::clone(&self.shared_context.plugin_driver);

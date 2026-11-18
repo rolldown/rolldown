@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use rolldown_common::{
-  EmittedAsset, EmittedChunk, EmittedPrebuiltChunk, ImportAttributes, ImportKind, Log, LogLevel,
-  LogLocation, ModuleDefFormat, ModuleId, ModuleType, PackageJson, PluginIdx,
-  PreserveEntrySignatures, ResolvedExternal, ResolvedId, SourcemapChainElement, StrOrBytes,
-  side_effects::HookSideEffects,
+  EmittedAsset, EmittedChunk, EmittedPrebuiltChunk, ImportAttributes, ImportKind, JsModuleMeta,
+  JsModuleMetaEntry, Log, LogLevel, LogLocation, ModuleDefFormat, ModuleId, ModuleType,
+  PackageJson, PluginIdx, PreserveEntrySignatures, ResolvedExternal, ResolvedId,
+  SourcemapChainElement, StrOrBytes, side_effects::HookSideEffects,
 };
 use rolldown_plugin::{__inner::infer_module_def_format, RecordedAction};
 use rolldown_sourcemap::SourceMap;
@@ -14,7 +14,7 @@ use rolldown_utils::url::clean_url;
 use super::codec::{Decoder, Encoder};
 
 /// Bumped on every change to the encoding below. A saved result in another format is not found.
-pub const SAVED_RESULT_FORMAT: u32 = 1;
+pub const SAVED_RESULT_FORMAT: u32 = 2;
 
 /// What the persistent cache saves for a module: the state after `transform`, the resolve result
 /// of each import, and the actions of the skipped hooks that Rolldown does again on reuse.
@@ -25,10 +25,16 @@ pub struct SavedResult {
   /// Only the value that `load` or `transform` returned. The value from the importer's
   /// `resolveId` is part of the importer's resolve results.
   pub hook_side_effects: Option<HookSideEffects>,
+  /// Only the `meta` that the JS `load` and `transform` hooks returned, like `hook_side_effects`.
+  pub js_meta: JsModuleMeta,
   pub sourcemap_chain: Vec<SourcemapChainElement>,
   pub is_read_from_disk: bool,
   pub resolved: Vec<SavedResolve>,
+  /// The actions of the `load` and `transform` hooks. Done again before the module is parsed.
   pub actions: Vec<RecordedAction>,
+  /// The actions of the resolve hooks for the imports of the module. Done again after the
+  /// imports are resolved, because a `transform_ast` hook runs between the two groups.
+  pub resolve_actions: Vec<RecordedAction>,
 }
 
 /// Imports with the same specifier, kind and attributes share one resolve result, as in
@@ -54,6 +60,7 @@ pub struct SavedResolvedId {
   pub package_json_path: Option<String>,
   pub side_effects: Option<HookSideEffects>,
   pub is_external_without_side_effects: bool,
+  pub js_meta: Option<Arc<JsModuleMeta>>,
 }
 
 /// How to fill in `module_def_format` again, so that a change to the `type` field of
@@ -105,6 +112,7 @@ impl SavedResolvedId {
         .map(|package_json| package_json.realpath().to_string_lossy().into_owned()),
       side_effects: resolved_id.side_effects,
       is_external_without_side_effects: resolved_id.is_external_without_side_effects,
+      js_meta: resolved_id.js_meta.clone(),
     }
   }
 }
@@ -116,6 +124,7 @@ impl SavedResult {
     write_str_or_bytes(&mut e, &self.source);
     write_module_type(&mut e, &self.module_type);
     e.opt(self.hook_side_effects, write_hook_side_effects);
+    write_js_meta(&mut e, &self.js_meta);
     e.seq(self.sourcemap_chain.iter(), write_sourcemap_element);
     e.bool(self.is_read_from_disk);
     e.seq(self.resolved.iter(), |e, saved| {
@@ -125,6 +134,7 @@ impl SavedResult {
       e.opt(saved.resolved.as_ref(), write_saved_resolved_id);
     });
     e.seq(self.actions.iter(), write_action);
+    e.seq(self.resolve_actions.iter(), write_action);
     e.finish()
   }
 
@@ -137,6 +147,7 @@ impl SavedResult {
       source: read_str_or_bytes(&mut d)?,
       module_type: read_module_type(&mut d)?,
       hook_side_effects: d.opt(read_hook_side_effects)?,
+      js_meta: read_js_meta(&mut d)?,
       sourcemap_chain: d.seq(read_sourcemap_element)?,
       is_read_from_disk: d.bool()?,
       resolved: d.seq(|d| {
@@ -148,6 +159,7 @@ impl SavedResult {
         })
       })?,
       actions: d.seq(read_action)?,
+      resolve_actions: d.seq(read_action)?,
     };
     d.is_empty().then_some(result)
   }
@@ -211,6 +223,18 @@ fn read_hook_side_effects(d: &mut Decoder) -> Option<HookSideEffects> {
     2 => Some(HookSideEffects::NoTreeshake),
     _ => None,
   }
+}
+
+fn write_js_meta(e: &mut Encoder, meta: &JsModuleMeta) {
+  e.seq(meta.entries().iter(), |e, entry| {
+    e.str(&entry.key);
+    e.opt_str(entry.json.as_deref());
+  });
+}
+
+fn read_js_meta(d: &mut Decoder) -> Option<JsModuleMeta> {
+  let entries = d.seq(|d| Some(JsModuleMetaEntry { key: d.string()?, json: d.opt_string()? }))?;
+  Some(JsModuleMeta::new(entries))
 }
 
 fn write_sourcemap(e: &mut Encoder, map: &SourceMap) {
@@ -370,6 +394,7 @@ fn write_saved_resolved_id(e: &mut Encoder, value: &SavedResolvedId) {
   e.opt_str(value.package_json_path.as_deref());
   e.opt(value.side_effects, write_hook_side_effects);
   e.bool(value.is_external_without_side_effects);
+  e.opt(value.js_meta.as_deref(), write_js_meta);
 }
 
 fn read_saved_resolved_id(d: &mut Decoder) -> Option<SavedResolvedId> {
@@ -391,6 +416,7 @@ fn read_saved_resolved_id(d: &mut Decoder) -> Option<SavedResolvedId> {
     package_json_path: d.opt_string()?,
     side_effects: d.opt(read_hook_side_effects)?,
     is_external_without_side_effects: d.bool()?,
+    js_meta: d.opt(|d| read_js_meta(d).map(Arc::new))?,
   })
 }
 
@@ -535,6 +561,12 @@ fn write_action(e: &mut Encoder, action: &RecordedAction) {
       write_log_level(e, *level);
       e.str(json);
     }
+    RecordedAction::RustModuleMeta { module_id, key, value } => {
+      e.u8(9);
+      e.str(module_id);
+      e.str(key);
+      e.bytes(value);
+    }
   }
 }
 
@@ -572,6 +604,84 @@ fn read_action(d: &mut Decoder) -> Option<RecordedAction> {
     },
     7 => RecordedAction::Log { level: read_log_level(d)?, log: read_log(d)? },
     8 => RecordedAction::JsLog { level: read_log_level(d)?, json: d.string()? },
+    9 => RecordedAction::RustModuleMeta {
+      module_id: d.str()?.into(),
+      key: d.str()?.into(),
+      value: d.bytes()?.into(),
+    },
     _ => return None,
   })
+}
+
+#[cfg(test)]
+mod tests {
+  use std::sync::Arc;
+
+  use rolldown_common::{
+    ImportAttributes, ImportKind, JsModuleMeta, JsModuleMetaEntry, ModuleId, ModuleType,
+    ResolvedExternal, StrOrBytes, side_effects::HookSideEffects,
+  };
+  use rolldown_plugin::RecordedAction;
+
+  use super::{DefFormatFrom, SavedResolve, SavedResolvedId, SavedResult};
+
+  fn meta(entries: &[(&str, Option<&str>)]) -> JsModuleMeta {
+    JsModuleMeta::new(
+      entries
+        .iter()
+        .map(|(key, json)| JsModuleMetaEntry {
+          key: (*key).to_string(),
+          json: json.map(ToString::to_string),
+        })
+        .collect(),
+    )
+  }
+
+  #[test]
+  fn meta_and_rust_module_meta_are_the_same_after_encode_and_decode() {
+    let own = meta(&[("icons", Some(r#"["home",{"n":1}]"#)), ("cleared", None)]);
+    let resolved = meta(&[("from", Some(r#""a.js""#))]);
+    let saved = SavedResult {
+      source: StrOrBytes::Str("export {}".to_string()),
+      module_type: ModuleType::Js,
+      hook_side_effects: Some(HookSideEffects::False),
+      js_meta: own.clone(),
+      sourcemap_chain: vec![],
+      is_read_from_disk: true,
+      resolved: vec![SavedResolve {
+        specifier: "./b.js".to_string(),
+        kind: ImportKind::Import,
+        attributes: ImportAttributes::default(),
+        resolved: Some(SavedResolvedId {
+          module_def_format: DefFormatFrom::Id,
+          id: ModuleId::new("/src/b.js"),
+          attributes: ImportAttributes::default(),
+          external: ResolvedExternal::Bool(false),
+          normalize_external_id: None,
+          package_json_path: None,
+          side_effects: Some(HookSideEffects::NoTreeshake),
+          is_external_without_side_effects: false,
+          js_meta: Some(Arc::new(resolved.clone())),
+        }),
+      }],
+      actions: vec![RecordedAction::RustModuleMeta {
+        module_id: "/src/b.js".into(),
+        key: "my-plugin".into(),
+        // Not valid UTF-8: a value is bytes, not text.
+        value: [0, 255, 1].as_slice().into(),
+      }],
+      resolve_actions: vec![RecordedAction::RustModuleMeta {
+        module_id: "/src/a.js".into(),
+        key: "empty".into(),
+        value: [].as_slice().into(),
+      }],
+    };
+    let decoded = SavedResult::decode(&saved.encode()).expect("should decode");
+    assert_eq!(decoded.js_meta, own);
+    let restored = decoded.resolved[0].resolved.as_ref().expect("a resolve result");
+    assert_eq!(restored.js_meta.as_deref(), Some(&resolved));
+    assert_eq!(restored.side_effects, Some(HookSideEffects::NoTreeshake));
+    assert_eq!(format!("{:?}", decoded.actions), format!("{:?}", saved.actions));
+    assert_eq!(format!("{:?}", decoded.resolve_actions), format!("{:?}", saved.resolve_actions));
+  }
 }

@@ -115,6 +115,9 @@ not change the module.
   external modules. JS starts the module from those options, with a copy of `meta`, and keeps
   them in `resolvedModuleOptionMap` for the reset above. In a full scan, a module without a
   receipt skips the call, because the full-scan reset already left it with no options.
+  With the persistent cache, a reused resolution has no receipt. It carries its saved `meta`
+  (`ResolvedId::js_meta`) instead, and the call passes that. See
+  [`../persistent-cache/implementation.md`](../persistent-cache/implementation.md#module-meta-and-modulesideeffects-of-javascript-plugins).
 - `this.resolve` returns the `meta` under its own receipt and removes it, and the
   `moduleSideEffects` of its own Rust result: the hook value, else the value from
   `reported_module_side_effects`, which is the same default value as a `getModuleInfo` read. It

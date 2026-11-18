@@ -64,6 +64,12 @@ A module gets a saved result only when every one of these hooks that ran for it 
 
 By setting `cache: true`, the plugin promises that skipping the hook loses nothing that another hook needs. For example, a `transform` hook that stores data in a variable for a later `renderChunk` hook must not set `cache: true`, because the variable is empty when the `transform` hook is skipped.
 
+Such a hook can return the data as `meta` instead. Rolldown saves the `meta` and the `moduleSideEffects` that a hook returns, and gives them back when it skips the hook. A later hook reads them with `this.getModuleInfo(id)`, as in a build without the cache.
+
+In a hook with `cache: true`, do not read or change `meta` or `moduleSideEffects` through `this.getModuleInfo(id)`, for any `id`. For example, do not write `this.getModuleInfo(id).meta.icons = ['search']`. Such a use, and a call of `this.load`, gives the module of the hook call no saved result.
+
+Rolldown saves `meta` as JSON. A value in it must be a string, a finite number, a boolean, `null`, an array or a plain object. An object must not be used two times in one `meta`. Inside a value, a property with the value `undefined` is left out. When a hook returns another value, such as a `Set` or a function, Rolldown saves no result for that module and prints the warning `PERSISTENT_CACHE_UNSAVABLE_META`. Each module gets its own copy of the saved values, so an object that a hook returns for several modules is not shared between them after a restart.
+
 #### Example
 
 ```js

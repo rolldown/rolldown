@@ -368,15 +368,15 @@ Two input classes are outside the ordering promise, yet the emitted code must st
 
 ### Group chunk re-exports for merged emitted entries
 
-An emitted `allow-extension` entry can re-export a binding from another chunk. Rollup then lets the group chunk import that binding and export it with the export name of the entry (`ensureReexportsAreAvailableForModule`). A trial of this approach for [#11767](https://github.com/rolldown/rolldown/issues/11767) caused these failures:
+An emitted `allow-extension` entry that merges into a group chunk can re-export a binding from another chunk. In this case, Rollup makes the group chunk import that binding and export it with the export name of the entry (`ensureReexportsAreAvailableForModule`). This approach caused these failures in a trial for [#11767](https://github.com/rolldown/rolldown/issues/11767):
 
-- A CommonJS entry that forwards ESM exports put an undeclared export into the group chunk, so Node rejected the whole group.
-- A re-exported `then` made the namespace of the group chunk thenable, so `import()` of a sibling entry returned the wrong value.
-- A binding of an ESM-wrapped module was exported before its `init_*()` call, so its value was `undefined`.
-- An ambiguous `export *` name added an import that the debug assertion in `compute_cross_chunk_links` did not predict.
-- Two export names of one binding kept only one name.
+- A CommonJS entry that forwards ESM exports (`module.exports = require('./dep.js')`) put an undeclared export into the group chunk. Thus Node could not load the group chunk.
+- A re-exported `then` made the namespace of the group chunk a thenable (an object with a `then` method). Thus `import()` of a sibling entry returned the wrong value.
+- The group chunk exported a binding of a wrapped ESM module, but the group chunk did not call the `init_*()` function of that module. Thus a program that imported only the group chunk got `undefined`.
+- An ambiguous `export *` name gave the group chunk an extra import. The module-level import prediction (`predicted_static_import_targets`) did not include this import, so a debug assertion in `compute_cross_chunk_links` panicked.
+- When one binding had two export names, the group chunk exported it with only one of the names.
 
-Each failure needs its own guard, and the import prediction must also know the new imports. Thus the chunk optimizer keeps the facade of such an entry instead (see [implementation.md](./implementation.md#facade-elimination-optimize_facade_entry_chunks)). The cost is one more chunk for each such entry.
+Each failure needs its own guard. Also, the module-level import prediction must include the new imports. Thus the chunk optimizer keeps the facade of such an entry instead (see [implementation.md](./implementation.md#facade-elimination-optimize_facade_entry_chunks)). The cost is one more chunk for each such entry. The runtime helper can also move into its own chunk, as in the repro of [#11767](https://github.com/rolldown/rolldown/issues/11767).
 
 ### Late `WrapKind` override
 

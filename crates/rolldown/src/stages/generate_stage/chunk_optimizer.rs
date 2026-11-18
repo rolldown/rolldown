@@ -1038,16 +1038,20 @@ impl GenerateStage<'_> {
     (facade_eliminations, common_chunk_merges, emitted_chunk_groups)
   }
 
-  /// Tells if the module exports a binding that is in a chunk other than `chunk_idx`. The chunk
-  /// `chunk_idx` does not export such a binding with the export name of the module. Thus an
-  /// emitted entry with such an export keeps its facade (issue #11767).
+  /// Returns `true` if the module exports a binding that is in a chunk other than `chunk_idx`.
+  /// The chunk `chunk_idx` does not export such a binding with the export name of the module.
+  /// Thus an emitted entry with such an export keeps its facade (issue #11767).
   ///
   /// The function does not count these exports:
-  /// - A binding of an external module, because the chunk imports it directly.
+  /// - A binding that an external module owns. Such a binding is in no chunk, because each chunk
+  ///   imports it from the external module itself.
   /// - A property of a namespace, for example an import from a CommonJS module. In CJS output, a
-  ///   facade for such an export reads a namespace that it does not declare.
-  /// - The exports of a CommonJS module and the exports that come from CommonJS. The function
-  ///   skips them, as `register_entry_export_depended_symbols` does.
+  ///   facade that exports such a property can read a namespace that the facade does not declare.
+  ///   The facade still exports such a property if another export keeps the facade.
+  /// - All exports, if the module is a CommonJS module. The facade of a CommonJS entry can export
+  ///   a name that the facade does not declare.
+  /// - The exports that come from CommonJS, for example through `export * from './cjs.js'`.
+  ///   `register_entry_export_depended_symbols` also skips these exports.
   ///
   /// See internal-docs/code-splitting/implementation.md.
   fn exports_binding_from_other_chunk(
@@ -1068,9 +1072,14 @@ impl GenerateStage<'_> {
     })
   }
 
-  /// Finds the emitted entries in each group chunk that keep their facade chunks. An entry keeps
-  /// its facade if one of its export names conflicts with an export name of another emitted entry
-  /// in the same group, or if it exports a binding from another chunk.
+  /// Decides which emitted entries keep their facade chunks when a group chunk holds their
+  /// modules. It adds a facade elimination for all other entries. The function checks the
+  /// entries of each group chunk in reverse execution order. An entry keeps its facade in two
+  /// cases:
+  /// - Name check: an entry that the function checked before has the same export name for a
+  ///   different binding.
+  /// - Cross-chunk check: the entry exports a binding that is in another chunk
+  ///   (`exports_binding_from_other_chunk`).
   fn resolve_emitted_chunk_group_conflicts(
     &self,
     chunk_graph: &ChunkGraph,
@@ -1099,9 +1108,11 @@ impl GenerateStage<'_> {
       // its facade chunk cannot be removed.
       for (chunk_idx, entry_module_idx) in emitted_entry_modules {
         let module_meta = &self.link_output.metas[entry_module_idx];
-        // The name check runs first, so it allocates the same export names as it does without the
-        // second check. Thus the second check only keeps more facades. It does not change which
-        // entry gets an export name.
+        // The name check runs first, so the names that it assigns do not depend on the
+        // cross-chunk check. Thus the cross-chunk check only keeps more facades. It does not
+        // change the decision for the other entries. If the cross-chunk check runs first, it can
+        // cause a merge that does not occur without that check. Then the group chunk can export
+        // the wrong binding when `minifyInternalExports` is `false` (issue #10500).
         let needs_facade =
           module_meta.resolved_exports.iter().any(|(export_name, resolved_export)| {
             let canonical_ref =

@@ -295,12 +295,26 @@ Dynamic/emitted entries can become empty facades when all their modules are pull
 
 For a removed dynamic facade whose namespace is only observed through known dynamic-import reads, dependency inclusion and the module finalizer both select names with `LinkingMetadata::dynamically_read_export_names`. They borrow the link-stage dynamic-import usage map, which is immutable during generation. Full-namespace consumers disable this filter; an interface recorded by strict-order lowering takes precedence. Global symbol liveness also includes static importers' reads and cannot determine the dynamic namespace's interface.
 
-A `codeSplitting` group can catch the module of an **emitted** `allow-extension` entry. Then the chunk optimizer removes the facade of the entry (`resolve_emitted_chunk_group_conflicts`). It keeps the facade in two cases:
+A `codeSplitting` group can put the module of an **emitted** `allow-extension` entry into the group chunk. Then the facade chunk of the entry is empty. `resolve_emitted_chunk_group_conflicts` removes such a facade, except in two cases:
 
-- Two emitted entries in the same group have the same export name for different bindings. The optimizer checks this case first, so the second case does not change which entry gets an export name.
-- The entry exports a binding that is in another chunk (`exports_binding_from_other_chunk`, [#11767](https://github.com/rolldown/rolldown/issues/11767), `optimization/chunk_merging/allow_extension_cross_chunk_reexport_keeps_facade`). The group chunk does not export such a binding with the export name of the entry. The check does not count a binding of an external module, a property of a namespace (for example an import from a CommonJS module), the exports of a CommonJS entry, and the exports that come from CommonJS. In CJS output, a facade for a namespace property reads a namespace that it does not declare. The facade of a CommonJS entry can export a name that it does not declare. For these exports, the output does not change, and the export stays lost.
+- **Name check.** The optimizer checks the entries of the group in reverse execution order. It gives each export name to the first entry that exports it. A later entry that exports the same name for a different binding keeps its facade.
+- **Cross-chunk check** (`exports_binding_from_other_chunk`, [#11767](https://github.com/rolldown/rolldown/issues/11767)). The entry exports a binding that is in another chunk. The group chunk does not export such a binding with the export name of the entry (`optimization/chunk_merging/allow_extension_cross_chunk_reexport_keeps_facade`).
 
-The optimizer marks a removed facade `RemovedWithPreservedExports`. It also records the entry module for the group chunk in `common_chunk_preserve_export_names_modules`, so the group chunk keeps the export names of the entry. See [design.md](./design.md#group-chunk-re-exports-for-merged-emitted-entries) for the rejected alternative.
+The name check runs first, so the names that it assigns do not depend on the cross-chunk check. Thus the cross-chunk check only keeps more facades. It does not change the decision for the other entries. If the cross-chunk check runs first, it can cause a merge that does not occur without that check. Then the group chunk can export the wrong binding when `minifyInternalExports` is `false` ([#10500](https://github.com/rolldown/rolldown/issues/10500)). This option is `false` by default for all output formats other than ESM, unless `minify` is `true` or an object.
+
+The cross-chunk check does not count these exports:
+
+- A binding that an external module owns. Such a binding is in no chunk, because each chunk imports it from the external module itself.
+- A property of a namespace, for example an import from a CommonJS module. In CJS output, a facade that exports such a property can read a namespace that the facade does not declare.
+- All exports of a CommonJS entry. The facade of a CommonJS entry can export a name that the facade does not declare.
+- The exports that come from CommonJS, for example through `export * from './cjs.js'`. `register_entry_export_depended_symbols` also skips these exports.
+
+The last three kinds do not keep the facade:
+
+- If no other export keeps the facade, the optimizer removes it. Then the entry loses such an export.
+- If another export keeps the facade, the facade also exports a property of a namespace, but not the exports that come from CommonJS. In CJS output, a read of such a property can throw a `ReferenceError`. A facade that the name check keeps has the same problem.
+
+The optimizer marks a removed facade `RemovedWithPreservedExports`. It also adds the entry module to the set of the group chunk in `common_chunk_preserve_export_names_modules`. `deconflict_exported_names` uses this set to keep the export names of the entry in the group chunk, but only when `minifyInternalExports` is `true`. See [design.md](./design.md#group-chunk-re-exports-for-merged-emitted-entries) for the rejected alternative.
 
 A **user-defined** entry can likewise become an empty facade when manual code splitting (a `codeSplitting` group, possibly via `entriesAware` subgroup merging) places its module into a common chunk. Folding that common chunk back into the entry chunk is only safe when the chunk does not also hold **another user-defined entry's module**. Otherwise the sibling entry would be forced to import this entry chunk just to reach its own module, and loading it would eagerly run this entry's top-level `init_*` — leaking its side effects into the sibling (visible under `strictExecutionOrder`). In that case the facade is kept so each entry imports the shared (wrapped) chunk and runs only its own `init_*`. See [#9463](https://github.com/rolldown/rolldown/issues/9463).
 

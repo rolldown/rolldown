@@ -1,4 +1,3 @@
 mod new_url_asset_loaded_by_plugin;
-mod new_url_asset_loaded_by_plugin_with_module_type;
 mod plugin_context;
 mod render_chunk_origin;

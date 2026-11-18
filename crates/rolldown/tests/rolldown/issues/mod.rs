@@ -12,6 +12,10 @@ mod _11351;
 mod _11351_dynamic_import;
 #[path = "./11447/mod.rs"]
 mod _11447;
+#[path = "./11447_input_facade/mod.rs"]
+mod _11447_input_facade;
+#[path = "./11447_removed_facade/mod.rs"]
+mod _11447_removed_facade;
 #[path = "./1733/mod.rs"]
 mod _1733;
 #[path = "./4895/mod.rs"]

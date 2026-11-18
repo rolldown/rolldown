@@ -1548,7 +1548,7 @@ function printVerdict(target, opts = {}) {
           .slice(0, 3)
           .map(
             (m) =>
-              `${moduleLabel(mg.graph, m)} retains ${kb(m.retainedBytes)}/${m.retainedModuleCount} module(s)${m.idom != null ? ` via ${mods[m.idom].id}` : ''}`,
+              `${moduleLabel(mg.graph, m)} retains ${kb(m.retainedBytes)}/${m.retainedModuleCount} module(s)${m.idom != null ? ` via ${moduleLabel(mg.graph, mods[m.idom])}` : ''}`,
           )
           .join(', '),
         `${CLI} what-if <module> prices the deferral (exact modules+bytes freed; --keep a,b holds needed parts eager); ${CLI} cut <module> lists the fewest import edits when several paths reach it; make the importer use dynamic import(). Retained is potential, not proof - if the first render genuinely needs it, justify with a measurement or constraint`,
@@ -2909,7 +2909,7 @@ function printGraphSection(target, builtAtMs = null) {
   );
   for (const mod of rows) {
     console.log(
-      `  ${kb(mod.retainedBytes).padStart(10)}  ${moduleLabel(mg.graph, mod)}${mod.idom != null ? `  via ${mods[mod.idom].id}` : ''}`,
+      `  ${kb(mod.retainedBytes).padStart(10)}  ${moduleLabel(mg.graph, mod)}${mod.idom != null ? `  via ${moduleLabel(mg.graph, mods[mod.idom])}` : ''}`,
     );
   }
   const note = packageRootNote(rows);
@@ -3084,7 +3084,10 @@ async function cmdGraph(argv) {
     "retained size - what deferring each module's import edge would remove from the initial load:",
   );
   for (const mod of rows) {
-    const via = mod.idom != null ? `  via ${mods[mod.idom].id}` : '  (directly under the entries)';
+    const via =
+      mod.idom != null
+        ? `  via ${moduleLabel(graph, mods[mod.idom])}`
+        : '  (directly under the entries)';
     console.log(
       `  ${kb(mod.retainedBytes).padStart(10)}  ${moduleLabel(graph, mod)}  (own ${kb(mod.bytes)}, ${mod.retainedModuleCount} module(s))${via}`,
     );
@@ -5721,8 +5724,9 @@ the loop:
      enable it, it is one config line)
   3. read the app source; find why the landing page pays for each finding. On rolldown
      devtools report builds, \`graph\` + \`what-if <module>\` answer this statically: the
-     module every import path goes through (via/idom) and the bytes a deferral frees; \`cut <module>\` gives the
-     fewest import edits to detach a multi-path module - no chain-tracing by hand
+     module every import path goes through (via/idom) and the bytes a deferral frees;
+     \`cut <module>\` gives the fewest import edits to detach a multi-path module - no
+     chain-tracing by hand
   4. change the app (never remove features); one change at a time
   5. rebuild; run the app's functional check; scan (--quick to probe, full scan to decide)
   6. "improvement beyond noise" + check passes -> keep, scan --pin (or baseline), commit;

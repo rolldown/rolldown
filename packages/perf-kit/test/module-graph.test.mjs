@@ -509,7 +509,8 @@ test('why recovers the entry from the dominator data in an older report', (t) =>
   const { reportFile } = reportDir(t, { graph: duplicateLabelGraph() });
   const run = runGraphCommand(reportFile, 'why', 'ace/power.js');
   assert.equal(run.status, 0, run.stderr);
-  assert.match(run.stdout, /chain from the entry: ace\/index\.js -> ace\/power\.js/);
+  assert.match(run.stdout, /<- ace\/index\.js \[index:0\]/);
+  assert.match(run.stdout, /chain from the entry: ace\/index\.js \[index:0\] -> ace\/power\.js/);
 });
 
 for (const withCycle of [false, true]) {
@@ -541,7 +542,7 @@ for (const withCycle of [false, true]) {
     const { reportFile } = reportDir(t, { graph });
     const run = runGraphCommand(reportFile, 'why', 'ace/power.js');
     assert.equal(run.status, 0, run.stderr);
-    assert.match(run.stdout, /chain from the entry: ace\/index\.js -> ace\/power\.js/);
+    assert.match(run.stdout, /chain from the entry: ace\/index\.js \[index:0\] -> ace\/power\.js/);
   });
 }
 
@@ -551,8 +552,10 @@ test('the graph selector for a duplicate label works in what-if and cut', (t) =>
   });
   const ranking = runGraphCommand(reportFile, 'graph');
   assert.equal(ranking.status, 0, ranking.stderr);
-  const selector = ranking.stdout.match(/ace\/index\.js \[(index:\d+)\]/)?.[1];
+  // The row label, not a `via` label: `via` names the dominator.
+  const selector = ranking.stdout.match(/ace\/index\.js \[(index:\d+)\]  \(own/)?.[1];
   assert.equal(selector, 'index:1');
+  assert.match(ranking.stdout, /ace\/power\.js .*via ace\/index\.js \[index:0\]/);
 
   const deferral = runGraphCommand(reportFile, 'what-if', selector);
   assert.equal(deferral.status, 0, deferral.stderr);

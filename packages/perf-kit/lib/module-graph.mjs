@@ -212,6 +212,7 @@ function dominatorRoot(modules, roots, index) {
 /** Entry module indices, with a cached lookup for older reports. */
 export function entryIndices(graph) {
   if (graph.entryModuleIndices != null) return graph.entryModuleIndices;
+  // Older reports name the entries only by label. See internal-docs/devtools/implementation.md.
   const cached = legacyEntryIndices.get(graph);
   if (cached) return cached;
   const byId = moduleIndicesById(graph);

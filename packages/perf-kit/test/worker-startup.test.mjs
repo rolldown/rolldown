@@ -595,34 +595,44 @@ test('why: the chain holds only real static imports', () => {
   assert.deepEqual(whyModule(graph, indexOf(graph, 'src/lazy.js')).chain, []);
 });
 
-test('why and worker attribution keep virtual hops in a shared import chain', (t) => {
-  const virtual = '\\0virtual:bridge';
-  const graph = makeGraph(
-    [
-      { id: 'a-entry.js', bytes: 10, imports: [[2, false]] },
-      { id: 'b-entry.js', bytes: 10, imports: [[3, false]] },
-      { id: virtual, bytes: 10, imports: [[4, false]] },
-      { id: 'b-bridge.js', bytes: 10, imports: [[4, false]] },
-      { id: 'z-bridge.js', bytes: 10, imports: [[5, false]] },
-      { id: 'shared.js', bytes: 10 },
-    ],
-    ['a-entry.js', 'b-entry.js'],
-  );
-  const chain = ['a-entry.js', virtual, 'z-bridge.js'];
-  assert.deepEqual(graphChainResolver(graph)('shared.js'), chain);
+// Reports keep the NUL prefix of a virtual id; an escaped `\0` in an id must print the same.
+for (const [form, virtual] of [
+  ['a NUL prefix', '\0virtual:bridge'],
+  ['an escaped \\0 prefix', '\\0virtual:bridge'],
+]) {
+  test(`why and worker attribution keep virtual hops in a shared import chain (${form})`, (t) => {
+    const graph = makeGraph(
+      [
+        { id: 'a-entry.js', bytes: 10, imports: [[2, false]] },
+        { id: 'b-entry.js', bytes: 10, imports: [[3, false]] },
+        { id: virtual, bytes: 10, imports: [[4, false]] },
+        { id: 'b-bridge.js', bytes: 10, imports: [[4, false]] },
+        { id: 'z-bridge.js', bytes: 10, imports: [[5, false]] },
+        { id: 'shared.js', bytes: 10 },
+      ],
+      ['a-entry.js', 'b-entry.js'],
+    );
+    assert.deepEqual(graphChainResolver(graph)('shared.js'), [
+      'a-entry.js',
+      virtual,
+      'z-bridge.js',
+    ]);
 
-  const dir = tmp();
-  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
-  const report = write(dir, 'module-graph.json', JSON.stringify(graph));
-  const cli = fileURLToPath(new URL('../harness.mjs', import.meta.url));
-  const run = spawnSync(process.execPath, [cli, 'why', 'shared.js', '--report', report], {
-    cwd: dir,
-    encoding: 'utf8',
-    timeout: 20_000,
+    const dir = tmp();
+    t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+    const report = write(dir, 'module-graph.json', JSON.stringify(graph));
+    const cli = fileURLToPath(new URL('../harness.mjs', import.meta.url));
+    const run = spawnSync(process.execPath, [cli, 'why', 'shared.js', '--report', report], {
+      cwd: dir,
+      encoding: 'utf8',
+      timeout: 20_000,
+    });
+    assert.equal(run.status, 0, run.stderr);
+    // Both forms print as the two characters `\0`.
+    const shown = ['a-entry.js', '\\0virtual:bridge', 'z-bridge.js', 'shared.js'].join(' -> ');
+    assert.ok(run.stdout.includes(`chain from the entry: ${shown}`), run.stdout);
   });
-  assert.equal(run.status, 0, run.stderr);
-  assert.ok(run.stdout.includes(`chain from the entry: ${[...chain, 'shared.js'].join(' -> ')}`));
-});
+}
 
 // --- the config shim ---------------------------------------------------------------------
 

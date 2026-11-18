@@ -11,7 +11,7 @@
 
 import path from 'node:path';
 
-import { importChainResolver } from '../module-graph.mjs';
+import { importChainResolver, moduleLabel } from '../module-graph.mjs';
 import { localFile } from './measure.mjs';
 
 const isLab = (rel) => !rel || rel.startsWith('__lab') || rel.startsWith('_virtual/');
@@ -149,9 +149,12 @@ export function graphChainResolver(graph) {
   };
 }
 
-/** Direct static importers of a module and one chain from the entry: the "why" view. */
+/**
+ * Direct static importers of a module and one chain from the entry: the "why" view.
+ * Modules are named by `moduleLabel`, so a label that several modules share stays clear.
+ */
 export function whyModule(graph, index) {
-  const name = (i) => graph.modules[i].id;
+  const name = (i) => moduleLabel(graph, graph.modules[i]);
   const preds = graph.staticPreds[index] ?? [];
   return {
     module: name(index),

@@ -572,7 +572,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       namespace_ref,
       span,
       importer_span,
-      None,
       // The first index stmt is reserved for the facade statement that constructs Module Namespace
       // Object
       import_expression_node_id.map(|node_id| {

@@ -120,6 +120,7 @@ export function bindingifyInputOptions(
     ),
     devtools: inputOptions.devtools,
     invalidateJsSideCache: pluginContextData.clear.bind(pluginContextData),
+    resetJsModuleOptions: pluginContextData.resetModuleOptions.bind(pluginContextData),
     preserveEntrySignatures: bindingifyPreserveEntrySignatures(
       inputOptions.preserveEntrySignatures,
     ),
@@ -132,15 +133,12 @@ export function bindingifyInputOptions(
 function bindingifyDevMode(devMode?: DevModeOptions): BindingExperimentalOptions['devMode'] {
   if (devMode) {
     if (typeof devMode === 'boolean') {
-      return devMode
-        ? { implement: getDefaultDevRuntime(), skipCommonRuntimeInjection: true }
-        : undefined;
+      return devMode ? { implement: getDefaultDevRuntime() } : undefined;
     }
-    const usesDefaultRuntime = devMode.implement == null;
+    const { host, port, ...rest } = devMode;
     return {
-      ...devMode,
-      implement: devMode.implement ?? getDefaultDevRuntime(devMode.host, devMode.port),
-      skipCommonRuntimeInjection: usesDefaultRuntime ? true : devMode.skipCommonRuntimeInjection,
+      ...rest,
+      implement: rest.implement ?? getDefaultDevRuntime(host, port),
     };
   }
 }

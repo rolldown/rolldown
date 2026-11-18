@@ -142,6 +142,7 @@ function bindingifyResolveIdResult(
       moduleSideEffects: ret.moduleSideEffects ?? null,
       invalidate: false,
     },
+    true,
   );
 
   return {
@@ -214,6 +215,7 @@ function bindingifyResolveDynamicImportResult(
       moduleSideEffects: ret.moduleSideEffects || null,
       invalidate: false,
     },
+    true,
   );
 
   return result;

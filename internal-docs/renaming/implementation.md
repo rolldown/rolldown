@@ -78,9 +78,11 @@ but its initializer assigns to the catch parameter. Oxc represents these as
 separate symbols and exposes their relationship through `Scoping::catch_var_bindings`.
 They normally print under one name while retaining their distinct values.
 
-Before choosing names, `Renamer::add_catch_var_name_groups` groups bindings with
-the same source name in each affected var scope. This includes catch parameters,
-the enclosing var, and Annex B block functions that can write that name.
+Before choosing names, `Renamer::add_catch_var_name_groups` groups var and catch
+bindings with the same source name in each affected strict var scope. Lexical
+bindings and block functions keep their independent names. Sloppy var scopes
+also coordinate same-named block bindings, so renaming preserves the lexical
+barriers that control whether Annex B block functions can write the outer var.
 Grouping only the catch parameter and var would let a block function create a
 different implicit binding after renaming. Bindings in other var scopes remain
 independent. Name lookup and inner-binding renames use the enclosing var as the

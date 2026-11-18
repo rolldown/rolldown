@@ -644,6 +644,8 @@ const DevModeSchema = v.union([
     port: v.optional(v.number()),
     host: v.optional(v.string()),
     implement: v.optional(v.string()),
+    // Vite still passes this option for compatibility with older Rolldown versions.
+    // Remove this in a minor version after Vite removes the field
     skipCommonRuntimeInjection: v.optional(v.boolean()),
     lazy: v.optional(v.boolean()),
     hotUpdate: v.optional(v.boolean()),

@@ -279,9 +279,7 @@ impl EcmaGenerator {
       OutputFormat::Esm => {
         render_esm(ctx, addon_render_context, &rendered_module_sources, &carried_sources)
       }
-      OutputFormat::Cjs => {
-        render_cjs(ctx, addon_render_context, &rendered_module_sources, &mut warnings)
-      }
+      OutputFormat::Cjs => render_cjs(ctx, addon_render_context, &rendered_module_sources),
       OutputFormat::Iife => {
         match render_iife(ctx, addon_render_context, &rendered_module_sources, &mut warnings).await
         {

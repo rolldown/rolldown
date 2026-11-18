@@ -90,7 +90,7 @@ jobs:
         id: vp-setup
         background: true
         with:
-          version: '1.6.0'
+          version: '1.7.0'
           cache: true
 
       - name: Setup Rust
@@ -257,7 +257,7 @@ jobs:
 
       - uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
         with:
-          version: '1.6.0'
+          version: '1.7.0'
           cache: true
 
       - name: Build Node binding
@@ -303,7 +303,7 @@ jobs:
         id: vp-setup
         background: true
         with:
-          version: '1.6.0'
+          version: '1.7.0'
           cache: true
 
       - name: Setup Rust
@@ -358,7 +358,7 @@ jobs:
 
           - uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
             with:
-              version: '1.6.0'
+              version: '1.7.0'
               cache: true
 
       - name: Build `@rolldown/debug`

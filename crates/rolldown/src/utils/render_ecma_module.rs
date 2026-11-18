@@ -226,7 +226,7 @@ mod tests {
   }
 
   /// The oxc codegen map is always the last element of the chain and, in production, uses
-  /// the module id as its source name (see `NormalModule::render`).
+  /// the module id as its source name (see `render_normal_module`).
   fn codegen_map(content: &str) -> SourceMap {
     map(MODULE_ID, content)
   }

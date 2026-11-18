@@ -1,0 +1,65 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { t as init_a } from "./a2.js";
+init_a();
+
+```
+
+## a2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+//#region b.js
+var reexported;
+function init_b() {
+	return (init_b = __esmMin((() => {
+		reexported = /* #__NO_SIDE_EFFECTS__ */ () => {};
+	})))();
+}
+//#endregion
+//#region main.js
+function hoisted() {}
+var local;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_a();
+		init_b();
+		local = /* #__NO_SIDE_EFFECTS__ */ () => {};
+	})))();
+}
+//#endregion
+//#region a.js
+function init_a() {
+	return (init_a = __esmMin((() => {
+		init_main();
+		try {
+			local();
+		} catch {
+			globalThis.threw.push("local");
+		}
+		try {
+			reexported();
+		} catch {
+			globalThis.threw.push("reexported");
+		}
+	})))();
+}
+//#endregion
+export { init_b as a, local as i, hoisted as n, reexported as o, init_main as r, init_a as t };
+
+```
+
+## main.js
+
+```js
+import { i as local, n as hoisted, o as reexported, r as init_main } from "./a2.js";
+init_main();
+export { hoisted, local, reexported };
+
+```

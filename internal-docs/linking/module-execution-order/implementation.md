@@ -27,6 +27,8 @@ The link-time constant lookup in `refine_stmt_side_effects.rs` therefore rejects
 
 The entry re-export fallback in `esm_init_obligations::collect_entry_reexported_wrapper_inits` likewise applies only to unwrapped entries. An ESM-wrapped entry initializes its static dependencies through its own wrapper in source order, including across chunks. Calling its re-export owners first in `exec_order` can enter a dependency cycle through a different module and read an uninitialized binding (issue #11231).
 
+Cross-module optimization uses a stricter rule before it removes a call to a function that `export { fn }` or `export default fn` exports (`SymbolRefFlags::ExportedSeparately`, see `is_separately_exported_call_removable` in `cross_module_optimization.rs`). When another module declares the function with `const`, `let` or `var`, the calling module must be in no cycle. Then all of its static imports finish before its own code runs, whichever entry loads first. It is not enough that the exporter is outside the caller's component: if a.js and main.js import each other and main.js re-exports `fn` from b.js, loading main.js runs a.js before b.js, although the global order can put b.js first. A function declaration is initialized before any code runs, so it needs no check.
+
 ## Algorithm
 
 The pass is an **iterative post-order DFS** with an explicit `execution_stack: Vec<Status>`. Using an explicit stack (rather than recursion) avoids stack overflow on deep module graphs, which are common in real-world codebases.

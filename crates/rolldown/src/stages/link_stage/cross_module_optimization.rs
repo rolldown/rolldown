@@ -444,6 +444,27 @@ impl<'ast> CrossModuleOptimizationRunnerContext<'_, 'ast> {
     }
     Some(self.immutable_ctx.symbols.canonical_ref_for(resolution.resolved?))
   }
+
+  /// A call to a function that `export { fn }` or `export default fn` exports is removed only when
+  /// the binding is initialized and the call result runs no code. For example, a call before
+  /// `const fn = () => {}` throws, and `const [a] = fn()` runs the iterator of the result.
+  /// See `internal-docs/linking/module-execution-order/implementation.md`.
+  fn is_separately_exported_call_removable(&self, symbol_ref: SymbolRef) -> bool {
+    let ctx = &self.immutable_ctx;
+    let is_initialized = symbol_ref.is_declared_by_function(ctx.symbols)
+      || if symbol_ref.owner == ctx.module_idx {
+        ctx.stmt_infos[ctx.module_idx]
+          .declared_stmts_by_symbol(&symbol_ref)
+          .iter()
+          .all(|declaring_stmt_idx| *declaring_stmt_idx < self.toplevel_stmt_idx.get())
+      } else {
+        // The static imports of a module outside every import cycle run first. The order inside
+        // a cycle depends on which entry loads first, also for an exporter outside the cycle
+        // that a module in the cycle re-exports.
+        !ctx.import_cycles.in_cycle(ctx.modules, ctx.module_idx)
+      };
+    is_initialized && call_result_runs_no_code(&self.visit_path)
+  }
 }
 
 impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast> {
@@ -523,21 +544,24 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
     let (is_side_effects_free_function, is_pure_annotation_only) = self
       .resolve_callee_canonical_symbol(&it.callee)
       .map(|symbol_ref| {
+        let flags = self
+          .immutable_ctx
+          .symbols
+          .local_db(symbol_ref.owner)
+          .flags
+          .get(&symbol_ref.symbol)
+          .copied()
+          .unwrap_or_default();
         // The binding must also be guaranteed unassigned: a `@__NO_SIDE_EFFECTS__` function
         // whose export binding is later reassigned would, at the call site, invoke the
         // replacement (which may have side effects), so the call must not be dropped. This
         // mirrors what finalization checks for identifier callees.
         let is_free = symbol_ref
           .is_side_effect_free_function(self.immutable_ctx.symbols, self.immutable_ctx.modules)
-          && symbol_ref.is_not_reassigned(self.immutable_ctx.symbols);
-        let is_annotation_only = is_free
-          && self
-            .immutable_ctx
-            .symbols
-            .local_db(symbol_ref.owner)
-            .flags
-            .get(&symbol_ref.symbol)
-            .is_some_and(|f| f.contains(SymbolRefFlags::PureAnnotationOnly));
+          && symbol_ref.is_not_reassigned(self.immutable_ctx.symbols)
+          && (!flags.contains(SymbolRefFlags::ExportedSeparately)
+            || self.is_separately_exported_call_removable(symbol_ref));
+        let is_annotation_only = is_free && flags.contains(SymbolRefFlags::PureAnnotationOnly);
         (is_free, is_annotation_only)
       })
       .unwrap_or((false, false));
@@ -621,6 +645,31 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
       }
     }
   }
+}
+
+/// Whether the call whose ancestors are `visit_path` runs no code on its result. The result can be
+/// discarded, bound to a plain name, exported as default, tested by `if` or `switch`, or used by
+/// an enclosing call, which has its own side effects. Destructuring, a `using` declaration or an
+/// operator can call methods of the result.
+fn call_result_runs_no_code(visit_path: &[AstKind]) -> bool {
+  let mut ancestors = visit_path.iter().rev();
+  while let Some(kind) = ancestors.next() {
+    match kind {
+      AstKind::CallExpression(_) | AstKind::ChainExpression(_) => {}
+      AstKind::ExpressionStatement(_)
+      | AstKind::ExportDefaultDeclaration(_)
+      | AstKind::IfStatement(_)
+      | AstKind::SwitchStatement(_)
+      | AstKind::SwitchCase(_) => return true,
+      AstKind::VariableDeclarator(declarator) => {
+        let Some(AstKind::VariableDeclaration(decl)) = ancestors.next() else { return false };
+        return !decl.kind.is_using()
+          && matches!(declarator.id, BindingPattern::BindingIdentifier(_));
+      }
+      _ => return false,
+    }
+  }
+  false
 }
 
 /// If ast path from first lazy node to the terminal node are all lazy.

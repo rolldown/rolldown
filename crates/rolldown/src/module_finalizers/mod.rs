@@ -16,7 +16,7 @@ use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ChunkKind, ExportsKind, ImportAttributes, ImportRecordIdx,
   ImportRecordMeta, InlineConstMode, MemberExprProp, MemberExprRefResolution, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule, OutputExports,
-  OutputFormat, Platform, Specifier, SymbolRef, WrapKind, is_lazy_proxy,
+  OutputFormat, Platform, Specifier, SymbolRef, SymbolRefFlags, WrapKind, is_lazy_proxy,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::{
@@ -682,6 +682,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let symbol_ref = self.ctx.symbol_db.canonical_ref_for((self.ctx.idx, id).into());
           symbol_ref.is_side_effect_free_function(self.ctx.symbol_db, self.ctx.modules)
             && symbol_ref.is_not_reassigned(self.ctx.symbol_db)
+            // The minifier can remove a pure call that runs before the binding is initialized.
+            // For a function that `export { fn }` exports, mark the call only when a function
+            // declaration, which is hoisted, declares it.
+            && (!symbol_ref
+              .flags(self.ctx.symbol_db)
+              .is_some_and(|flags| flags.contains(SymbolRefFlags::ExportedSeparately))
+              || symbol_ref.is_declared_by_function(self.ctx.symbol_db))
         })
         .unwrap_or(false);
       if is_empty_function {

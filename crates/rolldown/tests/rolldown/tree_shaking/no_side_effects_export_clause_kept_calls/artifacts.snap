@@ -1,0 +1,67 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## EVAL
+
+```text
+[EVAL] Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[ eval.js:2:1 ]
+   │
+ 2 │ eval("replaced = () => globalThis.calls.push('eval')");
+   │ ──┬─  
+   │   ╰─── Use of direct `eval` here.
+   │ 
+   │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
+───╯
+
+```
+
+# Assets
+
+## entry.js
+
+```js
+import { i as replaced, n as restDefault, r as redeclared, t as iterable } from "./iterable.js";
+//#region entry.js
+replaced();
+redeclared();
+restDefault();
+const [first] = /* @__PURE__ */ iterable("destructuring");
+//#endregion
+
+```
+
+## iterable.js
+
+```js
+//#region eval.js
+let replaced = /* #__NO_SIDE_EFFECTS__ */ () => {};
+eval("replaced = () => globalThis.calls.push('eval')");
+//#endregion
+//#region redeclared.js
+var redeclared = /* #__NO_SIDE_EFFECTS__ */ () => {};
+var redeclared = () => globalThis.calls.push("redeclared");
+//#endregion
+//#region rest-default.js
+function restDefault(...[value = globalThis.calls.push("rest default")]) {}
+//#endregion
+//#region iterable.js
+/* #__NO_SIDE_EFFECTS__ */
+function iterable(name) {
+	return { *[Symbol.iterator]() {
+		globalThis.calls.push(name);
+	} };
+}
+//#endregion
+export { replaced as i, restDefault as n, redeclared as r, iterable as t };
+
+```
+
+## other.js
+
+```js
+export { t as iterable, r as redeclared, i as replaced, n as restDefault } from "./iterable.js";
+
+```

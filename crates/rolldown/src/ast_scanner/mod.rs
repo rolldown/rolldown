@@ -932,8 +932,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       match stmt {
         ast::Statement::FunctionDeclaration(fn_decl) => {
           if let Some(id) = &fn_decl.id
-            && let Some(is_pure_annotation_only) =
-              side_effect_free_function_kind(fn_decl.is_side_effect_free(), fn_decl.pure)
+            && let Some(is_pure_annotation_only) = side_effect_free_function_kind(
+              fn_decl.is_side_effect_free() && has_plain_rest(&fn_decl.params),
+              fn_decl.pure,
+            )
           {
             self.side_effect_free_functions.insert(id.symbol_id(), is_pure_annotation_only);
           }
@@ -942,12 +944,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           for decl in &var_decl.declarations {
             let BindingPattern::BindingIdentifier(binding) = &decl.id else { continue };
             let kind = match &decl.init {
-              Some(Expression::FunctionExpression(func)) => {
-                side_effect_free_function_kind(func.is_side_effect_free(), func.pure)
-              }
-              Some(Expression::ArrowFunctionExpression(func)) => {
-                side_effect_free_function_kind(func.is_side_effect_free(), func.pure)
-              }
+              Some(Expression::FunctionExpression(func)) => side_effect_free_function_kind(
+                func.is_side_effect_free() && has_plain_rest(&func.params),
+                func.pure,
+              ),
+              Some(Expression::ArrowFunctionExpression(func)) => side_effect_free_function_kind(
+                func.is_side_effect_free() && has_plain_rest(&func.params),
+                func.pure,
+              ),
               _ => None,
             };
             if let Some(is_pure_annotation_only) = kind {
@@ -964,9 +968,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let Some(&is_pure_annotation_only) = self.side_effect_free_functions.get(&symbol_id) else {
       return;
     };
+    // Direct `eval` and a repeated `var` declaration can replace the function without a write
+    // reference, which `IsNotReassigned` cannot see. The declaration forms do not check this yet.
+    let scoping = self.result.symbol_ref_db.scoping();
+    if eval_can_assign(scoping, symbol_id) || !scoping.symbol_redeclarations(symbol_id).is_empty() {
+      return;
+    }
     self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
     let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
-    flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
+    flags.insert(SymbolRefFlags::SideEffectsFreeFunction | SymbolRefFlags::ExportedSeparately);
     if is_pure_annotation_only {
       flags.insert(SymbolRefFlags::PureAnnotationOnly);
     }
@@ -1498,4 +1508,14 @@ pub enum IdentifierReferenceKind {
 /// body is empty or because it carries `@__NO_SIDE_EFFECTS__`.
 fn side_effect_free_function_kind(empty: bool, pure: bool) -> Option<bool> {
   (empty || pure).then_some(pure && !empty)
+}
+
+/// `FunctionExt::is_side_effect_free` does not check the rest parameter, so it treats
+/// `function f(...[a = effect()]) {}` as empty. Only a plain `...rest` keeps the function empty.
+/// The declaration forms do not check this yet.
+fn has_plain_rest(params: &ast::FormalParameters) -> bool {
+  params
+    .rest
+    .as_ref()
+    .is_none_or(|rest| matches!(rest.rest.argument, BindingPattern::BindingIdentifier(_)))
 }

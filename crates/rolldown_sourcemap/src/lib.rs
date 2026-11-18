@@ -6,7 +6,9 @@ use std::borrow::Cow;
 
 use oxc_sourcemap::{LookupCursor, SourceMapParts, Token};
 
-pub use oxc_sourcemap::{JSONSourceMap, OwnedSourceMap, SourceMapBuilder, SourcemapVisualizer};
+pub use oxc_sourcemap::{
+  JSONSourceMap, Mappings, OwnedSourceMap, SourceMapBuilder, SourcemapVisualizer,
+};
 pub use resolve_sources::resolve_sources_against_module;
 pub use source_joiner::SourceJoiner;
 
@@ -20,9 +22,9 @@ pub use crate::source::{Source, SourceMapSource};
 /// destination line numbers accordingly. Used to re-anchor a sourcemap after removing a
 /// prefix (e.g. a shebang line) from the generated code.
 ///
-/// Reuses the map's existing allocations: strings are moved, and the token buffer is mutated
-/// in place unless tokens have to be dropped (only when some token maps into the stripped
-/// prefix, which rolldown's own maps never do — prepended text carries no tokens).
+/// Reuses the map's strings, which are moved. The mappings are re-encoded, and tokens that map
+/// into the stripped prefix are dropped (rolldown's own maps have none: prepended text carries
+/// no tokens).
 pub fn adjust_sourcemap_dst_lines(sourcemap: SourceMap, lines: u32) -> SourceMap {
   if lines == 0 {
     return sourcemap;
@@ -40,22 +42,16 @@ pub fn adjust_sourcemap_dst_lines(sourcemap: SourceMap, lines: u32) -> SourceMap
   };
 
   let mut parts = sourcemap.into_parts();
-  if parts.tokens.iter().any(|t| t.get_dst_line() < lines) {
-    parts.tokens = parts.tokens.iter().filter(|t| t.get_dst_line() >= lines).map(shift).collect();
-  } else {
-    for token in &mut parts.tokens {
-      *token = shift(token);
-    }
-  }
-  // The chunk boundaries and VLQ baselines in `token_chunks` describe the pre-shift tokens.
-  parts.token_chunks = None;
+  let mut mappings = Mappings::with_byte_capacity(parts.mappings.byte_len());
+  mappings.extend(parts.mappings.tokens().filter(|t| t.get_dst_line() >= lines).map(|t| shift(&t)));
+  parts.mappings = mappings;
 
   SourceMap::from_parts(parts)
 }
 
 /// Builds an empty sourcemap with no tokens, sources, names, or contents.
 pub fn empty_sourcemap() -> SourceMap {
-  SourceMap::new(None, vec![], None, vec![], vec![], Box::new([]), None)
+  SourceMap::new(None, vec![], None, vec![], vec![], Mappings::default())
 }
 
 // <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>
@@ -72,7 +68,7 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
   let tokens = remap_chain(sourcemap_chain, &mut []);
   let (sources, source_contents) = copy_sources(sourcemap_chain[0], None);
   let names = copy_names(sourcemap_chain, None);
-  SourceMap::new(None, names, None, sources, source_contents, tokens, None)
+  SourceMap::new(None, names, None, sources, source_contents, tokens)
 }
 
 /// Like `collapse_sourcemaps`, but keeps only the sources and names that a traced token
@@ -111,11 +107,11 @@ pub fn collapse_sourcemaps_traced(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'
   }
   let (sources, source_contents) = copy_sources(first_map, source_used);
   let names = copy_names(sourcemap_chain, (!every_name_used).then_some(&name_used));
-  SourceMap::new(None, names, None, sources, source_contents, tokens, None)
+  SourceMap::new(None, names, None, sources, source_contents, tokens)
 }
 
 /// One map has nothing to remap. When a token references every source and name, the map is copied
-/// as is. Otherwise, the copy keeps the other fields, but not `token_chunks`.
+/// as is. Otherwise, the copy keeps the other fields.
 fn trace_single_map(map: &oxc_sourcemap::SourceMap<'_>) -> SourceMap {
   let (mut stack_flags, mut heap_flags) = ([false; 64], Vec::new());
   let source_used = source_flags(map.get_sources().len(), &mut stack_flags, &mut heap_flags);
@@ -147,13 +143,11 @@ fn trace_single_map(map: &oxc_sourcemap::SourceMap<'_>) -> SourceMap {
     source_root: map.get_source_root().map(owned),
     sources,
     source_contents,
-    tokens: if new_ids.keeps_ids() {
-      map.get_tokens().collect()
+    mappings: if new_ids.keeps_ids() {
+      map.mappings().clone()
     } else {
       map.get_tokens().map(|token| new_ids.apply(token)).collect()
     },
-    // The VLQ baselines in `token_chunks` describe the old ids.
-    token_chunks: None,
     ignore_list,
     debug_id: map.get_debug_id().map(owned),
   })
@@ -382,7 +376,7 @@ fn remap_chain(
 /// has one flag for each name and one more flag for the ids out of range.
 fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool>(
   last_map: &oxc_sourcemap::SourceMap<'_>,
-  chain: &mut [(LookupCursor<'_>, u32)],
+  chain: &mut [(LookupCursor, u32)],
   last_offset: u32,
   name_used: &mut [bool],
 ) -> Box<[Token]> {
@@ -482,8 +476,7 @@ fn test_lookup_cursor_matches_approximate_lookup() {
     None,
     vec![Some("source.js".into())],
     vec![None],
-    tokens.into_boxed_slice(),
-    None,
+    tokens,
   );
   let table = map.generate_lookup_table();
   let mut lookup = map.lookup_cursor();
@@ -600,9 +593,7 @@ fn traced_collapse_preserves_null_sources_when_renumbering() {
     None,
     vec![None, Some("unused.js".into()), Some("used.js".into())],
     vec![None, Some("unused".into()), Some("used".into())],
-    vec![Token::new(0, 0, 0, 0, Some(0), None), Token::new(0, 4, 1, 2, Some(2), None)]
-      .into_boxed_slice(),
-    None,
+    vec![Token::new(0, 0, 0, 0, Some(0), None), Token::new(0, 4, 1, 2, Some(2), None)],
   );
   map.set_ignore_list(vec![0, 1, 2]);
   let collapsed = collapse_sourcemaps_traced(&[&map]);

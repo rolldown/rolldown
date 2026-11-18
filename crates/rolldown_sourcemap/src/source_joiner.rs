@@ -10,8 +10,7 @@ pub struct SourceJoiner<'source> {
   pub enable_sourcemap: bool,
   names_len: usize,
   sources_len: usize,
-  tokens_len: usize,
-  token_chunks_len: usize,
+  mappings_byte_len: usize,
 }
 
 impl<'source> SourceJoiner<'source> {
@@ -52,8 +51,7 @@ impl<'source> SourceJoiner<'source> {
       ConcatSourceMapBuilder::with_capacity(
         self.names_len,
         self.sources_len,
-        self.tokens_len,
-        self.token_chunks_len,
+        self.mappings_byte_len,
       )
     });
     if let Some(sourcemap_builder) = &mut sourcemap_builder {
@@ -94,8 +92,7 @@ impl<'source> SourceJoiner<'source> {
     self.enable_sourcemap = true;
     self.names_len += hint.get_names().count();
     self.sources_len += hint.get_sources().count();
-    self.tokens_len += hint.get_tokens().count();
-    self.token_chunks_len += 1;
+    self.mappings_byte_len += hint.mappings().byte_len();
   }
 }
 
@@ -168,8 +165,7 @@ fn test_concat_mixed_owned_and_borrowed_sourcemaps() {
       None,
       vec![Some(Cow::Owned(filename.to_string()))],
       vec![Some(Cow::Owned(source_content.to_string()))],
-      vec![Token::new(0, 0, 0, 0, Some(0), None)].into_boxed_slice(),
-      None,
+      vec![Token::new(0, 0, 0, 0, Some(0), None)],
     )
   }
 

@@ -309,6 +309,37 @@ oxc_resolver = { version = "11.24.3", features = [
 oxc_resolver_napi = { version = "11.24.3", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "10.0.0" } # https://github.com/oxc-project/oxc-sourcemap
 
+[patch.crates-io]
+# TODO: remove after oxc-project/oxc-sourcemap#520 and oxc-project/oxc#29808 are released.
+oxc_sourcemap = { git = "https://github.com/oxc-project/oxc-sourcemap", branch = "packed-sourcemap" }
+oxc = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_allocator = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_ast = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_ast_macros = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_ast_visit = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_codegen = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_compat = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_data_structures = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_diagnostics = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_ecmascript = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_estree = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_isolated_declarations = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_mangler = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_minifier = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_minify_napi = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_napi = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_parser = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_parser_napi = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_regular_expression = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_semantic = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_span = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_str = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_syntax = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_transform_napi = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_transformer = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_transformer_plugins = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+oxc_traverse = { git = "https://github.com/oxc-project/oxc", branch = "packed-sourcemap" }
+
 [profile.dev]
 # Minimal debug info to speed up local and CI builds.
 debug = "line-tables-only"

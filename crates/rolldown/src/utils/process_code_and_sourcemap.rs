@@ -323,8 +323,7 @@ mod tests {
       None,
       vec![None, Some(input.into())],
       vec![],
-      Box::new([]),
-      None,
+      rolldown_sourcemap::Mappings::default(),
     );
     prepare_sourcemap(&options, &mut map, &dir, "out.js").await.unwrap();
     assert_eq!(map.get_sources().collect::<Vec<_>>(), [None, Some("renamed.js")]);
@@ -341,8 +340,7 @@ mod tests {
       None,
       vec![None, Some(input.into())],
       vec![],
-      Box::new([]),
-      None,
+      rolldown_sourcemap::Mappings::default(),
     );
     prepare_sourcemap(&NormalizedBundlerOptions::default(), &mut map, &dir, "out.js")
       .await

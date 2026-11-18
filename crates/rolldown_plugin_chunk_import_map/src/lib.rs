@@ -10,6 +10,7 @@ use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutputMap, HookUsage, 
 use rolldown_utils::{
   dashmap::FxDashMap,
   hash_placeholder::{HASH_PLACEHOLDER_LEFT_FINDER, find_hash_placeholders},
+  pattern_filter::StringOrRegex,
   rustc_hash::FxHashMapExt as _,
   xxhash::encode_hash_with_base,
 };
@@ -20,8 +21,20 @@ use xxhash_rust::xxh3::Xxh3;
 pub struct ChunkImportMapPlugin {
   pub base_url: Option<String>,
   pub file_name: Option<String>,
+  pub include: Option<Vec<StringOrRegex>>,
   pub initialized: AtomicBool,
   pub chunk_import_map: FxDashMap<ArcStr, String>,
+}
+
+impl ChunkImportMapPlugin {
+  fn is_included(&self, chunk_name: &str) -> bool {
+    self.include.as_ref().is_none_or(|patterns| {
+      patterns.iter().any(|pattern| match pattern {
+        StringOrRegex::String(name) => name == chunk_name,
+        StringOrRegex::Regex(regex) => regex.matches(chunk_name),
+      })
+    })
+  }
 }
 
 impl Plugin for ChunkImportMapPlugin {
@@ -44,7 +57,7 @@ impl Plugin for ChunkImportMapPlugin {
       for chunk in args.chunks.values() {
         let mut hash_placeholders =
           find_hash_placeholders(&chunk.filename, &HASH_PLACEHOLDER_LEFT_FINDER).peekable();
-        if hash_placeholders.peek().is_none() {
+        if hash_placeholders.peek().is_none() || !self.is_included(&chunk.name) {
           continue;
         }
         let hasher = match &chunk.facade_module_id {

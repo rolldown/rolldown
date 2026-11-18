@@ -1126,6 +1126,15 @@
             "string",
             "null"
           ]
+        },
+        "include": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false

@@ -1,0 +1,67 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
+// lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+var value;
+var init_lazy = __esmMin((() => {
+	value = "lazy";
+}));
+// main.js
+async function run() {
+	try {
+		throw 0;
+	} catch (Promise$1) {
+		var Promise$1 = 1;
+		return [Promise$1, (await Promise.resolve().then(() => (init_lazy(), lazy_exports))).value];
+	}
+}
+run().then((result) => assert.deepStrictEqual(result, [1, "lazy"]));
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert_strict = require("node:assert/strict");
+node_assert_strict = __toESM(node_assert_strict);
+// lazy.js
+var lazy_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+var value;
+var init_lazy = __esmMin((() => {
+	value = "lazy";
+}));
+// main.js
+async function run() {
+	try {
+		throw 0;
+	} catch (Promise$1) {
+		var Promise$1 = 1;
+		return [Promise$1, (await Promise.resolve().then(() => (init_lazy(), lazy_exports))).value];
+	}
+}
+run().then((result) => node_assert_strict.default.deepStrictEqual(result, [1, "lazy"]));
+
+```
+
+# Variant: minified: [minify: true]
+
+## Assets
+
+### main.js
+
+```js
+import e from"node:assert/strict";var t=Object.defineProperty,n=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}},r=/* @__PURE__ */ ((e,n)=>{let r=Object.setPrototypeOf({},null);for(var i in e)t(r,i,{get:e[i],enumerable:!0});return n&1||t(r,Symbol.toStringTag,{value:`Module`}),n&2?r:Object.preventExtensions(r)})({value:()=>i}),i,a=n((()=>{i=`lazy`}));async function o(){try{throw 0}catch(Promise$1){var Promise$1=1;return[Promise$1,(await Promise.resolve().then(()=>(a(),r))).value]}}o().then(t=>e.deepStrictEqual(t,[1,`lazy`]));
+```

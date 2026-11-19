@@ -1,0 +1,7 @@
+{
+  "config": { "codeSplitting": false },
+  "configVariants": [
+    { "_configName": "cjs", "format": "cjs" },
+    { "_configName": "minified", "minify": true }
+  ]
+}

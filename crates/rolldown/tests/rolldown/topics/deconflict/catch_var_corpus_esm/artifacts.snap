@@ -1,0 +1,820 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// value.js
+let e$3 = "value-e";
+function setE(next) {
+	e$3 = next;
+}
+// inner.js
+function inner() {
+	const out = [];
+	try {
+		throw 1;
+	} catch (e) {
+		var e = 2;
+		out.push(e, e$3, e$3);
+	}
+	out.push(e);
+	return out;
+}
+function nested() {
+	const out = [];
+	try {
+		throw 1;
+	} catch (e) {
+		try {
+			throw 2;
+		} catch (e) {
+			var e = 3;
+			out.push(e, e$3);
+		}
+		out.push(e, e$3);
+	}
+	out.push(e);
+	return out;
+}
+function loops() {
+	const out = [];
+	try {
+		throw 0;
+	} catch (e) {
+		for (var e of [1, 2]) out.push(e);
+		for (var e in { k: 1 }) out.push(e);
+		var { e } = { e: 3 };
+		out.push(e);
+		var [e] = [4];
+		out.push(e, e$3);
+	}
+	out.push(e);
+	return out;
+}
+function arrow() {
+	return (() => {
+		try {
+			throw 0;
+		} catch (e) {
+			var e = 5;
+			return [
+				e,
+				e$3,
+				(() => e)()
+			];
+		}
+	})();
+}
+// top_a.js
+var e$2 = "a";
+const aLog = [];
+try {
+	throw "caught-a";
+} catch (e$2) {
+	aLog.push(e$2);
+	var e$2 = "a2";
+	aLog.push(e$2);
+}
+aLog.push(e$2);
+function getA() {
+	return e$2;
+}
+// top_b.js
+var e$1 = "b";
+const bLog = [];
+try {
+	throw "caught-b";
+} catch (e$1) {
+	var e$1 = "b2";
+	bLog.push(e$1);
+}
+e$1 += "!";
+bLog.push(e$1);
+function getB() {
+	return e$1;
+}
+// self.js
+var only;
+var s;
+var s = 1;
+s++;
+const selfLog = [];
+try {
+	throw 0;
+} catch (s$1) {
+	var s$1 = 3;
+	selfLog.push(s$1, s, s);
+}
+try {
+	throw 0;
+} catch (only$1) {
+	var only$1 = 4;
+	selfLog.push(only$1, only);
+}
+selfLog.push(only);
+// cycle_b.js
+function readA() {
+	return c;
+}
+// cycle_a.js
+var c = "c0";
+const cycleLog = [];
+try {
+	throw 0;
+} catch (c) {
+	var c = "c1";
+	cycleLog.push(c, readA());
+}
+c = "c2";
+cycleLog.push(readA());
+// main.js
+let e = "main";
+e += "!";
+setE("set");
+assert.deepStrictEqual(inner(), [
+	2,
+	"set",
+	"set",
+	void 0
+]);
+assert.deepStrictEqual(nested(), [
+	3,
+	"set",
+	1,
+	"set",
+	void 0
+]);
+assert.deepStrictEqual(loops(), [
+	1,
+	2,
+	"k",
+	3,
+	4,
+	"set",
+	void 0
+]);
+assert.deepStrictEqual(arrow(), [
+	5,
+	"set",
+	5
+]);
+assert.deepStrictEqual(aLog, [
+	"caught-a",
+	"a2",
+	"a"
+]);
+assert.deepStrictEqual([e$2, getA()], ["a", "a"]);
+assert.deepStrictEqual(bLog, ["b2", "b!"]);
+assert.deepStrictEqual([e$1, getB()], ["b!", "b!"]);
+assert.deepStrictEqual(selfLog, [
+	3,
+	2,
+	2,
+	4,
+	void 0,
+	void 0
+]);
+assert.deepStrictEqual([s, only], [2, void 0]);
+assert.deepStrictEqual(cycleLog, [
+	"c1",
+	"c0",
+	"c2"
+]);
+assert.strictEqual(c, "c2");
+assert.strictEqual(e, "main!");
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert_strict = require("node:assert/strict");
+node_assert_strict = __toESM(node_assert_strict);
+// value.js
+let e$3 = "value-e";
+function setE(next) {
+	e$3 = next;
+}
+// inner.js
+function inner() {
+	const out = [];
+	try {
+		throw 1;
+	} catch (e) {
+		var e = 2;
+		out.push(e, e$3, e$3);
+	}
+	out.push(e);
+	return out;
+}
+function nested() {
+	const out = [];
+	try {
+		throw 1;
+	} catch (e) {
+		try {
+			throw 2;
+		} catch (e) {
+			var e = 3;
+			out.push(e, e$3);
+		}
+		out.push(e, e$3);
+	}
+	out.push(e);
+	return out;
+}
+function loops() {
+	const out = [];
+	try {
+		throw 0;
+	} catch (e) {
+		for (var e of [1, 2]) out.push(e);
+		for (var e in { k: 1 }) out.push(e);
+		var { e } = { e: 3 };
+		out.push(e);
+		var [e] = [4];
+		out.push(e, e$3);
+	}
+	out.push(e);
+	return out;
+}
+function arrow() {
+	return (() => {
+		try {
+			throw 0;
+		} catch (e) {
+			var e = 5;
+			return [
+				e,
+				e$3,
+				(() => e)()
+			];
+		}
+	})();
+}
+// top_a.js
+var e$2 = "a";
+const aLog = [];
+try {
+	throw "caught-a";
+} catch (e$2) {
+	aLog.push(e$2);
+	var e$2 = "a2";
+	aLog.push(e$2);
+}
+aLog.push(e$2);
+function getA() {
+	return e$2;
+}
+// top_b.js
+var e$1 = "b";
+const bLog = [];
+try {
+	throw "caught-b";
+} catch (e$1) {
+	var e$1 = "b2";
+	bLog.push(e$1);
+}
+e$1 += "!";
+bLog.push(e$1);
+function getB() {
+	return e$1;
+}
+// self.js
+var only;
+var s;
+var s = 1;
+s++;
+const selfLog = [];
+try {
+	throw 0;
+} catch (s$1) {
+	var s$1 = 3;
+	selfLog.push(s$1, s, s);
+}
+try {
+	throw 0;
+} catch (only$1) {
+	var only$1 = 4;
+	selfLog.push(only$1, only);
+}
+selfLog.push(only);
+// cycle_b.js
+function readA() {
+	return c;
+}
+// cycle_a.js
+var c = "c0";
+const cycleLog = [];
+try {
+	throw 0;
+} catch (c) {
+	var c = "c1";
+	cycleLog.push(c, readA());
+}
+c = "c2";
+cycleLog.push(readA());
+// main.js
+let e = "main";
+e += "!";
+setE("set");
+node_assert_strict.default.deepStrictEqual(inner(), [
+	2,
+	"set",
+	"set",
+	void 0
+]);
+node_assert_strict.default.deepStrictEqual(nested(), [
+	3,
+	"set",
+	1,
+	"set",
+	void 0
+]);
+node_assert_strict.default.deepStrictEqual(loops(), [
+	1,
+	2,
+	"k",
+	3,
+	4,
+	"set",
+	void 0
+]);
+node_assert_strict.default.deepStrictEqual(arrow(), [
+	5,
+	"set",
+	5
+]);
+node_assert_strict.default.deepStrictEqual(aLog, [
+	"caught-a",
+	"a2",
+	"a"
+]);
+node_assert_strict.default.deepStrictEqual([e$2, getA()], ["a", "a"]);
+node_assert_strict.default.deepStrictEqual(bLog, ["b2", "b!"]);
+node_assert_strict.default.deepStrictEqual([e$1, getB()], ["b!", "b!"]);
+node_assert_strict.default.deepStrictEqual(selfLog, [
+	3,
+	2,
+	2,
+	4,
+	void 0,
+	void 0
+]);
+node_assert_strict.default.deepStrictEqual([s, only], [2, void 0]);
+node_assert_strict.default.deepStrictEqual(cycleLog, [
+	"c1",
+	"c0",
+	"c2"
+]);
+node_assert_strict.default.strictEqual(c, "c2");
+node_assert_strict.default.strictEqual(e, "main!");
+
+```
+
+# Variant: minified: [minify: true]
+
+## Assets
+
+### main.js
+
+```js
+import t from"node:assert/strict";let n=`value-e`;function r(t){n=t}function i(){let t=[];try{throw 1}catch(e){var e=2;t.push(e,n,n)}return t.push(e),t}function a(){let t=[];try{throw 1}catch(e){try{throw 2}catch(e){var e=3;t.push(e,n)}t.push(e,n)}return t.push(e),t}function o(){let t=[];try{throw 0}catch(e){for(var e of[1,2])t.push(e);for(var e in{k:1})t.push(e);var{e}={e:3};t.push(e);var[e]=[4];t.push(e,n)}return t.push(e),t}function s(){return(()=>{try{throw 0}catch(e){var e=5;return[e,n,e]}})()}var e$2=`a`;const l=[];try{throw`caught-a`}catch(e$2){l.push(e$2);var e$2=`a2`;l.push(e$2)}l.push(e$2);function u(){return e$2}var e$1=`b`;const d=[];try{throw`caught-b`}catch(e$1){var e$1=`b2`;d.push(e$1)}e$1+=`!`,d.push(e$1);function f(){return e$1}var p,m,m=1;m++;const h=[];try{throw 0}catch(s$1){var s$1=3;h.push(s$1,m,m)}try{throw 0}catch(only$1){var only$1=4;h.push(only$1,p)}h.push(p);function g(){return c}var c=`c0`;const _=[];try{throw 0}catch(c){var c=`c1`;_.push(c,g())}c=`c2`,_.push(g());let e=`main`;e+=`!`,r(`set`),t.deepStrictEqual(i(),[2,`set`,`set`,void 0]),t.deepStrictEqual(a(),[3,`set`,1,`set`,void 0]),t.deepStrictEqual(o(),[1,2,`k`,3,4,`set`,void 0]),t.deepStrictEqual(s(),[5,`set`,5]),t.deepStrictEqual(l,[`caught-a`,`a2`,`a`]),t.deepStrictEqual([e$2,u()],[`a`,`a`]),t.deepStrictEqual(d,[`b2`,`b!`]),t.deepStrictEqual([e$1,f()],[`b!`,`b!`]),t.deepStrictEqual(h,[3,2,2,4,void 0,void 0]),t.deepStrictEqual([m,p],[2,void 0]),t.deepStrictEqual(_,[`c1`,`c0`,`c2`]),t.strictEqual(c,`c2`),t.strictEqual(e,`main!`);
+```
+
+# Variant: wrapped: [on_demand_wrapping: false] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
+// value.js
+function setE(next) {
+	e$3 = next;
+}
+var e$3;
+function init_value() {
+	return (init_value = __esmMin((() => {
+		e$3 = "value-e";
+	})))();
+}
+// inner.js
+function inner() {
+	const out = [];
+	try {
+		throw 1;
+	} catch (e) {
+		var e = 2;
+		out.push(e, e$3, e$3);
+	}
+	out.push(e);
+	return out;
+}
+function nested() {
+	const out = [];
+	try {
+		throw 1;
+	} catch (e) {
+		try {
+			throw 2;
+		} catch (e) {
+			var e = 3;
+			out.push(e, e$3);
+		}
+		out.push(e, e$3);
+	}
+	out.push(e);
+	return out;
+}
+function loops() {
+	const out = [];
+	try {
+		throw 0;
+	} catch (e) {
+		for (var e of [1, 2]) out.push(e);
+		for (var e in { k: 1 }) out.push(e);
+		var { e } = { e: 3 };
+		out.push(e);
+		var [e] = [4];
+		out.push(e, e$3);
+	}
+	out.push(e);
+	return out;
+}
+function arrow() {
+	return (() => {
+		try {
+			throw 0;
+		} catch (e) {
+			var e = 5;
+			return [
+				e,
+				e$3,
+				(() => e)()
+			];
+		}
+	})();
+}
+function init_inner() {
+	return (init_inner = __esmMin((() => {
+		init_value();
+	})))();
+}
+// top_a.js
+function getA() {
+	return e$2;
+}
+var e$2, aLog;
+function init_top_a() {
+	return (init_top_a = __esmMin((() => {
+		e$2 = "a";
+		aLog = [];
+		try {
+			throw "caught-a";
+		} catch (e$2) {
+			aLog.push(e$2);
+			e$2 = "a2";
+			aLog.push(e$2);
+		}
+		aLog.push(e$2);
+	})))();
+}
+// top_b.js
+function getB() {
+	return e$1;
+}
+var e$1, bLog;
+function init_top_b() {
+	return (init_top_b = __esmMin((() => {
+		e$1 = "b";
+		bLog = [];
+		try {
+			throw "caught-b";
+		} catch (e$1) {
+			e$1 = "b2";
+			bLog.push(e$1);
+		}
+		e$1 += "!";
+		bLog.push(e$1);
+	})))();
+}
+// self.js
+var s, selfLog, only;
+function init_self() {
+	return (init_self = __esmMin((() => {
+		init_self();
+		s = 1;
+		s++;
+		selfLog = [];
+		try {
+			throw 0;
+		} catch (s$1) {
+			s$1 = 3;
+			selfLog.push(s$1, s, s);
+		}
+		try {
+			throw 0;
+		} catch (only$1) {
+			only$1 = 4;
+			selfLog.push(only$1, only);
+		}
+		selfLog.push(only);
+	})))();
+}
+// cycle_b.js
+function readA() {
+	return c;
+}
+function init_cycle_b() {
+	return (init_cycle_b = __esmMin((() => {
+		init_cycle_a();
+	})))();
+}
+// cycle_a.js
+var c, cycleLog;
+function init_cycle_a() {
+	return (init_cycle_a = __esmMin((() => {
+		init_cycle_b();
+		c = "c0";
+		cycleLog = [];
+		try {
+			throw 0;
+		} catch (c) {
+			c = "c1";
+			cycleLog.push(c, readA());
+		}
+		c = "c2";
+		cycleLog.push(readA());
+	})))();
+}
+// main.js
+var e;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		init_value();
+		init_inner();
+		init_top_a();
+		init_top_b();
+		init_self();
+		init_cycle_a();
+		e = "main";
+		e += "!";
+		setE("set");
+		assert.deepStrictEqual(inner(), [
+			2,
+			"set",
+			"set",
+			void 0
+		]);
+		assert.deepStrictEqual(nested(), [
+			3,
+			"set",
+			1,
+			"set",
+			void 0
+		]);
+		assert.deepStrictEqual(loops(), [
+			1,
+			2,
+			"k",
+			3,
+			4,
+			"set",
+			void 0
+		]);
+		assert.deepStrictEqual(arrow(), [
+			5,
+			"set",
+			5
+		]);
+		assert.deepStrictEqual(aLog, [
+			"caught-a",
+			"a2",
+			"a"
+		]);
+		assert.deepStrictEqual([e$2, getA()], ["a", "a"]);
+		assert.deepStrictEqual(bLog, ["b2", "b!"]);
+		assert.deepStrictEqual([e$1, getB()], ["b!", "b!"]);
+		assert.deepStrictEqual(selfLog, [
+			3,
+			2,
+			2,
+			4,
+			void 0,
+			void 0
+		]);
+		assert.deepStrictEqual([s, only], [2, void 0]);
+		assert.deepStrictEqual(cycleLog, [
+			"c1",
+			"c0",
+			"c2"
+		]);
+		assert.strictEqual(c, "c2");
+		assert.strictEqual(e, "main!");
+	})))();
+}
+init_main();
+
+```
+
+# Variant: on-demand: [on_demand_wrapping: true] [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert/strict";
+// value.js
+let e$3 = "value-e";
+function setE(next) {
+	e$3 = next;
+}
+// inner.js
+function inner() {
+	const out = [];
+	try {
+		throw 1;
+	} catch (e) {
+		var e = 2;
+		out.push(e, e$3, e$3);
+	}
+	out.push(e);
+	return out;
+}
+function nested() {
+	const out = [];
+	try {
+		throw 1;
+	} catch (e) {
+		try {
+			throw 2;
+		} catch (e) {
+			var e = 3;
+			out.push(e, e$3);
+		}
+		out.push(e, e$3);
+	}
+	out.push(e);
+	return out;
+}
+function loops() {
+	const out = [];
+	try {
+		throw 0;
+	} catch (e) {
+		for (var e of [1, 2]) out.push(e);
+		for (var e in { k: 1 }) out.push(e);
+		var { e } = { e: 3 };
+		out.push(e);
+		var [e] = [4];
+		out.push(e, e$3);
+	}
+	out.push(e);
+	return out;
+}
+function arrow() {
+	return (() => {
+		try {
+			throw 0;
+		} catch (e) {
+			var e = 5;
+			return [
+				e,
+				e$3,
+				(() => e)()
+			];
+		}
+	})();
+}
+// top_a.js
+var e$2 = "a";
+const aLog = [];
+try {
+	throw "caught-a";
+} catch (e$2) {
+	aLog.push(e$2);
+	var e$2 = "a2";
+	aLog.push(e$2);
+}
+aLog.push(e$2);
+function getA() {
+	return e$2;
+}
+// top_b.js
+var e$1 = "b";
+const bLog = [];
+try {
+	throw "caught-b";
+} catch (e$1) {
+	var e$1 = "b2";
+	bLog.push(e$1);
+}
+e$1 += "!";
+bLog.push(e$1);
+function getB() {
+	return e$1;
+}
+// self.js
+var only;
+var s;
+var s = 1;
+s++;
+const selfLog = [];
+try {
+	throw 0;
+} catch (s$1) {
+	var s$1 = 3;
+	selfLog.push(s$1, s, s);
+}
+try {
+	throw 0;
+} catch (only$1) {
+	var only$1 = 4;
+	selfLog.push(only$1, only);
+}
+selfLog.push(only);
+// cycle_b.js
+function readA() {
+	return c;
+}
+// cycle_a.js
+var c = "c0";
+const cycleLog = [];
+try {
+	throw 0;
+} catch (c) {
+	var c = "c1";
+	cycleLog.push(c, readA());
+}
+c = "c2";
+cycleLog.push(readA());
+// main.js
+let e = "main";
+e += "!";
+setE("set");
+assert.deepStrictEqual(inner(), [
+	2,
+	"set",
+	"set",
+	void 0
+]);
+assert.deepStrictEqual(nested(), [
+	3,
+	"set",
+	1,
+	"set",
+	void 0
+]);
+assert.deepStrictEqual(loops(), [
+	1,
+	2,
+	"k",
+	3,
+	4,
+	"set",
+	void 0
+]);
+assert.deepStrictEqual(arrow(), [
+	5,
+	"set",
+	5
+]);
+assert.deepStrictEqual(aLog, [
+	"caught-a",
+	"a2",
+	"a"
+]);
+assert.deepStrictEqual([e$2, getA()], ["a", "a"]);
+assert.deepStrictEqual(bLog, ["b2", "b!"]);
+assert.deepStrictEqual([e$1, getB()], ["b!", "b!"]);
+assert.deepStrictEqual(selfLog, [
+	3,
+	2,
+	2,
+	4,
+	void 0,
+	void 0
+]);
+assert.deepStrictEqual([s, only], [2, void 0]);
+assert.deepStrictEqual(cycleLog, [
+	"c1",
+	"c0",
+	"c2"
+]);
+assert.strictEqual(c, "c2");
+assert.strictEqual(e, "main!");
+
+```

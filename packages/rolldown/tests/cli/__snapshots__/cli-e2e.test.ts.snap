@@ -843,6 +843,22 @@ called output options hook
 "
 `;
 
+exports[`watch cli > should report a finished failed watch round 1`] = `
+[
+  "Rebuilt dist/a.js",
+  "UNRESOLVED_IMPORT",
+  "waiting for changes...",
+]
+`;
+
+exports[`watch cli > should report a finished successful watch round 1`] = `
+[
+  "Rebuilt dist/a.js",
+  "Rebuilt dist/b.js",
+  "waiting for changes...",
+]
+`;
+
 exports[`watch cli > should require both ROLLDOWN_WATCH and this.meta.watchMode to be false 1`] = `
 "process.env.ROLLUP_WATCH undefined
 process.env.ROLLDOWN_WATCH undefined
@@ -861,7 +877,6 @@ closeBundle called:"
 exports[`watch cli > should require both ROLLDOWN_WATCH and this.meta.watchMode to be true 1`] = `
 "process.env.ROLLUP_WATCH true
 process.env.ROLLDOWN_WATCH true
-Waiting for changes...
 options called:
 this.meta.watchMode true
 process.env.ROLLUP_WATCH true

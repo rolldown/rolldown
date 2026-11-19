@@ -141,12 +141,14 @@ async function watchInner(
         logger.error(event.error);
         break;
 
+      case 'END':
+        logger.log('waiting for changes...');
+        break;
+
       default:
         break;
     }
   });
-
-  logger.log(`Waiting for changes...`);
 }
 
 async function bundleInner(

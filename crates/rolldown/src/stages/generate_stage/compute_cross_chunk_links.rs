@@ -14,8 +14,8 @@ use oxc_index::{IndexVec, index_vec};
 use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
-  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, NamedImport, NormalModule, OutputFormat,
-  PostChunkOptimizationOperation, PreserveEntrySignatures, RUNTIME_HELPER_NAMES,
+  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, NamedImport, NormalModule,
+  OutputFormat, PostChunkOptimizationOperation, PreserveEntrySignatures, RUNTIME_HELPER_NAMES,
   ResolvedImportRecord, RuntimeHelper, StaticImport, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
   TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
 };
@@ -617,33 +617,11 @@ impl GenerateStage<'_> {
     }
     for (&source, records) in &mut targets {
       for (&record, importees) in records {
-        if importees.len() < 2 {
-          continue;
-        }
-        let mut pending = link_output.module_table[source].import_records()[record]
-          .resolved_module
-          .into_iter()
-          .collect::<Vec<_>>();
-        let mut visited = FxHashSet::default();
-        let mut ordered = FxIndexSet::default();
-        while let Some(owner) = pending.pop() {
-          if !visited.insert(owner) {
-            continue;
-          }
-          if importees.contains(&owner) {
-            ordered.insert(owner);
-          } else {
-            pending.extend(
-              link_output.module_table[owner]
-                .import_records()
-                .iter()
-                .filter(|rec| rec.kind == ImportKind::Import)
-                .filter_map(|rec| rec.resolved_module)
-                .rev(),
-            );
-          }
-        }
-        *importees = ordered;
+        Self::sort_reexport_importees(
+          &link_output.module_table,
+          link_output.module_table[source].import_records()[record].resolved_module,
+          importees,
+        );
       }
     }
     targets
@@ -737,15 +715,13 @@ impl GenerateStage<'_> {
       let Some(importee) = record.resolved_module else {
         continue;
       };
-      if let Some(targets) = self
+      let reexport_targets = self
         .reexport_side_effect_importees
         .get(&module_idx)
-        .and_then(|records| records.get(&record_idx))
-      {
-        importees.extend(targets.iter().copied());
-      }
+        .and_then(|records| records.get(&record_idx));
       if is_kept(importee) {
         importees.push(importee);
+        importees.extend(reexport_targets.into_iter().flatten().copied());
         continue;
       }
       // The modules that declare the bindings of each import record, sorted by record: the bindings
@@ -777,6 +753,7 @@ impl GenerateStage<'_> {
         owners
       });
       let start = binding_owners.partition_point(|&(idx, _)| idx < record_idx);
+      let record_start = importees.len();
       importees.extend(
         binding_owners[start..]
           .iter()
@@ -784,7 +761,48 @@ impl GenerateStage<'_> {
           .map(|&(_, owner)| owner)
           .filter(|&owner| is_kept(owner)),
       );
+      if let Some(reexport_targets) = reexport_targets {
+        let mut targets = importees[record_start..]
+          .iter()
+          .copied()
+          .chain(reexport_targets.iter().copied())
+          .collect::<FxIndexSet<_>>();
+        Self::sort_reexport_importees(&self.link_output.module_table, Some(importee), &mut targets);
+        targets.extend(importees.drain(record_start..));
+        importees.extend(targets);
+      }
     }
+  }
+
+  fn sort_reexport_importees(
+    modules: &ModuleTable,
+    importee: Option<ModuleIdx>,
+    targets: &mut FxIndexSet<ModuleIdx>,
+  ) {
+    if targets.len() < 2 {
+      return;
+    }
+    let mut pending = importee.into_iter().collect::<Vec<_>>();
+    let mut visited = FxHashSet::default();
+    let mut ordered = FxIndexSet::default();
+    while let Some(owner) = pending.pop() {
+      if !visited.insert(owner) {
+        continue;
+      }
+      if targets.contains(&owner) {
+        ordered.insert(owner);
+      } else {
+        pending.extend(
+          modules[owner]
+            .import_records()
+            .iter()
+            .filter(|rec| rec.kind == ImportKind::Import)
+            .filter_map(|rec| rec.resolved_module)
+            .rev(),
+        );
+      }
+    }
+    *targets = ordered;
   }
 
   /// Compute provisional links for order analysis. Uses an empty order state and explicitly marks

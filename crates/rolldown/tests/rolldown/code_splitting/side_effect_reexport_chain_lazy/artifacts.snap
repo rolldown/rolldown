@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// lib/forward.js
+if (globalThis.showForwarder) console.log("forward");
+// entry.js
+console.log("entry", 1);
+let signal = "ready";
+if (globalThis.load) import("./other.js");
+export { signal };
+
+```
+
+## other.js
+
+```js
+import { signal } from "./entry.js";
+// other.js
+console.log("other", 1, signal);
+
+```

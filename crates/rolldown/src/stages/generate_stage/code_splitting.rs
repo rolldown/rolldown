@@ -1403,6 +1403,9 @@ impl GenerateStage<'_> {
       meta.load_dependencies.iter().copied().for_each(|dep_idx| {
         q.push_back(dep_idx);
       });
+      if let Some(records) = self.reexport_side_effect_importees.get(&module_idx) {
+        q.extend(records.values().flatten().copied());
+      }
       if let Some(dependencies) = init_dependencies {
         q.extend(dependencies[module_idx].iter().copied());
       }

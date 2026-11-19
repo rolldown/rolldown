@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+import "./setup.js";
+import "./forward.js";
+// entry.js
+console.log("entry", 1);
+
+```
+
+## forward.js
+
+```js
+// forward.js
+console.log("forward", globalThis.ready);
+
+```
+
+## other.js
+
+```js
+import "./forward.js";
+// other.js
+console.log("other", 1);
+
+```
+
+## setup.js
+
+```js
+// setup.js
+globalThis.ready = "ready";
+console.log("setup");
+
+```
+
+## third.js
+
+```js
+import "./setup.js";
+
+```

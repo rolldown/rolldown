@@ -1,0 +1,7 @@
+{
+  "type": "module",
+  "sideEffects": [
+    "./setup.js",
+    "./forward.js"
+  ]
+}

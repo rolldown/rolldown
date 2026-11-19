@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// lib/forward.js
+console.log("forward");
+// entry.js
+console.log("entry", 1);
+if (globalThis.load) import("./lazy.js");
+
+```
+
+## lazy.js
+
+```js
+import "./entry.js";
+// lazy.js
+console.log("lazy", 1);
+
+```
+
+## other.js
+
+```js
+// other.js
+console.log("other", 1);
+
+```

@@ -1605,6 +1605,12 @@
             "boolean",
             "null"
           ]
+        },
+        "droppedImportAttribute": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

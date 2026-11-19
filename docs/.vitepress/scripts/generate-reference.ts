@@ -21,7 +21,7 @@ await copyFile('.vitepress/theme/components/api.index.md', 'reference/index.md')
 console.log('📚 New index added successfully');
 
 async function discoverExports(): Promise<string[]> {
-  const excludedExports = new Set(['./experimental', './parallelPlugin']);
+  const excludedExports = new Set(['./experimental']);
 
   const pkgJsonPath = path.join(root, 'packages/rolldown/package.json');
   const pkgJson: { exports: Record<string, { dev?: string }> } = JSON.parse(

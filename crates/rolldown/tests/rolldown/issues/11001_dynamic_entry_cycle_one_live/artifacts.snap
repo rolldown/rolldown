@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// a.mjs
+var a_exports = /* @__PURE__ */ __exportAll({ a: () => a });
+function a() {
+	return used();
+}
+var init_a = __esmMin((() => {}));
+// sdk.mjs
+function used() {
+	return 1;
+}
+function deadA() {
+	return Promise.resolve().then(() => (init_a(), a_exports));
+}
+console.log(typeof used);
+if ((await deadA()).a() !== 1) throw new Error("a");
+export {};
+
+```

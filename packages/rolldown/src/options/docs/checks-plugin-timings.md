@@ -35,4 +35,4 @@ The clock starts and stops **inside the JavaScript callback**, not around the ca
 
 **What the listed numbers mean.** Measuring from inside the callback excludes the time a call spent queued; it does not separate running from awaiting. A listed callback is wall time for that callback, not CPU time, so one that awaits I/O without overlapping another call of itself is charged for the wait. The figure excludes the data conversion Rolldown does on either side of the call.
 
-**Not covered.** Plugins written in Rust (`builtin:` and the plugins Rolldown ships internally) have no JavaScript callback to measure and never appear. Neither do parallel plugins, whose hooks run on worker threads. The report is produced when the build is closed, so watch and dev-server rebuilds do not emit it.
+**Not covered.** Plugins written in Rust (`builtin:` and the plugins Rolldown ships internally) have no JavaScript callback to measure and never appear. The report is produced when the build is closed, so watch and dev-server rebuilds do not emit it.

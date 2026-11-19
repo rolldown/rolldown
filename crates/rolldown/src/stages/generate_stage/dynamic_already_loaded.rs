@@ -424,12 +424,6 @@ impl GenerateStage<'_> {
     });
   }
 
-  /// Makes each entry chunk export the namespace of its entry module, in the closure of
-  /// `replay_link_stage_inclusion`. The closure returns the result: whether a namespace needs
-  /// `__exportAll`. Call `narrow_namespace_stmt_to_used_symbols` for each entry module before the
-  /// replay. `optimize_facade_entry_chunks` calls this function in the replay of its facade
-  /// changes, so that one replay does both changes.
-  ///
   /// When a namespace needs `__exportAll`, the chunk gets the helper flag. The flag makes the chunk
   /// a runtime consumer, so runtime placement needs no other record of the chunk.
   pub(super) fn include_dynamic_entry_namespace_extractions<'a>(

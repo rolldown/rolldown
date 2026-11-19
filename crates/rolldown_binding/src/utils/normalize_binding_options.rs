@@ -45,8 +45,6 @@ use rustc_hash::FxHashMap;
 use std::path::PathBuf;
 use url::Url;
 
-#[cfg(not(target_family = "wasm"))]
-use crate::{options::plugin::ParallelJsPlugin, worker_manager::WorkerManager};
 use std::sync::Arc;
 
 fn normalize_generated_code_option(
@@ -569,10 +567,6 @@ pub struct NormalizedBindingOptions {
 pub fn normalize_binding_options(
   input_options: crate::options::BindingInputOptions,
   output_options: crate::options::BindingOutputOptions,
-  #[cfg(not(target_family = "wasm"))] mut parallel_plugins_map: Option<
-    crate::parallel_js_plugin_registry::PluginValues,
-  >,
-  #[cfg(not(target_family = "wasm"))] worker_manager: Option<WorkerManager>,
 ) -> napi::Result<NormalizedBindingOptions> {
   let cwd = PathBuf::from(input_options.cwd);
   // Each JS function of the options goes through `callbacks.track`.
@@ -929,62 +923,22 @@ pub fn normalize_binding_options(
     })
   };
 
-  #[cfg(not(target_family = "wasm"))]
-  // Deal with plugins
-  let worker_manager = worker_manager.map(Arc::new);
-
-  #[cfg(not(target_family = "wasm"))]
   let plugins: Vec<SharedPluginable> = input_options
     .plugins
     .into_iter()
     .chain(output_options.plugins)
-    .enumerate()
-    .map(|(index, plugin)| {
-      plugin.map_or_else(
-        || {
-          let plugins = parallel_plugins_map
-            .as_mut()
-            .and_then(|plugin| plugin.remove(&index))
-            .unwrap_or_default();
-          let worker_manager = worker_manager.as_ref().unwrap();
-          ParallelJsPlugin::new_shared(plugins, Arc::clone(worker_manager))
-        },
-        |plugin| match plugin {
-          Either::A(plugin_options) => JsPlugin::new_shared(plugin_options),
-          Either::B(builtin) => {
-            // Needs to save the name, since `try_into` will consume the ownership
-            let name = format!("{:?}", builtin.__name);
-            builtin.try_into().map_err(|err| {
-              napi::Error::new(
-                napi::Status::InvalidArg,
-                format!("Failed to convert builtin plugin '{name}': {err}"),
-              )
-            })
-          }
-        },
-      )
-    })
-    .collect::<Result<Vec<_>, _>>()?;
-
-  #[cfg(target_family = "wasm")]
-  let plugins: Vec<SharedPluginable> = input_options
-    .plugins
-    .into_iter()
-    .chain(output_options.plugins)
-    .filter_map(|plugin| {
-      plugin.map(|plugin| match plugin {
-        Either::A(plugin_options) => JsPlugin::new_shared(plugin_options),
-        Either::B(builtin) => {
-          // Needs to save the name, since `try_into` will consume the ownership
-          let name = format!("{:?}", builtin.__name);
-          builtin.try_into().map_err(|err| {
-            napi::Error::new(
-              napi::Status::InvalidArg,
-              format!("Failed to convert builtin plugin '{name}': {err}"),
-            )
-          })
-        }
-      })
+    .map(|plugin| match plugin {
+      Either::A(plugin_options) => JsPlugin::new_shared(plugin_options),
+      Either::B(builtin) => {
+        // Needs to save the name, since `try_into` will consume the ownership
+        let name = format!("{:?}", builtin.__name);
+        builtin.try_into().map_err(|err| {
+          napi::Error::new(
+            napi::Status::InvalidArg,
+            format!("Failed to convert builtin plugin '{name}': {err}"),
+          )
+        })
+      }
     })
     .collect::<Result<Vec<_>, _>>()?;
 

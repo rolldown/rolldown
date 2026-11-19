@@ -134,6 +134,10 @@ fn init() {
       // we don't have that many `blocking` tasks to run at this moment
       .unwrap_or(4);
     let mut builder = tokio::runtime::Builder::new_multi_thread();
+    // Tokio runs this on worker threads and on blocking pool threads.
+    // Module tasks parse on these threads, so they allocate from the AST heap.
+    #[cfg(all(not(feature = "default_global_allocator"), not(target_env = "ohos")))]
+    builder.on_thread_stop(ast_heap::release_current_thread);
 
     let rt = builder
       .max_blocking_threads(max_blocking_threads)

@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// sdk.mjs
+function used() {
+	return 1;
+}
+console.log(typeof used);
+export {};
+
+```

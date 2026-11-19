@@ -137,9 +137,13 @@ pub struct EcmaView {
   pub imports: FxHashMap<NodeId, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
   pub default_export_ref: SymbolRef,
-  /// Built once by the scan and only read after it. Shared so that cloning the
-  /// module table for every incremental build does not deep-copy each module's
-  /// source maps.
+  /// Built by the scan. Shared so that cloning the module table for every
+  /// incremental build does not deep-copy each module's source maps.
+  ///
+  /// A build that is not incremental composes the transform runs of the chain
+  /// before the link stage (`collapse_sourcemap_chains`), and empties the chain
+  /// after every module is rendered (`free_sourcemap_chains`). In such a build,
+  /// do not read the chain after rendering.
   #[expect(
     clippy::rc_buffer,
     reason = "the scan extends and reorders a fresh chain in place through `Arc::make_mut`, which `Arc<[T]>` cannot do"

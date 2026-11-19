@@ -176,7 +176,7 @@ impl GenerateStage<'_> {
   /// The accessor and the forwards are new exports. A chunk gets one only if the new export does
   /// not change its signature, and if no `import()` in the bundle can see the new key
   /// (`chunks_exposed_to_dynamic_import`). The paths use only the edges that the module-level
-  /// prediction covers (`CrossChunkLinkState::predicted_importee_table`).
+  /// prediction covers (`CrossChunkLinkState::predicted_importees`).
   ///
   /// A read that cannot reach the accessor through such chunks reads a public export of the entry
   /// chunk that declares the namespace of the read (`namespace_chunk`). This occurs only if that
@@ -186,7 +186,6 @@ impl GenerateStage<'_> {
   /// the property one time, when its chunk runs. Thus ESM output gets an accessor only if two or
   /// more chunks can call it. A CJS export is a getter, so in CJS output the getter of such a
   /// public export also calls the accessor.
-  #[expect(clippy::too_many_lines)]
   pub(super) fn share_commonjs_property_reads(
     &mut self,
     chunk_graph: &ChunkGraph,
@@ -219,6 +218,10 @@ impl GenerateStage<'_> {
       &files,
     );
 
+    if reads.is_empty() {
+      return shared;
+    }
+
     // The accessor and each forward are new exports of their chunks. A chunk can get one only if
     // its signature allows new exports and no `import()` in the bundle can see the new key.
     let exposed = self.chunks_exposed_to_dynamic_import(chunk_graph);
@@ -233,24 +236,18 @@ impl GenerateStage<'_> {
       .collect();
     let can_pass_on = |chunk_idx: ChunkIdx| passable[chunk_idx];
 
-    // The edges of `link_state` that the module-level prediction covers. A new import on such an
-    // edge does not change the result of the already-loaded analysis (`predicted_importee_table`).
-    let importees = link_state.predicted_importee_table(self.link_output.runtime.id());
-    // The chunks that import each chunk through these edges.
+    // The chunks that import each chunk through the edges of `link_state` that the module-level
+    // prediction covers. A new import on such an edge does not change the result of the
+    // already-loaded analysis (`predicted_importees`). The loop visits the importers in chunk
+    // order, so each list is in ascending order for `binary_search`.
     let mut importers: IndexVec<ChunkIdx, Vec<ChunkIdx>> =
-      IndexVec::from_vec(vec![vec![]; chunk_graph.chunk_table.len()]);
-    for (importer, importees) in importees.iter_enumerated() {
-      if !is_file(importer) {
-        continue;
-      }
-      for &importee in importees {
+      IndexVec::from_vec(vec![vec![]; files.len()]);
+    for importer in files.indices().filter(|&chunk_idx| is_file(chunk_idx)) {
+      for importee in link_state.predicted_importees(importer, self.link_output.runtime.id()) {
         if importee != importer && is_file(importee) {
           importers[importee].push(importer);
         }
       }
-    }
-    for list in &mut importers {
-      list.sort_unstable();
     }
     let imports =
       |importer: ChunkIdx, importee: ChunkIdx| importers[importee].binary_search(&importer).is_ok();

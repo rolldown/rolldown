@@ -1,41 +1,9 @@
-use std::borrow::Cow;
-
-use rolldown::{BundlerOptions, InputItem, OutputFormat, PreserveEntrySignatures};
+use rolldown::{BundlerOptions, InputItem};
 use rolldown_common::{
-  CodeSplittingMode, EmittedChunk, ManualCodeSplittingOptions, MatchGroup, MatchGroupName,
-  MatchGroupTest,
+  CodeSplittingMode, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, MatchGroupTest,
 };
-use rolldown_plugin::{HookUsage, Plugin, PluginContext};
-use rolldown_testing::{
-  integration_test::NamedBundlerOptions, manual_integration_test, test_config::TestMeta,
-};
+use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 use rolldown_utils::js_regex::HybridRegex;
-
-#[derive(Debug)]
-struct EmitChunkPlugin;
-
-impl Plugin for EmitChunkPlugin {
-  fn name(&self) -> Cow<'static, str> {
-    "emit-chunk-plugin".into()
-  }
-
-  async fn build_start(
-    &self,
-    ctx: &PluginContext,
-    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
-  ) -> Result<(), anyhow::Error> {
-    ctx.emit_chunk(EmittedChunk {
-      id: "./seg.js".to_string(),
-      preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
-      ..Default::default()
-    })?;
-    Ok(())
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::BuildStart
-  }
-}
 
 #[tokio::test(flavor = "multi_thread")]
 async fn allow_extension_cross_chunk_reexport_shared_read_imported_entry() {
@@ -68,23 +36,8 @@ async fn allow_extension_cross_chunk_reexport_shared_read_imported_entry() {
   manual_integration_test!()
     .build(TestMeta { expect_executed: true, ..Default::default() })
     .run_multiple(
-      vec![
-        NamedBundlerOptions {
-          description: None,
-          options: options.clone(),
-          snapshot: None,
-          config_name: None,
-          expect_execution_failure: None,
-        },
-        NamedBundlerOptions {
-          description: Some("cjs".to_string()),
-          options: BundlerOptions { format: Some(OutputFormat::Cjs), ..options },
-          snapshot: None,
-          config_name: Some("cjs".to_string()),
-          expect_execution_failure: None,
-        },
-      ],
-      vec![Plugin::new_shared(EmitChunkPlugin)],
+      super::cross_chunk_reexport_fixture::es_and_cjs(options),
+      vec![super::cross_chunk_reexport_fixture::emit_chunks(&["./seg.js"])],
     )
     .await;
 }

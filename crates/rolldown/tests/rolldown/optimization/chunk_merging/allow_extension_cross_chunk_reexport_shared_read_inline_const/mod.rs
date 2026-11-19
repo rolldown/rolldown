@@ -1,39 +1,10 @@
-use std::borrow::Cow;
-
-use rolldown::{BundlerOptions, InputItem, PreserveEntrySignatures};
+use rolldown::{BundlerOptions, InputItem};
 use rolldown_common::{
-  CodeSplittingMode, EmittedChunk, InlineConstOption, ManualCodeSplittingOptions, MatchGroup,
-  MatchGroupName, MatchGroupTest, OptimizationOption,
+  CodeSplittingMode, InlineConstOption, ManualCodeSplittingOptions, MatchGroup, MatchGroupName,
+  MatchGroupTest, OptimizationOption,
 };
-use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 use rolldown_utils::js_regex::HybridRegex;
-
-#[derive(Debug)]
-struct EmitChunkPlugin;
-
-impl Plugin for EmitChunkPlugin {
-  fn name(&self) -> Cow<'static, str> {
-    "emit-chunk-plugin".into()
-  }
-
-  async fn build_start(
-    &self,
-    ctx: &PluginContext,
-    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
-  ) -> Result<(), anyhow::Error> {
-    ctx.emit_chunk(EmittedChunk {
-      id: "./seg.js".to_string(),
-      preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
-      ..Default::default()
-    })?;
-    Ok(())
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::BuildStart
-  }
-}
 
 #[tokio::test(flavor = "multi_thread")]
 async fn allow_extension_cross_chunk_reexport_shared_read_inline_const() {
@@ -69,7 +40,7 @@ async fn allow_extension_cross_chunk_reexport_shared_read_inline_const() {
         }),
         ..Default::default()
       },
-      vec![Plugin::new_shared(EmitChunkPlugin)],
+      vec![super::cross_chunk_reexport_fixture::emit_chunks(&["./seg.js"])],
     )
     .await;
 }

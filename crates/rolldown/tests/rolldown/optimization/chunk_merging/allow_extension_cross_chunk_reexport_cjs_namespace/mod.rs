@@ -1,41 +1,9 @@
-use std::borrow::Cow;
-
-use rolldown::{BundlerOptions, InputItem, OutputFormat, PreserveEntrySignatures};
+use rolldown::{BundlerOptions, InputItem, OutputFormat};
 use rolldown_common::{
-  CodeSplittingMode, EmittedChunk, ManualCodeSplittingOptions, MatchGroup, MatchGroupName,
-  MatchGroupTest,
+  CodeSplittingMode, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, MatchGroupTest,
 };
-use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 use rolldown_utils::js_regex::HybridRegex;
-
-#[derive(Debug)]
-struct EmitChunkPlugin;
-
-impl Plugin for EmitChunkPlugin {
-  fn name(&self) -> Cow<'static, str> {
-    "emit-chunk-plugin".into()
-  }
-
-  async fn build_start(
-    &self,
-    ctx: &PluginContext,
-    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
-  ) -> Result<(), anyhow::Error> {
-    for id in ["./seg_named.js", "./seg_barrel.js", "./seg_star.js", "./seg_merged.js"] {
-      ctx.emit_chunk(EmittedChunk {
-        id: id.to_string(),
-        preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
-        ..Default::default()
-      })?;
-    }
-    Ok(())
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::BuildStart
-  }
-}
 
 #[tokio::test(flavor = "multi_thread")]
 async fn allow_extension_cross_chunk_reexport_cjs_namespace() {
@@ -76,7 +44,12 @@ async fn allow_extension_cross_chunk_reexport_cjs_namespace() {
         })),
         ..Default::default()
       },
-      vec![Plugin::new_shared(EmitChunkPlugin)],
+      vec![super::cross_chunk_reexport_fixture::emit_chunks(&[
+        "./seg_named.js",
+        "./seg_barrel.js",
+        "./seg_star.js",
+        "./seg_merged.js",
+      ])],
     )
     .await;
 }

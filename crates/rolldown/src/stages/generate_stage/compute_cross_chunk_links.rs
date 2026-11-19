@@ -103,28 +103,20 @@ impl CrossChunkLinkState {
       .collect()
   }
 
-  /// The static importees of each chunk that the module-level prediction covers: the edges that
+  /// The static importees of `importer` that the module-level prediction covers: the edges that
   /// this derivation found, except an edge that imports only runtime helpers. The already-loaded
   /// analysis saw these edges (`debug_assert_module_level_static_import_prediction`). Thus a new
   /// import on one of them does not change the result of that analysis. The prediction does not
   /// cover an edge for runtime helpers only, or an edge that chunk merging wrote before.
-  pub(super) fn predicted_importee_table(
+  pub(super) fn predicted_importees(
     &self,
+    importer: ChunkIdx,
     runtime_idx: ModuleIdx,
-  ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
-    self
-      .index_imports_from_other_chunks
-      .iter()
-      .map(|imports| {
-        imports
-          .iter()
-          .filter(|(_, items)| {
-            items.is_empty() || items.iter().any(|item| item.import_ref.owner != runtime_idx)
-          })
-          .map(|(importee, _)| *importee)
-          .collect()
-      })
-      .collect()
+  ) -> impl Iterator<Item = ChunkIdx> + '_ {
+    self.index_imports_from_other_chunks[importer].iter().filter_map(move |(&importee, items)| {
+      (items.is_empty() || items.iter().any(|item| item.import_ref.owner != runtime_idx))
+        .then_some(importee)
+    })
   }
 }
 

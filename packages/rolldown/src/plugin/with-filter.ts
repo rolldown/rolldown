@@ -22,7 +22,7 @@ function withFilterImpl<A, T extends RolldownPluginOption<A>>(
   if (Array.isArray(pluginOption)) {
     return pluginOption.map((p) => withFilter(p, filterObjectList)) as T;
   }
-  // TODO: check builtin plugin and parallel plugin
+  // TODO: check builtin plugin
   let plugin = pluginOption as Plugin<A>;
   let filterObjectIndex = findMatchedFilterObject(plugin.name, filterObjectList);
   if (filterObjectIndex === -1) {

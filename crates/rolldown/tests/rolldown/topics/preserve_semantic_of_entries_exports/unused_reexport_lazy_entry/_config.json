@@ -1,0 +1,7 @@
+{
+  "configVariants": [
+    { "_configName": "false", "preserveEntrySignatures": "false" },
+    { "_configName": "allow-extension", "preserveEntrySignatures": "allow-extension" },
+    { "_configName": "strict", "preserveEntrySignatures": "strict" }
+  ]
+}

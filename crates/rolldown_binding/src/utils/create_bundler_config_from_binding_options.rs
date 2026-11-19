@@ -1,41 +1,13 @@
-use rolldown::BundlerConfig;
-
 use crate::{
   types::binding_bundler_options::BindingBundlerOptions,
-  utils::normalize_binding_options::normalize_binding_options,
+  utils::normalize_binding_options::{NormalizedBindingOptions, normalize_binding_options},
 };
 
+/// The caller owns the `callbacks` field of the result. The caller must release these JS functions
+/// at the end of its close.
 pub fn create_bundler_config_from_binding_options(
   option: BindingBundlerOptions,
-) -> napi::Result<BundlerConfig> {
-  let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;
-  // Only the parallel-plugin worker pool reads the registry, and wasm has no
-  // threads for that pool. Borrow it so the binding counts as used. Do not
-  // bind it to `_`: that would drop it here instead of at the end of scope.
-  #[cfg(target_family = "wasm")]
-  let _ = &parallel_plugins_registry;
-
-  #[cfg(not(target_family = "wasm"))]
-  let worker_count =
-    parallel_plugins_registry.as_ref().map(|registry| registry.worker_count).unwrap_or_default();
-  #[cfg(not(target_family = "wasm"))]
-  let parallel_plugins_map =
-    parallel_plugins_registry.map(|registry| registry.take_plugin_values());
-
-  #[cfg(not(target_family = "wasm"))]
-  let worker_manager = if worker_count > 0 {
-    use crate::worker_manager::WorkerManager;
-    Some(WorkerManager::new(worker_count))
-  } else {
-    None
-  };
-
-  normalize_binding_options(
-    input_options,
-    output_options,
-    #[cfg(not(target_family = "wasm"))]
-    parallel_plugins_map,
-    #[cfg(not(target_family = "wasm"))]
-    worker_manager,
-  )
+) -> napi::Result<NormalizedBindingOptions> {
+  let BindingBundlerOptions { input_options, output_options } = option;
+  normalize_binding_options(input_options, output_options)
 }

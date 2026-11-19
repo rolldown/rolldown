@@ -36,12 +36,7 @@ describe('sanitizeFileName timings', () => {
         return `sanitized-${name}`;
       });
       const outputOptions: OutputOptions = { sanitizeFileName };
-      const { bundlerOptions } = await createBundlerOptions(
-        inputOptions,
-        outputOptions,
-        false,
-        true,
-      );
+      const bundlerOptions = await createBundlerOptions(inputOptions, outputOptions, false, true);
       const bindingSanitizeFileName = bundlerOptions.outputOptions.sanitizeFileName;
       expect(typeof bindingSanitizeFileName).toBe('function');
       if (typeof bindingSanitizeFileName !== 'function') {
@@ -69,6 +64,7 @@ describe('sanitizeFileName timings', () => {
               hook: 'sanitizeFileName',
               calls: 1,
               ms: 40,
+              maxMs: 40,
               maxInFlight: 1,
               overlapMs: 0,
               rankable: true,
@@ -137,6 +133,7 @@ describe('sanitizeFileName timings', () => {
                   hook: 'sanitizeFileName',
                   calls: 3,
                   ms: 120,
+                  maxMs: 40,
                   maxInFlight: 1,
                   overlapMs: 0,
                   rankable: true,

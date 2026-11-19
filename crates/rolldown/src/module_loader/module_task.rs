@@ -22,7 +22,10 @@ use crate::{
   utils::{load_source::load_source, transform_source::transform_source},
 };
 
-use super::{resolve_utils::resolve_dependencies, task_context::TaskContext};
+use super::{
+  resolve_utils::resolve_dependencies,
+  task_context::{TaskContext, TaskMessageGuard},
+};
 
 pub struct ModuleTaskOwner {
   source: ArcStr,
@@ -86,14 +89,14 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
 
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = %self.resolved_id.id))]
   pub async fn run(mut self) {
+    let guard = TaskMessageGuard::new(&self.ctx, self.resolved_id.id.clone());
     if let Err(errs) = self.run_inner().await {
       self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
-      self
-        .ctx
-        .tx
-        .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
-        .expect("ModuleLoader: failed to send build errors - main thread terminated while processing module errors");
+      // The send fails only when the build was dropped before this task finished.
+      // Then nothing reads the result, so ignore the error.
+      let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
+    guard.mark_sent();
   }
 
   async fn run_inner(&mut self) -> BuildResult<()> {
@@ -111,6 +114,9 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
         dynamically_imported_ids: FxIndexSet::default(),
         exports: vec![],
         input_format: ExportsKind::None,
+        // Filled in once the module has been parsed. Hook values recorded on the JS side
+        // are still visible before that.
+        module_side_effects: None,
       }),
     );
 
@@ -144,7 +150,6 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
           warnings: &mut warnings,
           module_type: module_type.clone(),
           replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
-          is_user_defined_entry: self.is_user_defined_entry,
           flat_options: self.flat_options,
         },
         CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
@@ -244,9 +249,9 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       tla_keyword_span,
     }));
 
-    self.ctx.tx.send(result).expect(
-      "ModuleLoader channel closed while sending module completion - main thread terminated unexpectedly"
-    );
+    // The send fails only when the build was dropped before this task finished.
+    // Then nothing reads the result, so ignore the error.
+    let _ = self.ctx.tx.send(result);
 
     Ok(())
   }
@@ -298,7 +303,6 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       })
     })?;
     let source = match source {
-      _ if self.resolved_id.id.starts_with("rolldown:") => source,
       StrOrBytes::Str(source) => {
         // Run plugin transform.
         let source = transform_source(

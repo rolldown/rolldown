@@ -43,8 +43,8 @@ Object.defineProperty(exports, "default", {
 
 ```js
 const require_runtime = require("./_virtual/_rolldown/runtime.js");
-require("./barrel.js");
 let node_assert = require("node:assert");
+require("./barrel.js");
 node_assert = require_runtime.__toESM(node_assert);
 // main.js
 node_assert.default.deepStrictEqual(globalThis.evaluated, ["dep"]);

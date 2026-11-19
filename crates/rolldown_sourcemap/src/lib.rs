@@ -1,16 +1,23 @@
+mod resolve_sources;
 mod source;
 mod source_joiner;
 
 use std::borrow::Cow;
 
-use oxc_sourcemap::{SourceMapParts, Token};
+use oxc_sourcemap::{LookupCursor, SourceMapParts, Token};
 
 pub use oxc_sourcemap::{JSONSourceMap, OwnedSourceMap, SourceMapBuilder, SourcemapVisualizer};
+pub use resolve_sources::resolve_sources_against_module;
 pub use source_joiner::SourceJoiner;
 
 /// Rolldown always stores and produces owned sourcemaps, so we alias the
 /// lifetime-parameterized `oxc_sourcemap::SourceMap` to its `'static` form.
 pub type SourceMap = oxc_sourcemap::SourceMap<'static>;
+
+/// The lifetime-parameterized sourcemap, for callers that collapse a map
+/// which still borrows its source (for example an oxc codegen map) and must
+/// not `into_owned` it first.
+pub type SourceMapRef<'a> = oxc_sourcemap::SourceMap<'a>;
 
 pub use crate::source::{Source, SourceMapSource};
 
@@ -312,20 +319,19 @@ fn copy_names(
   names
 }
 
+type SourcesAndContents = (Vec<Option<Cow<'static, str>>>, Vec<Option<Cow<'static, str>>>);
+
 /// Copies the sources of `map` and their contents. With `used`, it copies only the marked sources,
 /// and it drops the contents past the last source.
-fn copy_sources(
-  map: &oxc_sourcemap::SourceMap<'_>,
-  used: Option<&[bool]>,
-) -> (Vec<Cow<'static, str>>, Vec<Option<Cow<'static, str>>>) {
+fn copy_sources(map: &oxc_sourcemap::SourceMap<'_>, used: Option<&[bool]>) -> SourcesAndContents {
   let Some(used) = used else {
     return (
-      map.get_sources().map(owned).collect(),
+      map.get_sources().map(|source| source.map(owned)).collect(),
       map.get_source_contents().map(|content| content.map(owned)).collect(),
     );
   };
   (
-    map.get_sources().zip(used).filter_map(kept).map(owned).collect(),
+    map.get_sources().zip(used).filter_map(kept).map(|source| source.map(owned)).collect(),
     map
       .get_source_contents()
       .zip(used)
@@ -357,7 +363,7 @@ fn remap_chain(
       #[expect(clippy::cast_possible_truncation)]
       let name_count = sourcemap.get_names().len() as u32;
       offset += name_count;
-      (*sourcemap, sourcemap.generate_lookup_table(), map_offset)
+      (sourcemap.lookup_cursor(), map_offset)
     })
     .collect();
   chain_with_offsets.reverse();
@@ -372,7 +378,7 @@ fn remap_chain(
     (false, true) => remap_tokens::<true, false>,
     (false, false) => remap_tokens::<true, true>,
   };
-  remap(last_map, &chain_with_offsets, last_offset, name_used)
+  remap(last_map, &mut chain_with_offsets, last_offset, name_used)
 }
 
 /// Remaps `last_map`'s tokens through `chain`, the earlier maps with the nearest one first.
@@ -381,18 +387,20 @@ fn remap_chain(
 /// has one flag for each name and one more flag for the ids out of range.
 fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool>(
   last_map: &oxc_sourcemap::SourceMap<'_>,
-  chain: &[(&oxc_sourcemap::SourceMap<'_>, Vec<&[Token]>, u32)],
+  chain: &mut [(LookupCursor<'_>, u32)],
   last_offset: u32,
   name_used: &mut [bool],
 ) -> Box<[Token]> {
-  let source_view_tokens = last_map.get_source_view_tokens();
-  let mut remapped = Vec::with_capacity(source_view_tokens.size_hint().0);
+  // Remapping only needs numeric token fields, not the source/name strings that
+  // SourceViewToken associates with a map. Keep raw tokens throughout the chain.
+  let tokens = last_map.get_tokens();
+  let mut remapped = Vec::with_capacity(tokens.size_hint().0);
   let mut dst_line = None;
   let mut has_mapping = false;
   let mut is_mapped = false;
   let mut leading_unmapped = None;
 
-  for token in source_view_tokens {
+  for token in tokens {
     if dst_line != Some(token.get_dst_line()) {
       dst_line = Some(token.get_dst_line());
       has_mapping = false;
@@ -406,16 +414,13 @@ fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool>(
 
       let mut original_token = token;
       let mut name_id = token.get_name_id().map(|id| id + last_offset);
-      for (sourcemap, lookup_table, offset) in chain {
-        let traced = sourcemap.lookup_source_view_token_approx(
-          lookup_table,
-          original_token.get_src_line(),
-          original_token.get_src_col(),
-        )?;
+      for (lookup, offset) in chain.iter_mut() {
+        let traced = lookup
+          .lookup_token_approx(original_token.get_src_line(), original_token.get_src_col())?;
         traced.get_source_id()?;
         if TRACK_NAMES {
           // Prefer the name from this (earlier) map; otherwise carry forward the downstream one.
-          name_id = traced.get_name_id().map(|id| id + offset).or(name_id);
+          name_id = traced.get_name_id().map(|id| id + *offset).or(name_id);
         }
         original_token = traced;
       }
@@ -464,6 +469,52 @@ fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool>(
   }
 
   remapped.into_boxed_slice()
+}
+
+#[test]
+fn test_lookup_cursor_matches_approximate_lookup() {
+  let mut tokens =
+    vec![Token::new(0, 5, 1, 0, Some(0), None), Token::new(0, 5, 2, 0, Some(0), Some(0))];
+  tokens.extend(
+    (9..120)
+      .step_by(3)
+      .map(|column| Token::new(0, column, 0, column, (column % 2 == 0).then_some(0), None)),
+  );
+  tokens.extend([Token::new(2, 0, 3, 0, Some(0), None), Token::new(2, 4, 3, 4, Some(0), Some(0))]);
+  let map = SourceMap::new(
+    None,
+    vec!["name".into()],
+    None,
+    vec![Some("source.js".into())],
+    vec![None],
+    tokens.into_boxed_slice(),
+    None,
+  );
+  let table = map.generate_lookup_table();
+  let mut lookup = map.lookup_cursor();
+  let mut check = |line, column| {
+    assert_eq!(
+      lookup.lookup_token_approx(line, column),
+      map.lookup_token_approx(&table, line, column),
+      "query ({line}, {column})"
+    );
+  };
+  // Sequential scans, repeated queries, and backwards movement across duplicate columns.
+  for column in (0..140).chain((0..140).rev()) {
+    check(0, column);
+    check(0, column);
+  }
+  // Empty/missing lines, distant jumps, and a return to a previously cached line.
+  for (line, column) in [(2, 4), (1, 0), (0, 5), (0, u32::MAX), (0, 5), (u32::MAX, 0)] {
+    check(line, column);
+  }
+  let mut state = 1_u32;
+  for _ in 0..512 {
+    state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+    check(state % 4, (state >> 8) % 140);
+  }
+  let empty = empty_sourcemap();
+  assert_eq!(empty.lookup_cursor().lookup_token_approx(0, 0), None);
 }
 
 #[test]
@@ -547,6 +598,33 @@ fn test_collapse_sourcemaps() {
 }
 
 #[test]
+fn traced_collapse_preserves_null_sources_when_renumbering() {
+  let mut map = SourceMap::new(
+    None,
+    vec![],
+    None,
+    vec![None, Some("unused.js".into()), Some("used.js".into())],
+    vec![None, Some("unused".into()), Some("used".into())],
+    vec![Token::new(0, 0, 0, 0, Some(0), None), Token::new(0, 4, 1, 2, Some(2), None)]
+      .into_boxed_slice(),
+    None,
+  );
+  map.set_ignore_list(vec![0, 1, 2]);
+  let collapsed = collapse_sourcemaps_traced(&[&map]);
+  assert_eq!(collapsed.get_sources().collect::<Vec<_>>(), [None, Some("used.js")]);
+  assert_eq!(collapsed.get_source_contents().collect::<Vec<_>>(), [None, Some("used")]);
+  assert_eq!(collapsed.get_ignore_list(), Some(&[0, 1][..]));
+  assert_eq!(
+    collapsed.get_tokens().map(|token| token.get_source_id()).collect::<Vec<_>>(),
+    [Some(0), Some(1)]
+  );
+  let encoded = collapsed.to_json_string();
+  let decoded = oxc_sourcemap::SourceMap::from_json_string(&encoded).unwrap();
+  assert_eq!(decoded.get_sources().collect::<Vec<_>>(), [None, Some("used.js")]);
+  assert!(decoded.get_tokens().eq(collapsed.get_tokens()));
+}
+
+#[test]
 fn test_collapse_sourcemaps_clamps_before_first_token_on_a_line() {
   use oxc_sourcemap::SourceMapBuilder;
 
@@ -567,7 +645,7 @@ fn test_collapse_sourcemaps_clamps_before_first_token_on_a_line() {
   assert_eq!((tokens[0].get_dst_line(), tokens[0].get_dst_col()), (0, 0));
   assert_eq!((tokens[0].get_src_line(), tokens[0].get_src_col()), (0, 2));
   assert_eq!(tokens[0].get_source_id(), Some(0));
-  assert_eq!(collapsed.get_sources().collect::<Vec<_>>(), ["original.js"]);
+  assert_eq!(collapsed.get_sources().collect::<Vec<_>>(), [Some("original.js")]);
 }
 
 #[test]
@@ -734,7 +812,7 @@ export function App() {
 
   let generated_loc = get_loc(transformed_code.find("return").unwrap(), transformed_code);
   let original_loc = collapsed
-    .lookup_source_view_token(&collapsed_lookup_table, generated_loc.0, generated_loc.1)
+    .lookup_token(&collapsed_lookup_table, generated_loc.0, generated_loc.1)
     .map(|token| (token.get_src_line(), token.get_src_col()));
   assert_eq!(
     original_loc,
@@ -891,7 +969,7 @@ fn test_collapse_sourcemaps_traced_keeps_single_map_fields() {
     r#"{"version":3,"sourceRoot":"src/","names":[],"sources":["a.js","b.js","c.js"],"sourcesContent":["a","b","c"],"ignoreList":[1,2],"mappings":"AAAA,EEAA"}"#,
   )]);
   assert_eq!(dropped.get_source_root(), Some("src/"));
-  assert_eq!(dropped.get_sources().collect::<Vec<_>>(), ["a.js", "c.js"]);
+  assert_eq!(dropped.get_sources().collect::<Vec<_>>(), [Some("a.js"), Some("c.js")]);
   assert_eq!(dropped.get_ignore_list(), Some([1].as_slice()));
   assert_eq!(dropped.get_tokens().last().unwrap().get_source_id(), Some(1));
 }
@@ -908,7 +986,7 @@ fn test_collapse_sourcemaps_traced_beyond_stack_flags() {
   builder.add_token(0, 0, 0, 0, Some(source_ids[69]), Some(used));
   let map = builder.into_sourcemap();
   let dropped = collapse_sourcemaps_traced(&[&map]);
-  assert_eq!(dropped.get_sources().collect::<Vec<_>>(), ["s69.js"]);
+  assert_eq!(dropped.get_sources().collect::<Vec<_>>(), [Some("s69.js")]);
   assert_eq!(dropped.get_names().collect::<Vec<_>>(), ["used"]);
   let token = dropped.get_tokens().next().unwrap();
   assert_eq!((token.get_source_id(), token.get_name_id()), (Some(0), Some(0)));

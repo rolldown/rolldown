@@ -1,6 +1,7 @@
 use core::cmp::Reverse;
 use std::collections::hash_map::Entry;
 
+use oxc::semantic::SymbolId;
 use oxc_str::CompactStr;
 use rolldown_common::{ModuleTable, SymbolRef, SymbolRefDb};
 use rolldown_utils::{concat_string, rustc_hash::FxHashMapExt};
@@ -101,16 +102,17 @@ impl ConflictResolver {
 /// naming priority. `exec_order` is assigned ascending (dependencies first,
 /// entry last / highest), so `Reverse(exec_order)` sorts the entry first — the
 /// same priority as the `.rev()` pass in `deconflict_chunk_symbols`. Ties are
-/// broken by symbol name ascending. This is the single source of the ordering
-/// invariant previously duplicated as the pinned-SHA comments in
-/// `compute_cross_chunk_links.rs`.
+/// broken by symbol name, then symbol ID within its owner. A module namespace
+/// and a local binding can share a name. Reachable exported owners have unique
+/// execution orders, so the per-owner symbol ID resolves the remaining ties
+/// without depending on asynchronous module discovery order.
 pub fn deconflict_order_key<'a>(
   symbol_ref: SymbolRef,
   module_table: &ModuleTable,
   symbol_db: &'a SymbolRefDb,
-) -> (Reverse<u32>, &'a str) {
+) -> (Reverse<u32>, &'a str, SymbolId) {
   let exec_order = module_table[symbol_ref.owner].exec_order();
-  (Reverse(exec_order), symbol_ref.name(symbol_db))
+  (Reverse(exec_order), symbol_ref.name(symbol_db), symbol_ref.symbol)
 }
 
 #[cfg(test)]
@@ -183,7 +185,7 @@ mod tests {
 
   #[test]
   fn order_key_is_reverse_exec_order_then_name() {
-    // The key type: the entry module has the highest exec_order (dependencies
+    // The key's priority prefix: the entry module has the highest exec_order (dependencies
     // execute first with lower orders, entry last). Reverse sorts the highest
     // exec_order first (entry-first), and ties break by name ascending. We
     // assert the tuple shape and comparison semantics with synthetic values.

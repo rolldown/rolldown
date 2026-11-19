@@ -25,7 +25,7 @@ You need:
 - For a page: Chrome or Edge on the machine. `CHROME_PATH` selects the browser.
 - For a Worker: `@cloudflare/vite-plugin` and `wrangler` as dev dependencies of the app. Coverage needs Wrangler 4.108.0 or later.
 
-perf-kit has no dependencies, so it runs without an install step:
+You can run perf-kit without adding it as a project dependency:
 
 ::: code-group
 
@@ -41,12 +41,43 @@ $ npx @rolldown/perf-kit help
 
 To add it to the project instead, run `vp add -D @rolldown/perf-kit` or `npm i -D @rolldown/perf-kit`. The command is then `vp exec perf-kit` or `npx perf-kit`. perf-kit keeps its state in `.perf-kit/` in the folder you run it from. It writes a `.gitignore` there, so the state stays out of commits.
 
-### Turn on the build report
+### Configure the build
 
-This step is optional. If the app builds with Rolldown, turn on the [build report](/in-depth/build-report#usage) and rebuild the app. perf-kit then reads 2 of its files:
+Set these options and rebuild the app:
 
-- `module-graph.json`, for the commands that [find code that can load later](#find-code-that-can-load-later).
-- `chunk-graph.json`, for the check that finds chunks that start late. Available since Rolldown 1.3.0. A Vite manifest (`build.manifest: true`) also works.
+::: code-group
+
+```js [rolldown.config.js]
+import { defineConfig } from 'rolldown';
+
+export default defineConfig({
+  input: 'src/main.js',
+  devtools: { mode: 'report' },
+  output: { sourcemap: true },
+});
+```
+
+```js [vite.config.js]
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  build: {
+    sourcemap: true,
+    rolldownOptions: {
+      devtools: { mode: 'report' },
+    },
+  },
+});
+```
+
+:::
+
+- `sourcemap: true`: `scan` and `coverage` stop with an error when the entry chunk of a page has no sourcemap. Turn on sourcemaps with any bundler.
+- `devtools: { mode: 'report' }` writes the [build report](/in-depth/build-report). It needs Rolldown, and Vite 8 uses Rolldown. perf-kit reads 2 of its files:
+  - `module-graph.json`, for the commands that [find code that can load later](#find-code-that-can-load-later).
+  - `chunk-graph.json`, for the check that finds chunks that start late. A Vite manifest (`build.manifest: true`) also works.
+
+For a Worker, skip this step. The `worker-config` build sets both options.
 
 ## Use it with a coding agent
 
@@ -395,7 +426,7 @@ Before you compare builds, check the recording with `--calibrate`. The [README](
 
 ### Find code that can load later
 
-Run each command as `npx @rolldown/perf-kit <command>`. These commands need the [build report](#turn-on-the-build-report), and they do not need a browser run. Their numbers are leads, not measurements, so check each change with `scan`.
+Run each command as `npx @rolldown/perf-kit <command>`. These commands need the [build report](#configure-the-build), and they do not need a browser run. Their numbers are leads, not measurements, so check each change with `scan`.
 
 | Command               | What it answers                                                                                                                |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -458,4 +489,3 @@ Edit 1 also moves `charts.js` and the 2 chart modules. Check that the first rend
 - A deferral moves work and does not delete it. The first request or interaction that needs the module pays for its load.
 - The rendered-output check sees the page as the server sends it, without interaction. It does not compare states behind a click, a login or live data, so keep the app's own tests green.
 - perf-kit does not collect metrics from real users. Field mode measures one account, one network and one machine.
-- `--ready exit` and a `stdout:` pattern that starts with `^` time out under the inspector at this time.

@@ -1,6 +1,6 @@
 import type { Plugin } from 'rolldown';
 import { rolldown } from 'rolldown';
-import { isWasiTest } from 'rolldown-tests/utils';
+import { isWasiTest, sleep } from 'rolldown-tests/utils';
 import { describe, expect, test, vi } from 'vitest';
 import { aggregateBindingErrorsIntoJsError } from '../../src/utils/error';
 
@@ -17,22 +17,80 @@ async function buildWithPlugin(plugin: Plugin) {
   }
 }
 
-test('Plugin renderError hook', async () => {
-  const renderErrorFn = vi.fn();
-  const renderChunkFn = vi.fn();
+describe('Plugin renderError hook', () => {
+  test('calls renderError with the rendering error', async () => {
+    const renderErrorFn = vi.fn();
+    const renderChunkFn = vi.fn();
+    const error = await buildWithPlugin({
+      name: 'test',
+      renderStart() {
+        renderChunkFn();
+        throw new Error('renderStart error');
+      },
+      renderError: (error) => {
+        renderErrorFn();
+        expect(error!.message).toContain('renderStart error');
+      },
+    });
+    expect(error!.message).toContain('renderStart error');
+    expect(renderErrorFn).toHaveBeenCalledTimes(1);
+  });
+
+  test('preserves rendering and renderError failures', async () => {
+    const error = await buildWithPlugin({
+      name: 'test',
+      renderStart() {
+        this.error({ code: 'PRIMARY_FAILURE', message: 'rendering failed' });
+      },
+      renderError() {
+        throw new Error('cleanup failed');
+      },
+    });
+    expect(error).toMatchObject({
+      message: expect.stringMatching(/rendering failed[\s\S]*cleanup failed/),
+      errors: [{ message: 'rendering failed' }, { message: 'cleanup failed' }],
+    });
+  });
+});
+
+test('Plugin renderError hook waits for an async handler', async () => {
+  let finished = false;
+  await buildWithPlugin({
+    name: 'test',
+    renderStart() {
+      throw new Error('renderStart error');
+    },
+    async renderError() {
+      await sleep(50);
+      finished = true;
+    },
+  });
+  expect(finished).toBe(true);
+});
+
+test('Plugin renderError hook reports an async rejection', async () => {
   const error = await buildWithPlugin({
     name: 'test',
     renderStart() {
-      renderChunkFn();
       throw new Error('renderStart error');
     },
-    renderError: (error) => {
-      renderErrorFn();
-      expect(error!.message).toContain('renderStart error');
+    async renderError() {
+      await Promise.resolve();
+      throw new Error('renderError error');
+    },
+  });
+  expect(error!.message).toContain('renderError error');
+});
+
+test('Plugin renderStart hook reports an async rejection', async () => {
+  const error = await buildWithPlugin({
+    name: 'test',
+    async renderStart() {
+      await Promise.resolve();
+      throw new Error('renderStart error');
     },
   });
   expect(error!.message).toContain('renderStart error');
-  expect(renderErrorFn).toHaveBeenCalledTimes(1);
 });
 
 describe('Plugin buildEnd hook', async () => {
@@ -163,6 +221,45 @@ test('call transformContext error', async () => {
     },
   });
   expect(error!.message).toContain('transform hook error');
+});
+
+// Under the wasm binding the plugin error is reconstructed as a plain `Error`, losing its `url`.
+test.skipIf(isWasiTest)('includes the url of a plugin error in the message', async () => {
+  const error: any = await buildWithPlugin({
+    name: 'test',
+    transform() {
+      this.error({ message: 'transform hook error', url: 'https://example.com/docs' });
+    },
+  });
+  expect(error.message).toContain('transform hook error\nhttps://example.com/docs');
+  // Same as Rollup, the error object itself keeps the url out of its message.
+  expect(error.errors[0].message).toBe('transform hook error');
+  expect(error.errors[0].url).toBe('https://example.com/docs');
+});
+
+test('prints the url of a plugin warning', async () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  try {
+    const build = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [
+        {
+          name: 'test',
+          transform() {
+            this.warn({ message: 'transform hook warning', url: 'https://example.com/docs' });
+          },
+        },
+      ],
+    });
+    await build.generate();
+    await build.close();
+    expect(warn).toHaveBeenCalledWith(
+      '(test plugin) transform hook warning\nhttps://example.com/docs',
+    );
+  } finally {
+    warn.mockRestore();
+  }
 });
 
 // #4141

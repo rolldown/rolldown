@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## assets/file-Br93rtKC.txt
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
+// main.js
+var import_file = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = "./assets/file-Br93rtKC.txt";
+})))());
+const url = new URL("assets/file-Br93rtKC.txt", import.meta.url);
+assert.equal(new URL(import_file.default, import.meta.url).href, url.href);
+
+```

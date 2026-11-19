@@ -59,6 +59,7 @@ pub(super) struct OrderLoweringInput<'a> {
   pub(super) star_reexport_records_by_imported_symbol:
     &'a FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
   pub(super) member_read_star_reexport_paths: &'a [MemberReadStarReexportPath],
+  pub(super) kept_inlined_constant_reads: &'a FxHashSet<SymbolRef>,
   pub(super) used_symbol_refs_builder: &'a UsedSymbolRefsBuilder,
   pub(super) cyclic_modules: &'a FxHashSet<ModuleIdx>,
   pub(super) tree_shaking: bool,
@@ -640,6 +641,7 @@ impl GenerateStage<'_> {
         .link_output
         .star_reexport_records_by_imported_symbol,
       member_read_star_reexport_paths: &self.link_output.member_read_star_reexport_paths,
+      kept_inlined_constant_reads: &self.link_output.kept_inlined_constant_reads,
       used_symbol_refs_builder,
       cyclic_modules: &cyclic_modules,
       tree_shaking: self.options.treeshake.is_some(),
@@ -658,13 +660,7 @@ impl GenerateStage<'_> {
 
     let mut output =
       OrderLoweringOutput { symbols: &mut self.link_output.symbol_db, state: order_state };
-    lower_order_state(
-      &input,
-      &mut output,
-      runtime_helper,
-      code_splitting_disabled,
-      &consumer_local_plan,
-    );
+    lower_order_state(&input, &mut output, runtime_helper, &consumer_local_plan);
     self.populate_consumer_local_namespace_targets(order_state);
     let runtime_idx = self.link_output.runtime.id();
     order_state.compute_runtime_symbol_closure(
@@ -1560,7 +1556,6 @@ fn lower_order_state(
   input: &OrderLoweringInput<'_>,
   output: &mut OrderLoweringOutput<'_>,
   runtime_helper: RuntimeHelper,
-  code_splitting_disabled: bool,
   consumer_local_plan: &ConsumerLocalReexportPlan,
 ) {
   for module_idx in
@@ -1593,13 +1588,7 @@ fn lower_order_state(
   // Real lowering runs once per bundle, so it builds its own reverse index here; the fixpoint
   // projector passes the analysis-owned one instead of rebuilding per round.
   let reverse_static_imports = super::order_analysis::reverse_static_import_index(input.modules);
-  populate_order_import_overlays(
-    input,
-    &reexport_usage,
-    output.state,
-    code_splitting_disabled,
-    &reverse_static_imports,
-  );
+  populate_order_import_overlays(input, &reexport_usage, output.state, &reverse_static_imports);
 }
 
 /// Mint the per-record [`OrderImportOverlay`]s for the current plan: a wrapper-referencing overlay
@@ -1616,7 +1605,6 @@ pub(super) fn populate_order_import_overlays(
   input: &OrderLoweringInput<'_>,
   reexport_usage: &FrozenReexportUsage,
   state: &mut OrderWrapState,
-  code_splitting_disabled: bool,
   reverse_static_imports: &oxc_index::IndexVec<ModuleIdx, Vec<ModuleIdx>>,
 ) {
   // Backward closure of the plan over the reverse static-import index: one walk answers every
@@ -1679,7 +1667,7 @@ pub(super) fn populate_order_import_overlays(
           importee.namespace_object_ref,
           input.linking[importee_idx].has_dynamic_exports,
           execution_dependencies.contains(&importee_idx),
-          code_splitting_disabled,
+          input.code_splitting_disabled,
         );
         if let Some(overlay) = &mut overlay
           && let Some(retained_reexport_path) = retained_reexport_path
@@ -1740,6 +1728,8 @@ pub(super) fn collect_frozen_reexport_usage(
     } else {
       input.used_symbol_refs_builder.contains(&imported_as_ref)
         || consumed_facades.contains(&imported_as_ref)
+        // An inlined constant read keeps no binding, but it still runs its declaring module.
+        || input.kept_inlined_constant_reads.contains(&imported_as_ref)
         || input.linking[root.0]
           .referenced_symbols_by_entry_point_chunk
           .iter()

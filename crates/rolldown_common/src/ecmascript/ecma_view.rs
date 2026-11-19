@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{ConstExportMeta, SourcemapChainElement};
+use crate::{ConstExportMeta, DeferredWriteConstant, SourcemapChainElement};
 use arcstr::ArcStr;
 use bitflags::bitflags;
 use oxc::{
@@ -15,7 +15,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   ExportsKind, HmrInfo, ImportRecordIdx, ImporterRecord, LocalExport, ModuleDefFormat, ModuleId,
   ModuleIdx, NamedImport, ResolvedImportRecord, StmtInfoIdx, SymbolRef,
-  side_effects::DeterminedSideEffects,
+  side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 
 bitflags! {
@@ -157,6 +157,11 @@ pub struct EcmaView {
   // the module ids imported by this module via dynamic import()
   pub dynamically_imported_ids: FxIndexSet<ModuleId>,
   pub side_effects: DeterminedSideEffects,
+  /// Plugin-facing `moduleSideEffects`. Produced with `side_effects` by
+  /// [`crate::module_side_effects_decision`]. `treeshake: false` (no hook value, or a hook
+  /// `true`) and an external with no hook value stay [`DeterminedSideEffects::NoTreeshake`]
+  /// for inclusion and report `true`.
+  pub reported_side_effects: HookSideEffects,
   pub ast_usage: EcmaModuleAstUsage,
   pub self_referenced_class_decl_symbol_ids: FxHashSet<SymbolId>,
   // the range of hashbang in source
@@ -185,6 +190,9 @@ pub struct EcmaView {
   pub hmr_hot_ref: Option<SymbolRef>,
   pub hmr_info: HmrInfo,
   pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
+  /// Exported `let`s that become constants when no code can call their writers.
+  /// See internal-docs/constant-branches/implementation.md.
+  pub deferred_write_constants: Vec<DeferredWriteConstant>,
   /// Enum member constant values, keyed by enum name → member name → value.
   /// Used by the finalizer to inline `Direction.Up` style accesses across modules.
   /// Contains both const and regular enums.

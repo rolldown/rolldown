@@ -24,7 +24,7 @@ pub struct SymbolRefDataClassic {
 
 bitflags::bitflags! {
   #[derive(Debug, Default, Clone, Copy)]
-  pub struct SymbolRefFlags: u8 {
+  pub struct SymbolRefFlags: u16 {
     const IsNotReassigned = 1;
     /// The function is side-effect-free solely because of a `@__NO_SIDE_EFFECTS__` annotation,
     /// NOT because its body is empty. Such functions may still use their arguments, so
@@ -61,6 +61,13 @@ bitflags::bitflags! {
     /// A binding that always holds a top-level function that never reads `this`, so calling it as
     /// a namespace member cannot observe the namespace.
     const NeverReadsThis = 1 << 7;
+    /// A root `var` that code may read before its declarator assigns it, when it is `undefined`.
+    /// Its value is not inlined. See `internal-docs/inline-const/design.md`.
+    const ReadBeforeAssigned = 1 << 8;
+    /// Set with `SideEffectsFreeFunction` when `export { fn }` or `export default fn` exports the
+    /// function instead of its declaration. The linker checks initialization, the result, and
+    /// the rest of the statement before removing these calls. See `cross_module_optimization.rs`.
+    const ExportedSeparately = 1 << 9;
   }
 }
 
@@ -82,8 +89,6 @@ pub struct SymbolRefDbForModule {
   /// Facades created or reused since `begin_link`, in creation order.
   link_facades: Vec<(CompactStr, SymbolId)>,
   linking: bool,
-  #[cfg(debug_assertions)]
-  create_reason: FxHashMap<SymbolRef, String>,
 }
 
 impl Default for SymbolRefDbForModule {
@@ -97,8 +102,6 @@ impl Default for SymbolRefDbForModule {
       reusable_link_facades: FxHashMap::default(),
       link_facades: Vec::new(),
       linking: false,
-      #[cfg(debug_assertions)]
-      create_reason: FxHashMap::default(),
     }
   }
 }
@@ -117,8 +120,6 @@ impl SymbolRefDbForModule {
       reusable_link_facades: FxHashMap::default(),
       link_facades: Vec::new(),
       linking: false,
-      #[cfg(debug_assertions)]
-      create_reason: FxHashMap::default(),
     }
   }
 
@@ -131,7 +132,6 @@ impl SymbolRefDbForModule {
   }
 
   /// The `facade` means the symbol is actually not exist in the AST.
-  #[cfg_attr(debug_assertions, track_caller)]
   pub fn create_facade_root_symbol_ref(&mut self, name: &str) -> SymbolRef {
     let reused =
       if self.linking { self.reusable_link_facades.get_mut(name).and_then(Vec::pop) } else { None };
@@ -151,19 +151,7 @@ impl SymbolRefDbForModule {
       self.link_facades.push((CompactStr::from(name), symbol_id));
     }
 
-    let ret = SymbolRef::from((self.owner_idx, symbol_id));
-    #[cfg(debug_assertions)]
-    {
-      let location = std::panic::Location::caller();
-      self.create_reason.insert(
-        ret,
-        format!(
-          "create facade root symbol ref for {:?} -> {}.\nlocation: {}",
-          self.owner_idx, name, location
-        ),
-      );
-    }
-    ret
+    SymbolRef::from((self.owner_idx, symbol_id))
   }
 
   /// Check if a symbol is a facade symbol (synthetic, not present in the original AST).
@@ -272,8 +260,6 @@ impl SymbolRefDb {
         reusable_link_facades: inner.reusable_link_facades.clone(),
         link_facades: Vec::new(),
         linking: false,
-        #[cfg(debug_assertions)]
-        create_reason: inner.create_reason.clone(),
       }));
     }
     Self { inner: vec, has_module_preserve_jsx: self.has_module_preserve_jsx }
@@ -449,16 +435,6 @@ impl SymbolRefDb {
   pub fn is_declared_in_root_scope(&self, refer: SymbolRef) -> bool {
     let local_db = self.inner[refer.owner].unpack_ref();
     local_db.ast_scopes.symbol_scope_id(refer.symbol) == local_db.root_scope_id
-  }
-
-  #[cfg(debug_assertions)]
-  /// If it is not a facade symbol, `No create reason found` will be returned.
-  pub fn get_create_reason(&self, symbol_ref: &SymbolRef) -> &str {
-    self
-      .local_db(symbol_ref.owner)
-      .create_reason
-      .get(symbol_ref)
-      .map_or("No create reason found", |reason| reason.as_str())
   }
 }
 

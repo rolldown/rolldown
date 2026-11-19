@@ -1,6 +1,5 @@
 use std::{borrow::Cow, path::Path};
 
-use oxc::ast::CommentKind;
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
 use rolldown_error::{BuildResult, ResultExt};
@@ -26,10 +25,6 @@ const SOURCEMAP_FILENAME_ENCODE_SET: &AsciiSet = &CONTROLS
   .add(b'{')
   .add(b'}');
 
-// `*` before `/` closes a CSS comment.
-const CSS_SOURCEMAP_FILENAME_ENCODE_SET: &AsciiSet = &SOURCEMAP_FILENAME_ENCODE_SET.add(b'*');
-
-#[expect(clippy::too_many_arguments)]
 #[cfg(feature = "experimental")]
 pub async fn process_code_and_sourcemap(
   options: &NormalizedBundlerOptions,
@@ -38,14 +33,14 @@ pub async fn process_code_and_sourcemap(
   file_dir: &Path,
   filename: &str,
   debug_id: u128,
-  is_css: bool,
   sourcemap_filename: Option<String>,
 ) -> BuildResult<Option<OutputAsset>> {
   prepare_sourcemap(options, map, file_dir, filename).await?;
   let map_filename = sourcemap_filename.unwrap_or_else(|| format!("{filename}.map"));
-  emit_sourcemap(options, code, map, &map_filename, debug_id, is_css)
+  emit_sourcemap(options, code, map, &map_filename, debug_id)
 }
 
+// See internal-docs/chunk-hash/implementation.md for source indices and callback handling.
 pub async fn prepare_sourcemap(
   options: &NormalizedBundlerOptions,
   map: &mut SourceMap,
@@ -65,6 +60,7 @@ pub async fn prepare_sourcemap(
   if let Some(source_map_ignore_list) = &options.sourcemap_ignore_list {
     let relative_sources = map
       .get_sources()
+      .flatten()
       .map(|source| source.as_path().relative(file_dir).to_string_lossy().into_owned())
       .collect::<Vec<_>>();
 
@@ -99,9 +95,11 @@ pub async fn prepare_sourcemap(
     };
 
     #[expect(clippy::cast_possible_truncation)]
-    let ignore_list = ignored
-      .into_iter()
+    let ignore_list = map
+      .get_sources()
       .enumerate()
+      .filter_map(|(index, source)| source.map(|_| index))
+      .zip(ignored)
       .filter_map(|(index, should_ignore)| should_ignore.then_some(index as u32))
       .collect::<Vec<_>>();
 
@@ -114,6 +112,7 @@ pub async fn prepare_sourcemap(
     let map_path = map_path.to_string_lossy();
     let relative_sources = map
       .get_sources()
+      .flatten()
       .map(|source| source.as_path().relative(file_dir).to_string_lossy().into_owned())
       .collect::<Vec<_>>();
     let source_count = relative_sources.len();
@@ -139,17 +138,28 @@ pub async fn prepare_sourcemap(
       .map(|source| source.replace(std::path::MAIN_SEPARATOR, "/"))
       .collect::<Vec<_>>();
 
-    map.set_sources(sources);
+    if map.get_sources().all(|source| source.is_some()) {
+      map.set_sources(sources.into_iter().map(Some));
+    } else {
+      let mut transformed = sources.into_iter();
+      let sources = map
+        .get_sources()
+        .map(|source| source.map(|_| transformed.next().expect("source count was checked")))
+        .collect::<Vec<_>>();
+      map.set_sources(sources);
+    }
   } else if cfg!(windows) {
     // Normalize the windows path at final.
-    let sources =
-      map.get_sources().map(|x| relative_path_to_slash(x.as_path(), file_dir)).collect::<Vec<_>>();
+    let sources = map
+      .get_sources()
+      .map(|x| x.map(|x| relative_path_to_slash(x.as_path(), file_dir)))
+      .collect::<Vec<_>>();
     map.set_sources(sources);
   } else {
     map.set_sources(
       map
         .get_sources()
-        .map(|x| x.as_path().relative(file_dir).to_string_lossy().into_owned())
+        .map(|x| x.map(|x| x.as_path().relative(file_dir).to_string_lossy().into_owned()))
         .collect::<Vec<_>>(),
     );
   }
@@ -163,70 +173,32 @@ pub fn emit_sourcemap(
   map: &mut SourceMap,
   map_filename: &str,
   debug_id: u128,
-  is_css: bool,
 ) -> BuildResult<Option<OutputAsset>> {
-  let source_map_link_comment_kind =
-    if is_css { CommentKind::SingleLineBlock } else { CommentKind::Line };
-
   if options.sourcemap_debug_ids && options.sourcemap.is_some() {
     let debug_id_str = uuid_v4_string_from_u128(debug_id);
     map.set_debug_id(&debug_id_str);
 
-    process_sourcemap_related_reference(
-      code,
-      |source| {
-        source.push_str("# debugId=");
-        source.push_str(debug_id_str.as_str());
-        Ok(())
-      },
-      source_map_link_comment_kind,
-    )?;
+    process_sourcemap_related_reference(code, |source| {
+      source.push_str("# debugId=");
+      source.push_str(debug_id_str.as_str());
+      Ok(())
+    })?;
   }
 
   if let Some(sourcemap) = &options.sourcemap {
     match sourcemap {
       SourceMapType::File | SourceMapType::Hidden => {
-        let source = map.to_json_string();
+        // `to_json_string` reserves six times the map's string bytes up front and returns the
+        // buffer unshrunk. This string lives on as the `.map` asset until the output is written
+        // (or longer, when the caller keeps the `BundleOutput`), so give the slack back now.
+        let mut source = map.to_json_string();
+        source.shrink_to_fit();
         if matches!(sourcemap, SourceMapType::File) {
-          process_sourcemap_related_reference(
-            code,
-            |source| {
-              source.push_str("# sourceMappingURL=");
-              let encode_set = if is_css {
-                CSS_SOURCEMAP_FILENAME_ENCODE_SET
-              } else {
-                SOURCEMAP_FILENAME_ENCODE_SET
-              };
-
-              match &options.sourcemap_base_url {
-                Some(url_string) => {
-                  let encoded_filename: Cow<'_, str> =
-                    utf8_percent_encode(map_filename, encode_set).into();
-                  let url = Url::parse(url_string)
-                    .and_then(|base| base.join(&encoded_filename))
-                    .map_err_to_unhandleable()?;
-                  let url = url.as_str();
-                  // The base URL may contain `*/`, which would close the CSS comment
-                  if is_css && url.contains('*') {
-                    source.push_str(&url.replace('*', "%2A"));
-                  } else {
-                    source.push_str(url);
-                  }
-                }
-                None => {
-                  let filename = Path::new(map_filename)
-                    .file_name()
-                    .ok_or(anyhow::anyhow!("should have filename"))?
-                    .to_string_lossy();
-                  let encoded_filename: Cow<'_, str> =
-                    utf8_percent_encode(&filename, encode_set).into();
-                  source.push_str(&encoded_filename);
-                }
-              }
-              Ok(())
-            },
-            source_map_link_comment_kind,
-          )?;
+          process_sourcemap_related_reference(code, |source| {
+            source.push_str("# sourceMappingURL=");
+            source.push_str(&sourcemap_file_url(options, map_filename)?);
+            Ok(())
+          })?;
         }
         return Ok(Some(OutputAsset {
           filename: map_filename.into(),
@@ -237,15 +209,11 @@ pub fn emit_sourcemap(
       }
       SourceMapType::Inline => {
         let data_url = map.to_data_url();
-        process_sourcemap_related_reference(
-          code,
-          |source| {
-            source.push_str("# sourceMappingURL=");
-            source.push_str(&data_url);
-            Ok(())
-          },
-          source_map_link_comment_kind,
-        )?;
+        process_sourcemap_related_reference(code, |source| {
+          source.push_str("# sourceMappingURL=");
+          source.push_str(&data_url);
+          Ok(())
+        })?;
       }
     }
   }
@@ -253,31 +221,96 @@ pub fn emit_sourcemap(
   Ok(None)
 }
 
+pub fn sourcemap_file_url(
+  options: &NormalizedBundlerOptions,
+  map_filename: &str,
+) -> BuildResult<String> {
+  match &options.sourcemap_base_url {
+    Some(url_string) => {
+      let encoded_filename: Cow<'_, str> =
+        utf8_percent_encode(map_filename, SOURCEMAP_FILENAME_ENCODE_SET).into();
+      let url = Url::parse(url_string)
+        .and_then(|base| base.join(&encoded_filename))
+        .map_err_to_unhandleable()?;
+      Ok(url.into())
+    }
+    None => {
+      let filename = Path::new(map_filename)
+        .file_name()
+        .ok_or(anyhow::anyhow!("should have filename"))?
+        .to_string_lossy();
+      let encoded_filename: Cow<'_, str> =
+        utf8_percent_encode(&filename, SOURCEMAP_FILENAME_ENCODE_SET).into();
+      Ok(encoded_filename.into_owned())
+    }
+  }
+}
+
 fn process_sourcemap_related_reference(
   source: &mut String,
   mut reference_body_processor: impl FnMut(&mut String) -> BuildResult<()>,
-  comment_kind: CommentKind,
 ) -> BuildResult<()> {
-  source.push('\n');
-  match comment_kind {
-    CommentKind::Line | CommentKind::HtmlOpen | CommentKind::HtmlClose => {
-      source.push_str("//");
-      reference_body_processor(source)?;
-    }
-    CommentKind::SingleLineBlock | CommentKind::MultiLineBlock => {
-      source.push_str("/*");
-      reference_body_processor(source)?;
-      source.push_str("*/");
-    }
-  }
-  Ok(())
+  source.push_str("\n//");
+  reference_body_processor(source)
 }
 
 #[cfg(test)]
 mod tests {
-  use super::emit_sourcemap;
-  use rolldown_common::{NormalizedBundlerOptions, SourceMapType};
-  use rolldown_sourcemap::SourceMapBuilder;
+  use super::{emit_sourcemap, prepare_sourcemap};
+  use rolldown_common::{
+    NormalizedBundlerOptions, SourceMapIgnoreList, SourceMapPathTransform, SourceMapType,
+  };
+  use rolldown_sourcemap::{SourceMap, SourceMapBuilder};
+
+  #[tokio::test]
+  async fn null_sources_keep_their_indices_and_skip_path_callbacks() {
+    let options = NormalizedBundlerOptions {
+      sourcemap_ignore_list: Some(SourceMapIgnoreList::new(std::sync::Arc::new(|sources, _| {
+        assert_eq!(sources, ["input.js"]);
+        Box::pin(async { Ok(vec![true]) })
+      }))),
+      sourcemap_path_transform: Some(SourceMapPathTransform::new(std::sync::Arc::new(
+        |sources, _| {
+          assert_eq!(sources, ["input.js"]);
+          Box::pin(async { Ok(vec!["renamed.js".into()]) })
+        },
+      ))),
+      ..Default::default()
+    };
+    let dir = std::env::current_dir().unwrap();
+    let input = dir.join("input.js").to_string_lossy().into_owned();
+    let mut map = SourceMap::new(
+      None,
+      vec![],
+      None,
+      vec![None, Some(input.into())],
+      vec![],
+      Box::new([]),
+      None,
+    );
+    prepare_sourcemap(&options, &mut map, &dir, "out.js").await.unwrap();
+    assert_eq!(map.get_sources().collect::<Vec<_>>(), [None, Some("renamed.js")]);
+    assert_eq!(map.get_ignore_list(), Some(&[1][..]));
+  }
+
+  #[tokio::test]
+  async fn null_sources_survive_relative_path_normalization() {
+    let dir = std::env::current_dir().unwrap();
+    let input = dir.join("input.js").to_string_lossy().into_owned();
+    let mut map = SourceMap::new(
+      None,
+      vec![],
+      None,
+      vec![None, Some(input.into())],
+      vec![],
+      Box::new([]),
+      None,
+    );
+    prepare_sourcemap(&NormalizedBundlerOptions::default(), &mut map, &dir, "out.js")
+      .await
+      .unwrap();
+    assert_eq!(map.get_sources().collect::<Vec<_>>(), [None, Some("input.js")]);
+  }
 
   #[test]
   fn sourcemap_filenames_remain_in_comments() {
@@ -286,7 +319,7 @@ mod tests {
     let mut map = SourceMapBuilder::default().into_sourcemap().into_owned();
     let filename = "test\u{2028}(filename,{}).map";
     let mut code = String::from("export const value = 42;");
-    let asset = emit_sourcemap(&options, &mut code, &mut map, filename, 0, false).unwrap().unwrap();
+    let asset = emit_sourcemap(&options, &mut code, &mut map, filename, 0).unwrap().unwrap();
     assert_eq!(asset.filename.as_str(), filename);
     assert_eq!(
       code,
@@ -297,40 +330,23 @@ mod tests {
 
   #[test]
   fn sourcemap_urls_preserve_filename_data() {
-    for (base_url, js_base, css_base) in [
-      (None, "", ""),
-      (
-        Some("https://example.test/base*/"),
-        "https://example.test/base*/",
-        "https://example.test/base%2A/",
-      ),
-    ] {
-      for (filename, js_filename, css_filename) in [
-        ("space #?%*.map", "space%20%23%3F%25*.map", "space%20%23%3F%25%2A.map"),
-        (
-          "line\n\r\u{2028}\u{2029}.map",
-          "line%0A%0D%E2%80%A8%E2%80%A9.map",
-          "line%0A%0D%E2%80%A8%E2%80%A9.map",
-        ),
+    for base_url in [None, Some("https://example.test/base*/")] {
+      for (filename, encoded_filename) in [
+        ("space #?%*.map", "space%20%23%3F%25*.map"),
+        ("line\n\r\u{2028}\u{2029}.map", "line%0A%0D%E2%80%A8%E2%80%A9.map"),
         // spellchecker:ignore-next-line
-        ("café.map", "caf%C3%A9.map", "caf%C3%A9.map"),
+        ("café.map", "caf%C3%A9.map"),
       ] {
-        for is_css in [false, true] {
-          let options = NormalizedBundlerOptions {
-            sourcemap: Some(SourceMapType::File),
-            sourcemap_base_url: base_url.map(String::from),
-            ..Default::default()
-          };
-          let mut map = SourceMapBuilder::default().into_sourcemap().into_owned();
-          let mut code = String::new();
-          emit_sourcemap(&options, &mut code, &mut map, filename, 0, is_css).unwrap();
-          let expected = if is_css {
-            format!("\n/*# sourceMappingURL={css_base}{css_filename}*/")
-          } else {
-            format!("\n//# sourceMappingURL={js_base}{js_filename}")
-          };
-          assert_eq!(code, expected);
-        }
+        let options = NormalizedBundlerOptions {
+          sourcemap: Some(SourceMapType::File),
+          sourcemap_base_url: base_url.map(String::from),
+          ..Default::default()
+        };
+        let mut map = SourceMapBuilder::default().into_sourcemap().into_owned();
+        let mut code = String::new();
+        emit_sourcemap(&options, &mut code, &mut map, filename, 0).unwrap();
+        let base_url = base_url.unwrap_or_default();
+        assert_eq!(code, format!("\n//# sourceMappingURL={base_url}{encoded_filename}"));
       }
     }
   }

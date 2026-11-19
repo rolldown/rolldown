@@ -810,19 +810,21 @@ impl MetricsAggregator {
   }
 
   pub(crate) fn graph_section(&self, analysis: &crate::graph::GraphAnalysis) -> GraphSection {
-    let entry_set: std::collections::BTreeSet<&str> =
-      analysis.entry_modules.iter().map(String::as_str).collect();
     let mut rows: Vec<&crate::graph::GraphNode> = analysis
       .nodes
       .iter()
-      .filter(|node| {
-        node.static_reachable && node.retained_bytes > 0 && !entry_set.contains(node.id.as_str())
+      .enumerate()
+      .filter_map(|(i, node)| {
+        (node.static_reachable
+          && node.retained_bytes > 0
+          && analysis.entry_indices.binary_search(&i).is_err())
+        .then_some(node)
       })
       .collect();
     rows.sort_by(|a, b| b.retained_bytes.cmp(&a.retained_bytes).then_with(|| a.id.cmp(&b.id)));
     rows.truncate(self.config.top_n);
     GraphSection {
-      entry_modules: analysis.entry_modules.iter().map(|id| self.stabilize(id)).collect(),
+      entry_modules: analysis.entry_ids().map(|id| self.stabilize(id)).collect(),
       static_module_count: analysis.static_module_count,
       static_bytes: analysis.static_bytes,
       dynamic_only_module_count: analysis.dynamic_only_count,

@@ -43,13 +43,21 @@ export interface OutputCodeCacheEntry {
   code: string;
 }
 
+/**
+ * `undefined` means no hook or plugin write has set `moduleSideEffects`. Readers then
+ * use the effective native value. `null` is an explicit write and stays `null`.
+ * The public `ModuleOptions` type stays `boolean | 'no-treeshake' | null` so hook
+ * result types keep intersecting.
+ */
+type StoredModuleOptions = Omit<ModuleOptions, 'moduleSideEffects'> & {
+  moduleSideEffects: ModuleOptions['moduleSideEffects'] | undefined;
+};
+
 export class PluginContextData {
-  moduleOptionMap: Map<string, ModuleOptions> = new Map();
-  /**
-   * The cache is `null` in parallel plugin workers. In a worker, each plugin has its own
-   * `PluginContextData`, so the cache never finds a match. See `parallel-plugin-worker.ts`.
-   */
-  outputCodeCache: Map<string, OutputCodeCacheEntry> | null;
+  moduleOptionMap: Map<string, StoredModuleOptions> = new Map();
+  /** The module options set by `resolveId` and `this.load`. */
+  private resolvedModuleOptionMap: Map<string, StoredModuleOptions> = new Map();
+  outputCodeCache: Map<string, OutputCodeCacheEntry> = new Map();
   resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map();
   /** The next `this.resolve` receipt. See `saveResolveOptions`. */
   private nextResolveOptionsReceipt = 0;
@@ -65,10 +73,7 @@ export class PluginContextData {
     private outputOptions: OutputOptions,
     private normalizedInputPlugins: RolldownPlugin[],
     private normalizedOutputPlugins: RolldownPlugin[],
-    cacheOutputCode = true,
-  ) {
-    this.outputCodeCache = cacheOutputCode ? new Map() : null;
-  }
+  ) {}
 
   /**
    * The module id of `rawId` imported with `attributes`, as JS keys it. Without
@@ -86,10 +91,32 @@ export class PluginContextData {
     return this.importAttributes ? id : parseModuleId(id).rawId;
   }
 
-  updateModuleOption(id: string, option: ModuleOptions): ModuleOptions {
+  /** Set `isResolution` for the options from `resolveId` and `this.load`. */
+  updateModuleOption(id: string, option: ModuleOptions, isResolution = false): StoredModuleOptions {
     id = this.moduleOptionKey(id);
+    const storedSideEffects =
+      option.moduleSideEffects == null ? undefined : option.moduleSideEffects;
+    if (isResolution) {
+      const resolved = this.resolvedModuleOptionMap.get(id);
+      if (resolved) {
+        if (storedSideEffects !== undefined) {
+          resolved.moduleSideEffects = storedSideEffects;
+        }
+        Object.assign(resolved.meta, option.meta);
+      } else {
+        // Copy `meta`, because merges change it in place. `null` from a hook means
+        // "not specified" and is stored as `undefined` so readers use the native value.
+        this.resolvedModuleOptionMap.set(id, {
+          ...option,
+          meta: { ...option.meta },
+          moduleSideEffects: storedSideEffects,
+        });
+      }
+    }
     const existing = this.moduleOptionMap.get(id);
     if (existing) {
+      // `null` from a hook means "not specified" and must not clear a previous value.
+      // An explicit `null` write assigns the stored field directly.
       if (option.moduleSideEffects != null) {
         existing.moduleSideEffects = option.moduleSideEffects;
       }
@@ -100,18 +127,22 @@ export class PluginContextData {
         existing.invalidate = option.invalidate;
       }
     } else {
-      this.moduleOptionMap.set(id, option);
-      return option;
+      const stored: StoredModuleOptions = {
+        ...option,
+        moduleSideEffects: option.moduleSideEffects == null ? undefined : option.moduleSideEffects,
+      };
+      this.moduleOptionMap.set(id, stored);
+      return stored;
     }
     return existing;
   }
 
-  getModuleOption(id: string): ModuleOptions {
+  getModuleOption(id: string): StoredModuleOptions {
     id = this.moduleOptionKey(id);
     const option = this.moduleOptionMap.get(id);
     if (!option) {
-      const raw: ModuleOptions = {
-        moduleSideEffects: null,
+      const raw: StoredModuleOptions = {
+        moduleSideEffects: undefined,
         meta: {},
       };
       this.moduleOptionMap.set(id, raw);
@@ -135,12 +166,10 @@ export class PluginContextData {
       get() {
         return moduleSideEffects;
       },
-      set: (v: any) => {
-        this.updateModuleOption(id, {
-          moduleSideEffects: v,
-          meta: info.meta,
-          invalidate: true,
-        });
+      set: (v: ModuleInfo['moduleSideEffects']) => {
+        const stored = this.getModuleOption(id);
+        stored.moduleSideEffects = v;
+        stored.invalidate = true;
         moduleSideEffects = v;
       },
     });
@@ -205,11 +234,32 @@ export class PluginContextData {
     return this.normalizedOutputOptions;
   }
 
+  /**
+   * `null` clears the options of all modules (a full scan). Otherwise the given modules go back to
+   * the options set when they were resolved, because their importers do not resolve them again.
+   */
+  resetModuleOptions(ids: string[] | null): void {
+    if (!ids) {
+      this.moduleOptionMap.clear();
+      this.resolvedModuleOptionMap.clear();
+      return;
+    }
+    for (const id of ids) {
+      const key = this.moduleOptionKey(id);
+      const resolved = this.resolvedModuleOptionMap.get(key);
+      if (resolved) {
+        this.moduleOptionMap.set(key, { ...resolved, meta: { ...resolved.meta } });
+      } else {
+        this.moduleOptionMap.delete(key);
+      }
+    }
+  }
+
   clear(): void {
     this.renderedChunkMeta = null;
     this.loadModulePromiseMap.clear();
     // Watch mode reuses this object across rebuilds; entries hold the previous build's chunk data.
-    this.outputCodeCache?.clear();
+    this.outputCodeCache.clear();
     // `resolveOptionsMap` and its receipt counter stay as they are: a `this.resolve` call of the
     // previous build may still be in flight, and its receipt must not be given out again.
   }

@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## barrel.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({ NAME: () => NAME });
+const NAME = "layers";
+export { barrel_exports as n, NAME as t };
+
+```
+
+## main.js
+
+```js
+// main.js
+globalThis.load = [() => import("./barrel.js").then((n) => n.n).then((m) => m.NAME), () => import("./page.js")];
+
+```
+
+## page.js
+
+```js
+import { t as NAME } from "./barrel.js";
+// helpers.js
+const shout = (s) => s.toUpperCase();
+// page.js
+const TITLE = shout(NAME);
+export { TITLE };
+
+```

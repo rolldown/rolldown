@@ -28,7 +28,8 @@ use crate::{ast_scanner::cjs_export_analyzer::CommonJsAstType, utils};
 
 use super::{
   AstScanner, UntranspiledSyntax, cjs_export_analyzer::CjsGlobalAssignmentType,
-  stmt_eval_analyzer::StmtEvalAnalyzer, top_level_import_read::TopLevelImportReadDetector,
+  early_var_reads::EarlyVarReads, stmt_eval_analyzer::StmtEvalAnalyzer,
+  top_level_import_read::TopLevelImportReadDetector,
 };
 
 impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
@@ -48,10 +49,23 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
 
   fn enter_node(&mut self, kind: oxc::ast::AstKind<'ast>) {
     self.visit_path.push(kind);
+    if is_function_or_class(kind)
+      && let Some(early_var_reads) = &self.early_var_reads
+    {
+      let outermost = (!early_var_reads.is_nested()).then(|| self.outermost_runs_at(kind));
+      if let Some(early_var_reads) = &mut self.early_var_reads {
+        early_var_reads.enter(outermost);
+      }
+    }
   }
 
-  fn leave_node(&mut self, _it: oxc::ast::AstKind<'ast>) {
+  fn leave_node(&mut self, kind: oxc::ast::AstKind<'ast>) {
     self.visit_path.pop();
+    if is_function_or_class(kind)
+      && let Some(early_var_reads) = &mut self.early_var_reads
+    {
+      early_var_reads.leave();
+    }
   }
 
   fn visit_program(&mut self, program: &ast::Program<'ast>) {
@@ -78,6 +92,17 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
       self.result.ecma_view_meta.insert(EcmaViewMeta::IndependentInitialization);
     }
 
+    self.collect_side_effect_free_functions(program);
+
+    let scoping = self.result.symbol_ref_db.scoping();
+    if scoping
+      .get_bindings(scoping.root_scope_id())
+      .values()
+      .any(|&symbol_id| scoping.symbol_flags(symbol_id).is_function_scoped_declaration())
+    {
+      self.early_var_reads = Some(EarlyVarReads::default());
+    }
+
     // With a top-level `return`, a module is CommonJS unless it has an `export` declaration.
     let top_level_return_ends_module = !program
       .body
@@ -92,6 +117,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
       {
         self.current_stmt_idx = StmtInfoIdx::from_raw_unchecked(idx as u32 + 1);
       }
+      self.current_stmt_start = stmt.span().start;
       let analyzer = StmtEvalAnalyzer::new(
         &self.result.symbol_ref_db.ast_scopes,
         self.immutable_ctx.flat_options,
@@ -203,6 +229,10 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     let symbol_id = ident.symbol_id.get().unpack();
     if self.is_root_symbol(symbol_id) {
       self.declare_normal_symbol_ref(symbol_id);
+    } else if let Some(var_id) = self.result.symbol_ref_db.scoping().catch_var_binding(symbol_id)
+      && self.is_root_symbol(var_id)
+    {
+      self.declare_normal_symbol_ref(var_id);
     }
   }
 
@@ -224,7 +254,8 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     self.process_identifier_ref_by_scope(ident);
     self.try_diagnostic_forbid_const_assign(ident);
     self.update_dynamic_import_binding_usage_info(ident);
-    self.record_var_read_before_declaration(ident);
+    self.record_root_binding_ref(ident);
+    self.record_root_write(ident);
   }
 
   fn visit_statement(&mut self, stmt: &ast::Statement<'ast>) {
@@ -406,6 +437,12 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     // `var` in a nested statement also declares a root binding, but its initializer can be skipped.
     if matches!(self.visit_path.as_slice(), [] | [AstKind::ExportDeclaration(_)]) {
       for declarator in &decl.declarations {
+        if decl.kind == ast::VariableDeclarationKind::Var
+          && let BindingPattern::BindingIdentifier(binding) = &declarator.id
+          && let Some(early_var_reads) = &mut self.early_var_reads
+        {
+          early_var_reads.add_var_declarator(binding.symbol_id(), declarator.span.end);
+        }
         if let (BindingPattern::BindingIdentifier(binding), Some(init)) =
           (&declarator.id, &declarator.init)
           && let Some(value) = self.extract_constant_value_from_expr(Some(init))
@@ -514,6 +551,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ));
     }
     self.result.ast_usage.insert(EcmaModuleAstUsage::TopLevelAwait);
+    self.current_stmt_info.meta.insert(StmtInfoMeta::TopLevelAwait);
     if self.result.tla_keyword_span.is_none() {
       self.result.tla_keyword_span = Some(span);
     }
@@ -544,21 +582,23 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     })
   }
 
-  /// Module-level code runs in source order, so it reads a root `var` declared later as
-  /// `undefined`. `export { x }` only forwards the binding.
-  fn record_var_read_before_declaration(&mut self, ident_ref: &IdentifierReference) {
-    if !self.is_top_level || matches!(self.visit_path.last(), Some(AstKind::ExportSpecifier(_))) {
+  /// Records a reference to a root variable or function for finding `var`s read before their
+  /// declarator runs. `export { x }` only forwards the binding.
+  fn record_root_binding_ref(&mut self, ident_ref: &IdentifierReference) {
+    if self.early_var_reads.is_none()
+      || matches!(self.visit_path.last(), Some(AstKind::ExportSpecifier(_)))
+    {
       return;
     }
     let Some(symbol_id) = self.resolve_symbol_from_reference(ident_ref) else {
       return;
     };
-    let scoping = self.result.symbol_ref_db.scoping();
+    let flags = self.result.symbol_ref_db.scoping().symbol_flags(symbol_id);
     if self.is_root_symbol(symbol_id)
-      && scoping.symbol_flags(symbol_id).is_function_scoped_declaration()
-      && ident_ref.span.start < scoping.symbol_span(symbol_id).start
+      && (flags.is_variable() || flags.is_function())
+      && let Some(early_var_reads) = &mut self.early_var_reads
     {
-      self.vars_read_before_declaration.insert(symbol_id);
+      early_var_reads.add_ref(symbol_id, ident_ref.span.start);
     }
   }
 
@@ -620,7 +660,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           }
           "require" => {
             let is_dummy_record = match self.visit_path.last() {
-              Some(AstKind::CallExpression(call_expr)) => {
+              Some(AstKind::CallExpression(call_expr))
+                if call_expr.callee.node_id() == ident_ref.node_id() =>
+              {
                 !self.process_global_require_call(call_expr)
               }
               Some(_) => true,
@@ -988,4 +1030,8 @@ fn assert_key_span(options: &Expression) -> Option<Span> {
     let ast::ObjectPropertyKind::ObjectProperty(property) = property else { return None };
     (!property.computed && property.key.static_name()? == "assert").then(|| property.key.span())
   })
+}
+
+fn is_function_or_class(kind: AstKind) -> bool {
+  matches!(kind, AstKind::Function(_) | AstKind::ArrowFunctionExpression(_) | AstKind::Class(_))
 }

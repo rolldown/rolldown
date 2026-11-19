@@ -7,5 +7,8 @@
         "import": "./entry.js"
       }
     ]
-  }
+  },
+  "configVariants": [
+    { "treeshake": false, "minify": false, "_configName": "treeshake-disabled", "_snapshot": false }
+  ]
 }

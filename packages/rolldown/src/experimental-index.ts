@@ -19,8 +19,6 @@ export {
 } from './binding.cjs';
 export { resolveTsconfig } from './utils/resolve-tsconfig';
 
-export { defineParallelPlugin } from './plugin/parallel-plugin';
-
 // Builtin plugin factory
 export {
   isolatedDeclarationPlugin,

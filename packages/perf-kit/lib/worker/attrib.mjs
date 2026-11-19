@@ -11,6 +11,7 @@
 
 import path from 'node:path';
 
+import { importChainResolver, moduleLabel } from '../module-graph.mjs';
 import { localFile } from './measure.mjs';
 
 const isLab = (rel) => !rel || rel.startsWith('__lab') || rel.startsWith('_virtual/');
@@ -140,46 +141,25 @@ export function graphChainResolver(graph) {
       .replace(/^node_modules\//, '')
       .replace(/\.[cm]?[jt]sx?$/, '');
   const byKey = new Map(graph.modules.map((m, i) => [norm(m.id), i]));
+  const chainTo = importChainResolver(graph);
   return (file) => {
     const i = byKey.get(norm(file));
     if (i == null) return null;
-    const chain = [];
-    let cur = i;
-    const seen = new Set();
-    while (cur != null && !seen.has(cur)) {
-      seen.add(cur);
-      const m = graph.modules[cur];
-      const up = m.idom != null && m.idom >= 0 ? m.idom : (graph.staticPreds[cur] ?? [])[0];
-      if (up == null || up === cur) break;
-      chain.push(up);
-      cur = up;
-    }
-    return chain
-      .reverse()
-      .map((j) => graph.modules[j].id)
-      .filter((id) => !/^(\\0|\0)/.test(id));
+    return chainTo(i).map((j) => graph.modules[j].id);
   };
 }
 
-/** Direct static importers of a module and one chain from the entry: the "why" view. */
+/**
+ * Direct static importers of a module and one chain from the entry: the "why" view.
+ * Modules are named by `moduleLabel`, so a label that several modules share stays clear.
+ */
 export function whyModule(graph, index) {
-  const name = (i) => graph.modules[i].id;
+  const name = (i) => moduleLabel(graph, graph.modules[i]);
   const preds = graph.staticPreds[index] ?? [];
-  const chain = [];
-  let cur = index;
-  const seen = new Set();
-  while (cur != null && !seen.has(cur)) {
-    seen.add(cur);
-    const m = graph.modules[cur];
-    const up = m.idom != null && m.idom >= 0 ? m.idom : (graph.staticPreds[cur] ?? [])[0];
-    if (up == null || up === cur) break;
-    chain.push(up);
-    cur = up;
-  }
   return {
     module: name(index),
     bytes: graph.modules[index].bytes ?? 0,
     importers: preds.map((p) => ({ module: name(p), bytes: graph.modules[p].bytes ?? 0 })),
-    chain: chain.reverse().map(name),
+    chain: importChainResolver(graph)(index).map(name),
   };
 }

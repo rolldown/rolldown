@@ -1,7 +1,7 @@
 use crate::types::generator::GenerateContext;
 use arcstr::ArcStr;
 use oxc_str::CompactStr;
-use rolldown_common::{NormalModule, OutputExports};
+use rolldown_common::{ExportsKind, NormalModule, OutputExports, OutputFormat};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 
 // Port from https://github.com/rollup/rollup/blob/master/src/utils/getExportMode.ts
@@ -15,7 +15,13 @@ pub fn determine_export_mode(
   match export_mode {
     OutputExports::Named => Ok(OutputExports::Named),
     OutputExports::Default => {
-      if export_names.len() != 1 || export_names[0].as_str() != "default" {
+      // A CommonJS entry has no static exports; its chunk assigns module.exports itself.
+      let has_native_cjs_default = matches!(ctx.options.format, OutputFormat::Cjs)
+        && matches!(module.exports_kind, ExportsKind::CommonJs)
+        && export_names.is_empty();
+      if !has_native_cjs_default
+        && (export_names.len() != 1 || export_names[0].as_str() != "default")
+      {
         return Err(
           vec![BuildDiagnostic::invalid_export_option(
             "default".into(),

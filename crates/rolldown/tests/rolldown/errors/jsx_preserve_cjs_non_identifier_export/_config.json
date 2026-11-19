@@ -1,0 +1,16 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.jsx" }],
+    "external": ["ext"],
+    "transform": {
+      "jsx": "preserve"
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "cjs",
+      "format": "cjs"
+    }
+  ],
+  "expectError": true
+}

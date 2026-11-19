@@ -215,16 +215,6 @@ pub struct EnabledMinifyOptions {
   pub mangle_properties_patterns: Option<ManglePropertiesPatterns>,
 }
 
-impl MinifyOptions {
-  /// Returns `true` if the minify options is [`Enabled`].
-  ///
-  /// [`Enabled`]: MinifyOptions::Enabled
-  #[must_use]
-  pub fn is_enabled(&self) -> bool {
-    !matches!(self, Self::Disabled)
-  }
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;

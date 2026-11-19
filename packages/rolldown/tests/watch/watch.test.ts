@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { ModuleInfo, RolldownWatcher, WatchOptions } from 'rolldown';
 import { rolldown, watch as _watch } from 'rolldown';
+import { esmExternalRequirePlugin } from 'rolldown/plugins';
 import { sleep } from 'rolldown-tests/utils';
 import { test, vi } from 'vitest';
 
@@ -1489,6 +1490,49 @@ test.concurrent(
   },
 );
 
+// https://github.com/rolldown/rolldown/issues/9922
+test.concurrent(
+  'watch should fail when onLog rejects a native plugin warning',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('watch-native-plugin-warning-error', retryCount, {
+      'main.js': `const ext = require('ext');\nconsole.log(ext);`,
+    });
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const buildEndFn = vi.fn();
+    const watcher = watch({
+      input: path.join(dir, 'main.js'),
+      output: { dir: path.join(dir, 'dist') },
+      external: ['ext'],
+      plugins: [
+        esmExternalRequirePlugin({ external: ['ext'] }),
+        {
+          name: 'observe-build-end',
+          buildEnd(error) {
+            buildEndFn(error?.message);
+          },
+        },
+      ],
+      onLog(_level, log) {
+        if (log.message.includes('duplicate external')) {
+          throw new Error('convert log to error');
+        }
+      },
+    });
+    onTestFinished(async () => await watcher.close());
+
+    await expect(waitBuildFinished(watcher)).rejects.toThrow('convert log to error');
+    expect(buildEndFn).toHaveBeenCalledWith(expect.stringContaining('convert log to error'));
+    expect(fs.existsSync(path.join(dir, 'dist'))).toBe(false);
+  },
+);
+
 // https://github.com/rolldown/rolldown/issues/8912
 test.concurrent(
   'watch should not emit false FILE_NAME_CONFLICT on rebuild',
@@ -1537,6 +1581,35 @@ test.concurrent(
     await editFile(path.join(dir, 'main.js'), `console.log('updated')`);
     await waitBuildFinished(watcher);
     expect(filenameConflictFn).not.toBeCalled();
+  },
+);
+
+// The `watch` wrapper above forces polling, so this is the only test in this file on the
+// native backend. It checks the output, not the event kind, because macOS FSEvents may
+// report an in-place write as `create`.
+test.concurrent(
+  'native watcher (usePolling: false) rebuilds on file change',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-native', retryCount);
+    const watcher = _watch({
+      input,
+      output: { file: output },
+      watch: { watcher: { usePolling: false } },
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    await waitBuildFinished(watcher);
+    expect(fs.readFileSync(output, 'utf-8')).toContain('console.log(1)');
+    await editFile(input, 'console.log(2)');
+    await expect
+      .poll(() => fs.readFileSync(output, 'utf-8'), { timeout: 10_000 })
+      .toContain('console.log(2)');
   },
 );
 
@@ -1719,5 +1792,164 @@ test.concurrent(
     expect(events).not.toContain('END');
 
     expect(fs.existsSync(output)).toBe(false);
+  },
+);
+
+// The close of one event result runs `closeBundle` for that build only. The watcher keeps the
+// options for the next rebuilds, so that close must not release their JS functions.
+// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
+test.concurrent(
+  'a rebuild after an event result close still calls the option functions',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput(
+      'watch-result-close-option-functions',
+      retryCount,
+    );
+    const entryFileNames = vi.fn(() => '[name].js');
+    const watcher = watch({ input, output: { dir: outputDir, entryFileNames } });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const results: string[] = [];
+    let onResult: (() => void) | undefined;
+    watcher.on('event', async (event) => {
+      if (event.code === 'BUNDLE_END') {
+        await event.result.close();
+        results.push('end');
+        onResult?.();
+      } else if (event.code === 'ERROR') {
+        await event.result.close();
+        results.push(`error: ${event.error.message}`);
+        onResult?.();
+      }
+    });
+
+    await new Promise<void>((resolve) => (onResult = resolve));
+    expect(entryFileNames).toHaveBeenCalled();
+    entryFileNames.mockClear();
+
+    const rebuilt = new Promise<void>((resolve) => (onResult = resolve));
+    await editFile(input, 'console.log(2)');
+    await rebuilt;
+    expect(results).toEqual(['end', 'end']);
+    expect(entryFileNames).toHaveBeenCalled();
+  },
+);
+
+// `watcher.close()` can run while an event result close still runs `closeBundle`. Then the watcher
+// close does not wait for that hook. So it must not release the JS functions of the options
+// before the hook ends.
+// See internal-docs/bundler-data-lifecycle/implementation.md ("JS callback lifetime").
+test.concurrent(
+  'a pending event result close keeps the option functions until its closeBundle ends',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput(
+      'watch-pending-result-close-option-functions',
+      retryCount,
+    );
+    let hookStarted!: () => void;
+    const started = new Promise<void>((resolve) => (hookStarted = resolve));
+    let releaseHook!: () => void;
+    const paused = new Promise<void>((resolve) => (releaseHook = resolve));
+    let resultClosed!: () => void;
+    const closed = new Promise<void>((resolve) => (resultClosed = resolve));
+    let resolved: unknown;
+
+    const watcher = watch({
+      input,
+      output: { dir: outputDir },
+      external: (id) => id === 'ext',
+      plugins: [
+        {
+          name: 'paused-close-bundle',
+          async closeBundle() {
+            hookStarted();
+            await paused;
+            resolved = await this.resolve('ext').then(
+              (result) => result?.external,
+              (error: Error) => (error.cause as Error | undefined)?.message ?? error.message,
+            );
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      // A second close does nothing. This one stops the watcher if the test fails early.
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    watcher.on('event', async (event) => {
+      if (event.code === 'BUNDLE_END' || event.code === 'ERROR') {
+        await event.result.close();
+        resultClosed();
+      }
+    });
+
+    await started;
+    await watcher.close();
+    releaseHook();
+    await closed;
+    expect(resolved).toBe(true);
+  },
+);
+
+// https://github.com/rolldown/rolldown/issues/11223
+test.concurrent(
+  'a later build does not keep the `moduleSideEffects: false` of an earlier build',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-reset-side-effects', retryCount);
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    const source = path.join(dir, 'mod-source.js');
+    fs.writeFileSync(input, `import 'virtual:mod'`);
+    fs.writeFileSync(source, 'export const value = 1');
+
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'toggle-side-effects',
+          resolveId: (id) => (id === 'virtual:mod' ? '\0virtual:mod' : undefined),
+          load(id) {
+            if (id !== '\0virtual:mod') return;
+            this.addWatchFile(source);
+            return fs.readFileSync(source, 'utf8');
+          },
+          transform(code, id) {
+            if (id !== '\0virtual:mod') return;
+            // No opinion once the module has a top-level effect.
+            return code.includes('EFFECT') ? { code } : { code, moduleSideEffects: false };
+          },
+        },
+      ],
+    });
+
+    try {
+      await waitBuildFinished(watcher);
+      expect(fs.readFileSync(output, 'utf-8')).not.toContain('EFFECT');
+
+      await editFile(source, 'globalThis.EFFECT = true\nexport const value = 1');
+      await waitBuildFinished(watcher);
+      expect(fs.readFileSync(output, 'utf-8')).toContain('EFFECT');
+    } finally {
+      await watcher.close();
+    }
   },
 );

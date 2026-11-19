@@ -7,5 +7,10 @@
         "import": "./entry.js"
       }
     ]
-  }
+  },
+  "configVariants": [
+    { "preserveEntrySignatures": "exports-only", "_snapshot": false },
+    { "preserveEntrySignatures": "allow-extension", "_snapshot": false },
+    { "preserveEntrySignatures": "strict", "_snapshot": false }
+  ]
 }

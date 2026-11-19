@@ -69,12 +69,6 @@ impl Deref for JsPlugin {
 }
 
 impl JsPlugin {
-  #[cfg_attr(target_family = "wasm", allow(unused))]
-  pub(super) fn new(inner: BindingPluginOptions) -> napi::Result<Self> {
-    let filter_expr_cache = inner.pre_compile_filter_expr()?;
-    Ok(Self { inner, filter_expr_cache })
-  }
-
   pub(crate) fn new_shared(inner: BindingPluginOptions) -> napi::Result<SharedPluginable> {
     let filter_expr_cache = inner.pre_compile_filter_expr()?;
     Ok(Plugin::new_shared(Self { inner, filter_expr_cache }))

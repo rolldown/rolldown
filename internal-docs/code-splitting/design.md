@@ -491,6 +491,7 @@ pub struct OrderLoweringInput<'a> {
   pub star_reexport_records_by_imported_symbol:
     &'a FxHashMap<SymbolRef, Vec<Vec<(ModuleIdx, ImportRecordIdx)>>>,
   pub member_read_star_reexport_paths: &'a [MemberReadStarReexportPath],
+  pub kept_inlined_constant_reads: &'a FxHashSet<SymbolRef>,
   pub used_symbol_refs_builder: &'a UsedSymbolRefsBuilder,
   pub cyclic_modules: &'a FxHashSet<ModuleIdx>,
   pub tree_shaking: bool,

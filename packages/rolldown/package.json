@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "1.3.1",
+  "version": "1.3.3",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "keywords": [
     "bundler",
@@ -35,9 +35,6 @@
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
-  "imports": {
-    "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs"
-  },
   "exports": {
     ".": {
       "dev": "./src/index.ts",
@@ -65,10 +62,6 @@
     "./getLogFilter": {
       "dev": "./src/get-log-filter.ts",
       "default": "./dist/get-log-filter.mjs"
-    },
-    "./parallelPlugin": {
-      "dev": "./src/parallel-plugin.ts",
-      "default": "./dist/parallel-plugin.mjs"
     },
     "./parseAst": {
       "dev": "./src/parse-ast-index.ts",
@@ -98,7 +91,6 @@
       },
       "./filter": "./dist/filter-index.mjs",
       "./getLogFilter": "./dist/get-log-filter.mjs",
-      "./parallelPlugin": "./dist/parallel-plugin.mjs",
       "./parseAst": "./dist/parse-ast-index.mjs",
       "./package.json": "./package.json",
       "./plugins": "./dist/plugins-index.mjs",

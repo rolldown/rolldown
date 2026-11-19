@@ -1,5 +1,7 @@
+use std::sync::Arc;
+
 use itertools::Itertools;
-use napi::Env;
+use napi::{Env, bindgen_prelude::PromiseRaw};
 use napi_derive::napi;
 use sugar_path::SugarPath;
 
@@ -18,7 +20,10 @@ use super::types::{
   binding_resolved_external::BindingResolvedExternal,
 };
 
-use crate::{types::binding_module_info::BindingModuleInfo, utils::napi_error};
+use crate::{
+  types::binding_module_info::BindingModuleInfo,
+  utils::{napi_error, spawn_boxed_future},
+};
 
 #[napi]
 pub struct BindingPluginContext {
@@ -28,60 +33,78 @@ pub struct BindingPluginContext {
 #[napi]
 impl BindingPluginContext {
   #[napi(
-    ts_args_type = "rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string"
+    ts_args_type = "rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string",
+    ts_return_type = "Promise<void>"
   )]
-  pub async fn load(
+  pub fn load<'env>(
     &self,
+    env: &'env Env,
     raw_id: String,
     attributes: BindingImportAttributes,
     side_effects: Option<BindingHookSideEffects>,
     package_json_path: Option<String>,
-  ) -> napi::Result<()> {
-    let package_json = package_json_path
-      .as_ref()
-      .map(|p| self.inner.try_get_package_json_or_create(p.as_path()))
-      .transpose()?;
-    let module_def_format = infer_module_def_format(&raw_id, package_json.as_ref());
-    self
-      .inner
-      .load(
-        &raw_id,
-        from_binding_import_attributes(attributes),
-        side_effects.map(TryInto::try_into).transpose()?,
-        module_def_format,
-      )
-      .await
-      .map_err(|program_err| napi_error::load_error(&raw_id, program_err))
+  ) -> napi::Result<PromiseRaw<'env, ()>> {
+    let inner = Arc::clone(&self.inner);
+    spawn_boxed_future(env, async move {
+      let package_json = package_json_path
+        .as_ref()
+        .map(|p| inner.try_get_package_json_or_create(p.as_path()))
+        .transpose()?;
+      let module_def_format = infer_module_def_format(&raw_id, package_json.as_ref());
+      inner
+        .load(
+          &raw_id,
+          from_binding_import_attributes(attributes),
+          side_effects.map(TryInto::try_into).transpose()?,
+          module_def_format,
+        )
+        .await
+        .map_err(|program_err| napi_error::load_error(&raw_id, program_err))
+    })
   }
 
-  #[napi]
-  pub async fn resolve(
+  #[napi(ts_return_type = "Promise<BindingPluginContextResolvedId | null>")]
+  pub fn resolve<'env>(
     &self,
+    env: &'env Env,
     specifier: String,
     importer: Option<String>,
     extra_options: Option<BindingPluginContextResolveOptions>,
-  ) -> napi::Result<Option<BindingPluginContextResolvedId>> {
-    let ret = self
-      .inner
-      .resolve(
-        &specifier,
-        importer.as_deref(),
-        extra_options.map(TryInto::try_into).transpose().map_err(napi::Error::from_reason)?,
-      )
-      .await
-      .map_err(|program_err| napi_error::resolve_error(&specifier, program_err))?
-      .ok();
+  ) -> napi::Result<PromiseRaw<'env, Option<BindingPluginContextResolvedId>>> {
+    let inner = Arc::clone(&self.inner);
+    spawn_boxed_future(env, async move {
+      let ret = inner
+        .resolve(
+          &specifier,
+          importer.as_deref(),
+          extra_options.map(TryInto::try_into).transpose().map_err(napi::Error::from_reason)?,
+        )
+        .await
+        .map_err(|program_err| napi_error::resolve_error(&specifier, program_err))?
+        .ok();
 
-    Ok(ret.map(|info| BindingPluginContextResolvedId {
-      // TODO: should use `&str` instead. (claude code) Attempt failed due to NAPI object field must be String type
-      id: info.id.raw_id().to_string(),
-      attributes: to_binding_import_attributes(&info.attributes).unwrap_or_default(),
-      external: info.external.into(),
-      module_side_effects: info.side_effects.map(Into::into),
-      // TODO: should use `&str` instead. (claude code) Attempt failed due to PathBuf conversion requires to_string_lossy()
-      package_json_path:
-        info.package_json.map(|item| item.realpath().to_string_lossy().to_string()),
-    }))
+      let Some(info) = ret else {
+        return Ok(None);
+      };
+      // Report the value this id would be bundled with, not only a hook return.
+      // `ResolvedId::side_effects` stays the raw hook value so loading the module
+      // still runs the normal side-effect decision.
+      let module_side_effects = inner
+        .reported_module_side_effects(&info)
+        .await
+        .map_err(|err| napi::Error::from_reason(err.to_string()))?;
+      Ok(Some(BindingPluginContextResolvedId {
+        // TODO: should use `&str` instead. (claude code) Attempt failed due to NAPI object field must be String type
+        id: info.id.raw_id().to_string(),
+        attributes: to_binding_import_attributes(&info.attributes).unwrap_or_default(),
+        external: info.external.into(),
+        module_side_effects: Some(module_side_effects.into()),
+        // TODO: should use `&str` instead. (claude code) Attempt failed due to PathBuf conversion requires to_string_lossy()
+        package_json_path: info
+          .package_json
+          .map(|item| item.realpath().to_string_lossy().to_string()),
+      }))
+    })
   }
 
   #[napi]

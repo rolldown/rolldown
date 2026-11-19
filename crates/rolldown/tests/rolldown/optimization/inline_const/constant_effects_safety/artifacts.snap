@@ -23,8 +23,7 @@ export { DEV, PROD, mutable, object };
 
 ```js
 import { mutable, object } from "./flags.js";
-// main.js
-if (console.log("TEST_EFFECT"), false);
+console.log("TEST_EFFECT");
 console.log("LIVE_ELSE");
 console.log("LIVE_TRUE");
 if (mutable) console.log("MUTABLE");

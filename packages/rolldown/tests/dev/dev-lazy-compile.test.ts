@@ -156,6 +156,74 @@ test(
   },
 );
 
+test(
+  'lazy chunk includes a factory for an initially unloaded barrel',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-barrel-factory-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const files = {
+      'main.js': `import { render } from './view.js';\nconsole.log(render());\nimport('./lazy.js');\n`,
+      'view.js': `import { format } from './barrel.js';\nexport const render = () => format('before');\nimport.meta.hot.accept();\n`,
+      'barrel.js': `export * from './implementation.js';\n`,
+      'implementation.js': `export const format = value => 'rendered:' + value;\n`,
+      'lazy.js': `import { format } from './barrel.js';\nexport const value = format('lazy');\n`,
+    };
+    for (const [name, code] of Object.entries(files)) {
+      fs.writeFileSync(path.join(dir, name), code);
+    }
+
+    const engine = await dev(
+      {
+        cwd: dir,
+        input: './main.js',
+        experimental: { devMode: { lazy: true } },
+        optimization: { inlineConst: false },
+        plugins: [
+          {
+            name: 'side-effect-free-barrel',
+            resolveId(source) {
+              if (source === './barrel.js') {
+                return { id: path.join(dir, 'barrel.js'), moduleSideEffects: false };
+              }
+            },
+          },
+        ],
+      },
+      {
+        dir: path.join(dir, 'dist'),
+        codeSplitting: {
+          groups: [
+            {
+              name: 'barrel',
+              test: /barrel\.js$/,
+              includeDependenciesRecursively: false,
+              entriesAware: false,
+              minShareCount: 1,
+            },
+          ],
+        },
+      },
+      {},
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.registerClient('barrel-client');
+    const chunk = await engine.compileEntry(
+      `${path.join(dir, 'lazy.js')}?rolldown-lazy=1`,
+      'barrel-client',
+    );
+    expect(chunk.code).toMatch(/registerFactory\("[^"]*barrel\.js"/);
+  },
+);
+
 /**
  * Writes `main.js` and a `lazy.js` whose `throw` sits on line 2, and returns a
  * plugin that pushes that line down — the shape of any transform that removes or
@@ -581,7 +649,7 @@ test(
     const engine = await dev(
       {
         input: path.join(dir, 'main.js'),
-        experimental: { devMode: { lazy: true, implement: '', skipCommonRuntimeInjection: true } },
+        experimental: { devMode: { lazy: true, implement: '' } },
       },
       { dir: path.join(dir, 'dist'), format: 'esm' },
       {},
@@ -746,7 +814,7 @@ test(
     const engine = await dev(
       {
         input: path.join(dir, 'main.js'),
-        experimental: { devMode: { lazy: true, implement: '', skipCommonRuntimeInjection: true } },
+        experimental: { devMode: { lazy: true, implement: '' } },
       },
       { dir: path.join(dir, 'dist'), format: 'esm' },
       {},
@@ -815,7 +883,7 @@ test(
     const engine = await dev(
       {
         input: path.join(dir, 'main.js'),
-        experimental: { devMode: { lazy: true, implement: '', skipCommonRuntimeInjection: true } },
+        experimental: { devMode: { lazy: true, implement: '' } },
       },
       { dir: path.join(dir, 'dist'), format: 'esm' },
       {},
@@ -875,7 +943,7 @@ test(
     const engine = await dev(
       {
         input: path.join(dir, 'main.js'),
-        experimental: { devMode: { lazy: true, implement: '', skipCommonRuntimeInjection: true } },
+        experimental: { devMode: { lazy: true, implement: '' } },
       },
       { dir: path.join(dir, 'dist'), format: 'esm' },
       {},
@@ -960,7 +1028,7 @@ test(
     const engine = await dev(
       {
         input: path.join(dir, 'main.js'),
-        experimental: { devMode: { lazy: true, implement: '', skipCommonRuntimeInjection: true } },
+        experimental: { devMode: { lazy: true, implement: '' } },
       },
       { dir: path.join(dir, 'dist'), format: 'esm' },
       {},

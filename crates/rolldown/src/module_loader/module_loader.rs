@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
+use std::path::Path;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
@@ -25,10 +26,12 @@ use rolldown_error::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_utils::commondir;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
+use sugar_path::SugarPath;
 use tracing::Instrument;
 
 use crate::module_loader::module_task::ModuleTaskOwner;
@@ -255,29 +258,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     for idx in &self.new_added_modules_from_partial_scan {
       self.shared_context.plugin_driver.transform_dependencies.remove(idx);
     }
-    // Retry only files the graph still needs: entries, or files something
-    // still imports (judged on the freshest edge state, where modules
-    // re-scanned by this failed scan already updated their edges). A broken
-    // file whose last import was removed must not fail every later build;
-    // a fresh build of the same tree would succeed without it.
-    let pending_rescans = scanned_resolved_ids
-      .into_iter()
-      .filter(|resolved_id| {
-        if self.cache.user_defined_entry.contains(&resolved_id.id) {
-          return true;
-        }
-        let Some(state) = self.cache.module_id_to_idx.get(&resolved_id.id) else {
-          return false;
-        };
-        let idx = state.idx();
-        self.cache.get_snapshot().user_defined_entry_modules.contains(&idx)
-          || self
-            .intermediate_normal_modules
-            .importers
-            .get(idx)
-            .is_some_and(|records| !records.is_empty())
-      })
-      .collect();
+    // Retry only files the graph still needs, judged on the freshest edge
+    // state, where modules re-scanned by this failed scan already updated
+    // their edges.
+    let pending_rescans =
+      self.cache.still_needed(&self.intermediate_normal_modules.importers, scanned_resolved_ids);
     self.intermediate_normal_modules.importers = self.cache.derive_importers_from_snapshot();
     self.cache.modules_with_changed_importers.clear();
     if let Some(backup) = barrel_state_backup {
@@ -359,39 +344,29 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
   /// preserve all of its exports. Request `All` from it: if it has already been
   /// loaded as a barrel, load its remaining (deferred) records now; otherwise
   /// record the request so they get loaded once it finishes loading.
-  #[expect(clippy::rc_buffer)]
-  fn request_all_exports_for_entry(
-    &mut self,
-    idx: ModuleIdx,
-    user_defined_entries: &Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
-  ) {
+  fn request_all_exports_for_entry(&mut self, idx: ModuleIdx) {
     if let Some(barrel_module_state) = self.cache.barrel_state.barrel_infos.get(&idx) {
       // If the module is already a barrel module, we need to load its remaining re-export import records
       if barrel_module_state.is_some() {
-        self.process_barrel_import_record(
-          &mut VecDeque::from_iter([(idx, ImportedExports::All)]),
-          user_defined_entries,
-        );
+        self.process_barrel_import_record(&mut VecDeque::from_iter([(idx, ImportedExports::All)]));
       }
     } else {
       self.cache.barrel_state.requested_exports.insert(idx, ImportedExports::All);
     }
   }
 
-  #[expect(clippy::rc_buffer)]
   fn try_spawn_new_task(
     &mut self,
     resolved_id: ResolvedId,
     owner: Option<ModuleTaskOwner>,
     is_user_defined_entry: bool,
     assert_module_type: Option<&ModuleType>,
-    user_defined_entries: &Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
   ) -> ModuleIdx {
     let idx = match self.cache.module_id_to_idx.get(&resolved_id.id).copied() {
       Some(VisitState::Seen(idx)) => {
         self.check_external_conflict(idx, &resolved_id, owner.as_ref());
         if self.flat_options.is_lazy_barrel_enabled() && owner.is_none() {
-          self.request_all_exports_for_entry(idx, user_defined_entries);
+          self.request_all_exports_for_entry(idx);
         }
         return idx;
       }
@@ -417,12 +392,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       }
     };
     if self.flat_options.is_lazy_barrel_enabled() && owner.is_none() {
-      self.request_all_exports_for_entry(idx, user_defined_entries);
+      self.request_all_exports_for_entry(idx);
     }
     let ctx = Arc::clone(&self.shared_context);
     if resolved_id.external.is_external() {
       self.external_module_idxs.insert(idx);
-      let task = ExternalModuleTask::new(ctx, idx, resolved_id, Arc::clone(user_defined_entries));
+      let task = ExternalModuleTask::new(ctx, idx, resolved_id);
       tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task")));
     } else {
       let task = ModuleTask::new(
@@ -470,10 +445,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       self.remaining += 1;
     }
 
-    let user_defined_entries = Arc::new(match fetch_mode {
+    let user_defined_entries = match fetch_mode {
       ScanMode::Full => self.resolve_user_defined_entries().await?,
       ScanMode::Partial(_) => vec![],
-    });
+    };
 
     let entries_count = user_defined_entries.len() + /* runtime */ 1;
     self.intermediate_normal_modules.modules.reserve(entries_count);
@@ -483,7 +458,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let mut entry_points = FxIndexSet::default();
     let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
     for (name, resolved_id) in user_defined_entries.iter().cloned() {
-      let idx = self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries);
+      let idx = self.try_spawn_new_task(resolved_id, None, true, None);
       user_defined_entry_ids.insert(idx);
       entry_points.insert(EntryPoint {
         idx,
@@ -514,6 +489,18 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         changed_resolved_ids.push(resolved_id);
       }
     }
+    // Keep only the module options set when the changed modules were resolved, because their
+    // importers do not resolve them again.
+    if !changed_resolved_ids.is_empty()
+      && let Some(reset_js_module_options) = &self.shared_context.options.reset_js_module_options
+    {
+      let module_ids = changed_resolved_ids.iter().map(|resolved_id| resolved_id.id.to_string());
+      if let Err(err) = reset_js_module_options.call(Some(module_ids.collect())).await {
+        // The files were taken from `pending_rescans`, so queue them again.
+        self.revert_partial_scan(changed_resolved_ids, barrel_state_backup);
+        return Err(err.into());
+      }
+    }
     for resolved_id in changed_resolved_ids.iter().cloned() {
       self.shared_context.plugin_driver.invalidate_context_load_module(&resolved_id.id);
       if let Entry::Occupied(mut occ) = self.cache.module_id_to_idx.entry(resolved_id.id.clone()) {
@@ -527,13 +514,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       // Setting `Owner` to `None` is safe here since `Owner` is only used to emit
       // `Unloadable` diagnostics, and we know this module exists in the filesystem.
       // TODO: copy assert_module_type
-      self.try_spawn_new_task(
-        resolved_id,
-        None,
-        is_user_defined_entry,
-        None,
-        &user_defined_entries,
-      );
+      self.try_spawn_new_task(resolved_id, None, is_user_defined_entry, None);
     }
 
     let mut work_queue: VecDeque<(ModuleIdx, ImportedExports)> = VecDeque::new();
@@ -644,7 +625,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
               Some(ModuleTaskOwner::new(normal_module, raw_rec.span)),
               false,
               raw_rec.asserted_module_type.as_ref(),
-              &user_defined_entries,
             );
 
             if let Some((_, ref mut initial_needed_records)) = initialized_barrel_tracking {
@@ -718,7 +698,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
                 })
               },
             );
-            self.process_barrel_import_record(&mut work_queue, &user_defined_entries);
+            self.process_barrel_import_record(&mut work_queue);
           }
 
           self.symbol_ref_db.store_local_db(module_idx, symbols);
@@ -772,13 +752,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
 
           let mut import_records = IndexVec::with_capacity(raw_import_records.len());
           for (raw_rec, info) in raw_import_records.into_iter().zip(resolved_deps) {
-            let idx = self.try_spawn_new_task(
-              info,
-              None,
-              false,
-              raw_rec.asserted_module_type.as_ref(),
-              &user_defined_entries,
-            );
+            let idx =
+              self.try_spawn_new_task(info, None, false, raw_rec.asserted_module_type.as_ref());
             self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
               kind: raw_rec.kind,
               importer_path: module.id.clone(),
@@ -801,7 +776,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {
           let module_id = resolve_id.id.clone();
-          let idx = self.try_spawn_new_task(*resolve_id, None, false, None, &user_defined_entries);
+          let idx = self.try_spawn_new_task(*resolve_id, None, false, None);
           // `this.load` waits for a load signal, and only a normal module task sends it.
           // A `this.load` of an id that is already external is a conflict, and
           // `try_spawn_new_task` records it as an error. The code below ends the wait, so
@@ -823,9 +798,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
           .await;
 
           let module_idx = match result {
-            Ok(resolved_id) => {
-              self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries)
-            }
+            Ok(resolved_id) => self.try_spawn_new_task(resolved_id, None, true, None),
             Err(e) => {
               self.errors.push(e);
               continue;
@@ -859,6 +832,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         }
       }
     }
+
+    self.render_new_external_paths(&user_defined_entries, &extra_entry_points);
 
     let mut errors = std::mem::take(&mut self.errors);
     if !errors.is_empty() {
@@ -1023,6 +998,39 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     })
   }
 
+  /// Renders each path external this scan added relative to the common directory of the entries.
+  /// A full scan computes that directory here, after the scan, because emitted chunks join the
+  /// entries during it.
+  fn render_new_external_paths(
+    &mut self,
+    user_defined_entries: &[(Option<ArcStr>, ResolvedId)],
+    extra_entry_points: &[EntryPoint],
+  ) {
+    if self.is_full_scan {
+      let modules = &self.intermediate_normal_modules.modules;
+      let emitted_entry_ids = extra_entry_points.iter().filter_map(|entry| {
+        let id = modules.try_get(entry.idx)?.as_ref()?.id();
+        id.is_path().then(|| id.raw_id())
+      });
+      let common_dir = commondir::common_dir(
+        user_defined_entries
+          .iter()
+          .map(|(_, resolved_id)| resolved_id.id.raw_id())
+          .chain(emitted_entry_ids),
+      );
+      self.cache.user_defined_entry_common_dir = common_dir.map(Arc::from);
+    }
+    let cwd = self.shared_context.options.cwd.as_path();
+    let common_dir = self.cache.user_defined_entry_common_dir.as_deref().unwrap_or(cwd);
+    for &idx in &self.external_module_idxs {
+      if let Some(Module::External(module)) = self.intermediate_normal_modules.modules.get_mut(idx)
+        && module.need_renormalize_render_path
+      {
+        module.name = Path::new(module.id.raw_id()).relative(common_dir).to_slash().into();
+      }
+    }
+  }
+
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
   pub async fn resolve_user_defined_entries(
     &self,
@@ -1115,11 +1123,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     chain
   }
 
-  #[expect(clippy::rc_buffer)]
   fn process_barrel_import_record(
     &mut self,
     work_queue: &mut VecDeque<(ModuleIdx, ImportedExports)>,
-    user_defined_entries: &Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
   ) {
     while let Some((idx, imported_exports)) = work_queue.pop_front() {
       // No entry in `barrel_infos` means this module hasn't been loaded and processed yet.
@@ -1217,7 +1223,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
               Some(ModuleTaskOwner::new(barrel_normal_module, import_record_state.span)),
               false,
               import_record_state.asserted_module_type.as_ref(),
-              user_defined_entries,
             );
             self.intermediate_normal_modules.importers[new_idx].push(importer_record);
             self.mark_module_importers_changed(new_idx);
@@ -1264,5 +1269,52 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       barrel_module_state.tracked_records = tracked_records;
       barrel_module_state.remaining_imported_specifiers = remaining_imported_specifiers;
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::sync::Arc;
+
+  use rolldown_common::{BundleMode, BundlerOptions, FlatOptions, ModuleId, ResolvedId};
+  use rolldown_fs::OsFileSystem;
+
+  use crate::{
+    BundleFactory, BundleFactoryOptions,
+    module_loader::task_context::{TaskContext, TaskContextMeta},
+  };
+
+  use super::{ExternalModuleTask, ModuleTask};
+
+  /// A module task that finishes after its build was dropped must not panic when it sends.
+  #[tokio::test]
+  async fn module_tasks_ignore_a_dropped_receiver() {
+    let mut factory = BundleFactory::new(BundleFactoryOptions {
+      bundler_options: BundlerOptions::default(),
+      disable_tracing_setup: true,
+      ..Default::default()
+    })
+    .expect("create bundle factory");
+    let bundle = factory.create_bundle(BundleMode::FullBuild, None).expect("create bundle");
+    // Drop the receiver at once, as a dropped build does.
+    let (tx, _) = tokio::sync::mpsc::unbounded_channel();
+    let ctx: Arc<TaskContext<OsFileSystem>> = Arc::new(TaskContext {
+      options: bundle.options,
+      tx,
+      resolver: bundle.resolver,
+      fs: bundle.fs,
+      plugin_driver: bundle.plugin_driver,
+      meta: TaskContextMeta { replace_global_define_config: None },
+    });
+
+    let normal = ResolvedId { id: ModuleId::new_empty("empty"), ..Default::default() };
+    let flat_options = FlatOptions::from_shared_options(&ctx.options);
+    ModuleTask::new(Arc::clone(&ctx), 0.into(), normal, None, false, None, flat_options, None)
+      .run()
+      .await;
+
+    let external =
+      ResolvedId { id: ModuleId::new("external"), external: true.into(), ..Default::default() };
+    ExternalModuleTask::new(Arc::clone(&ctx), 1.into(), external).run().await;
   }
 }

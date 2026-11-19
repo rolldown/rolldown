@@ -5,5 +5,9 @@
       { "name": "namespace", "import": "./namespace.js" },
       { "name": "direct", "import": "./direct.js" }
     ]
-  }
+  },
+  "configVariants": [
+    { "strictExecutionOrder": true },
+    { "strictExecutionOrder": true, "onDemandWrapping": true }
+  ]
 }

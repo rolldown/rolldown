@@ -887,8 +887,8 @@ export interface JSONSourceMap {
    * This value is prepended to the individual entries in the "source" field.
    */
   sourceRoot?: string
-  /** A list of original sources used by the "mappings" entry. */
-  sources: Array<string>
+  /** A list of original sources used by the "mappings" entry, with `None` for unknown names. */
+  sources: Array<string | undefined | null>
   /**
    * An optional list of source content, useful when the "source" can't be hosted.
    * The contents are listed in the same order as the sources in line 5. "null" may be used if some original sources should be retrieved by name.
@@ -912,7 +912,7 @@ export interface SourceMap {
   mappings: string
   names: Array<string>
   sourceRoot?: string
-  sources: Array<string>
+  sources: Array<string | undefined | null>
   sourcesContent?: Array<string>
   version: number
   ignoreList?: Array<number>
@@ -1573,7 +1573,7 @@ export declare class BindingCallableBuiltinPlugin {
   constructor(plugin: BindingBuiltinPlugin)
   getOrder(hookName: string): string | null
   resolveId(id: string, importer?: string | undefined | null, options?: BindingHookJsResolveIdOptions | undefined | null): Promise<BindingHookJsResolveIdOutput | undefined | null>
-  load(id: string): Promise<BindingHookJsLoadOutput | undefined | null>
+  load(id: string): Promise<BindingHookLoadOutput | undefined | null>
   transform(code: string, id: string, options: BindingTransformHookExtraArgs): Promise<BindingHookTransformOutput | undefined | null>
   watchChange(path: string, event: BindingJsWatchChangeEvent): Promise<undefined>
 }
@@ -1599,12 +1599,15 @@ export declare class BindingDecodedMap {
    * Each line is an array of segments, where each segment is [generatedColumn, sourceIndex, originalLine, originalColumn, nameIndex?].
    */
   get mappings(): Array<Array<Array<number>>>
-  /** The list of source indices that should be excluded from debugging. */
-  get x_google_ignoreList(): Array<number> | null
+  /**
+   * The list of source indices that should be excluded from debugging, or `undefined` when
+   * the map has none. `magic-string` leaves the field out in that case.
+   */
+  get x_google_ignoreList(): Array<number> | undefined
 }
 
 export declare class BindingDevEngine {
-  constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
+  constructor(options: BindingBundlerOptions, devOptions: BindingDevOptions)
   run(): Promise<void>
   ensureCurrentBuildFinish(): Promise<void>
   getBundleState(): Promise<BindingBundleState>
@@ -1655,6 +1658,8 @@ export declare class BindingMagicString {
   get filename(): string | null
   get indentExclusionRanges(): Array<Array<number>> | Array<number> | null
   get ignoreList(): boolean
+  /** The `hires` option of this instance, or `null` when it is not set. */
+  get hires(): boolean | 'boundary' | null
   get offset(): number
   set offset(offset: number)
   replace(from: string, to: string): this
@@ -1746,6 +1751,8 @@ export declare class BindingModuleInfo {
   isEntry: boolean
   inputFormat: 'es' | 'cjs' | 'unknown'
   get code(): string | null
+  /** Effective `moduleSideEffects` (`boolean | 'no-treeshake'`). `null` until the module has been parsed. */
+  get moduleSideEffects(): boolean | 'no-treeshake' | null
 }
 
 export declare class BindingNormalizedOptions {
@@ -1876,8 +1883,11 @@ export declare class BindingSourceMap {
   get names(): Array<string>
   /** The VLQ-encoded mappings string. */
   get mappings(): string
-  /** The list of source indices that should be excluded from debugging. */
-  get x_google_ignoreList(): Array<number> | null
+  /**
+   * The list of source indices that should be excluded from debugging, or `undefined` when
+   * the map has none. `magic-string` leaves the field out in that case.
+   */
+  get x_google_ignoreList(): Array<number> | undefined
   /** Returns the source map as a JSON string. */
   toString(): string
   /** Returns the source map as a base64-encoded data URL. */
@@ -1921,12 +1931,6 @@ export declare class BindingWatcherEvent {
   bundleEndData(): BindingBundleEndEventData
   bundleErrorData(): BindingBundleErrorEventData
   watchChangeData(): BindingWatcherChangeData
-}
-
-export declare class ParallelJsPluginRegistry {
-  id: number
-  workerCount: number
-  constructor(workerCount: number)
 }
 
 export declare class TraceSubscriberGuard {
@@ -1978,7 +1982,6 @@ export interface BindingBundleAnalyzerPluginConfig {
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions
   outputOptions: BindingOutputOptions
-  parallelPluginsRegistry?: ParallelJsPluginRegistry
 }
 
 export interface BindingBundleState {
@@ -2026,11 +2029,13 @@ export interface BindingChecksOptions {
   shimmedExport?: boolean
   deprecatedImportAssertion?: boolean
   invalidImportAttribute?: boolean
+  droppedImportAttribute?: boolean
 }
 
 export interface BindingChunkImportMap {
   baseUrl?: string
   fileName?: string
+  include?: Array<BindingStringOrRegex>
 }
 
 export declare enum BindingChunkModuleOrderBy {
@@ -2292,11 +2297,7 @@ export interface BindingEsmExternalRequirePluginConfig {
 }
 
 export interface BindingExperimentalDevModeOptions {
-  host?: string
-  port?: number
   implement: string
-  /** @deprecated Common runtime injection will be disabled by default in the future. */
-  skipCommonRuntimeInjection?: boolean
   lazy?: boolean
   hotUpdate?: boolean
 }
@@ -2338,12 +2339,6 @@ export type BindingHmrUpdate =
 
 export interface BindingHookFilter {
   value?: Array<Array<BindingFilterToken>>
-}
-
-export interface BindingHookJsLoadOutput {
-  code: string
-  map?: string
-  moduleSideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingHookJsResolveIdOptions {
@@ -2525,7 +2520,7 @@ export interface BindingInputItem {
 export interface BindingInputOptions {
   external?: Array<string | RegExp> | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)
   input: Array<BindingInputItem>
-  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions)[]
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
@@ -2549,6 +2544,7 @@ export interface BindingInputOptions {
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
   devtools?: BindingDevtoolsOptions
   invalidateJsSideCache?: () => void
+  resetJsModuleOptions?: (moduleIds: string[] | null) => void
   preserveEntrySignatures?: BindingPreserveEntrySignatures
   optimization?: BindingOptimization
   context?: string
@@ -2626,6 +2622,13 @@ export interface BindingMagicStringOptions {
   offset?: number
   indentExclusionRanges?: Array<Array<number>> | Array<number>
   ignoreList?: boolean
+  /**
+   * The resolution of the sourcemaps generated from this instance: `true`, `false` or
+   * `"boundary"`. It applies to the map that Rolldown generates when a hook returns this
+   * instance without a `map`, and to `generateMap()` without `hires`. When it is not set,
+   * Rolldown uses `"boundary"` and `generateMap()` uses `false`.
+   */
+  hires?: boolean | 'boundary'
 }
 
 export type BindingMakeAbsoluteExternalsRelative =
@@ -2717,7 +2720,7 @@ export interface BindingOutputOptions {
   intro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   outro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   paths?: Record<string, string> | ((id: string) => string)
-  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sourcemapBaseUrl?: string
@@ -2856,6 +2859,8 @@ export interface BindingPluginTiming {
   hook: string
   calls: number
   ms: number
+  /** The longest single call. */
+  maxMs: number
   maxInFlight: number
   /** How much of `ms` is double counted because calls overlapped. */
   overlapMs: number
@@ -2870,11 +2875,6 @@ export interface BindingPluginTimingsMeasurement {
   /** Wall time in which any measured callback was running, counting overlap once. */
   busyMs: number
   rows: Array<BindingPluginTiming>
-}
-
-export interface BindingPluginWithIndex {
-  index: number
-  plugin: BindingPluginOptions
 }
 
 export interface BindingPreRenderedAsset {
@@ -2928,9 +2928,7 @@ export interface BindingResolveOptions {
   yarnPnp?: boolean
 }
 
-export interface BindingSourcemap {
-  inner: string | BindingJsonSourcemap
-}
+export type BindingSourcemap = string | BindingJsonSourcemap
 
 export interface BindingSourceMapOptions {
   /** The filename for the generated file (goes into `map.file`) */
@@ -3263,8 +3261,6 @@ export interface PreRenderedChunk {
   /** Exported variable names from this chunk. */
   exports: Array<string>
 }
-
-export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
 /**
  * Starts a new measuring window: the peak restarts from the current live

@@ -1,6 +1,7 @@
 mod cjs_export_analyzer;
 pub mod const_eval;
 pub mod dynamic_import;
+mod early_var_reads;
 mod hmr;
 pub mod impl_visit;
 mod import_analyzer;
@@ -24,15 +25,15 @@ use oxc::{
     },
   },
   ast_visit::{VisitJs, walk_js},
-  semantic::SymbolId,
+  semantic::{SymbolFlags, SymbolId},
   span::{GetSpan, Span},
 };
 use oxc_index::IndexVec;
 use oxc_str::{CompactStr, JSStr};
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
-  ConstExportMeta, ConstantValue, DynamicImportExprInfo, EcmaModuleAstUsage, EcmaViewMeta,
-  ExportsKind, FlatOptions, HmrInfo, ImportAttributes, ImportKind, ImportRecordIdx,
+  ConstExportMeta, ConstantValue, DeferredWriteConstant, DynamicImportExprInfo, EcmaModuleAstUsage,
+  EcmaViewMeta, ExportsKind, FlatOptions, HmrInfo, ImportAttributes, ImportKind, ImportRecordIdx,
   ImportRecordMeta, LocalExport, MemberExprProp, MemberExprRef, ModuleDefFormat, ModuleId,
   ModuleIdx, NamedImport, RawImportRecord, RolldownFileUrlReference, Specifier, StmtEvalFlags,
   StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
@@ -52,6 +53,7 @@ use bitflags::bitflags;
 
 use crate::SharedOptions;
 use crate::ast_scanner::cjs_export_analyzer::CommonjsExportSymbolUsage;
+use crate::ast_scanner::early_var_reads::{EarlyVarReads, RunsAt};
 
 bitflags! {
   #[derive(Debug, Clone, Copy, Default)]
@@ -127,6 +129,8 @@ pub struct ScanResult {
   pub hmr_hot_ref: Option<SymbolRef>,
   pub directive_range: Vec<Span>,
   pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
+  /// See `EcmaView::deferred_write_constants`.
+  pub deferred_write_constants: Vec<DeferredWriteConstant>,
   /// Temporary storage for node IDs of `require()` calls in `module.exports = require(...)` patterns.
   /// Resolved to `cjs_reexport_import_record_ids` after scanning completes.
   pub cjs_reexport_require_node_ids: Vec<NodeId>,
@@ -174,15 +178,30 @@ pub struct AstScanner<'me, 'ast> {
   /// case, `exports.xxx` writes may no longer target the exported object.
   has_cjs_exports_reassignment: bool,
   /// Whether the current position is at the top level (all parent scopes are block or top-level).
-  /// A cache of [AstScanner::is_valid_tla_scope].
   is_top_level: bool,
   current_comment_idx: usize,
   untranspiled_syntax: UntranspiledSyntax,
   /// Symbol IDs of namespace imports (`import * as ns from '...'`).
   /// Used to treat property reads on namespace objects as side-effect-free.
   namespace_object_symbol_ids: FxHashSet<SymbolId>,
-  /// Root `var` bindings that module-level code reads before their declaration.
-  vars_read_before_declaration: FxHashSet<SymbolId>,
+  /// Tracks reads of root `var` bindings before their declarator runs. `None` when the module
+  /// declares no root `var`.
+  early_var_reads: Option<EarlyVarReads>,
+  /// Start of the module-level statement being visited.
+  current_stmt_start: u32,
+  /// Root `let` bindings that code writes, found only with `inlineConst`. Only these can become
+  /// `deferred_write_constants`. Most modules have none, so most identifier references skip
+  /// `record_root_write` after one check.
+  mutated_root_lets: FxHashSet<SymbolId>,
+  /// Each write to a binding in `mutated_root_lets`: the symbol, the top-level statement, and
+  /// whether the write runs when the module runs (it is not inside a function).
+  root_writes: Vec<(SymbolId, StmtInfoIdx, bool)>,
+  /// Literal bindings that `add_constant_symbol` rejected only because code writes them.
+  mutated_constant_candidates: Vec<(SymbolId, ConstExportMeta)>,
+  /// Top-level functions that are side-effect free but not declared with `export`, keyed by
+  /// symbol. The value is `true` when only the `@__NO_SIDE_EFFECTS__` annotation makes them
+  /// side-effect free. See [`Self::collect_side_effect_free_functions`].
+  side_effect_free_functions: FxHashMap<SymbolId, bool>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -243,6 +262,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       dummy_record_set: FxHashSet::default(),
       commonjs_exports: FxHashMap::default(),
       constant_export_map: FxHashMap::default(),
+      deferred_write_constants: Vec::new(),
       ecma_view_meta: EcmaViewMeta::default(),
       cjs_reexport_require_node_ids: Vec::new(),
       cjs_reexport_import_record_ids: Vec::new(),
@@ -283,7 +303,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       current_comment_idx: 0,
       untranspiled_syntax: UntranspiledSyntax::empty(),
       namespace_object_symbol_ids: FxHashSet::default(),
-      vars_read_before_declaration: FxHashSet::default(),
+      early_var_reads: None,
+      current_stmt_start: 0,
+      mutated_root_lets: FxHashSet::default(),
+      root_writes: Vec::new(),
+      mutated_constant_candidates: Vec::new(),
+      side_effect_free_functions: FxHashMap::default(),
     }
   }
 
@@ -301,7 +326,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// }
   /// ```
   pub fn is_valid_tla_scope(&self) -> bool {
-    self.scope_stack.iter().rev().all(|flag| flag.is_top() || flag.is_block())
+    self.scope_stack.iter().rev().all(|flag| !flag.is_var() || flag.is_top())
   }
 
   pub fn is_root_scope(&self) -> bool {
@@ -309,6 +334,20 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   pub fn scan(mut self, program: &Program<'ast>) -> BuildResult<ScanResult> {
+    if self.immutable_ctx.flat_options.inline_const_enabled() {
+      let scoping = self.result.symbol_ref_db.scoping();
+      self.mutated_root_lets = scoping
+        .get_bindings(scoping.root_scope_id())
+        .values()
+        .copied()
+        .filter(|symbol_id| {
+          let flags = scoping.symbol_flags(*symbol_id);
+          flags.contains(SymbolFlags::BlockScopedVariable)
+            && !flags.is_const_variable()
+            && scoping.symbol_is_mutated(*symbol_id)
+        })
+        .collect();
+    }
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
 
@@ -436,22 +475,28 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     }
 
-    // A `var` read before its declaration holds `undefined` there and its initializer later.
-    for symbol_id in &self.vars_read_before_declaration {
-      if let Some(flags) = self.result.symbol_ref_db.flags.get_mut(symbol_id) {
-        flags.remove(SymbolRefFlags::IsNotReassigned);
+    // A `var` read before its declarator runs holds `undefined` there and its initializer later.
+    if let Some(early_var_reads) = self.early_var_reads.take() {
+      let read_early = early_var_reads.finish(self.result.symbol_ref_db.scoping());
+      for symbol_id in read_early {
+        self
+          .result
+          .symbol_ref_db
+          .flags
+          .entry(symbol_id)
+          .or_default()
+          .insert(SymbolRefFlags::ReadBeforeAssigned);
       }
     }
 
     self.result.constant_export_map.retain(|symbol_id, constant_meta| {
       (constant_meta.commonjs_export && !bailout_inlined_cjs_exports_symbol_ids.contains(symbol_id))
-        || self
-          .result
-          .symbol_ref_db
-          .flags
-          .get(symbol_id)
-          .is_some_and(|flag| flag.contains(SymbolRefFlags::IsNotReassigned))
+        || self.result.symbol_ref_db.flags.get(symbol_id).is_some_and(|flag| {
+          flag.contains(SymbolRefFlags::IsNotReassigned)
+            && !flag.contains(SymbolRefFlags::ReadBeforeAssigned)
+        })
     });
+    self.collect_deferred_write_constants();
 
     if cfg!(debug_assertions) {
       use rustc_hash::FxHashSet;
@@ -532,7 +577,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       namespace_ref,
       span,
       importer_span,
-      None,
       // The first index stmt is reserved for the facade statement that constructs Module Namespace
       // Object
       import_expression_node_id.map(|node_id| {
@@ -875,8 +919,67 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     decl.specifiers.iter().for_each(|spec| {
       if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {
         self.add_local_export(spec.exported.name().as_str(), local_symbol_id, spec.span);
+        self.mark_exported_side_effect_free_function(local_symbol_id);
       }
     });
+  }
+
+  /// Collects the top-level functions that are side-effect free (empty body or
+  /// `@__NO_SIDE_EFFECTS__`) but not declared with `export`, so that a later `export { fn }` or
+  /// `export default fn` can mark them the same way `export function fn` is marked.
+  fn collect_side_effect_free_functions(&mut self, program: &Program<'ast>) {
+    for stmt in &program.body {
+      match stmt {
+        ast::Statement::FunctionDeclaration(fn_decl) => {
+          if let Some(id) = &fn_decl.id
+            && let Some(is_pure_annotation_only) = side_effect_free_function_kind(
+              fn_decl.is_side_effect_free() && has_plain_rest(&fn_decl.params),
+              fn_decl.pure,
+            )
+          {
+            self.side_effect_free_functions.insert(id.symbol_id(), is_pure_annotation_only);
+          }
+        }
+        ast::Statement::VariableDeclaration(var_decl) => {
+          for decl in &var_decl.declarations {
+            let BindingPattern::BindingIdentifier(binding) = &decl.id else { continue };
+            let kind = match &decl.init {
+              Some(Expression::FunctionExpression(func)) => side_effect_free_function_kind(
+                func.is_side_effect_free() && has_plain_rest(&func.params),
+                func.pure,
+              ),
+              Some(Expression::ArrowFunctionExpression(func)) => side_effect_free_function_kind(
+                func.is_side_effect_free() && has_plain_rest(&func.params),
+                func.pure,
+              ),
+              _ => None,
+            };
+            if let Some(is_pure_annotation_only) = kind {
+              self.side_effect_free_functions.insert(binding.symbol_id(), is_pure_annotation_only);
+            }
+          }
+        }
+        _ => {}
+      }
+    }
+  }
+
+  fn mark_exported_side_effect_free_function(&mut self, symbol_id: SymbolId) {
+    let Some(&is_pure_annotation_only) = self.side_effect_free_functions.get(&symbol_id) else {
+      return;
+    };
+    // Direct `eval` and a repeated `var` declaration can replace the function without a write
+    // reference, which `IsNotReassigned` cannot see. The declaration forms do not check this yet.
+    let scoping = self.result.symbol_ref_db.scoping();
+    if eval_can_assign(scoping, symbol_id) || !scoping.symbol_redeclarations(symbol_id).is_empty() {
+      return;
+    }
+    self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
+    let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
+    flags.insert(SymbolRefFlags::SideEffectsFreeFunction | SymbolRefFlags::ExportedSeparately);
+    if is_pure_annotation_only {
+      flags.insert(SymbolRefFlags::PureAnnotationOnly);
+    }
   }
 
   fn scan_export_decl(&mut self, export_decl: &ExportDeclaration<'ast>) {
@@ -971,6 +1074,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             || scoping.get_resolved_references(symbol_id).any(Reference::is_write);
           if !cannot_reuse_symbol {
             self.result.default_export_ref.symbol = symbol_id;
+            self.mark_exported_side_effect_free_function(symbol_id);
           }
         }
         None
@@ -1106,6 +1210,31 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     ident_ref.reference_id.get().is_some_and(|ref_id| {
       self.result.symbol_ref_db.scoping().get_reference(ref_id).flags().is_member_write_target()
     })
+  }
+
+  /// Where the code inside `kind`, a function or class that no other function or class encloses,
+  /// runs. `kind` is the last entry of `visit_path`.
+  fn outermost_runs_at(&self, kind: AstKind<'ast>) -> RunsAt {
+    let statement_start = RunsAt::Position(self.current_stmt_start);
+    match kind {
+      AstKind::Function(function) if function.is_declaration() => match &function.id {
+        Some(id) if self.is_root_symbol(id.symbol_id()) => RunsAt::Body(id.symbol_id()),
+        _ => statement_start,
+      },
+      AstKind::Function(_) | AstKind::ArrowFunctionExpression(_) => {
+        match self.visit_path.iter().rev().nth(1) {
+          // `const f = () => {}`: the body runs when `f` is called.
+          Some(AstKind::VariableDeclarator(declarator)) => match &declarator.id {
+            BindingPattern::BindingIdentifier(id) if self.is_root_symbol(id.symbol_id()) => {
+              RunsAt::Body(id.symbol_id())
+            }
+            _ => statement_start,
+          },
+          _ => statement_start,
+        }
+      }
+      _ => statement_start,
+    }
   }
 
   fn is_root_symbol(&self, symbol_id: SymbolId) -> bool {
@@ -1246,16 +1375,107 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     expr.and_then(|expr| try_extract_const_literal(&self.create_constant_eval_ctx(), expr))
   }
 
+  /// See internal-docs/inline-const/design.md.
   pub fn add_constant_symbol(&mut self, symbol_id: SymbolId, value: ConstExportMeta) {
     let scoping = self.result.symbol_ref_db.scoping();
+    let is_facade = self.result.symbol_ref_db.is_facade_symbol(symbol_id);
     // A repeated `var` declaration assigns without a write reference.
-    let is_mutated = !self.result.symbol_ref_db.is_facade_symbol(symbol_id)
-      && (scoping.symbol_is_mutated(symbol_id)
-        || !scoping.symbol_redeclarations(symbol_id).is_empty());
-    if is_mutated || eval_can_assign(scoping, symbol_id) {
+    let is_redeclared = !is_facade && !scoping.symbol_redeclarations(symbol_id).is_empty();
+    if is_redeclared || eval_can_assign(scoping, symbol_id) {
+      return;
+    }
+    if !is_facade && scoping.symbol_is_mutated(symbol_id) {
+      // The writes can all be in functions that no code calls. See
+      // `collect_deferred_write_constants`.
+      if !value.commonjs_export {
+        self.mutated_constant_candidates.push((symbol_id, value));
+      }
       return;
     }
     self.result.constant_export_map.insert(symbol_id, value);
+  }
+
+  /// Records a write to a binding in `mutated_root_lets` for `collect_deferred_write_constants`.
+  pub fn record_root_write(&mut self, ident_ref: &IdentifierReference) {
+    if self.mutated_root_lets.is_empty() {
+      return;
+    }
+    let Some(reference_id) = ident_ref.reference_id.get() else {
+      return;
+    };
+    let reference = self.result.symbol_ref_db.scoping().get_reference(reference_id);
+    if reference.is_write()
+      && let Some(symbol_id) = reference.symbol_id()
+      && self.mutated_root_lets.contains(&symbol_id)
+    {
+      self.root_writes.push((symbol_id, self.current_stmt_idx, self.is_top_level));
+    }
+  }
+
+  /// Keeps the rejected literal bindings that the link stage can still make constants: an exported
+  /// `let` whose every write is inside a function. The link stage checks that no code can call
+  /// those functions. See internal-docs/constant-branches/implementation.md.
+  ///
+  /// Only `let`: a read before the module runs (in an import cycle) throws for a `let`, which is
+  /// the case that inlining a never-written `let` already accepts. The same read of a `var` gives
+  /// `undefined`.
+  fn collect_deferred_write_constants(&mut self) {
+    if self.mutated_constant_candidates.is_empty() {
+      return;
+    }
+    let candidates = std::mem::take(&mut self.mutated_constant_candidates);
+    let exported_symbols = self
+      .result
+      .named_exports
+      .values()
+      .filter(|local_export| !local_export.came_from_commonjs)
+      .map(|local_export| local_export.referenced.symbol)
+      .collect::<FxHashSet<_>>();
+    let mut writes_by_symbol = candidates
+      .iter()
+      .filter(|(symbol_id, _)| {
+        self.mutated_root_lets.contains(symbol_id) && exported_symbols.contains(symbol_id)
+      })
+      .map(|(symbol_id, _)| (*symbol_id, Some(Vec::new())))
+      .collect::<FxHashMap<SymbolId, Option<Vec<StmtInfoIdx>>>>();
+    if writes_by_symbol.is_empty() {
+      return;
+    }
+    for (symbol_id, stmt_idx, runs_at_module_evaluation) in &self.root_writes {
+      if let Some(writer_stmts) = writes_by_symbol.get_mut(symbol_id) {
+        if *runs_at_module_evaluation {
+          *writer_stmts = None;
+        } else if let Some(writer_stmts) = writer_stmts {
+          writer_stmts.push(*stmt_idx);
+        }
+      }
+    }
+    for (symbol_id, meta) in candidates {
+      let Some(Some(mut writer_stmts)) = writes_by_symbol.remove(&symbol_id) else {
+        continue;
+      };
+      // Each write must be one that the visitor recorded. Otherwise a write is not known.
+      let write_count = self
+        .result
+        .symbol_ref_db
+        .get_resolved_references(symbol_id)
+        .filter(|reference| reference.is_write())
+        .count();
+      let symbol_ref: SymbolRef = (self.immutable_ctx.idx, symbol_id).into();
+      let declared_stmts = self.result.stmt_infos.declared_stmts_by_symbol(&symbol_ref);
+      if write_count != writer_stmts.len()
+        || writer_stmts.iter().any(|stmt_idx| declared_stmts.contains(stmt_idx))
+      {
+        continue;
+      }
+      writer_stmts.sort_unstable();
+      writer_stmts.dedup();
+      self.result.deferred_write_constants.push(DeferredWriteConstant {
+        symbol: symbol_id,
+        meta,
+        writer_stmts,
+      });
+    }
   }
 
   fn is_import_expr_ignored_by_comment(&mut self, expr: &ImportExpression<'ast>) -> bool {
@@ -1282,4 +1502,20 @@ pub enum IdentifierReferenceKind {
   Root(SymbolRef),
   /// rest
   Other,
+}
+
+/// Returns `Some(is_pure_annotation_only)` when a function is side-effect free, either because its
+/// body is empty or because it carries `@__NO_SIDE_EFFECTS__`.
+fn side_effect_free_function_kind(empty: bool, pure: bool) -> Option<bool> {
+  (empty || pure).then_some(pure && !empty)
+}
+
+/// `FunctionExt::is_side_effect_free` does not check the rest parameter, so it treats
+/// `function f(...[a = effect()]) {}` as empty. Only a plain `...rest` keeps the function empty.
+/// The declaration forms do not check this yet.
+fn has_plain_rest(params: &ast::FormalParameters) -> bool {
+  params
+    .rest
+    .as_ref()
+    .is_none_or(|rest| matches!(rest.rest.argument, BindingPattern::BindingIdentifier(_)))
 }

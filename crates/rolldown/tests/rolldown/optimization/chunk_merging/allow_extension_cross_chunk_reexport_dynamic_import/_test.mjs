@@ -39,9 +39,11 @@ assert.strictEqual(barrel.own, 1);
 const external = await loadExternal();
 assert.strictEqual(external.s_foreign(), 'foreign');
 
-// The getter of `boom` throws. `import()` still resolves, as it does in Node.
+// The getter of `boom` throws. `import()` still resolves, as it does in Node. The namespace object
+// and the facade share one read of `boom`, so the namespace object also gives `undefined`.
 const getter = await loadGetter();
 assert.strictEqual(getter.s_foreign(), 'foreign');
+assert.strictEqual(getter.boom, undefined);
 
 assert.strictEqual(await loadNamespace(), segNamespace);
 assert.strictEqual(segNamespace.s_foreign(), 'foreign');

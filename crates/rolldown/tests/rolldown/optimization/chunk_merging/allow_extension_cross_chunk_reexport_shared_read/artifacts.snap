@@ -1,0 +1,489 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+# Assets
+
+## app.js
+
+```js
+import { a as barrel_exports, c as require_mut, d as read_counter_n, f as require_counter, l as read_bad_x, o as read_barrel_exports_y, s as read_mut_m, u as require_bad } from "./group.js";
+// app.js
+var import_counter = require_counter();
+var import_bad = require_bad();
+var import_mut = require_mut();
+var calls = import_bad.calls;
+var m = read_mut_m(import_mut);
+var n = read_counter_n(import_counter);
+var reads = import_counter.reads;
+var setM = import_mut.setM;
+var x = read_bad_x(import_bad);
+var y = read_barrel_exports_y(barrel_exports);
+var yReads = barrel_exports.yReads;
+export { calls, m, n, reads, setM, x, y, yReads };
+
+```
+
+## dep.js
+
+```js
+// dep.js
+const foreign = 5;
+export { foreign };
+
+```
+
+## group.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// counter.cjs
+var require_counter = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.n = 0;
+	let reads = 0;
+	Object.defineProperty(exports, "n", {
+		enumerable: true,
+		get() {
+			reads += 1;
+			return reads;
+		}
+	});
+	exports.reads = () => reads;
+}));
+// bad.cjs
+var require_bad = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.x = 0;
+	let calls = 0;
+	Object.defineProperty(exports, "x", {
+		enumerable: true,
+		get() {
+			calls += 1;
+			throw new Error("read of x");
+		}
+	});
+	exports.calls = () => calls;
+}));
+// mut.cjs
+var require_mut = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.m = 1;
+	exports.setM = (value) => {
+		exports.m = value;
+	};
+}));
+// a.cjs
+var require_a = /* @__PURE__ */ __commonJSMin(((exports) => {
+	let reads = 0;
+	Object.defineProperty(exports, "y", {
+		enumerable: true,
+		get() {
+			reads += 1;
+			return reads;
+		}
+	});
+	exports.yReads = () => reads;
+}));
+// b.cjs
+var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {}));
+// barrel.js
+var import_counter = require_counter();
+var import_bad = require_bad();
+var import_mut = require_mut();
+var barrel_exports = /* @__PURE__ */ __exportAll({}, 2);
+__reExport(barrel_exports, /* @__PURE__ */ __toESM(require_a()));
+__reExport(barrel_exports, /* @__PURE__ */ __toESM(require_b()));
+// seg.js
+const own = 17;
+var counter_n, has_counter_n;
+function read_counter_n(ns) {
+	if (!has_counter_n) {
+		try {
+			counter_n = ns.n;
+		} catch (e) {
+			if (ns == null) throw e;
+		}
+		has_counter_n = true;
+	}
+	return counter_n;
+}
+var bad_x, has_bad_x;
+function read_bad_x(ns) {
+	if (!has_bad_x) {
+		try {
+			bad_x = ns.x;
+		} catch (e) {
+			if (ns == null) throw e;
+		}
+		has_bad_x = true;
+	}
+	return bad_x;
+}
+var mut_m, has_mut_m;
+function read_mut_m(ns) {
+	if (!has_mut_m) {
+		try {
+			mut_m = ns.m;
+		} catch (e) {
+			if (ns == null) throw e;
+		}
+		has_mut_m = true;
+	}
+	return mut_m;
+}
+var barrel_exports_y, has_barrel_exports_y;
+function read_barrel_exports_y(ns) {
+	if (!has_barrel_exports_y) {
+		try {
+			barrel_exports_y = ns.y;
+		} catch (e) {
+			if (ns == null) throw e;
+		}
+		has_barrel_exports_y = true;
+	}
+	return barrel_exports_y;
+}
+export { barrel_exports as a, require_mut as c, read_counter_n as d, require_counter as f, own as i, read_bad_x as l, import_counter as n, read_barrel_exports_y as o, import_mut as r, read_mut_m as s, import_bad as t, require_bad as u };
+
+```
+
+## other.js
+
+```js
+import { f as require_counter, i as own } from "./group.js";
+var reads = require_counter().reads;
+export { own, reads };
+
+```
+
+## seg.js
+
+```js
+import { a as barrel_exports, d as read_counter_n, i as own, l as read_bad_x, n as import_counter, o as read_barrel_exports_y, r as import_mut, s as read_mut_m, t as import_bad } from "./group.js";
+import { foreign } from "./dep.js";
+var first = read_counter_n(import_counter);
+var m = read_mut_m(import_mut);
+var second = read_barrel_exports_y(barrel_exports);
+var x = read_bad_x(import_bad);
+export { first, foreign, m, own, second, x };
+
+```
+
+# Variant: cjs
+
+## warnings
+
+### INVALID_OPTION
+
+```text
+[INVALID_OPTION] `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+## Assets
+
+### app.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_group = require("./group.js");
+// app.js
+var import_counter = require_group.require_counter();
+var import_bad = require_group.require_bad();
+var import_mut = require_group.require_mut();
+Object.defineProperty(exports, "calls", {
+	enumerable: true,
+	get: function() {
+		return import_bad.calls;
+	}
+});
+Object.defineProperty(exports, "m", {
+	enumerable: true,
+	get: function() {
+		return require_group.read_mut_m(import_mut);
+	}
+});
+Object.defineProperty(exports, "n", {
+	enumerable: true,
+	get: function() {
+		return require_group.read_counter_n(import_counter);
+	}
+});
+Object.defineProperty(exports, "reads", {
+	enumerable: true,
+	get: function() {
+		return import_counter.reads;
+	}
+});
+Object.defineProperty(exports, "setM", {
+	enumerable: true,
+	get: function() {
+		return import_mut.setM;
+	}
+});
+Object.defineProperty(exports, "x", {
+	enumerable: true,
+	get: function() {
+		return require_group.read_bad_x(import_bad);
+	}
+});
+Object.defineProperty(exports, "y", {
+	enumerable: true,
+	get: function() {
+		return require_group.read_barrel_exports_y(require_group.barrel_exports);
+	}
+});
+Object.defineProperty(exports, "yReads", {
+	enumerable: true,
+	get: function() {
+		return require_group.barrel_exports.yReads;
+	}
+});
+
+```
+
+### dep.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// dep.js
+const foreign = 5;
+exports.foreign = foreign;
+
+```
+
+### group.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// counter.cjs
+var require_counter = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.n = 0;
+	let reads = 0;
+	Object.defineProperty(exports, "n", {
+		enumerable: true,
+		get() {
+			reads += 1;
+			return reads;
+		}
+	});
+	exports.reads = () => reads;
+}));
+// bad.cjs
+var require_bad = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.x = 0;
+	let calls = 0;
+	Object.defineProperty(exports, "x", {
+		enumerable: true,
+		get() {
+			calls += 1;
+			throw new Error("read of x");
+		}
+	});
+	exports.calls = () => calls;
+}));
+// mut.cjs
+var require_mut = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.m = 1;
+	exports.setM = (value) => {
+		exports.m = value;
+	};
+}));
+// a.cjs
+var require_a = /* @__PURE__ */ __commonJSMin(((exports) => {
+	let reads = 0;
+	Object.defineProperty(exports, "y", {
+		enumerable: true,
+		get() {
+			reads += 1;
+			return reads;
+		}
+	});
+	exports.yReads = () => reads;
+}));
+// b.cjs
+var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {}));
+// barrel.js
+var import_counter = require_counter();
+var import_bad = require_bad();
+var import_mut = require_mut();
+var barrel_exports = /* @__PURE__ */ __exportAll({}, 2);
+__reExport(barrel_exports, /* @__PURE__ */ __toESM(require_a()));
+__reExport(barrel_exports, /* @__PURE__ */ __toESM(require_b()));
+// seg.js
+const own = 17;
+var counter_n, has_counter_n;
+function read_counter_n(ns) {
+	if (!has_counter_n) {
+		try {
+			counter_n = ns.n;
+		} catch (e) {
+			if (ns == null) throw e;
+		}
+		has_counter_n = true;
+	}
+	return counter_n;
+}
+var bad_x, has_bad_x;
+function read_bad_x(ns) {
+	if (!has_bad_x) {
+		try {
+			bad_x = ns.x;
+		} catch (e) {
+			if (ns == null) throw e;
+		}
+		has_bad_x = true;
+	}
+	return bad_x;
+}
+var mut_m, has_mut_m;
+function read_mut_m(ns) {
+	if (!has_mut_m) {
+		try {
+			mut_m = ns.m;
+		} catch (e) {
+			if (ns == null) throw e;
+		}
+		has_mut_m = true;
+	}
+	return mut_m;
+}
+var barrel_exports_y, has_barrel_exports_y;
+function read_barrel_exports_y(ns) {
+	if (!has_barrel_exports_y) {
+		try {
+			barrel_exports_y = ns.y;
+		} catch (e) {
+			if (ns == null) throw e;
+		}
+		has_barrel_exports_y = true;
+	}
+	return barrel_exports_y;
+}
+Object.defineProperty(exports, "barrel_exports", {
+	enumerable: true,
+	get: function() {
+		return barrel_exports;
+	}
+});
+Object.defineProperty(exports, "import_bad", {
+	enumerable: true,
+	get: function() {
+		return import_bad;
+	}
+});
+Object.defineProperty(exports, "import_counter", {
+	enumerable: true,
+	get: function() {
+		return import_counter;
+	}
+});
+Object.defineProperty(exports, "import_mut", {
+	enumerable: true,
+	get: function() {
+		return import_mut;
+	}
+});
+Object.defineProperty(exports, "own", {
+	enumerable: true,
+	get: function() {
+		return own;
+	}
+});
+Object.defineProperty(exports, "read_bad_x", {
+	enumerable: true,
+	get: function() {
+		return read_bad_x;
+	}
+});
+Object.defineProperty(exports, "read_barrel_exports_y", {
+	enumerable: true,
+	get: function() {
+		return read_barrel_exports_y;
+	}
+});
+Object.defineProperty(exports, "read_counter_n", {
+	enumerable: true,
+	get: function() {
+		return read_counter_n;
+	}
+});
+Object.defineProperty(exports, "read_mut_m", {
+	enumerable: true,
+	get: function() {
+		return read_mut_m;
+	}
+});
+Object.defineProperty(exports, "require_bad", {
+	enumerable: true,
+	get: function() {
+		return require_bad;
+	}
+});
+Object.defineProperty(exports, "require_counter", {
+	enumerable: true,
+	get: function() {
+		return require_counter;
+	}
+});
+Object.defineProperty(exports, "require_mut", {
+	enumerable: true,
+	get: function() {
+		return require_mut;
+	}
+});
+
+```
+
+### other.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_group = require("./group.js");
+// other.js
+var import_counter = require_group.require_counter();
+exports.own = require_group.own;
+Object.defineProperty(exports, "reads", {
+	enumerable: true,
+	get: function() {
+		return import_counter.reads;
+	}
+});
+
+```
+
+### seg.js
+
+```js
+const require_group = require("./group.js");
+const require_dep = require("./dep.js");
+var first = require_group.read_counter_n(require_group.import_counter);
+var m = require_group.read_mut_m(require_group.import_mut);
+var second = require_group.read_barrel_exports_y(require_group.barrel_exports);
+var x = require_group.read_bad_x(require_group.import_bad);
+exports.first = first;
+exports.foreign = require_dep.foreign;
+exports.m = m;
+exports.own = require_group.own;
+exports.second = second;
+exports.x = x;
+
+```

@@ -13,10 +13,12 @@ use oxc::{
   transformer::ESFeature,
 };
 use rolldown_common::{
-  AstScopes, Chunk, ChunkIdx, ChunkKind, ExportsKind, ImportAttributes, ImportRecordIdx,
-  ImportRecordMeta, InlineConstMode, MemberExprProp, MemberExprRefResolution, Module, ModuleIdx,
-  ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule, OutputExports,
-  OutputFormat, Platform, Specifier, SymbolRef, WrapKind, is_lazy_proxy,
+  AstScopes, Chunk, ChunkIdx, ChunkKind, ConstExportMeta, ExportsKind, ImportAttributes,
+  ImportRecordIdx, ImportRecordMeta, IndexModules, InlineConstMode, MemberExprProp,
+  MemberExprRefResolution, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType,
+  NamespaceAlias, NormalModule, OutputExports, OutputFormat, Platform, RetainedExportSymbols,
+  Specifier, SymbolRef, SymbolRefDb, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
+  is_lazy_proxy,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::{
@@ -27,6 +29,7 @@ use rolldown_ecmascript_utils::{
 };
 use rolldown_error::EmptyImportMetaKind;
 
+use crate::chunk_graph::ChunkGraph;
 use crate::hmr::utils::create_request_lazy_call;
 use std::borrow::Cow;
 
@@ -51,7 +54,7 @@ use crate::stages::generate_stage::{
   InlineReader,
   order_wrap_state::{OrderCjsCarrierKey, OrderWrapState},
 };
-use crate::types::linking_metadata::LinkingMetadata;
+use crate::types::linking_metadata::{LinkingMetadata, LinkingMetadataVec};
 use crate::utils;
 use crate::utils::external_import_interop::import_record_needs_interop;
 
@@ -911,31 +914,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     namespace_alias: &NamespaceAlias,
   ) -> Option<(ast::Expression<'ast>, FinalizedExprProcessHint)> {
     let inline_options = self.ctx.options.optimization.inline_const?;
-    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(original_ref);
-    let named_import = self.ctx.module.named_imports.get(&canonical_ref)?;
-
-    if !matches!(&named_import.imported, Specifier::Literal(lit) if lit != "default") {
-      return None;
-    }
-
-    let import_record = &self.ctx.module.import_records[named_import.record_idx];
-    let importee = import_record
-      .resolved_module
-      .and_then(|module_idx| self.ctx.modules[module_idx].as_normal())?;
-
-    let resolved_export =
-      self.ctx.linking_infos[importee.idx].resolved_exports.get(&namespace_alias.property_name)?;
-
-    // Don't inline when there are conflicting CJS sources — the value could differ per branch
-    // TODO(hana): Optimize this with conditional inlining
-    if resolved_export.cjs_conflicting_symbol_refs.is_some() {
-      return None;
-    }
-
-    let export_symbol = resolved_export.symbol_ref;
-    let canonical_export_ref = self.ctx.symbol_db.canonical_ref_for(export_symbol);
-
-    let constant_meta = self.ctx.constant_value_map.get(&canonical_export_ref)?;
+    let constant_meta = namespace_alias_constant(
+      self.ctx.module,
+      original_ref,
+      namespace_alias,
+      self.ctx.symbol_db,
+      self.ctx.modules,
+      self.ctx.linking_infos,
+      self.ctx.constant_value_map,
+    )?;
 
     if matches!(inline_options.mode, InlineConstMode::Smart)
       && (!self.state.contains(TraverseState::SmartInlineConst) || !constant_meta.safe_to_inline)
@@ -1084,10 +1071,36 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ))
   }
 
+  /// The value that the getter of the export `symbol_ref` returns in the namespace object of the
+  /// module. If the getter shares the read of a CommonJS property, it calls the function of the
+  /// read with the namespace: `first: () => read_counter_n(import_counter)`. The call runs when
+  /// code reads the export, so the CommonJS getter runs at most one time for all shared reads of
+  /// the property. See internal-docs/code-splitting/implementation.md ("Shared CommonJS property
+  /// reads").
+  fn namespace_getter_returned_expr(&self, symbol_ref: SymbolRef) -> ast::Expression<'ast> {
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+    if let Some(callee) =
+      self.ctx.shared_commonjs_reads.namespace_call(self.ctx.chunk_idx, canonical_ref)
+      && let Some(ns_alias) = self.ctx.symbol_db.get(canonical_ref).namespace_alias.as_ref()
+      && self.try_inline_constant_from_namespace_alias(symbol_ref, ns_alias).is_none()
+    {
+      // The namespace, without the property read.
+      let (namespace, _) = self.finalized_expr_for_symbol_ref(symbol_ref, false, true);
+      let (callee, _) = self.finalized_expr_for_symbol_ref(callee, false, false);
+      return Expression::new_call_with_arg(callee, namespace, false, self);
+    }
+    self.finalized_expr_for_symbol_ref(symbol_ref, false, false).0
+  }
+
   fn generate_declaration_of_module_namespace_object(&self) -> Vec<ast::Statement<'ast>> {
     if !self.module_namespace_included {
       return vec![];
     }
+    // The finalizer writes the namespace object before it visits a statement. Thus a getter of a
+    // CommonJS property (a namespace alias) returns an inlined constant only in the `All` mode of
+    // `inlineConst` (`try_inline_constant_from_namespace_alias`). The shared reads of CommonJS
+    // properties use this rule (`GenerateStage::collect_commonjs_property_reads`).
+    debug_assert!(!self.state.contains(TraverseState::SmartInlineConst));
 
     let binding_name_for_namespace_object_ref =
       self.canonical_name_for(self.ctx.module.namespace_object_ref);
@@ -1095,64 +1108,31 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // construct `{ prop_name: () => returned, ... }`
     let mut arg_obj_expr = ast::ObjectExpression::dummy(self.allocator());
 
-    let namespace_is_semantically_observed = self
-      .ctx
-      .linking_info
-      .module_namespace_included_reason
-      .contains(ModuleNamespaceIncludedReason::Unknown)
-      || (self
-        .ctx
-        .linking_info
-        .module_namespace_included_reason
-        .contains(ModuleNamespaceIncludedReason::ReExportDynamicExports)
-        && self.ctx.linking_info.has_dynamic_exports)
-      || self
-        .ctx
-        .order_wrap_state
-        .requires_semantic_namespace(self.ctx.module.namespace_object_ref, |importer_idx| {
-          self.ctx.chunk_graph.module_is_in_live_chunk(importer_idx)
-        });
-    let dynamic_export_names = self
-      .ctx
-      .linking_info
-      .module_namespace_included_reason
-      .contains(ModuleNamespaceIncludedReason::SimulateFacadeChunk)
-      .then(|| self.ctx.linking_info.dynamically_read_export_names(self.ctx.dynamic_import_usage))
-      .flatten();
-    let simulated_facade_export_names = (!namespace_is_semantically_observed)
-      .then(|| {
-        self
-          .ctx
-          .order_wrap_state
-          .simulated_facade_export_names(self.ctx.module.namespace_object_ref)
-          .or(dynamic_export_names)
-      })
-      .flatten();
+    let simulated_facade_export_names = narrowed_namespace_export_names(
+      self.ctx.linking_info,
+      self.ctx.module.namespace_object_ref,
+      self.ctx.order_wrap_state,
+      self.ctx.chunk_graph,
+      self.ctx.dynamic_import_usage,
+    );
 
     // Even if the module namespace is included, some exports may not be used due to `optimize_facade_dynamic_entry_chunks`
     // https://github.com/rolldown/rolldown/blob/d6d65f9080e427cd9feef56eb7a110fbcf6c1414/crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs#L347-L354
     arg_obj_expr.properties.extend(self.ctx.linking_info.canonical_exports(false).filter_map(
       |(export, resolved_export)| {
-        // Even if the symbol is not marked as used (generated inside module),
-        // it should be included in the namespace export.
-        let is_inlinable_constant = self
-          .ctx
-          .constant_value_map
-          .get(&self.ctx.symbol_db.canonical_ref_for(resolved_export.symbol_ref))
-          .is_some_and(|meta| !meta.commonjs_export);
-        if let Some(export_names) = simulated_facade_export_names {
-          if !export_names.contains(export) {
-            return None;
-          }
-        } else if !self.ctx.retained_export_symbols.contains(&resolved_export.symbol_ref)
-          && !is_inlinable_constant
-        {
+        if !namespace_object_has_getter(
+          simulated_facade_export_names,
+          export,
+          resolved_export.symbol_ref,
+          self.ctx.retained_export_symbols,
+          self.ctx.constant_value_map,
+          self.ctx.symbol_db,
+        ) {
           return None;
         }
         // prop_name: () => returned
         let prop_name = export;
-        let (returned, _) =
-          self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
+        let returned = self.namespace_getter_returned_expr(resolved_export.symbol_ref);
         // `__proto__` has special semantics in object literals - it sets the prototype
         // instead of creating a property. Use computed property syntax for it.
         let key = if is_validate_identifier_name(prop_name) && prop_name != "__proto__" {
@@ -3631,6 +3611,97 @@ impl oxc::ast_visit::VisitJsMut<'_> for SpanRewriter {
   fn visit_span(&mut self, span: &mut Span) {
     *span = self.0;
   }
+}
+
+/// The names of the exports that get a getter in the namespace object of a module, if the object
+/// keeps only the exports that code reads. These are the exports of a removed dynamic entry facade
+/// (`OrderWrapState::simulated_facade_export_names`), or the exports that the `import()`
+/// expressions of the entry read. `None` means that the object keeps each retained export. The
+/// shared reads of CommonJS properties use the same rule
+/// (`GenerateStage::collect_commonjs_property_reads`).
+pub fn narrowed_namespace_export_names<'a>(
+  linking_info: &'a LinkingMetadata,
+  namespace_object_ref: SymbolRef,
+  order_wrap_state: &'a OrderWrapState,
+  chunk_graph: &ChunkGraph,
+  dynamic_import_usage: Option<&'a DynamicImportExportsUsage>,
+) -> Option<&'a FxHashSet<CompactStr>> {
+  let reason = linking_info.module_namespace_included_reason;
+  let namespace_is_semantically_observed = reason.contains(ModuleNamespaceIncludedReason::Unknown)
+    || (reason.contains(ModuleNamespaceIncludedReason::ReExportDynamicExports)
+      && linking_info.has_dynamic_exports)
+    || order_wrap_state.requires_semantic_namespace(namespace_object_ref, |importer_idx| {
+      chunk_graph.module_is_in_live_chunk(importer_idx)
+    });
+  if namespace_is_semantically_observed {
+    return None;
+  }
+  order_wrap_state.simulated_facade_export_names(namespace_object_ref).or_else(|| {
+    reason
+      .contains(ModuleNamespaceIncludedReason::SimulateFacadeChunk)
+      .then(|| linking_info.dynamically_read_export_names(dynamic_import_usage))
+      .flatten()
+  })
+}
+
+/// Whether the export `export` gets a getter in the namespace object of a module. `export_names`
+/// is the result of `narrowed_namespace_export_names`.
+pub fn namespace_object_has_getter(
+  export_names: Option<&FxHashSet<CompactStr>>,
+  export: &CompactStr,
+  symbol_ref: SymbolRef,
+  retained_export_symbols: &RetainedExportSymbols,
+  constant_value_map: &FxHashMap<SymbolRef, ConstExportMeta>,
+  symbol_db: &SymbolRefDb,
+) -> bool {
+  match export_names {
+    Some(export_names) => export_names.contains(export),
+    // Even if the symbol is not marked as used (generated inside module), it should be included in
+    // the namespace export.
+    None => {
+      retained_export_symbols.contains(&symbol_ref)
+        || constant_value_map
+          .get(&symbol_db.canonical_ref_for(symbol_ref))
+          .is_some_and(|meta| !meta.commonjs_export)
+    }
+  }
+}
+
+/// The constant value of the export that a read of `namespace_alias` in `module` resolves to.
+/// `inlineConst` can put this value in place of the read. The caller checks the option and the
+/// mode (`ScopeHoistingFinalizer::try_inline_constant_from_namespace_alias`). The shared reads of
+/// CommonJS properties use the same rule (`GenerateStage::collect_commonjs_property_reads`).
+pub fn namespace_alias_constant<'a>(
+  module: &NormalModule,
+  original_ref: SymbolRef,
+  namespace_alias: &NamespaceAlias,
+  symbol_db: &SymbolRefDb,
+  modules: &IndexModules,
+  linking_infos: &LinkingMetadataVec,
+  constant_value_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
+) -> Option<&'a ConstExportMeta> {
+  let canonical_ref = symbol_db.canonical_ref_for(original_ref);
+  let named_import = module.named_imports.get(&canonical_ref)?;
+
+  if !matches!(&named_import.imported, Specifier::Literal(lit) if lit != "default") {
+    return None;
+  }
+
+  let import_record = &module.import_records[named_import.record_idx];
+  let importee =
+    import_record.resolved_module.and_then(|module_idx| modules[module_idx].as_normal())?;
+
+  let resolved_export =
+    linking_infos[importee.idx].resolved_exports.get(&namespace_alias.property_name)?;
+
+  // Don't inline when there are conflicting CJS sources — the value could differ per branch
+  // TODO(hana): Optimize this with conditional inlining
+  if resolved_export.cjs_conflicting_symbol_refs.is_some() {
+    return None;
+  }
+
+  let canonical_export_ref = symbol_db.canonical_ref_for(resolved_export.symbol_ref);
+  constant_value_map.get(&canonical_export_ref)
 }
 
 /// Returns the result of [`ScopeHoistingFinalizer::namespace_object_is_open`] for the module

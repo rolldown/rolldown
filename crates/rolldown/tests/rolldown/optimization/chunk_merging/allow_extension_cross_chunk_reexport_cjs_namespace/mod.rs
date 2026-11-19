@@ -22,7 +22,7 @@ impl Plugin for EmitChunkPlugin {
     ctx: &PluginContext,
     _args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> Result<(), anyhow::Error> {
-    for id in ["./seg_named.js", "./seg_barrel.js", "./seg_star.js"] {
+    for id in ["./seg_named.js", "./seg_barrel.js", "./seg_star.js", "./seg_merged.js"] {
       ctx.emit_chunk(EmittedChunk {
         id: id.to_string(),
         preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
@@ -47,6 +47,11 @@ async fn allow_extension_cross_chunk_reexport_cjs_namespace() {
   //   CommonJS module. The namespace of `barrel.js` is in the `barrel.js` chunk.
   // In CJS output, the read of such a property must get the namespace through the `require()`
   // binding of the other chunk. The `index.js` entry also re-exports `y` this way.
+  //
+  // `seg_merged.js` imports `keep` from `merged_lib.cjs` and re-exports `w` from it. The two
+  // import records get one namespace after the link pass (`merge_cjs_namespace`), but the
+  // `group` chunk exports the namespace of the second record. `index.js` re-exports `keep`, so
+  // `merged_lib.cjs` is not in the `seg_merged.js` chunk.
   //
   // `index.js` loads `seg_named.js` and `seg_star.js` with `import()`. That loads the `group`
   // chunk and reads the namespace object of the entry, as it does when the facade is removed.

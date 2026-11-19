@@ -55,9 +55,10 @@ async fn allow_extension_cross_chunk_reexport_dynamic_import() {
   //   so `import()` gets `x`. A facade does not re-export the names that `export *` gets from a
   //   CommonJS module.
   // - `seg_getter.js` re-exports `boom` from a CommonJS module that throws when code reads
-  //   `boom`. The namespace object reads `boom` only on access, so `import()` resolves, as it
-  //   does in Node. The facade reads `boom` in a `try` block when it loads, so the facade also
-  //   loads, and `boom` is `undefined`, as in Node.
+  //   `boom`. The facade and the getter of `boom` in the namespace object share one read in a
+  //   `try` block. The facade reads `boom` when it loads, and the namespace object reads it only
+  //   on access. Thus the facade loads and `import()` resolves, and both give `undefined`, as in
+  //   Node.
   // - `reader.js` reads the namespace object of `seg_namespace.js` as a value, and `import()`
   //   returns the same object.
   // `seg_external.js` has `export *` from an external module. Only its facade re-exports the

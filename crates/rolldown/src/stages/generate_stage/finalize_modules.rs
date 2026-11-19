@@ -100,6 +100,7 @@ impl GenerateStage<'_> {
             resolved_file_urls,
             has_enum_inlining,
             inline_state: &self.inline_state,
+            shared_commonjs_reads: &self.shared_commonjs_reads,
           };
 
           let (transferred_import_record, mut module_diagnostics) =

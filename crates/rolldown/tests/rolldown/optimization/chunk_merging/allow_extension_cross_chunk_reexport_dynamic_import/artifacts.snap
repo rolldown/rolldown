@@ -54,7 +54,19 @@ var require_getter = /* @__PURE__ */ __commonJSMin(((exports) => {
 		}
 	});
 }));
-export { require_getter as t };
+var getter_boom, has_getter_boom;
+function read_getter_boom(ns) {
+	if (!has_getter_boom) {
+		try {
+			getter_boom = ns.boom;
+		} catch (e) {
+			if (ns == null) throw e;
+		}
+		has_getter_boom = true;
+	}
+	return getter_boom;
+}
+export { require_getter as n, read_getter_boom as t };
 
 ```
 
@@ -62,7 +74,7 @@ export { require_getter as t };
 
 ```js
 import { i as __toESM, n as __exportAll, r as __reExport } from "./rolldown-runtime.js";
-import { t as require_getter } from "./getter.js";
+import { n as require_getter, t as read_getter_boom$1 } from "./getter.js";
 import { t as foreign } from "./dep.js";
 import { t as require_lib } from "./lib.js";
 import { t as barrel_exports } from "./barrel.js";
@@ -81,18 +93,21 @@ __reExport(seg_dynamic_exports, /* @__PURE__ */ __toESM(require_lib()));
 var seg_external_exports = /* @__PURE__ */ __exportAll({ s_foreign: () => foreign }, 2);
 // seg_getter.js
 var seg_getter_exports = /* @__PURE__ */ __exportAll({
-	boom: () => import_getter.boom,
+	boom: () => read_getter_boom$1(import_getter),
 	s_foreign: () => foreign
 });
 var import_getter = require_getter();
-export { seg_barrel_exports as a, seg_dynamic_exports as i, seg_getter_exports as n, seg_namespace_exports as o, seg_external_exports as r, import_getter as t };
+function read_getter_boom(ns) {
+	return read_getter_boom$1(ns);
+}
+export { seg_barrel_exports as a, seg_dynamic_exports as i, seg_getter_exports as n, seg_namespace_exports as o, seg_external_exports as r, read_getter_boom as s, import_getter as t };
 
 ```
 
 ## index.js
 
 ```js
-import { t as require_getter } from "./getter.js";
+import { n as require_getter } from "./getter.js";
 import { t as foreign } from "./dep.js";
 import { t as require_lib } from "./lib.js";
 import { t as barrel_exports } from "./barrel.js";
@@ -160,11 +175,8 @@ export * from "node:path";
 
 ```js
 import { t as foreign } from "./dep.js";
-import { t as import_getter } from "./group.js";
-var boom;
-try {
-	boom = import_getter.boom;
-} catch (e) {}
+import { s as read_getter_boom, t as import_getter } from "./group.js";
+var boom = read_getter_boom(import_getter);
 export { boom, foreign as s_foreign };
 
 ```

@@ -24,7 +24,7 @@ use crate::{
   module_finalizers::{ScopeHoistingFinalizer, TraverseState},
   stages::{
     generate_stage::{
-      FinalEsmInitMetadata, InlineCommonChunksState, Sealed,
+      FinalEsmInitMetadata, InlineCommonChunksState, Sealed, SharedCommonJsReads,
       order_wrap_state::{EsmInitOrigin, EsmInitTarget, OrderWrapState},
     },
     link_stage::SafelyMergeCjsNsInfo,
@@ -76,6 +76,9 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub has_enum_inlining: bool,
   /// `experimentalInlineCommonChunks`: records and the bridges this chunk reads them through.
   pub inline_state: &'me InlineCommonChunksState,
+  /// The shared reads of CommonJS properties. A getter of a namespace object can call a function of
+  /// a shared read (`SharedCommonJsReads::namespace_call`).
+  pub shared_commonjs_reads: &'me SharedCommonJsReads,
 }
 
 #[derive(Clone, Copy, Debug)]

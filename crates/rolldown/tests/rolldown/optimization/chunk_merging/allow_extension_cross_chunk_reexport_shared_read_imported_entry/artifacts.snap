@@ -1,0 +1,229 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+# Assets
+
+## app.js
+
+```js
+import { t as require_counter } from "./counter.js";
+// app.js
+var import_counter = require_counter();
+var n = import_counter.n;
+var reads = import_counter.reads;
+export { n, reads, import_counter as t };
+
+```
+
+## app2.js
+
+```js
+import { t as require_counter } from "./counter.js";
+require_counter();
+const a2 = 1;
+export { a2 };
+
+```
+
+## counter.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// counter.cjs
+var require_counter = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.n = 0;
+	let reads = 0;
+	Object.defineProperty(exports, "n", {
+		enumerable: true,
+		get() {
+			reads += 1;
+			return reads;
+		}
+	});
+	exports.reads = () => reads;
+}));
+export { require_counter as t };
+
+```
+
+## dep.js
+
+```js
+// dep.js
+const foreign = 5;
+export { foreign };
+
+```
+
+## group.js
+
+```js
+import "./app.js";
+
+```
+
+## main.js
+
+```js
+// main.js
+const loadApp = () => import("./app.js");
+export { loadApp };
+
+```
+
+## seg.js
+
+```js
+import { t as import_counter } from "./app.js";
+import { foreign } from "./dep.js";
+import "./group.js";
+var first = import_counter;
+try {
+	first = first.n;
+} catch (e) {
+	first = void 0;
+}
+export { first, foreign };
+
+```
+
+# Variant: cjs
+
+## warnings
+
+### INVALID_OPTION
+
+```text
+[INVALID_OPTION] `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+## Assets
+
+### app.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// app.js
+var import_counter = require("./counter.js").require_counter();
+Object.defineProperty(exports, "import_counter", {
+	enumerable: true,
+	get: function() {
+		return import_counter;
+	}
+});
+Object.defineProperty(exports, "n", {
+	enumerable: true,
+	get: function() {
+		return import_counter.n;
+	}
+});
+Object.defineProperty(exports, "reads", {
+	enumerable: true,
+	get: function() {
+		return import_counter.reads;
+	}
+});
+
+```
+
+### app2.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+require("./counter.js").require_counter();
+const a2 = 1;
+exports.a2 = a2;
+
+```
+
+### counter.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// counter.cjs
+var require_counter = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.n = 0;
+	let reads = 0;
+	Object.defineProperty(exports, "n", {
+		enumerable: true,
+		get() {
+			reads += 1;
+			return reads;
+		}
+	});
+	exports.reads = () => reads;
+}));
+Object.defineProperty(exports, "require_counter", {
+	enumerable: true,
+	get: function() {
+		return require_counter;
+	}
+});
+
+```
+
+### dep.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// dep.js
+const foreign = 5;
+exports.foreign = foreign;
+
+```
+
+### group.js
+
+```js
+require("./app.js");
+
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// main.js
+const loadApp = () => Promise.resolve().then(() => require("./app.js"));
+exports.loadApp = loadApp;
+
+```
+
+### seg.js
+
+```js
+const require_app = require("./app.js");
+const require_dep = require("./dep.js");
+require("./group.js");
+var first = require_app.import_counter;
+try {
+	first = first.n;
+} catch (e) {
+	first = void 0;
+}
+exports.first = first;
+exports.foreign = require_dep.foreign;
+
+```

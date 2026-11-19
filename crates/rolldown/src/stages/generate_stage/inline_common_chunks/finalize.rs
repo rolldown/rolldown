@@ -118,6 +118,7 @@ impl GenerateStage<'_> {
             resolved_file_urls,
             has_enum_inlining,
             inline_state: &self.inline_state,
+            shared_commonjs_reads: &self.shared_commonjs_reads,
           };
           let (_, module_diagnostics) = ctx.finalize_normal_module(&mut ast, ast_scope);
           diagnostics.extend(module_diagnostics);

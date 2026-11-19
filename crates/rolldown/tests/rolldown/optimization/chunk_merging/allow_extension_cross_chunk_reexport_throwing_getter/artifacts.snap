@@ -81,14 +81,18 @@ export { __commonJSMin as t };
 ```js
 import { foreign } from "./dep.js";
 import { n as import_lib, r as own, t as import_counter } from "./group.js";
-var first;
+var first = import_counter;
 try {
-	first = import_counter.n;
-} catch (e) {}
-var x;
+	first = first.n;
+} catch (e) {
+	first = void 0;
+}
+var x = import_lib;
 try {
-	x = import_lib.x;
-} catch (e) {}
+	x = x.x;
+} catch (e) {
+	x = void 0;
+}
 export { first, foreign, own, first as second, x };
 
 ```
@@ -200,14 +204,18 @@ Object.defineProperty(exports, "__commonJSMin", {
 ```js
 const require_dep = require("./dep.js");
 const require_group = require("./group.js");
-var first;
+var first = require_group.import_counter;
 try {
-	first = require_group.import_counter.n;
-} catch (e) {}
-var x;
+	first = first.n;
+} catch (e) {
+	first = void 0;
+}
+var x = require_group.import_lib;
 try {
-	x = require_group.import_lib.x;
-} catch (e) {}
+	x = x.x;
+} catch (e) {
+	x = void 0;
+}
 exports.first = first;
 exports.foreign = require_dep.foreign;
 exports.own = require_group.own;

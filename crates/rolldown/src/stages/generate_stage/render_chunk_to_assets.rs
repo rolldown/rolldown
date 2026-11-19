@@ -215,6 +215,7 @@ impl GenerateStage<'_> {
               render_export_items_index_vec,
               resolved_paths,
               inline_state: &self.inline_state,
+              shared_commonjs_reads: &self.shared_commonjs_reads,
               carried_renders,
             };
             EcmaGenerator::instantiate_chunk(&mut ecma_ctx).await

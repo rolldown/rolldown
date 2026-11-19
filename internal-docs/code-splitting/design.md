@@ -381,7 +381,7 @@ Each failure needs its own guard. Also, the module-level import prediction must 
 A kept facade does not give the same value as the namespace object of the entry in the group chunk. `import()` of the entry returns that object when the facade is removed:
 
 - In CJS output, a write to an export of the facade changes the export. A write to an export of the namespace object fails, as for a module namespace.
-- The facade reads each CommonJS export one time, when it loads. If a getter throws, the export of the facade is `undefined`, as in Node. The namespace object reads the export at each access.
+- The facade reads each CommonJS export one time, when it loads. If a getter throws, the export of the facade is `undefined`, as in Node. The namespace object reads the export only when code reads it. The two share one read when they can (see **Shared reads** below).
 - A facade does not re-export the names that `export *` gets from a CommonJS module. The namespace object gets them at run time.
 - Another module can read the namespace object as a value (`import * as ns`). Then `import()` must return that same object.
 
@@ -393,9 +393,9 @@ The redirect applies only when the cross-chunk check is the only reason for the 
 
 **Load of a kept facade.** An ESM facade binds each export to a variable, so it reads each CommonJS export when it loads. When the optimizer removes the facade, the group chunk does not export such a property, and no file reads it when it loads. Code outside the bundle then imports the other exports of the entry from the group chunk, and a getter that throws does not stop that load. Thus a getter that throws must not stop the load of a facade that the cross-chunk check keeps. Node reads each export of a CommonJS module one time when it imports the module, and it ignores an error from a getter. Thus such a facade reads each CommonJS export one time, in a `try` block, and all export names of one CommonJS export get the value of that read (`export { x as a, x as b }`). The CJS facade does the same, so both output formats give the same values. Module initialization stays outside the `try` block.
 
-In CJS output, a bundled module can get a property through `export *` from an external module. The facade cannot tell such a property from a CommonJS property, so it saves that value too, and the property is not live. A direct re-export of an external module keeps its getter.
+The facade finds the module that gives each property (`namespace_alias_origin`). Only a CommonJS property gets a saved value. A bundled barrel can get a property through `export *` from one external module. Such a property is a live binding of an ES module, so the ESM facade re-exports it from that module, and the CJS facade keeps a getter. A property of an unknown origin keeps a getter in CJS output.
 
-Other entry chunks and facades do not change. In ESM output, they read without a `try` block, so a getter that throws makes their load fail. CJS output keeps their getters. This design does not change these separate gaps. In strict execution order, the bundle also restores the facade of an emitted entry in the order wrap plan when the cross-chunk check does not keep it. Thus such a facade renders as the other facades.
+Another chunk can export the same CommonJS property, for example an ordinary entry that also re-exports it. Node reads the property one time for both entries, so the chunks share one read (see **Shared reads** below). Other entry chunks and facades that do not share a read do not change. In ESM output, they read without a `try` block, so a getter that throws makes their load fail. CJS output keeps their getters. This design does not change these separate gaps. In strict execution order, the bundle also restores the facade of an emitted entry in the order wrap plan when the cross-chunk check does not keep it. Thus such a facade renders as the other facades.
 
 **Rejected alternative: a `try` block in each CJS getter.** Then the spread of the facade (`{ ...facade }`) does not throw. But the getter reads the export at each access, so two reads can give different values. Node reads the export one time.
 
@@ -403,10 +403,42 @@ Other entry chunks and facades do not change. In ESM output, they read without a
 
 **Rejected alternative: remove the facade when it exports a CommonJS property.** The group chunk then loads as it does without the cross-chunk check. But such an entry loses its re-exports from other chunks again ([#11767](https://github.com/rolldown/rolldown/issues/11767)).
 
+**Shared reads.** When a facade and another chunk export the same CommonJS property, they call one accessor. The chunk of the CommonJS module or of the namespace declares it (see [implementation.md](./implementation.md#shared-commonjs-property-reads)). These rules decide the design:
+
+- No runtime change. The accessor is code of the chunk, not a runtime helper.
+- No new chunk dependency. A chunk that does not import the owner of the accessor calls it through a forward in a chunk between them. The pass adds no import and no namespace extraction to get a path.
+- No new visible key. A chunk gets the accessor or a forward only if the new export changes neither a fixed entry signature nor the namespace that `import()` gives for the chunk. This applies to a pure dynamic entry, and also to a user-defined or emitted entry that code in the bundle loads with `import()`. `allow-extension` permits new exports of an entry file, but `Object.keys(await import('./app.js'))` can see a new key. A forward can stay when the importers read an extracted namespace that hides it. Runtime placement can add a key to such a namespace when its importers cannot read an extracted namespace (`dynamic_entry_extraction_skip_reason`). A shared read cannot. Such a namespace can already have extra keys, but that is not a reason to add one more key.
+- If a reader has no path through such chunks, it keeps its own read. The other readers still share one read if a facade is one of them. Then the getter runs two times, and the load order decides which reader gets the second value.
+- The facade and the namespace object of its entry are two ways to load the entry: code outside the bundle loads the facade, and `import()` in the bundle gives the namespace object. Thus a getter of that namespace object is a reader too. It calls the accessor when code reads the export, not when the namespace object is created. In each load order, the facade and each read of the namespace object give the value of one read, as in Node.
+- The read runs at the first use. An import of the owner proves that the owner loads. It does not prove that the getter must run at that time. Thus the accessor reads the property at its first call, not when the owner loads.
+- A getter that throws gives `undefined`, and the accessor does not read again, as in Node. A namespace that is `null` or `undefined` is not a read of the property, so the accessor throws, as a plain property read does.
+- The value is saved. In CJS output, the getter of an ordinary entry that shares a read returns the saved value after the first read. Before, the getter read the property at each access, so it saw each later write. If the getter read the property again, the CommonJS getter could run a second time, and the ordinary entry could give another value than the facade. The saved value matches Node after the snapshot, but the read can run later than in Node. Node copies the named exports of a CommonJS module when it imports the module ([CommonJS namespaces](https://nodejs.org/api/esm.html#commonjs-namespaces)). The output reads the property at the first call of the accessor, and an ordinary CJS entry and a namespace object call it at the first access of a getter. Thus a write before the first read can be visible. A write after the first read does not change the saved value.
+- Only a CommonJS named re-export that a marked facade shares gets a saved value. Direct `require()` property reads, the bindings of an external ES module, the getters of other namespace objects, and ordinary entries without such a facade do not change.
+
+**Rejected alternative: a runtime helper that saves the value.** It changes the runtime for one case. A function of the chunk does the same work.
+
+**Rejected alternative: a saved value at the top level of the owner.** The owner can load for a file that reads no property, for example for an entry that imports another export of the group chunk. Then the getter runs at that load.
+
+**Rejected alternative: share only when each exporter imports the owner.** An exporter can get the namespace from another chunk, for example from the group chunk or from an entry chunk. Then each chunk reads the property. In CJS output, the value of the ordinary entry then changes when the facade loads first.
+
+**Rejected alternative: a forward in an entry chunk whose namespace `import()` gives.** Runtime placement allows a new export in a pure dynamic entry whose importers cannot read an extracted namespace, and `allow-extension` allows a new export in a user-defined entry. But the forward is then a new key of `Object.keys(await import('./app.js'))`.
+
+**Rejected alternative: a new import or a new extraction for a reader that has no path.** The reader then reaches the accessor, and the getter runs one time. But the change adds a chunk dependency, or it changes the value that `import()` gives, for one shared read.
+
+**Rejected alternative: a note about the namespace getter.** When the facade loads first, a getter that reads the property again makes `ns.first` give another value than the facade. Node gives the same value, and so does the output when the optimizer removes the facade. A note does not remove this regression.
+
+**Rejected alternative: a call of the accessor when the namespace object is created.** Then an `import()` that reads no export runs the getter.
+
+**Unresolved: shared reads.**
+
+- Two ordinary entries without such a facade still read a property one time each.
+- In strict execution order, a restored facade reads the property in its own code, and the other entry reads it again.
+- A reader that has no path to the accessor reads the property in its own code, so the getter runs again. Examples are a dynamic entry that gets the property through another dynamic entry, and a facade that gets it through a user-defined entry that `import()` loads.
+
 **Unresolved.** The namespace object of the group chunk differs from Node in two cases, with or without the facade:
 
 - In ESM output, the namespace object does not get the names of an external `export *`.
-- The namespace object reads a CommonJS export at each access. Node reads the export one time, when it loads the CommonJS module. Thus the namespace object sees a later write.
+- The namespace object reads a CommonJS export at each access, unless its getter shares the read of a facade. Node reads the export one time, when it loads the CommonJS module. Thus the namespace object sees a later write.
 
 ### Late `WrapKind` override
 

@@ -10,7 +10,10 @@ use rolldown_common::{
   ConstExportMeta, ConstantValue, ExportsKind, GetLocalDb, IndexModules, ModuleIdx, Specifier,
   StmtEvalFlags, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
 };
-use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
+use rolldown_utils::{
+  IndexBitSet,
+  rayon::{IntoParallelRefIterator, ParallelIterator},
+};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -32,7 +35,7 @@ struct Components {
   /// One module of the component of each module.
   representatives: IndexVec<ModuleIdx, ModuleIdx>,
   /// Whether each module is in a cycle or can reach an external module.
-  imports_may_run_later: IndexVec<ModuleIdx, bool>,
+  imports_may_run_later: IndexBitSet<ModuleIdx>,
 }
 
 impl ImportCycles {
@@ -54,14 +57,16 @@ impl ImportCycles {
         }
       }
       let mut representatives = (0..modules.len()).map(ModuleIdx::new).collect::<IndexVec<_, _>>();
-      let mut imports_may_run_later =
-        (0..modules.len()).map(|_| false).collect::<IndexVec<ModuleIdx, _>>();
+      let mut imports_may_run_later = IndexBitSet::new(modules.len());
       for component in petgraph::algo::kosaraju_scc(&graph) {
         let representative = ModuleIdx::new(component[0].index());
         let is_cycle = component.len() > 1;
         for node in component {
-          representatives[ModuleIdx::new(node.index())] = representative;
-          imports_may_run_later[ModuleIdx::new(node.index())] = is_cycle;
+          let module_idx = ModuleIdx::new(node.index());
+          representatives[module_idx] = representative;
+          if is_cycle {
+            imports_may_run_later.set_bit(module_idx);
+          }
         }
       }
       // An external module can import emitted modules and complete a cycle we cannot see.
@@ -73,7 +78,7 @@ impl ImportCycles {
         }),
       );
       while let Some(node) = dfs.next(reverse_graph) {
-        imports_may_run_later[ModuleIdx::new(node.index())] = true;
+        imports_may_run_later.set_bit(ModuleIdx::new(node.index()));
       }
       Components { representatives, imports_may_run_later }
     })
@@ -97,7 +102,7 @@ impl ImportCycles {
     modules: &IndexModules,
     module: ModuleIdx,
   ) -> bool {
-    !self.components(modules).imports_may_run_later[module]
+    !self.components(modules).imports_may_run_later.has_bit(module)
   }
 }
 

@@ -11,16 +11,13 @@ import type { BindingModuleMetaEntry } from '../binding.cjs';
  * Each value is saved as JSON, so it must be the same after it is written as JSON and read back.
  * A string, a boolean, `null`, a finite number, an array and a plain object are. Everything that
  * JSON changes or drops is not: a function, a symbol, a `BigInt`, `NaN`, `Infinity`, `-0`, a
- * `Map`, a `Set`, a `Date`, an instance of a class, an object without a prototype, an `undefined`
- * or a hole in an array, a property with a symbol key, a property that is not enumerable, and an
- * object that is used two times or contains itself. A top-level key that is not well-formed
- * UTF-16 cannot be saved either.
+ * `Map`, a `Set`, a `Date`, an instance of a class, an object without a prototype, `undefined`
+ * inside a value (an item, a hole, or the value of a property), a property with a symbol key, a
+ * property that is not enumerable, and an object that is used two times or contains itself. A
+ * top-level key that is not well-formed UTF-16 cannot be saved either.
  *
- * `undefined` as the value of a property is handled in two ways:
- * - Under a top-level key, it gets an entry without JSON text. The copy writes `undefined` over
- *   an older value of the key, so a reuse must do the same.
- * - Deeper inside a value, the property is left out, as JSON does. This is the one loss that is
- *   allowed.
+ * `undefined` under a top-level key gets an entry without JSON text. The copy writes `undefined`
+ * over an older value of the key, so a reuse must do the same.
  */
 export function toSavableMetaEntries(meta: object): BindingModuleMetaEntry[] | undefined {
   try {
@@ -121,7 +118,7 @@ function isSavable(value: unknown, seen: Set<object>): boolean {
   }
   for (const key of keys) {
     const item = (value as Record<string, unknown>)[key];
-    if (item !== undefined && !isSavable(item, seen)) {
+    if (!isSavable(item, seen)) {
       return false;
     }
   }

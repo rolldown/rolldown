@@ -674,24 +674,22 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// member gets the same `this` guard.
   fn rewrite_call_callee(&self, call_expr: &mut ast::CallExpression<'ast>) {
     if let Some(ident_ref) = call_expr.callee.as_identifier_mut() {
-      let is_empty_function = ident_ref
+      let is_pure_function = ident_ref
         .reference_id
         .get()
         .and_then(|ref_id| self.scope.scoping().get_reference(ref_id).symbol_id())
         .map(|id| {
           let symbol_ref = self.ctx.symbol_db.canonical_ref_for((self.ctx.idx, id).into());
+          // The linker checks argument reads and uses of the result for separate exports.
+          // The minifier can discard those effects if we mark the call pure here.
           symbol_ref.is_side_effect_free_function(self.ctx.symbol_db, self.ctx.modules)
             && symbol_ref.is_not_reassigned(self.ctx.symbol_db)
-            // The minifier can remove a pure call that runs before the binding is initialized.
-            // For a function that `export { fn }` exports, mark the call only when a function
-            // declaration, which is hoisted, declares it.
-            && (!symbol_ref
+            && !symbol_ref
               .flags(self.ctx.symbol_db)
               .is_some_and(|flags| flags.contains(SymbolRefFlags::ExportedSeparately))
-              || symbol_ref.is_declared_by_function(self.ctx.symbol_db))
         })
         .unwrap_or(false);
-      if is_empty_function {
+      if is_pure_function {
         call_expr.pure = true;
       }
       if let Some(new_expr) = self.try_rewrite_identifier_reference_expr(ident_ref, true) {

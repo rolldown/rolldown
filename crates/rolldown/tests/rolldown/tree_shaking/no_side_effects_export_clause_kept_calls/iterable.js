@@ -7,4 +7,16 @@ function iterable(name) {
   };
 }
 
-export { iterable };
+/* @__NO_SIDE_EFFECTS__ */
+function coercible() {
+  return {
+    [Symbol.toPrimitive]() {
+      globalThis.calls.push('coercion');
+      return 'value';
+    },
+  };
+}
+
+function noop() {}
+
+export { coercible, iterable, noop };

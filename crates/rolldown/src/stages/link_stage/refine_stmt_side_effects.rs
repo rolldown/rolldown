@@ -2,7 +2,10 @@ use std::sync::OnceLock;
 
 use oxc::semantic::SymbolId;
 use oxc_index::IndexVec;
-use petgraph::graph::{DiGraph, NodeIndex};
+use petgraph::{
+  graph::{DiGraph, NodeIndex},
+  visit::{Dfs, Reversed},
+};
 use rolldown_common::{
   ConstExportMeta, ConstantValue, ExportsKind, GetLocalDb, IndexModules, ModuleIdx, Specifier,
   StmtEvalFlags, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
@@ -28,8 +31,8 @@ pub(super) struct ImportCycles {
 struct Components {
   /// One module of the component of each module.
   representatives: IndexVec<ModuleIdx, ModuleIdx>,
-  /// Whether the component of each module has more than one module.
-  in_cycle: IndexVec<ModuleIdx, bool>,
+  /// Whether each module is in a cycle or can reach an external module.
+  imports_may_run_later: IndexVec<ModuleIdx, bool>,
 }
 
 impl ImportCycles {
@@ -51,16 +54,28 @@ impl ImportCycles {
         }
       }
       let mut representatives = (0..modules.len()).map(ModuleIdx::new).collect::<IndexVec<_, _>>();
-      let mut in_cycle = (0..modules.len()).map(|_| false).collect::<IndexVec<ModuleIdx, _>>();
+      let mut imports_may_run_later =
+        (0..modules.len()).map(|_| false).collect::<IndexVec<ModuleIdx, _>>();
       for component in petgraph::algo::kosaraju_scc(&graph) {
         let representative = ModuleIdx::new(component[0].index());
         let is_cycle = component.len() > 1;
         for node in component {
           representatives[ModuleIdx::new(node.index())] = representative;
-          in_cycle[ModuleIdx::new(node.index())] = is_cycle;
+          imports_may_run_later[ModuleIdx::new(node.index())] = is_cycle;
         }
       }
-      Components { representatives, in_cycle }
+      // An external module can import emitted modules and complete a cycle we cannot see.
+      let reverse_graph = Reversed(&graph);
+      let mut dfs = Dfs::empty(reverse_graph);
+      dfs.stack.extend(
+        modules.iter().filter_map(|module| {
+          module.is_external().then_some(NodeIndex::new(module.idx().index()))
+        }),
+      );
+      while let Some(node) = dfs.next(reverse_graph) {
+        imports_may_run_later[ModuleIdx::new(node.index())] = true;
+      }
+      Components { representatives, imports_may_run_later }
     })
   }
 
@@ -74,11 +89,15 @@ impl ImportCycles {
     representatives[importer] == representatives[exporter]
   }
 
-  /// Returns whether `module` is in an import cycle with other modules. All static imports of a
-  /// module outside every cycle finish running before its own code, whichever entry loads first.
+  /// Whether the static imports of `module` finish before its own code runs, regardless of
+  /// which entry loads first.
   /// See `internal-docs/linking/module-execution-order/implementation.md`.
-  pub(super) fn in_cycle(&self, modules: &IndexModules, module: ModuleIdx) -> bool {
-    self.components(modules).in_cycle[module]
+  pub(super) fn imports_finish_before_evaluation(
+    &self,
+    modules: &IndexModules,
+    module: ModuleIdx,
+  ) -> bool {
+    !self.components(modules).imports_may_run_later[module]
   }
 }
 

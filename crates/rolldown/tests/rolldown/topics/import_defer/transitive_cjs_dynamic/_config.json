@@ -1,0 +1,10 @@
+{
+  "_comment": "CommonJS output: `d.js` is the target of `import.defer()`, in its own chunk, and imports an external. The external loads in the init of `d.js`, at the first access to the deferred namespace, not when `import.defer()` loads the chunk.",
+  "config": {
+    "format": "cjs",
+    "external": ["ext-dyn"],
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

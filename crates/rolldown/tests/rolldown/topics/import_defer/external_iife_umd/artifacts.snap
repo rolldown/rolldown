@@ -1,0 +1,99 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import defer` of the external module "ext" is lowered to a normal import in IIFE output, because the module is a global or a wrapper argument. The module evaluates when the bundle starts, not at the first access to its namespace.
+   ╭─[ main.js:1:1 ]
+   │
+ 1 │ import defer * as ns from 'ext';
+   │ ────────────────┬───────────────  
+   │                 ╰───────────────── 
+───╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import.defer()` of the external module "ext2" is lowered to `import()` in IIFE output. The module evaluates when the `import()` call loads it, not at the first access to its namespace.
+   ╭─[ main.js:4:27 ]
+   │
+ 4 │ export const load = () => import.defer('ext2');
+   │                           ──────────┬─────────  
+   │                                     ╰─────────── 
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+var lib = (function(exports, ext) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	ext = __toESM(ext);
+	// main.js
+	const read = () => ext.value;
+	const load = () => import("ext2");
+	exports.load = load;
+	exports.read = read;
+	return exports;
+})({}, Ext);
+
+```
+
+# Variant: [format: Umd]
+
+## warnings
+
+### UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import defer` of the external module "ext" is lowered to a normal import in UMD output, because the module is a global or a wrapper argument. The module evaluates when the bundle starts, not at the first access to its namespace.
+   ╭─[ main.js:1:1 ]
+   │
+ 1 │ import defer * as ns from 'ext';
+   │ ────────────────┬───────────────  
+   │                 ╰───────────────── 
+───╯
+
+```
+
+### UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import.defer()` of the external module "ext2" is lowered to `import()` in UMD output. The module evaluates when the `import()` call loads it, not at the first access to its namespace.
+   ╭─[ main.js:4:27 ]
+   │
+ 4 │ export const load = () => import.defer('ext2');
+   │                           ──────────┬─────────  
+   │                                     ╰─────────── 
+───╯
+
+```
+
+## Assets
+
+### main.js
+
+```js
+(function(global, factory) {
+	typeof exports === "object" && typeof module !== "undefined" ? factory(exports, require("ext")) : typeof define === "function" && define.amd ? define(["exports", "ext"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.lib = {}, global.Ext));
+})(this, function(exports, ext) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	ext = __toESM(ext);
+	// main.js
+	const read = () => ext.value;
+	const load = () => import("ext2");
+	exports.load = load;
+	exports.read = read;
+});
+
+```

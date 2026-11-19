@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// barrel.js
+var import_c;
+// route.js
+function read() {
+	return import_c.default.answer;
+}
+function init_route() {
+	return (init_route = __esmMin((() => {
+		// barrel.js
+		import_c = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+			module.exports = { answer: 42 };
+		})))());
+	})))();
+}
+// main.js
+function run() {
+	return (init_route(), read)();
+}
+export { run };
+
+```

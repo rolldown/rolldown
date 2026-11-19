@@ -1,0 +1,8 @@
+{
+  "_comment": "`p.js` and `m.js` are private members of the root `d.js`, and they import each other. `m.js` reads the CommonJS bindings of `p.js` (`c` and the namespace `ns`) before the body of `p.js` runs. The statements that assign these bindings move before the body of `m.js`, one time, so that `m.js` reads the values and the namespace object keeps its identity.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "_comment": "`data.json` is a user entry and an `import.defer()` target. `strictExecutionOrder` gives it an execution-order wrapper. The entry facade `data.js` calls `init_data()`, and the chunk that holds the code does not call it at load. So `import()` in `main.js` calls `init_data()` itself. The `cjs` variant loads the chunk with `require()`.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "data",
+        "import": "./data.json"
+      }
+    ],
+    "strictExecutionOrder": true,
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "cjs",
+      "format": "cjs"
+    }
+  ]
+}

@@ -71,10 +71,15 @@ impl ExternalModule {
   }
 
   pub fn get_import_path(&self, chunk: &Chunk, paths: Option<&PathsOutputOption>) -> ArcStr {
+    self.import_path_from_file_name(chunk, self.get_file_name(paths))
+  }
+
+  /// The import path of the external module in `chunk`, from its file name (`get_file_name`).
+  /// The file name is the same in all chunks, and the import path is not.
+  pub fn import_path_from_file_name(&self, chunk: &Chunk, file_name: ArcStr) -> ArcStr {
     if !self.need_renormalize_render_path {
-      return self.get_file_name(paths);
+      return file_name;
     }
-    let file_name = self.get_file_name(paths);
     let mut target = file_name.as_str();
     let mut importer = chunk
       .preliminary_filename

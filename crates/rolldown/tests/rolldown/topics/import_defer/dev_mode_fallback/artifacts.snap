@@ -1,0 +1,100 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import defer` is currently lowered to a normal import in dev mode. This changes execution timing because side effects run immediately instead of when the deferred import is first used. Dev mode does not support the deferred evaluation yet, also when `experimental.importDefer` is `true`.
+   ╭─[ main.js:3:1 ]
+   │
+ 3 │ import defer * as ns from './x.js';
+   │ ─────────────────┬─────────────────  
+   │                  ╰─────────────────── The deferred phase is removed here.
+───╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import defer` is currently lowered to a normal import in dev mode. This changes execution timing because side effects run immediately instead of when the deferred import is first used. Dev mode does not support the deferred evaluation yet, also when `experimental.importDefer` is `true`.
+   ╭─[ main.js:7:28 ]
+   │
+ 7 │ export const loadY = () => import.defer('./y.js');
+   │                            ───────────┬──────────  
+   │                                       ╰──────────── The deferred phase is removed here.
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+import assert from "node:assert";
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"log.js",
+		"x.js",
+		"main.js",
+		"y.js"
+	],
+	localCount: 3,
+	edges: [
+		[],
+		[0],
+		[0, 1]
+	],
+	dynamicEdges: { 2: [3] },
+	entries: [2]
+});
+// log.js
+var log_exports = /* @__PURE__ */ __exportAll({ log: () => log });
+__rolldown_runtime__.createModuleHotContext("log.js");
+__rolldown_runtime__.registerModule("log.js", { exports: log_exports });
+const log = [];
+// x.js
+var x_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
+__rolldown_runtime__.createModuleHotContext("x.js");
+__rolldown_runtime__.registerModule("x.js", { exports: x_exports });
+log.push("x");
+// main.js
+var main_exports = /* @__PURE__ */ __exportAll({ loadY: () => loadY });
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+assert.deepStrictEqual(log, ["x"]);
+assert.strictEqual(1, 1);
+const loadY = () => import("./y.js");
+export { loadY };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
+
+```
+
+## y.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+__rolldown_runtime__.registerGraph({
+	ids: ["y.js"],
+	localCount: 1,
+	edges: [[]]
+});
+// y.js
+var y_exports = /* @__PURE__ */ __exportAll({ value: () => 2 });
+__rolldown_runtime__.createModuleHotContext("y.js");
+__rolldown_runtime__.registerModule("y.js", { exports: y_exports });
+const value = 2;
+export { value };
+
+```

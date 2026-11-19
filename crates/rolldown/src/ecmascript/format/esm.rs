@@ -1,7 +1,8 @@
 use itertools::Itertools;
 use rolldown_common::{
-  AddonRenderContext, ChunkIdx, ExportsKind, ExternalModule, ModuleIdx, RUNTIME_MODULE_KEY,
-  Specifier, StaticImport, SymbolRef,
+  AddonRenderContext, ChunkIdx, ConcatenateWrappedModuleKind, ConcatenatedGroupEvent, ExportsKind,
+  ExternalModule, ImportKind, ImportRecordMeta, ModuleIdx, NamedImport, RUNTIME_MODULE_KEY,
+  Specifier, StaticImport, SymbolRef, WrapKind,
 };
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{
@@ -17,7 +18,10 @@ use super::{
 use crate::{
   ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
   types::generator::GenerateContext,
-  utils::chunk::render_chunk_exports::{render_chunk_exports, render_wrapped_entry_chunk},
+  utils::{
+    chunk::render_chunk_exports::{render_chunk_exports, render_wrapped_entry_chunk},
+    render_ecma_module::module_debug_comment,
+  },
 };
 
 /// `carried_sources`: the inline common chunk records this file carries, finalized and printed
@@ -89,6 +93,10 @@ pub fn render_esm<'code>(
     source_joiner.append_source(source);
   }
 
+  if let Some(source) = render_lazy_host_init_call(ctx) {
+    source_joiner.append_source(source);
+  }
+
   if let Some(exports) = render_chunk_exports(ctx, None) {
     source_joiner.append_source(exports);
   }
@@ -136,18 +144,227 @@ fn render_chunk_content<'code>(
     }
   }
 
-  module_sources.iter().for_each(
-    |RenderedModuleSource { sources: module_render_output, module_idx, .. }| {
-      if let Some(emitted_sources) = module_render_output {
-        for source in emitted_sources.as_ref() {
+  // If there is no concatenate_wrapping_modules, just concate all modules by exec order.
+  if ctx.chunk.module_groups.is_empty() {
+    module_sources.iter().for_each(
+      |RenderedModuleSource { sources: module_render_output, module_idx, .. }| {
+        if let Some(emitted_sources) = module_render_output {
+          for source in emitted_sources.as_ref() {
+            source_joiner.append_source(source);
+          }
+        }
+        if let Some(prelude) = dev_graph_prelude.take_if(|_| is_runtime_module(*module_idx)) {
+          source_joiner.append_source(prelude);
+        }
+      },
+    );
+    return;
+  }
+  // `group_deferred_modules` makes no groups in dev mode, so no prelude is pending here.
+  debug_assert!(dev_graph_prelude.is_none());
+  render_deferred_groups(ctx, module_sources, source_joiner);
+}
+
+/// Renders a chunk with deferred groups (`group_deferred_modules`):
+/// - A member adds, at its own place, only its declarations.
+/// - A root adds its declarations and the start of its wrapper, then the CommonJS wrappers of
+///   the group, the bodies of the members in the order of evaluation, its own body, and the end
+///   of its wrapper.
+///
+/// See internal-docs/import-defer/implementation.md ("Deferred groups").
+fn render_deferred_groups<'code>(
+  ctx: &GenerateContext<'_>,
+  module_sources: &'code [RenderedModuleSource],
+  source_joiner: &mut SourceJoiner<'code>,
+) {
+  let source_by_module =
+    module_sources.iter().map(|source| (source.module_idx, source)).collect::<FxHashMap<_, _>>();
+  // The CommonJS modules of a group keep their `require_*` wrapper, and the whole wrapper
+  // declaration goes in the wrapper of the root (`commonjs_modules_of_groups`).
+  let mut commonjs_by_root: FxHashMap<ModuleIdx, Vec<ModuleIdx>> = FxHashMap::default();
+  for group in &ctx.chunk.module_groups {
+    let commonjs = group
+      .modules
+      .iter()
+      .copied()
+      .filter(|&idx| matches!(ctx.link_output.metas[idx].wrap_kind(), WrapKind::Cjs))
+      .collect_vec();
+    if !commonjs.is_empty() {
+      commonjs_by_root.insert(group.entry, commonjs);
+    }
+  }
+  let moved_commonjs = commonjs_by_root.values().flatten().copied().collect::<FxHashSet<_>>();
+  for module_source in module_sources {
+    if moved_commonjs.contains(&module_source.module_idx) {
+      continue;
+    }
+    for source in module_source.sources_of_group_declarations() {
+      source_joiner.append_source(source);
+    }
+    if !matches!(
+      ctx.link_output.metas[module_source.module_idx].concatenated_wrapped_module_kind,
+      ConcatenateWrappedModuleKind::Root
+    ) {
+      continue;
+    }
+    let Some((wrapper_start, wrapper_end)) = ctx
+      .chunk
+      .module_idx_to_render_concatenated_module
+      .get(&module_source.module_idx)
+      .and_then(|parts| parts.root_wrapper.as_ref())
+    else {
+      debug_assert!(false, "the finalizer gives each root the text of its wrapper");
+      continue;
+    };
+    // The debug comment of a module comes with its first source. A root with no declarations
+    // starts at its wrapper.
+    if module_source.sources_of_group_declarations().is_empty()
+      && let Some(comment) = group_debug_comment(ctx, module_source.module_idx)
+    {
+      source_joiner.append_source(comment);
+    }
+    source_joiner.append_source(wrapper_start.clone());
+    // The wrapper declarations come first: the member bodies and the pre-calls can call them.
+    let mut after_members = false;
+    for commonjs in commonjs_by_root.get(&module_source.module_idx).into_iter().flatten() {
+      if let Some(commonjs_source) = source_by_module.get(commonjs) {
+        for source in commonjs_source.all_sources() {
           source_joiner.append_source(source);
+          after_members = true;
         }
       }
-      if let Some(prelude) = dev_graph_prelude.take_if(|_| is_runtime_module(*module_idx)) {
-        source_joiner.append_source(prelude);
+    }
+    let (members_appended, root_steps) =
+      append_group_member_bodies(ctx, module_source.module_idx, &source_by_module, source_joiner);
+    after_members |= members_appended;
+    let body = module_source.sources_of_group_body();
+    if after_members
+      && (!root_steps.is_empty() || !body.is_empty())
+      && let Some(comment) = group_debug_comment(ctx, module_source.module_idx)
+    {
+      source_joiner.append_source(comment);
+    }
+    if !root_steps.is_empty() {
+      source_joiner.append_source(root_steps.join("\n"));
+    }
+    for source in body {
+      source_joiner.append_source(source);
+    }
+    source_joiner.append_source(wrapper_end.clone());
+  }
+}
+
+/// The debug comment of the part of a module that is in the wrapper of a root.
+fn group_debug_comment(ctx: &GenerateContext<'_>, module_idx: ModuleIdx) -> Option<String> {
+  ctx.link_output.module_table[module_idx]
+    .as_normal()
+    .and_then(|module| module_debug_comment(module, ctx.options))
+}
+
+/// Adds the body of each member that the group of `root` evaluates, depth first in the order of
+/// the steps (`ConcatenatedGroupEvent`), as the spec `InnerModuleEvaluation` does: a member body
+/// comes after the bodies of the members that it imports. Before a member body, it adds the
+/// pending steps of the importer, in their order:
+/// - the calls of the functions outside the group that the importer calls before that member
+///   (the pre-calls), so that those modules still evaluate first. The importer calls them again
+///   in its body, and the second call does nothing. A pre-call that an earlier pre-call of the
+///   same group already made is not added again.
+/// - the statements that the finalizer moved out of the body of the importer (`Init`), so that
+///   the member body can read their bindings.
+///
+/// A moved statement with no member body after it comes before the body of its module, after
+/// the pending pre-calls before it. Returns true if it added a source, and the steps that come
+/// before the body of the root.
+fn append_group_member_bodies<'code, 'ctx>(
+  ctx: &'ctx GenerateContext<'_>,
+  root: ModuleIdx,
+  source_by_module: &FxHashMap<ModuleIdx, &'code RenderedModuleSource>,
+  source_joiner: &mut SourceJoiner<'code>,
+) -> (bool, Vec<&'ctx str>) {
+  let mut appended = false;
+  let events_of = |module_idx: ModuleIdx| {
+    ctx
+      .chunk
+      .module_idx_to_render_concatenated_module
+      .get(&module_idx)
+      .map_or(&[][..], |parts| parts.group_events.as_slice())
+  };
+  let mut visited = FxHashSet::from_iter([root]);
+  let mut pre_called: FxHashSet<&str> = FxHashSet::default();
+  let mut root_steps = vec![];
+  // (module, index of the next step, the pending steps)
+  let mut stack: Vec<(ModuleIdx, usize, Vec<&ConcatenatedGroupEvent>)> = vec![(root, 0, vec![])];
+  while let Some(top) = stack.last_mut() {
+    let events = events_of(top.0);
+    let Some(event) = events.get(top.1) else {
+      let (module_idx, _, pending) = stack.pop().expect("the stack is not empty");
+      let steps = group_steps_to_write(&pending, &mut pre_called, true);
+      if module_idx == root {
+        root_steps = steps;
+        continue;
       }
-    },
-  );
+      let body = source_by_module
+        .get(&module_idx)
+        .map_or(&[][..], |member_source| member_source.sources_of_group_body());
+      if !body.is_empty() || !steps.is_empty() {
+        if let Some(comment) = group_debug_comment(ctx, module_idx) {
+          source_joiner.append_source(comment);
+        }
+        appended = true;
+      }
+      if !steps.is_empty() {
+        source_joiner.append_source(steps.join("\n"));
+      }
+      for source in body {
+        source_joiner.append_source(source);
+      }
+      continue;
+    };
+    top.1 += 1;
+    match event {
+      ConcatenatedGroupEvent::Call(_) | ConcatenatedGroupEvent::Init(_) => top.2.push(event),
+      ConcatenatedGroupEvent::Member(member) => {
+        if !visited.insert(*member) {
+          continue;
+        }
+        let steps = group_steps_to_write(&top.2, &mut pre_called, false);
+        top.2.clear();
+        if !steps.is_empty() {
+          source_joiner.append_source(steps.join("\n"));
+          appended = true;
+        }
+        stack.push((*member, 0, vec![]));
+      }
+    }
+  }
+  (appended, root_steps)
+}
+
+/// The texts of the pending steps of a module to write now, in their order. A pre-call that the
+/// group already made is not written again. Each moved statement is written, because each one
+/// is pending only one time. With `until_last_init`, the steps end at the last moved statement:
+/// the body of the module makes the calls after it.
+fn group_steps_to_write<'ctx>(
+  pending: &[&'ctx ConcatenatedGroupEvent],
+  pre_called: &mut FxHashSet<&'ctx str>,
+  until_last_init: bool,
+) -> Vec<&'ctx str> {
+  let end = if until_last_init {
+    pending
+      .iter()
+      .rposition(|event| matches!(event, ConcatenatedGroupEvent::Init(_)))
+      .map_or(0, |idx| idx + 1)
+  } else {
+    pending.len()
+  };
+  pending[..end]
+    .iter()
+    .filter_map(|event| match event {
+      ConcatenatedGroupEvent::Call(call) => pre_called.insert(call).then_some(call.as_str()),
+      ConcatenatedGroupEvent::Init(init) => Some(init.as_str()),
+      ConcatenatedGroupEvent::Member(_) => None,
+    })
+    .collect()
 }
 
 fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
@@ -179,6 +396,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
           named_imports.iter(),
           &mut has_importee_imported,
           &mut rendered_external_import_namespace_modules,
+          has_evaluation_phase_import(ctx, importee_id),
         );
         continue;
       }
@@ -238,6 +456,54 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
   (!s.is_empty()).then_some(s)
 }
 
+/// The call in the init chunk of a deferred module (`plan_lazy_host_inits`): `init_x();`, or
+/// `await init_x();` when the module can evaluate top-level await. The init chunk imports
+/// `init_x` from the host of the module.
+/// See internal-docs/import-defer/implementation.md ("Init after the import of a host").
+fn render_lazy_host_init_call(ctx: &GenerateContext<'_>) -> Option<String> {
+  let (_, module) = *ctx.chunk_graph.lazy_host_inits.host_by_init_chunk.get(&ctx.chunk_idx)?;
+  let target = ctx.esm_init_target(module)?;
+  let name = ctx.finalized_string_pattern_for_symbol_ref(
+    target.wrapper_ref,
+    ctx.chunk_idx,
+    &ctx.chunk.canonical_names,
+  );
+  let name = escape_non_ascii(&name, ctx.options.charset.is_ascii());
+  Some(if target.tla_tainted {
+    concat_string!("await ", name, "();\n")
+  } else {
+    concat_string!(name, "();\n")
+  })
+}
+
+/// Whether `named_import` comes from `import defer * as ns from '...'`.
+fn is_defer_phase_import(
+  ctx: &GenerateContext<'_>,
+  importer: ModuleIdx,
+  named_import: &NamedImport,
+) -> bool {
+  ctx.link_output.module_table[importer]
+    .as_normal()
+    .is_some_and(|module| module.import_records[named_import.record_idx].is_defer_phase())
+}
+
+/// Whether a module of this chunk imports the external in the evaluation phase. `import defer`
+/// does not evaluate the external when the chunk loads. Thus, an external that this chunk imports
+/// only in the defer phase gets no bare `import 'ext'` for its side effects.
+fn has_evaluation_phase_import(ctx: &GenerateContext<'_>, external_idx: ModuleIdx) -> bool {
+  !ctx.options.experimental.is_import_defer_enabled()
+    || ctx.chunk.modules.iter().any(|module_idx| {
+      ctx.link_output.module_table[*module_idx].as_normal().is_some_and(|module| {
+        module.import_records.iter().any(|rec| {
+          rec.kind == ImportKind::Import
+            && rec.resolved_module == Some(external_idx)
+            && !rec.is_defer_phase()
+            && !rec.meta.contains(ImportRecordMeta::IsExportStar)
+        })
+      })
+    })
+}
+
 fn create_import_declaration(
   mut specifiers: Vec<String>,
   default_alias: &[String],
@@ -288,6 +554,7 @@ fn render_named_imports<'a, I>(
   named_imports: I,
   is_importee_rendered: &mut bool,
   rendered_external_import_namespace_modules: &mut FxHashSet<ModuleIdx>,
+  has_evaluation_phase_import: bool,
 ) -> String
 where
   I: Iterator<Item = &'a (ModuleIdx, rolldown_common::NamedImport)>,
@@ -295,8 +562,9 @@ where
   let mut s = String::new();
   let ascii_only = ctx.options.charset.is_ascii();
   let mut default_alias = vec![];
+  let mut rendered_deferred_aliases = FxHashSet::default();
   let specifiers = named_imports
-    .filter_map(|(_importer, named_import)| {
+    .filter_map(|(importer, named_import)| {
       let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(named_import.imported_as);
       // A named import that is itself re-exported skips the external binding merger
       // (`bind_imports_and_exports`), so its canonical ref stays importer-local; its usage
@@ -316,6 +584,25 @@ where
         .symbol_db
         .canonical_name_for_or_original(canonical_ref, &ctx.chunk.canonical_names);
       let rendered_alias = escape_non_ascii(alias, ascii_only);
+      if is_defer_phase_import(ctx, *importer, named_import) {
+        // `import defer * as ns from 'ext'`. It is a separate declaration, and it does not
+        // evaluate the external.
+        if rendered_deferred_aliases.insert(rendered_alias.to_string()) {
+          s.push_str("import defer * as ");
+          s.push_str(&rendered_alias);
+          s.push_str(" from ");
+          s.push_str(&to_ecma_string_literal(
+            &importee.get_import_path(ctx.chunk, ctx.resolved_paths),
+            ascii_only,
+          ));
+          if let Some(with_clause) = importee.attributes.to_with_clause(ascii_only) {
+            s.push(' ');
+            s.push_str(&with_clause);
+          }
+          s.push_str(";\n");
+        }
+        return None;
+      }
       match &named_import.imported {
         Specifier::Star => {
           if rendered_external_import_namespace_modules.contains(&importee.idx) {
@@ -359,7 +646,9 @@ where
 
   if !specifiers.is_empty()
     || !default_alias.is_empty()
-    || (importee.side_effects.has_side_effects() && !*is_importee_rendered)
+    || (importee.side_effects.has_side_effects()
+      && !*is_importee_rendered
+      && has_evaluation_phase_import)
   {
     *is_importee_rendered = true;
     s.push_str(&create_import_declaration(

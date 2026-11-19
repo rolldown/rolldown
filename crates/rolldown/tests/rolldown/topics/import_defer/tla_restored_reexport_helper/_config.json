@@ -1,0 +1,10 @@
+{
+  "config": {
+    "treeshake": {
+      "moduleSideEffects": false
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "_comment": "`import()` and `import.defer()` of one JSON module, in both orders. A JSON module has no interop wrapper (`unwrap_json_module`). The chunks of `first.json` and `second.json` also export the deferred namespace objects, so `import()` reads the namespace object from the chunk. `local.json` is in the chunk of the importer. The `cjs` variant loads the chunks with `require()`. The `strict` variant gives each JSON module an execution-order wrapper, and no code evaluates `local.json` before `import()`. So `import()` calls `init_x()`.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "cjs",
+      "format": "cjs"
+    },
+    {
+      "_configName": "strict",
+      "strictExecutionOrder": true
+    }
+  ]
+}

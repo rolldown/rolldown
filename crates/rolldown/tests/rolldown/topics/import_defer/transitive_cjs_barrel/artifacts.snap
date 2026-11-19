@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+// barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({ barrelValue: () => import_ext_barrel.value }, 2);
+var barrel_deferred = /* @__PURE__ */ __deferNs(() => (init_barrel(), barrel_exports));
+var import_ext_barrel;
+function init_barrel() {
+	return (init_barrel = __esmMin((() => {
+		import_ext_barrel = require("ext-barrel");
+		__reExport(barrel_exports, require("ext-barrel-star"));
+	})))();
+}
+// consumer.js
+init_barrel();
+const readBarrel = () => [import_ext_barrel.value, barrel_exports.starValue];
+// main.js
+const readDeferred = () => [(init_barrel(), import_ext_barrel.value), (init_barrel(), barrel_deferred.starValue)];
+exports.readBarrel = readBarrel;
+exports.readDeferred = readDeferred;
+
+```

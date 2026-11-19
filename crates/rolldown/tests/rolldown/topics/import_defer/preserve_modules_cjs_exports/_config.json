@@ -1,0 +1,10 @@
+{
+  "_comment": "With `preserveModules`, the files of the deferred `a.js` and of `log.js` (in the closure of `a.js`) load without running their modules: `init_a()` and `init_log()` assign the bindings later. In `cjs` output, each export of these files is a getter. A copy at load read `undefined` for a `const`, a `class` and a `let` that is never reassigned. `main.js` also imports `log.js` eagerly: it calls `init_log()`, then reads `log`. The function is a control: it is hoisted, so a copy also worked.",
+  "config": {
+    "preserveModules": true,
+    "format": "cjs",
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

@@ -26,6 +26,10 @@ pub fn render_wrapped_entry_chunk(
 ) -> Option<String> {
   if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     let entry_meta = &ctx.link_output.metas[entry_id];
+    // A module of a deferred closure evaluates on request, not when its chunk loads.
+    if ctx.chunk_graph.lazy_dynamic_defer_host(entry_id, entry_meta) == Some(ctx.chunk_idx) {
+      return None;
+    }
     if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
       if matches!(ctx.options.format, OutputFormat::Cjs)
         && let Some(host_idx) = ctx.chunk_graph.module_to_chunk[entry_id]
@@ -290,6 +294,14 @@ pub fn render_chunk_exports(
               canonical_ref.owner != module.idx
             });
           }
+          // A lazy host loads without running its module: `init_x()` assigns the bindings
+          // later. A value copy at load keeps `undefined`, also for a `const`, so each export is
+          // a getter, as in a common chunk. The mode stays `Named`, because other chunks import
+          // `init_x`, which is not a declared export (`export_mode_module`).
+          // See internal-docs/import-defer/implementation.md.
+          let is_lazy_defer_host =
+            ctx.chunk_graph.lazy_dynamic_defer_host(module.idx, &link_output.metas[module.idx])
+              == Some(ctx.chunk_idx);
           if !export_items.is_empty() {
             let rendered_items = export_items
               .into_iter()
@@ -332,7 +344,7 @@ pub fn render_chunk_exports(
                        export branch (`exports.{exported_name} = {exported_value}`): it would \
                        freeze the pre-rebind function and re-run the module body",
                     );
-                    if is_order_wrapper_ref || keep_live_binding {
+                    if is_order_wrapper_ref || keep_live_binding || is_lazy_defer_host {
                       render_object_define_property(&exported_name, &exported_value, ascii_only)
                     } else if exported_name.as_str() == "__proto__" {
                       // `__proto__` has special semantics - assigning to it sets the prototype

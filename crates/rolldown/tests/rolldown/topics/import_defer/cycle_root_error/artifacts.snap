@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+const log = [];
+function read(access) {
+	try {
+		access();
+		return "ok";
+	} catch (error) {
+		return error instanceof TypeError ? "TypeError" : `${error.constructor.name}: ${error.message}`;
+	}
+}
+function init_b() {
+	return (init_b = __esmState((() => {
+		init_a(init_b);
+	}), () => [init_a]))(arguments[0]);
+}
+function init_a() {
+	return (init_a = __esmState((() => {
+		init_b(init_a);
+		throw new Error("A failed");
+	}), () => [init_b]))(arguments[0]);
+}
+// main.js
+log.push("a: " + read(() => (__esmDefer(init_a), 1)));
+log.push("b: " + read(() => (__esmDefer(init_b), 2)));
+export { log };
+
+```

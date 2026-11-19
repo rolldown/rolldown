@@ -78,6 +78,9 @@ bitflags::bitflags! {
     /// The import record is solely for re-export purposes, created by
     /// `export { .. } from '..'` or `export * as ns from '..'`
     const IsReExportOnly = 1 << 10;
+    /// The record is a deferred import: `import defer * as ns from 'mod'` or `import.defer('mod')`.
+    /// The scanner sets it only when `experimental.importDefer` is on.
+    const DeferPhase = 1 << 11;
 
     const TopLevelPureDynamicImport = Self::IsTopLevel.bits() | Self::PureDynamicImport.bits();
   }
@@ -106,6 +109,10 @@ pub struct ImportRecord<State: Debug + Clone> {
 impl<State: Debug + Clone> ImportRecord<State> {
   pub fn is_unspanned(&self) -> bool {
     self.meta.contains(ImportRecordMeta::IsUnspannedImport)
+  }
+
+  pub fn is_defer_phase(&self) -> bool {
+    self.meta.contains(ImportRecordMeta::DeferPhase)
   }
 }
 

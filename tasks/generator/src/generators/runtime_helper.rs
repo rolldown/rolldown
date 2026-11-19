@@ -17,6 +17,10 @@ const RUNTIME_PATH_LIST: [&str; 2] = [
   "crates/rolldown/src/runtime/runtime-tail-node.js",
 ];
 
+/// The runtime module includes this file only when `experimental.importDefer` is on. Its helpers
+/// come last, so the other helpers keep their bits.
+const RUNTIME_IMPORT_DEFER_PATH: &str = "crates/rolldown/src/runtime/runtime-defer.js";
+
 impl Generator for RuntimeHelperGenerator {
   fn generate_many(&self, _ctx: &Context) -> anyhow::Result<Vec<crate::output::Output>> {
     Ok(vec![crate::output::Output::RustString {
@@ -29,13 +33,17 @@ impl Generator for RuntimeHelperGenerator {
 /// `quote!` can not generate bitflags properly(The format is mess)
 fn generate_hook_usage_rs() -> String {
   let root_dir = rolldown_workspace::root_dir();
+  let read_names = |p: &str| {
+    let runtime_source =
+      std::fs::read_to_string(root_dir.join(p)).expect("Failed to read runtime source file");
+    extract_toplevel_bindings_name(&runtime_source, p)
+  };
   let mut top_level_items: Vec<String> = vec![];
   for p in RUNTIME_PATH_LIST {
-    let runtime_path = root_dir.join(p);
-    let runtime_source =
-      std::fs::read_to_string(&runtime_path).expect("Failed to read runtime source file");
-    top_level_items.extend(extract_toplevel_bindings_name(&runtime_source, p));
+    top_level_items.extend(read_names(p));
   }
+  let import_defer_items = read_names(RUNTIME_IMPORT_DEFER_PATH);
+  top_level_items.extend(import_defer_items.iter().cloned());
   let mut fields = vec![];
   let type_size = match top_level_items.len() {
     0..=8 => 8,
@@ -65,13 +73,21 @@ fn generate_hook_usage_rs() -> String {
 
   let runtime_helper_names =
     top_level_items.iter().map(|item| format!("\"{item}\"")).collect::<Vec<_>>().join(", ");
+  let import_defer_helper_names =
+    import_defer_items.iter().map(|item| format!("\"{item}\"")).collect::<Vec<_>>().join(", ");
   let runtime_helper_names_code = format!(
     r"
 pub const RUNTIME_HELPER_NAMES: [&str; {}] = [
   {runtime_helper_names}
 ];
+
+/// The helpers that the runtime module has only when `experimental.importDefer` is on.
+pub const RUNTIME_IMPORT_DEFER_HELPER_NAMES: [&str; {}] = [
+  {import_defer_helper_names}
+];
   ",
-    top_level_items.len()
+    top_level_items.len(),
+    import_defer_items.len()
   );
 
   let runtime_helper_impl = r#"
@@ -87,8 +103,16 @@ impl RuntimeHelper {
 use crate::StmtInfoIdx;
 
 /// Maps each single-bit `RuntimeHelper` to the `StmtInfoIdx`s that depend on it.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct DependedRuntimeHelperMap([Vec<StmtInfoIdx>; RUNTIME_HELPER_NAMES.len()]);
+
+// A manual `Default`: the standard library implements `Default` only for arrays of 32 or fewer
+// elements.
+impl Default for DependedRuntimeHelperMap {
+  fn default() -> Self {
+    Self(std::array::from_fn(|_| Vec::new()))
+  }
+}
 
 impl DependedRuntimeHelperMap {
   /// Record that `stmt_info_idx` depends on `helper`. `helper` must have exactly one bit set.

@@ -1,0 +1,8 @@
+{
+  "_comment": "`member.js` is a private module of the deferred root `first.js`, and `shared.js` is in the closures of `first.js` and `second.js`. `first.js` imports `shared.js` before `member.js`. The body of `member.js` runs at the start of the wrapper of `first.js`, so a copy of the call `init_shared()` comes before it (a pre-call). The order of evaluation is the order of native ESM: `shared`, `member`, `first`.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

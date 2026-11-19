@@ -1,0 +1,76 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// setup.js
+globalThis.__events = [];
+// shared.cjs
+var require_shared = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("shared");
+	module.exports = "shared";
+}));
+// lazy.cjs
+var require_lazy = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	globalThis.__events.push("lazy");
+	module.exports = "lazy";
+}));
+// helper.js
+function lazy() {
+	return require_lazy();
+}
+var import_d, helper;
+// route.js
+function read() {
+	return [
+		import_shared$1.default,
+		import_c.default,
+		helper
+	];
+}
+var import_shared$1, import_c;
+function init_route() {
+	return (init_route = __esmMin((() => {
+		// e.cjs
+		var require_e = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+			globalThis.__events.push("e");
+			module.exports = 40;
+		}));
+		// c.cjs
+		var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+			globalThis.__events.push("c");
+			module.exports = require_e() + 1;
+		}));
+		// d.cjs
+		var require_d = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+			globalThis.__events.push("d");
+			module.exports = 1;
+		}));
+		import_shared$1 = /* @__PURE__ */ __toESM(require_shared());
+		import_c = /* @__PURE__ */ __toESM(require_c());
+		// helper.js
+		import_d = /* @__PURE__ */ __toESM(require_d());
+		globalThis.__events.push("helper");
+		helper = import_d.default + 1;
+		// route.js
+		globalThis.__events.push("route");
+	})))();
+}
+// main.js
+var import_shared = /* @__PURE__ */ __toESM(require_shared());
+function run() {
+	const value = (init_route(), read)();
+	return {
+		shared: import_shared.default,
+		value,
+		lazy: (init_route(), lazy)(),
+		events: globalThis.__events
+	};
+}
+export { run };
+
+```

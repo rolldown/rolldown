@@ -429,6 +429,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when a module is dynamically imported but also statically imported, making the dynamic import ineffective for code splitting',
     ),
   ),
+  deferredExternalEvaluatedEagerly: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when an external module in the dependencies of an `import defer` target evaluates when its chunk loads, not when the target evaluates',
+    ),
+  ),
   largeBarrelModules: v.pipe(
     v.optional(v.boolean()),
     v.description(
@@ -729,6 +735,7 @@ const InputOptionsSchema = v.strictObject({
       ),
       lazyBarrel: v.optional(v.boolean()),
       importAttributes: v.optional(v.boolean()),
+      importDefer: v.optional(v.boolean()),
     }),
   ),
   transform: v.optional(TransformOptionsSchema),

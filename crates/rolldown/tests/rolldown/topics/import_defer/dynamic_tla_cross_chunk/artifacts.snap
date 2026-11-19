@@ -1,0 +1,162 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## d.js
+
+```js
+import { a as __esmDepDone, i as __esmDefer, l as __esmState, n as log, o as __esmEnd, r as __deferNs, s as __esmFail, t as init_log, u as __exportAll } from "./log.js";
+// t.js
+function init_t() {
+	return (init_t = __esmState((async () => {
+		try {
+			init_log();
+			log.push("t start");
+			await 0;
+			log.push("t end");
+		} catch (e) {
+			throw __esmFail(init_t, e);
+		}
+		__esmEnd(init_t);
+	}), () => [], 3))(arguments[0]);
+}
+// d.js
+var d_exports = /* @__PURE__ */ __exportAll({ value: () => "d" });
+var d_deferred = /* @__PURE__ */ __deferNs(() => (__esmDefer(init_d), d_exports), d_exports);
+var value;
+function init_d() {
+	return (init_d = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_t(init_d), init_t, init_d) || await init_t(init_d);
+			log.push("d");
+			value = "d";
+		} catch (e) {
+			throw __esmFail(init_d, e);
+		}
+		__esmEnd(init_d);
+	}), () => [init_t], 1))(arguments[0]);
+}
+export { d_exports as n, init_d as r, d_deferred as t, value };
+
+```
+
+## log.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+export { __esmDepDone as a, __esmGather as c, __esmDefer as i, __esmState as l, log as n, __esmEnd as o, __deferNs as r, __esmFail as s, init_log as t, __exportAll as u };
+
+```
+
+## main.js
+
+```js
+import { c as __esmGather, n as log, t as init_log } from "./log.js";
+// main.js
+init_log();
+const promise = (async (n) => (n = await import("./d.js"), __esmGather(n.r) || await __esmGather(), n.t))();
+log.push("after call");
+const ns = await promise;
+log.push("after import");
+const value = ns.value;
+export { log, value };
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### d.js
+
+```js
+import { a as __esmFail, c as __esmState, i as __esmEnd, l as __exportAll, n as __esmDefer, r as __esmDepDone, t as __deferNs } from "./rolldown-runtime.js";
+import { n as log, t as init_log } from "./log.js";
+// t.js
+function init_t() {
+	return (init_t = __esmState((async () => {
+		try {
+			init_log();
+			log.push("t start");
+			await 0;
+			log.push("t end");
+		} catch (e) {
+			throw __esmFail(init_t, e);
+		}
+		__esmEnd(init_t);
+	}), () => [], 3))(arguments[0]);
+}
+// d.js
+var d_exports = /* @__PURE__ */ __exportAll({ value: () => "d" });
+var d_deferred = /* @__PURE__ */ __deferNs(() => (__esmDefer(init_d), d_exports), d_exports);
+var value;
+function init_d() {
+	return (init_d = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_t(init_d), init_t, init_d) || await init_t(init_d);
+			log.push("d");
+			value = "d";
+		} catch (e) {
+			throw __esmFail(init_d, e);
+		}
+		__esmEnd(init_d);
+	}), () => [init_t], 1))(arguments[0]);
+}
+export { d_exports as n, init_d as r, d_deferred as t, value };
+
+```
+
+### log.js
+
+```js
+import { s as __esmMin } from "./rolldown-runtime.js";
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+export { log as n, init_log as t };
+
+```
+
+### main.js
+
+```js
+import { o as __esmGather, s as __esmMin } from "./rolldown-runtime.js";
+import { n as log, t as init_log } from "./log.js";
+// main.js
+var promise, ns, value;
+function init_main() {
+	return (init_main = __esmMin((async () => {
+		init_log();
+		promise = (async (n) => (n = await import("./d.js"), __esmGather(n.r) || await __esmGather(), n.t))();
+		log.push("after call");
+		ns = await promise;
+		log.push("after import");
+		value = ns.value;
+	})))();
+}
+await init_main();
+export { log, value };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmFail as a, __esmState as c, __esmEnd as i, __exportAll as l, __esmDefer as n, __esmGather as o, __esmDepDone as r, __esmMin as s, __deferNs as t };
+
+```

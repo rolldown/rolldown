@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// m.js
+var m;
+// r.js
+function r_default() {
+	return import_c.default.value + m;
+}
+var import_c;
+function init_r() {
+	return (init_r = __esmMin((() => {
+		import_c = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+			module.exports = { value: 41 };
+		})))());
+		// m.js
+		m = 1 + (globalThis.__zero ?? 0);
+		// r.js
+		__name(r_default, "default");
+	})))();
+}
+// main.js
+function run() {
+	return [(init_r(), r_default.name), (init_r(), r_default)()];
+}
+export { run };
+
+```

@@ -63,13 +63,15 @@ For each `(importer, stmt_info, rec)` triple this pass dispatches on `rec.kind`,
   //   → __reExport(index_exports, foo_exports);
   ```
 
-- **`Import`, `WrapKind::Cjs`, not reexport** — push `wrapper_ref` (`require_foo`); push `__toESM` iff interop is needed; declare and rename the namespace ref to `import_<repr_name>`.
+- **`Import`, `WrapKind::Cjs`, not reexport** — `side_effect = importee.side_effects.has_side_effects()`; push `wrapper_ref` (`require_foo`); push `__toESM` iff interop is needed (a static `import defer` record skips this check and never pushes it); declare and rename the namespace ref to `import_<repr_name>`.
 
   ```js
   // foo.js (cjs): module.exports = { a: 1 };
   // index.js: import foo from './foo'; foo.a;
   //   → var import_foo = __toESM(require_foo()); import_foo.default.a;
   ```
+
+  A static `import defer` record keeps `side_effect` and `wrapper_ref`, though its statement only declares `import_foo` and calls nothing. Tree shaking includes a target with side effects through `meta.dependencies`, which has the deferred records. When nothing reads the namespace, this statement is the only reference to `require_foo`, and the body of the target must stay in that wrapper. With `side_effect = false`, tree shaking keeps the target but drops the wrapper: the body runs at startup, and two such targets can declare one top-level name twice. The record does not push `__toESM`. Each deferred access pushes it (see the statement-level flags below), and so does the facade statement of `foo_deferred` (`create_deferred_cjs_namespaces`). Thus an unread deferred import adds no `__toESM`.
 
 - **`Import`, `WrapKind::Cjs`, reexport-all** — `side_effect=true`; push `wrapper_ref`; push `__toESM` and `__reExport`; when `treeshake.commonjs` is off, also push the importer namespace ref.
 
@@ -87,13 +89,20 @@ For each `(importer, stmt_info, rec)` triple this pass dispatches on `rec.kind`,
   //   → init_foo(); use(x);
   ```
 
-- **`Import`, `WrapKind::Esm`, reexport-all** — push `wrapper_ref` (`init_foo`); `side_effect=true` unconditionally (a reexport-all of a wrapped ESM importee always runs, regardless of `importee.side_effects`). Additionally, when the importee has dynamic exports, push `__reExport`, set `ReExportDynamicExports`, and push importer & importee namespace refs.
+- **`Import`, `WrapKind::Esm`, reexport-all** — push `wrapper_ref` (`init_foo`); `side_effect=true` (a reexport-all of a wrapped ESM importee always runs, regardless of `importee.side_effects`). Additionally, when the importee has dynamic exports, push `__reExport`, set `ReExportDynamicExports`, and push importer & importee namespace refs.
 
   ```js
   // foo.js (esm, wrapped, has dynamic exports via re-export of cjs)
   // index.js: export * from './foo';
   //   → init_foo(); __reExport(index_exports, foo_exports);
   ```
+
+  Exception: an importer in an `import defer` closure (`wrapped_by_import_defer`), in a build with one chunk, with an importee that has no dynamic exports. There, the eager rule applies: `side_effect = importee.side_effects.has_side_effects()`. Tree shaking then keeps the statement only for a used binding or a side effect, so an `export *` target that no code uses leaves the output, as in the eager build.
+  - A target that stays in the output still gets its init call from the importer. The finalizer emits the excluded-statement targets (`transitive_init_targets`) in place of the excluded statement. These targets are the wrapped modules that are included and in the chunk of the importer, so the call order is unchanged.
+  - One chunk means: code splitting is off, and at most one module has a user-defined or emitted entry point. Do not count `entries` here: before `include_statements`, it also holds each `import()` target.
+  - Why one chunk only: the excluded-statement targets do not include a module in another chunk. With more chunks, a target in another chunk would lose its init call, and its init would run later than in native ESM.
+
+- **`Import`, `WrapKind::Esm`, importee tracked by `import defer` and TLA-tainted** — a deferred record (`import defer`) gets `__esmGather(init_foo, init_bar) || await __esmGather()`: push `__esmGather` onto the statement, and set `side_effect=true`. Else, when the importer is also tracked, the lowered call is `__esmDepDone(init_foo(init_bar), init_foo, init_bar) || await init_foo(init_bar)`. The wrapper statement of the importer (`wrapper_stmt_info`) references `__esmDepDone`, not the import statement. When tree shaking removes the statement, the finalizer can still restore the init call (`remove_unused_top_level_stmt`), and that call also needs the helper.
 
 - **`Require`, `WrapKind::None`** — nothing; a `require` against a flat-ESM importee that wasn't promoted is a no-op at this layer.
 
@@ -178,15 +187,16 @@ For each `(importer, stmt_info, rec)` triple this pass dispatches on `rec.kind`,
 - `HasDummyRecord` → push `__require`. Set on `require(...)` calls without a resolvable target.
 - `NonStaticDynamicImport` → push `__toESM`. For `import(foo)` / `import('a' + 'b')`.
 - `keep_names && KeepNamesType` → push `__name`. The `keepNames` runtime implementation.
+- A deferred access (`ns.foo`, `'foo' in ns`: a key of `deferred_access_targets`) → push the wrapper ref of the target (`init_foo` / `require_foo`), and `__esmDefer` when the target is tracked. For a bundled CommonJS target, also push `__toESM`: the first access assigns `import_foo = __toESM(require_foo())`. The record is an `import defer * as foo`, and a namespace import always needs interop. Thus the pass does not call `import_record_needs_interop`, which searches all named imports of the importer.
 
-When `safely_merge_cjs_ns_map` has an entry for an importee, its `needs_interop` is authoritative for the `Import` / `WrapKind::Cjs` / non-reexport arm — overriding the per-record `import_record_needs_interop` check. The map records cross-importer agreement that several ESM importers can share one `__toESM` call.
+When `safely_merge_cjs_ns_map` has an entry for an importee, its `needs_interop` is authoritative for the eager records of the `Import` / `WrapKind::Cjs` / non-reexport arm — overriding the per-record `import_record_needs_interop` check. The map records cross-importer agreement that several ESM importers can share one `__toESM` call. `determine_safely_merge_cjs_ns` skips the deferred records, so the map describes only the eager imports: it is `false` when no eager import needs interop, for example `import './foo'`. A static `import defer` record reads neither the map nor `import_record_needs_interop`. Its accesses and its facade always push `__toESM` for a bundled target, and the finalizer always writes it (`cjs_deferred_namespace_expr`).
 
 ## Invariants (the contract for `include_statements`)
 
 After this pass:
 
 1. **Wrapper and namespace `SymbolRef`s are in `referenced_symbols`.** If the lowered form mentions a wrapper call (`init_foo`, `require_foo`) or a namespace object (importer's or importee's `namespace_object_ref`), the corresponding `SymbolRef` is in `stmt_info.referenced_symbols`. Tree-shaking will drop anything not referenced; missing a push here = silently elided wrapper/namespace.
-2. **Runtime helpers live in `depended_runtime_helper`, not `referenced_symbols`.** The lone exception is the external-runtime-`__require` polyfill arm, which pushes the resolved `__require` symbol onto `referenced_symbols` directly. `include_statements` joins this map against statement inclusion and pulls helpers in via `include_runtime_symbol`.
+2. **Runtime helpers live in `depended_runtime_helper`, not `referenced_symbols`.** There are two exceptions. The external-runtime-`__require` polyfill arm pushes the resolved `__require` symbol onto `referenced_symbols` directly. The `import defer` helpers `__esmDefer`, `__esmGather` and `__esmDepDone` are also pushed as resolved runtime symbols (`__esmDepDone` onto the wrapper statement of the importer). `include_statements` joins this map against statement inclusion and pulls helpers in via `include_runtime_symbol`.
 3. **`side_effect=true` is set whenever the lowered statement must run regardless of who reads it.** Includes `export * from 'cjs'`, `import 'esm-with-side-effects'`, all CJS-external imports under `Cjs/Iife/Umd`, and the dynamic-`__reExport` arms.
 4. **Every CJS namespace import has a stable `import_<repr_name>` name.** Downstream rendering can rely on both `wrapper_ref` (set by `wrap_modules`) and the namespace name (set here) being settled.
 

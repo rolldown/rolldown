@@ -1,0 +1,13 @@
+{
+  "_comment": "ESM output with `checks.deferredExternalEvaluatedEagerly: false`: no DEFERRED_EXTERNAL_EVALUATED_EAGERLY for `ext-lazy`.",
+  "config": {
+    "external": ["ext-lazy"],
+    "checks": {
+      "deferredExternalEvaluatedEagerly": false
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "expectExecuted": false
+}

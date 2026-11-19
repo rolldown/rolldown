@@ -13,12 +13,13 @@ use oxc::{
   transformer::ESFeature,
 };
 use rolldown_common::{
-  AstScopes, Chunk, ChunkIdx, ChunkKind, ExportsKind, ImportAttributes, ImportRecordIdx,
-  ImportRecordMeta, InlineConstMode, MemberExprProp, MemberExprRefResolution, Module, ModuleIdx,
-  ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule, OutputExports,
-  OutputFormat, Platform, Specifier, SymbolRef, SymbolRefFlags, WrapKind, is_lazy_proxy,
+  AstScopes, Chunk, ChunkIdx, ChunkKind, ConcatenateWrappedModuleKind, ConcatenatedGroupEvent,
+  ExportsKind, ImportAttributes, ImportRecordIdx, ImportRecordMeta, InlineConstMode,
+  MemberExprProp, MemberExprRefResolution, Module, ModuleIdx, ModuleNamespaceIncludedReason,
+  ModuleType, NamespaceAlias, NormalModule, OutputExports, OutputFormat, Platform,
+  RenderedConcatenatedModuleParts, Specifier, SymbolRef, SymbolRefFlags, WrapKind, is_lazy_proxy,
 };
-use rolldown_ecmascript::EcmaAst;
+use rolldown_ecmascript::{EcmaAst, ToSourceString};
 use rolldown_ecmascript_utils::{
   BindingIdentifierFactoryExt as _, BindingPatternExt, CallExpressionExt,
   CallExpressionFactoryExt as _, ClassElementFactoryExt as _, ExpressionExt,
@@ -142,6 +143,13 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   /// Finalized init statements this module donates to another module of its chunk
   /// (`Chunk::remove_map`), as detached fragments. See `transfer_import_stmt`.
   pub transferred_import_record: Vec<(ImportRecordIdx, EcmaAst)>,
+  pub rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts,
+  /// For a root or a member of a deferred group: the index of each `Init` event in
+  /// `group_events`, and the index of its statement in the body (`move_group_init_stmts`).
+  pub group_init_stmts: Vec<(usize, usize)>,
+  /// The `Init` event of the statement that `transform_or_remove_import_export_stmt` made last.
+  /// `remove_unused_top_level_stmt` adds it to `group_init_stmts` when it pushes the statement.
+  pub pending_group_init: Option<usize>,
   pub json_module_inlined_prop: Option<Box<FxHashMap<SymbolId, ast::Expression<'ast>>>>,
   /// Reference ids of `import.meta.ROLLDOWN_FILE_URL_*` accesses that no emitted file matches.
   ///
@@ -226,6 +234,149 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     expr
   }
 
+  /// Whether this module is the root or a member of a deferred group.
+  fn is_in_deferred_group(&self) -> bool {
+    !matches!(
+      self.ctx.linking_info.concatenated_wrapped_module_kind,
+      ConcatenateWrappedModuleKind::None
+    )
+  }
+
+  /// Whether `module_idx` is a member of a deferred group. A member has no `init_*` wrapper.
+  fn is_deferred_group_member(&self, module_idx: ModuleIdx) -> bool {
+    matches!(
+      self.ctx.linking_infos[module_idx].concatenated_wrapped_module_kind,
+      ConcatenateWrappedModuleKind::Inner
+    )
+  }
+
+  /// Records that the body of this module evaluates `member`, a member of the same deferred
+  /// group. The statement of the import has no init call.
+  fn record_group_member(&mut self, member: ModuleIdx) {
+    debug_assert!(
+      self.is_in_deferred_group(),
+      "{} imports a member of a deferred group, but is not in the group",
+      self.ctx.module.stable_id
+    );
+    self
+      .rendered_concatenated_wrapped_module_parts
+      .group_events
+      .push(ConcatenatedGroupEvent::Member(member));
+  }
+
+  /// Records `call`, a call of an init function of a module outside the group, in the body of a
+  /// root or a member of a deferred group. The renderer can copy the call before a member body
+  /// (a pre-call).
+  fn record_group_call(&mut self, call: &ast::Expression<'ast>) {
+    if !self.is_in_deferred_group() {
+      return;
+    }
+    let text =
+      ast::Statement::new_expression_statement(SPAN, call.clone_in(self.allocator()), self)
+        .to_output_source_string(self.ctx.options.charset.is_ascii());
+    self
+      .rendered_concatenated_wrapped_module_parts
+      .group_events
+      .push(ConcatenatedGroupEvent::Call(CompactStr::new(text.trim_end())));
+  }
+
+  /// `record_group_call` for the init of `importee_idx`. A no-op init needs no pre-call.
+  fn record_group_init_call(&mut self, importee_idx: ModuleIdx, call: &ast::Expression<'ast>) {
+    if self.ctx.final_esm_init_metadata.init_is_noop(importee_idx)
+      && self.ctx.linking_infos[importee_idx].import_defer_tracked_deps.is_none()
+    {
+      return;
+    }
+    self.record_group_call(call);
+  }
+
+  /// Records an `Init` event, with no text yet, in a root or a member of a deferred group. The
+  /// statement of the event writes a binding or a namespace object at the place of an import or
+  /// a re-export statement. Returns the index of the event.
+  fn record_group_init(&mut self) -> Option<usize> {
+    if !self.is_in_deferred_group() {
+      return None;
+    }
+    let events = &mut self.rendered_concatenated_wrapped_module_parts.group_events;
+    events.push(ConcatenatedGroupEvent::Init(CompactStr::new("")));
+    Some(events.len() - 1)
+  }
+
+  /// A member body runs before the whole body of its importer (`append_group_member_bodies` in
+  /// `render_esm`). A wrapper runs the statements of the imports in source order: the binding of
+  /// an import is ready before the init call of each later import. Thus the statement of each
+  /// `Init` event with a later `Member` event moves out of the body, and the event gets the text
+  /// of the statement. Each other statement stays in the body, and its event goes away.
+  /// See internal-docs/import-defer/implementation.md ("Deferred groups").
+  fn move_group_init_stmts(
+    &mut self,
+    program: &mut ast::Program<'ast>,
+    last_import_stmt_idx: &mut usize,
+  ) {
+    if self.group_init_stmts.is_empty() {
+      return;
+    }
+    let group_init_stmts = std::mem::take(&mut self.group_init_stmts);
+    let last_member = self
+      .rendered_concatenated_wrapped_module_parts
+      .group_events
+      .iter()
+      .rposition(|event| matches!(event, ConcatenatedGroupEvent::Member(_)));
+    let (moved, kept): (Vec<_>, Vec<_>) = group_init_stmts
+      .into_iter()
+      .partition(|&(event_idx, _)| last_member.is_some_and(|last| event_idx < last));
+    if !moved.is_empty() {
+      let moved_by_body_idx = moved
+        .iter()
+        .map(|&(event_idx, body_idx)| (body_idx, event_idx))
+        .collect::<FxHashMap<_, _>>();
+      for (body_idx, stmt) in program.body.take_in(self).into_iter().enumerate() {
+        let Some(&event_idx) = moved_by_body_idx.get(&body_idx) else {
+          program.body.push(stmt);
+          continue;
+        };
+        let text = self.group_init_text(stmt);
+        self.rendered_concatenated_wrapped_module_parts.group_events[event_idx] =
+          ConcatenatedGroupEvent::Init(text);
+      }
+      // The positions in the body that the caller recorded before the move: the end of the
+      // imports, and the place of the `__name()` statement of `export default function () {}`.
+      let mut moved_body_idxs = moved_by_body_idx.into_keys().collect::<Vec<_>>();
+      moved_body_idxs.sort_unstable();
+      let removed_before = |position: usize| moved_body_idxs.partition_point(|&idx| idx < position);
+      *last_import_stmt_idx -= removed_before(*last_import_stmt_idx);
+      for (position, _, _) in &mut self.keep_name_statement_to_insert {
+        *position -= removed_before(*position);
+      }
+    }
+    if !kept.is_empty() {
+      let kept_events = kept.into_iter().map(|(event_idx, _)| event_idx).collect::<FxHashSet<_>>();
+      let mut event_idx = 0;
+      self.rendered_concatenated_wrapped_module_parts.group_events.retain(|_| {
+        let keep = !kept_events.contains(&event_idx);
+        event_idx += 1;
+        keep
+      });
+    }
+  }
+
+  /// The text of a statement that moves out of the body, in the form that the walk gives to the
+  /// statements of a wrapped body: `var x = e` becomes `x = e`, and `x` goes into the hoisted
+  /// `var` list of the module.
+  fn group_init_text(&mut self, stmt: Statement<'ast>) -> CompactStr {
+    let stmt = match stmt {
+      Statement::VariableDeclaration(mut decl) => {
+        let (expr, bindings) = self
+          .var_declaration_to_expr_seq_and_bindings(&mut decl, TraverseState::TopLevel)
+          .expect("the finalizer makes only top-level `var` declarations for imports");
+        self.top_level_var_bindings.extend(bindings);
+        Statement::new_expression_statement(SPAN, expr, self)
+      }
+      stmt => stmt,
+    };
+    CompactStr::new(stmt.to_output_source_string(self.ctx.options.charset.is_ascii()).trim_end())
+  }
+
   /// Build the `init_x()` call expression for a wrapped (`WrapKind::Esm`) importee.
   ///
   /// - `mark_pure_if_noop`: annotate the call `/* @__PURE__ */` when the importee's init is a
@@ -247,14 +398,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // `init_foo`
     let (wrapper_ref_expr, _) =
       self.finalized_expr_for_symbol_ref(target.wrapper_ref, false, false);
-    // `init_foo()`
+    // `init_foo()`. The call of a tracked module (`import defer`) changes its state record, so it
+    // is never pure.
     let init_call = ast::Expression::new_call_expression_with_pure(
       call_span,
       wrapper_ref_expr,
       None,
       [],
       false,
-      mark_pure_if_noop && self.ctx.final_esm_init_metadata.init_is_noop(importee_idx),
+      mark_pure_if_noop
+        && self.ctx.final_esm_init_metadata.init_is_noop(importee_idx)
+        && importee_linking_info.import_defer_tracked_deps.is_none(),
       self,
     );
     if await_if_tla && target.tla_tainted {
@@ -263,6 +417,428 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     } else {
       init_call
     }
+  }
+
+  /// `init_foo(init_bar)`: when the importer `bar` and the importee `foo` are both tracked
+  /// (`import defer`), the eager import passes the init function of the importer. `__esmState`
+  /// reads its record to follow the cycle (spec `InnerModuleEvaluation`).
+  /// Returns true when it passed the caller.
+  fn pass_tracked_caller(
+    &self,
+    init_expr: &mut ast::Expression<'ast>,
+    importee_idx: ModuleIdx,
+  ) -> bool {
+    if self.ctx.linking_infos[importee_idx].import_defer_tracked_deps.is_none() {
+      return false;
+    }
+    let Some(caller_expr) = self.tracked_caller_expr() else { return false };
+    let ast::Expression::CallExpression(call) = init_expr else { return false };
+    call.arguments.push(caller_expr.into());
+    true
+  }
+
+  /// `init_bar`, the init function of this module, when the module is tracked (`import defer`).
+  fn tracked_caller_expr(&self) -> Option<ast::Expression<'ast>> {
+    let caller_ref = self
+      .ctx
+      .linking_info
+      .import_defer_tracked_deps
+      .as_ref()
+      .and(self.ctx.linking_info.wrapper_ref)?;
+    Some(self.finalized_expr_for_symbol_ref(caller_ref, false, false).0)
+  }
+
+  /// The init call of an eager import in the body of this module `bar`: an import statement
+  /// (`import './foo'`), an `export * from './foo'` statement, or a target of an excluded
+  /// re-export. Each of these calls must use this form, because the state record of a tracked
+  /// module follows the cycle only when the importer passes its init function.
+  /// - `init_foo()`, or `await init_foo()` when `foo` is TLA-tainted. The call is
+  ///   `/* @__PURE__ */` when the init of `foo` is a no-op.
+  /// - `init_foo(init_bar)` when `bar` and `foo` are both tracked (`import defer`).
+  /// - `__esmDepDone(init_foo(init_bar), init_foo, init_bar) || await init_foo(init_bar)` when
+  ///   they are both tracked and `foo` is TLA-tainted. The import waits only when `foo` did not
+  ///   finish, so that the body of `bar` runs synchronously after a deferred import prepared it.
+  fn import_stmt_init_expr(&self, importee_idx: ModuleIdx, span: Span) -> ast::Expression<'ast> {
+    let mut init_call = self.wrapped_esm_init_call_expr(importee_idx, span, true, false);
+    let tracked = self.pass_tracked_caller(&mut init_call, importee_idx);
+    let tla_tainted = self
+      .ctx
+      .order_wrap_state
+      .esm_init_target(importee_idx, &self.ctx.linking_infos[importee_idx])
+      .is_some_and(|target| target.tla_tainted);
+    if !tla_tainted {
+      return init_call;
+    }
+    let (true, Some(caller_expr)) = (tracked, self.tracked_caller_expr()) else {
+      return ast::Expression::new_await_expression(SPAN, init_call, self);
+    };
+    let importee_init = self
+      .finalized_expr_for_symbol_ref(
+        self.ctx.linking_infos[importee_idx].wrapper_ref.expect("a tracked module is wrapped"),
+        false,
+        false,
+      )
+      .0;
+    let dep_done = ast::Expression::new_call_expression(
+      SPAN,
+      self.finalized_expr_for_runtime_symbol("__esmDepDone"),
+      None,
+      [init_call.into(), importee_init.into(), caller_expr.into()],
+      false,
+      self,
+    );
+    let mut await_call = self.wrapped_esm_init_call_expr(importee_idx, span, false, false);
+    self.pass_tracked_caller(&mut await_call, importee_idx);
+    ast::Expression::new_logical_expression(
+      SPAN,
+      dep_done,
+      ast::LogicalOperator::Or,
+      ast::Expression::new_await_expression(SPAN, await_call, self),
+      self,
+    )
+  }
+
+  /// `__esmGather(init_foo, init_bar) || await __esmGather();`: the preparation of
+  /// `import defer * as ns from './foo'` in this module `bar`, when `foo` is TLA-tainted (spec
+  /// `GatherAsynchronousTransitiveDependencies`). The importer waits for the modules with
+  /// top-level await that a deferred access to `foo` can evaluate. `init_bar` is absent when this
+  /// module is not tracked. `None` when `foo` is not TLA-tainted: the statement evaluates nothing.
+  fn deferred_import_preparation_stmt(&self, importee_idx: ModuleIdx) -> Option<Statement<'ast>> {
+    let importee_info = &self.ctx.linking_infos[importee_idx];
+    if !importee_info.is_tla_or_contains_tla_dependency
+      || importee_info.import_defer_tracked_deps.is_none()
+    {
+      return None;
+    }
+    let importee_init =
+      self.finalized_expr_for_symbol_ref(importee_info.wrapper_ref?, false, false).0;
+    Some(Statement::new_expression_statement(
+      SPAN,
+      self.esm_gather_expr(importee_init, self.tracked_caller_expr()),
+      self,
+    ))
+  }
+
+  /// `__esmGather(<init>, <caller>) || await __esmGather()`. `<caller>` is absent when the
+  /// importer is not tracked, and for `import.defer()`.
+  fn esm_gather_expr(
+    &self,
+    init_expr: Expression<'ast>,
+    caller_expr: Option<Expression<'ast>>,
+  ) -> Expression<'ast> {
+    let mut gather = ast::CallExpression::new(
+      SPAN,
+      self.finalized_expr_for_runtime_symbol("__esmGather"),
+      None,
+      [],
+      false,
+      self,
+    );
+    gather.arguments.push(init_expr.into());
+    if let Some(caller_expr) = caller_expr {
+      gather.arguments.push(caller_expr.into());
+    }
+    let wait = ast::Expression::new_call_expression(
+      SPAN,
+      self.finalized_expr_for_runtime_symbol("__esmGather"),
+      None,
+      [],
+      false,
+      self,
+    );
+    ast::Expression::new_logical_expression(
+      SPAN,
+      ast::Expression::CallExpression(gather.into_in(self.allocator())),
+      ast::LogicalOperator::Or,
+      ast::Expression::new_await_expression(SPAN, wait, self),
+      self,
+    )
+  }
+
+  /// `(async (n) => <body>)()`, or `(async () => <body>)()` when `param` is `None`.
+  fn async_arrow_iife(&self, param: Option<&str>, body: Expression<'ast>) -> Expression<'ast> {
+    let mut params = oxc::allocator::Vec::with_capacity_in(1, self);
+    if let Some(name) = param {
+      params.push(ast::FormalParameter::new(
+        SPAN,
+        [],
+        ast::BindingPattern::new_binding_identifier(
+          SPAN,
+          oxc::ast::ast::Str::from_str_in(name, self),
+          self,
+        ),
+        None,
+        None,
+        false,
+        None,
+        false,
+        false,
+        self,
+      ));
+    }
+    let arrow = Expression::new_arrow_function_expression(
+      SPAN,
+      true,
+      None,
+      ast::FormalParameters::boxed(
+        SPAN,
+        ast::FormalParameterKind::ArrowFormalParameters,
+        params,
+        None,
+        self,
+      ),
+      None,
+      ast::ArrowFunctionBody::from(body),
+      self,
+    );
+    Expression::new_call_expression(
+      SPAN,
+      Expression::new_parenthesized_expression(SPAN, arrow, self),
+      None,
+      [],
+      false,
+      self,
+    )
+  }
+
+  /// `n.<name>`
+  fn chunk_namespace_member(name: &str, builder: &Self) -> Expression<'ast> {
+    Expression::new_static_member_expression(
+      SPAN,
+      Expression::new_identifier(SPAN, "n", builder),
+      IdentifierName::new(SPAN, oxc::ast::ast::Str::from_str_in(name, builder), builder),
+      false,
+      builder,
+    )
+  }
+
+  /// The lowering of `import.defer('./foo')` when `foo` is an `import.defer()` target, and of
+  /// `import('./foo')` when the chunk that holds `foo` does not evaluate it at load
+  /// (`ChunkGraph::lazy_dynamic_defer_host`) or when `foo` is an `import.defer()` target with no
+  /// wrapper. Each form calls `init_foo` itself.
+  /// `<prep>` is `__esmGather(init_foo) || await __esmGather()`, only when a deferred access to
+  /// `foo` can evaluate top-level await.
+  /// - `import.defer('./foo')`, same chunk: `(async () => foo_deferred)()`, or
+  ///   `(async () => (await 0, <prep>, foo_deferred))()`. `await 0` keeps the walk out of the
+  ///   call: the spec gathers after the load, in a promise job.
+  /// - `import.defer('./foo')`, other chunk:
+  ///   `(async (n) => (n = await import('./chunk.js'), <prep on n.init_foo>, n.foo_deferred))()`.
+  /// - `import('./foo')`, same chunk: `Promise.resolve().then(() => (init_foo(), foo_exports))`,
+  ///   or `init_foo().then(() => foo_exports)` when `foo` is TLA-tainted.
+  /// - `import('./foo')`, other chunk: `import('./chunk.js').then((n) => (n.init_foo(),
+  ///   n.foo_exports))`, or `(async (n) => (n = await import('./chunk.js'), await n.init_foo(),
+  ///   n.foo_exports))()` when `foo` is TLA-tainted.
+  ///
+  /// The `import.defer()` forms do not call `.then`: the spec does not call
+  /// `Promise.prototype.then` (test262 `promise-prototype-then-not-called.js`).
+  ///
+  /// A JSON module has no interop wrapper (`unwrap_json_module`): it declares only data. Its
+  /// `import()` forms are `Promise.resolve().then(() => foo_exports)` and
+  /// `import('./chunk.js').then((n) => n.foo_exports)`. The chunk also exports `foo_deferred`, so
+  /// the namespace of the chunk is not the namespace of `foo`. With `strictExecutionOrder`, the
+  /// module can have an execution-order wrapper, and the chunk does not always call `init_foo()`
+  /// at load (`preserve_strict_entry_signatures`). Then the forms call `init_foo` as above.
+  fn rewrite_dynamic_import_of_defer_target(
+    &self,
+    expr: Option<&mut ast::ImportExpression<'ast>>,
+    importee_idx: ModuleIdx,
+    is_defer: bool,
+  ) -> Option<Expression<'ast>> {
+    let info = &self.ctx.linking_infos[importee_idx];
+    // The interop wrapper, or the execution-order wrapper that `strictExecutionOrder` can give to
+    // a module with no interop wrapper (a JSON module).
+    let wrapper_ref =
+      self.ctx.order_wrap_state.esm_init_target(importee_idx, info).map(|t| t.wrapper_ref);
+    let namespace_ref = self.ctx.modules[importee_idx].namespace_object_ref()?;
+    // Only `import.defer()` reads the deferred namespace object.
+    let deferred_ref = if is_defer { Some(info.deferred_namespace_ref?) } else { None };
+    let tla_tainted = info.is_tla_or_contains_tla_dependency;
+    let needs_preparation =
+      tla_tainted && info.import_defer_tracked_deps.is_some() && wrapper_ref.is_some();
+    let host = if self.ctx.options.code_splitting.is_disabled() {
+      self.ctx.chunk_idx
+    } else {
+      self.ctx.chunk_graph.module_to_chunk[importee_idx]?
+    };
+
+    if host == self.ctx.chunk_idx {
+      if let Some(deferred_ref) = deferred_ref {
+        let deferred = self.finalized_expr_for_symbol_ref(deferred_ref, false, false).0;
+        let body = if let Some(wrapper_ref) = wrapper_ref.filter(|_| needs_preparation) {
+          let init_expr = self.finalized_expr_for_symbol_ref(wrapper_ref, false, false).0;
+          let mut expressions = oxc::allocator::Vec::with_capacity_in(3, self);
+          expressions.push(Expression::new_await_expression(
+            SPAN,
+            Expression::new_number_0(SPAN, self),
+            self,
+          ));
+          expressions.push(self.esm_gather_expr(init_expr, None));
+          expressions.push(deferred);
+          Expression::new_parenthesized_expression(
+            SPAN,
+            Expression::new_sequence_expression(SPAN, expressions, self),
+            self,
+          )
+        } else {
+          deferred
+        };
+        return Some(self.async_arrow_iife(None, body));
+      }
+      let namespace = self.finalized_expr_for_symbol_ref(namespace_ref, false, false).0;
+      let Some(wrapper_ref) = wrapper_ref else {
+        return Some(Expression::new_promise_resolve_then(namespace, self));
+      };
+      let init_expr = self.finalized_expr_for_symbol_ref(wrapper_ref, false, false).0;
+      let init_call = Expression::new_call_expression(SPAN, init_expr, None, [], false, self);
+      return Some(if tla_tainted {
+        Expression::new_callee_then_call(init_call, namespace, self)
+      } else {
+        Expression::new_promise_resolve_then(
+          Expression::new_seq_in_parens(init_call, namespace, self),
+          self,
+        )
+      });
+    }
+
+    let expr = expr?;
+    // `inline_common_chunk_module_bailout` keeps the chunk of an `import.defer()` target a file,
+    // and a lazy host is an entry chunk. Thus the chunk has exports.
+    debug_assert!(self.ctx.inline_state.record(host).is_none());
+    let host_chunk = &self.ctx.chunk_graph.chunk_table[host];
+    let name_of = |symbol_ref: SymbolRef| {
+      host_chunk.exports_to_other_chunks.get(&symbol_ref).and_then(|names| names.first())
+    };
+    // `import()` and the preparation call `init_foo`.
+    let init_name = match wrapper_ref {
+      Some(wrapper_ref) if needs_preparation || !is_defer => Some(name_of(wrapper_ref)?),
+      _ => None,
+    };
+    let namespace_name = name_of(namespace_ref)?;
+    let deferred_name = match deferred_ref {
+      Some(deferred_ref) => Some(name_of(deferred_ref)?),
+      None => None,
+    };
+    let import_path = self.ctx.chunk.import_path_for(host_chunk);
+    // `import('./chunk.js')`, or `require('./chunk.js')` in CommonJS output.
+    let load_expr = if matches!(self.ctx.options.format, OutputFormat::Cjs) {
+      ast::Expression::new_call_expression(
+        SPAN,
+        ast::Expression::new_identifier(SPAN, "require", self),
+        None,
+        [ast::Argument::new_string_literal(
+          expr.span,
+          oxc::ast::ast::Str::from_str_in(&import_path, self),
+          None,
+          self,
+        )],
+        false,
+        self,
+      )
+    } else {
+      expr.source = Expression::new_string_literal(
+        expr.source.span(),
+        oxc::ast::ast::Str::from_str_in(&import_path, self),
+        None,
+        self,
+      );
+      expr.options = None;
+      expr.phase = None;
+      Expression::ImportExpression(expr.take_in_box(self))
+    };
+
+    if !is_defer && !tla_tainted {
+      // `import('./chunk.js').then((n) => (n.init_foo(), n.foo_exports))`, or
+      // `import('./chunk.js').then((n) => n.foo_exports)` for a JSON module with no wrapper.
+      let load_expr = if matches!(self.ctx.options.format, OutputFormat::Cjs) {
+        Expression::new_promise_resolve_then(load_expr, self)
+      } else {
+        load_expr
+      };
+      let init_name = init_name.map(CompactStr::as_str);
+      return Some(Expression::CallExpression(
+        CallExpression::new_then_call_esm_wrappers_with_namespace(
+          load_expr,
+          None,
+          init_name.as_slice(),
+          namespace_name.as_str(),
+          self,
+        ),
+      ));
+    }
+
+    // `n = await import('./chunk.js')`. In CommonJS output, `await 0` first: `require()` loads
+    // at once, and the module must not load in the call of `import.defer()`.
+    let loaded = if matches!(self.ctx.options.format, OutputFormat::Cjs) {
+      let mut expressions = oxc::allocator::Vec::with_capacity_in(2, self);
+      expressions.push(Expression::new_await_expression(
+        SPAN,
+        Expression::new_number_0(SPAN, self),
+        self,
+      ));
+      expressions.push(load_expr);
+      Expression::new_parenthesized_expression(
+        SPAN,
+        Expression::new_sequence_expression(SPAN, expressions, self),
+        self,
+      )
+    } else {
+      Expression::new_await_expression(SPAN, load_expr, self)
+    };
+    let mut expressions = oxc::allocator::Vec::with_capacity_in(3, self);
+    expressions.push(Expression::new_assignment_expression(
+      SPAN,
+      ast::AssignmentOperator::Assign,
+      ast::AssignmentTarget::new_assignment_target_identifier(SPAN, "n", self),
+      loaded,
+      self,
+    ));
+    if let Some(deferred_name) = deferred_name {
+      if let Some(init_name) = init_name.filter(|_| needs_preparation) {
+        expressions.push(self.esm_gather_expr(Self::chunk_namespace_member(init_name, self), None));
+      }
+      expressions.push(Self::chunk_namespace_member(deferred_name, self));
+    } else {
+      // `await n.init_foo()`
+      if let Some(init_name) = init_name {
+        expressions.push(Expression::new_await_expression(
+          SPAN,
+          Expression::new_call_expression(
+            SPAN,
+            Self::chunk_namespace_member(init_name, self),
+            None,
+            [],
+            false,
+            self,
+          ),
+          self,
+        ));
+      }
+      expressions.push(Self::chunk_namespace_member(namespace_name, self));
+    }
+    Some(self.async_arrow_iife(
+      Some("n"),
+      Expression::new_parenthesized_expression(
+        SPAN,
+        Expression::new_sequence_expression(SPAN, expressions, self),
+        self,
+      ),
+    ))
+  }
+
+  /// `__esmDefer(init_foo)` for a deferred access to a tracked module, else `init_foo()`.
+  pub(crate) fn deferred_init_call_expr(&self, target: ModuleIdx) -> ast::Expression<'ast> {
+    let target_info = &self.ctx.linking_infos[target];
+    if target_info.import_defer_tracked_deps.is_some()
+      && let Some(wrapper_ref) = target_info.wrapper_ref
+    {
+      return Expression::new_call_with_arg(
+        self.finalized_expr_for_runtime_symbol("__esmDefer"),
+        self.finalized_expr_for_symbol_ref(wrapper_ref, false, false).0,
+        false,
+        self,
+      );
+    }
+    self.wrapped_esm_init_call_expr(target, SPAN, false, false)
   }
 
   fn order_cjs_carrier_init_call_expr(
@@ -415,6 +991,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     self.ctx.chunk.remove_map.get(&self.ctx.idx).is_some_and(|recs| recs.contains(&rec_idx))
   }
 
+  /// The chunk of this module initializes the lazy host of `importee_idx` right after its import
+  /// of the host (`plan_lazy_host_inits`), so the body does not call `init_x()`.
+  /// See internal-docs/import-defer/implementation.md ("Init after the import of a host").
+  fn is_lazy_host_init_moved(&self, importee_idx: ModuleIdx) -> bool {
+    self.ctx.chunk_graph.lazy_host_inits.moved_calls.contains(&(self.ctx.idx, importee_idx))
+  }
+
   /// Captures the finalized `stmt` when its record is transferred, and returns whether it should
   /// be removed here. `finalize_modules` prepends it to the recipient after every finalizer ran.
   /// See internal-docs/ast-mutation/implementation.md ("Transferred Finalized Imports").
@@ -456,12 +1039,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         self.ctx.chunk_graph.module_to_chunk[forwarding_module_idx] == Some(self.ctx.chunk_idx)
       },
     );
+    // A target here is behind a module with no wrapper. In an `import defer` closure, only a JSON
+    // module has no wrapper, and `group_deferred_modules` keeps the wrapper of each module that
+    // eager code reaches. Thus a target is not a member of a deferred group.
     let mut init_exprs = targets.into_iter().filter_map(|target| match target {
       WrappedEsmInitTarget::Module(module_idx) => {
-        if !self.generated_init_esm_importee_ids.insert(module_idx) {
+        debug_assert!(!self.is_deferred_group_member(module_idx));
+        if !self.generated_init_esm_importee_ids.insert(module_idx)
+          || self.is_lazy_host_init_moved(module_idx)
+        {
           return None;
         }
-        Some(self.wrapped_esm_init_call_expr(module_idx, SPAN, true, true))
+        Some(self.import_stmt_init_expr(module_idx, SPAN))
       }
       WrappedEsmInitTarget::CjsCarrier(key) => {
         if !self.generated_order_cjs_carriers.insert(key) {
@@ -525,6 +1114,299 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     stmts
   }
 
+  /// `__toESM(require_foo())`, or `require_foo()` when `needs_toesm` is false. The importee is a
+  /// `WrapKind::Cjs` module.
+  pub(crate) fn cjs_import_init_expr(
+    &self,
+    importee_idx: ModuleIdx,
+    needs_toesm: bool,
+  ) -> Expression<'ast> {
+    // `require_foo`
+    let (importee_wrapper_ref_name, hint) = self.finalized_expr_for_symbol_ref(
+      self.ctx.linking_infos[importee_idx].wrapper_ref.unwrap(),
+      false,
+      false,
+    );
+    let require_call = if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
+      importee_wrapper_ref_name
+    } else {
+      ast::Expression::new_call_expression(SPAN, importee_wrapper_ref_name, None, [], false, self)
+    };
+    if needs_toesm {
+      // `__toESM`
+      let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
+      Expression::new_to_esm_wrapper(
+        to_esm_fn_name,
+        require_call,
+        self.ctx.module.should_consider_node_esm_spec_for_static_import(),
+        self,
+      )
+    } else {
+      require_call
+    }
+  }
+
+  /// `import_x || (import_x = __toESM(require_x()))`: the namespace of the CommonJS module that
+  /// `import defer * as ns` targets. The first evaluation assigns `import_x`, so that all
+  /// accesses of the record read one namespace object. For an external module in CommonJS
+  /// output: `import_ext || (import_ext = __toESM(require("ext")))`.
+  pub(crate) fn cjs_deferred_namespace_expr(
+    &self,
+    rec_idx: ImportRecordIdx,
+  ) -> Option<Expression<'ast>> {
+    let rec = &self.ctx.module.import_records[rec_idx];
+    let target = rec.resolved_module?;
+    let namespace_name = self.canonical_name_for(rec.namespace_ref);
+    // The record is an `import defer * as ns`, and a namespace import always needs interop. The
+    // linker keeps `__toESM` by the same rule. `cjs_import_init_expr` keeps the interop mode of
+    // the importer. See internal-docs/import-defer/implementation.md.
+    let init_expr = match &self.ctx.modules[target] {
+      Module::Normal(_) => self.cjs_import_init_expr(target, true),
+      Module::External(external) => self.external_require_expr(external, true),
+    };
+    let assignment = Expression::new_assignment_expression(
+      SPAN,
+      ast::AssignmentOperator::Assign,
+      ast::AssignmentTarget::new_assignment_target_identifier(
+        SPAN,
+        oxc::ast::ast::Str::from_str_in(namespace_name, self),
+        self,
+      ),
+      init_expr,
+      self,
+    );
+    Some(Expression::new_logical_expression(
+      SPAN,
+      Expression::new_id_ref_expr(SPAN, namespace_name, self),
+      ast::LogicalOperator::Or,
+      Expression::new_parenthesized_expression(SPAN, assignment, self),
+      self,
+    ))
+  }
+
+  /// `require("ext")`, or `__toESMCached("ext", require("ext"))` when `needs_interop`: the lazy
+  /// load of an external module in CommonJS output, for `import defer` and for a module of a
+  /// deferred closure. `__toESMCached` gives one namespace object for all loads of the external.
+  fn external_require_expr(
+    &self,
+    external: &rolldown_common::ExternalModule,
+    needs_interop: bool,
+  ) -> Expression<'ast> {
+    let file_name = external.get_file_name(self.ctx.resolved_paths);
+    let import_path = external.import_path_from_file_name(self.ctx.chunk, file_name.clone());
+    let require_call = Expression::new_call_with_arg(
+      ast::Expression::new_identifier(SPAN, "require", self),
+      Expression::new_string_literal(
+        SPAN,
+        oxc::ast::ast::Str::from_str_in(&import_path, self),
+        None,
+        self,
+      ),
+      false,
+      self,
+    );
+    if !needs_interop {
+      return require_call;
+    }
+    self.to_esm_cached_call(
+      &file_name,
+      require_call,
+      self.ctx.module.should_consider_node_esm_spec_for_static_import(),
+    )
+  }
+
+  /// `__toESMCached("ext", <exports>)`, or `__toESMCached("ext", <exports>, 1)` in Node mode. The
+  /// helper keeps one namespace object for each key and interop mode. The key is the file name of
+  /// the external module (`ExternalModule::get_file_name`), which is the same in all chunks. The
+  /// `require()` path is not: it is relative to the folder of the chunk. The exports object is not
+  /// a correct key either: a primitive cannot be a key, and two externals can export one object.
+  fn to_esm_cached_call(
+    &self,
+    file_name: &str,
+    exports_expr: Expression<'ast>,
+    node_mode: bool,
+  ) -> Expression<'ast> {
+    let mut args = oxc::allocator::Vec::with_capacity_in(3, self);
+    args.push(ast::Argument::new_string_literal(
+      SPAN,
+      oxc::ast::ast::Str::from_str_in(file_name, self),
+      None,
+      self,
+    ));
+    args.push(ast::Argument::from(exports_expr));
+    if node_mode {
+      args.push(ast::Argument::new_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal, self));
+    }
+    ast::Expression::new_call_expression_with_pure(
+      SPAN,
+      self.finalized_expr_for_runtime_symbol("__toESMCached"),
+      None,
+      args,
+      false,
+      true,
+      self,
+    )
+  }
+
+  /// `__deferNsCached("ext", () => <namespace>)`, or with `1` in Node mode: the deferred namespace
+  /// of an external module in CommonJS output. The helper keeps one object for each key and
+  /// interop mode, with the key of `to_esm_cached_call`. Thus each deferred import of the
+  /// external gets the same object, also in another chunk, in a wrapper or from `import.defer()`.
+  fn deferred_ns_cached_call(
+    &self,
+    file_name: &str,
+    namespace: Expression<'ast>,
+    node_mode: bool,
+  ) -> Expression<'ast> {
+    let mut args = oxc::allocator::Vec::with_capacity_in(3, self);
+    args.push(ast::Argument::new_string_literal(
+      SPAN,
+      oxc::ast::ast::Str::from_str_in(file_name, self),
+      None,
+      self,
+    ));
+    args.push(Expression::new_arrow_returning(namespace, self).into());
+    if node_mode {
+      args.push(ast::Argument::new_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal, self));
+    }
+    ast::Expression::new_call_expression_with_pure(
+      SPAN,
+      self.finalized_expr_for_runtime_symbol("__deferNsCached"),
+      None,
+      args,
+      false,
+      true,
+      self,
+    )
+  }
+
+  /// The import of an external module in a module of a deferred closure, CommonJS output. The
+  /// statement stays at its position, so the external loads when the module evaluates, not when
+  /// the chunk loads:
+  /// - `import 'ext'`: `require("ext");`.
+  /// - Other imports and re-exports: `var import_ext = require("ext");`, or
+  ///   `var import_ext = __toESM(require("ext"));` for a default or namespace import. The imports
+  ///   of the module read `import_ext` (`bind_imports_and_exports`).
+  fn lazy_external_import_stmt(
+    &self,
+    stmt: &Statement<'ast>,
+    rec_idx: ImportRecordIdx,
+    external: &rolldown_common::ExternalModule,
+  ) -> Statement<'ast> {
+    let is_bare_import = stmt
+      .as_import_declaration()
+      .is_some_and(|decl| decl.specifiers.as_ref().is_none_or(|specifiers| specifiers.is_empty()));
+    if is_bare_import {
+      return ast::Statement::new_expression_statement(
+        SPAN,
+        self.external_require_expr(external, false),
+        self,
+      );
+    }
+    let rec = &self.ctx.module.import_records[rec_idx];
+    Statement::new_var_decl(
+      self.canonical_name_for(rec.namespace_ref),
+      self.external_require_expr(external, import_record_needs_interop(self.ctx.module, rec_idx)),
+      self,
+    )
+  }
+
+  /// `__reExport(x_exports, require("ext"))` for `export * from 'ext'` in CommonJS, IIFE and UMD
+  /// output.
+  fn cjs_external_re_export_stmt(&self, importee: &Module) -> Statement<'ast> {
+    let (importer_namespace_ref_expr, _) =
+      self.finalized_expr_for_symbol_ref(self.ctx.module.namespace_object_ref, false, false);
+    let re_export_call_expr = CallExpression::new_re_export_call(
+      // Insert `__reExport(importer_exports, require('ext'))`
+      self.finalized_expr_for_runtime_symbol("__reExport"),
+      importer_namespace_ref_expr,
+      Expression::new_call_with_arg(
+        ast::Expression::new_identifier(SPAN, "require", self),
+        ast::Expression::new_string_literal(
+          SPAN,
+          oxc::ast::ast::Str::from_str_in(importee.id().raw_id(), self),
+          None,
+          self,
+        ),
+        false,
+        self,
+      ),
+      self,
+    );
+    ast::Statement::new_expression_statement(
+      SPAN,
+      Expression::CallExpression(re_export_call_expr.into_in(self.allocator())),
+      self,
+    )
+  }
+
+  /// Whether this module loads its external modules lazily: CommonJS output, and the module is in
+  /// a deferred closure (`import defer`).
+  fn loads_externals_lazily(&self) -> bool {
+    matches!(self.ctx.options.format, OutputFormat::Cjs)
+      && self.ctx.linking_info.wrapped_by_import_defer
+  }
+
+  /// The declaration of `import_x` for `import defer * as ns from './x'`, where `./x` is a
+  /// CommonJS module: `var import_x;`. The first deferred access assigns it
+  /// (`wrap_deferred_access`). When tree shaking keeps the deferred namespace object of the
+  /// record (an escape of `ns` reads it), the declaration also has the object:
+  /// `var import_x, x_deferred = __deferNs(() => import_x || (import_x = __toESM(require_x())));`.
+  /// An external module in CommonJS output gets its object from `deferred_ns_cached_call`.
+  /// A symbol in `merged_deferred_cjs_namespace_refs` is not declared here: the first record of
+  /// its group declares the binding, under the name of the canonical symbol.
+  /// Returns `None` when the record declares neither symbol.
+  fn deferred_cjs_import_decl(
+    &self,
+    rec_idx: ImportRecordIdx,
+    namespace_name: &str,
+  ) -> Option<Statement<'ast>> {
+    let merged = &self.ctx.chunk_graph.merged_deferred_cjs_namespace_refs;
+    let rec = &self.ctx.module.import_records[rec_idx];
+    let mut decl = (!merged.contains(&rec.namespace_ref))
+      .then(|| Statement::new_var_decl_no_init(namespace_name, self));
+    let meta = self.ctx.linking_info;
+    let Some(deferred) = meta.deferred_cjs_namespaces.get(&rec_idx) else { return decl };
+    if !meta.stmt_info_included.has_bit(deferred.stmt_info_idx)
+      || merged.contains(&deferred.symbol_ref)
+    {
+      return decl;
+    }
+    let Some(init_body) = self.cjs_deferred_namespace_expr(rec_idx) else { return decl };
+    let deferred_ns = if let Some(Module::External(external)) =
+      rec.resolved_module.map(|target| &self.ctx.modules[target])
+    {
+      self.deferred_ns_cached_call(
+        &external.get_file_name(self.ctx.resolved_paths),
+        init_body,
+        self.ctx.module.should_consider_node_esm_spec_for_static_import(),
+      )
+    } else {
+      let mut call = CallExpression::new(
+        SPAN,
+        self.finalized_expr_for_runtime_symbol("__deferNs"),
+        None,
+        [],
+        false,
+        self,
+      );
+      call.pure = true;
+      call.arguments.push(Expression::new_arrow_returning(init_body, self).into());
+      Expression::CallExpression(call.into_in(self.allocator()))
+    };
+    let deferred_decl =
+      Statement::new_var_decl(self.canonical_name_for(deferred.symbol_ref), deferred_ns, self);
+    match (&mut decl, deferred_decl) {
+      (
+        Some(Statement::VariableDeclaration(decl)),
+        Statement::VariableDeclaration(mut deferred_decl),
+      ) => decl.declarations.append(&mut deferred_decl.declarations),
+      (None, deferred_decl) => decl = Some(deferred_decl),
+      _ => {}
+    }
+    decl
+  }
+
   /// If return true the import stmt should be removed,
   /// or transform the import stmt to target form.
   fn transform_or_remove_import_export_stmt(
@@ -537,8 +1419,26 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
     let rec = &self.ctx.module.import_records[rec_idx];
     let Some(resolved_module_idx) = rec.resolved_module else { return true };
-    let Module::Normal(importee) = &self.ctx.modules[resolved_module_idx] else {
-      return true;
+    let importee = match &self.ctx.modules[resolved_module_idx] {
+      Module::Normal(importee) => importee,
+      Module::External(external) => {
+        // `import defer * as ns from 'ext'` in CommonJS output loads `ext` lazily: `var import_ext,
+        // ext_deferred = __deferNsCached("ext", () => import_ext || (import_ext = ...))`.
+        if rec.is_defer_phase() && matches!(self.ctx.options.format, OutputFormat::Cjs) {
+          let Some(decl) =
+            self.deferred_cjs_import_decl(rec_idx, self.canonical_name_for(rec.namespace_ref))
+          else {
+            return true;
+          };
+          *stmt = decl;
+          return false;
+        }
+        if self.loads_externals_lazily() {
+          *stmt = self.lazy_external_import_stmt(stmt, rec_idx, external);
+          return false;
+        }
+        return true;
+      }
     };
     let importee_linking_info = &self.ctx.linking_infos[importee.idx];
     // A consumer-local barrel is a routing waypoint even when linking already gave it an ESM
@@ -603,64 +1503,75 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           }
         }
 
-        // Replace the statement with something like `var import_foo = __toESM(require_foo())`
-        // or `var import_foo = require_foo()` if only named imports are used
-
-        // `require_foo`
-        let (importee_wrapper_ref_name, hint) = self.finalized_expr_for_symbol_ref(
-          importee_linking_info.wrapper_ref.unwrap(),
-          false,
-          false,
-        );
-
-        let require_call = if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
-          importee_wrapper_ref_name
-        } else {
-          ast::Expression::new_call_expression(
-            SPAN,
-            importee_wrapper_ref_name,
-            None,
-            [],
-            false,
-            self,
-          )
-        };
-
-        // Check if we need __toESM or can use require_foo() directly
-        let needs_toesm = if let Some(info) = merge_info {
-          info.needs_interop
-        } else {
-          import_record_needs_interop(self.ctx.module, rec_idx)
-        };
-        let init_expr = if needs_toesm {
-          // `__toESM`
-          let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
-          Expression::new_to_esm_wrapper(
-            to_esm_fn_name,
-            require_call,
-            self.ctx.module.should_consider_node_esm_spec_for_static_import(),
-            self,
-          )
-        } else {
-          require_call
-        };
-
         // `import_foo`
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
-        *stmt = Statement::new_var_decl(binding_name_for_wrapper_call_ret, init_expr, self);
+        if rec.is_defer_phase() {
+          // Another record of the chunk declares both symbols.
+          let Some(decl) =
+            self.deferred_cjs_import_decl(rec_idx, binding_name_for_wrapper_call_ret)
+          else {
+            return true;
+          };
+          *stmt = decl;
+        } else {
+          // Replace the statement with something like `var import_foo = __toESM(require_foo())`
+          // or `var import_foo = require_foo()` if only named imports are used
+          // Check if we need __toESM or can use require_foo() directly
+          let needs_toesm = if let Some(info) = merge_info {
+            info.needs_interop
+          } else {
+            import_record_needs_interop(self.ctx.module, rec_idx)
+          };
+          let init_expr = self.cjs_import_init_expr(resolved_module_idx, needs_toesm);
+          *stmt = Statement::new_var_decl(binding_name_for_wrapper_call_ret, init_expr, self);
+        }
 
-        return self.transfer_import_stmt(rec_idx, stmt);
+        if self.transfer_import_stmt(rec_idx, stmt) {
+          return true;
+        }
+        // `var import_foo = ...`, or for a deferred import that keeps its namespace object,
+        // `var import_foo, foo_deferred = __deferNs(...)`. A declaration with no initializer
+        // writes nothing in the body.
+        if matches!(
+          stmt,
+          Statement::VariableDeclaration(decl)
+            if decl.declarations.iter().any(|declarator| declarator.init.is_some())
+        ) {
+          self.pending_group_init = self.record_group_init();
+        }
+        return false;
       }
       // Replace the import statement with `init_foo()` if `ImportDeclaration` is not a plain import
       // or the importee have side effects.
       WrapKind::Esm => {
-        if self.generated_init_esm_importee_ids.contains(&importee.idx) {
-          return true;
+        // A deferred import evaluates nothing at its statement. Each deferred access calls the
+        // init instead. A TLA-tainted target first gets its preparation.
+        if rec.is_defer_phase() {
+          let Some(preparation) = self.deferred_import_preparation_stmt(importee.idx) else {
+            return true;
+          };
+          *stmt = preparation;
+        } else {
+          if matches!(
+            importee_linking_info.concatenated_wrapped_module_kind,
+            ConcatenateWrappedModuleKind::Inner
+          ) {
+            self.record_group_member(importee.idx);
+            return true;
+          }
+          if self.generated_init_esm_importee_ids.contains(&importee.idx) {
+            return true;
+          }
+          self.generated_init_esm_importee_ids.insert(importee.idx);
+          if self.is_lazy_host_init_moved(importee.idx) {
+            return true;
+          }
+          let init_expr = self.import_stmt_init_expr(importee.idx, stmt.span());
+          if !self.is_transferred_import(rec_idx) {
+            self.record_group_init_call(importee.idx, &init_expr);
+          }
+          *stmt = ast::Statement::new_expression_statement(SPAN, init_expr, self);
         }
-        self.generated_init_esm_importee_ids.insert(importee.idx);
-        // `init_foo()` / `await init_foo()`
-        let init_expr = self.wrapped_esm_init_call_expr(importee.idx, stmt.span(), true, true);
-        *stmt = ast::Statement::new_expression_statement(SPAN, init_expr, self);
 
         return self.transfer_import_stmt(rec_idx, stmt);
       }
@@ -728,6 +1639,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     preserve_this_semantic_if_needed: bool,
     optimize_namespace_alias_transform: bool,
   ) -> (ast::Expression<'ast>, FinalizedExprProcessHint) {
+    debug_assert!(
+      !(self.is_deferred_group_member(symbol_ref.owner)
+        && self.ctx.linking_infos[symbol_ref.owner].wrapper_ref == Some(symbol_ref)),
+      "{} refers to the init wrapper of {}, a member of a deferred group, which has no wrapper",
+      self.ctx.module.stable_id,
+      self.ctx.modules[symbol_ref.owner].stable_id()
+    );
     if !symbol_ref.is_declared_in_root_scope(self.ctx.symbol_db) {
       // No fancy things on none root scope symbols
       return (
@@ -1245,39 +2163,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           re_export_external_stmts = Some(stmts.collect::<Vec<_>>());
         }
         OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {
+          // A module that loads its externals lazily calls `__reExport` at the position of the
+          // `export *` statement, in its init.
+          let lazy = self.loads_externals_lazily();
           let stmts = export_all_externals_rec_ids.iter().copied().filter_map(|idx| {
-            // importer_exports
-            let (importer_namespace_ref_expr, _) = self.finalized_expr_for_symbol_ref(
-              self.ctx.module.namespace_object_ref,
-              false,
-              false,
-            );
+            if lazy {
+              return None;
+            }
             let rec = &self.ctx.module.import_records[idx];
             let importee = rec.resolved_module.map(|module_idx| &self.ctx.modules[module_idx])?;
-
-            let re_export_call_expr = CallExpression::new_re_export_call(
-              // Insert `__reExport(importer_exports, require('ext'))`
-              self.finalized_expr_for_runtime_symbol("__reExport"),
-              importer_namespace_ref_expr,
-              Expression::new_call_with_arg(
-                ast::Expression::new_identifier(SPAN, "require", self),
-                ast::Expression::new_string_literal(
-                  SPAN,
-                  oxc::ast::ast::Str::from_str_in(importee.id().raw_id(), self),
-                  None,
-                  self,
-                ),
-                false,
-                self,
-              ),
-              self,
-            );
-
-            Some(ast::Statement::new_expression_statement(
-              SPAN,
-              Expression::CallExpression(re_export_call_expr.into_in(self.allocator())),
-              self,
-            ))
+            Some(self.cjs_external_re_export_stmt(importee))
           });
           re_export_external_stmts = Some(stmts.collect());
         }
@@ -1290,8 +2185,60 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let mut ret = vec![decl_stmt];
     ret.extend(re_export_external_stmts.unwrap_or_default());
+    ret.extend(self.generate_declaration_of_deferred_namespace());
 
     ret
+  }
+
+  /// `var x_deferred = __deferNs(() => (init_x(), x_exports), x_exports)`, when tree shaking keeps
+  /// the deferred namespace of this module (`import defer`). It comes after the namespace object
+  /// that it reads. With dynamic exports (`export *` from CommonJS), the second argument is
+  /// absent, and the key list comes from the first evaluation.
+  fn generate_declaration_of_deferred_namespace(&self) -> Option<Statement<'ast>> {
+    let meta = self.ctx.linking_info;
+    let stmt_idx = meta.deferred_namespace_stmt_info?;
+    if !meta.stmt_info_included.has_bit(stmt_idx) {
+      return None;
+    }
+    let deferred_name = self.canonical_name_for(meta.deferred_namespace_ref?);
+    let namespace_expr =
+      || self.finalized_expr_for_symbol_ref(self.ctx.module.namespace_object_ref, false, false).0;
+    // The arrow calls `init_x` through its binding: a hoisted `init_x` replaces itself at the
+    // first call, and the old function would evaluate the module again.
+    let init_body = if self.ctx.order_wrap_state.esm_init_target(self.ctx.idx, meta).is_some() {
+      ast::Expression::new_parenthesized_expression(
+        SPAN,
+        ast::Expression::new_sequence_expression(
+          SPAN,
+          allocator::Vec::from_array_in(
+            [self.deferred_init_call_expr(self.ctx.idx), namespace_expr()],
+            self,
+          ),
+          self,
+        ),
+        self,
+      )
+    } else {
+      namespace_expr()
+    };
+    let mut call = CallExpression::new(
+      SPAN,
+      self.finalized_expr_for_runtime_symbol("__deferNs"),
+      None,
+      [],
+      false,
+      self,
+    );
+    call.pure = true;
+    call.arguments.push(Expression::new_arrow_returning(init_body, self).into());
+    if !meta.has_dynamic_exports {
+      call.arguments.push(namespace_expr().into());
+    }
+    Some(Statement::new_var_decl(
+      deferred_name,
+      Expression::CallExpression(call.into_in(self.allocator())),
+      self,
+    ))
   }
 
   // Handle `import.meta.xxx`, `import.meta['xxx']`, `import.meta?.xxx` and `import.meta?.['xxx']`
@@ -2104,6 +3051,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
 
     if self.ctx.options.code_splitting.is_disabled() {
+      if rec.is_defer_phase()
+        && self.ctx.linking_infos[importee_id].dynamic_defer_target
+        && let Some(new_expr) = self.rewrite_dynamic_import_of_defer_target(None, importee_id, true)
+      {
+        return Some(new_expr);
+      }
       match &self.ctx.modules[importee_id] {
         Module::Normal(importee) => {
           let importee_linking_info = &self.ctx.linking_infos[importee_id];
@@ -2242,13 +3195,21 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             for &target in targets {
               let init_expr = match target {
                 WrappedEsmInitTarget::Module(importee_idx) => {
-                  if !self.generated_init_esm_importee_ids.insert(importee_idx) {
+                  if !self.generated_init_esm_importee_ids.insert(importee_idx)
+                    || self.is_lazy_host_init_moved(importee_idx)
+                  {
+                    continue;
+                  }
+                  if self.is_deferred_group_member(importee_idx) {
+                    self.record_group_member(importee_idx);
                     continue;
                   }
                   // An excluded re-export can forward to a TLA-tainted wrapper. The current
                   // module is then TLA-tainted as well, so its async init body must await the
                   // forwarded promise before later statements observe the importee's bindings.
-                  self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, true)
+                  let init_expr = self.import_stmt_init_expr(importee_idx, SPAN);
+                  self.record_group_init_call(importee_idx, &init_expr);
+                  init_expr
                 }
                 WrappedEsmInitTarget::CjsCarrier(key) => {
                   if !self.generated_order_cjs_carriers.insert(key) {
@@ -2364,12 +3325,20 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 if matches!(importee_linking_info.wrap_kind(), WrapKind::Esm)
                   && !consumer_local_route
                 {
-                  // Recorded so the entry prelude does not call it again ahead of this statement.
-                  self.generated_init_esm_importee_ids.insert(importee.idx);
-                  let init_expr = self.wrapped_esm_init_call_expr(importee.idx, SPAN, true, true);
-                  program
-                    .body
-                    .push(ast::Statement::new_expression_statement(SPAN, init_expr, self));
+                  // The body of a member of a deferred group runs in the wrapper of the root.
+                  if self.is_deferred_group_member(importee.idx) {
+                    self.record_group_member(importee.idx);
+                  } else {
+                    // Recorded so the entry prelude does not call it again ahead of this statement.
+                    self.generated_init_esm_importee_ids.insert(importee.idx);
+                    if !self.is_lazy_host_init_moved(importee.idx) {
+                      let init_expr = self.import_stmt_init_expr(importee.idx, SPAN);
+                      self.record_group_init_call(importee.idx, &init_expr);
+                      program
+                        .body
+                        .push(ast::Statement::new_expression_statement(SPAN, init_expr, self));
+                    }
+                  }
                 }
 
                 match importee.exports_kind {
@@ -2399,6 +3368,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                         Expression::CallExpression(call_expr.into_in(self.allocator()));
                       // __reExport(exports, otherExports)
                       let stmt = ast::Statement::new_expression_statement(SPAN, call_expr, self);
+                      if let Some(event_idx) = self.record_group_init() {
+                        self.group_init_stmts.push((event_idx, program.body.len()));
+                      }
                       program.body.push(stmt);
                     }
                   }
@@ -2483,21 +3455,25 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       Expression::CallExpression(call_expr.into_in(self.allocator())),
                       self,
                     );
+                    if let Some(event_idx) = self.record_group_init() {
+                      self.group_init_stmts.push((event_idx, program.body.len()));
+                    }
                     program.body.push(stmt);
                   }
                   ExportsKind::None => {}
                 }
               }
-              Module::External(_importee) => {
-                match self.ctx.options.format {
-                  rolldown_common::OutputFormat::Esm
-                  | rolldown_common::OutputFormat::Iife
-                  | rolldown_common::OutputFormat::Umd
-                  | rolldown_common::OutputFormat::Cjs => {
-                    // Just remove the statement
-                    return;
-                  }
+              Module::External(_) => {
+                // A module of a deferred closure in CommonJS output loads the external here, in
+                // its init: `__reExport(x_exports, require("ext"))`. Other modules get the call
+                // with the namespace declaration, and the statement is removed.
+                if self.loads_externals_lazily() {
+                  self.debug_assert_namespace_object_is_open();
+                  program
+                    .body
+                    .push(self.cjs_external_re_export_stmt(&self.ctx.modules[module_idx]));
                 }
+                return;
               }
             }
 
@@ -2687,13 +3663,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             };
           }
         }
+        if let Some(event_idx) = self.pending_group_init.take() {
+          self.group_init_stmts.push((event_idx, program.body.len()));
+        }
         program.body.push(top_stmt);
         if is_module_decl {
           last_import_stmt_idx = Some(program.body.len());
         }
       },
     );
-    last_import_stmt_idx.unwrap_or(0)
+    debug_assert!(self.pending_group_init.is_none(), "a group statement did not reach the body");
+    let mut last_import_stmt_idx = last_import_stmt_idx.unwrap_or(0);
+    self.move_group_init_stmts(program, &mut last_import_stmt_idx);
+    last_import_stmt_idx
   }
 
   fn process_fn(
@@ -3352,6 +4334,24 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     match &self.ctx.modules[importee_idx] {
       Module::Normal(importee) => {
+        // A lazy module: an `import.defer()` target, or a module of a deferred closure in its own
+        // dynamic entry chunk (`ChunkGraph::lazy_dynamic_defer_host`). The chunk of the module does
+        // not evaluate it at load. `import.defer()` loads that chunk and gathers the async
+        // dependencies. `import()` loads it and calls `init_x()`. An `import.defer()` target with
+        // no interop wrapper (a JSON module) can run at load, but its chunk also exports
+        // `x_deferred`. Thus `import()` of it reads `x_exports`, after `init_x()` when
+        // `strictExecutionOrder` gives it an execution-order wrapper.
+        let is_defer = rec.is_defer_phase();
+        let importee_info = &self.ctx.linking_infos[importee_idx];
+        if ((importee_info.dynamic_defer_target
+          && (is_defer || importee_info.wrapper_ref.is_none()))
+          || self.ctx.chunk_graph.lazy_dynamic_defer_host(importee_idx, importee_info).is_some())
+          && let Some(new_expr) =
+            self.rewrite_dynamic_import_of_defer_target(Some(&mut **expr), importee_idx, is_defer)
+        {
+          *node = new_expr;
+          return true;
+        }
         let Some(&importee_chunk_idx) =
           self.ctx.chunk_graph.entry_module_to_entry_chunk.get(&importee_idx)
         else {
@@ -3464,9 +4464,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         needs_to_esm_helper = importee.exports_kind.is_commonjs();
       }
       Module::External(importee) => {
+        // `import.defer('ext')` keeps its phase in ESM output. IIFE and UMD output keep a native
+        // `import()`, and the link stage warns (`check_deferred_externals`).
+        if rec.is_defer_phase() && matches!(self.ctx.options.format, OutputFormat::Esm) {
+          expr.phase = Some(ast::ImportPhase::Defer);
+        }
         self.rewrite_external_import_options(expr, &rec.attributes, &importee.attributes);
         // The path is rendered like the one of a static import, with or without options.
-        let import_path = importee.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
+        let file_name = importee.get_file_name(self.ctx.resolved_paths);
+        let import_path = importee.import_path_from_file_name(self.ctx.chunk, file_name.clone());
         if str != import_path.as_str() {
           expr.source = Expression::new_string_literal(
             expr.source.span(),
@@ -3480,6 +4486,27 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           // and `with { type: 'json' }` picks the module type. Do not lower the call to
           // `require()`, which cannot carry attributes.
           return false;
+        }
+        // `import.defer('ext')` in CommonJS output, for each value of `dynamicImportInCjs`:
+        // `(async () => __deferNsCached("ext", () => __toESMCached("ext", require("ext"))))()`.
+        // The first access to a key loads `ext`, as for the static form. Each call gives the
+        // deferred namespace object of the static form with the same interop mode. The form does
+        // not call `.then` (test262 `promise-prototype-then-not-called.js`).
+        if rec.is_defer_phase() && matches!(self.ctx.options.format, OutputFormat::Cjs) {
+          let node_mode = self.ctx.module.should_consider_node_esm_spec_for_dynamic_import();
+          node.replace_with(|old| {
+            let ast::Expression::ImportExpression(import_expr) = old else { unreachable!() };
+            let require_call = Expression::new_call_with_arg(
+              ast::Expression::new_identifier(SPAN, "require", self),
+              import_expr.unbox().source,
+              false,
+              self,
+            );
+            let namespace = self.to_esm_cached_call(&file_name, require_call, node_mode);
+            let deferred_ns = self.deferred_ns_cached_call(&file_name, namespace, node_mode);
+            self.async_arrow_iife(None, deferred_ns)
+          });
+          return true;
         }
         // Convert `import("external")` to `Promise.resolve().then(() => __toESM(require("external")))`
         // when format is CJS and dynamicImportInCjs is false

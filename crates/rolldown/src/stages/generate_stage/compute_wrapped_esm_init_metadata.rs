@@ -5,9 +5,10 @@ use std::ops::Deref;
 use oxc::ast::ast::{Declaration, Statement};
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ChunkIdx, ConstExportMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules,
-  InlineConstMode, Module, ModuleIdx, ModuleNamespaceIncludedReason, NormalModule, StmtInfoIdx,
-  StmtInfos, SymbolRef, SymbolRefDb, UsedSymbolRefsView, WrapKind,
+  ChunkIdx, ConcatenateWrappedModuleKind, ConstExportMeta, ImportKind, ImportRecordIdx,
+  ImportRecordMeta, IndexModules, InlineConstMode, Module, ModuleIdx,
+  ModuleNamespaceIncludedReason, NormalModule, StmtInfoIdx, StmtInfos, SymbolRef, SymbolRefDb,
+  UsedSymbolRefsView, WrapKind,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_utils::{index_vec_ext::IndexVecRefExt, rayon::ParallelIterator as _};
@@ -238,6 +239,12 @@ impl EsmInitTargetContext<'_> {
 /// Whether calling the module's `init_*()` is a no-op because nothing lands inside its `__esm`
 /// closure.
 fn init_is_noop(meta: &LinkingMetadata, ast: Option<&EcmaAst>, keep_names: bool) -> bool {
+  // Restrict to standalone wrappers. In a concatenated group the shared `init_*` runs the
+  // whole group's closure, so this module's own empty body wouldn't prove the call is a
+  // no-op (a sibling could carry content).
+  if !matches!(meta.concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None) {
+    return false;
+  }
   // Shimmed missing exports emit `<name> = void 0;` assignments *into* the closure
   // (generated after this pass, so they aren't visible in the AST below). Their presence
   // makes the init non-empty.
@@ -312,7 +319,7 @@ fn transitive_esm_init_targets(
     }
     for &rec_idx in &stmt_info.import_records {
       let rec = &module.import_records[rec_idx];
-      if rec.kind != ImportKind::Import {
+      if rec.kind != ImportKind::Import || rec.is_defer_phase() {
         continue;
       }
       if ctx.order_state.is_consumer_local_reexport_record(module.idx, rec_idx) {
@@ -545,6 +552,9 @@ fn collect_legacy_esm_init_targets(
       targets.push(WrappedEsmInitTarget::Module(importee.idx));
     } else {
       for rec in importee.import_records.iter().rev() {
+        if rec.is_defer_phase() {
+          continue;
+        }
         if let Some(sub_importee_idx) = rec.resolved_module {
           stack.push(sub_importee_idx);
         }

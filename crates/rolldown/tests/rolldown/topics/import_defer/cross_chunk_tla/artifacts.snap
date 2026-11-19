@@ -1,0 +1,69 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## deferred.js
+
+```js
+import { i as __esmFail, n as __esmDepDone, o as __esmMin, r as __esmEnd, s as __esmState } from "./rolldown-runtime.js";
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+// t.js
+function init_t() {
+	return (init_t = __esmState((async () => {
+		try {
+			init_log();
+			await 0;
+			log.push("t");
+		} catch (e) {
+			throw __esmFail(init_t, e);
+		}
+		__esmEnd(init_t);
+	}), () => [], 3))(arguments[0]);
+}
+// d.js
+var value;
+function init_d() {
+	return (init_d = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_t(init_d), init_t, init_d) || await init_t(init_d);
+			log.push("d");
+			value = "d:" + log.length;
+		} catch (e) {
+			throw __esmFail(init_d, e);
+		}
+		__esmEnd(init_d);
+	}), () => [init_t], 1))(arguments[0]);
+}
+export { log as i, value as n, init_log as r, init_d as t };
+
+```
+
+## main.js
+
+```js
+import { a as __esmGather, t as __esmDefer } from "./rolldown-runtime.js";
+import { i as log, n as value$1, r as init_log, t as init_d } from "./deferred.js";
+// main.js
+init_log();
+__esmGather(init_d) || await __esmGather();
+log.push("main");
+const value = (__esmDefer(init_d), value$1);
+export { log, value };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmGather as a, __esmFail as i, __esmDepDone as n, __esmMin as o, __esmEnd as r, __esmState as s, __esmDefer as t };
+
+```

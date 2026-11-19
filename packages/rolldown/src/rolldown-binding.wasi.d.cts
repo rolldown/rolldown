@@ -2023,6 +2023,7 @@ export interface BindingChecksOptions {
   duplicateShebang?: boolean
   unsupportedTsconfigOption?: boolean
   ineffectiveDynamicImport?: boolean
+  deferredExternalEvaluatedEagerly?: boolean
   largeBarrelModules?: boolean
   sourcemapBroken?: boolean
   namespaceConflict?: boolean
@@ -2315,6 +2316,7 @@ export interface BindingExperimentalOptions {
   chunkOptimization?: boolean | BindingChunkOptimizationOptions
   lazyBarrel?: boolean
   importAttributes?: boolean
+  importDefer?: boolean
 }
 
 export interface BindingFilterToken {

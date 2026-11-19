@@ -1,0 +1,15 @@
+{
+  "_comment": "IIFE and UMD output: `import defer` of an external module is eager, with a warning, because the module is a global or a wrapper argument. `import.defer()` of an external module becomes a native `import()`, with a warning.",
+  "config": {
+    "format": "iife",
+    "name": "lib",
+    "external": ["ext", "ext2"],
+    "globals": { "ext": "Ext" },
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [{ "format": "umd" }],
+  "expectExecuted": false,
+  "expectWarning": true
+}

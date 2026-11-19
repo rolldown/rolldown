@@ -10,6 +10,7 @@ use rolldown_common::{
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildResult, Diagnostics};
 use rolldown_utils::{
+  index_vec_ext::IndexVecExt as _,
   indexmap::FxIndexMap,
   rayon::{IntoParallelIterator, ParallelIterator},
 };
@@ -167,6 +168,8 @@ impl GenerateStage<'_> {
       index_vec![None; chunk_graph.chunk_table.len()];
     let mut index_instantiated_chunks: IndexInstantiatedChunks =
       IndexVec::with_capacity(chunk_graph.chunk_table.len());
+    let mut ast_table = ast_table;
+    let group_bodies_by_chunk = self.print_deferred_group_bodies(chunk_graph, &mut ast_table);
     let chunk_index_to_codegen_rets = self.create_chunk_to_codegen_ret_map(chunk_graph, ast_table);
     let render_export_items_index_vec = &chunk_graph
       .chunk_table
@@ -184,8 +187,9 @@ impl GenerateStage<'_> {
     try_join_all(
       chunk_index_to_codegen_rets
         .into_iter()
+        .zip(group_bodies_by_chunk)
         .enumerate()
-        .filter_map(|(idx, module_id_to_codegen_ret)| {
+        .filter_map(|(idx, (module_id_to_codegen_ret, group_body_codegen_rets))| {
           let chunk_idx =
             ChunkIdx::from_raw(u32::try_from(idx).expect("chunk index should fit in u32"));
           // A record is no file; its modules are printed by the files that carry it.
@@ -196,29 +200,44 @@ impl GenerateStage<'_> {
           }
           let chunk = chunk_graph.chunk_table.get(chunk_idx)?;
           let carried_renders = inline_renders.remove(&chunk_idx).unwrap_or_default();
-          Some((chunk_idx, chunk, module_id_to_codegen_ret, carried_renders))
+          Some((
+            chunk_idx,
+            chunk,
+            module_id_to_codegen_ret,
+            group_body_codegen_rets,
+            carried_renders,
+          ))
         })
-        .map(|(chunk_idx, chunk, module_id_to_codegen_ret, carried_renders)| {
-          let resolved_paths = self.resolved_paths.as_ref();
-          async move {
-            let mut ecma_ctx = GenerateContext {
-              chunk_idx,
-              chunk,
-              options: self.options,
-              link_output: self.link_output,
-              used_symbol_refs,
-              order_wrap_state: order_state,
-              chunk_graph,
-              plugin_driver: self.plugin_driver,
-              module_id_to_codegen_ret,
-              render_export_items_index_vec,
-              resolved_paths,
-              inline_state: &self.inline_state,
-              carried_renders,
-            };
-            EcmaGenerator::instantiate_chunk(&mut ecma_ctx).await
-          }
-        }),
+        .map(
+          |(
+            chunk_idx,
+            chunk,
+            module_id_to_codegen_ret,
+            group_body_codegen_rets,
+            carried_renders,
+          )| {
+            let resolved_paths = self.resolved_paths.as_ref();
+            async move {
+              let mut ecma_ctx = GenerateContext {
+                chunk_idx,
+                chunk,
+                options: self.options,
+                link_output: self.link_output,
+                used_symbol_refs,
+                order_wrap_state: order_state,
+                chunk_graph,
+                plugin_driver: self.plugin_driver,
+                module_id_to_codegen_ret,
+                group_body_codegen_rets,
+                render_export_items_index_vec,
+                resolved_paths,
+                inline_state: &self.inline_state,
+                carried_renders,
+              };
+              EcmaGenerator::instantiate_chunk(&mut ecma_ctx).await
+            }
+          },
+        ),
     )
     .await?
     .into_iter()
@@ -233,6 +252,54 @@ impl GenerateStage<'_> {
     });
 
     Ok((index_instantiated_chunks, index_chunk_to_instance))
+  }
+
+  /// Prints the body of each root and member of a deferred group on its own, and removes it from
+  /// the AST of the module (`render_normal_module_group_body`). The AST keeps the top-level
+  /// declarations, and `create_chunk_to_codegen_ret_map` prints them. Returns the printed bodies
+  /// of each chunk.
+  /// See internal-docs/import-defer/implementation.md ("Rendering").
+  fn print_deferred_group_bodies(
+    &self,
+    chunk_graph: &ChunkGraph,
+    ast_table: &mut IndexEcmaAst,
+  ) -> Vec<FxHashMap<ModuleIdx, ModuleRenderOutput>> {
+    let mut bodies_by_chunk =
+      (0..chunk_graph.chunk_table.len()).map(|_| FxHashMap::default()).collect::<Vec<_>>();
+    // Only `group_deferred_modules` makes groups. A build with no groups does not read the
+    // modules here.
+    if chunk_graph.chunk_table.iter().all(|chunk| chunk.module_groups.is_empty()) {
+      return bodies_by_chunk;
+    }
+    let body_starts = chunk_graph
+      .chunk_table
+      .iter()
+      .flat_map(|chunk| &chunk.module_idx_to_render_concatenated_module)
+      .filter_map(|(&module_idx, parts)| Some((module_idx, parts.body_start?)))
+      .collect::<FxHashMap<_, _>>();
+    if body_starts.is_empty() {
+      return bodies_by_chunk;
+    }
+    let bodies = ast_table
+      .par_iter_mut_enumerated()
+      .filter_map(|(module_idx, ast)| {
+        let body_start = *body_starts.get(&module_idx)?;
+        let module = self.link_output.module_table[module_idx].as_normal()?;
+        let body = crate::utils::render_ecma_module::render_normal_module_group_body(
+          module,
+          self.options,
+          ast.as_mut()?,
+          body_start,
+        );
+        Some((module_idx, body))
+      })
+      .collect::<Vec<_>>();
+    for (module_idx, body) in bodies {
+      let chunk_idx = chunk_graph.module_to_chunk[module_idx]
+        .expect("a module of a deferred group is in a chunk");
+      bodies_by_chunk[chunk_idx.index()].insert(module_idx, body);
+    }
+    bodies_by_chunk
   }
 
   /// Create a IndexVecMap from chunk index to related modules codegen return list.
@@ -298,8 +365,9 @@ impl GenerateStage<'_> {
               .as_ref()
               .or(shared_ast_table[module_idx].as_ref())
               .expect("should have ast");
-            #[expect(clippy::bool_to_int_with_if)]
-            let initial_indent = if needs_extra_indent { 1 } else { 0 };
+            // For a root or a member of a deferred group, the AST has only its declarations
+            // here (`print_deferred_group_bodies`).
+            let initial_indent = u32::from(needs_extra_indent);
             Some(crate::utils::render_ecma_module::render_normal_module(
               module,
               self.options,

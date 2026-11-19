@@ -1,0 +1,8 @@
+{
+  "_comment": "A write to a deferred namespace of a CommonJS module keeps the deferred namespace object: `set` fails and evaluates nothing, `delete` evaluates the module and then fails, and `ns.obj.value = 2` reads `obj` first. A call keeps the namespace object as `this`, as the eager form `import_x.fn()` does.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

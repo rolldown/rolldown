@@ -1,0 +1,8 @@
+{
+  "_comment": "Only the group of the deferred root `route.js` (with its member `helper.js`) uses `c.cjs`, `d.cjs` and `e.cjs` (`c.cjs` requires `e.cjs`), so their wrapper declarations go in the wrapper of `route.js`. `shared.cjs` stays at the top level, because `main.js` imports it eagerly. `lazy.cjs` stays at the top level, because a hoisted function of `helper.js` requires it. The bodies run in the order of native ESM: `route.js` imports `c.cjs` before `helper.js`, so its statement `import_c = __toESM(require_c())` moves before the body of `helper.js`.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

@@ -1,0 +1,74 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Import `x` will always be undefined because there is no matching export in 'b.js'
+   ╭─[ a.js:6:28 ]
+   │
+ 6 │ export const readB = () => b.x;
+   │                            ─┬─  
+   │                             ╰─── 
+───╯
+
+```
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Import `x` will always be undefined because there is no matching export in 'b.js'
+   ╭─[ main.js:6:29 ]
+   │
+ 6 │ log.push('b: ' + read(() => b.x));
+   │                             ─┬─  
+   │                              ╰─── 
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+function read(access) {
+	try {
+		access();
+		return "ok";
+	} catch (error) {
+		return error instanceof TypeError ? "TypeError" : `${error.constructor.name}: ${error.message}`;
+	}
+}
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+// b.js
+function init_b() {
+	return (init_b = __esmState((() => {
+		init_log();
+		log.push("b throws");
+		throw new Error("B failed");
+	}), () => [init_a]))(arguments[0]);
+}
+function init_a() {
+	return (init_a = __esmState((() => {
+		init_log();
+		log.push("a");
+	}), () => [init_b]))(arguments[0]);
+}
+// main.js
+init_log();
+init_a();
+log.push("b: " + read(() => (__esmDefer(init_b), void 0)));
+log.push("a: " + read(() => (__esmDefer(init_a), 1)));
+export { log };
+
+```

@@ -2,7 +2,7 @@ use std::ffi::OsString;
 
 use arcstr::ArcStr;
 use cow_utils::CowUtils;
-use rolldown_common::{Output, OutputAsset, OutputChunk};
+use rolldown_common::{OutputAsset, OutputChunk};
 use rolldown_utils::pattern_filter::normalize_path;
 use rustc_hash::FxHashMap;
 use serde::Serialize;

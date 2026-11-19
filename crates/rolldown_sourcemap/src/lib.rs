@@ -87,14 +87,30 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
 /// the result finds the token that the same lookup finds in the last map, and a chain with the
 /// result gives the same final map as a chain with the whole run. The result also keeps the
 /// `sourceRoot` of the first map, because its sources come from that map.
-pub fn compose_sourcemap_run(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) -> SourceMap {
-  debug_assert!(sourcemap_chain.len() > 1);
+///
+/// Returns `None` if a map before the last one has tokens that are not sorted by generated
+/// position. A lookup in such a map can depend on the earlier lookups, so the composition could
+/// give another final map. A run of one map gives a copy of that map.
+pub fn compose_sourcemap_run(
+  sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>],
+) -> Option<SourceMap> {
+  let (_, earlier_maps) = sourcemap_chain.split_last()?;
+  if earlier_maps.is_empty() {
+    return Some(sourcemap_chain[0].clone().into_owned());
+  }
+  if !earlier_maps.iter().all(|map| has_sorted_tokens(map)) {
+    return None;
+  }
   let first_map = sourcemap_chain[0];
   let tokens = remap_chain::<true>(sourcemap_chain, &mut []);
   let (sources, source_contents) = copy_sources(first_map, None);
   let names = copy_names(sourcemap_chain, None);
   let source_root = first_map.get_source_root().map(owned);
-  SourceMap::new(None, names, source_root, sources, source_contents, tokens, None)
+  Some(SourceMap::new(None, names, source_root, sources, source_contents, tokens, None))
+}
+
+fn has_sorted_tokens(map: &oxc_sourcemap::SourceMap<'_>) -> bool {
+  map.get_tokens().map(|token| (token.get_dst_line(), token.get_dst_col())).is_sorted()
 }
 
 /// Like `collapse_sourcemaps`, but keeps only the sources and names that a traced token
@@ -390,8 +406,9 @@ fn remap_chain<const KEEP_POSITIONS: bool>(
 
   // `last_offset` counts the names of every map before the last one. When it is 0, no traced
   // token can carry a name, so the remap loop skips the per-step name tracking. A chain without
-  // names also skips the marks.
-  let remap = match (last_offset == 0, name_used.is_empty()) {
+  // names also skips the marks. A composed run always tracks the names: a name id out of range of
+  // its map points into the names of a later map, and the longer chain reads that id later.
+  let remap = match (last_offset == 0 && !KEEP_POSITIONS, name_used.is_empty()) {
     (true, true) => remap_tokens::<false, false, KEEP_POSITIONS>,
     (true, false) => remap_tokens::<false, true, KEEP_POSITIONS>,
     (false, true) => remap_tokens::<true, false, KEEP_POSITIONS>,

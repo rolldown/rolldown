@@ -18,9 +18,9 @@ use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 /// Composes each run of consecutive `Transform` maps in every module chain into one map.
 ///
 /// The composed map has a token at each position of the last map of the run
-/// (`compose_sourcemap_run`), so rendering builds the same final map from the shorter chain.
-/// The intermediate maps are freed before the link and generate stages. Rendering does not read
-/// the chains of virtual modules, so they are skipped.
+/// (`compose_sourcemap_run`), so rendering builds the same final map from the shorter chain. A run
+/// with unsorted tokens stays as it is. The intermediate maps are freed before the link and
+/// generate stages. Rendering does not read the chains of virtual modules, so they are skipped.
 pub fn collapse_sourcemap_chains(module_table: &mut ModuleTable) {
   module_table.modules.raw.par_iter_mut().for_each(|module| {
     let Module::Normal(module) = module else { return };
@@ -75,10 +75,14 @@ fn push_run(run: &mut Vec<(PluginIdx, SourceMap)>, collapsed: &mut Vec<Sourcemap
     1 => collapsed.extend(run.drain(..).map(SourcemapChainElement::Transform)),
     _ => {
       let maps: Vec<&SourceMap> = run.iter().map(|(_, map)| map).collect();
-      let map = compose_sourcemap_run(&maps);
-      let plugin_idx = run[run.len() - 1].0;
-      collapsed.push(SourcemapChainElement::Transform((plugin_idx, map)));
-      run.clear();
+      if let Some(map) = compose_sourcemap_run(&maps) {
+        let plugin_idx = run[run.len() - 1].0;
+        collapsed.push(SourcemapChainElement::Transform((plugin_idx, map)));
+        run.clear();
+      } else {
+        // The run has a map with unsorted tokens, so it stays as it is.
+        collapsed.extend(run.drain(..).map(SourcemapChainElement::Transform));
+      }
     }
   }
 }
@@ -223,6 +227,51 @@ mod tests {
   }
 
   #[test]
+  fn names_of_a_load_map_before_the_run_survive() {
+    // The name ids of the composed map come after the names of the `Load` map.
+    let load = SourcemapChainElement::Load(map(
+      "/project/src/loaded.ts",
+      "const value: number = 1;\n",
+      &[(0, 0, Some("loaded")), (6, 6, None), (14, 22, Some("number"))],
+    ));
+    let chain = vec![
+      load,
+      shift(&[(0, 0, None), (4, 6, Some("first")), (10, 14, None)]),
+      shift(&[(0, 0, Some("second")), (3, 4, None), (9, 10, Some("third"))]),
+    ];
+    assert_eq!(kinds(&collapse_and_compare(chain)), ["load", "transform"]);
+  }
+
+  #[test]
+  fn a_run_with_an_unsorted_line_is_kept() {
+    // The first map is not sorted by column. A lookup in it depends on the earlier lookups, so a
+    // composition could give another final map.
+    let chain = vec![
+      shift(&[(0, 0, None), (4, 4, None), (2, 2, None), (6, 6, None)]),
+      shift(&[(0, 0, None), (1, 6, None), (3, 3, None)]),
+    ];
+    assert_eq!(kinds(&collapse_and_compare(chain)), ["transform", "transform"]);
+  }
+
+  #[test]
+  fn a_name_id_out_of_range_of_its_map_gives_the_same_name() {
+    // A map from a Rust plugin can have a name id out of range. In the whole chain, the id of the
+    // first map points into the names of the second map.
+    let mut builder = SourceMapBuilder::default();
+    let source_id = builder.add_source_and_content(MODULE_ID, "const value = 1;\n");
+    builder.add_token(0, 0, 0, 0, Some(source_id), Some(0));
+    builder.add_token(0, 4, 0, 6, Some(source_id), None);
+    let first = transform(builder.into_sourcemap().into_owned());
+    let mut builder = SourceMapBuilder::default();
+    let source_id = builder.add_source_and_content(MODULE_ID, "const value = 1;\n");
+    builder.add_name("unused");
+    builder.add_token(0, 0, 0, 0, Some(source_id), None);
+    builder.add_token(0, 3, 0, 4, Some(source_id), None);
+    let second = transform(builder.into_sourcemap().into_owned());
+    assert_eq!(kinds(&collapse_and_compare(vec![first, second])), ["transform"]);
+  }
+
+  #[test]
   fn a_map_without_mappings_still_drops_the_earlier_sources_and_names() {
     // The same case as `map_without_mappings_drops_earlier_sources_and_names` in
     // `render_ecma_module`: no token reaches the original code (#11176).
@@ -262,6 +311,7 @@ mod tests {
     assert!(json.unwrap().contains(r#""sources":["/project/lib/a.ts","/project/lib/b.ts"]"#));
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn a_url_source_root_of_the_first_map_is_kept() {
     // Rendering does not resolve the sources of a map with a URL `sourceRoot`.

@@ -3082,6 +3082,7 @@ dependencies = [
  "derive_more",
  "memchr",
  "oxc",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_std_utils",

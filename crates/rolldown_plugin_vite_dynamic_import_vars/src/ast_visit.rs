@@ -1,11 +1,13 @@
-use std::path::Path;
+use std::{fmt, path::Path};
 
+use arcstr::ArcStr;
 use cow_utils::CowUtils;
 use oxc::{
-  ast::ast::{Expression, Program},
+  ast::ast::{Expression, ObjectPropertyKind, Program},
   ast_visit::{VisitJs, walk_js},
-  span::Span,
+  span::{GetSpan, Span},
 };
+use rolldown_error::{BuildDiagnostic, DiagnosticOptions, EventKindSwitcher};
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_plugin_utils::to_string_literal;
 use rolldown_std_utils::relative_path_as_js_specifier;
@@ -18,8 +20,61 @@ use super::dynamic_import_to_glob::{
 
 #[derive(Debug)]
 struct DynamicImportRequest<'a> {
-  pub query: &'a str,
+  pub query: Option<&'a str>,
   pub import: bool,
+  pub attributes: Option<&'a str>,
+}
+
+fn format_glob_options<'a, 'b: 'a>(
+  request: &'b DynamicImportRequest<'a>,
+) -> impl fmt::Display + 'a {
+  fmt::from_fn(move |formatter| {
+    if request.query.is_none() && request.attributes.is_none() {
+      return Ok(());
+    }
+    formatter.write_str(", { ")?;
+    if let Some(query) = request.query {
+      write!(formatter, "query: {}", to_string_literal(query))?;
+      if request.import {
+        formatter.write_str(", import: \"*\"")?;
+      }
+    }
+    if let Some(attributes) = request.attributes {
+      if request.query.is_some() {
+        formatter.write_str(", ")?;
+      }
+      write!(formatter, "with: {attributes}")?;
+    }
+    formatter.write_str(" }")
+  })
+}
+
+#[derive(Default)]
+pub struct ImportOptions {
+  attributes_span: Option<Span>,
+  assert_span: Option<Span>,
+}
+
+fn import_options(options: Option<&Expression<'_>>) -> ImportOptions {
+  let Some(Expression::ObjectExpression(options)) = options.map(Expression::get_inner_expression)
+  else {
+    return ImportOptions::default();
+  };
+  let find_property = |name: &str| {
+    options
+      .properties
+      .iter()
+      .rev()
+      .filter_map(ObjectPropertyKind::as_property)
+      .find(|property| property.key.is_specific_literal_name(name))
+  };
+  let assertion = find_property("assert");
+  let attributes = find_property("with").or(assertion);
+  let attributes_span = match attributes.map(|property| property.value.get_inner_expression()) {
+    Some(Expression::ObjectExpression(attributes)) => Some(attributes.span),
+    _ => None,
+  };
+  ImportOptions { attributes_span, assert_span: assertion.map(|property| property.key.span()) }
 }
 
 /// A variable dynamic import whose glob needs the resolver, copied out of the AST.
@@ -32,14 +87,15 @@ pub struct AsyncImport {
   pub glob: String,
   pub span: Span,
   pub source_span: Span,
+  pub options: ImportOptions,
   pub first_quasi_len: usize,
 }
 
 pub struct DynamicImportVarsVisit<'a> {
   pub ctx: &'a PluginContext,
-  pub source_text: &'a str,
+  pub source_text: &'a ArcStr,
   pub root: &'a Path,
-  pub importer: &'a Path,
+  pub id: &'a str,
   pub need_helper: bool,
   pub vite_ignored_starts: Vec<u32>,
   pub async_imports: Vec<AsyncImport>,
@@ -92,18 +148,20 @@ impl DynamicImportVarsVisit<'_> {
 
       // Oxc turns CRLF into LF in `raw`, so take the length from the span.
       let first_quasi_len = source.quasis[0].span.size() as usize;
+      let options = import_options(import_expr.options.as_ref());
       if glob.as_bytes()[0] != b'.' && glob.as_bytes()[0] != b'/' {
         self.async_imports.push(AsyncImport {
           glob: glob.into_owned(),
           span: import_expr.span,
           source_span: source.span,
+          options,
           first_quasi_len,
         });
         return false;
       }
 
       let prefix = to_usv_str(source.quasis[0].value.cooked.expect("untagged template literal"));
-      self.rewrite(import_expr.span, source.span, first_quasi_len, &prefix, &glob);
+      self.rewrite(import_expr.span, source.span, &options, first_quasi_len, &prefix, &glob);
       return false;
     }
     true
@@ -116,12 +174,13 @@ impl DynamicImportVarsVisit<'_> {
     &mut self,
     span: Span,
     source_span: Span,
+    options: &ImportOptions,
     first_quasi_len: usize,
     prefix: &str,
     glob: &str,
   ) {
     let raw = source_span.shrink(1).source_text(self.source_text);
-    let base = self.importer.parent().unwrap_or(self.root);
+    let base = Path::new(self.id).parent().unwrap_or(self.root);
     let runtime_prefix = if prefix.is_empty() {
       String::new()
     } else {
@@ -143,7 +202,7 @@ impl DynamicImportVarsVisit<'_> {
     let glob = glob.cow_replace("**", "*");
     let source_text = source_span.source_text(self.source_text);
 
-    let (pattern, glob_params) = {
+    let (pattern, request) = {
       let index = glob.rfind('/').unwrap_or(0);
       let index = glob[index..].find('?').map_or(glob.len(), |i| i + index);
 
@@ -156,26 +215,39 @@ impl DynamicImportVarsVisit<'_> {
         }
       };
 
-      let params = (!query.is_empty())
-        .then_some(DynamicImportRequest { query, import: has_special_query_param(query) });
-
-      (glob, params)
+      let query = (!query.is_empty()).then_some(query);
+      (
+        glob,
+        DynamicImportRequest {
+          query,
+          import: query.is_some_and(has_special_query_param),
+          attributes: options.attributes_span.map(|span| span.source_text(self.source_text)),
+        },
+      )
     };
+
+    if let Some(span) = options.assert_span
+      && self.ctx.options().checks.contains(EventKindSwitcher::DeprecatedImportAssertion)
+    {
+      let warning = BuildDiagnostic::deprecated_import_assertion(
+        self.id.to_string(),
+        self.source_text.clone(),
+        span,
+      );
+      self.ctx.warn(LogWithoutPlugin {
+        message: warning.to_message_with(&DiagnosticOptions { cwd: self.root.to_path_buf() }),
+        id: warning.id(),
+        code: Some(warning.kind().to_string()),
+        ..Default::default()
+      });
+    }
 
     // __variableDynamicImportRuntimeHelper((import.meta.glob(pattern, params)), expr, segments)
     let segments = pattern.split('/').count();
     let replacement = format!(
       "__variableDynamicImportRuntimeHelper(import.meta.glob({}{}), {runtime_pattern}, {segments})",
       to_string_literal(&pattern),
-      glob_params
-        .map(|params| {
-          format!(
-            ", {{ query: {}{} }}",
-            to_string_literal(params.query),
-            if params.import { ", import: \"*\"" } else { "" }
-          )
-        })
-        .unwrap_or_default()
+      format_glob_options(&request),
     );
 
     self

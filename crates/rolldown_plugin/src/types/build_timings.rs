@@ -69,6 +69,10 @@ impl BuildTimings {
     self.link_stage_micros.load(Ordering::Relaxed)
   }
 
+  /// Whether the build looks plugin-bound: at least `MIN_BUILD_MICROS` long, with non-link time
+  /// more than `PLUGIN_TIME_OVER_LINK_TIME` times the link stage. The multiplier was settled by
+  /// studying real-world projects.
+  ///
   /// The totals are supplied by the caller, so a build that produced several outputs can sum
   /// its clocks before asking. The measurement it is judged against accumulates across
   /// outputs, so these have to as well.

@@ -1,5 +1,5 @@
 use oxc_index::IndexVec;
-use rolldown_common::{ChunkIdx, CrossChunkImportItem};
+use rolldown_common::{ChunkIdx, CrossChunkImportItem, StaticImport};
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -110,15 +110,26 @@ impl GenerateStage<'_> {
         .collect::<Vec<_>>();
       // Evaluation order: the runtime chunk first, then the file's committed importees in order,
       // each record expanded in place into its own committed importees. A record the file reads
-      // without carrying it expands into bare imports.
+      // without carrying it expands into bare imports. The external imports of the file keep their
+      // places among them; a record never imports an external module.
       let mut order: FxIndexSet<ChunkIdx> = FxIndexSet::default();
       order.insert(runtime_chunk);
+      let mut static_imports = vec![StaticImport::Chunk(runtime_chunk)];
       let mut expanded: FxHashSet<ChunkIdx> = FxHashSet::default();
-      for importee in &file_chunk.cross_chunk_imports {
-        expand_record_imports(*importee, &records, &record_importees, &mut expanded, &mut order);
-      }
-      for record in carried {
-        expand_record_imports(*record, &records, &record_importees, &mut expanded, &mut order);
+      for static_import in file_chunk
+        .static_imports
+        .iter()
+        .copied()
+        .chain(carried.iter().map(|record| StaticImport::Chunk(*record)))
+      {
+        let StaticImport::Chunk(importee) = static_import else {
+          static_imports.push(static_import);
+          continue;
+        };
+        let start = order.len();
+        expand_record_imports(importee, &records, &record_importees, &mut expanded, &mut order);
+        static_imports
+          .extend(order.iter().skip(start).map(|importee| StaticImport::Chunk(*importee)));
       }
       // Import items: the file's own plus every carried record's, per importee. A carried record
       // cannot import the file: that would be a static cycle between a record and a file, which
@@ -154,6 +165,7 @@ impl GenerateStage<'_> {
       let chunk = &mut chunk_graph.chunk_table[file];
       chunk.imports_from_other_chunks = imports_from_other_chunks.into_iter().collect();
       chunk.cross_chunk_imports = cross_chunk_imports;
+      chunk.static_imports = static_imports;
       chunk.cross_chunk_dynamic_imports = cross_chunk_dynamic_imports;
     }
 

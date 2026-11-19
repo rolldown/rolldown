@@ -18,7 +18,6 @@ The relevant prefix of `LinkStage::link()` (in `mod.rs`) runs roughly:
 
 ```
 sort_modules
-compute_tla
 determine_module_exports_kind   <- this file
 determine_safely_merge_cjs_ns
 wrap_modules
@@ -28,6 +27,7 @@ bind_imports_and_exports
 create_exports_for_ecma_modules
 reference_needed_symbols
 include_statements
+compute_tla
 ```
 
 Position is load-bearing: `wrap_modules` propagates wrap requirements transitively through the graph using the `WrapKind`s set here as roots, and `bind_imports_and_exports` reads the `exports_kind` set here to decide how to thread re-exports through CJS namespace bindings.
@@ -108,7 +108,7 @@ That refactor was previously merged and then reverted (#9237) after a hard-to-re
 
 ## Why CSS import kinds are `unreachable!`
 
-`Module::as_normal` filters out `Module::External`, `Module::CssModule`, and any non-JS module variant before this pass sees them. CSS dependencies are reached only via `ImportKind::AtImport` / `UrlImport`, which originate from CSS modules — not from JS. Therefore those kinds cannot appear in a JS module's `import_records`, and the panic is a guard against a misclassification upstream. `NewUrl` and `HotAccept` _do_ appear on JS modules but carry no exports/wrap implication, so they're explicit no-ops.
+Import records only come from the AST scanner, and the scanner never creates `ImportKind::AtImport` / `UrlImport`. Those kinds only reach the resolver through `this.resolve(.., { kind })`. Therefore they cannot appear in a module's `import_records`, and the panic is a guard against a misclassification upstream. `NewUrl` and `HotAccept` _do_ appear on JS modules but carry no exports/wrap implication, so they're explicit no-ops.
 
 ## Editing checklist
 

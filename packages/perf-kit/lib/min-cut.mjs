@@ -10,15 +10,11 @@
 // fully iterative (explicit stacks/queues) — dependency graphs reach 50k modules and
 // tens of thousands of levels deep, which would overflow a recursive DFS.
 
+import { entryIndices } from './module-graph.mjs';
+
 // Sentinel capacity for the artificial/protected edges. Real max flow is bounded by the
 // number of unit-capacity edges, so this is never a bottleneck on a cuttable path.
 const INF = 1e12;
-
-/** Entry module indices (the flow sources). */
-export function entryIdx(graph) {
-  const idOf = new Map(graph.modules.map((m, i) => [m.id, i]));
-  return (graph.entryModules ?? []).map((id) => idOf.get(id)).filter((i) => i != null);
-}
 
 /**
  * Minimum edge cut separating `target` from the entries over static edges, never cutting
@@ -29,7 +25,7 @@ export function entryIdx(graph) {
 export function minCut(graph, target, protectedEdges = [], sourcesArg = null) {
   const mods = graph.modules;
   const n = mods.length;
-  const sources = sourcesArg ?? entryIdx(graph);
+  const sources = sourcesArg ?? entryIndices(graph);
 
   // A target that is itself an entry can't be detached by cutting imports — you'd have
   // to delete the module. Flag it, don't cut.

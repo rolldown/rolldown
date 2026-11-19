@@ -144,7 +144,7 @@ test('a read map or array may be changed in place, so it is sent back with an as
     imports: ['b.js', 'style.js', 'extra.js'],
   });
   expect(a).not.toHaveProperty('code');
-  expect('map' in a && a.map?.inner).toMatchObject({ names: ['a', 'extra'], mappings: 'AAAAA' });
+  expect('map' in a && a.map).toMatchObject({ names: ['a', 'extra'], mappings: 'AAAAA' });
   expect(changes['b.js']).toStrictEqual({ filename: 'b.js', isEntry: false, map: null });
   expect(changes['style.js']).toStrictEqual({ filename: 'renamed.js', isEntry: false });
   // Only the maps the plugin read were copied out.

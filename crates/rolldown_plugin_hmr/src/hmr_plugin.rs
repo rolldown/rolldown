@@ -32,10 +32,6 @@ impl Plugin for HmrPlugin {
 
     let mut hmr_source = String::new();
 
-    if dev_mode_options.skip_common_runtime_injection != Some(true) {
-      hmr_source.push_str(include_str!("./runtime/runtime-extra-dev-common.js"));
-    }
-
     // The JS API supplies the default implementation. Rust consumers must provide the
     // complete implementation, including the common runtime when they need it.
     if let Some(implement) = dev_mode_options.implement.as_deref() {

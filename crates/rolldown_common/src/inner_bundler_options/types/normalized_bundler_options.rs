@@ -35,8 +35,8 @@ use crate::inner_bundler_options::types::optimization::NormalizedOptimizationCon
 use crate::{
   DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
   HashCharacters, InjectImport, InputItem, InvalidateJsSideCache, LogLevel,
-  MakeAbsoluteExternalsRelative, ModuleType, OnLog, PluginTimingsOption, RollupPreRenderedAsset,
-  StrictMode, TransformOptions,
+  MakeAbsoluteExternalsRelative, ModuleType, OnLog, PluginTimingsOption, ResetJsModuleOptions,
+  RollupPreRenderedAsset, StrictMode, TransformOptions,
 };
 
 #[expect(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
@@ -111,6 +111,7 @@ pub struct NormalizedBundlerOptions {
   pub transform_options: Box<TransformOptions>,
   pub make_absolute_externals_relative: MakeAbsoluteExternalsRelative,
   pub invalidate_js_side_cache: Option<InvalidateJsSideCache>,
+  pub reset_js_module_options: Option<ResetJsModuleOptions>,
   pub log_level: Option<LogLevel>,
   pub on_log: Option<OnLog>,
   pub preserve_modules: bool,
@@ -193,6 +194,7 @@ impl Default for NormalizedBundlerOptions {
       transform_options: Default::default(),
       make_absolute_externals_relative: Default::default(),
       invalidate_js_side_cache: Default::default(),
+      reset_js_module_options: Default::default(),
       log_level: Default::default(),
       on_log: Default::default(),
       preserve_modules: false,
@@ -230,12 +232,6 @@ impl NormalizedBundlerOptions {
     self.strict_execution_order
   }
 
-  /// Strict execution order with on-demand wrapping — the selective mode that derives its wrapping
-  /// plan from the execution-order analysis instead of deferring every eligible module.
-  pub fn is_strict_on_demand_wrapping_enabled(&self) -> bool {
-    self.strict_execution_order && self.experimental.is_on_demand_wrapping_enabled()
-  }
-
   pub fn has_manual_code_splitting_groups(&self) -> bool {
     self
       .manual_code_splitting
@@ -251,16 +247,6 @@ impl NormalizedBundlerOptions {
       return self.polyfill_require;
     }
     true
-  }
-
-  pub async fn asset_filename_template(
-    &self,
-    rollup_pre_rendered_asset: &RollupPreRenderedAsset,
-  ) -> anyhow::Result<FilenameTemplate> {
-    Ok(FilenameTemplate::new(
-      self.asset_filenames.call(rollup_pre_rendered_asset).await?,
-      "output.assetFileNames",
-    ))
   }
 
   pub async fn asset_filename_with_file(

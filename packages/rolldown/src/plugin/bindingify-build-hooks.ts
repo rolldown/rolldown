@@ -42,9 +42,31 @@ export function bindingifyBuildStart(
 ): PluginHookWithBindingExt<BindingPluginOptions['buildStart']> {
   return bindingifyHook(args.plugin.buildStart, ({ handler }) => ({
     plugin: (ctx, opts) => {
-      return discardResult(
-        handler.call(createPluginContext(args, ctx), args.pluginContextData.getInputOptions(opts)),
-      );
+      const context = createPluginContext(args, ctx);
+      const load = context.load.bind(context);
+      let inBuildStart = true;
+      context.load = (options) => {
+        if (inBuildStart) {
+          return Promise.reject(
+            new Error('`this.load` is not supported in the `buildStart` hook.'),
+          );
+        }
+        return load(options);
+      };
+      try {
+        const result = discardResult(
+          handler.call(context, args.pluginContextData.getInputOptions(opts)),
+        );
+        if (isPromiseLike(result)) {
+          return Promise.resolve(result).finally(() => {
+            inBuildStart = false;
+          });
+        }
+        inBuildStart = false;
+      } catch (error) {
+        inBuildStart = false;
+        throw error;
+      }
     },
   }));
 }
@@ -120,6 +142,7 @@ function bindingifyResolveIdResult(
       moduleSideEffects: ret.moduleSideEffects ?? null,
       invalidate: false,
     },
+    true,
   );
 
   return {
@@ -192,6 +215,7 @@ function bindingifyResolveDynamicImportResult(
       moduleSideEffects: ret.moduleSideEffects || null,
       invalidate: false,
     },
+    true,
   );
 
   return result;
@@ -402,12 +426,14 @@ function preProcessSourceMap(
     typeof ret.map === 'object'
       ? copySourcemapObject(ret.map)
       : (JSON.parse(ret.map) as ExistingRawSourceMap);
-  if (!isEmptySourcemapFiled(map.sources)) {
+  if (!isEmptySourcemapFiled(map.sources) || map.sources?.[0] === null) {
     // normalize original sourcemap sources
     // Port form https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts#L180-L188.
     const directory = path.dirname(id) || '.';
     const sourceRoot = map.sourceRoot || '.';
-    map.sources = map.sources!.map((source) => path.resolve(directory, sourceRoot, source!));
+    map.sources = map.sources!.map((source) =>
+      source === null ? null : path.resolve(directory, sourceRoot, source),
+    );
   }
   return map;
 }

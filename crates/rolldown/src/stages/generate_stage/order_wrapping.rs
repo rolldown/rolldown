@@ -660,13 +660,7 @@ impl GenerateStage<'_> {
 
     let mut output =
       OrderLoweringOutput { symbols: &mut self.link_output.symbol_db, state: order_state };
-    lower_order_state(
-      &input,
-      &mut output,
-      runtime_helper,
-      code_splitting_disabled,
-      &consumer_local_plan,
-    );
+    lower_order_state(&input, &mut output, runtime_helper, &consumer_local_plan);
     self.populate_consumer_local_namespace_targets(order_state);
     let runtime_idx = self.link_output.runtime.id();
     order_state.compute_runtime_symbol_closure(
@@ -1562,7 +1556,6 @@ fn lower_order_state(
   input: &OrderLoweringInput<'_>,
   output: &mut OrderLoweringOutput<'_>,
   runtime_helper: RuntimeHelper,
-  code_splitting_disabled: bool,
   consumer_local_plan: &ConsumerLocalReexportPlan,
 ) {
   for module_idx in
@@ -1595,13 +1588,7 @@ fn lower_order_state(
   // Real lowering runs once per bundle, so it builds its own reverse index here; the fixpoint
   // projector passes the analysis-owned one instead of rebuilding per round.
   let reverse_static_imports = super::order_analysis::reverse_static_import_index(input.modules);
-  populate_order_import_overlays(
-    input,
-    &reexport_usage,
-    output.state,
-    code_splitting_disabled,
-    &reverse_static_imports,
-  );
+  populate_order_import_overlays(input, &reexport_usage, output.state, &reverse_static_imports);
 }
 
 /// Mint the per-record [`OrderImportOverlay`]s for the current plan: a wrapper-referencing overlay
@@ -1618,7 +1605,6 @@ pub(super) fn populate_order_import_overlays(
   input: &OrderLoweringInput<'_>,
   reexport_usage: &FrozenReexportUsage,
   state: &mut OrderWrapState,
-  code_splitting_disabled: bool,
   reverse_static_imports: &oxc_index::IndexVec<ModuleIdx, Vec<ModuleIdx>>,
 ) {
   // Backward closure of the plan over the reverse static-import index: one walk answers every
@@ -1681,7 +1667,7 @@ pub(super) fn populate_order_import_overlays(
           importee.namespace_object_ref,
           input.linking[importee_idx].has_dynamic_exports,
           execution_dependencies.contains(&importee_idx),
-          code_splitting_disabled,
+          input.code_splitting_disabled,
         );
         if let Some(overlay) = &mut overlay
           && let Some(retained_reexport_path) = retained_reexport_path

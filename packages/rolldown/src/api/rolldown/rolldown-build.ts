@@ -93,9 +93,7 @@ export class RolldownBuild {
   async close(): Promise<void> {
     // Every cleanup step (stop workers, `BindingBundler.close`, release the async runtime) runs
     // exactly once, even when an earlier step fails, and a repeated `close` never re-runs any of
-    // them: a second native close runs `closeBundle` again, and on wasm it spawns onto the async
-    // runtime the first one released, which traps. The first caller gets any error; a repeat only
-    // waits.
+    // them. The first caller gets any error; a repeat only waits.
     // See internal-docs/rust-classic-bundler/implementation.md ("Close Mechanism").
     if (this.#closing) {
       await this.#closing.catch(noop);

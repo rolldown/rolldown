@@ -2,27 +2,37 @@ use std::{collections::BTreeMap, sync::OnceLock};
 
 use oxc::{
   codegen::{self, CodegenOptions, CommentOptions},
-  minifier::MinifierOptions as OxcMinifierOptions,
+  minifier::{ManglePropertyCache, MinifierOptions as OxcMinifierOptions},
+  span::SourceType,
 };
 use oxc_allocator::AllocatorPool;
-use rolldown_common::{
-  InstantiatedChunk, InstantiationKind, MinifyOptions, NormalizedBundlerOptions, Output,
-};
+use rolldown_common::{InstantiatedChunk, MinifyOptions, NormalizedBundlerOptions, Output};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
-use rolldown_sourcemap::collapse_sourcemaps;
-use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
+use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
 
 use crate::type_alias::IndexInstantiatedChunks;
 
 use super::GenerateStage;
 
-impl GenerateStage<'_> {
-  #[tracing::instrument(level = "debug", skip_all)]
-  pub fn minify_chunks(
+/// Everything needed to minify ECMAScript chunks, computed once per build. It owns its options,
+/// so `render_chunks` can hand each chunk to the rayon pool as soon as its `renderChunk` hooks
+/// return.
+pub struct ChunkMinifier {
+  compress: bool,
+  minify_options: OxcMinifierOptions,
+  codegen_options: CodegenOptions,
+  source_type: SourceType,
+  allocator_pool: AllocatorPool,
+  property_mangle_cache: OnceLock<ManglePropertyCache>,
+}
+
+impl ChunkMinifier {
+  /// Returns `None` when minification is disabled.
+  pub fn new(
     options: &NormalizedBundlerOptions,
-    chunks: &mut IndexInstantiatedChunks,
-  ) -> BuildResult<Option<BTreeMap<String, Option<String>>>> {
+    chunks: &IndexInstantiatedChunks,
+  ) -> BuildResult<Option<Self>> {
     let Some((compress, minify_options, remove_whitespace, ascii_only)) =
       chunk_minify_options(&options.minify)
     else {
@@ -36,81 +46,87 @@ impl GenerateStage<'_> {
           .into(),
       );
     }
-    let allocator_pool = AllocatorPool::new(rayon::current_num_threads());
-    let source_type = options.format.source_type().with_jsx(true);
-
-    let property_mangle_cache = OnceLock::new();
-    chunks.par_iter_mut().try_for_each(|chunk| -> BuildResult<()> {
-      if !is_minifiable_ecma_chunk(chunk) {
-        return Ok(());
-      }
-      let codegen_options = CodegenOptions {
-        minify: remove_whitespace,
-        ascii_only: options.charset.is_ascii() || ascii_only,
-        comments: CommentOptions {
-          normal: !remove_whitespace,
-          jsdoc: options.comments.jsdoc && !remove_whitespace,
-          annotation: options.comments.annotation,
-          legal: if options.comments.legal || !remove_whitespace {
-            codegen::LegalComment::Inline
-          } else {
-            codegen::LegalComment::None
-          },
+    let codegen_options = CodegenOptions {
+      minify: remove_whitespace,
+      ascii_only: options.charset.is_ascii() || ascii_only,
+      comments: CommentOptions {
+        normal: !remove_whitespace,
+        jsdoc: options.comments.jsdoc && !remove_whitespace,
+        annotation: options.comments.annotation,
+        legal: if options.comments.legal || !remove_whitespace {
+          codegen::LegalComment::Inline
+        } else {
+          codegen::LegalComment::None
         },
-        ..CodegenOptions::default()
-      };
+      },
+      ..CodegenOptions::default()
+    };
+    Ok(Some(Self {
+      compress,
+      minify_options: minify_options.clone(),
+      codegen_options,
+      source_type: options.format.source_type().with_jsx(true),
+      allocator_pool: AllocatorPool::new(rayon::current_num_threads()),
+      property_mangle_cache: OnceLock::new(),
+    }))
+  }
 
-      let allocator_guard = allocator_pool.get();
-      // The minify map borrows the pre-minify `chunk.content` (as `sourcesContent`,
-      // which the collapse discards), so collapse before swapping in the minified
-      // content instead of paying an `into_owned` copy of the whole chunk text.
-      let (minified_content, collapsed_map) = {
-        // TODO: Do we need to ensure `chunk.preliminary_filename` to be absolute path?
-        let (minified_content, new_map, chunk_property_mangle_cache) = EcmaCompiler::dce_or_minify(
-          &allocator_guard,
-          chunk.content.try_as_inner_str()?,
-          source_type,
-          chunk.map.is_some(),
-          chunk.preliminary_filename.as_str(),
-          compress,
-          minify_options.clone(),
-          codegen_options,
-        )?;
-        if let Some(cache) = chunk_property_mangle_cache {
-          property_mangle_cache
-            .set(cache)
-            .expect("property mangling is limited to one JavaScript chunk");
-        }
-        let collapsed_map = match (&chunk.map, &new_map) {
-          (Some(origin_map), Some(new_map)) => Some(collapse_sourcemaps(&[origin_map, new_map])),
-          _ => {
-            // TODO: Map is dirty. Should we reset the `chunk.map` to `None`?
-            None
-          }
-        };
-        (minified_content, collapsed_map)
-      };
-      chunk.content = minified_content.into();
-      if let Some(map) = collapsed_map {
-        chunk.map = Some(map);
+  pub fn should_minify(chunk: &InstantiatedChunk) -> bool {
+    is_minifiable_ecma_chunk(chunk)
+  }
+
+  /// Minifies one chunk's code, returning the new code and its map chained onto `map`.
+  #[tracing::instrument(level = "debug", skip_all)]
+  pub fn minify(
+    &self,
+    content: &str,
+    map: Option<&SourceMap>,
+    filename: &str,
+  ) -> BuildResult<(String, Option<SourceMap>)> {
+    let allocator_guard = self.allocator_pool.get();
+    // TODO: Do we need to ensure `chunk.preliminary_filename` to be absolute path?
+    let (minified_content, new_map, chunk_property_mangle_cache) = EcmaCompiler::dce_or_minify(
+      &allocator_guard,
+      content,
+      self.source_type,
+      map.is_some(),
+      filename,
+      self.compress,
+      self.minify_options.clone(),
+      self.codegen_options.clone(),
+    )?;
+    if let Some(cache) = chunk_property_mangle_cache {
+      self
+        .property_mangle_cache
+        .set(cache)
+        .expect("property mangling is limited to one JavaScript chunk");
+    }
+    let collapsed_map = match (map, &new_map) {
+      (Some(origin_map), Some(new_map)) => Some(collapse_sourcemaps(&[origin_map, new_map])),
+      _ => {
+        // TODO: Map is dirty. Should we reset the `chunk.map` to `None`?
+        None
       }
-      Ok(())
-    })?;
+    };
+    Ok((minified_content, collapsed_map))
+  }
 
-    Ok(property_mangle_cache.into_inner().map(|cache| {
+  pub fn into_mangle_cache(self) -> Option<BTreeMap<String, Option<String>>> {
+    self.property_mangle_cache.into_inner().map(|cache| {
       cache
         .into_iter()
         .map(|(original, target)| {
           (original.into_string(), target.map(oxc_str::CompactStr::into_string))
         })
         .collect()
-    }))
+    })
   }
+}
 
+impl GenerateStage<'_> {
   /// Checks the final output after `generateBundle`.
   ///
-  /// Plugins can emit prebuilt chunks after `minify_chunks`, so the early check alone is not
-  /// enough.
+  /// Plugins can emit prebuilt chunks after minification, so the early check alone is not enough.
   pub(crate) fn validate_mangle_properties_output(
     options: &NormalizedBundlerOptions,
     outputs: &[Output],
@@ -150,8 +166,7 @@ fn chunk_minify_options(
 }
 
 fn is_minifiable_ecma_chunk(chunk: &InstantiatedChunk) -> bool {
-  matches!(chunk.kind, InstantiationKind::Ecma(_))
-    && !test_d_ts_pattern(chunk.preliminary_filename.as_str())
+  !test_d_ts_pattern(chunk.preliminary_filename.as_str())
 }
 
 fn test_d_ts_pattern(input: &str) -> bool {

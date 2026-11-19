@@ -28,12 +28,12 @@ use napi::bindgen_prelude::{Either, Either3, FnArgs};
 use oxc::transformer::EngineTargets;
 use rolldown::{
   AddonOutputOption, AssetFilenamesOutputOption, BundlerConfig, BundlerOptions,
-  ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, HashCharacters,
-  InlineCommonChunksOptions, IsExternal, ManglePropertiesPattern, ManglePropertiesPatterns,
-  ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType, OptimizationOption,
-  OutputCharset, OutputExports, OutputFormat, Platform, PluginTimingsOption, RawCompressOptions,
-  RawMangleOptions, RawManglePropertiesOptions, RawMinifyOptions, RawMinifyOptionsDetailed,
-  SanitizeFilename, StrictMode, TsConfig,
+  ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, EsModuleFlag,
+  HashCharacters, InlineCommonChunksOptions, IsExternal, ManglePropertiesPattern,
+  ManglePropertiesPatterns, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType,
+  OptimizationOption, OutputCharset, OutputExports, OutputFormat, Platform, PluginTimingsOption,
+  RawCompressOptions, RawMangleOptions, RawManglePropertiesOptions, RawMinifyOptions,
+  RawMinifyOptionsDetailed, SanitizeFilename, StrictMode, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -382,6 +382,25 @@ fn normalize_invalidate_js_side_cache_option(
   })
 }
 
+fn normalize_reset_js_module_options_option(
+  reset_js_module_options: Option<UntrackedJsCallback<FnArgs<(Option<Vec<String>>,)>, ()>>,
+  callbacks: &JsCallbackRelease,
+) -> Option<rolldown::ResetJsModuleOptions> {
+  reset_js_module_options.map(|ts_fn| {
+    let ts_fn = callbacks.track(ts_fn);
+    rolldown::ResetJsModuleOptions::new(Arc::new(move |module_ids| {
+      let ts_fn = ts_fn.clone();
+      Box::pin(async move {
+        ts_fn
+          .invoke_async(FnArgs { data: (module_ids,) })
+          .await
+          .context("resetJsModuleOptions option")
+          .map_err(anyhow::Error::from)
+      })
+    }))
+  })
+}
+
 fn normalize_on_log_option(
   on_log: BindingOnLog,
   callbacks: &JsCallbackRelease,
@@ -573,6 +592,8 @@ pub fn normalize_binding_options(
     "invalidateJsSideCache option",
     &callbacks,
   );
+  let reset_js_module_options =
+    normalize_reset_js_module_options_option(input_options.reset_js_module_options, &callbacks);
   let on_log = normalize_on_log_option(input_options.on_log, &callbacks);
 
   let mut module_types = None;
@@ -642,10 +663,13 @@ pub fn normalize_binding_options(
       })
       .transpose()?,
     sourcemap: output_options.sourcemap.map(Into::into),
-    es_module: output_options.es_module.map(|es_module| match es_module {
-      Either::A(es_module_bool) => es_module_bool.into(),
-      Either::B(es_module_string) => es_module_string.into(),
-    }),
+    es_module: output_options
+      .es_module
+      .map(|es_module| match es_module {
+        Either::A(v) => Ok(EsModuleFlag::from(v)),
+        Either::B(v) => EsModuleFlag::try_from(v).map_err(napi::Error::from_reason),
+      })
+      .transpose()?,
     banner: normalize_addon_option(output_options.banner, "banner option", &callbacks),
     footer: normalize_addon_option(output_options.footer, "footer option", &callbacks),
     post_banner: normalize_addon_option(
@@ -873,6 +897,7 @@ pub fn normalize_binding_options(
       mode: inner.mode,
     }),
     invalidate_js_side_cache,
+    reset_js_module_options,
     log_level: Some(input_options.log_level.into()),
     on_log,
     preserve_modules: output_options.preserve_modules,

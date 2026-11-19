@@ -120,6 +120,16 @@ The sourcemap sequence is:
 
 Preparation and emission are separate so user callbacks run only once while every content-changing map option contributes to `[hash]`. Debug IDs are deliberately added after the sourcemap hash, matching Rollup. The path passed to sourcemap callbacks is the default `<preliminary-chunk-file>.map` path (possibly containing hash placeholders), which avoids circular dependencies through either a chunk hash or a custom sourcemap hash. A callback that incorporates this path into a source path has its chunk placeholders resolved before emission.
 
+Null source slots retain their indices through preparation and placeholder substitution. Path transforms and ignore-list callbacks receive only named sources; their results are mapped back to the original source indices.
+
+## Chunk Import Map
+
+`experimental.chunkImportMap` gives a chunk a **stable name**. It is the preliminary file name with the hash placeholder filled by a hash of the chunk's identity (facade module id or chunk name), not its content. `builtin:chunk-import-map` (`crates/rolldown_plugin_chunk_import_map`) computes the stable names in its `renderChunk` hook, which is pinned last, and writes them over the placeholders of mapped chunks in every chunk's code. After that a reference to a mapped chunk is plain bytes, so it is not a hash dependency and a content change in the mapped chunk does not rename its importers. The emitted import map points each stable name at the final file name.
+
+`chunkImportMap.include` limits the mapped chunks by chunk name. A chunk outside the map keeps its placeholder, so it stays a normal hash dependency.
+
+Hashing needs nothing else, as long as every file name is in the code before hashing. A tool that lists chunk file names in another chunk, like Vite does for the files a dynamic import loads, has to write them in `renderChunk` by their preliminary file names. Their placeholders are then handled like the ones in import statements. A file name written in `generateBundle` is not covered by the hash. `include` makes this visible, because a mapped chunk on the import path cuts the chain of hash dependencies.
+
 ## Why Not Hash the Preliminary Filename Directly
 
 Tempting alternative: mix the preliminary filename into the final hash _after normalizing its placeholder_ — this would satisfy uniqueness for chunks with different chunk names without any rehash loop.

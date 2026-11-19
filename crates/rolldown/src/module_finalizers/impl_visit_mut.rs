@@ -30,6 +30,39 @@ use super::ScopeHoistingFinalizer;
 const CJS_AMBIENT_PATHS: [(&str, &str); 2] = [("__dirname", "dirname"), ("__filename", "filename")];
 
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
+  /// Preserve the enclosing declaration when a catch/var name group is split to avoid an import.
+  /// See internal-docs/renaming/implementation.md.
+  fn preserve_renamed_catch_vars(&mut self, program: &mut ast::Program<'ast>) {
+    let scoping = self.scope.scoping();
+    let mut names = scoping
+      .catch_var_bindings()
+      .filter_map(|(catch, var)| {
+        if scoping.symbol_scope_id(var) != scoping.root_scope_id() {
+          return None;
+        }
+        let var_ref = (self.ctx.idx, var).into();
+        let name = self.canonical_name_for(var_ref);
+        (name != self.canonical_name_for((self.ctx.idx, catch).into())
+          && self
+            .ctx
+            .stmt_infos
+            .declared_stmts_by_symbol(&var_ref)
+            .iter()
+            .any(|&idx| self.ctx.linking_info.stmt_info_included.has_bit(idx)))
+        .then_some(name)
+      })
+      .collect::<Vec<_>>();
+    names.sort_unstable();
+    names.dedup();
+    for name in names.into_iter().rev() {
+      if self.needs_hosted_top_level_binding {
+        self.top_level_var_bindings.insert(ast::Str::from_str_in(name, self).into());
+      } else {
+        program.body.insert(0, Statement::new_var_decl_no_init(name, self));
+      }
+    }
+  }
+
   /// Returns the parameters of the CJS closure: `cjs_wrapper_fixed_params`, then the `this`
   /// binding.
   fn cjs_wrapper_params(&self) -> Vec<&str> {
@@ -407,6 +440,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     });
 
     walk_js_mut::walk_program(self, program);
+    self.preserve_renamed_catch_vars(program);
 
     // Insert keep_name statements for top-level declarations
     self.insert_keep_name_statements(&mut program.body);
@@ -422,8 +456,12 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         };
 
         let (commonjs_ref_expr, _) = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
-
         let mut stmts_inside_closure = allocator::Vec::new_in(self);
+        // Keep UMD dependencies on their CommonJS path. See internal-docs/renaming/design.md,
+        // principle 7.
+        if self.scope.scoping().root_unresolved_references().contains_key("define") {
+          stmts_inside_closure.push(Statement::new_var_decl_no_init("define", self));
+        }
         // CJS exposes these as mutable wrapper-local bindings, not as aliases to import.meta.
         self.prepend_cjs_ambient_path_bindings(&mut stmts_inside_closure);
         stmts_inside_closure.append(&mut program.body);
@@ -584,7 +622,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       if let Some((expr, bindings)) =
         self.var_declaration_to_expr_seq_and_bindings(decl, self.state)
       {
-        self.hoist_top_level_var_bindings(bindings);
+        self.top_level_var_bindings.extend(bindings);
         *it = ast::Statement::new_expression_statement(SPAN, expr, self);
       }
     }
@@ -622,12 +660,23 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     if self.ctx.options.keep_names && self.ctx.runtime.id() != self.ctx.idx {
       match expr {
         ast::Expression::ClassExpression(class_expression) => {
-          if let Some(id) = class_expression.id.as_ref() {
-            if let Some(element) = self.keep_name_helper_for_class(
-              id.symbol_id.get().map(KeepNameId::SymbolId),
-              &class_expression.body,
-            ) {
-              class_expression.body.body.insert(0, element);
+          let class = &mut **class_expression;
+          if let Some(id) = class.id.as_mut()
+            && let Some(symbol_id) = id.symbol_id.get()
+          {
+            let keep_name_id = Some(KeepNameId::SymbolId(symbol_id));
+            if let Some(element) = self.keep_name_helper_for_class(keep_name_id, &class.body) {
+              class.body.body.insert(0, element);
+            } else if !self.can_keep_class_name_in_class_body()
+              && self.keep_name_for_class(keep_name_id, &class.body).is_some()
+            {
+              // Neither class static blocks nor class fields in the target: wrap the class
+              // like the function expression below, `__name(class Foo$1 {}, "Foo")`.
+              let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
+              id.name = oxc::ast::ast::Str::from_str_in(canonical_name, self).into();
+              // Clear symbol_id so that the walk neither wraps nor renames this class again.
+              id.symbol_id.get_mut().take();
+              self.wrap_class_expr_with_keep_name(keep_name_id, expr);
             }
           }
         }
@@ -821,6 +870,13 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     walk_js_mut::walk_expression(self, expr);
   }
 
+  fn visit_jsx_closing_element(&mut self, it: &mut ast::JSXClosingElement<'ast>) {
+    // The opening element already reports an element name that can't be rewritten.
+    let reported = self.unsupported_jsx_element_names.len();
+    walk_js_mut::walk_jsx_closing_element(self, it);
+    self.unsupported_jsx_element_names.truncate(reported);
+  }
+
   fn visit_jsx_element_name(&mut self, it: &mut ast::JSXElementName<'ast>) {
     match it {
       ast::JSXElementName::Identifier(ident) => {
@@ -843,9 +899,12 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             Expression::ThisExpression(this_expr) => {
               *it = ast::JSXElementName::ThisExpression(this_expr);
             }
+            Expression::ComputedMemberExpression(_) => {
+              self.unsupported_jsx_element_names.push(identifier_reference.span);
+            }
             _ => {
               unreachable!(
-                "Should always rewrite to Identifier, StaticMemberExpression, or ThisExpression for JsxElementName::IdentifierReference"
+                "Should always rewrite to Identifier, StaticMemberExpression, ComputedMemberExpression, or ThisExpression for JsxElementName::IdentifierReference"
               )
             }
           }
@@ -876,6 +935,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               }
               Expression::ThisExpression(this_expr) => {
                 *it = ast::JSXElementName::ThisExpression(this_expr);
+              }
+              Expression::ComputedMemberExpression(_) => {
+                self.unsupported_jsx_element_names.push(ident.span);
               }
               _ => {
                 unreachable!(
@@ -993,7 +1055,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       if let Some((expr, bindings)) =
         self.var_declaration_to_expr_seq_and_bindings(decl, self.state)
       {
-        self.hoist_top_level_var_bindings(bindings);
+        self.top_level_var_bindings.extend(bindings);
         *it = ast::ForStatementInit::from(expr);
       }
     }
@@ -1008,27 +1070,10 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       && decl.kind.is_var()
       && let Some(declarator) = decl.declarations.pop()
     {
-      self.hoist_top_level_var_bindings(
-        declarator.id.get_binding_identifiers().iter().map(|id| id.name),
-      );
+      self
+        .top_level_var_bindings
+        .extend(declarator.id.get_binding_identifiers().iter().map(|id| id.name));
       *it = ast::ForStatementLeft::from(declarator.id.into_assignment_target(self));
-    }
-  }
-
-  fn visit_catch_clause(&mut self, it: &mut ast::CatchClause<'ast>) {
-    let param = it
-      .param
-      .as_ref()
-      .and_then(|param| param.pattern.get_binding_identifier())
-      .and_then(|ident| ident.symbol_id.get())
-      .map(|symbol_id| SymbolRef::from((self.ctx.idx, symbol_id)));
-    if let Some(symbol_ref) = param {
-      let is_module_binding = symbol_ref.is_declared_in_root_scope(self.ctx.symbol_db);
-      self.catch_params.push((self.canonical_name_for(symbol_ref), is_module_binding));
-    }
-    walk_js_mut::walk_catch_clause(self, it);
-    if param.is_some() {
-      self.catch_params.pop();
     }
   }
 
@@ -1056,11 +1101,15 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       ast::Declaration::ClassDeclaration(decl) => {
         // need to insert `keep_names` helper, because `get_transformed_class_decl`
         // will remove id in `class.id`
-        if let Some(element) = self.keep_name_helper_for_class(
-          decl.id.as_ref().and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId)),
-          &decl.body,
-        ) {
+        let keep_name_id =
+          decl.id.as_ref().and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId));
+        if let Some(element) = self.keep_name_helper_for_class(keep_name_id, &decl.body) {
           decl.body.body.insert(0, element);
+        } else if !self.can_keep_class_name_in_class_body()
+          && self.keep_name_for_class(keep_name_id, &decl.body).is_some()
+          && let Some(insert) = self.process_fn(keep_name_id, keep_name_id)
+        {
+          self.keep_name_statement_to_insert.push(insert);
         }
         it.replace_with(|old| {
           let ast::Declaration::ClassDeclaration(class_box) = old else { unreachable!() };
@@ -1070,7 +1119,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           }
         });
         // Clear symbol_id on class expression's id to prevent visit_expression
-        // from inserting a duplicate __name static block during walk
+        // from inserting a duplicate __name call during walk
         // (`it` is only a `VariableDeclaration` when the class was transformed above).
         if let ast::Declaration::VariableDeclaration(var_decl) = it {
           if let Some(declarator) = var_decl.declarations.first_mut() {

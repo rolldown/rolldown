@@ -66,7 +66,7 @@ pub mod unsupported_feature;
 pub mod unsupported_tsconfig_option;
 pub mod untranspiled_syntax;
 
-pub trait BuildEvent: Sync + Send + AsAny + AsAnyMut {
+pub trait BuildEvent: Sync + Send + AsAnyMut {
   fn kind(&self) -> EventKind;
 
   fn message(&self, opts: &DiagnosticOptions) -> String;
@@ -107,16 +107,6 @@ where
 {
   fn from(e: T) -> Self {
     Box::new(e)
-  }
-}
-
-pub trait AsAny {
-  fn as_any(&self) -> &dyn Any;
-}
-
-impl<T: 'static + BuildEvent> AsAny for T {
-  fn as_any(&self) -> &dyn Any {
-    self
   }
 }
 

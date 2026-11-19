@@ -644,6 +644,8 @@ const DevModeSchema = v.union([
     port: v.optional(v.number()),
     host: v.optional(v.string()),
     implement: v.optional(v.string()),
+    // Vite still passes this option for compatibility with older Rolldown versions.
+    // Remove this in a minor version after Vite removes the field
     skipCommonRuntimeInjection: v.optional(v.boolean()),
     lazy: v.optional(v.boolean()),
     hotUpdate: v.optional(v.boolean()),
@@ -703,6 +705,7 @@ const InputOptionsSchema = v.strictObject({
           v.object({
             baseUrl: v.optional(v.string()),
             fileName: v.optional(v.string()),
+            include: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
           }),
         ]),
       ),
@@ -789,7 +792,7 @@ const InputCliOverrideSchema = v.strictObject({
   treeshake: v.pipe(v.optional(v.boolean()), v.description('enable treeshaking')),
   makeAbsoluteExternalsRelative: v.pipe(
     v.optional(v.boolean()),
-    v.description('Prevent normalization of external imports'),
+    v.description('normalization of external imports'),
   ),
   preserveEntrySignatures: v.pipe(
     v.optional(v.literal(false)),
@@ -980,7 +983,7 @@ const OutputOptionsSchema = v.strictObject({
       `Output format of the generated bundle (supports ${styleText(
         'underline',
         'esm',
-      )}, cjs, and iife)`,
+      )}, cjs, iife, and umd)`,
     ),
   ),
   sourcemap: v.pipe(
@@ -1063,10 +1066,7 @@ const OutputOptionsSchema = v.strictObject({
     v.description('Control comments in the output'),
   ),
   plugins: v.optional(v.custom<RolldownOutputPluginOption>(() => true)),
-  polyfillRequire: v.pipe(
-    v.optional(v.boolean()),
-    v.description('Disable require polyfill injection'),
-  ),
+  polyfillRequire: v.pipe(v.optional(v.boolean()), v.description('require polyfill injection')),
   hoistTransitiveImports: v.optional(v.literal(false)),
   preserveModules: v.pipe(v.optional(v.boolean()), v.description('Preserve module structure')),
   preserveModulesRoot: v.pipe(
@@ -1254,7 +1254,7 @@ export function validateOption<T>(key: 'input' | 'output', options: T): void {
           );
           if (subIssue) {
             if (subIssue.path) {
-              issuePaths.push(subIssue.path.map((path) => path.key));
+              issuePaths.push(...subIssue.path.map((path) => path.key));
             }
             issueMsg = subIssue.message;
           }

@@ -1,0 +1,71 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// a.js
+var Foo$1 = class Foo$1 {
+	static #_ = __name(this, "Foo");
+	static tag = this.name;
+	static tag2 = Foo$1.name;
+};
+const Bar$1 = class {
+	static #_ = __name(this, "Bar");
+	static tag = this.name;
+};
+var a_default = class {
+	static #_ = __name(this, "default");
+	static tag = this.name;
+};
+// c.js
+var Baz = class {};
+// b.js
+var Qux$1 = class Qux$1 {
+	static #_2 = __name(this, "Qux");
+	static #_ = "qux";
+	static tag = this.name;
+	static read() {
+		return Qux$1.#_;
+	}
+};
+var Holder = class Holder {
+	static #_ = "holder";
+	static make() {
+		return class Baz$1 {
+			static #_2 = __name(this, "Baz");
+			static tag = this.name;
+			static read() {
+				return Holder.#_;
+			}
+			static base() {
+				return Baz;
+			}
+		};
+	}
+};
+// main.js
+var Foo = class {};
+const Bar = class {};
+var Qux = class {};
+assert.strictEqual(Foo$1.name, "Foo");
+assert.strictEqual(Foo$1.tag, "Foo");
+assert.strictEqual(Foo$1.tag2, "Foo");
+assert.strictEqual(Bar$1.name, "Bar");
+assert.strictEqual(Bar$1.tag, "Bar");
+assert.strictEqual(a_default.name, "default");
+assert.strictEqual(a_default.tag, "default");
+assert.strictEqual(Qux$1.name, "Qux");
+assert.strictEqual(Qux$1.tag, "Qux");
+assert.strictEqual(Qux$1.read(), "qux");
+const Made = Holder.make();
+assert.strictEqual(Made.name, "Baz");
+assert.strictEqual(Made.tag, "Baz");
+assert.strictEqual(Made.read(), "holder");
+export { Bar, Foo, Qux };
+
+```

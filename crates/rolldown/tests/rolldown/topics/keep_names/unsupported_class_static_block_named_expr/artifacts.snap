@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+// a.js
+var Foo = class {};
+// main.js
+const X = /* @__PURE__ */ __name(class Foo$1 {
+	static get() {
+		return Foo;
+	}
+}, "Foo");
+const Y = /* @__PURE__ */ __name(class Foo$2 {
+	static self() {
+		return Foo$2;
+	}
+	static get() {
+		return Foo;
+	}
+}, "Foo");
+function make() {
+	class Foo$3 {
+		static get() {
+			return Foo;
+		}
+	}
+	__name(Foo$3, "Foo");
+	return Foo$3;
+}
+assert.strictEqual(Foo.name, "Foo");
+assert.strictEqual(X.name, "Foo");
+assert.strictEqual(X.get(), Foo);
+assert.strictEqual(Y.name, "Foo");
+assert.strictEqual(Y.self(), Y);
+assert.strictEqual(make().name, "Foo");
+assert.strictEqual(make().get(), Foo);
+export { X, Y, make };
+
+```

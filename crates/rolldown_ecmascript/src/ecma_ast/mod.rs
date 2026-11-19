@@ -4,7 +4,7 @@ use crate::EcmaCompiler;
 use arcstr::ArcStr;
 use oxc::{
   allocator::{Allocator, CloneIn},
-  ast::ast::{Comment, Program},
+  ast::ast::Program,
   span::SourceType,
 };
 use program_cell::{ProgramCellDependent, ProgramCellOwner};
@@ -48,10 +48,6 @@ impl EcmaAst {
 
   pub fn program(&self) -> &Program<'_> {
     &self.program.borrow_dependent().program
-  }
-
-  pub fn comments(&self) -> &oxc::allocator::Vec<'_, Comment> {
-    &self.program.borrow_dependent().program.comments
   }
 
   /// Clone the `Program` with another `Allocator`.

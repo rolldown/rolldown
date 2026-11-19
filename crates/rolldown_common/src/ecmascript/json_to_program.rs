@@ -345,7 +345,7 @@ mod tests {
     // 9007199254740995 is beyond Number.MAX_SAFE_INTEGER (2^53 - 1 = 9007199254740991)
     // When parsed as f64 and back, it becomes 9007199254740996
     let json: Value = serde_json::from_str(r#"{ "v": 9007199254740995 }"#).unwrap();
-    assert_snapshot!(to_code(&json), @r#"({ "v": 9007199254740996 });"#);
+    assert_snapshot!(to_code(&json), @r#"({ "v": 0x20000000000004 });"#);
   }
 
   /// Regression test: numbers outside f64's finite range must not panic. With serde_json's

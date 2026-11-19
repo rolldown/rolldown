@@ -1,0 +1,99 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] A JSX element name can't refer to an import that has to be read as a bracketed property, because the imported name is not a valid identifier, while `transform.jsx` is 'preserve'. Assign the import to a variable and use the variable as the element name.
+   ╭─[ main.jsx:4:19 ]
+   │
+ 4 │ export const a = <MyTag />;
+   │                   ──┬──  
+   │                     ╰──── 
+───╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] A JSX element name can't refer to an import that has to be read as a bracketed property, because the imported name is not a valid identifier, while `transform.jsx` is 'preserve'. Assign the import to a variable and use the variable as the element name.
+   ╭─[ main.jsx:5:19 ]
+   │
+ 5 │ export const b = <MyTag.Item />;
+   │                   ──┬──  
+   │                     ╰──── 
+───╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] A JSX element name can't refer to an import that has to be read as a bracketed property, because the imported name is not a valid identifier, while `transform.jsx` is 'preserve'. Assign the import to a variable and use the variable as the element name.
+   ╭─[ main.jsx:6:19 ]
+   │
+ 6 │ export const c = <MyTag>text</MyTag>;
+   │                   ──┬──  
+   │                     ╰──── 
+───╯
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Errors
+
+### UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] A JSX element name can't refer to an import that has to be read as a bracketed property, because the imported name is not a valid identifier, while `transform.jsx` is 'preserve'. Assign the import to a variable and use the variable as the element name.
+   ╭─[ main.jsx:4:19 ]
+   │
+ 4 │ export const a = <MyTag />;
+   │                   ──┬──  
+   │                     ╰──── 
+───╯
+
+```
+
+### UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] A JSX element name can't refer to an import that has to be read as a bracketed property, because the imported name is not a valid identifier, while `transform.jsx` is 'preserve'. Assign the import to a variable and use the variable as the element name.
+   ╭─[ main.jsx:5:19 ]
+   │
+ 5 │ export const b = <MyTag.Item />;
+   │                   ──┬──  
+   │                     ╰──── 
+───╯
+
+```
+
+### UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] A JSX element name can't refer to an import that has to be read as a bracketed property, because the imported name is not a valid identifier, while `transform.jsx` is 'preserve'. Assign the import to a variable and use the variable as the element name.
+   ╭─[ main.jsx:6:19 ]
+   │
+ 6 │ export const c = <MyTag>text</MyTag>;
+   │                   ──┬──  
+   │                     ╰──── 
+───╯
+
+```
+
+### UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] A JSX element name can't refer to an import that has to be read as a bracketed property, because the imported name is not a valid identifier, while `transform.jsx` is 'preserve'. Assign the import to a variable and use the variable as the element name.
+   ╭─[ main.jsx:7:19 ]
+   │
+ 7 │ export const d = <ExtTag />;
+   │                   ───┬──  
+   │                      ╰──── 
+───╯
+
+```

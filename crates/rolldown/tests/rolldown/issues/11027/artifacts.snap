@@ -1,0 +1,82 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lib.js
+
+```js
+const require_lib$1 = require("./lib2.js");
+module.exports = require_lib$1.require_lib();
+
+```
+
+## lib2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// shared.js
+var shared_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+function value() {
+	return 43;
+}
+var init_shared = __esmMin((() => {}));
+// lib.cjs
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const shared = __toCommonJS(shared_exports);
+	module.exports = {
+		value: 42,
+		default: "own-default",
+		["__proto__"]: "own-proto",
+		__toESM: "own-helper-name",
+		shared: shared.value
+	};
+}));
+Object.defineProperty(exports, "__toCommonJS", {
+	enumerable: true,
+	get: function() {
+		return __toCommonJS;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+Object.defineProperty(exports, "init_shared", {
+	enumerable: true,
+	get: function() {
+		return init_shared;
+	}
+});
+Object.defineProperty(exports, "require_lib", {
+	enumerable: true,
+	get: function() {
+		return require_lib;
+	}
+});
+Object.defineProperty(exports, "value", {
+	enumerable: true,
+	get: function() {
+		return value;
+	}
+});
+
+```
+
+## main.js
+
+```js
+let node_assert_strict = require("node:assert/strict");
+const require_lib$1 = require("./lib2.js");
+node_assert_strict = require_lib$1.__toESM(node_assert_strict);
+// main.js
+var import_lib = /* @__PURE__ */ require_lib$1.__toESM(require_lib$1.require_lib());
+node_assert_strict.default.equal(import_lib.default.value, 42);
+node_assert_strict.default.equal(import_lib.default.shared, require_lib$1.value);
+node_assert_strict.default.equal(import_lib.default.shared(), 43);
+var main_default = import_lib.default;
+module.exports = main_default;
+
+```

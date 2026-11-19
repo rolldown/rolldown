@@ -1,0 +1,300 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+// lib.cjs
+module.exports = {
+	value: 42,
+	default: "named default"
+};
+Object.defineProperty(module.exports, "__proto__", {
+	value: "own proto",
+	enumerable: true
+});
+
+```
+
+## b.js
+
+```js
+module.exports = require("./a.js");
+
+```
+
+## callable_a.js
+
+```js
+// callable.cjs
+module.exports = function(value) {
+	return value + 1;
+};
+
+```
+
+## callable_b.js
+
+```js
+module.exports = require("./callable_a.js");
+
+```
+
+## empty_a.js
+
+```js
+
+```
+
+## empty_b.js
+
+```js
+module.exports = require("./empty_a.js");
+
+```
+
+## null_a.js
+
+```js
+// null.cjs
+module.exports = null;
+
+```
+
+## null_b.js
+
+```js
+module.exports = require("./null_a.js");
+
+```
+
+## primitive_a.js
+
+```js
+// primitive.cjs
+module.exports = 7;
+
+```
+
+## primitive_b.js
+
+```js
+module.exports = require("./primitive_a.js");
+
+```
+
+# Variant: [exports: Default]
+
+## Assets
+
+### a.js
+
+```js
+// lib.cjs
+module.exports = {
+	value: 42,
+	default: "named default"
+};
+Object.defineProperty(module.exports, "__proto__", {
+	value: "own proto",
+	enumerable: true
+});
+
+```
+
+### b.js
+
+```js
+module.exports = require("./a.js");
+
+```
+
+### callable_a.js
+
+```js
+// callable.cjs
+module.exports = function(value) {
+	return value + 1;
+};
+
+```
+
+### callable_b.js
+
+```js
+module.exports = require("./callable_a.js");
+
+```
+
+### empty_a.js
+
+```js
+
+```
+
+### empty_b.js
+
+```js
+module.exports = require("./empty_a.js");
+
+```
+
+### null_a.js
+
+```js
+// null.cjs
+module.exports = null;
+
+```
+
+### null_b.js
+
+```js
+module.exports = require("./null_a.js");
+
+```
+
+### primitive_a.js
+
+```js
+// primitive.cjs
+module.exports = 7;
+
+```
+
+### primitive_b.js
+
+```js
+module.exports = require("./primitive_a.js");
+
+```
+
+# Variant: [minify: true]
+
+## Assets
+
+### a.js
+
+```js
+module.exports={value:42,default:`named default`},Object.defineProperty(module.exports,"__proto__",{value:`own proto`,enumerable:!0});
+```
+
+### b.js
+
+```js
+module.exports=require("./a.js");
+```
+
+### callable_a.js
+
+```js
+module.exports=function(e){return e+1};
+```
+
+### callable_b.js
+
+```js
+module.exports=require("./callable_a.js");
+```
+
+### empty_a.js
+
+```js
+
+```
+
+### empty_b.js
+
+```js
+module.exports=require("./empty_a.js");
+```
+
+### null_a.js
+
+```js
+module.exports=null;
+```
+
+### null_b.js
+
+```js
+module.exports=require("./null_a.js");
+```
+
+### primitive_a.js
+
+```js
+module.exports=7;
+```
+
+### primitive_b.js
+
+```js
+module.exports=require("./primitive_a.js");
+```
+
+# Variant: [exports: Default] [minify: true]
+
+## Assets
+
+### a.js
+
+```js
+module.exports={value:42,default:`named default`},Object.defineProperty(module.exports,"__proto__",{value:`own proto`,enumerable:!0});
+```
+
+### b.js
+
+```js
+module.exports=require("./a.js");
+```
+
+### callable_a.js
+
+```js
+module.exports=function(e){return e+1};
+```
+
+### callable_b.js
+
+```js
+module.exports=require("./callable_a.js");
+```
+
+### empty_a.js
+
+```js
+
+```
+
+### empty_b.js
+
+```js
+module.exports=require("./empty_a.js");
+```
+
+### null_a.js
+
+```js
+module.exports=null;
+```
+
+### null_b.js
+
+```js
+module.exports=require("./null_a.js");
+```
+
+### primitive_a.js
+
+```js
+module.exports=7;
+```
+
+### primitive_b.js
+
+```js
+module.exports=require("./primitive_a.js");
+```

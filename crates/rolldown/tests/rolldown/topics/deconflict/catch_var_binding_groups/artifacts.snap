@@ -8,54 +8,54 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert/strict";
 // value.js
-let outer = 0;
+let outer$1 = 0;
 function update(value) {
-	outer = value;
+	outer$1 = value;
 }
 // dep.js
 function run() {
 	const values = [];
 	try {
 		throw 1;
-	} catch (outer$1) {
-		var outer$1 = 2;
-		values.push(outer$1, outer);
+	} catch (outer) {
+		var outer = 2;
+		values.push(outer, outer$1);
 		values.push(3);
 	}
-	values.push(outer$1);
+	values.push(outer);
 	return values;
 }
 function iterate() {
 	const values = [];
 	try {
 		throw 0;
-	} catch (outer$2) {
-		for (var outer$2 of [4, 5]) values.push(outer$2);
-		var { outer: outer$2 } = { outer: 6 };
-		values.push(outer$2);
-		var [outer$2] = [7];
-		values.push(outer$2);
-		for (var outer$2 in { key: 1 }) values.push(outer$2);
+	} catch (outer) {
+		for (var outer of [4, 5]) values.push(outer);
+		var { outer } = { outer: 6 };
 		values.push(outer);
+		var [outer] = [7];
+		values.push(outer);
+		for (var outer in { key: 1 }) values.push(outer);
+		values.push(outer$1);
 	}
-	values.push(outer$2);
+	values.push(outer);
 	return values;
 }
 function nested() {
 	const values = [];
 	try {
 		throw 1;
-	} catch (outer$3) {
-		values.push(outer$3);
+	} catch (outer) {
+		values.push(outer);
 		try {
 			throw 2;
-		} catch (outer$3) {
-			var outer$3 = 3;
-			values.push(outer$3, outer);
+		} catch (outer) {
+			var outer = 3;
+			values.push(outer, outer$1);
 		}
-		values.push(outer$3);
+		values.push(outer);
 	}
-	values.push(outer$3);
+	values.push(outer);
 	return values;
 }
 // main.js
@@ -96,54 +96,54 @@ assert.deepStrictEqual(nested(), [
 let node_assert_strict = require("node:assert/strict");
 node_assert_strict = __toESM(node_assert_strict);
 // value.js
-let outer = 0;
+let outer$1 = 0;
 function update(value) {
-	outer = value;
+	outer$1 = value;
 }
 // dep.js
 function run() {
 	const values = [];
 	try {
 		throw 1;
-	} catch (outer$1) {
-		var outer$1 = 2;
-		values.push(outer$1, outer);
+	} catch (outer) {
+		var outer = 2;
+		values.push(outer, outer$1);
 		values.push(3);
 	}
-	values.push(outer$1);
+	values.push(outer);
 	return values;
 }
 function iterate() {
 	const values = [];
 	try {
 		throw 0;
-	} catch (outer$2) {
-		for (var outer$2 of [4, 5]) values.push(outer$2);
-		var { outer: outer$2 } = { outer: 6 };
-		values.push(outer$2);
-		var [outer$2] = [7];
-		values.push(outer$2);
-		for (var outer$2 in { key: 1 }) values.push(outer$2);
+	} catch (outer) {
+		for (var outer of [4, 5]) values.push(outer);
+		var { outer } = { outer: 6 };
 		values.push(outer);
+		var [outer] = [7];
+		values.push(outer);
+		for (var outer in { key: 1 }) values.push(outer);
+		values.push(outer$1);
 	}
-	values.push(outer$2);
+	values.push(outer);
 	return values;
 }
 function nested() {
 	const values = [];
 	try {
 		throw 1;
-	} catch (outer$3) {
-		values.push(outer$3);
+	} catch (outer) {
+		values.push(outer);
 		try {
 			throw 2;
-		} catch (outer$3) {
-			var outer$3 = 3;
-			values.push(outer$3, outer);
+		} catch (outer) {
+			var outer = 3;
+			values.push(outer, outer$1);
 		}
-		values.push(outer$3);
+		values.push(outer);
 	}
-	values.push(outer$3);
+	values.push(outer);
 	return values;
 }
 // main.js
@@ -180,5 +180,5 @@ node_assert_strict.default.deepStrictEqual(nested(), [
 ### main.js
 
 ```js
-import e from"node:assert/strict";let t=0;function n(e){t=e}function r(){let e=[];try{throw 1}catch(outer$1){var outer$1=2;e.push(outer$1,t),e.push(3)}return e.push(outer$1),e}function i(){let e=[];try{throw 0}catch(outer$2){for(var outer$2 of[4,5])e.push(outer$2);var{outer:outer$2}={outer:6};e.push(outer$2);var[outer$2]=[7];for(var outer$2 in e.push(outer$2),{key:1})e.push(outer$2);e.push(t)}return e.push(outer$2),e}function a(){let e=[];try{throw 1}catch(outer$3){e.push(outer$3);try{throw 2}catch(outer$3){var outer$3=3;e.push(outer$3,t)}e.push(outer$3)}return e.push(outer$3),e}n(99),e.deepStrictEqual(r(),[2,99,3,void 0]),e.deepStrictEqual(i(),[4,5,6,7,`key`,99,void 0]),e.deepStrictEqual(a(),[1,3,99,1,void 0]);
+import e from"node:assert/strict";let t=0;function n(e){t=e}function r(){let e=[];try{throw 1}catch(outer){var outer=2;e.push(outer,t),e.push(3)}return e.push(outer),e}function i(){let e=[];try{throw 0}catch(outer){for(var outer of[4,5])e.push(outer);var{outer}={outer:6};e.push(outer);var[outer]=[7];for(var outer in e.push(outer),{key:1})e.push(outer);e.push(t)}return e.push(outer),e}function a(){let e=[];try{throw 1}catch(outer){e.push(outer);try{throw 2}catch(outer){var outer=3;e.push(outer,t)}e.push(outer)}return e.push(outer),e}n(99),e.deepStrictEqual(r(),[2,99,3,void 0]),e.deepStrictEqual(i(),[4,5,6,7,`key`,99,void 0]),e.deepStrictEqual(a(),[1,3,99,1,void 0]);
 ```

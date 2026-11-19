@@ -30,8 +30,9 @@ use super::ScopeHoistingFinalizer;
 const CJS_AMBIENT_PATHS: [(&str, &str); 2] = [("__dirname", "dirname"), ("__filename", "filename")];
 
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
-  /// Preserve the enclosing declaration when a catch/var name group is split to avoid an import.
-  /// See internal-docs/renaming/implementation.md.
+  /// Declare a top-level `var` whose catch parameter took its own name (`Renamer::split_catch_from_var`):
+  /// the `var` inside the catch now declares the catch parameter's name. See
+  /// internal-docs/renaming/implementation.md.
   fn preserve_renamed_catch_vars(&mut self, program: &mut ast::Program<'ast>) {
     let scoping = self.scope.scoping();
     let mut names = scoping

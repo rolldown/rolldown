@@ -31,7 +31,7 @@ var init_m = __esmMin((() => {
 	}
 	try {
 		throw 5;
-	} catch (g$1) {
+	} catch (g) {
 		try {
 			throw 6;
 		} catch (g$1) {

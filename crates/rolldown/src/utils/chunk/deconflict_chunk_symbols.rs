@@ -74,7 +74,8 @@ pub fn deconflict_chunk_symbols(
   let mut renamer = Renamer::new(&link_output.symbol_db, format, inner_binding_names);
   for &module_idx in modules {
     if let Some(db) = &link_output.symbol_db[module_idx] {
-      renamer.add_catch_var_name_groups(module_idx, db.ast_scopes.scoping());
+      let root_scope_is_inner = matches!(link_output.metas[module_idx].wrap_kind(), WrapKind::Cjs);
+      renamer.add_catch_var_bindings(module_idx, db.ast_scopes.scoping(), root_scope_is_inner);
     }
   }
   reserve_fixed_names(&mut renamer, modules, link_output, format);

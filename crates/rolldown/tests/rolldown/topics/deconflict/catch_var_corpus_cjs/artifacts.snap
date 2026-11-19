@@ -17,37 +17,37 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // other.js
-var other_exports = /* @__PURE__ */ __exportAll({ x: () => x$2 });
-var x$2;
+var other_exports = /* @__PURE__ */ __exportAll({ x: () => x$3 });
+var x$3;
 var init_other = __esmMin((() => {
-	x$2 = "other-x";
+	x$3 = "other-x";
 }));
 // esm.js
 var esm_exports = /* @__PURE__ */ __exportAll({
 	esmLog: () => esmLog,
 	innerEsm: () => innerEsm,
-	x: () => x$1
+	x: () => x$2
 });
 function innerEsm() {
 	try {
 		throw 0;
 	} catch (x) {
 		var x = "inner";
-		return [x, x$2];
+		return [x, x$3];
 	}
 }
-var x$1, esmLog;
+var x$2, esmLog;
 var init_esm = __esmMin((() => {
 	init_other();
-	x$1 = "esm-x";
+	x$2 = "esm-x";
 	esmLog = [];
 	try {
 		throw 0;
-	} catch (x$1) {
-		x$1 = "esm-c";
-		esmLog.push(x$1, x$2);
+	} catch (x$2) {
+		x$2 = "esm-c";
+		esmLog.push(x$2, x$3);
 	}
-	esmLog.push(x$1);
+	esmLog.push(x$2);
 }));
 // dep.cjs
 var require_dep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -152,36 +152,33 @@ var require_dep = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 // main.cjs
 const assert = require("node:assert/strict");
 const dep = require_dep();
-var x = "main-x";
+var x$1 = "main-x";
 var annex = [];
 try {
 	throw 0;
-} catch (y) {
-	var y = 1;
+} catch (y$1) {
+	var y$1 = 1;
 	{
-		function y() {
+		function y$1() {
 			return "fy";
 		}
-		annex.push(y());
+		annex.push(y$1());
 	}
-	annex.push(typeof y);
+	annex.push(typeof y$1);
 }
-annex.push(typeof y);
+annex.push(typeof y$1);
 try {
 	throw 0;
-} catch (z) {
-	var z = 1;
+} catch (z$1) {
+	var z$1 = 1;
 	{
 		let z = "lexical";
 		z += "!";
-		{
-			function z() {}
-		}
 		annex.push(z);
 	}
-	annex.push(z);
+	annex.push(z$1);
 }
-annex.push(typeof z);
+annex.push(typeof z$1);
 assert.deepStrictEqual(dep.fixed(), [
 	2,
 	"number",
@@ -199,7 +196,7 @@ assert.deepStrictEqual(dep.esm.esmLog, [
 	"esm-x"
 ]);
 assert.deepStrictEqual(dep.esm.innerEsm(), ["inner", "other-x"]);
-assert.strictEqual(x, "main-x");
+assert.strictEqual(x$1, "main-x");
 assert.deepStrictEqual(dep.log, [
 	"fx",
 	"number",
@@ -237,5 +234,5 @@ dep.lazy().then((value) => assert.strictEqual(value, "other-x"));
 ### main.js
 
 ```js
-var e=Object.defineProperty,t=Object.getOwnPropertyDescriptor,n=Object.getOwnPropertyNames,r=Object.prototype.hasOwnProperty,i=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}},a=(e,t)=>()=>(t||(e((t={exports:{}}).exports,t,t.exports),e=null),t.exports),o=(t,n)=>{let r=Object.setPrototypeOf({},null);for(var i in t)e(r,i,{get:t[i],enumerable:!0});return n&1||e(r,Symbol.toStringTag,{value:`Module`}),n&2?r:Object.preventExtensions(r)},s=(i,a,o,s)=>{if(a&&typeof a==`object`||typeof a==`function`)for(var c=n(a),l=0,u=c.length,d;l<u;l++)d=c[l],!r.call(i,d)&&d!==o&&e(i,d,{get:(e=>a[e]).bind(null,d),enumerable:!(s=t(a,d))||s.enumerable});return i},c=t=>r.call(t,`module.exports`)?t[`module.exports`]:s(e({},`__esModule`,{value:!0}),t),l=/* @__PURE__ */ o({x:()=>u}),u,d=i((()=>{u=`other-x`})),f=/* @__PURE__ */ o({esmLog:()=>h,innerEsm:()=>p,x:()=>m});function p(){try{throw 0}catch(x){var x=`inner`;return[x,u]}}var m,h,g=i((()=>{d(),m=`esm-x`,h=[];try{throw 0}catch(e){e=`esm-c`,h.push(e,u)}h.push(m)})),_=/* @__PURE__ */ a(((e,t)=>{var n=[];try{throw 0}catch(x){var x=1;{function x(){return`fx`}n.push(x())}n.push(typeof x)}n.push(typeof x);try{throw 0}catch(Promise$1){var Promise$1=`p`;{function Promise$1(){return`fp`}n.push(Promise$1())}n.push(typeof Promise$1)}n.push(typeof Promise$1);let r=()=>Promise.resolve().then(()=>(d(),l)).then(e=>e.x);function i(){let e=[];try{throw 0}catch(require$1){var require$1=1;{function require$1(){return 2}e.push(require$1())}e.push(typeof require$1)}return e.push(typeof require$1),e}function a(){let e=[];try{throw 0}catch(__dirname$1){var __dirname$1=`local`;e.push(__dirname$1)}return e.push(__dirname$1),e}function o(){let e=[];try{throw`outer`}catch(y){try{throw`inner`}catch(y){var y=`set`;{function y(){}}e.push(y)}e.push(y)}return e.push(typeof y),e}function s(){try{throw 0}catch(y){var y=`iy`}try{throw 0}catch(z){var z=`iz`}return[y,z]}t.exports={log:n,fixed:i,fixedModuleLevel:a,nestedAnnexB:o,inner:s,lazy:r,esm:(g(),c(f))}}));const v=require("node:assert/strict"),b=_();var x=`main-x`,S=[];try{throw 0}catch(y){var y=1;{function y(){return`fy`}S.push(y())}S.push(typeof y)}S.push(typeof y);try{throw 0}catch(z){var z=1;{let z=`lexical`;z+=`!`;{function z(){}}S.push(z)}S.push(z)}S.push(typeof z),v.deepStrictEqual(b.fixed(),[2,`number`,`function`]),v.deepStrictEqual(b.fixedModuleLevel(),[`local`,void 0]),v.deepStrictEqual(b.nestedAnnexB(),[`set`,`outer`,`function`]),v.deepStrictEqual(b.esm.esmLog,[`esm-c`,`other-x`,`esm-x`]),v.deepStrictEqual(b.esm.innerEsm(),[`inner`,`other-x`]),v.strictEqual(x,`main-x`),v.deepStrictEqual(b.log,[`fx`,`number`,`function`,`fp`,`string`,`function`]),v.deepStrictEqual(b.inner(),[void 0,void 0]),v.deepStrictEqual(S,[`fy`,`number`,`function`,`lexical!`,1,`undefined`]),b.lazy().then(e=>v.strictEqual(e,`other-x`));
+var e=Object.defineProperty,t=Object.getOwnPropertyDescriptor,n=Object.getOwnPropertyNames,r=Object.prototype.hasOwnProperty,i=(e,t,n)=>()=>{if(n)throw n[0];try{return e&&(t=e(e=0)),t}catch(e){throw n=[e],e}},a=(e,t)=>()=>(t||(e((t={exports:{}}).exports,t,t.exports),e=null),t.exports),o=(t,n)=>{let r=Object.setPrototypeOf({},null);for(var i in t)e(r,i,{get:t[i],enumerable:!0});return n&1||e(r,Symbol.toStringTag,{value:`Module`}),n&2?r:Object.preventExtensions(r)},s=(i,a,o,s)=>{if(a&&typeof a==`object`||typeof a==`function`)for(var c=n(a),l=0,u=c.length,d;l<u;l++)d=c[l],!r.call(i,d)&&d!==o&&e(i,d,{get:(e=>a[e]).bind(null,d),enumerable:!(s=t(a,d))||s.enumerable});return i},c=t=>r.call(t,`module.exports`)?t[`module.exports`]:s(e({},`__esModule`,{value:!0}),t),l=/* @__PURE__ */ o({x:()=>u}),u,d=i((()=>{u=`other-x`})),f=/* @__PURE__ */ o({esmLog:()=>h,innerEsm:()=>p,x:()=>m});function p(){try{throw 0}catch(x){var x=`inner`;return[x,u]}}var m,h,g=i((()=>{d(),m=`esm-x`,h=[];try{throw 0}catch(e){e=`esm-c`,h.push(e,u)}h.push(m)})),_=/* @__PURE__ */ a(((e,t)=>{var n=[];try{throw 0}catch(x){var x=1;{function x(){return`fx`}n.push(x())}n.push(typeof x)}n.push(typeof x);try{throw 0}catch(Promise$1){var Promise$1=`p`;{function Promise$1(){return`fp`}n.push(Promise$1())}n.push(typeof Promise$1)}n.push(typeof Promise$1);let r=()=>Promise.resolve().then(()=>(d(),l)).then(e=>e.x);function i(){let e=[];try{throw 0}catch(require$1){var require$1=1;{function require$1(){return 2}e.push(require$1())}e.push(typeof require$1)}return e.push(typeof require$1),e}function a(){let e=[];try{throw 0}catch(__dirname$1){var __dirname$1=`local`;e.push(__dirname$1)}return e.push(__dirname$1),e}function o(){let e=[];try{throw`outer`}catch(y){try{throw`inner`}catch(y){var y=`set`;{function y(){}}e.push(y)}e.push(y)}return e.push(typeof y),e}function s(){try{throw 0}catch(y){var y=`iy`}try{throw 0}catch(z){var z=`iz`}return[y,z]}t.exports={log:n,fixed:i,fixedModuleLevel:a,nestedAnnexB:o,inner:s,lazy:r,esm:(g(),c(f))}}));const v=require("node:assert/strict"),b=_();var S=`main-x`,C=[];try{throw 0}catch(y$1){var y$1=1;{function y$1(){return`fy`}C.push(y$1())}C.push(typeof y$1)}C.push(typeof y$1);try{throw 0}catch(z$1){var z$1=1;{let z=`lexical`;z+=`!`,C.push(z)}C.push(z$1)}C.push(typeof z$1),v.deepStrictEqual(b.fixed(),[2,`number`,`function`]),v.deepStrictEqual(b.fixedModuleLevel(),[`local`,void 0]),v.deepStrictEqual(b.nestedAnnexB(),[`set`,`outer`,`function`]),v.deepStrictEqual(b.esm.esmLog,[`esm-c`,`other-x`,`esm-x`]),v.deepStrictEqual(b.esm.innerEsm(),[`inner`,`other-x`]),v.strictEqual(S,`main-x`),v.deepStrictEqual(b.log,[`fx`,`number`,`function`,`fp`,`string`,`function`]),v.deepStrictEqual(b.inner(),[void 0,void 0]),v.deepStrictEqual(C,[`fy`,`number`,`function`,`lexical!`,1,`undefined`]),b.lazy().then(e=>v.strictEqual(e,`other-x`));
 ```

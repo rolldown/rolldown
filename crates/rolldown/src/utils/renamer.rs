@@ -3,7 +3,7 @@ use std::collections::hash_map::Entry;
 
 use rustc_hash::FxHashMap;
 
-use oxc::semantic::{ScopeId, Scoping, SymbolId};
+use oxc::semantic::{ScopeId, Scoping, SymbolFlags, SymbolId};
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use oxc_str::{CompactStr, Ident, IdentHashSet};
 
@@ -88,7 +88,10 @@ pub struct Renamer<'name> {
   canonical_names: FxHashMap<SymbolRef, CompactStr>,
   symbol_db: &'name SymbolRefDb,
   inner_binding_names: InnerBindingNames<'name>,
-  catch_var_name_groups: FxHashMap<SymbolRef, SymbolRef>,
+  /// The catch parameters and Annex B block functions that print the name of a top-level `var`
+  /// (see [`Renamer::add_catch_var_bindings`]), each mapped to that `var`. A catch parameter
+  /// leaves the map when it must take its own name (see [`Renamer::split_catch_from_var`]).
+  top_level_catch_vars: FxHashMap<SymbolRef, SymbolRef>,
 }
 
 impl<'name> Renamer<'name> {
@@ -125,35 +128,77 @@ impl<'name> Renamer<'name> {
           .map(|s| CompactStr::new(s)),
       ),
       inner_binding_names,
-      catch_var_name_groups: FxHashMap::default(),
+      top_level_catch_vars: FxHashMap::default(),
     }
   }
 
-  /// Coordinate catch/var names without linking their values. Same-named Annex B block
-  /// functions must follow too. See internal-docs/renaming/implementation.md.
-  pub fn add_catch_var_name_groups(&mut self, module_idx: ModuleIdx, scoping: &Scoping) {
-    let groups = scoping
-      .catch_var_bindings()
-      .map(|(_, var)| ((scoping.symbol_scope_id(var), scoping.symbol_ident(var)), var))
-      .collect::<FxHashMap<_, _>>();
-    if groups.is_empty() {
+  /// Handle the catch parameters that a `var` redeclares (`catch (e) { var e = 1 }`). Oxc keeps
+  /// the catch parameter and the enclosing `var` as two symbols that print through one
+  /// identifier, so they must print one name. See internal-docs/renaming/implementation.md.
+  ///
+  /// - The `var` is an inner binding: reserve its name, as oxc's mangler does. No top-level
+  ///   binding can then take the name, so no pass renames the catch parameter or the `var`, except
+  ///   for a fixed name (`NestedScopeRenamer::rename_bindings_shadowing_fixed_names`).
+  /// - The `var` is a top-level binding: it gets its name like any other. The catch parameter and
+  ///   the Annex B block functions that write the `var` print that name.
+  pub fn add_catch_var_bindings(
+    &mut self,
+    module_idx: ModuleIdx,
+    scoping: &Scoping,
+    root_scope_is_inner: bool,
+  ) {
+    let root_scope_id = scoping.root_scope_id();
+    let mut top_level_vars = vec![];
+    for (catch, var) in scoping.catch_var_bindings() {
+      if !root_scope_is_inner && scoping.symbol_scope_id(var) == root_scope_id {
+        self.top_level_catch_vars.insert((module_idx, catch).into(), (module_idx, var).into());
+        top_level_vars.push(var);
+      } else {
+        self.resolver.reserve(scoping.symbol_name(catch).into());
+      }
+    }
+    // Only sloppy code has Annex B block functions.
+    if top_level_vars.is_empty() || scoping.root_scope_flags().is_strict_mode() {
       return;
     }
-    for (scope_id, bindings) in scoping.iter_bindings() {
-      let var_scope = scoping
-        .scope_ancestors(scope_id)
-        .find(|&scope| scoping.scope_flags(scope).is_var())
-        .expect("every binding has an enclosing var scope");
-      for (&name, &symbol) in bindings {
-        if scoping.scope_flags(var_scope).is_strict_mode()
-          && !scoping.symbol_flags(symbol).is_function_scoped_declaration()
-        {
-          continue;
-        }
-        if let Some(&var) = groups.get(&(var_scope, name)) {
-          self.catch_var_name_groups.insert((module_idx, symbol).into(), (module_idx, var).into());
-        }
+    for symbol in scoping.symbol_ids() {
+      if let Some(var) = annex_b_function_var(scoping, symbol)
+        && top_level_vars.contains(&var)
+      {
+        self.top_level_catch_vars.insert((module_idx, symbol).into(), (module_idx, var).into());
       }
+    }
+  }
+
+  /// Returns the top-level `var` whose name `symbol_ref` prints, if `symbol_ref` is a catch
+  /// parameter or an Annex B block function that [`Renamer::add_catch_var_bindings`] mapped to it.
+  fn top_level_catch_var(&self, symbol_ref: SymbolRef) -> Option<SymbolRef> {
+    self.top_level_catch_vars.get(&symbol_ref).copied()
+  }
+
+  /// Whether `symbol_ref` is a top-level `var` that a catch parameter prints the name of.
+  fn is_top_level_catch_var(&self, symbol_ref: SymbolRef) -> bool {
+    !self.top_level_catch_vars.is_empty()
+      && self.top_level_catch_vars.values().any(|&var| var == symbol_ref)
+  }
+
+  /// Give a catch parameter its own name, apart from its top-level `var`. A reference inside the
+  /// catch can read the `var` through a self-import (or a re-export cycle); the catch parameter
+  /// would capture it under the shared name. The `var` keeps its name, and the finalizer declares
+  /// it separately (`ScopeHoistingFinalizer::preserve_renamed_catch_vars`). The Annex B block
+  /// functions keep printing the name of the `var`, because they write the `var`; sloppy code
+  /// has no imports, so they never meet this case.
+  fn split_catch_from_var(&mut self, catch_ref: SymbolRef, original_name: &str) {
+    self.top_level_catch_vars.remove(&catch_ref);
+    self.rename_inner_binding(catch_ref, original_name);
+  }
+
+  /// Rename an inner `var` that a catch parameter redeclares, and give `member` (that catch
+  /// parameter, or an Annex B block function that writes the `var`) the same name.
+  fn rename_inner_catch_var(&mut self, var_ref: SymbolRef, var_name: &str, member: SymbolRef) {
+    self.rename_inner_binding(var_ref, var_name);
+    if let Some(name) = self.canonical_names.get(&var_ref).cloned() {
+      self.canonical_names.insert(member, name);
     }
   }
 
@@ -166,9 +211,11 @@ impl<'name> Renamer<'name> {
   /// cases identically and fall back to `symbol_db` to determine the effective name
   /// during code generation.
   pub fn get_canonical_name(&self, symbol_ref: SymbolRef) -> Option<&CompactStr> {
-    let symbol_ref = self.catch_var_name_groups.get(&symbol_ref).copied().unwrap_or(symbol_ref);
     let canonical_ref = self.symbol_db.canonical_ref_for(symbol_ref);
-    self.canonical_names.get(&canonical_ref)
+    self.canonical_names.get(&canonical_ref).or_else(|| {
+      let var_ref = self.top_level_catch_var(symbol_ref)?;
+      self.canonical_names.get(&self.symbol_db.canonical_ref_for(var_ref))
+    })
   }
 
   /// Returns the symbol and top-level name that the finalizer prints for `symbol_ref`. The
@@ -285,28 +332,7 @@ impl<'name> Renamer<'name> {
   /// binding, for example a `child$1` from the Gleam convention for variable shadowing, or a root
   /// local of a CJS-wrapped module that kept its original name. Thus this function needs no more
   /// checks, and the rename never causes a second rename.
-  pub fn rename_inner_binding(
-    &mut self,
-    mut symbol_ref: SymbolRef,
-    original_name: &str,
-    root_scope_is_inner: bool,
-  ) {
-    if let Some(&var_ref) = self.catch_var_name_groups.get(&symbol_ref) {
-      let scoping = self.symbol_db[var_ref.owner].as_ref().unwrap().ast_scopes.scoping();
-      if symbol_ref != var_ref
-        && !root_scope_is_inner
-        && scoping.symbol_scope_id(var_ref.symbol) == scoping.root_scope_id()
-        && self.canonical_names.contains_key(&var_ref)
-      {
-        for (&member, group) in &mut self.catch_var_name_groups {
-          if *group == var_ref && member != var_ref {
-            *group = symbol_ref;
-          }
-        }
-      } else {
-        symbol_ref = var_ref;
-      }
-    }
+  pub fn rename_inner_binding(&mut self, symbol_ref: SymbolRef, original_name: &str) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     // A binding linked to a symbol elsewhere (an import binding) is printed under that symbol's
     // name, not its own: renaming it would rename the other symbol.
@@ -335,14 +361,41 @@ impl<'name> Renamer<'name> {
 
   #[inline]
   pub fn into_canonical_names(mut self) -> FxHashMap<SymbolRef, CompactStr> {
-    for (symbol, var) in self.catch_var_name_groups {
+    for (symbol, var) in self.top_level_catch_vars {
       let canonical_var = self.symbol_db.canonical_ref_for(var);
       if let Some(name) = self.canonical_names.get(&canonical_var).cloned() {
-        self.canonical_names.insert(symbol, name);
+        self.canonical_names.entry(symbol).or_insert(name);
       }
     }
     self.canonical_names
   }
+}
+
+/// Returns the `var` that a sloppy-mode block function `symbol` writes when its block is evaluated
+/// (Annex B.3.3), if the nearest var scope binds its name. A binding with that name in a scope
+/// between the block and the var scope (other than a catch parameter) stops the write, so the
+/// function stays block-local. See internal-docs/renaming/implementation.md.
+fn annex_b_function_var(scoping: &Scoping, symbol: SymbolId) -> Option<SymbolId> {
+  let flags = scoping.symbol_flags(symbol);
+  if !flags.is_function() || flags.contains(SymbolFlags::AsyncOrGeneratorFunction) {
+    return None;
+  }
+  let scope = scoping.symbol_scope_id(symbol);
+  let scope_flags = scoping.scope_flags(scope);
+  if scope_flags.is_var() || scope_flags.is_strict_mode() {
+    return None;
+  }
+  let name = scoping.symbol_ident(symbol);
+  for ancestor in scoping.scope_ancestors(scope).skip(1) {
+    let binding = scoping.get_binding(ancestor, name);
+    if scoping.scope_flags(ancestor).is_var() {
+      return binding;
+    }
+    if binding.is_some_and(|binding| !scoping.symbol_flags(binding).is_catch_variable()) {
+      return None;
+    }
+  }
+  None
 }
 
 /// Returns true if any scope of the module, also the root scope, binds `name`.
@@ -440,29 +493,33 @@ impl NestedScopeRenamer<'_, '_> {
     let scoping = self.scoping;
     let root_scope_id = scoping.root_scope_id();
     let root_scope_is_inner = self.root_scope_is_inner();
-    let group_name = (printed_symbol.owner == self.module_idx
-      && self.renamer.catch_var_name_groups.contains_key(&printed_symbol))
+    // A catch parameter that prints the name of its top-level `var` (see
+    // `Renamer::add_catch_var_bindings`) captures a reference with that name only if the reference
+    // reads the `var` itself, through a self-import or a cycle. Its source name is the `var`'s.
+    let catch_var_name = (printed_symbol.owner == self.module_idx
+      && self.renamer.is_top_level_catch_var(printed_symbol))
     .then(|| scoping.symbol_ident(printed_symbol.symbol));
     for scope_id in scoping.scope_ancestors(reference_scope) {
       if scope_id == root_scope_id && !root_scope_is_inner {
         break;
       }
-      let binding = scoping.get_binding(scope_id, name).or_else(|| {
-        let binding = scoping.get_binding(scope_id, group_name?)?;
-        self
-          .renamer
-          .get_canonical_name((self.module_idx, binding).into())
-          .is_some_and(|printed_name| printed_name.as_str() == name.as_str())
-          .then_some(binding)
-      });
-      if let Some(binding) = binding
+      if let Some(binding) = scoping.get_binding(scope_id, name)
         && binding != target
       {
-        self.renamer.rename_inner_binding(
-          (self.module_idx, binding).into(),
-          scoping.symbol_name(binding),
-          root_scope_is_inner,
-        );
+        let binding_ref = (self.module_idx, binding).into();
+        // A binding that prints its top-level `var`'s name does not print `name`: the `var` is
+        // not `printed_symbol` (the check below), and top-level names are unique.
+        if self.renamer.top_level_catch_var(binding_ref).is_none() {
+          self.renamer.rename_inner_binding(binding_ref, scoping.symbol_name(binding));
+        }
+      }
+      if let Some(var_name) = catch_var_name
+        && let Some(binding) = scoping.get_binding(scope_id, var_name)
+      {
+        let binding_ref = (self.module_idx, binding).into();
+        if self.renamer.top_level_catch_var(binding_ref) == Some(printed_symbol) {
+          self.renamer.split_catch_from_var(binding_ref, scoping.symbol_name(binding));
+        }
       }
     }
   }
@@ -614,13 +671,37 @@ impl NestedScopeRenamer<'_, '_> {
       if is_root && !root_scope_is_inner {
         continue;
       }
-      for (&name, symbol_id) in bindings {
+      for (&name, &symbol_id) in bindings {
         if !fixed_names.contains(&name.as_str()) {
           continue;
         }
-        let symbol_ref = (self.module_idx, *symbol_id).into();
-        self.renamer.rename_inner_binding(symbol_ref, name.as_str(), root_scope_is_inner);
+        let symbol_ref = (self.module_idx, symbol_id).into();
+        // It prints the name of its top-level `var`, which the resolver kept off the fixed names.
+        if self.renamer.top_level_catch_var(symbol_ref).is_some() {
+          continue;
+        }
+        // A catch parameter or Annex B block function that prints the name of an inner `var`.
+        // Reserving that name cannot keep it off a fixed name, so rename them together.
+        match self.inner_catch_var(symbol_id) {
+          Some(var) => self.renamer.rename_inner_catch_var(
+            (self.module_idx, var).into(),
+            name.as_str(),
+            symbol_ref,
+          ),
+          None => self.renamer.rename_inner_binding(symbol_ref, name.as_str()),
+        }
       }
     }
+  }
+
+  /// Returns the inner `var` that `symbol` prints the name of: the `var` that redeclares the catch
+  /// parameter `symbol`, or the `var` (redeclaring a catch parameter) that the Annex B block
+  /// function `symbol` writes.
+  fn inner_catch_var(&self, symbol: SymbolId) -> Option<SymbolId> {
+    let scoping = self.scoping;
+    scoping.catch_var_binding(symbol).or_else(|| {
+      let var = annex_b_function_var(scoping, symbol)?;
+      scoping.catch_var_bindings().any(|(_, linked)| linked == var).then_some(var)
+    })
   }
 }

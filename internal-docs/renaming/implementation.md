@@ -73,51 +73,35 @@ The first two passes use `Renamer::printed_binding`. This function follows a nam
 
 ## Catch/var names
 
-In `catch (e) { var e = 1 }`, the declaration creates an enclosing `var` binding,
-but its initializer assigns to the catch parameter. Oxc represents these as
-separate symbols and exposes their relationship through `Scoping::catch_var_bindings`.
-They normally print under one name while retaining their distinct values.
+In `catch (e) { var e = 1 }`, oxc keeps two symbols (oxc-project/oxc#28739): the catch parameter `C`, and the binding `O` that the `var` declares in the enclosing var scope. The `var` identifier carries `C`, because its initializer writes `C`. `Scoping::catch_var_bindings` gives the `(C, O)` links. `O` has no identifier of its own, so `C` and `O` must print the same name. A sloppy-mode block function named `e` (Annex B.3.3) writes `O` when its block runs, so it must print the name of `O` too.
 
-Before choosing names, `Renamer::add_catch_var_name_groups` groups var and catch
-bindings with the same source name in each affected strict var scope. Lexical
-bindings and block functions keep their independent names. Sloppy var scopes
-also coordinate same-named block bindings, so renaming preserves the lexical
-barriers that control whether Annex B block functions can write the outer var.
-Grouping only the catch parameter and var would let a block function create a
-different implicit binding after renaming. Bindings in other var scopes remain
-independent. Name lookup and inner-binding renames use the enclosing var as the
-group representative; `into_canonical_names` copies its chosen name to the
-group members. This changes names only, without linking semantic symbols.
+The rule is the one of oxc's mangler: a linked catch keeps its name, and everything else steps around it. `Renamer::add_catch_var_bindings` runs before any name is given:
 
-A self-import or re-export cycle can make a reference inside a catch read that
-same module's enclosing var. When the catch group would capture that imported
-read, `rename_inner_binding` separates its inner members from the already named
-top-level var. The catch group takes a fresh name while the imported read keeps
-the outer name. `preserve_renamed_catch_vars` emits an uninitialized outer
-declaration (or adds it to the wrapped-ESM hoist set), since the renamed `var`
-inside the catch now declares a different enclosing binding. This also covers
-outer vars whose only source declaration is in a catch loop. The path lookup
-also checks the printed symbol's source name for members of its catch/var group.
-It compares each candidate's effective name with the imported name, so a
-renamed outer var cannot be captured by a group member whose source name stayed
-unchanged.
+- `O` is an inner binding (in a function, or in the root scope of a CJS-wrapped module): the renamer reserves the name of `C`. No top-level binding or import can print that name, so no nested-scope pass renames `C` or `O`, and the Annex B functions keep their names too. The cost: a top-level binding of another module with the same name takes a `$N`.
+- `O` is a top-level binding: `O` gets its name like any other top-level binding. `C`, and each Annex B block function that writes `O`, print that name (`top_level_catch_vars`; `get_canonical_name` and `into_canonical_names` read it). `annex_b_function_var` finds these functions: a plain block function in sloppy code whose nearest var scope binds `O`'s name, with no other binding of that name in between (such a binding stops the write; a catch parameter does not). Only sloppy modules look for them, and they read the symbol table once.
 
-The scanner records the implicit outer var when visiting a linked catch
-binding. When wrapping ESM, the finalizer hoists that declaration under its
-coordinated name and leaves its initializer assigning to the catch parameter,
-using the normal variable-declaration hoisting path.
+Two cases still rename a linked catch:
+
+- **A self-import read inside the catch.** `import { e as outer } from './self.js'; export var e; try {} catch (e) { var e = 2; log(outer) }`: `outer` prints `O`'s name, and `C` would capture it. `rename_bindings_on_path` looks up `C` by `O`'s source name when the printed symbol is a top-level `O` of the module, and `Renamer::split_catch_from_var` gives `C` a name of its own. A binding found by the searched name that prints a top-level `O`'s name is skipped: it prints another name, because top-level names are unique. After the split, the `var` inside the catch declares `C`'s name. If `O`'s declaring statement is included, `ScopeHoistingFinalizer::preserve_renamed_catch_vars` declares `O` again (`var e;`, or the wrapped-ESM hoist set), which also covers an `O` declared only by the catch. Annex B functions never split: they need sloppy code, which has no imports.
+- **A fixed name.** If the linked name is a fixed name that the module body prints (`fixed_names_in_module_body`, for example `require` in CJS output), reserving cannot help. `rename_bindings_shadowing_fixed_names` renames `O`, then gives `C` and the Annex B functions that write `O` the same name (`Renamer::rename_inner_catch_var`). A top-level `O` never has a fixed name, because the resolver reserved the fixed names.
+
+The scanner declares a top-level `O` when it visits the `var` identifier (`AstScanner::visit_binding_identifier`), so the statement counts as `O`'s declaration. When the module is wrapped ESM, the finalizer hoists `O` and turns the `var` into an assignment to `C`.
+
+`rolldown#11736` first handled this with name groups: every same-named binding of the var scope printed `O`'s name, and a group was split when it would capture an import. The rule above replaces the groups, except for the self-import split, which keeps one catch parameter apart from its `var`.
 
 ## Tests
 
 The fixtures are in `crates/rolldown/tests/rolldown/topics/deconflict/`. Each `_test.mjs` runs the output and checks the values. When a binding captures a reference, the output usually runs and reads the wrong binding. It does not fail to parse.
 
-The `catch_var_binding_groups` fixture executes imported-name conflicts, nested
-catches, destructuring, and loop declarations in ESM, CommonJS, and minified
-output. `misc/catch_var_annex_b` covers sloppy CommonJS block functions, and
-`misc/wrapped_esm_catch_param_redeclared` covers hoisting paired module bindings
-whose names conflict with the importing module.
-`catch_var_self_import` covers direct self-imports and re-export cycles, including
-an implicit outer var, under unwrapped, wrapped, CommonJS, and minified output.
+Catch/var fixtures (each runs the output and checks values against Node's behavior on the source):
+
+- `catch_var_binding_groups`: imports read inside function-level catches, nested catches, destructuring and loop `var`s.
+- `catch_var_corpus_esm`: the same, plus two modules with a top-level linked `e`, self-imports, cycles, and the entry's own `e`; ESM, CJS, minified and wrapped output.
+- `catch_var_corpus_cjs`: sloppy CJS-wrapped modules with Annex B functions at the module level and in functions, nested catches, `require` and `__dirname` as linked names, and a wrapped ESM module.
+- `catch_var_fixed_name_promise`: a linked `Promise` around a lowered `import()`.
+- `catch_var_self_import`: self-imports and re-export cycles read inside a catch, including an `O` declared only by the catch.
+- `catch_var_lexical_names`: block functions and classes named like a top-level linked catch keep their `.name`.
+- `misc/catch_var_annex_b`, `misc/wrapped_esm_catch_param_redeclared`.
 
 ## Related
 

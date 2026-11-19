@@ -93,18 +93,36 @@ impl GenerateStage<'_> {
   }
 
   /// Finds the pure dynamic entry chunks that export bindings that their entry module does not
-  /// export. `candidates` are the chunks that a merge gave modules of other entries. The check
-  /// runs the link pass once, read-only, on the current layout. Its symbol ownership stays in the
-  /// pass-local table, so the symbol database does not change.
+  /// export. `candidates` holds the chunks that a merge gave modules of other entries. The function
+  /// adds the chunks that own a binding that a live pure dynamic entry re-exports, since such a
+  /// chunk exports the binding to the entry's chunk. The check runs the link pass once, read-only,
+  /// on the current layout. Its symbol ownership stays in the pass-local table, so the symbol
+  /// database does not change.
   ///
   /// The caller extracts the namespace of each returned entry on its own chunk. The chunk stays an
   /// entry chunk, so the order decisions of later steps do not change.
   pub(super) fn find_leaking_dynamic_entry_namespaces(
     &mut self,
     chunk_graph: &ChunkGraph,
-    candidates: &FxHashSet<ChunkIdx>,
+    candidates: &mut FxHashSet<ChunkIdx>,
     used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) -> Vec<(ChunkIdx, ModuleIdx)> {
+    let symbol_db = &self.link_output.symbol_db;
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      let ChunkKind::EntryPoint { meta, module, .. } = chunk.kind else { continue };
+      if meta != ChunkMeta::DynamicImported || !chunk_graph.chunk_is_live(chunk_idx) {
+        continue;
+      }
+      for export in self.link_output.metas[module].resolved_exports.values() {
+        let owner = symbol_db.canonical_ref_resolving_namespace(export.symbol_ref).owner;
+        if !export.came_from_commonjs
+          && let Some(owner_chunk) = chunk_graph.module_to_chunk[owner]
+          && owner_chunk != chunk_idx
+        {
+          candidates.insert(owner_chunk);
+        }
+      }
+    }
     if candidates.is_empty()
       || self.options.preserve_modules
       || self.options.code_splitting.is_disabled()
@@ -129,10 +147,6 @@ impl GenerateStage<'_> {
       return leaks;
     }
     leaks.sort_unstable();
-    // Do not assign the chunk orders here. The check needs only the sets of exported symbols, and
-    // `rebuild_sorted_chunk_idx_vec` also sorts the chunks that facade elimination removes later.
-    // Such a chunk would keep an order from this call and take a chunk name before a live chunk.
-    //
     // The link pass keeps a namespace object only when its module has `namespace_included`, and
     // `finalize_chunk_plan` makes that decision later. Without it, the check cannot see a chunk
     // that exports a namespace object to another chunk (`import * as route from './route.mjs'`).
@@ -191,7 +205,7 @@ impl GenerateStage<'_> {
 
   /// Asserts the rule of `find_leaking_dynamic_entry_namespaces` on the final links: a pure dynamic
   /// entry chunk whose namespace code can see exports only public exports of its entry module. The
-  /// check runs before facade elimination, runtime placement and order lowering, so a gap in it
+  /// check runs before runtime placement and order lowering, so a gap in it
   /// shows up here in the test suite. A release build keeps the extra keys in such a case.
   #[cfg(debug_assertions)]
   pub(super) fn debug_assert_dynamic_entry_namespaces(

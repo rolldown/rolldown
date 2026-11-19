@@ -10,7 +10,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { parseReadySpec, describeReady, runEnv } from '../lib/node/launch.mjs';
+import { parseReadySpec, describeReady, runEnv, startupRun } from '../lib/node/launch.mjs';
 import {
   attributeStartupCoverage,
   coldModules,
@@ -33,6 +33,9 @@ test('every supported --ready form parses to its own probe kind', () => {
   assert.equal(stdout.kind, 'stdout');
   assert.ok(stdout.pattern.test('server listening on 3000'));
   assert.ok(!stdout.pattern.test('still booting'));
+  // The spec names a line: `^` anchors at each stdout line, not only at the first one.
+  const anchored = parseReadySpec('stdout:^ready');
+  assert.ok(anchored.pattern.test('booting\nready 1\n'));
 });
 
 test('an unparsable ready spec names every supported form', () => {
@@ -331,4 +334,117 @@ test('a node startup profile maps the entry through its sourcemap', () => {
   assert.equal(result.ownership.appMs, 30);
   assert.equal(result.ownership.engineMs, 5);
   assert.equal(result.ownership.runtimeMs, 50);
+});
+
+test('the exit probe and a stdout anchor are reached under the inspector', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'perf-kit-node-ready-'));
+  const entry = path.join(dir, 'entry.mjs');
+  fs.writeFileSync(entry, "console.log('ready');\n");
+  for (const spec of ['exit', 'stdout:^ready']) {
+    const run = await startupRun({
+      entry,
+      cwd: dir,
+      ready: parseReadySpec(spec),
+      inspect: true,
+      timeoutMs: 20_000,
+      atReady: async () => 'collected',
+    });
+    assert.equal(run.collected, 'collected', spec);
+    assert.ok(run.elapsedMs > 0, spec);
+    if (spec === 'exit') assert.equal(run.exitCode, 0);
+  }
+});
+
+test('under the inspector, the exit probe still needs exit code 0', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'perf-kit-node-exit-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  // On each of these paths node waits for the debugger to disconnect, as after a clean end.
+  const cases = [
+    ['exit.mjs', 'process.exit(7);\n', /exited with code 7 before becoming ready/],
+    ['throws.mjs', "throw new Error('boom');\n", /exited with code 1 before becoming ready/],
+    ['exit-code.mjs', 'process.exitCode = 3;\n', /exited with code 3 before becoming ready/],
+  ];
+  for (const [name, source, expected] of cases) {
+    const entry = path.join(dir, name);
+    fs.writeFileSync(entry, source);
+    await assert.rejects(
+      startupRun({
+        entry,
+        cwd: dir,
+        ready: parseReadySpec('exit'),
+        inspect: true,
+        timeoutMs: 20_000,
+        atReady: async () => 'collected',
+      }),
+      expected,
+      name,
+    );
+  }
+});
+
+test('a stdout probe waits for the target line, not for the inspector lines on stderr', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'perf-kit-node-stdout-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const entry = path.join(dir, 'server.mjs');
+  fs.writeFileSync(
+    entry,
+    'setTimeout(() => {\n' +
+      '  globalThis.printed = true;\n' +
+      "  console.log('listening on 3000');\n" +
+      '}, 100);\n' +
+      'setInterval(() => {}, 1000);\n',
+  );
+  // Both patterns also match node's "Debugger listening on ws://…" line.
+  for (const spec of ['stdout:listening on', 'stdout:listening.*\\n?$']) {
+    const run = await startupRun({
+      entry,
+      cwd: dir,
+      ready: parseReadySpec(spec),
+      inspect: true,
+      timeoutMs: 20_000,
+      // The coverage and the profile must stop at the moment that the timed runs measure.
+      atReady: async (cdp) => {
+        const { result } = await cdp.send('Runtime.evaluate', {
+          expression: 'globalThis.printed === true',
+          returnByValue: true,
+        });
+        return result.value;
+      },
+    });
+    assert.equal(run.collected, true, spec);
+  }
+});
+
+test('a ready line on stderr does not satisfy a stdout probe, and the error says so', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'perf-kit-node-stderr-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const run = (name, source) => {
+    const entry = path.join(dir, name);
+    fs.writeFileSync(entry, source);
+    return startupRun({
+      entry,
+      cwd: dir,
+      ready: parseReadySpec('stdout:listening on'),
+      timeoutMs: 20_000,
+    });
+  };
+  // Each delay keeps the exit after the output, so the probe sees all of the output first.
+  await assert.rejects(
+    run('line.mjs', "console.error('listening on 3000');\nsetTimeout(() => {}, 100);\n"),
+    /stderr has a match \("listening on"\), but a stdout: spec reads stdout only/,
+  );
+  // Only the two streams together match, so neither stream printed the line.
+  await assert.rejects(
+    run(
+      'split.mjs',
+      "process.stdout.write('listening ');\n" +
+        "setTimeout(() => process.stderr.write('on 3000\\n'), 20);\n" +
+        'setTimeout(() => {}, 100);\n',
+    ),
+    (err) => {
+      assert.match(err.message, /exited cleanly but never signalled/);
+      assert.doesNotMatch(err.message, /stderr has a match/);
+      return true;
+    },
+  );
 });

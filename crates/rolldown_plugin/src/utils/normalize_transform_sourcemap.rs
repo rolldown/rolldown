@@ -1,13 +1,14 @@
 use std::borrow::Cow;
 
-use rolldown_sourcemap::SourceMap;
+use rolldown_sourcemap::{SourceMap, source_names_module};
 
 /// Names the module's own source in a `transform` hook sourcemap, and gives it the module's code
 /// when the plugin left its content missing, `null`, or empty.
 ///
 /// A map with at most one source maps back to the transform input, so that source is the module.
 /// A map with more sources names its own files (e.g. it was chained from the input's sourcemap),
-/// so only an entry named with the module id is the module. The other entries stay as returned.
+/// so only sources that name the module get the module's content. `source_names_module` checks
+/// the module id, absolute path aliases, and relative paths that resolve to the id.
 /// See internal-docs/sourcemap-chain/implementation.md.
 pub fn normalize_transform_sourcemap(map: SourceMap, id: &str, original_code: &str) -> SourceMap {
   let mut parts = map.into_parts();
@@ -17,8 +18,9 @@ pub fn normalize_transform_sourcemap(map: SourceMap, id: &str, original_code: &s
     }
     fill_empty_content(&mut parts.source_contents, 0, original_code);
   } else {
+    let source_root = parts.source_root.as_deref();
     for (index, source) in parts.sources.iter().enumerate() {
-      if source.as_deref() == Some(id) {
+      if source.as_deref().is_some_and(|source| source_names_module(source, source_root, id)) {
         fill_empty_content(&mut parts.source_contents, index, original_code);
       }
     }
@@ -38,6 +40,8 @@ fn fill_empty_content(contents: &mut Vec<Option<Cow<'static, str>>>, index: usiz
 
 #[cfg(test)]
 mod tests {
+  use std::path::Path;
+
   use super::normalize_transform_sourcemap;
   use rolldown_sourcemap::SourceMap;
 
@@ -45,11 +49,20 @@ mod tests {
   const CODE: &str = "console.log('a')\nconsole.log('b')\n";
 
   fn normalize(json: &'static str) -> (Vec<Option<String>>, Vec<Option<String>>) {
-    let map = normalize_transform_sourcemap(SourceMap::from_json_string(json).unwrap(), ID, CODE);
+    normalize_with_id(json, ID)
+  }
+
+  fn normalize_with_id(json: &'static str, id: &str) -> (Vec<Option<String>>, Vec<Option<String>>) {
+    let map = normalize_transform_sourcemap(SourceMap::from_json_string(json).unwrap(), id, CODE);
     (
       map.get_sources().map(|source| source.map(ToOwned::to_owned)).collect(),
       map.get_source_contents().map(|content| content.map(ToOwned::to_owned)).collect(),
     )
+  }
+
+  /// An absolute module id on every platform, so that relative sources can resolve to it.
+  fn absolute_id() -> String {
+    std::env::current_dir().unwrap().join("src").join("dep.js").to_str().unwrap().to_owned()
   }
 
   fn strings(items: &[&str]) -> Vec<Option<String>> {
@@ -163,5 +176,68 @@ mod tests {
       r#"{"version":3,"sources":["/helper.ts","/project/dep.js"],"sourcesContent":["",""],"names":[],"mappings":"AAAA;ACAA"}"#,
     );
     assert_eq!(sources_content, contents(&[Some(""), Some(CODE)]));
+  }
+
+  /// A relative source names the module when it resolves to the module id, with the rule that
+  /// resolves the sources of the first map in the chain.
+  #[test]
+  fn multiple_sources_fill_a_relative_module_entry() {
+    let id = absolute_id();
+    for json in [
+      r#"{"version":3,"sources":["dep.js","/helper.ts"],"names":[],"mappings":"AAAA;ACAA"}"#,
+      r#"{"version":3,"sources":["./dep.js","/helper.ts"],"names":[],"mappings":"AAAA;ACAA"}"#,
+      r#"{"version":3,"sources":["../src/dep.js","/helper.ts"],"names":[],"mappings":"AAAA;ACAA"}"#,
+      r#"{"version":3,"sourceRoot":"lib","sources":["../dep.js","/helper.ts"],"names":[],"mappings":"AAAA;ACAA"}"#,
+    ] {
+      let (sources, sources_content) = normalize_with_id(json, &id);
+      assert_eq!(sources_content, contents(&[Some(CODE)]), "{json}");
+      // The sources stay as returned. The collapse resolves them later.
+      assert_eq!(sources[1].as_deref(), Some("/helper.ts"), "{json}");
+    }
+
+    let (sources, sources_content) = normalize_with_id(
+      r#"{"version":3,"sources":["/helper.ts","./dep.js"],"sourcesContent":["H",""],"names":[],"mappings":"AAAA;ACAA"}"#,
+      &id,
+    );
+    assert_eq!(sources, strings(&["/helper.ts", "./dep.js"]));
+    assert_eq!(sources_content, contents(&[Some("H"), Some(CODE)]));
+  }
+
+  #[test]
+  fn multiple_sources_fill_an_absolute_module_alias_in_the_second_entry() {
+    let id = absolute_id();
+    let dir = Path::new(&id).parent().unwrap();
+    let alias = dir.join("other").join("..").join("dep.js");
+    let alias = alias.to_str().unwrap();
+    let mut map = SourceMap::from_json_string(
+      r#"{"version":3,"sources":["helper.ts","dep.js"],"names":[],"mappings":"AAAA;ACAA"}"#,
+    )
+    .unwrap();
+    map.set_sources([Some("helper.ts"), Some(alias)]);
+    let map = normalize_transform_sourcemap(map, &id, CODE);
+    assert_eq!(map.get_source(1), Some(alias));
+    assert_eq!(map.get_source_content(0), None);
+    assert_eq!(map.get_source_content(1), Some(CODE));
+  }
+
+  #[test]
+  fn multiple_sources_skip_a_relative_entry_of_another_file() {
+    let id = absolute_id();
+    for json in [
+      r#"{"version":3,"sources":["lib/dep.js","/helper.ts"],"names":[],"mappings":"AAAA;ACAA"}"#,
+      r#"{"version":3,"sourceRoot":"lib","sources":["dep.js","/helper.ts"],"names":[],"mappings":"AAAA;ACAA"}"#,
+      // A URL `sourceRoot` is not a directory.
+      r#"{"version":3,"sourceRoot":"webpack://pkg/","sources":["dep.js","/helper.ts"],"names":[],"mappings":"AAAA;ACAA"}"#,
+    ] {
+      let (_, sources_content) = normalize_with_id(json, &id);
+      assert_eq!(sources_content, contents(&[]), "{json}");
+    }
+
+    // A virtual module has no directory, so only its id names it.
+    let (_, sources_content) = normalize_with_id(
+      r#"{"version":3,"sources":["virtual","/helper.ts"],"names":[],"mappings":"AAAA;ACAA"}"#,
+      "\0virtual",
+    );
+    assert_eq!(sources_content, contents(&[]));
   }
 }

@@ -35,8 +35,10 @@ const maps: Record<string, (id: string) => ExistingRawSourceMap | string> = {
   'null-content.js': () => map([src('c.ts'), src('d.ts')], [null, 'export const d = 4']),
   'no-content.js': () => map([src('e.ts'), src('f.ts')]),
   'unnamed-source.js': () => map(['', src('h.ts')], ['G', 'H']),
-  // Only the entry named with the module id is the module, so only it gets the module's code.
+  // Only the entry that names the module is the module, so only it gets the module's code.
   'module-source.js': (id) => map([src('i.ts'), id], ['I', '']),
+  // A relative path names the module when it resolves to the module id.
+  'relative-source.js': () => map(['relative-source.js', src('p.ts')], [null, 'P']),
   // A single source is the module itself, so it gets the module's code.
   'single-source.js': () => map([src('k.ts')], [''], 'AAAA;AACA'),
   'string-map.js': () => JSON.stringify(map([src('m.ts'), src('n.ts')], ['', 'N'])),
@@ -86,6 +88,11 @@ export default defineTest({
       source: at('module-source.js'),
       content: "console.log('i1');\nconsole.log('i2');\n",
     });
+    expect(origin('o1')).toEqual({
+      source: at('relative-source.js'),
+      content: "console.log('o1');\nconsole.log('o2');\n",
+    });
+    expect(origin('o2')).toEqual({ source: at('src/p.ts'), content: 'P' });
     const singleSource = "console.log('k1');\nconsole.log('k2');\n";
     expect(origin('k1')).toEqual({ source: at('single-source.js'), content: singleSource });
     expect(origin('k2')).toEqual({ source: at('single-source.js'), content: singleSource });

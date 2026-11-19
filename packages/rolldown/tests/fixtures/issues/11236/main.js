@@ -5,3 +5,4 @@ import './unnamed-source.js';
 import './module-source.js';
 import './single-source.js';
 import './string-map.js';
+import './relative-source.js';

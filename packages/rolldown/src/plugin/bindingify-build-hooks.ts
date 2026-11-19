@@ -14,7 +14,11 @@ import { bindingifySourcemap, type ExistingRawSourceMap } from '../types/sourcem
 import { aggregateBindingErrorsIntoJsError } from '../utils/error';
 import { discardResult, isPromiseLike } from '../utils/misc';
 import { transformModuleInfo } from '../utils/transform-module-info';
-import { copySourcemapObject, prepareTransformHookSourcemap } from '../utils/transform-sourcemap';
+import {
+  copySourcemapObject,
+  isEmptySourcemapFiled,
+  prepareTransformHookSourcemap,
+} from '../utils/transform-sourcemap';
 import {
   bindingifyLoadFilter,
   bindingifyResolveIdFilter,
@@ -419,17 +423,15 @@ function preProcessSourceMap(
     typeof ret.map === 'object'
       ? copySourcemapObject(ret.map)
       : (JSON.parse(ret.map) as ExistingRawSourceMap);
-  if (!map.sources?.length) {
-    return map;
+  if (!isEmptySourcemapFiled(map.sources) || map.sources?.[0] === null) {
+    // normalize original sourcemap sources
+    // Port form https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts#L180-L188.
+    const directory = path.dirname(id) || '.';
+    const sourceRoot = map.sourceRoot || '.';
+    map.sources = map.sources!.map((source) =>
+      source === null ? null : path.resolve(directory, sourceRoot, source),
+    );
   }
-  // normalize original sourcemap sources
-  // Port form https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts#L180-L188.
-  const directory = path.dirname(id) || '.';
-  const sourceRoot = map.sourceRoot || '.';
-  // An unnamed source (`null` or `''`) has no path to resolve.
-  map.sources = map.sources.map((source) =>
-    source ? path.resolve(directory, sourceRoot, source) : source,
-  );
   return map;
 }
 

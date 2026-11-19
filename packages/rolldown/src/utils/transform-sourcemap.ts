@@ -1,5 +1,15 @@
 import type { ExistingRawSourceMap, SourceMapInput } from '../types/sourcemap';
 
+export function isEmptySourcemapFiled(array: undefined | (string | null | undefined)[]): boolean {
+  if (!array) {
+    return true;
+  }
+  if (array.length === 0 || !array[0] /* null or '' */) {
+    return true;
+  }
+  return false;
+}
+
 /**
  * Copies the fields that Rolldown reads from a hook's sourcemap object into a new plain
  * object. The glue then writes `sources` on the copy, so it does not change the plugin's

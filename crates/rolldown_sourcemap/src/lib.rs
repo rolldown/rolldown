@@ -1111,3 +1111,91 @@ fn test_compose_sourcemap_run_keeps_the_source_root_of_the_first_map() {
   // A run of one map gives a copy of that map.
   assert_eq!(compose_sourcemap_run(&[&first]).unwrap().to_json_string(), first.to_json_string());
 }
+
+/// Checks the contract of `compose_sourcemap_run` on random chains: if a run of maps is replaced
+/// by its composition, the collapse gives the same map. Each chain is `[before?, run.., after]`,
+/// like a load map, a run of transform maps, and the map of rendering.
+#[test]
+fn test_compose_sourcemap_run_matches_the_whole_run_for_random_chains() {
+  /// A linear congruential generator, so that every run of the test checks the same chains.
+  struct Random(u32);
+
+  impl Random {
+    fn below(&mut self, bound: u32) -> u32 {
+      self.0 = self.0.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+      (self.0 >> 16) % bound
+    }
+  }
+
+  /// Builds a map with up to 3 lines and small columns, so that tokens often share a column and
+  /// lookups often fall before the first token of a line. Some tokens are unmapped, and some
+  /// name ids are out of range, as in a map from a Rust plugin.
+  fn random_map(random: &mut Random, label: &str, may_be_unsorted: bool) -> SourceMap {
+    let source_count = 1 + random.below(2);
+    let name_count = random.below(3);
+    let unsorted_line = (may_be_unsorted && random.below(4) == 0).then(|| random.below(3));
+    let mut tokens = vec![];
+    for dst_line in 0..3 {
+      let mut columns = (0..random.below(5)).map(|_| random.below(8)).collect::<Vec<_>>();
+      columns.sort_unstable();
+      if unsorted_line == Some(dst_line) {
+        columns.reverse();
+      }
+      for dst_col in columns {
+        tokens.push(if random.below(10) < 3 {
+          Token::new(dst_line, dst_col, 0, 0, None, None)
+        } else {
+          let name_id =
+            if random.below(2) == 0 { Some(random.below(name_count + 2)) } else { None };
+          let source_id = Some(random.below(source_count));
+          Token::new(dst_line, dst_col, random.below(3), random.below(8), source_id, name_id)
+        });
+      }
+    }
+    SourceMap::new(
+      None,
+      (0..name_count).map(|i| format!("{label}-name-{i}").into()).collect(),
+      if random.below(4) == 0 { Some(format!("{label}-root/").into()) } else { None },
+      (0..source_count).map(|i| Some(format!("{label}-{i}.js").into())).collect(),
+      (0..source_count).map(|_| None).collect(),
+      tokens.into_boxed_slice(),
+      None,
+    )
+  }
+
+  const ITERATIONS: u32 = 10_000;
+  let mut random = Random(1);
+  let mut composed_runs = 0;
+  for iteration in 0..ITERATIONS {
+    let before = (random.below(2) == 0).then(|| random_map(&mut random, "before", false));
+    let run = (0..2 + random.below(3))
+      .map(|i| random_map(&mut random, &format!("run{i}"), true))
+      .collect::<Vec<_>>();
+    let after = random_map(&mut random, "after", false);
+
+    let run_refs = run.iter().collect::<Vec<_>>();
+    let Some(composed) = compose_sourcemap_run(&run_refs) else {
+      continue;
+    };
+    composed_runs += 1;
+
+    let whole_chain = before.iter().chain(&run).chain([&after]).collect::<Vec<_>>();
+    let composed_chain = before.iter().chain([&composed, &after]).collect::<Vec<_>>();
+    let inputs =
+      || whole_chain.iter().map(|map| map.to_json_string()).collect::<Vec<_>>().join("\n");
+    assert_eq!(
+      collapse_sourcemaps(&composed_chain).to_json_string(),
+      collapse_sourcemaps(&whole_chain).to_json_string(),
+      "collapse_sourcemaps, iteration {iteration}, chain:\n{}",
+      inputs()
+    );
+    assert_eq!(
+      collapse_sourcemaps_traced(&composed_chain).to_json_string(),
+      collapse_sourcemaps_traced(&whole_chain).to_json_string(),
+      "collapse_sourcemaps_traced, iteration {iteration}, chain:\n{}",
+      inputs()
+    );
+  }
+  // Most runs have sorted maps, so most iterations check a composition.
+  assert!(composed_runs > ITERATIONS / 2, "only {composed_runs} runs were composed");
+}

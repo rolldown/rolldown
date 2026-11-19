@@ -1,5 +1,5 @@
 {
-  "_comment": "`x.js` imports `m.js` without using it, so no file imports the common chunk that holds `m.js`; only `import()` loads it, and the chunk stays a file.",
+  "_comment": "`m.js` is a code-less barrel, so `x.js`, which imports it without using it, still shares a common chunk with it. No file imports that chunk; only `import()` loads it, and the chunk stays a file.",
   "config": {
     "input": [
       {

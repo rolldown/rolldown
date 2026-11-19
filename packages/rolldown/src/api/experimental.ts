@@ -31,7 +31,7 @@ export const scan = async (
 
   const inputOptions = await PluginDriver.callOptionsHook(rawInputOptions);
 
-  const ret = await createBundlerOptions(inputOptions, rawOutputOptions, false);
+  const bundlerOptions = await createBundlerOptions(inputOptions, rawOutputOptions, false);
 
   const bundler = new BindingBundler();
 
@@ -44,7 +44,6 @@ export const scan = async (
     cleanedUp = true;
     try {
       await bundler.close();
-      await ret.stopWorkers?.();
     } finally {
       shutdownAsyncRuntime();
     }
@@ -53,7 +52,7 @@ export const scan = async (
   let cleanupPromise = Promise.resolve();
 
   try {
-    const result = await bundler.scan(ret.bundlerOptions);
+    const result = await bundler.scan(bundlerOptions);
     unwrapBindingResult(result);
   } catch (err) {
     await cleanup();

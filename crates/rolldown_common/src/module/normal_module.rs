@@ -88,6 +88,7 @@ impl NormalModule {
         exports
       },
       input_format: self.ecma_view.exports_kind,
+      module_side_effects: Some(self.ecma_view.reported_side_effects),
     }
   }
 

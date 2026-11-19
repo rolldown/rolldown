@@ -645,7 +645,7 @@ test.concurrent(
         return outputCode();
       })
       .toContain('EFFECT');
-    // Only the options from `resolveId` stay.
-    expect(infos.at(-1)).toEqual({ meta: { resolved: true }, moduleSideEffects: null });
+    // Only `meta` from `resolveId` stays. `moduleSideEffects` is the effective value.
+    expect(infos.at(-1)).toEqual({ meta: { resolved: true }, moduleSideEffects: true });
   },
 );

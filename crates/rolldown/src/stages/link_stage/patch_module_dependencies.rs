@@ -1,4 +1,6 @@
-use rolldown_common::{Module, ModuleIdx, ModuleType, RuntimeHelper, StmtInfos, SymbolRef};
+use rolldown_common::{
+  ImportKind, Module, ModuleIdx, ModuleType, RuntimeHelper, StmtInfos, SymbolRef,
+};
 use rolldown_utils::{
   index_vec_ext::IndexVecRefExt, indexmap::FxIndexSet, rayon::ParallelIterator,
 };
@@ -291,11 +293,21 @@ impl LinkStage<'_> {
       .keys()
       .copied()
       .filter(|&entry_idx| {
+        let Some(module) = self.module_table[entry_idx].as_normal() else {
+          return false;
+        };
         let meta = &self.metas[entry_idx];
         self.stmt_infos[entry_idx].iter_enumerated().all(|(stmt_idx, stmt_info)| {
+          // Only `import` and `export … from` declarations hold `ImportKind::Import` records. A
+          // declaration that contains `import()` or `require()` is code of the entry's own.
+          let is_import_or_reexport = !stmt_info.import_records.is_empty()
+            && stmt_info
+              .import_records
+              .iter()
+              .all(|&rec_idx| module.import_records[rec_idx].kind == ImportKind::Import);
           stmt_idx == StmtInfos::NAMESPACE_STMT_IDX
             || !meta.stmt_info_included.has_bit(stmt_idx)
-            || !stmt_info.import_records.is_empty()
+            || is_import_or_reexport
             || (stmt_info.declared_symbols.is_empty()
               && !stmt_info.eval_flags.has_side_effect_for_tree_shaking())
         })

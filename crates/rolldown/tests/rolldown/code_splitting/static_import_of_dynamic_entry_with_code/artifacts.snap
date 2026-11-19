@@ -16,11 +16,29 @@ export { a };
 ## b.js
 
 ```js
-import { t as Bar } from "./lib.js";
+import { t as Bar } from "./bar.js";
 import { t as foo } from "./foo.js";
 // b.js
 const b = () => new Bar().value() + foo.value;
 export { b };
+
+```
+
+## bar.js
+
+```js
+import { t as foo } from "./foo.js";
+// lib/heavy.js
+function heavy() {
+	return "HEAVY".repeat(3);
+}
+// lib/bar.js
+var Bar = class {
+	value() {
+		return heavy() + foo.value;
+	}
+};
+export { Bar as t };
 
 ```
 
@@ -36,20 +54,11 @@ export { foo as t };
 ## lib.js
 
 ```js
-import { t as foo } from "./foo.js";
-// lib/heavy.js
-function heavy() {
-	return "HEAVY".repeat(3);
-}
-// lib/bar.js
-var Bar = class {
-	value() {
-		return heavy() + foo.value;
-	}
-};
+import "./foo.js";
+import { t as Bar } from "./bar.js";
 // lib/index.js
 const own = { bar: Bar };
-export { own, Bar as t };
+export { own };
 
 ```
 

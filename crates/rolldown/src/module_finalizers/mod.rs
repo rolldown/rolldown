@@ -27,7 +27,7 @@ use rolldown_ecmascript_utils::{
   ExpressionFactoryExt as _, IdentifierNameFactoryExt as _, StatementExt, StatementFactoryExt as _,
   parse_injected_expression,
 };
-use rolldown_error::EmptyImportMetaKind;
+use rolldown_error::{EmptyImportMetaKind, EventKindSwitcher};
 
 use crate::chunk_graph::ChunkGraph;
 use crate::hmr::utils::create_request_lazy_call;
@@ -172,6 +172,9 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   /// JSX element name can't hold: an import whose name is not a valid identifier, read as a
   /// bracketed property.
   pub unsupported_jsx_element_names: Vec<Span>,
+  /// Import records of externals whose attributes the output drops, with the span of the `with`
+  /// clause.
+  pub dropped_import_attributes: Vec<(ImportRecordIdx, Span)>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -2195,12 +2198,33 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   #[expect(clippy::too_many_lines)]
   fn remove_unused_top_level_stmt(&mut self, program: &mut ast::Program<'ast>) -> usize {
     let mut last_import_stmt_idx = None;
+    let warns_dropped_import_attributes =
+      self.ctx.options.checks.contains(EventKindSwitcher::DroppedImportAttribute)
+        && !self.ctx.options.format.keep_esm_import_export_syntax();
 
     let old_body = program.body.take_in(self);
     // the first statement info is the namespace variable declaration
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
     old_body.into_iter().enumerate().zip(self.ctx.stmt_infos.iter_enumerated().skip(1)).for_each(
       |((_top_stmt_idx, mut top_stmt), (stmt_info_idx, stmt_info))| {
+        // Runs for excluded statements too. An `export *` from an external is excluded, but its
+        // `require()` is still rendered.
+        if warns_dropped_import_attributes
+          && let Some(decl) = top_stmt.as_module_declaration()
+          && let Some(with_clause) = decl.with_clause()
+        {
+          let rec_idx = self.ctx.module.imports[&decl.node_id()];
+          let importee = self.ctx.module.import_records[rec_idx]
+            .resolved_module
+            .and_then(|idx| self.ctx.modules[idx].as_external());
+          // `require()` loads JSON without the attribute.
+          if importee.is_some_and(|importee| {
+            !importee.attributes.is_empty() && !importee.attributes.iter().eq([("type", "json")])
+          }) {
+            self.dropped_import_attributes.push((rec_idx, with_clause.span));
+          }
+        }
+
         let is_order_runtime_stmt =
           self.ctx.order_wrap_state.forces_runtime_stmt(self.ctx.runtime, self.ctx.idx, stmt_info);
         let is_stmt_included =

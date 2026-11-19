@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./entry.mjs"
+      }
+    ],
+    "platform": "node",
+    "file": "dist/entry.js",
+    "codeSplitting": false
+  }
+}

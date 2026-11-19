@@ -1,5 +1,9 @@
 use napi::bindgen_prelude::Either;
 
+use crate::types::binding_string_or_regex::{
+  BindingStringOrRegex, bindingify_string_or_regex_array,
+};
+
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingExperimentalOptions {
@@ -64,20 +68,13 @@ impl From<BindingChunkOptimizationOptions> for rolldown_common::ChunkOptimizatio
 #[derive(Debug, Default)]
 pub struct BindingExperimentalDevModeOptions {
   pub implement: String,
-  /// @deprecated Common runtime injection will be disabled by default in the future.
-  pub skip_common_runtime_injection: Option<bool>,
   pub lazy: Option<bool>,
   pub hot_update: Option<bool>,
 }
 
 impl From<BindingExperimentalDevModeOptions> for rolldown_common::DevModeOptions {
   fn from(value: BindingExperimentalDevModeOptions) -> Self {
-    Self {
-      implement: Some(value.implement),
-      skip_common_runtime_injection: value.skip_common_runtime_injection,
-      lazy: value.lazy,
-      hot_update: value.hot_update,
-    }
+    Self { implement: Some(value.implement), lazy: value.lazy, hot_update: value.hot_update }
   }
 }
 
@@ -120,10 +117,15 @@ impl From<BindingChunkModuleOrderBy> for rolldown_common::ChunkModulesOrderBy {
 pub struct BindingChunkImportMap {
   pub base_url: Option<String>,
   pub file_name: Option<String>,
+  pub include: Option<Vec<BindingStringOrRegex>>,
 }
 
 impl From<BindingChunkImportMap> for rolldown_common::ChunkImportMap {
   fn from(value: BindingChunkImportMap) -> Self {
-    Self { base_url: value.base_url, file_name: value.file_name }
+    Self {
+      base_url: value.base_url,
+      file_name: value.file_name,
+      include: value.include.map(bindingify_string_or_regex_array),
+    }
   }
 }

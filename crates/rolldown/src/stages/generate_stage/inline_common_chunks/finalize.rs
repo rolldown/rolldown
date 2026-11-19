@@ -1,6 +1,4 @@
-use rolldown_common::{
-  Chunk, ChunkIdx, ModuleRenderArgs, ModuleRenderOutput, SymbolRef, UsedSymbolRefs,
-};
+use rolldown_common::{Chunk, ChunkIdx, ModuleRenderOutput, SymbolRef, UsedSymbolRefs};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -133,7 +131,7 @@ impl GenerateStage<'_> {
           }
           diagnostics.extend(bare_bridge_callee(ast.program(), &callees, &module.stable_id));
           // A factory body sits one level inside the `__share` arrow function.
-          module.render(self.options, &ModuleRenderArgs::Ecma { ast: &ast }, 1)
+          crate::utils::render_ecma_module::render_normal_module(module, self.options, &ast, 1)
         })
         .collect();
       (modules, diagnostics)

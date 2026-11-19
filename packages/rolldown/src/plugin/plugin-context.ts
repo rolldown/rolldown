@@ -343,7 +343,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       moduleSideEffects: options.moduleSideEffects || null,
       invalidate: false,
     };
-    this.data.updateModuleOption(id, rawOptions);
+    this.data.updateModuleOption(id, rawOptions, true);
 
     let loadPromise = this.data.loadModulePromiseMap.get(id);
     if (!loadPromise) {

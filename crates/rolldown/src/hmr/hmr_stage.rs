@@ -525,20 +525,28 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         }
       }
 
-      if !added_static_deps.is_empty() {
-        let held = ClientHeldCopies {
-          shipped: client.shipped,
-          evaluated: client.top_level_evaluated,
-          stamp_table,
-        };
-        self.collect_unheld_sync_deps(
-          &[],
-          added_static_deps.iter().copied(),
-          None,
-          &held,
-          &mut carried,
-        );
-      }
+      // See internal-docs/hmr/design.md, principle 2.
+      let walk_from = carried
+        .iter()
+        .copied()
+        .filter(|module_idx| {
+          let stable_id = self.module_table().modules[*module_idx].stable_id().as_str();
+          client.shipped.contains_key(stable_id)
+            || client.top_level_evaluated.contains_key(stable_id)
+        })
+        .collect::<Vec<_>>();
+      let held = ClientHeldCopies {
+        shipped: client.shipped,
+        evaluated: client.top_level_evaluated,
+        stamp_table,
+      };
+      self.collect_unheld_sync_deps(
+        &walk_from,
+        added_static_deps.iter().copied(),
+        None,
+        &held,
+        &mut carried,
+      );
 
       let update = self.render_hmr_patch(carried, changed_ids.clone(), stamp_table).await?;
       client_updates.push(ClientHmrUpdate { client_id: client.client_id.to_string(), update });
@@ -806,7 +814,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         &file_dir,
         filename.as_str(),
         0,
-        /*is_css*/ false,
         None,
       )
       .await?
@@ -934,7 +941,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         &file_dir,
         filename.as_str(),
         0,
-        /*is_css*/ false,
         None,
       )
       .await?
@@ -1038,11 +1044,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     //
     // Warnings are dropped: a module rendered here was rendered by the full build too,
     // which reports a broken chain for it already.
-    let (code, codegen_map) = match codegen.map {
-      Some(map) => (codegen.code, Some(map.into_owned())),
-      None => (codegen.code, None),
-    };
-
+    // Hand the codegen map to the collapse as is. `into_owned` here would
+    // copy sourcesContent/names that the collapse immediately copies again
+    // (or drops). The returned map is owned.
+    let code = codegen.code;
     // Guarded, because a chain collapses to a map even when the codegen step
     // contributed none — which would hand back a sourcemap for a render that asked
     // not to have one.
@@ -1050,7 +1055,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .then(|| {
         collapse_module_sourcemap(
           &module.sourcemap_chain,
-          codegen_map,
+          codegen.map,
           module.id.as_str(),
           &mut Vec::new(),
         )

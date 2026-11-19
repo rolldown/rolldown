@@ -5,7 +5,6 @@ import path from 'node:path';
 import type { InputOptions, OutputOptions } from 'rolldown';
 import type { DevEngine, DevOptions } from 'rolldown/experimental';
 import { dev as _dev } from 'rolldown/experimental';
-import { isWasiTest } from 'rolldown-tests/utils';
 import { expect, test } from 'vitest';
 
 const TEST_TIMEOUT = 60_000;
@@ -39,9 +38,7 @@ function dev(
 //
 // Fix: after `close()`, `ensureCurrentBuildFinish()` is a no-op rather than
 // an error — there is no ongoing bundle to wait for.
-//
-// Under the wasm binding `close()` tears down the shared tokio runtime, so the no-op call panics with "Access tokio runtime failed in spawn". See https://github.com/rolldown/rolldown/issues/10639.
-test.skipIf(isWasiTest)(
+test(
   'ensureCurrentBuildFinish after close resolves instead of rejecting',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -129,7 +126,7 @@ const resolveExternal = (context: {
     (error: Error) => (error.cause as Error | undefined)?.message ?? error.message,
   );
 
-test.skipIf(isWasiTest)(
+test(
   'a closeBundle hook that awaits engine.close() does not hang',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -163,7 +160,7 @@ test.skipIf(isWasiTest)(
   },
 );
 
-test.skipIf(isWasiTest)(
+test(
   'a second close does not release the option functions while closeBundle runs',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -208,7 +205,7 @@ test.skipIf(isWasiTest)(
 // The dev engine keeps its plugin driver after its close, so a kept plugin context can still reach
 // an option function. After `bundle.close()`, the same call fails earlier, because that close drops
 // the plugin driver.
-test.skipIf(isWasiTest)(
+test(
   'a kept plugin context gets a clear error when an option function runs after close',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -245,5 +242,37 @@ test.skipIf(isWasiTest)(
     expect(((error as Error).cause as Error).message).toContain(
       'external option: A JS function of the bundler options was called after the bundle closed.',
     );
+  },
+);
+
+test(
+  'a kept plugin context can settle a load after close',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const { input, outDir } = createInput('dev-close-kept-load', onTestFinished);
+    const freshId = path.join(path.dirname(input), 'fresh.js');
+    fs.writeFileSync(freshId, 'export const fresh = 1;');
+    let load!: () => Promise<unknown>;
+    const engine = await dev(
+      {
+        input,
+        experimental: { devMode: true },
+        plugins: [
+          {
+            name: 'keep-load-context',
+            buildStart() {
+              load = () => this.load({ id: freshId });
+            },
+          },
+        ],
+      },
+      { dir: outDir },
+      {},
+    );
+    await engine.run();
+    await engine.ensureCurrentBuildFinish();
+    await withTimeout(engine.close(), 'The close');
+
+    await expect(withTimeout(load(), 'The load')).resolves.toBeNull();
   },
 );

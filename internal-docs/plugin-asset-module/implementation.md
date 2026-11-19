@@ -71,6 +71,12 @@ The remaining ESM overhead gap (compared to the old `has_lazy_export` approach) 
 
 This is a balanced tradeoff: a small bridge API on the `FileEmitter` (`associate_module_with_file_ref` / `file_ref_for_module`) avoids the cost of re-parsing modules in a plugin `transform` hook. The core handles detection and rewriting; the plugin handles asset emission and filename generation.
 
+### A user plugin loads the `new URL()` target first
+
+The asset plugin's `load` runs `Post`, so a user plugin can answer first, for example a wasm loader that handles every `.wasm` file. When no file is associated with the module after `load`, `load_source` (`crates/rolldown/src/utils/load_source.rs`) emits the file itself through the `FileEmitter` and associates it with the module, so the `new URL()` finalizer finds the asset as usual. The plugin's code stays the module's code: a returned `moduleType` is kept, and without one the asserted `asset` type, which the parser rejects, is not applied. A target with no file on disk, such as a virtual or ignored module, has nothing to emit, so its `new URL()` is left unrewritten.
+
+This only applies when a `new URL()` record is the first to reach the module, because the asserted type comes from that record. A module first reached by a plain `import` has no asserted type, so its `new URL()` is left unrewritten.
+
 ## Related
 
 - `crates/rolldown_plugin_asset_module/` — plugin implementation

@@ -37,13 +37,19 @@ pub(crate) struct GraphNode {
 }
 
 pub(crate) struct GraphAnalysis {
-  /// Raw ids of the user-defined entry modules the virtual root points at.
-  pub entry_modules: Vec<String>,
+  /// Sorted indices of the user-defined entry modules the virtual root points at.
+  pub entry_indices: Vec<usize>,
   /// Node table, sorted by raw id (deterministic across builds).
   pub nodes: Vec<GraphNode>,
   pub static_module_count: usize,
   pub static_bytes: u64,
   pub dynamic_only_count: usize,
+}
+
+impl GraphAnalysis {
+  pub(crate) fn entry_ids(&self) -> impl Iterator<Item = &str> {
+    self.entry_indices.iter().map(|&i| self.nodes[i].id.as_str())
+  }
 }
 
 /// Run the analysis. `adjacency` maps module id -> `(imported id, is_dynamic)` edges;
@@ -239,9 +245,8 @@ pub(crate) fn analyze(
     })
     .collect();
 
-  let entry_modules = entry_idxs.iter().map(|&e| ids[e].to_string()).collect();
   Some(GraphAnalysis {
-    entry_modules,
+    entry_indices: entry_idxs,
     nodes,
     static_module_count,
     static_bytes,

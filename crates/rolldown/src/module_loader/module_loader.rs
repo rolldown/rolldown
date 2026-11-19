@@ -489,6 +489,18 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         changed_resolved_ids.push(resolved_id);
       }
     }
+    // Keep only the module options set when the changed modules were resolved, because their
+    // importers do not resolve them again.
+    if !changed_resolved_ids.is_empty()
+      && let Some(reset_js_module_options) = &self.shared_context.options.reset_js_module_options
+    {
+      let module_ids = changed_resolved_ids.iter().map(|resolved_id| resolved_id.id.to_string());
+      if let Err(err) = reset_js_module_options.call(Some(module_ids.collect())).await {
+        // The files were taken from `pending_rescans`, so queue them again.
+        self.revert_partial_scan(changed_resolved_ids, barrel_state_backup);
+        return Err(err.into());
+      }
+    }
     for resolved_id in changed_resolved_ids.iter().cloned() {
       self.shared_context.plugin_driver.invalidate_context_load_module(&resolved_id.id);
       if let Entry::Occupied(mut occ) = self.cache.module_id_to_idx.entry(resolved_id.id.clone()) {

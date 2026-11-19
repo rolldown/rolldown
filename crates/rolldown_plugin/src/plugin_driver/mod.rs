@@ -62,9 +62,9 @@ pub struct PluginDriver {
   pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<WatchPath>>>>,
   context_load_completion_manager: ContextLoadCompletionManager,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
-  /// Outlives the `Bundle` through `BundleHandle`, which is how the binding reads them
-  /// once the build has finished.
-  pub build_timings: BuildTimings,
+  /// Shared, so the binding can keep the clocks of every build until the bundler closes
+  /// without keeping the driver of every build.
+  pub build_timings: Arc<BuildTimings>,
   /// Pending `onLog` callback tasks spawned by `PluginContext::{info,warn,debug}`.
   pub(crate) log_hook_tasks: SharedLogHookTasks,
 }

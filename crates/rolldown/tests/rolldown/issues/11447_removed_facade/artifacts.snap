@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## group.js
+
+```js
+// bar.js
+const bar = { value: "bar" };
+// foo.js
+const foo = "foo";
+export { foo, bar as t };
+
+```
+
+## main.js
+
+```js
+import { t as bar } from "./group.js";
+// main.js
+console.log(bar);
+
+```

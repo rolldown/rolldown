@@ -103,7 +103,6 @@ test(
       'runtime-extra-dev-default.js',
     )}`.replaceAll('$ADDR', 'example.test:1234');
     expect(runtimeModuleCode?.endsWith(expected)).toBe(true);
-    // `skipCommonRuntimeInjection` stops Rust from adding its own copy.
     expect(runtimeModuleCode?.split('class DevRuntime')).toHaveLength(2);
   },
 );

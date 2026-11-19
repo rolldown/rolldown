@@ -30,6 +30,14 @@ pub fn render_wrapped_entry_chunk(
   if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     let entry_meta = &ctx.link_output.metas[entry_id];
     if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
+      if matches!(ctx.options.format, OutputFormat::Cjs)
+        && let Some(host_idx) = ctx.chunk_graph.module_to_chunk[entry_id]
+        && host_idx != ctx.chunk_idx
+        && ctx.chunk_graph.chunk_table[host_idx].entry_module_idx() == Some(entry_id)
+      {
+        let require_binding = &ctx.chunk.require_binding_names_for_other_chunks[&host_idx];
+        return Some(concat_string!("module.exports = ", require_binding, ";\n"));
+      }
       let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
 
       let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(

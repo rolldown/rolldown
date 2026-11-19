@@ -36,12 +36,7 @@ describe('assetFileNames timings', () => {
         return `assets/${asset.names[0]}`;
       });
       const outputOptions: OutputOptions = { assetFileNames };
-      const { bundlerOptions } = await createBundlerOptions(
-        inputOptions,
-        outputOptions,
-        false,
-        true,
-      );
+      const bundlerOptions = await createBundlerOptions(inputOptions, outputOptions, false, true);
       const bindingAssetFileNames = bundlerOptions.outputOptions.assetFileNames;
       expect(typeof bindingAssetFileNames).toBe('function');
       if (typeof bindingAssetFileNames !== 'function') {

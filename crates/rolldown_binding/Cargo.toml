@@ -18,7 +18,6 @@ doctest = false
 [dependencies]
 anyhow = { workspace = true }
 arcstr = { workspace = true }
-async-channel = { workspace = true }
 dashmap = { workspace = true }
 derive_more = { workspace = true }
 futures = { workspace = true }

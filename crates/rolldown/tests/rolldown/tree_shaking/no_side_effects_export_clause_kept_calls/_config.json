@@ -1,0 +1,13 @@
+{
+  "_comment": "Keep calls when eval, a repeated declaration, or a rest parameter makes them impure. Keep getter reads, TDZ errors, coercion, destructuring, and nonterminating loops. The other entry puts the functions in a shared chunk.",
+  "config": {
+    "input": [
+      { "name": "entry", "import": "./entry.js" },
+      { "name": "early", "import": "./early.js" },
+      { "name": "loops", "import": "./loops.js" },
+      { "name": "other", "import": "./other.js" }
+    ],
+    "minify": false
+  },
+  "configVariants": [{ "minify": true, "_snapshot": false }]
+}

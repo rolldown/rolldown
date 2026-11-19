@@ -14,7 +14,7 @@ pub use binding_generated_code_options::BindingGeneratedCodeOptions;
 use binding_manual_code_splitting_options::BindingManualCodeSplittingOptions;
 use binding_pre_rendered_chunk::PreRenderedChunk;
 
-use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
+use super::plugin::BindingPluginOrBuiltinPlugin;
 use crate::types::{
   binding_rendered_chunk::BindingRenderedChunk,
   binding_string_or_regex::BindingStringOrRegex,
@@ -124,8 +124,8 @@ pub struct BindingOutputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "Record<string, string> | ((id: string) => string)")]
   pub paths: Option<PathsOutputOption>,
-  #[napi(ts_type = "(BindingBuiltinPlugin | BindingPluginOptions | undefined)[]")]
-  pub plugins: Vec<BindingPluginOrParallelJsPluginPlaceholder<'env>>,
+  #[napi(ts_type = "(BindingBuiltinPlugin | BindingPluginOptions)[]")]
+  pub plugins: Vec<BindingPluginOrBuiltinPlugin<'env>>,
   // preferConst: boolean;
   #[napi(ts_type = "'file' | 'inline' | 'hidden'")]
   pub sourcemap: Option<String>,

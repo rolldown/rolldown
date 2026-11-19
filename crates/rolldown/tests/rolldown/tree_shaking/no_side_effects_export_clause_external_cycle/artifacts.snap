@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## caller.js
+
+```js
+import { noop } from "./lib.js";
+
+// caller.js
+noop();
+
+```
+
+## lib.js
+
+```js
+import "./external.mjs";
+
+// lib.js
+const noop = () => {};
+
+export { noop };
+```

@@ -2010,6 +2010,55 @@ describe('persistent cache', () => {
     ]);
   });
 
+  test('a log that changes when it is saved as JSON gives its module no saved result', async () => {
+    writeFiles(BASIC_FILES);
+    const makePlugins = (calls: string[]): Plugin[] => [
+      recordingPlugin(calls, true),
+      {
+        name: 'warner',
+        transform: {
+          cache: true,
+          handler(_code, id) {
+            if (id === path.join(src, 'a.js')) {
+              this.warn({ message: 'look at a', cause: new Error('the cause') });
+            } else if (id === path.join(src, 'b.js')) {
+              this.warn('look at b');
+            }
+            return null;
+          },
+        },
+      },
+    ];
+    const collect = () => {
+      const logs: string[] = [];
+      const onLog: InputOptions['onLog'] = (_level, log) => {
+        if (log.plugin === 'warner') {
+          logs.push(`${log.message}|${(log as { cause?: Error }).cause?.message ?? ''}`);
+        }
+      };
+      return { logs, onLog };
+    };
+
+    const first = collect();
+    await build({ plugins: makePlugins([]), onLog: first.onLog });
+    for (let i = 0; i < 2; i++) {
+      const again = collect();
+      const calls: string[] = [];
+      await build({ plugins: makePlugins(calls), onLog: again.onLog });
+      // `a.js` runs its hooks again, so its log keeps the `Error`. `b.js` reuses its saved result.
+      expect(calls.sort()).toEqual([
+        'recording.load:a.js',
+        'recording.resolveId:a.js:./c.js',
+        'recording.transform:a.js',
+      ]);
+      expect(again.logs.sort()).toEqual(first.logs.sort());
+    }
+    expect(first.logs.sort()).toEqual([
+      expect.stringMatching(/look at a.*\|the cause$/),
+      expect.stringMatching(/look at b.*\|$/),
+    ]);
+  });
+
   test('`this.emitFile` in a cached `transform` emits the asset again', async () => {
     writeFiles(BASIC_FILES);
     const makePlugins = (calls: string[]): Plugin[] => [

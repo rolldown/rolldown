@@ -45,6 +45,7 @@ import type { PreRenderedAsset } from '../options/output-options';
 import type { OutputAsset } from '../types/rolldown-output';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { ResolveIdExtraOptions } from '../index';
+import { isSavableAsJson } from './savable-meta';
 
 /**
  * Either a {@linkcode name} or a {@linkcode fileName} can be supplied.
@@ -586,14 +587,12 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
  */
 function recordLogs(onLog: LogHandler, context: BindingPluginContext): LogHandler {
   return (level, log) => {
-    let json: string | undefined;
-    try {
-      json = JSON.stringify(log);
-    } catch {}
-    if (json === undefined) {
-      context.markNotCacheable(`a log of a plugin cannot be converted to JSON`);
+    // A reuse sends the log again from its JSON text, so the log must be the same after a JSON
+    // round trip. An `Error` in it, for example, would lose its `message`.
+    if (isSavableAsJson(log)) {
+      context.recordLog(level, JSON.stringify(log));
     } else {
-      context.recordLog(level, json);
+      context.markNotCacheable(`a log of a plugin changes when it is saved as JSON`);
     }
     onLog(level, log);
   };

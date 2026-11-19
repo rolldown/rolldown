@@ -1333,6 +1333,7 @@ impl GenerateStage<'_> {
     entry_meta: &crate::types::linking_metadata::LinkingMetadata,
   ) {
     let symbols = &self.link_output.symbol_db;
+    let mut verdicts = FxHashMap::default();
     let sorted_export_refs = entry_meta
       .resolved_exports
       .iter()
@@ -1345,6 +1346,7 @@ impl GenerateStage<'_> {
         self.entry_export_needs_service(
           entry_idx,
           symbols.canonical_ref_resolving_namespace(export.symbol_ref).owner,
+          &mut verdicts,
         )
       });
     if self.options.is_strict_execution_order_enabled() {
@@ -1368,7 +1370,7 @@ impl GenerateStage<'_> {
         symbols,
         None,
       ) {
-        if self.entry_export_needs_service(entry_idx, init.owner) {
+        if self.entry_export_needs_service(entry_idx, init.owner, &mut verdicts) {
           depended_symbols.insert(init.wrapper_ref);
         }
       }

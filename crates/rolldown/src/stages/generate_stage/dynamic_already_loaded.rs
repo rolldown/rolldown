@@ -802,12 +802,13 @@ impl GenerateStage<'_> {
       return;
     }
     let symbol_db = &self.link_output.symbol_db;
+    let mut verdicts = FxHashMap::default();
     for resolved_export in meta.resolved_exports.values() {
       if resolved_export.came_from_commonjs {
         continue;
       }
       let served = symbol_db.canonical_ref_resolving_namespace(resolved_export.symbol_ref);
-      if !self.entry_export_needs_service(module_idx, served.owner) {
+      if !self.entry_export_needs_service(module_idx, served.owner, &mut verdicts) {
         continue;
       }
       let is_live = assume_all_live
@@ -831,7 +832,7 @@ impl GenerateStage<'_> {
       symbol_db,
       None,
     ) {
-      if self.entry_export_needs_service(module_idx, init.owner)
+      if self.entry_export_needs_service(module_idx, init.owner, &mut verdicts)
         && (assume_all_live || used_symbol_refs_view.contains(&init.wrapper_ref))
       {
         targets.push(init.wrapper_ref.owner);
@@ -843,7 +844,14 @@ impl GenerateStage<'_> {
   /// preserved signature, only when `owner` or anything it statically imports has a side effect,
   /// so startup still runs it. `sideEffects: false` modules are crossed without counting their own
   /// statements, and `Analyzed` verdicts are not used because they also count dynamic imports.
-  pub(super) fn entry_export_needs_service(&self, entry: ModuleIdx, owner: ModuleIdx) -> bool {
+  /// `verdicts` holds the answer for each owner already walked and maps every module of a walk
+  /// without a side effect to `false`, so each module is walked at most once per cache.
+  pub(super) fn entry_export_needs_service(
+    &self,
+    entry: ModuleIdx,
+    owner: ModuleIdx,
+    verdicts: &mut FxHashMap<ModuleIdx, bool>,
+  ) -> bool {
     if self.options.preserve_modules
       || !self.link_output.module_table[entry].as_normal().unwrap().dynamic_importers.is_empty()
       || !matches!(
@@ -860,16 +868,22 @@ impl GenerateStage<'_> {
     let mut pending = vec![owner];
     let mut visited = FxHashSet::default();
     while let Some(idx) = pending.pop() {
-      if !visited.insert(idx) {
+      let known = verdicts.get(&idx).copied();
+      if known == Some(false) || !visited.insert(idx) {
         continue;
       }
       let module = &self.link_output.module_table[idx];
-      if match module.side_effects() {
-        DeterminedSideEffects::Analyzed(_) => self.link_output.stmt_infos[idx].iter().any(|stmt| {
-          !stmt.force_tree_shaking && stmt.eval_flags.contains(StmtEvalFlags::UnknownSideEffect)
-        }),
-        side_effects => side_effects.has_side_effects(),
-      } {
+      if known == Some(true)
+        || match module.side_effects() {
+          DeterminedSideEffects::Analyzed(_) => {
+            self.link_output.stmt_infos[idx].iter().any(|stmt| {
+              !stmt.force_tree_shaking && stmt.eval_flags.contains(StmtEvalFlags::UnknownSideEffect)
+            })
+          }
+          side_effects => side_effects.has_side_effects(),
+        }
+      {
+        verdicts.insert(owner, true);
         return true;
       }
       pending.extend(
@@ -880,6 +894,7 @@ impl GenerateStage<'_> {
           .filter_map(|rec| rec.resolved_module),
       );
     }
+    verdicts.extend(visited.into_iter().map(|idx| (idx, false)));
     false
   }
 

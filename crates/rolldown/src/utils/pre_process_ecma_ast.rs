@@ -1,16 +1,18 @@
+use std::cell::Cell;
 use std::path::Path;
 
 use arcstr::ArcStr;
 use oxc::ast::ast::CommentContent;
 use oxc::ast::ast::Program;
 use oxc::ast::ast::{
-  BindingPattern, Declaration, ExportDefaultDeclarationKind, Expression, Function, Statement,
-  VariableDeclarator,
+  ArrowFunctionExpression, BindingPattern, Declaration, ExportDefaultDeclarationKind,
+  ExportSpecifier, Expression, Function, IdentifierReference, Statement, VariableDeclarator,
 };
 use oxc::ast_visit::{VisitJs, VisitJsMut, walk_js, walk_js_mut};
 use oxc::diagnostics::{LabeledSpan, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
-use oxc::semantic::{ScopeFlags, Scoping, Stats, SymbolId};
+use oxc::semantic::{ScopeFlags, ScopeId, Scoping, Stats, SymbolId};
+use oxc::span::GetSpan;
 use oxc::syntax::symbol::SymbolFlags;
 use oxc::transformer::Transformer;
 use oxc::transformer_plugins::{
@@ -106,7 +108,7 @@ impl PreProcessEcmaAst {
 
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
-    self.clear_no_side_effects_replaceable_by_eval(&mut ast, &mut scoping);
+    self.clear_unsafe_no_side_effects(&mut ast, &mut scoping);
 
     // Extract enum member values before the transformer converts enums.
     // This runs before Step 3 (transformer) because `optimize_const_enums` / `optimize_enums`
@@ -288,27 +290,36 @@ impl PreProcessEcmaAst {
     })
   }
 
-  /// oxc treats every call of a `@__NO_SIDE_EFFECTS__` binding as pure. Direct `eval` can replace
-  /// a `let`, a `var` or a function declaration without a write reference, so drop the
-  /// annotation of each such binding before the dead code elimination runs.
-  fn clear_no_side_effects_replaceable_by_eval(
-    &mut self,
-    ast: &mut EcmaAst,
-    scoping: &mut Option<Scoping>,
-  ) {
+  /// oxc treats every call of a `@__NO_SIDE_EFFECTS__` binding as pure. Drop the annotation of a
+  /// binding whose call can still run code or throw, before the dead code elimination runs:
+  /// - Direct `eval` can replace a `let`, a `var` or a function declaration without a write
+  ///   reference.
+  /// - Code that reads a `let`, `const` or `var` binding before its declaration, outside a nested
+  ///   function, sees the binding before it is initialized. See
+  ///   `internal-docs/linking/module-execution-order/implementation.md`.
+  fn clear_unsafe_no_side_effects(&mut self, ast: &mut EcmaAst, scoping: &mut Option<Scoping>) {
     let scoping_ref = scoping.as_ref().unwrap();
-    if !scoping_ref.root_scope_flags().contains_direct_eval() {
+    let no_side_effects = scoping_ref.no_side_effects();
+    if no_side_effects.is_empty() {
       return;
     }
-    let symbols = scoping_ref
-      .no_side_effects()
+    let candidates = no_side_effects
       .iter()
       .copied()
-      .filter(|&symbol_id| {
+      .filter(|&symbol_id| !scoping_ref.symbol_flags(symbol_id).is_function())
+      .map(|symbol_id| (symbol_id, scoping_ref.symbol_span(symbol_id).start))
+      .collect::<FxHashMap<_, _>>();
+    let mut symbols = if candidates.is_empty() {
+      FxHashSet::default()
+    } else {
+      ReadBeforeDeclarationFinder::find(scoping_ref, candidates, ast.program())
+    };
+    if scoping_ref.root_scope_flags().contains_direct_eval() {
+      symbols.extend(no_side_effects.iter().copied().filter(|&symbol_id| {
         !scoping_ref.symbol_flags(symbol_id).is_const_variable()
           && scoping_ref.scope_flags(scoping_ref.symbol_scope_id(symbol_id)).contains_direct_eval()
-      })
-      .collect::<FxHashSet<_>>();
+      }));
+    }
     if symbols.is_empty() {
       return;
     }
@@ -387,6 +398,100 @@ impl<'ast> VisitJs<'ast> for FunctionDeclarationStartMatcher {
     }
     if self.remaining_target_count > 0 {
       walk_js::walk_statement(self, stmt);
+    }
+  }
+}
+
+/// Finds the `@__NO_SIDE_EFFECTS__` bindings that code reads before their declaration, outside a
+/// function nested in the declaring scope. Such a read sees the binding before it is initialized.
+struct ReadBeforeDeclarationFinder<'a> {
+  scoping: &'a Scoping,
+  /// The declaration start of each `let`, `const` or `var` binding to check.
+  candidates: FxHashMap<SymbolId, u32>,
+  last_declaration_start: u32,
+  /// Whether a binding to check is declared below the root scope. If not, a read inside a
+  /// function never counts, so the walk skips functions.
+  visit_functions: bool,
+  /// Each scope around the visited node, innermost last, and whether it is a function scope.
+  scopes: Vec<(Option<ScopeId>, bool)>,
+  found: FxHashSet<SymbolId>,
+}
+
+impl ReadBeforeDeclarationFinder<'_> {
+  fn find(
+    scoping: &Scoping,
+    candidates: FxHashMap<SymbolId, u32>,
+    program: &Program<'_>,
+  ) -> FxHashSet<SymbolId> {
+    let last_declaration_start = candidates.values().copied().max().unwrap_or_default();
+    let root_scope_id = scoping.root_scope_id();
+    let visit_functions =
+      candidates.keys().any(|&symbol_id| scoping.symbol_scope_id(symbol_id) != root_scope_id);
+    let mut finder = ReadBeforeDeclarationFinder {
+      scoping,
+      candidates,
+      last_declaration_start,
+      visit_functions,
+      scopes: vec![],
+      found: FxHashSet::default(),
+    };
+    finder.visit_program(program);
+    finder.found
+  }
+}
+
+impl<'ast> VisitJs<'ast> for ReadBeforeDeclarationFinder<'_> {
+  fn visit_program(&mut self, program: &Program<'ast>) {
+    self.scopes.push((program.scope_id.get(), false));
+    for stmt in &program.body {
+      if stmt.span().start >= self.last_declaration_start {
+        break;
+      }
+      self.visit_statement(stmt);
+    }
+  }
+
+  fn enter_scope(&mut self, flags: ScopeFlags, scope_id: &Cell<Option<ScopeId>>) {
+    self.scopes.push((scope_id.get(), flags.is_function()));
+  }
+
+  fn leave_scope(&mut self) {
+    self.scopes.pop();
+  }
+
+  fn visit_function(&mut self, func: &Function<'ast>, flags: ScopeFlags) {
+    if self.visit_functions {
+      walk_js::walk_function(self, func, flags);
+    }
+  }
+
+  fn visit_arrow_function_expression(&mut self, func: &ArrowFunctionExpression<'ast>) {
+    if self.visit_functions {
+      walk_js::walk_arrow_function_expression(self, func);
+    }
+  }
+
+  // `export { fn }` does not read the binding.
+  fn visit_export_specifier(&mut self, _it: &ExportSpecifier<'ast>) {}
+
+  fn visit_identifier_reference(&mut self, ident: &IdentifierReference<'ast>) {
+    let Some(symbol_id) =
+      ident.reference_id.get().and_then(|id| self.scoping.get_reference(id).symbol_id())
+    else {
+      return;
+    };
+    if self.candidates.get(&symbol_id).is_none_or(|&start| ident.span.start >= start) {
+      return;
+    }
+    let declaring_scope = Some(self.scoping.symbol_scope_id(symbol_id));
+    let in_nested_function = self
+      .scopes
+      .iter()
+      .rev()
+      .take_while(|(scope_id, _)| *scope_id != declaring_scope)
+      .any(|&(_, is_function)| is_function);
+    if !in_nested_function {
+      self.found.insert(symbol_id);
     }
   }
 }

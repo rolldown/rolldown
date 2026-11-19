@@ -149,6 +149,9 @@ pub struct LinkStage<'a> {
   pub relaxed_side_effect_modules: FxHashSet<ModuleIdx>,
   /// Lazily computed static-import components for entry-independent constant lookups.
   import_cycles: refine_stmt_side_effects::ImportCycles,
+  /// The calls of each module that can run before the callee is initialized. See
+  /// `cross_module_optimization.rs`.
+  calls_before_init: FxHashMap<ModuleIdx, Vec<cross_module_optimization::CallBeforeInit>>,
 }
 
 impl<'a> LinkStage<'a> {
@@ -200,6 +203,7 @@ impl<'a> LinkStage<'a> {
       scan_time_side_effects,
       relaxed_side_effect_modules: FxHashSet::default(),
       import_cycles: refine_stmt_side_effects::ImportCycles::default(),
+      calls_before_init: FxHashMap::default(),
       global_constant_symbol_map: constant_symbol_map,
       depended_runtime_helper: scan_stage_output
         .module_table
@@ -298,6 +302,7 @@ impl<'a> LinkStage<'a> {
     self.reference_needed_symbols();
     self.prune_constant_branches();
     self.include_statements(&unreachable_import_expression_node_ids);
+    self.protect_calls_before_init();
     self.compute_tla();
     self.assert_promoted_writers_excluded();
     self.check_lazy_barrel_uncertain_bindings();

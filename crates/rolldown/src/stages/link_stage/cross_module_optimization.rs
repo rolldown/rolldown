@@ -15,12 +15,15 @@ use oxc::{
 };
 use oxc_ecmascript::ToBoolean;
 use rolldown_common::{
-  AstScopes, ConstExportMeta, EcmaViewMeta, ExportsKind, FlatOptions, GetLocalDb, IndexModules,
-  MemberExprRefResolutionMap, ModuleIdx, SharedNormalizedBundlerOptions, Specifier, StmtEvalFlags,
-  StmtInfoIdx, SymbolRef, SymbolRefDb, SymbolRefFlags,
+  AstScopes, ConstExportMeta, EcmaViewMeta, EntryPoint, ExportsKind, FlatOptions, GetLocalDb,
+  IndexModules, MemberExprRefResolutionMap, ModuleIdx, SharedNormalizedBundlerOptions, Specifier,
+  StmtEvalFlags, StmtInfoIdx, SymbolRef, SymbolRefDb, SymbolRefFlags, WrapKind,
 };
 use rolldown_ecmascript_utils::ExpressionExt;
-use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
+use rolldown_utils::{
+  indexmap::FxIndexMap,
+  rayon::{IntoParallelRefIterator, ParallelIterator},
+};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -29,6 +32,7 @@ use crate::{
     stmt_eval_analyzer::StmtEvalAnalyzer,
   },
   type_alias::IndexStmtInfos,
+  types::linking_metadata::LinkingMetadataVec,
 };
 
 use super::{
@@ -40,7 +44,17 @@ type MutationResult = (
   Option<(ModuleIdx, FxHashMap<StmtInfoIdx, StmtEvalFlags>)>,
   FxHashMap<SymbolRef, ConstExportMeta>,
   FxHashSet<(ModuleIdx, NodeId)>,
+  (ModuleIdx, Vec<CallBeforeInit>),
 );
+
+/// A top-level call to a side-effect-free function that runs before the binding is initialized.
+/// The linker keeps the statement of the call.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct CallBeforeInit {
+  node_id: NodeId,
+  stmt_idx: StmtInfoIdx,
+  callee: SymbolRef,
+}
 
 #[derive(Default)]
 struct CrossModuleOptimizationCtx {
@@ -298,6 +312,7 @@ impl LinkStage<'_> {
             tree_shaking_flags_mutations: FxHashMap::default(),
             side_effect_free_call_expr_node_ids: FxHashSet::default(),
             has_separately_exported_call: false,
+            calls_before_init: Vec::new(),
             immutable_ctx: CrossModuleOptimizationImmutableCtx {
               eval_ctx: &eval_ctx,
               export_default_symbol: module.default_export_ref,
@@ -305,6 +320,8 @@ impl LinkStage<'_> {
               config: &cross_module_inline_const_ctx.config,
               modules: &self.module_table.modules,
               import_cycles: &self.import_cycles,
+              entries: &self.entries,
+              metas: &self.metas,
               symbols: &self.symbols,
               flat_options: self.flat_options,
               options: self.options,
@@ -330,6 +347,7 @@ impl LinkStage<'_> {
           if tree_shaking_flags_mutations.is_none()
             && ctx.local_constant_symbol_map.is_empty()
             && ctx.unreachable_import_expression_node_ids.is_empty()
+            && ctx.calls_before_init.is_empty()
           {
             return None;
           }
@@ -341,13 +359,20 @@ impl LinkStage<'_> {
               .into_iter()
               .map(|node_id| (module_idx, node_id))
               .collect(),
+            (module_idx, ctx.calls_before_init),
           ))
         })
       })
       .collect();
 
     let mut new_constant_refs = FxHashSet::default();
-    for (tree_shaking_flags_mutations, local_constants, unreachable_node_ids) in mutation_result {
+    for (
+      tree_shaking_flags_mutations,
+      local_constants,
+      unreachable_node_ids,
+      (module_idx, calls_before_init),
+    ) in mutation_result
+    {
       if let Some((module_idx, mutations)) = tree_shaking_flags_mutations
         && self.module_table[module_idx].as_normal().is_some()
       {
@@ -365,8 +390,32 @@ impl LinkStage<'_> {
 
       // Collect all unreachable import expression node IDs
       all_unreachable_node_ids.extend(unreachable_node_ids);
+
+      // A later pass visits the module again and finds the same calls.
+      if calls_before_init.is_empty() {
+        self.calls_before_init.remove(&module_idx);
+      } else {
+        self.calls_before_init.insert(module_idx, calls_before_init);
+      }
     }
     new_constant_refs
+  }
+
+  /// The minifier and other bundlers can remove a pure call, and also the arguments of a call to
+  /// another pure function, as in `noop(f())`. Protect each included call that runs before its
+  /// callee is initialized: the finalizer does not mark it pure, and drops the
+  /// `@__NO_SIDE_EFFECTS__` annotation of the callee when the minifier sees both. Must run after
+  /// `include_statements`.
+  /// See `internal-docs/linking/module-execution-order/implementation.md`.
+  pub(super) fn protect_calls_before_init(&mut self) {
+    for (module_idx, calls) in std::mem::take(&mut self.calls_before_init) {
+      for call in calls {
+        if self.metas[module_idx].stmt_info_included.has_bit(call.stmt_idx) {
+          self.metas[module_idx].calls_before_init.insert(call.node_id);
+          call.callee.flags_mut(&mut self.symbols).insert(SymbolRefFlags::MaybeCalledBeforeInit);
+        }
+      }
+    }
   }
 }
 
@@ -377,6 +426,8 @@ struct CrossModuleOptimizationImmutableCtx<'a, 'ast: 'a> {
   config: &'a CrossModuleOptimizationConfig,
   modules: &'a IndexModules,
   import_cycles: &'a ImportCycles,
+  entries: &'a FxIndexMap<ModuleIdx, Vec<EntryPoint>>,
+  metas: &'a LinkingMetadataVec,
   symbols: &'a SymbolRefDb,
   flat_options: FlatOptions,
   options: &'a SharedNormalizedBundlerOptions,
@@ -398,6 +449,7 @@ struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
   tree_shaking_flags_mutations: FxHashMap<StmtInfoIdx, StmtEvalFlags>,
   side_effect_free_call_expr_node_ids: FxHashSet<NodeId>,
   has_separately_exported_call: bool,
+  calls_before_init: Vec<CallBeforeInit>,
   immutable_ctx: CrossModuleOptimizationImmutableCtx<'a, 'ast>,
   /// Shared with the constant lookup of `eval_ctx`.
   toplevel_stmt_idx: &'a Cell<StmtInfoIdx>,
@@ -466,6 +518,48 @@ impl<'ast> CrossModuleOptimizationRunnerContext<'_, 'ast> {
       self.modules[symbol_ref.owner].exec_order() < self.modules[module_idx].exec_order()
         && self.import_cycles.imports_finish_before_evaluation(self.modules, module_idx)
     }
+  }
+
+  /// Whether the current call runs at the top level of the module before the binding of the
+  /// callee is initialized. In another module, the owner of the binding must run after the caller,
+  /// and every entry must run both modules in `exec_order`. This check does not include a call
+  /// inside a function or a class, or a call in a build where the order is not sure.
+  /// See `internal-docs/linking/module-execution-order/implementation.md`.
+  fn call_runs_before_init(&self, symbol_ref: SymbolRef, flags: SymbolRefFlags) -> bool {
+    // The only side-effect-free facade is the binding of `export default function () {}`, which a
+    // function declaration initializes before any code runs.
+    if flags.contains(SymbolRefFlags::IsFacade) || symbol_ref.is_declared_by_function(self.symbols)
+    {
+      return false;
+    }
+    if self.visit_path.iter().any(|kind| {
+      matches!(kind, AstKind::Function(_) | AstKind::ArrowFunctionExpression(_) | AstKind::Class(_))
+    }) {
+      return false;
+    }
+    let module_idx = self.immutable_ctx.module_idx;
+    if symbol_ref.owner == module_idx {
+      return !self.binding_is_initialized(symbol_ref);
+    }
+    self.runs_in_exec_order(module_idx, symbol_ref.owner)
+      && self.modules[module_idx].exec_order() < self.modules[symbol_ref.owner].exec_order()
+  }
+
+  /// Whether every entry runs the code of `caller` and `owner` in `exec_order`. With one entry,
+  /// the chunks run their unwrapped modules in `exec_order`. With more entries, both modules must
+  /// be in one region that code starts at one module, because a chunk runs a cycle in one order
+  /// even when two entries start the cycle at different modules.
+  fn runs_in_exec_order(&self, caller: ModuleIdx, owner: ModuleIdx) -> bool {
+    self
+      .options
+      .manual_code_splitting
+      .as_ref()
+      .is_none_or(|split| split.groups.as_ref().is_none_or(Vec::is_empty))
+      && [caller, owner]
+        .into_iter()
+        .all(|module_idx| self.metas[module_idx].wrap_kind() == WrapKind::None)
+      && (self.entries.len() == 1
+        || self.import_cycles.runs_in_one_order(self.modules, self.entries, caller, owner))
   }
 
   fn binding_read_is_safe(&self, canonical_ref: SymbolRef) -> bool {
@@ -574,9 +668,13 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
     {
       let flags = symbol_ref.flags(self.symbols).copied().unwrap_or_default();
       let exported_separately = flags.contains(SymbolRefFlags::ExportedSeparately);
-      if !exported_separately
-        || (self.binding_is_initialized(symbol_ref) && call_result_runs_no_code(&self.visit_path))
-      {
+      let runs_before_init = self.call_runs_before_init(symbol_ref, flags);
+      let is_removable = if exported_separately {
+        self.binding_is_initialized(symbol_ref) && call_result_runs_no_code(&self.visit_path)
+      } else {
+        !runs_before_init
+      };
+      if is_removable {
         self.side_effect_free_call_expr_node_ids.insert(it.node_id());
         self.has_separately_exported_call |= exported_separately;
         // A truly empty function cannot invoke its callback arguments.
@@ -585,6 +683,13 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
         {
           self.latest_side_effect_free_call_expr_node_id = Some(it.node_id());
         }
+      }
+      if runs_before_init {
+        self.calls_before_init.push(CallBeforeInit {
+          node_id: it.node_id(),
+          stmt_idx: self.toplevel_stmt_idx.get(),
+          callee: symbol_ref,
+        });
       }
     }
     walk_js::walk_call_expression(self, it);

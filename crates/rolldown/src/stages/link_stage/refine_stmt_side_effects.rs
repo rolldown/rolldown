@@ -1,17 +1,18 @@
 use std::sync::OnceLock;
 
 use oxc::semantic::SymbolId;
-use oxc_index::IndexVec;
+use oxc_index::{IndexVec, index_vec};
 use petgraph::{
   graph::{DiGraph, NodeIndex},
   visit::{Dfs, Reversed},
 };
 use rolldown_common::{
-  ConstExportMeta, ConstantValue, ExportsKind, GetLocalDb, IndexModules, ModuleIdx, Specifier,
-  StmtEvalFlags, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  ConstExportMeta, ConstantValue, EntryPoint, ExportsKind, GetLocalDb, IndexModules, ModuleIdx,
+  Specifier, StmtEvalFlags, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
 };
 use rolldown_utils::{
   IndexBitSet,
+  indexmap::FxIndexMap,
   rayon::{IntoParallelRefIterator, ParallelIterator},
 };
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -28,14 +29,30 @@ use super::LinkStage;
 #[derive(Debug, Default)]
 pub(super) struct ImportCycles {
   components: OnceLock<Components>,
+  regions: OnceLock<Regions>,
 }
 
 #[derive(Debug)]
 struct Components {
   /// One module of the component of each module.
   representatives: IndexVec<ModuleIdx, ModuleIdx>,
+  /// The representatives, with each importing component before the components it imports.
+  topological_order: Vec<ModuleIdx>,
   /// Whether each module is in a cycle or can reach an external module.
   imports_may_run_later: IndexBitSet<ModuleIdx>,
+}
+
+/// A region is a component and the components that only it imports, directly or through other
+/// such components. A component with an entry starts its own region. Code can reach a region only
+/// through its first component, so when code can start that component at only one module, every
+/// entry runs the region in one order.
+/// See `internal-docs/linking/module-execution-order/implementation.md`.
+#[derive(Debug)]
+struct Regions {
+  /// The representative of the first component of the region of each representative.
+  roots: IndexVec<ModuleIdx, ModuleIdx>,
+  /// The roots where code can start the component at only one module.
+  one_start: IndexBitSet<ModuleIdx>,
 }
 
 impl ImportCycles {
@@ -58,7 +75,11 @@ impl ImportCycles {
       }
       let mut representatives = (0..modules.len()).map(ModuleIdx::new).collect::<IndexVec<_, _>>();
       let mut imports_may_run_later = IndexBitSet::new(modules.len());
-      for component in petgraph::algo::kosaraju_scc(&graph) {
+      let components = petgraph::algo::kosaraju_scc(&graph);
+      // `kosaraju_scc` returns the components in reverse topological order.
+      let topological_order =
+        components.iter().rev().map(|component| ModuleIdx::new(component[0].index())).collect();
+      for component in components {
         let representative = ModuleIdx::new(component[0].index());
         let is_cycle = component.len() > 1;
         for node in component {
@@ -80,7 +101,70 @@ impl ImportCycles {
       while let Some(node) = dfs.next(reverse_graph) {
         imports_may_run_later.set_bit(ModuleIdx::new(node.index()));
       }
-      Components { representatives, imports_may_run_later }
+      Components { representatives, topological_order, imports_may_run_later }
+    })
+  }
+
+  fn regions(
+    &self,
+    modules: &IndexModules,
+    entries: &FxIndexMap<ModuleIdx, Vec<EntryPoint>>,
+  ) -> &Regions {
+    let components = self.components(modules);
+    self.regions.get_or_init(|| {
+      let representatives = &components.representatives;
+      // The first module where code can start each component, and the first importing component.
+      let mut starts = index_vec![None; modules.len()];
+      let mut many_starts = IndexBitSet::new(modules.len());
+      let mut add_start = |module_idx: ModuleIdx| {
+        let component = representatives[module_idx];
+        match starts[component] {
+          None => starts[component] = Some(module_idx),
+          Some(start) if start != module_idx => {
+            many_starts.set_bit(component);
+          }
+          Some(_) => {}
+        }
+      };
+      let mut importers = index_vec![None; modules.len()];
+      let mut own_region = IndexBitSet::new(modules.len());
+      for &entry in entries.keys() {
+        add_start(entry);
+        own_region.set_bit(representatives[entry]);
+      }
+      for module in modules {
+        let importer = representatives[module.idx()];
+        for record in module.import_records().iter().filter(|record| record.kind.is_static()) {
+          let Some(dependency) = record.resolved_module else { continue };
+          let component = representatives[dependency];
+          if component == importer {
+            continue;
+          }
+          add_start(dependency);
+          match importers[component] {
+            None => importers[component] = Some(importer),
+            Some(other) if other != importer => {
+              own_region.set_bit(component);
+            }
+            Some(_) => {}
+          }
+        }
+      }
+      let mut roots = representatives.clone();
+      for &component in &components.topological_order {
+        if !own_region.has_bit(component)
+          && let Some(importer) = importers[component]
+        {
+          roots[component] = roots[importer];
+        }
+      }
+      let mut one_start = IndexBitSet::new(modules.len());
+      for (component, start) in starts.iter_enumerated() {
+        if start.is_some() && !many_starts.has_bit(component) {
+          one_start.set_bit(component);
+        }
+      }
+      Regions { roots, one_start }
     })
   }
 
@@ -103,6 +187,21 @@ impl ImportCycles {
     module: ModuleIdx,
   ) -> bool {
     !self.components(modules).imports_may_run_later.has_bit(module)
+  }
+
+  /// Whether every entry runs `caller` and `owner` in one order: both modules are in one region,
+  /// and code can start the region at only one module.
+  pub(super) fn runs_in_one_order(
+    &self,
+    modules: &IndexModules,
+    entries: &FxIndexMap<ModuleIdx, Vec<EntryPoint>>,
+    caller: ModuleIdx,
+    owner: ModuleIdx,
+  ) -> bool {
+    let representatives = &self.components(modules).representatives;
+    let regions = self.regions(modules, entries);
+    let root = regions.roots[representatives[caller]];
+    root == regions.roots[representatives[owner]] && regions.one_start.has_bit(root)
   }
 }
 

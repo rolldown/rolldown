@@ -1,0 +1,9 @@
+{
+  "_comment": "a.js calls functions from b.js before b.js initializes them, because both are in one import cycle. main.js calls `later` before its declaration. These calls must stay and throw. The body of `later` has a side effect, because oxc can remove a call of a side-effect-free function before its declaration, with or without the annotation. The calls of the function declarations, of the function from c.js, outside the cycle, and of `annotated`, after its declaration, should be removed. The bare entry checks a call outside a try statement.",
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "bare", "import": "./bare.js" }
+    ]
+  }
+}

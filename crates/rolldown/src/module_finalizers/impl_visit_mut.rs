@@ -1086,6 +1086,10 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           else {
             continue;
           };
+          if let Some(symbol_id) = id.symbol_id.get() {
+            self
+              .clear_no_side_effects_if_called_before_init((self.ctx.idx, symbol_id).into(), init);
+          }
           self.process_keep_name_for_expression(id.symbol_id.get().map(KeepNameId::SymbolId), init);
         }
       }

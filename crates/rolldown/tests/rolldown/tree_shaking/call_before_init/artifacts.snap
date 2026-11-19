@@ -1,0 +1,54 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## bare.js
+
+```js
+// bare-a.js
+bare();
+// bare-b.js
+const bare = () => {};
+
+```
+
+## main.js
+
+```js
+// a.js
+try {
+	nse();
+} catch (error) {
+	globalThis.calls.push(`no side effects: ${error.name}`);
+}
+try {
+	letArrow();
+} catch (error) {
+	globalThis.calls.push(`let: ${error.name}`);
+}
+try {
+	emptyArrow();
+} catch (error) {
+	globalThis.calls.push(`empty arrow: ${error.name}`);
+}
+try {
+	nse();
+} catch (error) {
+	globalThis.calls.push(`namespace: ${error.name}`);
+}
+// b.js
+const nse = () => {};
+let letArrow = () => {};
+const emptyArrow = () => {};
+// main.js
+try {
+	later();
+} catch (error) {
+	globalThis.calls.push(`same module: ${error.name}`);
+}
+const later = () => globalThis.calls.push("later");
+const annotated = /* @__NO_SIDE_EFFECTS__ */ () => globalThis.calls.push("removed: an export clause does not read the binding");
+export { annotated };
+
+```

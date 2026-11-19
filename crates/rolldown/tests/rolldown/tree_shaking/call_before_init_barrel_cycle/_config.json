@@ -1,0 +1,7 @@
+{
+  "_comment": "factory.js reads `version` from the barrel index.js, so the barrel, the icons and the factory are in one import cycle. The only entry runs the factory before the icons, so the unused call `createIcon('b')` is removed. With preserveModules, the output of app.js imports a.js before index.js, so the output starts the cycle at a.js and runs b.js before the factory. If the call stayed, that output would throw, but the source does not throw. The call in a.js also runs after the factory, so it keeps its pure mark. The body of `createIcon` has a side effect, because oxc removes a call of a side-effect-free function without the annotation.",
+  "config": {
+    "input": [{ "name": "app", "import": "./app.js" }]
+  },
+  "configVariants": [{ "preserveModules": true, "_configName": "preserve-modules" }]
+}

@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy.js
+
+```js
+// lazy.js
+const lazy = "lazy";
+export { lazy };
+
+```
+
+## main.js
+
+```js
+// a.js
+try {
+	declared();
+} catch (error) {
+	globalThis.calls.push(`declared: ${error.name}`);
+}
+try {
+	declared();
+} catch (error) {
+	globalThis.calls.push(`declared argument: ${error.name}`);
+}
+try {
+	clause();
+} catch (error) {
+	globalThis.calls.push(`clause: ${error.name}`);
+}
+try {
+	clause();
+} catch (error) {
+	globalThis.calls.push(`clause argument: ${error.name}`);
+}
+// b.js
+globalThis.readValue = () => 42;
+const declared = () => globalThis.readValue();
+const clause = () => globalThis.readValue();
+// main.js
+const load = () => import("./lazy.js");
+export { load };
+
+```

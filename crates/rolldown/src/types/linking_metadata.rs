@@ -113,6 +113,9 @@ pub struct LinkingMetadata {
   /// Known branch decisions shared by dependency pruning and AST finalization.
   /// `if`/ternary: whether the consequent executes; logical expression: whether the RHS executes.
   pub constant_branches: FxHashMap<NodeId, bool>,
+  /// Top-level calls that run before the callee is initialized. The finalizer does not mark them
+  /// pure, so the minifier keeps them.
+  pub calls_before_init: FxHashSet<NodeId>,
   /// Tracks whether the module is included after tree-shaking.
   pub is_included: bool,
 }

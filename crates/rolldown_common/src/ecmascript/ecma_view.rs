@@ -140,10 +140,19 @@ pub struct EcmaView {
   /// Built by the scan. Shared so that cloning the module table for every
   /// incremental build does not deep-copy each module's source maps.
   ///
-  /// A build that is not incremental composes the transform runs of the chain
-  /// before the link stage (`collapse_sourcemap_chains`), and empties the chain
-  /// after every module is rendered (`free_sourcemap_chains`). In such a build,
-  /// do not read the chain after rendering.
+  /// Until a module is rendered, the chain keeps the map of every hook, so in
+  /// a large build the chains can use more than 1 GiB. To lower the peak
+  /// memory, a build that is not incremental changes the chain twice:
+  /// - Before the link stage, it composes the transform runs of the chain
+  ///   (`collapse_sourcemap_chains`).
+  /// - After every module is rendered, it empties the chain
+  ///   (`free_sourcemap_chains`). This is before `renderChunk` and
+  ///   minification, where the memory of a build peaks.
+  ///
+  /// # Warning
+  /// In a build that is not incremental, the chain is empty after rendering.
+  /// Do not read it after rendering: the code that reads it gets an empty
+  /// chain, and no error reports it.
   #[expect(
     clippy::rc_buffer,
     reason = "the scan extends and reorders a fresh chain in place through `Arc::make_mut`, which `Arc<[T]>` cannot do"

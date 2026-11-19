@@ -44,9 +44,7 @@ impl Plugin for ViteManifestPlugin {
     let mut manifest = BTreeMap::default();
     let mut css_entries = None;
 
-    // Manifest name of each chunk by file name, computed once. Resolving `imports` and
-    // `dynamicImports` used to search the whole bundle for every import, O(chunks * imports).
-    // The first chunk with a given file name wins, as with the search it replaces.
+    // Manifest name of each chunk, keyed by file name.
     let mut chunk_names: FxHashMap<&str, String> = FxHashMap::default();
     for file in args.bundle.iter() {
       if let Output::Chunk(chunk) = file {

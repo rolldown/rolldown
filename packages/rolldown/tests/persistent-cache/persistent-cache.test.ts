@@ -235,6 +235,49 @@ describe('persistent cache', () => {
     expect(out2).toEqual(await cleanBuild(() => [recordingPlugin([], true)]));
   });
 
+  test('`this.markNotCacheable` gives the module of the hook call no saved result', async () => {
+    writeFiles(BASIC_FILES);
+    const makePlugins = (calls: string[]): Plugin[] => [
+      recordingPlugin(calls, true),
+      {
+        name: 'marker',
+        load: {
+          cache: true,
+          handler(id) {
+            if (id === path.join(src, 'b.js')) this.markNotCacheable('test: load of b.js');
+            return null;
+          },
+        },
+        transform: {
+          cache: true,
+          handler(_code, id) {
+            if (id === path.join(src, 'a.js')) this.markNotCacheable();
+            return null;
+          },
+        },
+        buildEnd() {
+          // Not a hook call of a module task: it does nothing.
+          this.markNotCacheable();
+        },
+      },
+    ];
+    const out1 = await build({ plugins: makePlugins([]) });
+    for (let i = 0; i < 2; i++) {
+      const calls: string[] = [];
+      const out = await build({ plugins: makePlugins(calls) });
+      expect(calls.sort()).toEqual([
+        'recording.load:a.js',
+        'recording.load:b.js',
+        'recording.resolveId:a.js:./c.js',
+        'recording.transform:a.js',
+        'recording.transform:b.js',
+      ]);
+      expect(out).toEqual(out1);
+    }
+    // Without the cache, the call does nothing.
+    expect(out1).toEqual(await cleanBuild(() => makePlugins([])));
+  });
+
   describe('`this.addWatchFile` in `transform`', () => {
     const makePlugins = (calls: string[], dep: string): Plugin[] => [
       recordingPlugin(calls, true),

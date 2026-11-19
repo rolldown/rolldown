@@ -79,13 +79,13 @@ A JavaScript hook reaches Rust through the same forked context:
 `BindingTransformPluginContext::inner` returns it. What Rust cannot see, the
 JavaScript side reports with these methods of `BindingPluginContext`:
 
-| Method             | The JavaScript side calls it for                                                                             |
-| ------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `markNotCacheable` | `this.load`, a returned `meta` that cannot be saved, a use of `meta` through `this.getModuleInfo`            |
-| `recordLog`        | A log sent to `onLog`                                                                                        |
-| `recordModuleMeta` | The `meta` that a `load` or `transform` hook returned                                                        |
-| `isCacheRecording` | Whether the cache records this hook call. Without it, the JavaScript side does no work for the cache         |
-| `cacheModuleId`    | The module of the task, for the warning. A hook inside `this.resolve` can get another module as its importer |
+| Method             | The JavaScript side calls it for                                                                                           |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `markNotCacheable` | `this.markNotCacheable`, `this.load`, a returned `meta` that cannot be saved, a use of `meta` through `this.getModuleInfo` |
+| `recordLog`        | A log sent to `onLog`                                                                                                      |
+| `recordModuleMeta` | The `meta` that a `load` or `transform` hook returned                                                                      |
+| `isCacheRecording` | Whether the cache records this hook call. Without it, the JavaScript side does no work for the cache                       |
+| `cacheModuleId`    | The module of the task, for the warning. A hook inside `this.resolve` can get another module as its importer               |
 
 The `meta` that a `resolveId` or `resolveDynamicImport` hook returned goes to
 Rust with the result itself (`BindingHookResolveIdOutput::meta_entries`). See

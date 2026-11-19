@@ -1,0 +1,3 @@
+import './base.js';
+
+export {};

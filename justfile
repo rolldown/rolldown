@@ -258,9 +258,6 @@ bench-rust:
 bench-node:
   vp --filter bench run bench
 
-bench-node-par:
-  vp --filter bench exec node ./benches/par.js
-
 # --- Misc
 
 bump-packages *args:

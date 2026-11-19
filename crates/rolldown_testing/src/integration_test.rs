@@ -753,7 +753,6 @@ impl IntegrationTest {
             include_str!("../../rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js"),
             include_str!("./hmr-runtime.js")
           ));
-          dev_mode.skip_common_runtime_injection = Some(true);
         }
       }
     }

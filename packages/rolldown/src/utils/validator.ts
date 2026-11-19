@@ -465,6 +465,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when the options of a dynamic import are not statically analyzable while `experimental.importAttributes` is on',
     ),
   ),
+  droppedImportAttribute: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when the import attributes of an external module are dropped because the output format is not ESM',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 
@@ -644,6 +650,8 @@ const DevModeSchema = v.union([
     port: v.optional(v.number()),
     host: v.optional(v.string()),
     implement: v.optional(v.string()),
+    // Vite still passes this option for compatibility with older Rolldown versions.
+    // Remove this in a minor version after Vite removes the field
     skipCommonRuntimeInjection: v.optional(v.boolean()),
     lazy: v.optional(v.boolean()),
     hotUpdate: v.optional(v.boolean()),
@@ -703,6 +711,7 @@ const InputOptionsSchema = v.strictObject({
           v.object({
             baseUrl: v.optional(v.string()),
             fileName: v.optional(v.string()),
+            include: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
           }),
         ]),
       ),

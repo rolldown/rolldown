@@ -2,8 +2,9 @@ use std::ffi::OsString;
 
 use arcstr::ArcStr;
 use cow_utils::CowUtils;
-use rolldown_common::{Output, OutputAsset, OutputChunk};
+use rolldown_common::{OutputAsset, OutputChunk};
 use rolldown_utils::pattern_filter::normalize_path;
+use rustc_hash::FxHashMap;
 use serde::Serialize;
 
 use super::ViteManifestPlugin;
@@ -26,10 +27,6 @@ pub struct ManifestChunk {
   pub imports: Vec<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub dynamic_imports: Vec<String>,
-  #[serde(skip_serializing_if = "Option::is_none")]
-  pub css: Option<Vec<String>>,
-  #[serde(skip_serializing_if = "Option::is_none")]
-  pub assets: Option<Vec<String>>,
 }
 
 impl ViteManifestPlugin {
@@ -71,11 +68,9 @@ impl ViteManifestPlugin {
   }
 
   pub fn create_chunk(
-    &self,
-    bundle: &Vec<Output>,
+    chunk_names: &FxHashMap<&str, String>,
     chunk: &OutputChunk,
     src: &str,
-    is_legacy: bool,
   ) -> ManifestChunk {
     ManifestChunk {
       file: chunk.filename.to_string(),
@@ -83,32 +78,18 @@ impl ViteManifestPlugin {
       src: chunk.facade_module_id.is_some().then(|| src.to_string()),
       is_entry: chunk.is_entry,
       is_dynamic_entry: chunk.is_dynamic_entry,
-      imports: self.get_internal_imports(bundle, &chunk.imports, is_legacy),
-      dynamic_imports: self.get_internal_imports(bundle, &chunk.dynamic_imports, is_legacy),
-      css: None,
-      assets: None,
+      imports: Self::get_internal_imports(chunk_names, &chunk.imports),
+      dynamic_imports: Self::get_internal_imports(chunk_names, &chunk.dynamic_imports),
       ..Default::default()
     }
   }
 
+  /// Manifest names of the chunks in `imports`, skipping file names that are not chunks.
   fn get_internal_imports(
-    &self,
-    bundle: &Vec<Output>,
-    imports: &Vec<ArcStr>,
-    is_legacy: bool,
+    chunk_names: &FxHashMap<&str, String>,
+    imports: &[ArcStr],
   ) -> Vec<String> {
-    let mut filtered_imports = vec![];
-    for file in imports {
-      for output in bundle {
-        if let Output::Chunk(chunk) = output {
-          if chunk.filename == *file {
-            filtered_imports.push(self.get_chunk_name(chunk, is_legacy));
-            break;
-          }
-        }
-      }
-    }
-    filtered_imports
+    imports.iter().filter_map(|file| chunk_names.get(file.as_str()).cloned()).collect()
   }
 }
 

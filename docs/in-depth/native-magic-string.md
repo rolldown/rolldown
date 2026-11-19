@@ -103,20 +103,25 @@ The following MagicString methods are currently available in the native implemen
   - `options.source` - Source file name
   - `options.includeContent` - Include original source in the map
   - `options.hires` - High-resolution mode: `true`, `false`, or `"boundary"`. The default is the `hires` option of the instance, or `false` when that option is not set
+- `generateDecodedMap(options?)` - Generates a source map object with decoded `mappings`. Its `mappings` is an array with one array of segments for each line. It takes the same options as `generateMap`
 
 The constructor also accepts a `hires` option, which `magic-string` does not have: `new RolldownMagicString(code, { hires: false })`. It sets the resolution of the source maps that are generated from the instance.
 
-When a `transform` or `renderChunk` hook returns the native MagicString without a `map`, Rolldown generates the map for that step. It uses the `hires` option of the MagicString, or `"boundary"` when the option is not set. With `"boundary"`, the output source map keeps column positions and names after that map is composed with the others in the chain. With `hires: false`, the map for that step is smaller and faster to generate, but each position in it resolves to the start of its line. With `hires: true`, the map for that step is larger and slower to generate. The output source map usually has the same positions as with `"boundary"`, because the maps that Rolldown generates when it prints modules and chunks have segments at the start of tokens, and `"boundary"` has a segment at the start of each word and at each character that is not a letter, a digit or `_`, for example `"`, `[` or `!`. In `renderChunk`, `hires: true` can also make the output source map larger.
+When a `transform` or `renderChunk` hook returns the native MagicString without a `map`, Rolldown generates the map for that step. It uses the `hires` option of the MagicString, or `"boundary"` when the option is not set. With `"boundary"`, the output source map keeps column positions and names after that map is composed with the others in the chain. With `hires: false`, the map for that step is smaller and faster to generate, because it has fewer segments. With `hires: true`, the map for that step is larger and slower to generate. The output source map usually has the same positions as with `"boundary"`, because the maps that Rolldown generates when it prints modules and chunks have segments at the start of tokens, and `"boundary"` has a segment at the start of each word and at each character that is not a letter, a digit or `_`, for example `"`, `[` or `!`. In `renderChunk`, `hires: true` can also make the output source map larger.
+
+Before any edit, the text of a MagicString is one piece. An edit can split a piece into more pieces. An empty insertion inside a piece also splits it. A `hires: false` map has a segment only at these characters:
+
+- The first character of each piece.
+- The first character after each newline in a piece.
+- The first character of each replacement that is not empty.
+
+In a piece, a newline has no segment. Inserted text has no segment.
+
+When Rolldown composes the maps, a position resolves to the last segment at or before it on its line. If the position is before the first segment of its line, it resolves to that first segment. If its line has no segment, the position has no mapping.
 
 To use a different resolution, create the MagicString with the `hires` option. `meta.magicString` has no options, because Rolldown creates it, so create your own instance from `code`. With this option, Rolldown still generates the `transform` map on a background thread when `experimental.nativeMagicString` and source maps are on.
 
 You can also return your own map with the MagicString, for example `{ code: magicString, map: magicString.generateMap({ hires: 'boundary' }) }`. Rolldown then uses your map and does not generate one, but your hook generates that map on the JS thread. `map: null` tells Rolldown that the step did not move code, so Rolldown does not generate a map for it. If the step moved code, the output source map points to wrong positions.
-
-### Not Yet Implemented
-
-The following features are planned for future releases:
-
-- `generateDecodedMap()` - Generate source map with decoded mappings
 
 ## Real-World Performance
 

@@ -42,6 +42,7 @@ pub struct ChecksOptions {
   pub shimmed_export: Option<bool>,
   pub deprecated_import_assertion: Option<bool>,
   pub invalid_import_attribute: Option<bool>,
+  pub dropped_import_attribute: Option<bool>,
 }
 impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
   fn from(value: ChecksOptions) -> Self {
@@ -149,6 +150,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
     flag.set(
       rolldown_error::EventKindSwitcher::InvalidImportAttribute,
       value.invalid_import_attribute.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::DroppedImportAttribute,
+      value.dropped_import_attribute.unwrap_or(true),
     );
     flag
   }

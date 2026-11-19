@@ -162,7 +162,6 @@ export async function bindingifyOutputOptions(
       'chunkFileNames',
       chunkFileNames,
     ),
-    // TODO(sapphi-red): support parallel plugins
     plugins: [],
     minify: outputOptions.minify,
     externalLiveBindings: outputOptions.externalLiveBindings,

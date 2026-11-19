@@ -1080,34 +1080,10 @@
     "DevModeOptions": {
       "type": "object",
       "properties": {
-        "host": {
-          "description": "IP addresses that `DevRuntime` will connect to using WebSocket.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "port": {
-          "description": "Port that `DevRuntime` will connect to using WebSocket.",
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint16",
-          "minimum": 0,
-          "maximum": 65535
-        },
         "implement": {
           "description": "Custom dev mode runtime implementation.",
           "type": [
             "string",
-            "null"
-          ]
-        },
-        "skipCommonRuntimeInjection": {
-          "description": "Do not inject the common dev runtime before the custom implementation.\n\nDeprecated: common runtime injection will be disabled by default in the future.",
-          "type": [
-            "boolean",
             "null"
           ]
         },
@@ -1150,6 +1126,15 @@
             "string",
             "null"
           ]
+        },
+        "include": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false
@@ -1616,6 +1601,12 @@
           ]
         },
         "invalidImportAttribute": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "droppedImportAttribute": {
           "type": [
             "boolean",
             "null"

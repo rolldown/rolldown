@@ -42,7 +42,8 @@ On rolldown devtools report builds (rolldown ≥ 1.2.16; vite ≥ 8:
 `build.rolldownOptions.devtools = { mode: "report" }`) several static queries skip the
 import-chain archaeology entirely: `graph` ranks split candidates by **retained size**
 (the dominator subtree a deferral removes from the initial load, with `via` naming the
-one import chain to cut); `what-if <module> [<module>...] [--keep a,b]` lists the exact
+last module that every import path goes through);
+`what-if <module> [<module>...] [--keep a,b]` lists the exact
 modules and bytes one deferral frees (sentries in `--keep` stay eager) — pass **two or
 more** modules and it prices them as one combined plan against the summed-individually
 total, so shared internals dominated by no single module (a library split across imports,

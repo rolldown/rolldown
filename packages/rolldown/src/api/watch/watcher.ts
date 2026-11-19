@@ -59,13 +59,8 @@ class Watcher {
   closed: boolean;
   inner: BindingWatcher;
   emitter: WatcherEmitter;
-  stopWorkers: ((() => Promise<void>) | undefined)[];
 
-  constructor(
-    emitter: WatcherEmitter,
-    inner: BindingWatcher,
-    stopWorkers: ((() => Promise<void>) | undefined)[],
-  ) {
+  constructor(emitter: WatcherEmitter, inner: BindingWatcher) {
     this.closed = false;
     this.inner = inner;
     this.emitter = emitter;
@@ -75,7 +70,6 @@ class Watcher {
       await this.close();
       originClose();
     };
-    this.stopWorkers = stopWorkers;
 
     // Defer so watch() returns the emitter before the first build,
     // giving the caller a chance to attach .on() handlers.
@@ -87,9 +81,6 @@ class Watcher {
     if (this.closed) return;
     this.closed = true;
     try {
-      for (const stop of this.stopWorkers) {
-        await stop?.();
-      }
       await this.inner.close();
     } finally {
       shutdownAsyncRuntime();
@@ -119,13 +110,6 @@ export async function createWatcher(
       .flat(),
   );
   const callback = createEventCallback(emitter);
-  const bindingWatcher = new BindingWatcher(
-    bundlerOptions.map((option) => option.bundlerOptions),
-    callback,
-  );
-  new Watcher(
-    emitter,
-    bindingWatcher,
-    bundlerOptions.map((option) => option.stopWorkers),
-  );
+  const bindingWatcher = new BindingWatcher(bundlerOptions, callback);
+  new Watcher(emitter, bindingWatcher);
 }

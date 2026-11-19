@@ -1,8 +1,41 @@
 import { rolldown } from 'rolldown';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from 'vitest';
+
+test('module graph entry indices distinguish identical display IDs', async () => {
+  const cwd = mkdtempSync(join(realpathSync(tmpdir()), 'rolldown-module-metrics-'));
+  let bundle;
+  try {
+    mkdirSync(join(cwd, 'ace'));
+    mkdirSync(join(cwd, 'node_modules/ace'), { recursive: true });
+    writeFileSync(
+      join(cwd, 'ace/index.js'),
+      'import "../node_modules/ace/index.js"; import "../node_modules/ace/power.js";',
+    );
+    writeFileSync(join(cwd, 'node_modules/ace/index.js'), 'console.log("index");');
+    writeFileSync(join(cwd, 'node_modules/ace/power.js'), 'console.log("power");');
+    bundle = await rolldown({ cwd, input: './ace/index.js', devtools: { mode: 'report' } });
+    await bundle.generate({ dir: 'dist' });
+    await bundle.close();
+
+    const graph = JSON.parse(
+      readFileSync(join(cwd, 'node_modules/.rolldown/report/dist/module-graph.json'), 'utf8'),
+    );
+    const project = graph.modules.findIndex((module) => module.id === 'ace/index.js');
+    const dependency = graph.modules.findLastIndex((module) => module.id === 'ace/index.js');
+    const power = graph.modules.findIndex((module) => module.id === 'ace/power.js');
+    expect(dependency).toBeGreaterThan(project);
+    expect(graph.entryModules).toEqual(['ace/index.js']);
+    expect(graph.entryModuleIndices).toEqual([project]);
+    expect(graph.modules[project].imports).toContainEqual([dependency, false]);
+    expect(graph.modules[project].imports).toContainEqual([power, false]);
+  } finally {
+    await bundle?.close();
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
 
 test.each(['generate', 'write'])(
   'chunk metrics follow generateBundle changes in %s',

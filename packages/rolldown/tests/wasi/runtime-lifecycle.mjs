@@ -1,4 +1,4 @@
-// Regression test for #8411 and #8747, WASI only.
+// Regression test for #8411, #8747 and #10639, WASI only.
 //
 // The wasm binding refcounts the shared tokio runtime. Before the fix,
 // `RolldownBuild.close()` and `Watcher.close()` released the runtime without a
@@ -12,6 +12,7 @@
 // NAPI_RS_FORCE_WASI before importing rolldown, and `error` mode is required:
 // with `true`, a missing wasi build silently falls back to the native binding
 // and the test would pass without testing anything.
+import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -96,6 +97,30 @@ async function buildAndClose(dir) {
   await engine.ensureCurrentBuildFinish();
   await engine.close();
   console.log('[wasi-runtime] build close while dev engine alive: ok');
+}
+
+// #10639: a method called after its object's close() settles with its closed-state result instead of trapping.
+{
+  const dir = makeFixture('generate-after-close');
+  const bundle = await rolldown({ input: path.join(dir, 'entry.js'), cwd: dir });
+  await bundle.generate({ format: 'esm' });
+  await bundle.close();
+  await assert.rejects(bundle.generate({ format: 'esm' }), /\[ALREADY_CLOSED\]/);
+  console.log('[wasi-runtime] generate after build close: ok');
+}
+
+// #10639: the same for the dev engine.
+{
+  const dir = makeFixture('dev-methods-after-close');
+  const engine = await dev(
+    { input: path.join(dir, 'entry.js'), cwd: dir },
+    { dir: path.join(dir, 'dist') },
+    { watch: { enabled: false } },
+  );
+  await engine.close();
+  assert.equal(await engine.ensureCurrentBuildFinish(), undefined);
+  await assert.rejects(engine.getBundleState(), /Failed to get bundle state/);
+  console.log('[wasi-runtime] dev engine methods after close: ok');
 }
 
 fs.rmSync(root, { recursive: true, force: true });

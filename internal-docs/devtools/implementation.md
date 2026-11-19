@@ -71,6 +71,15 @@ app get two folders. `report_dir_is_one_folder_per_output` in
 `crates/rolldown_devtools_metrics/src/tests.rs` pins the mapping. The two modes are
 exclusive today: a report build writes no event log.
 
+In `module-graph.json`, `entryModuleIndices`, import targets, and `idom` refer to
+positions in the `modules` array. `entryModules` and each module's `id` are display
+labels. A project file and a dependency file can have the same label after path
+normalization. For older reports, perf-kit uses the entry labels and prefers
+statically reachable matches without an immediate dominator. When a shared module
+also has no immediate dominator, perf-kit prefers candidates whose static importers
+all lie in their own dominator subtree. Those importers can only reach the candidate
+after it has already been reached. Ties that remain use the last matching rows.
+
 With `devtools: { mode: 'report' }`, the metrics sink also writes
 `chunk-graph.json` beside `metrics.json`. The graph contains every emitted chunk,
 including its final filename, size, facade module, static imports, and dynamic
@@ -197,8 +206,6 @@ The system is built on the `tracing` crate. The core idea: **spans carry context
 Each hook call pair gets a unique `call_id` (UUID v4) via its enclosing span.
 
 A call that the plugin's own hook filter skips logs no events. In devtools mode the driver asks `Pluginable::call_hook_filter_matches` and skips the call, so the log and the report hold only calls whose handler ran. Every `transform` call emits a `HookTransformCallEnd`; a result without `code` ends with the unchanged code.
-
-A parallel plugin has one plugin per worker, and each worker can build a different filter from `threadNumber`. The driver asks before `run_single` selects a worker, so `ParallelJsPlugin::hook_filter_matches` passes when the filter of any worker accepts the call. A check of one worker only could skip a call that another worker runs, and the build output would then change in devtools mode. The selected worker checks its own filter again, so a call that it rejects can still appear as a no-op.
 
 ## Action Catalog
 

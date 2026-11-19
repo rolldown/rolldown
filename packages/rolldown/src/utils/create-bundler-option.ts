@@ -1,5 +1,4 @@
 import type { BindingBundlerOptions } from '../binding.cjs';
-import type { LogHandler } from '../log/log-handler';
 import { getLogger, getOnLog } from '../log/logger';
 import { LOG_LEVEL_INFO } from '../log/logging';
 import type { InputOptions } from '../options/input-options';
@@ -9,7 +8,6 @@ import { PluginDriver } from '../plugin/plugin-driver';
 import { getObjectPlugins } from '../plugin/plugin-driver';
 import { bindingifyInputOptions } from './bindingify-input-options';
 import { bindingifyOutputOptions } from './bindingify-output-options';
-import { initializeParallelPlugins } from './initialize-parallel-plugins';
 import {
   measureIfFunction,
   OUTPUT_OPTIONS_OWNER,
@@ -33,7 +31,7 @@ export async function createBundlerOptions(
    * watch, dev or scan would be written to on every hook call and never read.
    */
   measureTimings = false,
-): Promise<BundlerOptionWithStopWorker> {
+): Promise<BindingBundlerOptions> {
   const inputPlugins = await normalizePluginOption(inputOptions.plugins);
   const outputPlugins = await normalizePluginOption(outputOptions.plugins);
 
@@ -97,10 +95,6 @@ export async function createBundlerOptions(
     };
   }
 
-  const parallelPluginInitResult = import.meta.browserBuild
-    ? undefined
-    : await initializeParallelPlugins(plugins);
-
   // Warn if deprecated experimental.strictExecutionOrder is used
   if ((inputOptions.experimental as any)?.strictExecutionOrder !== undefined) {
     console.warn(
@@ -108,55 +102,37 @@ export async function createBundlerOptions(
     );
   }
 
-  try {
-    const pluginContextData = new PluginContextData(
-      onLog,
-      outputOptions,
-      normalizedInputPlugins,
-      normalizedOutputPlugins,
-    );
-    pluginContextData.importAttributes = inputOptions.experimental?.importAttributes ?? false;
+  const pluginContextData = new PluginContextData(
+    onLog,
+    outputOptions,
+    normalizedInputPlugins,
+    normalizedOutputPlugins,
+  );
+  pluginContextData.importAttributes = inputOptions.experimental?.importAttributes ?? false;
 
-    // Convert `InputOptions` to `BindingInputOptions`
-    const bindingInputOptions = bindingifyInputOptions(
-      plugins,
-      inputOptions,
-      outputOptions,
-      pluginContextData,
-      normalizedOutputPlugins,
-      onLog,
-      logLevel,
-      watchMode,
-      timings,
-    );
+  // Convert `InputOptions` to `BindingInputOptions`
+  const bindingInputOptions = bindingifyInputOptions(
+    plugins,
+    inputOptions,
+    outputOptions,
+    pluginContextData,
+    normalizedOutputPlugins,
+    onLog,
+    logLevel,
+    watchMode,
+    timings,
+  );
 
-    // Convert `OutputOptions` to `BindingOutputOptions`
-    const bindingOutputOptions = await bindingifyOutputOptions(
-      outputOptions,
-      pluginContextData,
-      onLog,
-      timings,
-    );
+  // Convert `OutputOptions` to `BindingOutputOptions`
+  const bindingOutputOptions = await bindingifyOutputOptions(
+    outputOptions,
+    pluginContextData,
+    onLog,
+    timings,
+  );
 
-    return {
-      bundlerOptions: {
-        inputOptions: bindingInputOptions,
-        outputOptions: bindingOutputOptions,
-        parallelPluginsRegistry: parallelPluginInitResult?.registry,
-      },
-      inputOptions,
-      onLog,
-      stopWorkers: parallelPluginInitResult?.stopWorkers,
-    };
-  } catch (e) {
-    await parallelPluginInitResult?.stopWorkers();
-    throw e;
-  }
-}
-
-export interface BundlerOptionWithStopWorker {
-  bundlerOptions: BindingBundlerOptions;
-  inputOptions: InputOptions;
-  onLog: LogHandler;
-  stopWorkers?: () => Promise<void>;
+  return {
+    inputOptions: bindingInputOptions,
+    outputOptions: bindingOutputOptions,
+  };
 }

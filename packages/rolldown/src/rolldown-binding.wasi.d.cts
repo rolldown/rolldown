@@ -1573,7 +1573,7 @@ export declare class BindingCallableBuiltinPlugin {
   constructor(plugin: BindingBuiltinPlugin)
   getOrder(hookName: string): string | null
   resolveId(id: string, importer?: string | undefined | null, options?: BindingHookJsResolveIdOptions | undefined | null): Promise<BindingHookJsResolveIdOutput | undefined | null>
-  load(id: string): Promise<BindingHookJsLoadOutput | undefined | null>
+  load(id: string): Promise<BindingHookLoadOutput | undefined | null>
   transform(code: string, id: string, options: BindingTransformHookExtraArgs): Promise<BindingHookTransformOutput | undefined | null>
   watchChange(path: string, event: BindingJsWatchChangeEvent): Promise<undefined>
 }
@@ -1607,7 +1607,7 @@ export declare class BindingDecodedMap {
 }
 
 export declare class BindingDevEngine {
-  constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
+  constructor(options: BindingBundlerOptions, devOptions: BindingDevOptions)
   run(): Promise<void>
   ensureCurrentBuildFinish(): Promise<void>
   getBundleState(): Promise<BindingBundleState>
@@ -1931,12 +1931,6 @@ export declare class BindingWatcherEvent {
   watchChangeData(): BindingWatcherChangeData
 }
 
-export declare class ParallelJsPluginRegistry {
-  id: number
-  workerCount: number
-  constructor(workerCount: number)
-}
-
 export declare class TraceSubscriberGuard {
   close(): void
 }
@@ -1986,7 +1980,6 @@ export interface BindingBundleAnalyzerPluginConfig {
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions
   outputOptions: BindingOutputOptions
-  parallelPluginsRegistry?: ParallelJsPluginRegistry
 }
 
 export interface BindingBundleState {
@@ -2034,11 +2027,13 @@ export interface BindingChecksOptions {
   shimmedExport?: boolean
   deprecatedImportAssertion?: boolean
   invalidImportAttribute?: boolean
+  droppedImportAttribute?: boolean
 }
 
 export interface BindingChunkImportMap {
   baseUrl?: string
   fileName?: string
+  include?: Array<BindingStringOrRegex>
 }
 
 export declare enum BindingChunkModuleOrderBy {
@@ -2300,11 +2295,7 @@ export interface BindingEsmExternalRequirePluginConfig {
 }
 
 export interface BindingExperimentalDevModeOptions {
-  host?: string
-  port?: number
   implement: string
-  /** @deprecated Common runtime injection will be disabled by default in the future. */
-  skipCommonRuntimeInjection?: boolean
   lazy?: boolean
   hotUpdate?: boolean
 }
@@ -2346,12 +2337,6 @@ export type BindingHmrUpdate =
 
 export interface BindingHookFilter {
   value?: Array<Array<BindingFilterToken>>
-}
-
-export interface BindingHookJsLoadOutput {
-  code: string
-  map?: string
-  moduleSideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingHookJsResolveIdOptions {
@@ -2533,7 +2518,7 @@ export interface BindingInputItem {
 export interface BindingInputOptions {
   external?: Array<string | RegExp> | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)
   input: Array<BindingInputItem>
-  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions)[]
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
@@ -2557,6 +2542,7 @@ export interface BindingInputOptions {
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
   devtools?: BindingDevtoolsOptions
   invalidateJsSideCache?: () => void
+  resetJsModuleOptions?: (moduleIds: string[] | null) => void
   preserveEntrySignatures?: BindingPreserveEntrySignatures
   optimization?: BindingOptimization
   context?: string
@@ -2732,7 +2718,7 @@ export interface BindingOutputOptions {
   intro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   outro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   paths?: Record<string, string> | ((id: string) => string)
-  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sourcemapBaseUrl?: string
@@ -2889,11 +2875,6 @@ export interface BindingPluginTimingsMeasurement {
   rows: Array<BindingPluginTiming>
 }
 
-export interface BindingPluginWithIndex {
-  index: number
-  plugin: BindingPluginOptions
-}
-
 export interface BindingPreRenderedAsset {
   name?: string
   names: Array<string>
@@ -2945,9 +2926,7 @@ export interface BindingResolveOptions {
   yarnPnp?: boolean
 }
 
-export interface BindingSourcemap {
-  inner: string | BindingJsonSourcemap
-}
+export type BindingSourcemap = string | BindingJsonSourcemap
 
 export interface BindingSourceMapOptions {
   /** The filename for the generated file (goes into `map.file`) */
@@ -3280,8 +3259,6 @@ export interface PreRenderedChunk {
   /** Exported variable names from this chunk. */
   exports: Array<string>
 }
-
-export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
 /**
  * Starts a new measuring window: the peak restarts from the current live

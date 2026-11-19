@@ -71,7 +71,7 @@ export class DevEngine {
     devOptions: DevOptions = {},
   ): Promise<DevEngine> {
     inputOptions = await PluginDriver.callOptionsHook(inputOptions);
-    const options = await createBundlerOptions(inputOptions, outputOptions, false);
+    const bundlerOptions = await createBundlerOptions(inputOptions, outputOptions, false);
 
     const userOnHmrUpdates = devOptions.onHmrUpdates;
     const bindingOnHmrUpdates: BindingDevOptions['onHmrUpdates'] = userOnHmrUpdates
@@ -128,7 +128,7 @@ export class DevEngine {
       hotUpdate: devOptions.hotUpdate,
     };
 
-    const inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
+    const inner = new BindingDevEngine(bundlerOptions, bindingDevOptions);
 
     startAsyncRuntime();
 

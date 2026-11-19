@@ -24,7 +24,7 @@ use binding_resolve_options::BindingResolveOptions;
 use binding_watch_option::BindingWatchOption;
 pub use binding_watch_option::BindingWatcherFileWatcherOptions;
 
-use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
+use super::plugin::BindingPluginOrBuiltinPlugin;
 use crate::generated::binding_checks_options;
 use crate::types::binding_plugin_timings::BindingPluginTimingsMeasurement;
 use crate::types::binding_string_or_regex::BindingStringOrRegex;
@@ -69,8 +69,8 @@ pub struct BindingInputOptions<'env> {
   // moduleContext?: ((id: string) => string | null | void) | { [id: string]: string };
   // onwarn?: WarningHandlerWithDefault;
   // perf?: boolean;
-  #[napi(ts_type = "(BindingBuiltinPlugin | BindingPluginOptions | undefined)[]")]
-  pub plugins: Vec<BindingPluginOrParallelJsPluginPlaceholder<'env>>,
+  #[napi(ts_type = "(BindingBuiltinPlugin | BindingPluginOptions)[]")]
+  pub plugins: Vec<BindingPluginOrBuiltinPlugin<'env>>,
   pub resolve: Option<BindingResolveOptions>,
   // preserveEntrySignatures?: PreserveEntrySignaturesOption;
   // /** @deprecated Use the "preserveModules" output option instead. */
@@ -112,6 +112,9 @@ pub struct BindingInputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "() => void")]
   pub invalidate_js_side_cache: Option<UntrackedJsCallback>,
+  #[debug(skip)]
+  #[napi(ts_type = "(moduleIds: string[] | null) => void")]
+  pub reset_js_module_options: Option<UntrackedJsCallback<FnArgs<(Option<Vec<String>>,)>, ()>>,
   pub preserve_entry_signatures: Option<BindingPreserveEntrySignatures>,
   pub optimization: Option<BindingOptimization>,
   pub context: Option<String>,

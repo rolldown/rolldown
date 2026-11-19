@@ -147,7 +147,7 @@ Absolute paths survive in exactly two places: the proxy id in `requestLazy(..., 
 
 ### Fetched State Tracking
 
-The `LazyCompilationPlugin` maintains two sets in `LazyCompilationContext` (shared with the `DevEngine` via `plugin.context()`):
+The `LazyCompilationPlugin` maintains two sets. Only `fetched_entries` is shared with the `DevEngine`, through the `LazyCompilationContext` that `plugin.context()` returns.
 
 - `lazy_entries` - All proxy module IDs created during resolution
 - `fetched_entries` - Proxy module IDs that have been fetched (requested at runtime via `/lazy`)

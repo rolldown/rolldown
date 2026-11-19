@@ -898,20 +898,12 @@ impl GenerateStage<'_> {
       .and_then(|idx| temp_chunk_opt_graph.to_temp_idx(idx));
     let mut imported_bindings = None;
     for (from_chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
-      let ChunkKind::EntryPoint { meta, bit: _, module } = chunk.kind else {
+      let ChunkKind::EntryPoint { meta, module } = chunk.kind else {
         continue;
       };
-      let is_emitted_entry_chunk = if meta.contains(ChunkMeta::EmittedChunk) {
-        if matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::AllowExtension)) {
-          true
-        } else {
-          // If an emitted chunk has other `preserveEntrySignatures` values, we can't optimize it.
-          // The facade chunk needs to be preserved.
-          continue;
-        }
-      } else {
-        false
-      };
+      let is_emitted_entry_chunk = meta.contains(ChunkMeta::EmittedChunk);
+      let can_eliminate_emitted_entry = is_emitted_entry_chunk
+        && matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::AllowExtension));
       if !chunk.modules.is_empty() {
         continue;
       }
@@ -920,15 +912,25 @@ impl GenerateStage<'_> {
         continue;
       };
       let target_chunk = &chunk_graph.chunk_table[target_chunk_idx];
+      let is_target_manual_chunk = matches!(
+        target_chunk.chunk_reason_type.as_ref(),
+        ChunkReasonType::ManualCodeSplitting { .. }
+      );
 
-      if meta.intersects(ChunkMeta::UserDefinedEntry) {
+      if meta.intersects(ChunkMeta::UserDefinedEntry)
+        || (is_emitted_entry_chunk
+          && !self.options.is_strict_execution_order_enabled()
+          && !is_target_manual_chunk
+          && matches!(target_chunk.kind, ChunkKind::Common))
+      {
         if matches!(target_chunk.kind, ChunkKind::Common) {
           // Execution-isolation guard (issue #9463).
+          // See internal-docs/code-splitting/implementation.md#facade-elimination-optimize_facade_entry_chunks.
           //
-          // Folding the common chunk *into* this user-defined entry chunk makes the
+          // Folding the common chunk *into* this entry chunk makes the
           // entry chunk eagerly run this entry's top-level (its `init_*` call)
           // whenever the chunk is loaded. If the common chunk also holds *another*
-          // user-defined entry's module, that other entry would be forced to import
+          // entry's module, that other entry would be forced to import
           // this entry chunk just to reach its own module — and would then run this
           // entry's side effects. e.g. loading entry `b` would trigger entry `a`'s
           // side effects. This happens when manual code splitting (a `codeSplitting`
@@ -939,11 +941,15 @@ impl GenerateStage<'_> {
           // shared chunk and runs only its own `init_*`. A shared chunk that holds
           // just this entry's module (plus non-entry deps a sibling genuinely
           // depends on) is still folded in, preserving the #5726 facade-elimination.
-          let holds_other_user_entry = target_chunk.modules.iter().any(|&module_idx| {
+          let holds_other_entry = target_chunk.modules.iter().any(|&module_idx| {
             module_idx != module
-              && self.link_output.user_defined_entry_modules.contains(&module_idx)
+              && if is_emitted_entry_chunk {
+                self.link_output.entries.contains_key(&module_idx)
+              } else {
+                self.link_output.user_defined_entry_modules.contains(&module_idx)
+              }
           });
-          let can_merge = !holds_other_user_entry
+          let can_merge = !holds_other_entry
             && match chunk.preserve_entry_signature {
               Some(PreserveEntrySignatures::Strict) => {
                 self.can_merge_without_changing_entry_signature(chunk, &target_chunk.modules)
@@ -963,14 +969,16 @@ impl GenerateStage<'_> {
         continue;
       }
 
-      let is_target_manual_chunk = matches!(
-        target_chunk.chunk_reason_type.as_ref(),
-        ChunkReasonType::ManualCodeSplitting { .. }
-      );
-      let is_target_pure_user_entry_chunk = matches!(target_chunk.kind, ChunkKind::EntryPoint { meta, bit: _, module: _ } if meta.is_pure_user_defined_entry());
+      // Emitted entries with stricter signatures may absorb a compatible common chunk above, but
+      // their facade must otherwise be preserved.
+      if is_emitted_entry_chunk && !can_eliminate_emitted_entry {
+        continue;
+      }
+
+      let is_target_pure_user_entry_chunk = matches!(target_chunk.kind, ChunkKind::EntryPoint { meta, module: _ } if meta.is_pure_user_defined_entry());
       let is_target_common_chunk = matches!(target_chunk.kind, ChunkKind::Common);
-      // Six optimization scenarios (scenario 1 is handled above for user-defined entries):
-      // 1. User-defined facade entry chunk merged with common chunk
+      // Six optimization scenarios (scenario 1 is handled above):
+      // 1. User-defined or emitted facade entry chunk merged with common chunk
       //    → Common chunk modules are moved into the entry chunk (handled above)
       // 2. Emitted chunk (AllowExtension) merged into manual code splitting group
       //    → Group by target chunk to detect export name conflicts before merging
@@ -1000,7 +1008,7 @@ impl GenerateStage<'_> {
           to_chunk_idx: from_chunk_idx,
           inherit_group: true,
         });
-      } else if is_target_manual_chunk && is_emitted_entry_chunk {
+      } else if is_target_manual_chunk && can_eliminate_emitted_entry {
         emitted_chunk_groups.entry(target_chunk_idx).or_default().push(from_chunk_idx);
       } else if !is_emitted_entry_chunk {
         // Check if merging would create a circular dependency.
@@ -1097,11 +1105,6 @@ impl GenerateStage<'_> {
   /// (e.g., a common chunk, manual code splitting group, or user-defined entry chunk).
   /// Instead of keeping an empty facade chunk, we rewrite references to point directly to the target chunk
   /// and ensure proper symbol inclusion.
-  ///
-  /// The same inclusion replay also extracts `namespace_extractions`, the dynamic entry namespaces
-  /// that `find_leaking_dynamic_entry_namespaces` returns. See
-  /// internal-docs/code-splitting/implementation.md#dynamic-entry-namespaces.
-  #[expect(clippy::too_many_arguments)]
   pub(super) fn optimize_facade_entry_chunks(
     &mut self,
     chunk_graph: &mut ChunkGraph,
@@ -1110,8 +1113,7 @@ impl GenerateStage<'_> {
     module_is_assigned: &mut IndexBitSet<ModuleIdx>,
     temp_chunk_opt_graph: &ChunkOptimizationGraph,
     used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
-    namespace_extractions: &[(ChunkIdx, ModuleIdx)],
-  ) {
+  ) -> Option<FxHashSet<ChunkIdx>> {
     // Find empty dynamic entry chunks that should be merged with their target common chunks
     let (mut facade_eliminations, common_chunk_merges, emitted_chunk_groups) =
       self.find_facade_chunk_merge_ops(chunk_graph, temp_chunk_opt_graph);
@@ -1119,9 +1121,8 @@ impl GenerateStage<'_> {
     if facade_eliminations.is_empty()
       && common_chunk_merges.is_empty()
       && emitted_chunk_groups.is_empty()
-      && namespace_extractions.is_empty()
     {
-      return;
+      return None;
     }
 
     self.resolve_emitted_chunk_group_conflicts(
@@ -1136,10 +1137,6 @@ impl GenerateStage<'_> {
         used_symbol_refs_builder,
       );
     }
-    for &(_, entry_module_idx) in namespace_extractions {
-      self.narrow_namespace_stmt_to_used_symbols(entry_module_idx, used_symbol_refs_builder);
-    }
-
     let mut runtime_dependent_chunks = FxHashSet::default();
 
     self.replay_link_stage_inclusion(used_symbol_refs_builder, |context| {
@@ -1218,12 +1215,6 @@ impl GenerateStage<'_> {
           needs_export_all_helper = true;
         }
       }
-      // Do not use `||` here. It skips the extractions when a facade needs `__exportAll`.
-      needs_export_all_helper |= Self::include_dynamic_entry_namespace_extractions(
-        context,
-        chunk_graph,
-        namespace_extractions,
-      );
       needs_export_all_helper
     });
 
@@ -1239,12 +1230,7 @@ impl GenerateStage<'_> {
       chunk_graph,
       input_base,
     );
-    self.try_merge_runtime_chunk(
-      chunk_graph,
-      Some(&runtime_dependent_chunks),
-      RuntimeMergeCascade::Full,
-      used_symbol_refs_builder,
-    );
+    Some(runtime_dependent_chunks)
   }
 
   /// Merge the standalone runtime chunk into a safe existing host. Prefer a

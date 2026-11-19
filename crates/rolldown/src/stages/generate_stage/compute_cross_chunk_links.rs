@@ -1210,18 +1210,7 @@ impl GenerateStage<'_> {
           let entry = &self.link_output.module_table[*entry_id].as_normal().unwrap();
           let entry_meta = &self.link_output.metas[entry.idx];
 
-          if !matches!(entry_meta.wrap_kind(), WrapKind::Cjs)
-            && (self.options.preserve_modules
-              || !entry.dynamic_importers.is_empty()
-              || !matches!(
-                normalize_preserve_entry_signature(
-                  &self.link_output.overrode_preserve_entry_signature_map,
-                  self.options,
-                  entry.idx,
-                ),
-                PreserveEntrySignatures::False
-              ))
-          {
+          if !matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
             self.register_entry_export_depended_symbols(
               chunk_graph,
               order_state,
@@ -1333,7 +1322,8 @@ impl GenerateStage<'_> {
   /// consumes (`collect_entry_reexported_wrapper_inits`), so everything the entry chunk may call
   /// is imported by construction; `None` for the names because registration runs before chunk
   /// names exist — it is what makes a wrapper reachable. The entry's own wrapper is not part of
-  /// the walk; the caller's `esm_init_target` arm covers it.
+  /// the walk; the caller's `esm_init_target` arm covers it. `entry_export_needs_service` drops
+  /// the owners that an entry without a preserved signature does not need to run.
   fn register_entry_export_depended_symbols(
     &self,
     chunk_graph: &ChunkGraph,
@@ -1350,7 +1340,13 @@ impl GenerateStage<'_> {
       .map(|(_, export)| export)
       // A chunk should always consume a cjs export symbol by property access, so filter
       // out a exported symbol that came from a cjs module.
-      .filter(|resolved_export| !resolved_export.came_from_commonjs);
+      .filter(|resolved_export| !resolved_export.came_from_commonjs)
+      .filter(|export| {
+        self.entry_export_needs_service(
+          entry_idx,
+          symbols.canonical_ref_resolving_namespace(export.symbol_ref).owner,
+        )
+      });
     if self.options.is_strict_execution_order_enabled() {
       for export_ref in sorted_export_refs {
         self.add_depended_symbol_with_wrapped_esm_init(
@@ -1372,7 +1368,9 @@ impl GenerateStage<'_> {
         symbols,
         None,
       ) {
-        depended_symbols.insert(init.wrapper_ref);
+        if self.entry_export_needs_service(entry_idx, init.owner) {
+          depended_symbols.insert(init.wrapper_ref);
+        }
       }
     }
   }

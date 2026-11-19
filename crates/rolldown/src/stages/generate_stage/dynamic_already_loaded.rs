@@ -3,9 +3,9 @@ use std::collections::VecDeque;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
-  PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
-  UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  PreserveEntrySignatures, RuntimeHelper, StmtEvalFlags, StmtInfoIdx, SymbolOrMemberExprRef,
+  SymbolRef, UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::{BitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -778,7 +778,7 @@ impl GenerateStage<'_> {
 
   /// An entry chunk imports the canonical symbol of every live resolved export it serves
   /// (`register_entry_export_depended_symbols`), even when no included statement of the entry
-  /// references it — a preserved re-export still becomes a real import of the owner's
+  /// references it — a re-export the entry never uses still becomes a real import of the owner's
   /// chunk. `load_dependencies` only carries the narrowed `referenced_symbols_by_entry_point_chunk`
   /// set, so these targets are derived separately from the full `resolved_exports`.
   ///
@@ -801,25 +801,15 @@ impl GenerateStage<'_> {
       // A CJS entry is consumed through its wrapper, not through per-export symbols.
       return;
     }
-    if !self.options.preserve_modules
-      && self.link_output.module_table[module_idx].as_normal().unwrap().dynamic_importers.is_empty()
-      && matches!(
-        normalize_preserve_entry_signature(
-          &self.link_output.overrode_preserve_entry_signature_map,
-          self.options,
-          module_idx,
-        ),
-        PreserveEntrySignatures::False
-      )
-    {
-      return;
-    }
     let symbol_db = &self.link_output.symbol_db;
     for resolved_export in meta.resolved_exports.values() {
       if resolved_export.came_from_commonjs {
         continue;
       }
       let served = symbol_db.canonical_ref_resolving_namespace(resolved_export.symbol_ref);
+      if !self.entry_export_needs_service(module_idx, served.owner) {
+        continue;
+      }
       let is_live = assume_all_live
         || if let Some(owner) = self.link_output.module_table[served.owner].as_normal()
           && owner.namespace_object_ref == served
@@ -841,10 +831,56 @@ impl GenerateStage<'_> {
       symbol_db,
       None,
     ) {
-      if assume_all_live || used_symbol_refs_view.contains(&init.wrapper_ref) {
+      if self.entry_export_needs_service(module_idx, init.owner)
+        && (assume_all_live || used_symbol_refs_view.contains(&init.wrapper_ref))
+      {
         targets.push(init.wrapper_ref.owner);
       }
     }
+  }
+
+  /// Whether the entry chunk must import `owner`, the module behind one of its exports. Without a
+  /// preserved signature, only when `owner` or anything it statically imports has a side effect,
+  /// so startup still runs it. `sideEffects: false` modules are crossed without counting their own
+  /// statements, and `Analyzed` verdicts are not used because they also count dynamic imports.
+  pub(super) fn entry_export_needs_service(&self, entry: ModuleIdx, owner: ModuleIdx) -> bool {
+    if self.options.preserve_modules
+      || !self.link_output.module_table[entry].as_normal().unwrap().dynamic_importers.is_empty()
+      || !matches!(
+        normalize_preserve_entry_signature(
+          &self.link_output.overrode_preserve_entry_signature_map,
+          self.options,
+          entry,
+        ),
+        PreserveEntrySignatures::False
+      )
+    {
+      return true;
+    }
+    let mut pending = vec![owner];
+    let mut visited = FxHashSet::default();
+    while let Some(idx) = pending.pop() {
+      if !visited.insert(idx) {
+        continue;
+      }
+      let module = &self.link_output.module_table[idx];
+      if match module.side_effects() {
+        DeterminedSideEffects::Analyzed(_) => self.link_output.stmt_infos[idx].iter().any(|stmt| {
+          !stmt.force_tree_shaking && stmt.eval_flags.contains(StmtEvalFlags::UnknownSideEffect)
+        }),
+        side_effects => side_effects.has_side_effects(),
+      } {
+        return true;
+      }
+      pending.extend(
+        module
+          .import_records()
+          .iter()
+          .filter(|rec| rec.kind == ImportKind::Import)
+          .filter_map(|rec| rec.resolved_module),
+      );
+    }
+    false
   }
 
   pub(super) fn referenced_symbol_owners(&self, module_idx: ModuleIdx) -> FxHashSet<ModuleIdx> {

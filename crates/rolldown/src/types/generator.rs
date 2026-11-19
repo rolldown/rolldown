@@ -113,6 +113,31 @@ impl GenerateContext<'_> {
     }
   }
 
+  /// The binding `binding_ref` that the chunk `cur_chunk_idx` imports from another chunk for a
+  /// shared read (`SharedCommonJsReads::binding`). The pattern reads the binding itself, not the
+  /// property of its namespace alias: CJS output reads the export through the `require()` binding
+  /// of the chunk, and ESM output uses the name of the import.
+  pub fn finalized_binding_pattern(
+    &self,
+    binding_ref: SymbolRef,
+    cur_chunk_idx: ChunkIdx,
+    canonical_names: &FxHashMap<SymbolRef, CompactStr>,
+  ) -> String {
+    let chunk_idx = self
+      .link_output
+      .symbol_db
+      .get(binding_ref)
+      .chunk_idx
+      .expect("the link pass gives the binding of a shared read to a chunk");
+    if matches!(self.options.format, rolldown_common::OutputFormat::Cjs)
+      && chunk_idx != cur_chunk_idx
+    {
+      self.cross_chunk_pattern(binding_ref, chunk_idx, cur_chunk_idx)
+    } else {
+      self.canonical_name_for(canonical_names, binding_ref).to_string()
+    }
+  }
+
   /// The namespace that `ns_alias` reads its property from, as the chunk `cur_chunk_idx` renders it.
   pub fn finalized_namespace_pattern(
     &self,

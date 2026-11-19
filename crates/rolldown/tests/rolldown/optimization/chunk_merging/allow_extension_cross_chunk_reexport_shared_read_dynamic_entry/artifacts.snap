@@ -71,7 +71,7 @@ import { n as require_counter, t as read_counter_n } from "./counter.js";
 var import_counter = require_counter();
 const dval = 1;
 var n = read_counter_n(import_counter);
-export { dval, n, import_counter as t };
+export { dval, n };
 
 ```
 
@@ -110,9 +110,7 @@ export { loadD, loadP };
 ## p.js
 
 ```js
-import { dval, t as import_counter } from "./d.js";
-var n = import_counter.n;
-export { dval, n };
+export { dval, n } from "./d.js";
 
 ```
 
@@ -219,12 +217,6 @@ const require_counter$1 = require("./counter.js");
 var import_counter = require_counter$1.require_counter();
 const dval = 1;
 exports.dval = dval;
-Object.defineProperty(exports, "import_counter", {
-	enumerable: true,
-	get: function() {
-		return import_counter;
-	}
-});
 Object.defineProperty(exports, "n", {
 	enumerable: true,
 	get: function() {
@@ -285,12 +277,7 @@ exports.loadP = loadP;
 ```js
 const require_d = require("./d.js");
 exports.dval = require_d.dval;
-Object.defineProperty(exports, "n", {
-	enumerable: true,
-	get: function() {
-		return require_d.import_counter.n;
-	}
-});
+exports.n = require_d.n;
 
 ```
 

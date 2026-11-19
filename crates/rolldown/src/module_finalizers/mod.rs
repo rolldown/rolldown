@@ -1079,6 +1079,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// reads").
   fn namespace_getter_returned_expr(&self, symbol_ref: SymbolRef) -> ast::Expression<'ast> {
     let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+    if let Some(binding) =
+      self.ctx.shared_commonjs_reads.namespace_binding(self.ctx.chunk_idx, canonical_ref)
+    {
+      // The getter returns the public export of an entry chunk that reads the property, in place
+      // of the property read (`SharedCommonJsReads::namespace_binding`).
+      return self.finalized_expr_for_binding(binding);
+    }
     if let Some(callee) =
       self.ctx.shared_commonjs_reads.namespace_call(self.ctx.chunk_idx, canonical_ref)
       && let Some(ns_alias) = self.ctx.symbol_db.get(canonical_ref).namespace_alias.as_ref()
@@ -1090,6 +1097,26 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return Expression::new_call_with_arg(callee, namespace, false, self);
     }
     self.finalized_expr_for_symbol_ref(symbol_ref, false, false).0
+  }
+
+  /// The binding `binding_ref` that the chunk imports for a shared read
+  /// (`SharedCommonJsReads::binding_imports`). The expression reads the binding itself, not the
+  /// property of its namespace alias.
+  fn finalized_expr_for_binding(&self, binding_ref: SymbolRef) -> ast::Expression<'ast> {
+    let chunk_idx = self
+      .ctx
+      .symbol_db
+      .get(binding_ref)
+      .chunk_idx
+      .expect("the link pass gives the binding of a shared read to a chunk");
+    if matches!(self.ctx.options.format, rolldown_common::OutputFormat::Cjs)
+      && chunk_idx != self.ctx.chunk_idx
+    {
+      return self
+        .finalized_expr_for_cross_chunk_symbol(self.ctx.chunk_idx, chunk_idx, binding_ref)
+        .0;
+    }
+    Expression::new_id_ref_expr(SPAN, self.canonical_name_for(binding_ref), self)
   }
 
   fn generate_declaration_of_module_namespace_object(&self) -> Vec<ast::Statement<'ast>> {

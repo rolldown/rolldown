@@ -7,7 +7,7 @@ use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, InlineConstMode, ModuleIdx, OutputFormat, SymbolRef, TaggedSymbolRef,
-  UsedSymbolRefsView,
+  UsedSymbolRefsView, WrapKind,
 };
 use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -34,6 +34,15 @@ pub struct SharedCommonJsReads {
   /// The function that a getter of a namespace object calls, by the chunk of the namespace object
   /// and the canonical symbol of the export (`ReadUse::NamespaceGetter`).
   namespace_calls: FxHashMap<(ChunkIdx, SymbolRef), SymbolRef>,
+  /// The public export of an entry chunk that an export reads in place of the property, by the
+  /// chunk and the canonical symbol of the export. The value is the binding of the public export.
+  /// The entry chunk reads the property, and the chunk imports the binding from it.
+  bindings: FxHashMap<(ChunkIdx, SymbolRef), SymbolRef>,
+  /// The binding that a getter of a namespace object returns in place of the property read, by
+  /// the chunk of the namespace object and the canonical symbol of the export.
+  namespace_bindings: FxHashMap<(ChunkIdx, SymbolRef), SymbolRef>,
+  /// The bindings of `bindings` and `namespace_bindings` that each chunk imports.
+  binding_imports: FxHashMap<ChunkIdx, Vec<SymbolRef>>,
   /// The functions that a chunk declares, in the order of the decision.
   declarations: FxHashMap<ChunkIdx, Vec<SharedReadDeclaration>>,
 }
@@ -71,7 +80,7 @@ pub enum SharedReadDeclaration {
 
 impl SharedCommonJsReads {
   pub fn is_empty(&self) -> bool {
-    self.calls.is_empty() && self.namespace_calls.is_empty()
+    self.calls.is_empty() && self.namespace_calls.is_empty() && self.binding_imports.is_empty()
   }
 
   /// The function that the export `export_ref` of the chunk `chunk_idx` calls with its namespace,
@@ -87,6 +96,25 @@ impl SharedCommonJsReads {
     self.namespace_calls.get(&(chunk_idx, export_ref)).copied()
   }
 
+  /// The binding of the public export of an entry chunk that the export `export_ref` of the chunk
+  /// `chunk_idx` gives in place of the property read. `export_ref` is a canonical symbol. The
+  /// chunk imports the binding (`binding_imports`).
+  pub fn binding(&self, chunk_idx: ChunkIdx, export_ref: SymbolRef) -> Option<SymbolRef> {
+    self.bindings.get(&(chunk_idx, export_ref)).copied()
+  }
+
+  /// The binding that the getter of the export `export_ref` in a namespace object of the chunk
+  /// `chunk_idx` returns in place of the property read. `export_ref` is a canonical symbol.
+  pub fn namespace_binding(&self, chunk_idx: ChunkIdx, export_ref: SymbolRef) -> Option<SymbolRef> {
+    self.namespace_bindings.get(&(chunk_idx, export_ref)).copied()
+  }
+
+  /// The bindings of public exports of entry chunks that the chunk `chunk_idx` imports. The link
+  /// pass imports each binding, not the namespace of its namespace alias.
+  pub fn binding_imports(&self, chunk_idx: ChunkIdx) -> &[SymbolRef] {
+    self.binding_imports.get(&chunk_idx).map_or(&[], Vec::as_slice)
+  }
+
   pub fn declarations(&self, chunk_idx: ChunkIdx) -> &[SharedReadDeclaration] {
     self.declarations.get(&chunk_idx).map_or(&[], Vec::as_slice)
   }
@@ -94,6 +122,14 @@ impl SharedCommonJsReads {
   /// The exports that call a function, by chunk and canonical symbol.
   pub fn exports(&self) -> impl Iterator<Item = (ChunkIdx, SymbolRef)> + '_ {
     self.calls.keys().copied()
+  }
+
+  /// The bindings that each chunk imports (`binding_imports`).
+  pub fn all_binding_imports(&self) -> impl Iterator<Item = (ChunkIdx, SymbolRef)> + '_ {
+    self
+      .binding_imports
+      .iter()
+      .flat_map(|(chunk_idx, bindings)| bindings.iter().map(move |binding| (*chunk_idx, *binding)))
   }
 }
 
@@ -139,8 +175,18 @@ impl GenerateStage<'_> {
   ///
   /// The accessor and the forwards are new exports. A chunk gets one only if the new export does
   /// not change its signature, and if no `import()` in the bundle can see the new key
-  /// (`chunks_exposed_to_dynamic_import`). A read that cannot reach the accessor through such
-  /// chunks stays in its chunk.
+  /// (`chunks_exposed_to_dynamic_import`). The paths use only the edges that the module-level
+  /// prediction covers (`CrossChunkLinkState::predicted_importee_table`).
+  ///
+  /// A read that cannot reach the accessor through such chunks reads a public export of the entry
+  /// chunk that declares the namespace of the read (`namespace_chunk`). This occurs only if that
+  /// entry chunk can call the accessor, exports the property under a name of its entry
+  /// (`is_entry_binding`), and is an importee of the chunk of the read
+  /// (`SharedCommonJsReads::binding`). Otherwise the read stays in its chunk. An ESM export reads
+  /// the property one time, when its chunk runs. Thus ESM output gets an accessor only if two or
+  /// more chunks can call it. A CJS export is a getter, so in CJS output the getter of such a
+  /// public export also calls the accessor.
+  #[expect(clippy::too_many_lines)]
   pub(super) fn share_commonjs_property_reads(
     &mut self,
     chunk_graph: &ChunkGraph,
@@ -187,10 +233,13 @@ impl GenerateStage<'_> {
       .collect();
     let can_pass_on = |chunk_idx: ChunkIdx| passable[chunk_idx];
 
-    // The chunks that import each chunk, through the edges of `link_state`.
+    // The edges of `link_state` that the module-level prediction covers. A new import on such an
+    // edge does not change the result of the already-loaded analysis (`predicted_importee_table`).
+    let importees = link_state.predicted_importee_table(self.link_output.runtime.id());
+    // The chunks that import each chunk through these edges.
     let mut importers: IndexVec<ChunkIdx, Vec<ChunkIdx>> =
       IndexVec::from_vec(vec![vec![]; chunk_graph.chunk_table.len()]);
-    for (importer, importees) in link_state.static_importee_table(chunk_graph).iter_enumerated() {
+    for (importer, importees) in importees.iter_enumerated() {
       if !is_file(importer) {
         continue;
       }
@@ -203,16 +252,16 @@ impl GenerateStage<'_> {
     for list in &mut importers {
       list.sort_unstable();
     }
+    let imports =
+      |importer: ChunkIdx, importee: ChunkIdx| importers[importee].binary_search(&importer).is_ok();
+    let is_facade =
+      |chunk_idx: ChunkIdx| chunk_graph.chunk_table[chunk_idx].is_cross_chunk_export_facade;
 
     for ((source, property), uses) in reads {
       let mut chunks = uses.iter().map(|(chunk_idx, _, _)| *chunk_idx).collect::<Vec<_>>();
       chunks.sort_unstable();
       chunks.dedup();
-      if chunks.len() < 2
-        || !chunks
-          .iter()
-          .any(|chunk_idx| chunk_graph.chunk_table[*chunk_idx].is_cross_chunk_export_facade)
-      {
+      if chunks.len() < 2 || !chunks.iter().any(|chunk_idx| is_facade(*chunk_idx)) {
         continue;
       }
       let owner = match source {
@@ -224,59 +273,107 @@ impl GenerateStage<'_> {
       let Some(owner) = owner.filter(|chunk_idx| is_file(*chunk_idx)) else {
         continue;
       };
-      // The owner exports the accessor. If it cannot get a new export, all reads of the key stay
-      // in their chunks.
-      if !can_pass_on(owner) {
+
+      // Each chunk that can call the accessor gets the next chunk on its path to the owner. A
+      // chunk passes the call on through a forward, so only a chunk that can get a new export is
+      // on a path. The search passes through common chunks before entry chunks, so an entry chunk
+      // gets a forward only if no path through common chunks reaches the chunk that needs it. The
+      // owner exports the accessor. If it cannot get a new export, only the owner can call the
+      // accessor.
+      let mut next_hop: FxHashMap<ChunkIdx, ChunkIdx> = FxHashMap::default();
+      if can_pass_on(owner) {
+        let mut visited = FxHashSet::from_iter([owner]);
+        let mut queue = VecDeque::from([owner]);
+        let mut entry_queue = VecDeque::new();
+        while let Some(chunk_idx) = queue.pop_front().or_else(|| entry_queue.pop_front()) {
+          for &importer in &importers[chunk_idx] {
+            if !visited.insert(importer) {
+              continue;
+            }
+            next_hop.insert(importer, chunk_idx);
+            if !can_pass_on(importer) {
+              continue;
+            }
+            if matches!(chunk_graph.chunk_table[importer].kind, ChunkKind::Common) {
+              queue.push_back(importer);
+            } else {
+              entry_queue.push_back(importer);
+            }
+          }
+        }
+      } else {
         tracing::debug!(
           chunk = owner.raw(),
           property = property.as_str(),
           "the chunk of a CommonJS property cannot export an accessor"
         );
-        continue;
       }
-
-      // Each chunk that can call the accessor gets the next chunk on its path to the owner. A
-      // chunk passes the call on through a forward, so only a chunk that can get a new export is
-      // on a path. The search passes through common chunks before entry chunks, so an entry chunk
-      // gets a forward only if no path through common chunks reaches the chunk that needs it.
-      let mut next_hop: FxHashMap<ChunkIdx, ChunkIdx> = FxHashMap::default();
-      let mut visited = FxHashSet::from_iter([owner]);
-      let mut queue = VecDeque::from([owner]);
-      let mut entry_queue = VecDeque::new();
-      while let Some(chunk_idx) = queue.pop_front().or_else(|| entry_queue.pop_front()) {
-        for &importer in &importers[chunk_idx] {
-          if !visited.insert(importer) {
-            continue;
-          }
-          next_hop.insert(importer, chunk_idx);
-          if !can_pass_on(importer) {
-            continue;
-          }
-          if matches!(chunk_graph.chunk_table[importer].kind, ChunkKind::Common) {
-            queue.push_back(importer);
-          } else {
-            entry_queue.push_back(importer);
-          }
-        }
-      }
-      // A read that cannot reach the accessor stays in its chunk. The other reads share one read
-      // if two or more chunks have them and a facade is one of these chunks. If no facade is one
-      // of these chunks, each read stays in its chunk.
       let (reachable, unreachable): (Vec<ChunkIdx>, Vec<ChunkIdx>) = chunks
         .iter()
         .partition(|chunk_idx| **chunk_idx == owner || next_hop.contains_key(*chunk_idx));
-      for chunk_idx in &unreachable {
-        tracing::debug!(
-          chunk = chunk_idx.raw(),
-          property = property.as_str(),
-          "a read of a CommonJS property cannot reach the accessor through existing edges"
-        );
+
+      // A read that cannot reach the accessor reads the property through a public export of the
+      // entry chunk that holds the namespace of the read, if that entry chunk reads the property
+      // and can call the accessor. The chunk of the read imports the namespace from that entry
+      // chunk, so the import of the binding keeps the same edges. The export has a name of the
+      // entry, so the import adds no key (`deconflict_exported_names`). Otherwise the read stays
+      // in its chunk.
+      let mut binding_chunks = vec![];
+      // The chunk, the export and the code of each such read, and the binding that it reads.
+      let mut binding_reads = vec![];
+      for &(chunk_idx, export_ref, read_use) in &uses {
+        if !unreachable.contains(&chunk_idx) {
+          continue;
+        }
+        let host = self
+          .namespace_chunk(link_state, export_ref)
+          .filter(|host| reachable.contains(host) && imports(chunk_idx, *host));
+        let binding = host.and_then(|host| {
+          uses.iter().find_map(|&(use_chunk, host_export, host_use)| {
+            (use_chunk == host
+              && host_use == ReadUse::Export
+              && self.is_entry_binding(chunk_graph, link_state, order_state, host, host_export))
+            .then_some(host_export)
+          })
+        });
+        let Some(binding) = binding else {
+          tracing::debug!(
+            chunk = chunk_idx.raw(),
+            property = property.as_str(),
+            "a read of a CommonJS property cannot reach the accessor through existing edges"
+          );
+          continue;
+        };
+        if !binding_chunks.contains(&chunk_idx) {
+          binding_chunks.push(chunk_idx);
+        }
+        binding_reads.push((chunk_idx, export_ref, read_use, binding));
       }
-      if reachable.len() < 2
-        || !reachable
-          .iter()
-          .any(|chunk_idx| chunk_graph.chunk_table[*chunk_idx].is_cross_chunk_export_facade)
+      // The reads share one read if two or more chunks have them and a facade is one of these
+      // chunks. Otherwise each read stays in its chunk.
+      if reachable.len() + binding_chunks.len() < 2
+        || !reachable.iter().chain(&binding_chunks).any(|chunk_idx| is_facade(*chunk_idx))
       {
+        continue;
+      }
+      for &(chunk_idx, export_ref, read_use, binding) in &binding_reads {
+        let bindings = match read_use {
+          ReadUse::Export => &mut shared.bindings,
+          ReadUse::NamespaceGetter => &mut shared.namespace_bindings,
+        };
+        bindings.insert((chunk_idx, export_ref), binding);
+        let imported = shared.binding_imports.entry(chunk_idx).or_default();
+        if !imported.contains(&binding) {
+          imported.push(binding);
+        }
+      }
+      // In ESM output, an export reads the property one time, when its chunk runs. Thus the reads
+      // need no accessor if only one chunk reads the property. In CJS output, an export is a getter
+      // that reads the property at each access. Thus the getter of an entry chunk calls the
+      // accessor if another chunk reads its export.
+      let needs_accessor = reachable.len() >= 2
+        || (matches!(self.options.format, OutputFormat::Cjs) && !binding_chunks.is_empty());
+      if !needs_accessor {
         continue;
       }
 
@@ -366,6 +463,43 @@ impl GenerateStage<'_> {
           .then_some(chunk_idx)
       })
       .collect()
+  }
+
+  /// The chunk that declares the namespace that the export `export_ref` reads its property from.
+  /// The chunk of the export imports the namespace from that chunk.
+  fn namespace_chunk(
+    &self,
+    link_state: &CrossChunkLinkState,
+    export_ref: SymbolRef,
+  ) -> Option<ChunkIdx> {
+    let symbols = &self.link_output.symbol_db;
+    let ns_alias = symbols.get(export_ref).namespace_alias.as_ref()?;
+    link_state.symbol_chunk(symbols.canonical_ref_for(ns_alias.namespace_ref), symbols)
+  }
+
+  /// Whether another chunk can read a CommonJS property through the export `export_ref` of the
+  /// chunk `chunk_idx`. These conditions are necessary:
+  /// - The chunk is an entry chunk, and `export_ref` has a name of the entry
+  ///   (`index_chunk_exported_symbols`). An import of the binding then gets this name.
+  /// - The chunk declares the binding, so an import of the binding comes from this chunk.
+  /// - The entry module is not wrapped, so the binding has its value when the chunk has run.
+  fn is_entry_binding(
+    &self,
+    chunk_graph: &ChunkGraph,
+    link_state: &CrossChunkLinkState,
+    order_state: &OrderWrapState,
+    chunk_idx: ChunkIdx,
+    export_ref: SymbolRef,
+  ) -> bool {
+    let ChunkKind::EntryPoint { module, .. } = chunk_graph.chunk_table[chunk_idx].kind else {
+      return false;
+    };
+    matches!(self.link_output.metas[module].wrap_kind(), WrapKind::None)
+      && !order_state.has_order_wrapper(module)
+      && link_state.symbol_chunk(export_ref, &self.link_output.symbol_db) == Some(chunk_idx)
+      && link_state.index_chunk_exported_symbols[chunk_idx]
+        .get(&export_ref)
+        .is_some_and(|names| !names.is_empty())
   }
 
   /// The function that `chunk_idx` declares on the path to the accessor. The function creates the
@@ -550,6 +684,29 @@ impl GenerateStage<'_> {
           .any(|symbol_ref| symbols.canonical_ref_for(*symbol_ref) == export_ref),
         "chunk {chunk_idx:?} has a shared CommonJS property read for `{}`, but does not export it",
         export_ref.name(symbols),
+      );
+    }
+    // A chunk that reads the public export of an entry chunk imports the binding from the entry
+    // chunk, and the entry chunk exports the binding only under names of its entry. Thus the read
+    // adds no key to the entry chunk.
+    for (chunk_idx, binding) in self.shared_commonjs_reads.all_binding_imports() {
+      let host = symbols.get(binding).chunk_idx.expect("the binding is in a chunk");
+      let host_chunk = &chunk_graph.chunk_table[host];
+      let entry = host_chunk.entry_module_idx().expect("the binding is in an entry chunk");
+      assert!(
+        host_chunk.exports_to_other_chunks[&binding]
+          .iter()
+          .all(|name| self.link_output.metas[entry].resolved_exports.contains_key(name)),
+        "chunk {host:?} exports the binding `{}` under a name that its entry does not export",
+        binding.name(symbols),
+      );
+      assert!(
+        chunk_graph.chunk_table[chunk_idx]
+          .imports_from_other_chunks
+          .get(&host)
+          .is_some_and(|items| items.iter().any(|item| item.import_ref == binding)),
+        "chunk {chunk_idx:?} reads the binding `{}`, but does not import it from chunk {host:?}",
+        binding.name(symbols),
       );
     }
   }

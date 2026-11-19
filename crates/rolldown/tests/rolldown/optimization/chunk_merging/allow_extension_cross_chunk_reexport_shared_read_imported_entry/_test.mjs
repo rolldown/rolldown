@@ -8,7 +8,7 @@ const configName = process.env.SCENARIO_CONFIG ?? globalThis.__configName;
 const load = async (name) =>
   configName === 'cjs' ? require(`./dist/${name}.js`) : await import(`./dist/${name}.js`);
 
-// `loadApp` is the `import()` of `app.js` in the bundle. Each scenario reads `app.n` one time.
+// `loadApp` is the `import()` of `app.js` in the bundle.
 const scenarios = {
   async appFirst() {
     const app = await (await load('main')).loadApp();
@@ -20,6 +20,11 @@ const scenarios = {
     const seg = await load('seg');
     const app = await (await load('main')).loadApp();
     return { keys: Object.keys(app).sort(), values: [seg.first, app.n, app.reads()] };
+  },
+  // Only the `app.js` entry loads, and code reads `app.n` two times.
+  async appOnly() {
+    const app = await (await load('main')).loadApp();
+    return { keys: Object.keys(app).sort(), values: [app.n, app.n, app.reads()] };
   },
 };
 
@@ -34,17 +39,11 @@ if (process.env.SCENARIO) {
         encoding: 'utf8',
       }),
     );
-  // The namespace of `app.js` has the namespace of `counter.cjs` as an extra key, because the
-  // facade reads `n` from it. The `app.js` chunk gets no forward, so the namespace gets no other
-  // key.
-  const keys = configName === 'cjs' ? ['import_counter', 'n', 'reads'] : ['n', 'reads', 't'];
-  // The facade and the `app.js` chunk each read `n`, so the getter of `n` runs two times. Node
-  // reads `n` one time and gives `1` to each export. The facade reads `n` when it loads. In ESM
-  // output, the `app.js` chunk reads `n` when it loads, before the facade that imports it. In CJS
-  // output, the `app.js` chunk reads `n` when code reads `app.n`.
-  assert.deepStrictEqual(run('appFirst'), { keys, values: [2, 1, 2] });
-  assert.deepStrictEqual(run('segFirst'), {
-    keys,
-    values: configName === 'cjs' ? [1, 2, 2] : [2, 1, 2],
-  });
+  // The facade reads `n` through the public export `n` of the `app.js` chunk, so the namespace of
+  // `app.js` gets no new key. The getter of `n` runs one time, and each read gives `1`, as in Node.
+  // In CJS output, the getter of `app.n` saves the value of its first read.
+  const expected = { keys: ['n', 'reads'], values: [1, 1, 1] };
+  assert.deepStrictEqual(run('appFirst'), expected);
+  assert.deepStrictEqual(run('segFirst'), expected);
+  assert.deepStrictEqual(run('appOnly'), expected);
 }

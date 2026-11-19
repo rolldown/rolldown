@@ -45,14 +45,14 @@ if (process.env.SCENARIO) {
       }),
     );
   // The importers of `d.js` cannot read an extracted namespace, because `d.js` re-exports a
-  // CommonJS property. Thus the namespace of `d.js` has the namespace of `counter.cjs` as an extra
-  // key for `p.js` (issue #11397). The shared read adds no key to this namespace.
+  // CommonJS property. The `p.js` chunk reads `n` through the public export `n` of the `d.js`
+  // chunk, so the namespace of `d.js` gets no new key.
   const expected = {
-    dKeys: configName === 'cjs' ? ['dval', 'import_counter', 'n'] : ['dval', 'n', 't'],
+    dKeys: ['dval', 'n'],
     pKeys: ['dval', 'n'],
-    // The facade, `app.js` and `d.js` share one read. `p.js` keeps its own read, so the getter of
-    // `n` runs two times. Node reads `n` one time and gives `1` to each export.
-    values: [1, 1, 1, 2, 2],
+    // The facade, `app.js`, `d.js` and `p.js` share one read, so the getter of `n` runs one time.
+    // Each read gives `1`, as in Node.
+    values: [1, 1, 1, 1, 1],
   };
   assert.deepStrictEqual(run('dynamicFirst'), expected);
   assert.deepStrictEqual(run('appFirst'), expected);

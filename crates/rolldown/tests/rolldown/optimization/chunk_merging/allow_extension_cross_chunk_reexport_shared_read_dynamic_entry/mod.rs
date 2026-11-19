@@ -45,7 +45,8 @@ async fn allow_extension_cross_chunk_reexport_shared_read_dynamic_entry() {
   // share one read of `n`. The dynamic entry `p.js` gets `n` through the `d.js` chunk. `d.js`
   // re-exports a CommonJS property, so the importers of `d.js` cannot read an extracted
   // namespace, and code can see a new key of its namespace. Thus the `d.js` chunk gets no
-  // forward, and the `p.js` chunk keeps its own read of `n`.
+  // forward. The `p.js` chunk imports the public export `n` of the `d.js` chunk, so it shares the
+  // read too.
   let options = BundlerOptions {
     input: Some(vec![
       InputItem { name: Some("app".into()), import: "./app.js".into() },

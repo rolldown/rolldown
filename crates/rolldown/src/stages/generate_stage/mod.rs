@@ -244,10 +244,19 @@ impl<'a> GenerateStage<'a> {
         &order_state,
         FinalEsmInitMetadataAvailability::Sealed(&final_esm_init_metadata),
       );
-      debug_assert!(
-        static_importees == link_state.static_importee_table(&chunk_graph),
-        "a shared CommonJS property read must not add a chunk edge"
-      );
+      #[cfg(debug_assertions)]
+      {
+        let after = link_state.static_importee_table(&chunk_graph);
+        let changed = static_importees
+          .iter_enumerated()
+          .filter(|(chunk_idx, before)| **before != after[*chunk_idx])
+          .map(|(chunk_idx, before)| format!("{chunk_idx:?}: {before:?} -> {:?}", after[chunk_idx]))
+          .collect::<Vec<_>>();
+        debug_assert!(
+          changed.is_empty(),
+          "a shared CommonJS property read must not change a chunk edge: {changed:?}"
+        );
+      }
     }
     self.commit_cross_chunk_links(&mut chunk_graph, link_state, &used_symbol_refs);
     #[cfg(debug_assertions)]

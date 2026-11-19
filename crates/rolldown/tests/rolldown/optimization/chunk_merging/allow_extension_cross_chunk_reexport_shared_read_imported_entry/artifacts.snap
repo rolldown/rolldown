@@ -26,7 +26,7 @@ import { t as require_counter } from "./counter.js";
 var import_counter = require_counter();
 var n = import_counter.n;
 var reads = import_counter.reads;
-export { n, reads, import_counter as t };
+export { n, reads };
 
 ```
 
@@ -89,16 +89,10 @@ export { loadApp };
 ## seg.js
 
 ```js
-import { t as import_counter } from "./app.js";
+import { n } from "./app.js";
 import { foreign } from "./dep.js";
 import "./group.js";
-var first = import_counter;
-try {
-	first = first.n;
-} catch (e) {
-	first = void 0;
-}
-export { first, foreign };
+export { n as first, foreign };
 
 ```
 
@@ -125,18 +119,13 @@ To fix:
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_counter$1 = require("./counter.js");
 // app.js
-var import_counter = require("./counter.js").require_counter();
-Object.defineProperty(exports, "import_counter", {
-	enumerable: true,
-	get: function() {
-		return import_counter;
-	}
-});
+var import_counter = require_counter$1.require_counter();
 Object.defineProperty(exports, "n", {
 	enumerable: true,
 	get: function() {
-		return import_counter.n;
+		return require_counter$1.read_counter_n(import_counter);
 	}
 });
 Object.defineProperty(exports, "reads", {
@@ -175,6 +164,24 @@ var require_counter = /* @__PURE__ */ __commonJSMin(((exports) => {
 	});
 	exports.reads = () => reads;
 }));
+var counter_n, has_counter_n;
+function read_counter_n(ns) {
+	if (!has_counter_n) {
+		try {
+			counter_n = ns.n;
+		} catch (e) {
+			if (ns == null) throw e;
+		}
+		has_counter_n = true;
+	}
+	return counter_n;
+}
+Object.defineProperty(exports, "read_counter_n", {
+	enumerable: true,
+	get: function() {
+		return read_counter_n;
+	}
+});
 Object.defineProperty(exports, "require_counter", {
 	enumerable: true,
 	get: function() {
@@ -217,13 +224,7 @@ exports.loadApp = loadApp;
 const require_app = require("./app.js");
 const require_dep = require("./dep.js");
 require("./group.js");
-var first = require_app.import_counter;
-try {
-	first = first.n;
-} catch (e) {
-	first = void 0;
-}
-exports.first = first;
+exports.first = require_app.n;
 exports.foreign = require_dep.foreign;
 
 ```

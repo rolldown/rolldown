@@ -41,12 +41,12 @@ impl Plugin for EmitChunkPlugin {
 async fn allow_extension_cross_chunk_reexport_shared_read_imported_entry() {
   // `seg.js` is an emitted AllowExtension entry, and the `group` chunk holds its module. The entry
   // re-exports `foreign` from the `dep.js` chunk, so it keeps its facade (issue #11767). The facade
-  // re-exports `n` of `counter.cjs` through `app.js`, so it reads `n` from the namespace in the
-  // `app.js` chunk. `app2.js` also imports `counter.cjs`, so `counter.cjs` is in a common chunk
-  // that the facade does not import. `main.js` loads the `app.js` entry with `import()`, which
-  // gives the namespace of the `app.js` chunk. A forward in the `app.js` chunk is a new key of
-  // this namespace, so the `app.js` chunk gets no forward. No other path of the facade reaches the
-  // accessor, so the facade and the `app.js` chunk each keep their own read of `n`.
+  // re-exports `n` of `counter.cjs` through `app.js`. `app2.js` also imports `counter.cjs`, so
+  // `counter.cjs` is in a common chunk that the facade does not import. `main.js` loads the
+  // `app.js` entry with `import()`, which gives the namespace of the `app.js` chunk. A forward in
+  // the `app.js` chunk is a new key of this namespace, so the `app.js` chunk gets no forward. The
+  // facade imports the public export `n` of the `app.js` chunk, so the facade and the `app.js`
+  // chunk share one read of `n`.
   let options = BundlerOptions {
     input: Some(vec![
       InputItem { name: Some("app".into()), import: "./app.js".into() },

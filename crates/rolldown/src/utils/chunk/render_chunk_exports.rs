@@ -242,7 +242,13 @@ pub fn render_chunk_exports(
             .symbol_db
             .canonical_name_for_or_original(canonical_ref, &chunk.canonical_names);
           let mut rendered_canonical_name = escape_non_ascii(canonical_name, ascii_only);
-          if let Some(ns_alias) = &symbol.namespace_alias {
+          if let Some(binding) = ctx.shared_commonjs_reads.binding(ctx.chunk_idx, canonical_ref) {
+            // The chunk imports the public export of an entry chunk that reads the property, and
+            // exports this import (`SharedCommonJsReads::binding`).
+            canonical_name =
+              link_output.symbol_db.canonical_name_for_or_original(binding, &chunk.canonical_names);
+            rendered_canonical_name = escape_non_ascii(canonical_name, ascii_only);
+          } else if let Some(ns_alias) = &symbol.namespace_alias {
             let origin = chunk
               .is_cross_chunk_export_facade
               .then(|| namespace_alias_origin(link_output, ns_alias));
@@ -369,12 +375,28 @@ pub fn render_chunk_exports(
                       && matches!(export_mode, Some(OutputExports::Named | OutputExports::Default))
                   })
                   .map(|ns_alias| (ns_alias, namespace_alias_origin(link_output, ns_alias)));
+                let binding = ctx.shared_commonjs_reads.binding(ctx.chunk_idx, canonical_ref);
                 let commonjs_property = alias_origin.and_then(|(ns_alias, origin)| {
                   matches!(origin, NamespaceAliasOrigin::CommonJs(_)).then_some(ns_alias)
                 });
-                let is_saved_value = commonjs_property.is_some();
+                let is_saved_value = commonjs_property.is_some() || binding.is_some();
                 let shared_read = ctx.shared_commonjs_reads.call(ctx.chunk_idx, canonical_ref);
-                if let Some(ns_alias) = commonjs_property {
+                if let Some(binding) = binding {
+                  // The chunk reads the public export of an entry chunk. The getter of that export
+                  // saves its first read, so this export is a saved value too
+                  // (`SharedCommonJsReads::binding`).
+                  exported_value = Cow::Owned(
+                    escape_non_ascii(
+                      &ctx.finalized_binding_pattern(
+                        binding,
+                        ctx.chunk_idx,
+                        &chunk.canonical_names,
+                      ),
+                      ascii_only,
+                    )
+                    .into_owned(),
+                  );
+                } else if let Some(ns_alias) = commonjs_property {
                   let name = link_output
                     .symbol_db
                     .canonical_name_for_or_original(canonical_ref, &chunk.canonical_names);

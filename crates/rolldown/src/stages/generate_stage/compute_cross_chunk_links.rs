@@ -102,6 +102,30 @@ impl CrossChunkLinkState {
       })
       .collect()
   }
+
+  /// The static importees of each chunk that the module-level prediction covers: the edges that
+  /// this derivation found, except an edge that imports only runtime helpers. The already-loaded
+  /// analysis saw these edges (`debug_assert_module_level_static_import_prediction`). Thus a new
+  /// import on one of them does not change the result of that analysis. The prediction does not
+  /// cover an edge for runtime helpers only, or an edge that chunk merging wrote before.
+  pub(super) fn predicted_importee_table(
+    &self,
+    runtime_idx: ModuleIdx,
+  ) -> IndexVec<ChunkIdx, FxHashSet<ChunkIdx>> {
+    self
+      .index_imports_from_other_chunks
+      .iter()
+      .map(|imports| {
+        imports
+          .iter()
+          .filter(|(_, items)| {
+            items.is_empty() || items.iter().any(|item| item.import_ref.owner != runtime_idx)
+          })
+          .map(|(importee, _)| *importee)
+          .collect()
+      })
+      .collect()
+  }
 }
 
 #[derive(Clone, Copy)]
@@ -1220,7 +1244,7 @@ impl GenerateStage<'_> {
               depended_symbols,
               entry.idx,
               entry_meta,
-              chunk,
+              chunk_id,
             );
           }
 
@@ -1274,6 +1298,16 @@ impl GenerateStage<'_> {
             depended_symbols
               .insert(self.link_output.runtime.resolve_symbol(RUNTIME_HELPER_NAMES[index]));
           }
+        }
+        // A chunk that reads a CommonJS property through the public export of an entry chunk
+        // imports the binding of that export, not the namespace of the binding.
+        for &binding in self.shared_commonjs_reads.binding_imports(chunk_id) {
+          self.add_depended_symbol_with_wrapped_esm_init(
+            chunk_graph,
+            order_state,
+            depended_symbols,
+            binding,
+          );
         }
 
         // Depending runtime helpers
@@ -1373,9 +1407,10 @@ impl GenerateStage<'_> {
     depended_symbols: &mut FxIndexSet<SymbolRef>,
     entry_idx: ModuleIdx,
     entry_meta: &crate::types::linking_metadata::LinkingMetadata,
-    chunk: &Chunk,
+    chunk_idx: ChunkIdx,
   ) {
     let symbols = &self.link_output.symbol_db;
+    let chunk = &chunk_graph.chunk_table[chunk_idx];
     let sorted_export_refs = entry_meta
       .resolved_exports
       .iter()
@@ -1388,6 +1423,14 @@ impl GenerateStage<'_> {
       // the namespace (`facade_external_reexport_modules`).
       .filter(|resolved_export| {
         self.facade_external_reexport_module(chunk, resolved_export.symbol_ref).is_none()
+      })
+      // Such an export reads the public export of an entry chunk in place of the namespace, and
+      // the chunk imports that binding (`SharedCommonJsReads::binding_imports`).
+      .filter(|resolved_export| {
+        self
+          .shared_commonjs_reads
+          .binding(chunk_idx, symbols.canonical_ref_for(resolved_export.symbol_ref))
+          .is_none()
       });
     if self.options.is_strict_execution_order_enabled() {
       for export_ref in sorted_export_refs {

@@ -108,7 +108,7 @@ export async function createWatcher(
   input: WatchOptions | WatchOptions[],
 ): Promise<void> {
   const options = arraify(input);
-  const bundlerOptions = await Promise.all(
+  const setupResults = await Promise.allSettled(
     options
       .map((option) =>
         arraify(option.output || {}).map(async (output) => {
@@ -118,14 +118,26 @@ export async function createWatcher(
       )
       .flat(),
   );
-  const callback = createEventCallback(emitter);
-  const bindingWatcher = new BindingWatcher(
-    bundlerOptions.map((option) => option.bundlerOptions),
-    callback,
+  const bundlerOptions = setupResults.flatMap((result) =>
+    result.status === 'fulfilled' ? [result.value] : [],
   );
-  new Watcher(
-    emitter,
-    bindingWatcher,
-    bundlerOptions.map((option) => option.stopWorkers),
-  );
+  try {
+    const failure = setupResults.find((result) => result.status === 'rejected');
+    if (failure) throw failure.reason;
+    const callback = createEventCallback(emitter);
+    const bindingWatcher = new BindingWatcher(
+      bundlerOptions.map((option) => option.bundlerOptions),
+      callback,
+    );
+    new Watcher(
+      emitter,
+      bindingWatcher,
+      bundlerOptions.map((option) => option.stopWorkers),
+    );
+  } catch (error) {
+    // A sibling setup may have started workers before another setup or the constructor failed.
+    // Wait for every cleanup, preserving the setup error if a worker also fails to stop.
+    await Promise.allSettled(bundlerOptions.map(async (option) => option.stopWorkers?.()));
+    throw error;
+  }
 }

@@ -36,6 +36,15 @@ import { createWatcher } from './watcher';
  */
 export function watch(input: WatchOptions | WatchOptions[]): RolldownWatcher {
   const emitter = new WatcherEmitter();
-  createWatcher(emitter, input);
+  // Setup can fail before a native watcher or bundle exists.
+  // See internal-docs/watch-mode/implementation.md ("Event Mapping").
+  createWatcher(emitter, input).catch(async (error) => {
+    try {
+      await emitter.emit('event', { code: 'ERROR', error });
+    } catch (listenerError) {
+      // Match native event dispatch: a rejected listener must not become an unhandled rejection.
+      console.error('watcher on_event listener error:', listenerError);
+    }
+  });
   return emitter;
 }

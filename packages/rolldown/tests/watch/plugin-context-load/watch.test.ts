@@ -79,7 +79,7 @@ function waitForBuild(watcher: RolldownWatcher): Promise<void> {
           break;
         case 'ERROR':
           watcher.off('event', listener);
-          await event.result.close();
+          await event.result?.close();
           reject(event.error);
           break;
         case 'START':

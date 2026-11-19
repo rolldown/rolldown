@@ -289,9 +289,12 @@ pub enum ModuleSideEffectsVerdict {
 
 /// Shared side-effect order for inclusion and for `getModuleInfo` / `this.resolve`.
 ///
-/// 1. Hook side effects. `true` means the default algorithm: it skips
-///    `treeshake.moduleSideEffects` and `package.json#sideEffects`.
-/// 2. `treeshake: false` (no hook value) includes the module and reports `true`.
+/// 1. Hook side effects. `false` and `no-treeshake` are final. `true` means the
+///    default algorithm: it skips `treeshake.moduleSideEffects` and
+///    `package.json#sideEffects`, except when `treeshake` is `false`, where `true`
+///    counts as no value.
+/// 2. `treeshake: false` (no hook value, or a hook `true`) includes the module and
+///    reports `true`.
 /// 3. `treeshake.moduleSideEffects`, passed the id's [`raw_id`](crate::ModuleId::raw_id).
 /// 4. Externals with no hook value. A pure external (`is_external_without_side_effects`)
 ///    is `false`. Any other external stays included and reports `true`.
@@ -299,12 +302,18 @@ pub enum ModuleSideEffectsVerdict {
 /// 6. [`ModuleSideEffectsVerdict::Analyze`]. Plugins report `true`.
 ///
 /// An explicit hook `no-treeshake` stays `no-treeshake`. Hook `true` on an external still
-/// uses the external short-circuit, including `no-treeshake` when the external is not pure.
+/// uses the external short-circuit when treeshake is on, including `no-treeshake` when the
+/// external is not pure. With treeshake off, hook `true` counts as no value.
 pub async fn module_side_effects_decision(
   treeshake: &NormalizedTreeshakeOptions,
   resolved_id: &ResolvedId,
-  hook_side_effects: Option<HookSideEffects>,
+  mut hook_side_effects: Option<HookSideEffects>,
 ) -> anyhow::Result<ModuleSideEffectsVerdict> {
+  // `this.resolve()` reports the effective `true`. A plugin that returns that object
+  // (`@rollup/plugin-alias`) would otherwise turn statement analysis on and drop the import.
+  if treeshake.is_none() && hook_side_effects == Some(HookSideEffects::True) {
+    hook_side_effects = None;
+  }
   match hook_side_effects {
     Some(HookSideEffects::False) => return Ok(defined(false)),
     Some(HookSideEffects::NoTreeshake) => {
@@ -471,6 +480,22 @@ mod reported_module_side_effects_tests {
         reported: HookSideEffects::True,
       },
     );
+    // A hook `true` counts as no value when treeshake is off. It must not request
+    // statement analysis. Plugins still see the effective `true`.
+    assert_eq!(
+      block_on_ready(module_side_effects_decision(&disabled, &bare, Some(HookSideEffects::True)))
+        .unwrap(),
+      ModuleSideEffectsVerdict::Final {
+        determined: DeterminedSideEffects::NoTreeshake,
+        reported: HookSideEffects::True,
+      },
+    );
+    bare.side_effects = Some(HookSideEffects::True);
+    assert_eq!(
+      block_on_ready(reported_module_side_effects(&disabled, &bare)).unwrap(),
+      HookSideEffects::True,
+    );
+    bare.side_effects = None;
     bare.side_effects = Some(HookSideEffects::NoTreeshake);
     assert_eq!(
       block_on_ready(reported_module_side_effects(&disabled, &bare)).unwrap(),

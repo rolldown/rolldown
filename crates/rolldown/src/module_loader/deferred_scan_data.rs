@@ -32,8 +32,8 @@ pub async fn defer_sync_scan_data(
     };
     // TODO: Document this and recommend user to return `moduleSideEffects` in hook return
     // value rather than mutate the `ModuleInfo`.
-    // `true` and `None` re-analyze statements. `false` and `no-treeshake` settle inside
-    // `module_side_effects_decision`, which `normalize_side_effects` shares with module creation.
+    // `normalize_side_effects` shares `module_side_effects_decision` with module creation.
+    // Hook `true` analyzes statements, except when treeshake is off, where it counts as no value.
     match normalize_side_effects(
       options,
       &normal.originative_resolved_id,

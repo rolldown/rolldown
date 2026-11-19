@@ -9,7 +9,8 @@ export interface ModuleInfo extends ModuleOptions {
    * `resolveId`, `load`, or `transform`, then `treeshake.moduleSideEffects`, then the
    * package `sideEffects` field, then `true`. `true` means the normal per-statement
    * treeshake. With no hook value, an external and every module built with `treeshake: false`
-   * also report `true`. The field is writable until `buildEnd`. Assigning `null` clears it.
+   * also report `true`. A hook `true` counts as no value when `treeshake` is `false`.
+   * The field is writable until `buildEnd`. Assigning `null` clears it.
    */
   moduleSideEffects: Exclude<ModuleOptions['moduleSideEffects'], undefined>;
   /**

@@ -158,8 +158,9 @@ pub struct EcmaView {
   pub dynamically_imported_ids: FxIndexSet<ModuleId>,
   pub side_effects: DeterminedSideEffects,
   /// Plugin-facing `moduleSideEffects`. Produced with `side_effects` by
-  /// [`crate::module_side_effects_decision`]. `treeshake: false` and an external with no
-  /// hook value stay [`DeterminedSideEffects::NoTreeshake`] for inclusion and report `true`.
+  /// [`crate::module_side_effects_decision`]. `treeshake: false` (no hook value, or a hook
+  /// `true`) and an external with no hook value stay [`DeterminedSideEffects::NoTreeshake`]
+  /// for inclusion and report `true`.
   pub reported_side_effects: HookSideEffects,
   pub ast_usage: EcmaModuleAstUsage,
   pub self_referenced_class_decl_symbol_ids: FxHashSet<SymbolId>,

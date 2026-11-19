@@ -74,10 +74,27 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
     // If there's only one sourcemap, return it as is.
     return sourcemap_chain[0].clone().into_owned();
   }
-  let tokens = remap_chain(sourcemap_chain, &mut []);
+  let tokens = remap_chain::<false>(sourcemap_chain, &mut []);
   let (sources, source_contents) = copy_sources(sourcemap_chain[0], None);
   let names = copy_names(sourcemap_chain, None);
   SourceMap::new(None, names, None, sources, source_contents, tokens, None)
+}
+
+/// Composes a run of maps into one map that can take the place of the run in a longer chain.
+///
+/// Unlike `collapse_sourcemaps`, the result has one token for each token of the last map, at the
+/// same position. A token that does not reach a source stays as an unmapped token. So a lookup in
+/// the result finds the token that the same lookup finds in the last map, and a chain with the
+/// result gives the same final map as a chain with the whole run. The result also keeps the
+/// `sourceRoot` of the first map, because its sources come from that map.
+pub fn compose_sourcemap_run(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) -> SourceMap {
+  debug_assert!(sourcemap_chain.len() > 1);
+  let first_map = sourcemap_chain[0];
+  let tokens = remap_chain::<true>(sourcemap_chain, &mut []);
+  let (sources, source_contents) = copy_sources(first_map, None);
+  let names = copy_names(sourcemap_chain, None);
+  let source_root = first_map.get_source_root().map(owned);
+  SourceMap::new(None, names, source_root, sources, source_contents, tokens, None)
 }
 
 /// Like `collapse_sourcemaps`, but keeps only the sources and names that a traced token
@@ -95,7 +112,7 @@ pub fn collapse_sourcemaps_traced(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'
   let name_count: usize = sourcemap_chain.iter().map(|map| map.get_names().len()).sum();
   // The last flag is for the name ids out of range. A chain without names marks no names.
   let mut name_used = if name_count == 0 { Vec::new() } else { vec![false; name_count + 1] };
-  let mut tokens = remap_chain(sourcemap_chain, &mut name_used);
+  let mut tokens = remap_chain::<false>(sourcemap_chain, &mut name_used);
   let name_out_of_range = name_used.pop();
   let (mut stack_flags, mut heap_flags) = ([false; 64], Vec::new());
   let source_used = source_flags(first_map.get_sources().len(), &mut stack_flags, &mut heap_flags);
@@ -344,7 +361,9 @@ fn copy_sources(map: &oxc_sourcemap::SourceMap<'_>, used: Option<&[bool]>) -> So
 /// Remaps the last map's tokens through the earlier maps. A name id in the result points into the
 /// names of every map, in chain order. When `name_used` is not empty, the remap also marks the
 /// names that a traced token references. Its last flag is then for the ids out of range.
-fn remap_chain(
+/// With `KEEP_POSITIONS`, the result has one token for each token of the last map (see
+/// `compose_sourcemap_run`).
+fn remap_chain<const KEEP_POSITIONS: bool>(
   sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>],
   name_used: &mut [bool],
 ) -> Box<[Token]> {
@@ -373,10 +392,10 @@ fn remap_chain(
   // token can carry a name, so the remap loop skips the per-step name tracking. A chain without
   // names also skips the marks.
   let remap = match (last_offset == 0, name_used.is_empty()) {
-    (true, true) => remap_tokens::<false, false>,
-    (true, false) => remap_tokens::<false, true>,
-    (false, true) => remap_tokens::<true, false>,
-    (false, false) => remap_tokens::<true, true>,
+    (true, true) => remap_tokens::<false, false, KEEP_POSITIONS>,
+    (true, false) => remap_tokens::<false, true, KEEP_POSITIONS>,
+    (false, true) => remap_tokens::<true, false, KEEP_POSITIONS>,
+    (false, false) => remap_tokens::<true, true, KEEP_POSITIONS>,
   };
   remap(last_map, &mut chain_with_offsets, last_offset, name_used)
 }
@@ -385,7 +404,7 @@ fn remap_chain(
 /// `TRACK_NAMES` and `MARK_NAMES` are consts so that a chain without names, or a collapse that
 /// does not mark names in `name_used`, compiles without that work. With `MARK_NAMES`, `name_used`
 /// has one flag for each name and one more flag for the ids out of range.
-fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool>(
+fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool, const KEEP_POSITIONS: bool>(
   last_map: &oxc_sourcemap::SourceMap<'_>,
   chain: &mut [(LookupCursor<'_>, u32)],
   last_offset: u32,
@@ -444,6 +463,10 @@ fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool>(
       ))
     })();
 
+    if KEEP_POSITIONS {
+      remapped.push(mapped_token.unwrap_or_else(unmapped_token));
+      continue;
+    }
     if let Some(mapped_token) = mapped_token {
       if !has_mapping {
         // Keep a leading unmapped segment when this line later becomes mapped. Approximate

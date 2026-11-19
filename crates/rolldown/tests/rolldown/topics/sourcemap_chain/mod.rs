@@ -1,14 +1,17 @@
 //! A build that is not incremental composes each run of consecutive transform maps before the
 //! link stage, and drops the sourcemap chains after every module is rendered. An incremental
-//! build keeps the chains as they are. Both builds must emit the same maps.
+//! build keeps the chains as they are, and a partial rebuild reuses the chain of an unchanged
+//! module. All these builds must emit the same maps.
 //!
 //! `main.js` is loaded with a map and then goes through three transforms, so its chain is
 //! `Load`, `Transform`, `Transform`, `Transform`. `dep.js` has three `Transform` elements.
 
 use std::{borrow::Cow, path::PathBuf, sync::Arc};
 
+use arcstr::ArcStr;
 use rolldown::{Bundler, BundlerOptions, ExperimentalOptions, InputItem, SourceMapType};
-use rolldown_common::Output;
+use rolldown_common::{Output, ScanMode};
+use rolldown_error::BuildResult;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookTransformArgs, HookTransformOutput,
   HookTransformReturn, HookUsage, Plugin, SharedLoadPluginContext, SharedTransformPluginContext,
@@ -107,8 +110,8 @@ fn bundler(incremental_build: bool) -> Bundler {
 }
 
 /// The code and the map JSON of the only chunk.
-async fn generate(bundler: &mut Bundler) -> (String, String) {
-  let output = bundler.generate().await.expect("build should succeed");
+fn code_and_map(output: BuildResult<rolldown::BundleOutput>) -> (String, String) {
+  let output = output.expect("build should succeed");
   let chunks: Vec<_> = output
     .assets
     .iter()
@@ -155,13 +158,20 @@ fn assert_maps_to(code: &str, map_json: &str, literal: &str, file: &str) {
 #[tokio::test(flavor = "multi_thread")]
 async fn collapsed_chains_give_the_same_maps_as_full_chains() {
   let mut collapsing = bundler(false);
-  let first = Box::pin(generate(&mut collapsing)).await;
+  let first = code_and_map(Box::pin(collapsing.generate()).await);
   // The first build dropped its chains. The second build scans the modules again.
-  let second = Box::pin(generate(&mut collapsing)).await;
-  let full = Box::pin(generate(&mut bundler(true))).await;
+  let second = code_and_map(Box::pin(collapsing.generate()).await);
+  let mut incremental = bundler(true);
+  let full = code_and_map(Box::pin(incremental.generate()).await);
+  // The partial rebuild scans `main.js` again and takes `dep.js` and its chain from the cache.
+  let main_id = ArcStr::from(fixture_dir().join("main.js").to_str().unwrap());
+  let rebuilt = code_and_map(
+    Box::pin(incremental.incremental_generate(ScanMode::Partial(vec![main_id]))).await,
+  );
 
   assert_eq!(first, full);
   assert_eq!(second, full);
+  assert_eq!(rebuilt, full);
   let (code, map_json) = &full;
   assert_maps_to(code, map_json, "main-anchor", "main.js");
   assert_maps_to(code, map_json, "dep-anchor", "dep.js");

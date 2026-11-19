@@ -1096,6 +1096,39 @@ fn test_compose_sourcemap_run_returns_none_for_an_unsorted_earlier_map() {
 }
 
 #[test]
+fn test_compose_sourcemap_run_returns_none_when_a_lookup_depends_on_the_lookup_order() {
+  let map = |tokens: &[(u32, u32)]| {
+    SourceMap::new(
+      None,
+      vec![],
+      None,
+      vec![Some("source.js".into())],
+      vec![None],
+      tokens
+        .iter()
+        .map(|&(dst_col, src_col)| Token::new(0, dst_col, 0, src_col, Some(0), None))
+        .collect(),
+      None,
+    )
+  };
+  // The columns of this line are in reverse order.
+  let unsorted = map(&[(6, 0), (4, 1), (2, 2)]);
+  let last = map(&[(0, 7), (1, 5)]);
+  let after = map(&[(0, 1)]);
+
+  // The collapse of the whole chain looks up only column 5 in the unsorted map. That lookup finds
+  // the token at column 6.
+  let whole = collapse_sourcemaps(&[&unsorted, &last, &after]);
+  assert_eq!(whole.get_tokens().map(|token| token.get_src_col()).collect::<Vec<_>>(), [0]);
+
+  // A composition looks up column 7 first and then column 5. After the first lookup, the cursor
+  // finds the token at column 2 for column 5. So a chain with that composition gives another map.
+  let tokens = remap_chain::<true>(&[&unsorted, &last], &mut []);
+  assert_eq!(tokens.iter().map(Token::get_src_col).collect::<Vec<_>>(), [2, 2]);
+  assert!(compose_sourcemap_run(&[&unsorted, &last]).is_none());
+}
+
+#[test]
 fn test_compose_sourcemap_run_keeps_the_source_root_of_the_first_map() {
   let parse = |json: &str| oxc_sourcemap::SourceMap::from_json_string(json).unwrap().into_owned();
   let first = parse(

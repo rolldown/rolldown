@@ -20,33 +20,59 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 # Assets
 
+## early.js
+
+```js
+import { r as noop } from "./iterable.js";
+
+//#region early.js
+noop(late);
+const late = 0;
+
+//#endregion
+```
+
 ## entry.js
 
 ```js
-import { i as replaced, n as restDefault, r as redeclared, t as iterable } from "./iterable.js";
+import { n as redeclared, r as replaced, t as restDefault } from "./rest-default.js";
+import { n as iterable, r as noop, t as coercible } from "./iterable.js";
+
+// HIDDEN [\0rolldown/runtime.js]
+//#region getter.cjs
+var require_getter = /* @__PURE__ */ __commonJSMin(((exports) => {
+	Object.defineProperty(exports, "value", { get() {
+		globalThis.calls.push("getter");
+		return 0;
+	} });
+}));
+
+//#endregion
 //#region entry.js
+var import_getter = /* @__PURE__ */ __toESM(require_getter());
 replaced();
 redeclared();
 restDefault();
-const [first] = /* @__PURE__ */ iterable("destructuring");
-//#endregion
+const [first] = iterable("destructuring");
+String(coercible());
+noop(import_getter.value);
+noop(import_getter.value);
+try {
+	early();
+} catch (error) {
+	globalThis.calls.push(error.name);
+}
+const late = globalThis.calls.length;
+function early() {
+	noop(late);
+}
 
+//#endregion
 ```
 
 ## iterable.js
 
 ```js
-//#region eval.js
-let replaced = /* #__NO_SIDE_EFFECTS__ */ () => {};
-eval("replaced = () => globalThis.calls.push('eval')");
-//#endregion
-//#region redeclared.js
-var redeclared = /* #__NO_SIDE_EFFECTS__ */ () => {};
-var redeclared = () => globalThis.calls.push("redeclared");
-//#endregion
-//#region rest-default.js
-function restDefault(...[value = globalThis.calls.push("rest default")]) {}
-//#endregion
 //#region iterable.js
 /* #__NO_SIDE_EFFECTS__ */
 function iterable(name) {
@@ -54,14 +80,58 @@ function iterable(name) {
 		globalThis.calls.push(name);
 	} };
 }
-//#endregion
-export { replaced as i, restDefault as n, redeclared as r, iterable as t };
+/* @__NO_SIDE_EFFECTS__ */
+function coercible() {
+	return { [Symbol.toPrimitive]() {
+		globalThis.calls.push("coercion");
+		return "value";
+	} };
+}
+function noop() {}
 
+//#endregion
+export { iterable as n, noop as r, coercible as t };
+```
+
+## loops.js
+
+```js
+import { r as noop } from "./iterable.js";
+
+//#region loops.js
+while (true) noop();
+do
+	noop();
+while (true);
+
+//#endregion
 ```
 
 ## other.js
 
 ```js
-export { t as iterable, r as redeclared, i as replaced, n as restDefault } from "./iterable.js";
+import { n as redeclared, r as replaced, t as restDefault } from "./rest-default.js";
+import { n as iterable, r as noop, t as coercible } from "./iterable.js";
 
+export { coercible, iterable, noop, redeclared, replaced, restDefault };
+```
+
+## rest-default.js
+
+```js
+//#region eval.js
+let replaced = /* #__NO_SIDE_EFFECTS__ */ () => {};
+eval("replaced = () => globalThis.calls.push('eval')");
+
+//#endregion
+//#region redeclared.js
+var redeclared = /* #__NO_SIDE_EFFECTS__ */ () => {};
+var redeclared = () => globalThis.calls.push("redeclared");
+
+//#endregion
+//#region rest-default.js
+function restDefault(...[value = globalThis.calls.push("rest default")]) {}
+
+//#endregion
+export { redeclared as n, replaced as r, restDefault as t };
 ```

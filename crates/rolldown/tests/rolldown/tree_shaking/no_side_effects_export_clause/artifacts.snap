@@ -9,8 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { n as listed, t as reassigned } from "./reassigned.js";
 //#region entry-a.js
 reassigned("kept: reassigned after the annotation");
-const [first] = /* @__PURE__ */ listed("kept: destructuring runs the iterator of the result");
-const result = /* @__PURE__ */ listed("kept: result is used");
+const [first] = listed("kept: destructuring runs the iterator of the result");
+const result = listed("kept: result is used");
 //#endregion
 export { result };
 

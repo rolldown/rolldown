@@ -30,8 +30,7 @@ use super::{
     compute_body_demand_keys, is_gated_side_effect_stmt, side_effects_included_on_demand,
   },
   passes::{
-    collect_depended_runtime_helpers, include_cjs_bailout_exports, include_runtime_symbol,
-    preserve_reexported_interfaces,
+    collect_depended_runtime_helpers, include_runtime_symbol, preserve_reexported_interfaces,
   },
 };
 
@@ -90,9 +89,7 @@ pub struct IncludeContext<'a> {
   /// (an import binding, or the resolved member of `ns.SIZE`) and its canonical symbol. Order
   /// wrapping reads them in `collect_frozen_reexport_usage`.
   pub kept_inlined_constant_reads: FxHashSet<SymbolRef>,
-  /// Tracks whether any new module was included during the current convergence iteration.
-  /// Used to detect fixpoint without O(N) scanning of `is_module_included_vec`.
-  pub module_inclusion_changed: bool,
+  pub pending_dynamic_entries: FxIndexSet<ModuleIdx>,
   pub module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
   pub json_module_none_self_reference_included_symbol: FxHashMap<ModuleIdx, FxHashSet<SymbolRef>>,
   /// User-defined entry modules (static and emitted, NOT dynamic). Exempt from
@@ -160,7 +157,7 @@ impl<'a> IncludeContext<'a> {
       external_importer_modes: FxHashMap::default(),
       inlined_constant_owner_side_effects: FxHashMap::default(),
       kept_inlined_constant_reads: FxHashSet::default(),
-      module_inclusion_changed: false,
+      pending_dynamic_entries: FxIndexSet::default(),
       module_namespace_included_reason,
       json_module_none_self_reference_included_symbol: FxHashMap::default(),
       entry_module_idxs,
@@ -347,39 +344,11 @@ impl LinkStage<'_> {
       include_module(context, module);
     });
 
-    let mut unused_record_idxs = vec![];
-    let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
-    let mut included_dynamic_entry = FxHashSet::default();
-    loop {
-      context.module_inclusion_changed = false;
-
-      // It could be safely take since it is no more used.
-      // We extract bailout_modules first to avoid borrowing conflict:
-      // passing `context` requires a mutable borrow, which conflicts with
-      // borrowing `context.bailout_cjs_tree_shaking_modules` inside the call.
-      let bailout_modules = std::mem::take(&mut context.bailout_cjs_tree_shaking_modules);
-      include_cjs_bailout_exports(context, &self.metas, bailout_modules);
-
-      dynamic_entries.iter().for_each(|entry| {
-        if included_dynamic_entry.contains(&entry.idx) {
-          return;
-        }
-        let included = self.process_and_retain_dynamic_entry(
-          entry,
-          &cycled_idx,
-          context,
-          &mut unused_record_idxs,
-          unreachable_import_expression_node_ids,
-        );
-        if included {
-          included_dynamic_entry.insert(entry.idx);
-        }
-      });
-
-      if !context.module_inclusion_changed {
-        break;
-      }
-    }
+    let (included_dynamic_entry, unused_record_idxs) = self.include_dynamic_entries(
+      &mut dynamic_entries,
+      context,
+      unreachable_import_expression_node_ids,
+    );
 
     // Under `preserveModules`, preserve each module's re-exports whose canonical value survived
     // tree-shaking, so every emitted file mirrors its source's export interface (issue #9122).
@@ -560,7 +529,6 @@ fn handle_include_module(ctx: &mut IncludeContext, module_idx: ModuleIdx) {
   if !ctx.is_module_included_vec.set_bit(module.idx) {
     return;
   }
-  ctx.module_inclusion_changed = true;
   if let Some(forwarding_refs) = ctx.deferred_forwarding_refs.remove(&module_idx) {
     for forwarding_ref in &forwarding_refs {
       enqueue_declaring_statements(ctx, forwarding_ref);
@@ -1065,6 +1033,15 @@ fn handle_include_statement(
   }
 
   let stmt_info = ctx.stmt_infos[module.idx].get(stmt_info_idx);
+
+  for &record_idx in &stmt_info.import_records {
+    let record = &module.import_records[record_idx];
+    if record.kind == ImportKind::DynamicImport
+      && let Some(module_idx) = record.resolved_module
+    {
+      ctx.pending_dynamic_entries.insert(module_idx);
+    }
+  }
 
   scan_import_records_for_cjs_bailout(ctx, module, stmt_info);
   let mut include_kind = if stmt_info.meta.contains(StmtInfoMeta::ReExportDynamicExports) {

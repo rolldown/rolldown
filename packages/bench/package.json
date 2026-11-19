@@ -4,8 +4,7 @@
   "type": "module",
   "scripts": {
     "bench": "oxnode ./benches/compare.js",
-    "bench-ci": "oxnode ./benches/ci.js",
-    "bench-par": "oxnode ./benches/par.js"
+    "bench-ci": "oxnode ./benches/ci.js"
   },
   "dependencies": {
     "react": "catalog:",
@@ -14,13 +13,9 @@
     "vue-router": "^5.5.0"
   },
   "devDependencies": {
-    "@babel/core": "catalog:",
-    "@babel/preset-env": "catalog:",
-    "@babel/preset-typescript": "catalog:",
     "@oxc-node/cli": "catalog:",
     "@rollup/plugin-commonjs": "catalog:",
     "@rollup/plugin-node-resolve": "catalog:",
-    "@types/babel__core": "catalog:",
     "@types/lodash-es": "catalog:",
     "chalk": "catalog:",
     "esbuild": "catalog:",

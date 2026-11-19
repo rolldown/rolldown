@@ -3,9 +3,9 @@ use std::collections::VecDeque;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
-  PreserveEntrySignatures, RuntimeHelper, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
-  UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  PreserveEntrySignatures, RuntimeHelper, StmtEvalFlags, StmtInfoIdx, SymbolOrMemberExprRef,
+  SymbolRef, UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::{BitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -13,6 +13,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::chunk_graph::ChunkGraph;
 use crate::esm_init_obligations::collect_entry_reexported_wrapper_inits;
 use crate::stages::link_stage::IncludeContext;
+use crate::utils::chunk::normalize_preserve_entry_signature;
 
 use super::{
   GenerateStage, code_splitting::IndexSplittingInfo,
@@ -423,12 +424,6 @@ impl GenerateStage<'_> {
     });
   }
 
-  /// Makes each entry chunk export the namespace of its entry module, in the closure of
-  /// `replay_link_stage_inclusion`. The closure returns the result: whether a namespace needs
-  /// `__exportAll`. Call `narrow_namespace_stmt_to_used_symbols` for each entry module before the
-  /// replay. `optimize_facade_entry_chunks` calls this function in the replay of its facade
-  /// changes, so that one replay does both changes.
-  ///
   /// When a namespace needs `__exportAll`, the chunk gets the helper flag. The flag makes the chunk
   /// a runtime consumer, so runtime placement needs no other record of the chunk.
   pub(super) fn include_dynamic_entry_namespace_extractions<'a>(
@@ -801,11 +796,15 @@ impl GenerateStage<'_> {
       return;
     }
     let symbol_db = &self.link_output.symbol_db;
+    let mut verdicts = FxHashMap::default();
     for resolved_export in meta.resolved_exports.values() {
       if resolved_export.came_from_commonjs {
         continue;
       }
       let served = symbol_db.canonical_ref_resolving_namespace(resolved_export.symbol_ref);
+      if !self.entry_export_needs_service(module_idx, served.owner, &mut verdicts) {
+        continue;
+      }
       let is_live = assume_all_live
         || if let Some(owner) = self.link_output.module_table[served.owner].as_normal()
           && owner.namespace_object_ref == served
@@ -827,10 +826,70 @@ impl GenerateStage<'_> {
       symbol_db,
       None,
     ) {
-      if assume_all_live || used_symbol_refs_view.contains(&init.wrapper_ref) {
+      if self.entry_export_needs_service(module_idx, init.owner, &mut verdicts)
+        && (assume_all_live || used_symbol_refs_view.contains(&init.wrapper_ref))
+      {
         targets.push(init.wrapper_ref.owner);
       }
     }
+  }
+
+  /// Whether the entry chunk must import `owner`, the module behind one of its exports. Without a
+  /// preserved signature, only when `owner` or anything it statically imports has a side effect,
+  /// so startup still runs it. `sideEffects: false` modules are crossed without counting their own
+  /// statements, and `Analyzed` verdicts are not used because they also count dynamic imports.
+  /// `verdicts` holds the answer for each owner already walked and maps every module of a walk
+  /// without a side effect to `false`, so each module is walked at most once per cache.
+  pub(super) fn entry_export_needs_service(
+    &self,
+    entry: ModuleIdx,
+    owner: ModuleIdx,
+    verdicts: &mut FxHashMap<ModuleIdx, bool>,
+  ) -> bool {
+    if self.options.preserve_modules
+      || !self.link_output.module_table[entry].as_normal().unwrap().dynamic_importers.is_empty()
+      || !matches!(
+        normalize_preserve_entry_signature(
+          &self.link_output.overrode_preserve_entry_signature_map,
+          self.options,
+          entry,
+        ),
+        PreserveEntrySignatures::False
+      )
+    {
+      return true;
+    }
+    let mut pending = vec![owner];
+    let mut visited = FxHashSet::default();
+    while let Some(idx) = pending.pop() {
+      let known = verdicts.get(&idx).copied();
+      if known == Some(false) || !visited.insert(idx) {
+        continue;
+      }
+      let module = &self.link_output.module_table[idx];
+      if known == Some(true)
+        || match module.side_effects() {
+          DeterminedSideEffects::Analyzed(_) => {
+            self.link_output.stmt_infos[idx].iter().any(|stmt| {
+              !stmt.force_tree_shaking && stmt.eval_flags.contains(StmtEvalFlags::UnknownSideEffect)
+            })
+          }
+          side_effects => side_effects.has_side_effects(),
+        }
+      {
+        verdicts.insert(owner, true);
+        return true;
+      }
+      pending.extend(
+        module
+          .import_records()
+          .iter()
+          .filter(|rec| rec.kind == ImportKind::Import)
+          .filter_map(|rec| rec.resolved_module),
+      );
+    }
+    verdicts.extend(visited.into_iter().map(|idx| (idx, false)));
+    false
   }
 
   pub(super) fn referenced_symbol_owners(&self, module_idx: ModuleIdx) -> FxHashSet<ModuleIdx> {

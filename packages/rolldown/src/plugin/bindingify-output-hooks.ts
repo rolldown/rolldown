@@ -206,7 +206,7 @@ function createOutputBundle(
     context,
     unwrapBindingResult(bundle),
     changed,
-    args.pluginContextData.outputCodeCache ?? undefined,
+    args.pluginContextData.outputCodeCache,
   );
   return { changed, context, output };
 }

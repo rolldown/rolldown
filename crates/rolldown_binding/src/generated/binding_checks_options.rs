@@ -34,6 +34,7 @@ pub struct BindingChecksOptions {
   pub shimmed_export: Option<bool>,
   pub deprecated_import_assertion: Option<bool>,
   pub invalid_import_attribute: Option<bool>,
+  pub dropped_import_attribute: Option<bool>,
 }
 impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
   fn from(value: BindingChecksOptions) -> Self {
@@ -67,6 +68,7 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       shimmed_export: value.shimmed_export,
       deprecated_import_assertion: value.deprecated_import_assertion,
       invalid_import_attribute: value.invalid_import_attribute,
+      dropped_import_attribute: value.dropped_import_attribute,
     }
   }
 }

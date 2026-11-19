@@ -93,7 +93,10 @@ async function watchInner(
   });
   const watcher = rolldownWatch(normalizedConfig);
 
-  onExit((code: number | null | undefined) => {
+  onExit((code: number | null | undefined, signal: NodeJS.Signals | null) => {
+    // A normal exit cannot wait for the close. The WASI binding has also stopped its threads by
+    // now, so calling into it can hang the process.
+    if (!signal) return;
     Promise.resolve(watcher.close()).finally(() => {
       process.exit(typeof code === 'number' ? code : 0);
     });

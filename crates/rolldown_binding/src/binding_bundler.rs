@@ -9,8 +9,8 @@ use crate::{
     js_callback_release::{RequestReleaseOnDrop, SharedJsCallbackRelease},
   },
   utils::{
-    handle_result, handle_warnings,
-    normalize_binding_options::{NormalizedBindingOptions, normalize_binding_options},
+    create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
+    handle_result, handle_warnings, normalize_binding_options::NormalizedBindingOptions,
     spawn_boxed_future,
   },
 };
@@ -65,7 +65,7 @@ impl BindingBundler {
     options: BindingBundlerOptions<'env>,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let NormalizedBindingOptions { config: normalized, callbacks } =
-      Self::normalize_binding_options(options)?;
+      create_bundler_config_from_binding_options(options)?;
     // The build future keeps this hold until it ends. See `option_callbacks`.
     let hold = self.option_callbacks.hold_with_group(callbacks);
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "generate") {
@@ -119,7 +119,7 @@ impl BindingBundler {
     options: BindingBundlerOptions<'env>,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let NormalizedBindingOptions { config: normalized, callbacks } =
-      Self::normalize_binding_options(options)?;
+      create_bundler_config_from_binding_options(options)?;
     // The build future keeps this hold until it ends. See `option_callbacks`.
     let hold = self.option_callbacks.hold_with_group(callbacks);
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "write") {
@@ -172,7 +172,7 @@ impl BindingBundler {
     options: BindingBundlerOptions<'env>,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<()>>> {
     let NormalizedBindingOptions { config: normalized, callbacks } =
-      Self::normalize_binding_options(options)?;
+      create_bundler_config_from_binding_options(options)?;
     // The build future keeps this hold until it ends. See `option_callbacks`.
     let hold = self.option_callbacks.hold_with_group(callbacks);
     if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "scan") {
@@ -290,43 +290,6 @@ async fn report_plugin_timings(
 }
 
 impl BindingBundler {
-  fn normalize_binding_options(
-    option: BindingBundlerOptions,
-  ) -> napi::Result<NormalizedBindingOptions> {
-    let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;
-    // Only the parallel-plugin worker pool reads the registry, and wasm has no
-    // threads for that pool. Borrow it so the binding counts as used. Do not
-    // bind it to `_`: that would drop it here instead of at the end of scope.
-    #[cfg(target_family = "wasm")]
-    let _ = &parallel_plugins_registry;
-
-    #[cfg(not(target_family = "wasm"))]
-    let worker_count =
-      parallel_plugins_registry.as_ref().map(|registry| registry.worker_count).unwrap_or_default();
-    #[cfg(not(target_family = "wasm"))]
-    let parallel_plugins_map =
-      parallel_plugins_registry.map(|registry| registry.take_plugin_values());
-
-    #[cfg(not(target_family = "wasm"))]
-    let worker_manager = if worker_count > 0 {
-      use crate::worker_manager::WorkerManager;
-      Some(WorkerManager::new(worker_count))
-    } else {
-      None
-    };
-
-    let ret = normalize_binding_options(
-      input_options,
-      output_options,
-      #[cfg(not(target_family = "wasm"))]
-      parallel_plugins_map,
-      #[cfg(not(target_family = "wasm"))]
-      worker_manager,
-    )?;
-
-    Ok(ret)
-  }
-
   /// Validates that dev mode is not enabled for the given API.
   /// Returns an error result if dev mode is enabled.
   fn validate_hmr_not_allowed<T>(

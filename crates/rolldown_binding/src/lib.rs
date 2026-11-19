@@ -57,7 +57,6 @@ mod generated;
 pub mod memory_reclaim;
 pub mod native_memory;
 pub mod options;
-pub mod parallel_js_plugin_registry;
 #[cfg(not(target_family = "wasm"))]
 mod runtime;
 pub mod transform;
@@ -65,7 +64,6 @@ pub mod transform_cache;
 pub mod types;
 pub mod utils;
 pub mod watcher;
-pub mod worker_manager;
 
 // --- External NAPI-RS dependencies ---
 pub use notify_napi;

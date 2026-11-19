@@ -1756,6 +1756,8 @@ export declare class BindingModuleInfo {
   isEntry: boolean
   inputFormat: 'es' | 'cjs' | 'unknown'
   get code(): string | null
+  /** Effective `moduleSideEffects` (`boolean | 'no-treeshake'`). `null` until the module has been parsed. */
+  get moduleSideEffects(): boolean | 'no-treeshake' | null
 }
 
 export declare class BindingNormalizedOptions {
@@ -1946,12 +1948,6 @@ export declare class BindingWatcherEvent {
   watchChangeData(): BindingWatcherChangeData
 }
 
-export declare class ParallelJsPluginRegistry {
-  id: number
-  workerCount: number
-  constructor(workerCount: number)
-}
-
 export declare class TraceSubscriberGuard {
   close(): void
 }
@@ -2001,7 +1997,6 @@ export interface BindingBundleAnalyzerPluginConfig {
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions
   outputOptions: BindingOutputOptions
-  parallelPluginsRegistry?: ParallelJsPluginRegistry
 }
 
 export interface BindingBundleState {
@@ -2049,6 +2044,7 @@ export interface BindingChecksOptions {
   shimmedExport?: boolean
   deprecatedImportAssertion?: boolean
   invalidImportAttribute?: boolean
+  droppedImportAttribute?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -2539,7 +2535,7 @@ export interface BindingInputItem {
 export interface BindingInputOptions {
   external?: Array<string | RegExp> | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)
   input: Array<BindingInputItem>
-  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions)[]
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
@@ -2739,7 +2735,7 @@ export interface BindingOutputOptions {
   intro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   outro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   paths?: Record<string, string> | ((id: string) => string)
-  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sourcemapBaseUrl?: string
@@ -2894,11 +2890,6 @@ export interface BindingPluginTimingsMeasurement {
   /** Wall time in which any measured callback was running, counting overlap once. */
   busyMs: number
   rows: Array<BindingPluginTiming>
-}
-
-export interface BindingPluginWithIndex {
-  index: number
-  plugin: BindingPluginOptions
 }
 
 export interface BindingPreRenderedAsset {
@@ -3285,8 +3276,6 @@ export interface PreRenderedChunk {
   /** Exported variable names from this chunk. */
   exports: Array<string>
 }
-
-export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
 /**
  * Starts a new measuring window: the peak restarts from the current live

@@ -91,9 +91,6 @@ through `reset_js_module_options` before it loads modules again (rolldown/rolldo
   to the options set when it was resolved (`resolvedModuleOptionMap`), because its importers do
   not resolve it again.
 
-Parallel plugin workers each have their own `PluginContextData`, which this callback does not
-reach.
-
 ### 6. Watch-mode filesystem cache
 
 The `notify` crate's `RecommendedCache` is held inside the debouncer in

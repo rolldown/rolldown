@@ -414,7 +414,13 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
           ? unreachable(`The PluginContext resolve result external couldn't be 'relative'`)
           : res.external,
       ...info,
-      moduleSideEffects: info.moduleSideEffects ?? res.moduleSideEffects ?? null,
+      // A value recorded by resolveId/load/transform wins. Otherwise use the effective
+      // value for this id (treeshake option, package.json `sideEffects`, then `true`,
+      // including externals and `treeshake: false`).
+      moduleSideEffects:
+        info.moduleSideEffects === undefined
+          ? (res.moduleSideEffects ?? null)
+          : info.moduleSideEffects,
       packageJsonPath: res.packageJsonPath,
     };
   }

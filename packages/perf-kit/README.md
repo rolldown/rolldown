@@ -274,7 +274,7 @@ measured different moments are not comparable.
 | `--ready` spec                 | Ready when                                        |
 | ------------------------------ | ------------------------------------------------- |
 | `port:3000`                    | a TCP listener is accepting                       |
-| `stdout:listening on \d+`      | a line matching this regex is printed             |
+| `stdout:listening on \d+`      | a stdout line matches this regex                  |
 | `http://127.0.0.1:3000/health` | an HTTP probe returns 2xx                         |
 | `exit`                         | the process exits 0 (CLIs, lambda-shaped entries) |
 

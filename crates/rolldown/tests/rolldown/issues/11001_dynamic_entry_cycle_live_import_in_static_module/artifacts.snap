@@ -1,0 +1,49 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+// a.mjs
+function value() {
+	return 2;
+}
+function loop() {
+	return import("./z.js");
+}
+export { loop, value };
+
+```
+
+## entry.js
+
+```js
+import { t as eager } from "./z2.js";
+// entry.mjs
+console.log(eager(), (await (await import("./z.js")).load()).value());
+export {};
+
+```
+
+## z.js
+
+```js
+export { t as eager, n as load } from "./z2.js";
+
+```
+
+## z2.js
+
+```js
+// z.mjs
+function eager() {
+	return 1;
+}
+function load() {
+	return import("./a.js");
+}
+export { load as n, eager as t };
+
+```

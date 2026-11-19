@@ -18,7 +18,6 @@ import type { SourceMapInput } from '../types/sourcemap';
 import type { MakeAsync, MaybePromise, NullValue, PartialNull } from '../types/utils';
 import type { GeneralHookFilter, HookFilter } from './hook-filter';
 import type { MinimalPluginContext } from './minimal-plugin-context';
-import type { ParallelPlugin } from './parallel-plugin';
 import type { PluginContext } from './plugin-context';
 import type { TransformPluginContext } from './transform-plugin-context';
 import type { TopLevelFilterExpression } from '@rolldown/pluginutils';
@@ -152,6 +151,12 @@ interface SpecifiedModuleOptions {
    * 4. {@linkcode TreeshakingOptions.moduleSideEffects | treeshake.moduleSideEffects} option
    * 5. `sideEffects` field in the `package.json` file
    * 6. `true` (default)
+   *
+   * `this.getModuleInfo(id).moduleSideEffects` and `this.resolve(id).moduleSideEffects` report
+   * this effective value. `true` is the normal per-statement treeshake, not a statement-level
+   * analysis result. With no hook value, an external and every module built with `treeshake: false`
+   * also report `true`. A hook `true` counts as no value when `treeshake` is `false`, so it does
+   * not turn statement analysis on. An explicit `"no-treeshake"` from a hook stays `"no-treeshake"`.
    */
   moduleSideEffects?: ModuleSideEffects | null;
 }
@@ -933,7 +938,7 @@ export interface Plugin<A = any> extends OutputPlugin, Partial<PluginHooks> {
   api?: A;
 }
 
-export type RolldownPlugin<A = any> = Plugin<A> | BuiltinPlugin | ParallelPlugin;
+export type RolldownPlugin<A = any> = Plugin<A> | BuiltinPlugin;
 export type RolldownPluginOption<A = any> = MaybePromise<
   | NullValue<RolldownPlugin<A>>
   | { name: string } // for rollup plugin compatibility

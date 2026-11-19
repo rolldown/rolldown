@@ -4,7 +4,8 @@ use oxc::span::Span;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, FlatOptions, ImportRecordIdx,
-  RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions, StmtEvalFlags,
+  ModuleSideEffectsVerdict, RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions,
+  StmtEvalFlags, module_side_effects_decision,
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_error::BuildResult;
@@ -133,7 +134,8 @@ pub async fn create_ecma_view(
     dynamic_importers_idx: FxIndexSet::default(),
     imported_ids: FxIndexSet::default(),
     dynamically_imported_ids: FxIndexSet::default(),
-    side_effects,
+    side_effects: side_effects.determined,
+    reported_side_effects: side_effects.reported,
     meta: {
       let mut meta = ecma_view_meta;
       meta.set(EcmaViewMeta::HasLazyExport, has_lazy_export);
@@ -169,85 +171,40 @@ pub async fn create_ecma_view(
   Ok(CreateEcmaViewReturn { ecma_view, ecma_related, raw_import_records, tla_keyword_span })
 }
 
-/// The side effects priority is:
-/// 1. Hook side effects
-/// 2. Package.json side effects
-/// 3. Analyzed side effects
+/// Inclusion verdict plus the `moduleSideEffects` value plugins see.
 ///
-/// We should skip the `check_side_effects_for` if the hook side effects is not `None`.
+/// Both come from [`rolldown_common::module_side_effects_decision`]. Statement analysis is the
+/// only step that stays here, because reporting an analyzed module is always `true`.
+pub struct NormalizedModuleSideEffects {
+  pub determined: DeterminedSideEffects,
+  pub reported: HookSideEffects,
+}
+
+/// Hook, option, package.json, external, and `treeshake: false` decisions come from
+/// [`rolldown_common::module_side_effects_decision`]. Statement analysis is the only step
+/// that stays here, because reporting an analyzed module is always `true`.
 pub async fn normalize_side_effects(
   options: &SharedNormalizedBundlerOptions,
   resolved_id: &ResolvedId,
   stmt_infos: Option<&rolldown_common::StmtInfos>,
   hook_side_effects: Option<HookSideEffects>,
-) -> BuildResult<DeterminedSideEffects> {
-  let side_effects = match hook_side_effects {
-    Some(side_effects) => match side_effects {
-      // The hook explicitly asserted side effects, so it takes priority over the
-      // `package.json#sideEffects`.
-      HookSideEffects::True => lazy_check_side_effects(resolved_id, stmt_infos, false),
-      HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
-      HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
-    },
-    // If user don't specify the side effects, we use fallback value from `option.treeshake.moduleSideEffects`;
-    None => match options.treeshake.as_ref() {
-      // Actually this convert is not necessary, just for passing type checking
-      None => DeterminedSideEffects::NoTreeshake,
-      Some(opt) => {
-        if opt.module_side_effects.is_fn() {
-          match opt
-            .module_side_effects
-            .ffi_resolve(resolved_id.id.raw_id(), resolved_id.external.is_external())
-            .await?
-          {
-            Some(value) => DeterminedSideEffects::UserDefined(value),
-            None => lazy_check_side_effects(resolved_id, stmt_infos, true),
-          }
-        } else {
-          match opt
-            .module_side_effects
-            .native_resolve(resolved_id.id.raw_id(), resolved_id.external.is_external())
-          {
-            Some(value) => DeterminedSideEffects::UserDefined(value),
-            None => lazy_check_side_effects(resolved_id, stmt_infos, true),
-          }
-        }
+) -> BuildResult<NormalizedModuleSideEffects> {
+  let (determined, reported) =
+    match module_side_effects_decision(&options.treeshake, resolved_id, hook_side_effects).await? {
+      ModuleSideEffectsVerdict::Final { determined, reported } => (determined, reported),
+      ModuleSideEffectsVerdict::Analyze => {
+        (lazy_check_side_effects(stmt_infos), HookSideEffects::True)
       }
-    },
-  };
-  Ok(side_effects)
+    };
+  Ok(NormalizedModuleSideEffects { determined, reported })
 }
 
+/// Statement-level side effects. `package.json` and externals are decided in
+/// [`rolldown_common::module_side_effects_decision`] before this runs.
 pub fn lazy_check_side_effects(
-  resolved_id: &ResolvedId,
   stmt_infos: Option<&rolldown_common::StmtInfos>,
-  check_package_json_side_effects: bool,
 ) -> DeterminedSideEffects {
-  if resolved_id.external.is_external() {
-    return if resolved_id.is_external_without_side_effects {
-      DeterminedSideEffects::UserDefined(false)
-    } else {
-      DeterminedSideEffects::NoTreeshake
-    };
-  }
   let stmt_infos = stmt_infos.expect("Normal module should have stmt_infos");
-  if check_package_json_side_effects
-    && let Some(side_effects) = resolved_id.package_json.as_ref().and_then(|p| {
-      // the glob expr is based on parent path of package.json, which is package path
-      // so we should use the relative path of the module to package path.
-      // A plugin `resolveId` hook can return a non-absolute id (e.g. virtual `\0dep`)
-      // together with a `packageJsonPath`, so `package_json` is populated even when the
-      // id is not a `Path` kind. Treat the raw id as a path here (matching the historical
-      // behavior) so `sideEffects` is still honored for such plugin-resolved modules,
-      // rather than gating on `as_path()` and silently dropping the package metadata.
-      let module_path_relative_to_package = resolved_id.id.relative_path(p.realpath().parent()?);
-      p.check_side_effects_for(&module_path_relative_to_package.to_string_lossy())
-        .map(DeterminedSideEffects::UserDefined)
-    })
-  {
-    return side_effects;
-  }
-
   // when determining cjs module side effects:
   // we don't considered `exports.a` has side effects
   let analyzed_side_effects = stmt_infos

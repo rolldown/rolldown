@@ -1,5 +1,4 @@
 use rolldown_common::ModuleId;
-use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rustc_hash::FxHashMap;
 
@@ -32,30 +31,25 @@ pub async fn defer_sync_scan_data(
       continue;
     };
     // TODO: Document this and recommend user to return `moduleSideEffects` in hook return
-    // value rather than mutate the `ModuleInfo`
-    let side_effects = match data.side_effects {
-      Some(HookSideEffects::False) => DeterminedSideEffects::UserDefined(false),
-      Some(HookSideEffects::NoTreeshake) => DeterminedSideEffects::NoTreeshake,
-      _ => {
-        // for Some(HookSideEffects::True) and None,
-        // we need to re analyze the side effects
-        match normalize_side_effects(
-          options,
-          &normal.originative_resolved_id,
-          Some(&scan_stage_output.stmt_infos[module_idx]),
-          data.side_effects,
-        )
-        .await
-        {
-          Ok(side_effects) => side_effects,
-          Err(error) => {
-            errors.extend(error.into_vec());
-            continue;
-          }
-        }
+    // value rather than mutate the `ModuleInfo`.
+    // `normalize_side_effects` shares `module_side_effects_decision` with module creation.
+    // Hook `true` analyzes statements, except when treeshake is off, where it counts as no value.
+    match normalize_side_effects(
+      options,
+      &normal.originative_resolved_id,
+      Some(&scan_stage_output.stmt_infos[module_idx]),
+      data.side_effects,
+    )
+    .await
+    {
+      Ok(side_effects) => {
+        normal.ecma_view.side_effects = side_effects.determined;
+        normal.ecma_view.reported_side_effects = side_effects.reported;
       }
-    };
-    normal.ecma_view.side_effects = side_effects;
+      Err(error) => {
+        errors.extend(error.into_vec());
+      }
+    }
   }
   if errors.is_empty() { Ok(()) } else { Err(errors.into()) }
 }

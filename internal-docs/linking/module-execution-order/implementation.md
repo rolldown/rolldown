@@ -27,6 +27,12 @@ The link-time constant lookup in `refine_stmt_side_effects.rs` therefore rejects
 
 The entry re-export fallback in `esm_init_obligations::collect_entry_reexported_wrapper_inits` likewise applies only to unwrapped entries. An ESM-wrapped entry initializes its static dependencies through its own wrapper in source order, including across chunks. Calling its re-export owners first in `exec_order` can enter a dependency cycle through a different module and read an uninitialized binding (issue #11231).
 
+Cross-module optimization checks binding initialization before it removes a call to a function that `export { fn }` or `export default fn` exports (`SymbolRefFlags::ExportedSeparately`). A function declaration is initialized before the module evaluates. An initializer for a local variable must precede the statement that reads it. For an imported variable, the exporter must precede the caller and the caller must first finish all static imports.
+
+The caller can start before a static import finishes if it is in a cycle. This applies even when it reads a binding from an exporter outside its own component. For example, `main.js` can import `a.js` and re-export `fn` from `b.js`. If `a.js` imports `fn` from `main.js`, loading `main.js` can evaluate `a.js` before `b.js`. An external module can complete a cycle through an emitted module. The initialization check treats all static paths to an external module as unknown.
+
+The linker checks binding reads in the entire statement, including arguments, before it relaxes the statement's side-effect flags. It also checks whether the result can run code, for example through coercion or destructuring. It keeps `while` and `do ... while` statements unless it can prove the test is false. The finalizer does not add a pure annotation for these calls, since the minifier does not have the linker's proof.
+
 ## Algorithm
 
 The pass is an **iterative post-order DFS** with an explicit `execution_stack: Vec<Status>`. Using an explicit stack (rather than recursion) avoids stack overflow on deep module graphs, which are common in real-world codebases.

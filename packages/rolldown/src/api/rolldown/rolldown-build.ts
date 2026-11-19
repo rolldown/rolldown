@@ -25,7 +25,6 @@ Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose');
 export class RolldownBuild {
   #inputOptions: InputOptions;
   #bundler: BindingBundler;
-  #stopWorkers?: () => Promise<void>;
   #closing?: Promise<void>;
 
   /** @hidden should not be used directly */
@@ -92,9 +91,9 @@ export class RolldownBuild {
    * ```
    */
   async close(): Promise<void> {
-    // Every cleanup step (stop workers, `BindingBundler.close`, release the async runtime) runs
-    // exactly once, even when an earlier step fails, and a repeated `close` never re-runs any of
-    // them. The first caller gets any error; a repeat only waits.
+    // Every cleanup step (`BindingBundler.close`, release the async runtime) runs exactly once,
+    // even when the native close fails, and a repeated `close` never re-runs any of them. The first
+    // caller gets any error; a repeat only waits.
     // See internal-docs/rust-classic-bundler/implementation.md ("Close Mechanism").
     if (this.#closing) {
       await this.#closing.catch(noop);
@@ -105,22 +104,11 @@ export class RolldownBuild {
   }
 
   async #close(): Promise<void> {
-    let stopWorkersError: { error: unknown } | undefined;
     try {
-      try {
-        await this.#stopWorkers?.();
-      } catch (error) {
-        stopWorkersError = { error };
-      }
-      this.#stopWorkers = void 0;
       // `BindingBundler.close` spawns onto the runtime, so release only after it settles.
-      // If it throws too, its error wins over the worker one.
       await this.#bundler.close();
     } finally {
       shutdownAsyncRuntime();
-    }
-    if (stopWorkersError) {
-      throw stopWorkersError.error;
     }
   }
 
@@ -142,29 +130,18 @@ export class RolldownBuild {
 
   async #build(isWrite: boolean, outputOptions: OutputOptions): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
-    await this.#stopWorkers?.();
-    const option = await createBundlerOptions(
+    const bundlerOptions = await createBundlerOptions(
       this.#inputOptions,
       outputOptions,
       /* watchMode */ false,
       /* measureTimings */ true,
     );
-
-    try {
-      this.#stopWorkers = option.stopWorkers;
-      let output: Awaited<ReturnType<BindingBundler['generate']>>;
-      if (isWrite) {
-        output = await this.#bundler.write(option.bundlerOptions);
-      } else {
-        output = await this.#bundler.generate(option.bundlerOptions);
-      }
-      const bindingOutputs = unwrapBindingResult(output);
-      trackOutputExternalMemory(bindingOutputs);
-      return new RolldownOutputImpl(bindingOutputs);
-    } catch (e) {
-      await option.stopWorkers?.();
-      throw e;
-    }
+    const output = isWrite
+      ? await this.#bundler.write(bundlerOptions)
+      : await this.#bundler.generate(bundlerOptions);
+    const bindingOutputs = unwrapBindingResult(output);
+    trackOutputExternalMemory(bindingOutputs);
+    return new RolldownOutputImpl(bindingOutputs);
   }
 }
 

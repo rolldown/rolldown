@@ -404,17 +404,17 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     }
 
     if (res == null) return null;
-    const info =
-      this.data.getModuleOption(this.data.toModuleId(res.id, res.attributes)) ||
-      ({} as ModuleOptions);
+    // Leave out the options that `load` and `transform` set, because a `resolveId` hook may
+    // return this result.
+    const info = this.data.getResolvedModuleOption(this.data.toModuleId(res.id, res.attributes));
     return {
       ...res,
       external:
         res.external === 'relative'
           ? unreachable(`The PluginContext resolve result external couldn't be 'relative'`)
           : res.external,
-      ...info,
-      moduleSideEffects: info.moduleSideEffects ?? res.moduleSideEffects ?? null,
+      meta: { ...info?.meta },
+      moduleSideEffects: info?.moduleSideEffects ?? res.moduleSideEffects ?? null,
       packageJsonPath: res.packageJsonPath,
     };
   }

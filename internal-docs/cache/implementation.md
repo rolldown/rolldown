@@ -91,6 +91,10 @@ through `reset_js_module_options` before it loads modules again (rolldown/rolldo
   to the options set when it was resolved (`resolvedModuleOptionMap`), because its importers do
   not resolve it again.
 
+`this.resolve()` and the `resolveId` result that goes to Rust only carry the options of
+resolutions. Otherwise a `resolveId` hook that returns the result of `this.resolve()` would record
+the options of `load` and `transform` as those of a resolution, and they would survive the reset.
+
 Parallel plugin workers each have their own `PluginContextData`, which this callback does not
 reach.
 

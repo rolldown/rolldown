@@ -1298,8 +1298,7 @@ impl BindingMagicString<'_> {
         None,
         source_map.get_sources().map(|s| s.map(|s| Cow::Owned(s.to_owned()))).collect(),
         source_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
-        source_map.get_tokens().collect::<Vec<_>>().into_boxed_slice(),
-        None,
+        source_map.mappings().clone(),
       );
       if self.ignore_list {
         m.set_ignore_list(vec![0]);
@@ -1336,8 +1335,7 @@ impl BindingMagicString<'_> {
         None,
         source_map.get_sources().map(|s| s.map(|s| Cow::Owned(s.to_owned()))).collect(),
         source_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
-        source_map.get_tokens().collect::<Vec<_>>().into_boxed_slice(),
-        None,
+        source_map.mappings().clone(),
       );
       if self.ignore_list {
         m.set_ignore_list(vec![0]);

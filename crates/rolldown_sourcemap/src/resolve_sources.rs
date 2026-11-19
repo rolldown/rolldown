@@ -73,8 +73,7 @@ mod tests {
       source_root.map(|root| root.to_string().into()),
       sources.iter().map(|s| Some((*s).to_string().into())).collect(),
       vec![],
-      Box::new([]),
-      None,
+      oxc_sourcemap::Mappings::default(),
     )
   }
 

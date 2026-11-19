@@ -58,7 +58,9 @@ impl EcmaAst {
     let program = ProgramCell::new(
       ProgramCellOwner {
         source: self.source().clone(),
-        allocator: Allocator::with_capacity(self.program.borrow_owner().allocator.used_bytes()),
+        allocator: crate::ast_arena::ast_allocator(
+          self.program.borrow_owner().allocator.used_bytes(),
+        ),
       },
       |owner| {
         let program = self.program().clone_in_with_semantic_ids(&owner.allocator);

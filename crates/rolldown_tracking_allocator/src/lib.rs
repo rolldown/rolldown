@@ -128,6 +128,34 @@ fn record(bytes_delta: isize, is_realloc: bool) {
   }
 }
 
+/// Record a successful allocation of `size` bytes.
+///
+/// [`TrackingAllocator`] calls this for its own allocations. Other allocators
+/// that also allocate from mimalloc (for example a separate mimalloc heap) call
+/// this too, so that [`stats`] includes their memory.
+pub fn record_alloc(size: usize) {
+  record(isize::try_from(size).unwrap_or(isize::MAX), false);
+}
+
+/// Record a deallocation of `size` bytes. See [`record_alloc`].
+pub fn record_dealloc(size: usize) {
+  // A free is not a new operation for the counts, but it must move the byte
+  // balance and can trigger a flush.
+  let size = isize::try_from(size).unwrap_or(isize::MAX);
+  if !arm_exit_flush() {
+    LIVE_BYTES.fetch_sub(size, Relaxed);
+    return;
+  }
+  let pending = PENDING_BYTES.with(|c| {
+    let pending = c.get() - size;
+    c.set(pending);
+    pending
+  });
+  if pending.abs() >= FLUSH_BYTES {
+    flush();
+  }
+}
+
 fn flush() {
   let bytes = PENDING_BYTES.with(|c| c.replace(0));
   let allocs = PENDING_ALLOCS.with(|c| c.replace(0));
@@ -151,7 +179,7 @@ unsafe impl GlobalAlloc for TrackingAllocator {
     // SAFETY: same contract, forwarded to `MiMalloc`.
     let ptr = unsafe { MiMalloc.alloc(layout) };
     if !ptr.is_null() {
-      record(isize::try_from(layout.size()).unwrap_or(isize::MAX), false);
+      record_alloc(layout.size());
     }
     ptr
   }
@@ -160,7 +188,7 @@ unsafe impl GlobalAlloc for TrackingAllocator {
     // SAFETY: same contract, forwarded to `MiMalloc`.
     let ptr = unsafe { MiMalloc.alloc_zeroed(layout) };
     if !ptr.is_null() {
-      record(isize::try_from(layout.size()).unwrap_or(isize::MAX), false);
+      record_alloc(layout.size());
     }
     ptr
   }
@@ -179,21 +207,7 @@ unsafe impl GlobalAlloc for TrackingAllocator {
   unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
     // SAFETY: same contract, forwarded to `MiMalloc`.
     unsafe { MiMalloc.dealloc(ptr, layout) };
-    // A free is not a new operation for the counts, but it must move the byte
-    // balance and can trigger a flush.
-    let size = isize::try_from(layout.size()).unwrap_or(isize::MAX);
-    if !arm_exit_flush() {
-      LIVE_BYTES.fetch_sub(size, Relaxed);
-      return;
-    }
-    let pending = PENDING_BYTES.with(|c| {
-      let pending = c.get() - size;
-      c.set(pending);
-      pending
-    });
-    if pending.abs() >= FLUSH_BYTES {
-      flush();
-    }
+    record_dealloc(layout.size());
   }
 }
 

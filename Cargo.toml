@@ -207,6 +207,8 @@ itoa = "1.0.18"
 json-escape-simd = "3.1.1"
 json-strip-comments = "3"
 jsonschema = { version = "0.61.0", default-features = false }
+# Use the same version as `mimalloc-safe`. `rolldown_binding` uses it directly for the mimalloc heap of module ASTs.
+libmimalloc-sys2 = { version = "0.1.66", features = ["extended"] }
 memchr = "2.8.2"
 mimalloc-safe = "0.1.70"
 mime = "0.3.17"

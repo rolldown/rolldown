@@ -256,6 +256,45 @@ export interface PluginContext extends MinimalPluginContext {
     id: string,
   ): void;
   /**
+   * Tells the persistent cache
+   * ({@linkcode InputOptions.experimental | experimental.cache}) to save no result for the
+   * module of the current hook call. The hooks of that module then run again in the next
+   * build. The other modules still get saved results.
+   *
+   * Use it in a `resolveId`, `resolveDynamicImport`, `load` or `transform` hook that has
+   * `cache: true`, when one call does something that Rolldown cannot do again without running
+   * the hook. An example is a call that changes a variable of the plugin.
+   *
+   * It does nothing when the cache is off, and in a hook call that the cache does not record.
+   *
+   * This is an internal and experimental API for the persistent cache. The hook keeps the cache
+   * on, and the call tells Rolldown not to save a result for the module of this call. The API
+   * can change or be removed when the design of the cache changes.
+   *
+   * @example
+   * ```js
+   * transform: {
+   *   cache: true,
+   *   handler(code, id) {
+   *     if (code.includes('__BUILD_TIME__')) {
+   *       // The result is different in every build.
+   *       this.markNotCacheable('uses the build time');
+   *       return code.replaceAll('__BUILD_TIME__', String(Date.now()));
+   *     }
+   *   },
+   * }
+   * ```
+   *
+   * @internal
+   * @experimental
+   */
+  markNotCacheable(
+    /**
+     * A short text that says why. Rolldown keeps it for debugging.
+     */
+    reason?: string,
+  ): void;
+  /**
    * Loads and parses the module corresponding to the given id, attaching additional
    * meta information to the module if provided. This will trigger the same
    * {@linkcode Plugin.load | load}, {@linkcode Plugin.transform | transform} and
@@ -526,6 +565,14 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
 
   public addWatchFile(id: string): void {
     this.context.addWatchFile(id);
+  }
+
+  public markNotCacheable(reason?: string): void {
+    this.data.markNotCacheable(this.context, () =>
+      typeof reason === 'string'
+        ? reason
+        : `plugin \`${this.pluginName}\` called \`this.markNotCacheable\``,
+    );
   }
 
   public parse(input: string, options?: ParserOptions | null): Program {

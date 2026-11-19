@@ -1,0 +1,51 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## base.js
+
+```js
+import { t as require_base } from "./base2.js";
+export default require_base();
+
+```
+
+## base2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// base.cjs
+var require_base = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	if (globalThis.skip) throw new Error("base evaluated while skipped");
+	module.exports = 9;
+}));
+export { __commonJSMin as n, require_base as t };
+
+```
+
+## middle.js
+
+```js
+import { n as __commonJSMin, t as require_base } from "./base2.js";
+// middle.cjs
+var require_middle = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = globalThis.skip ? 0 : require_base();
+}));
+export default require_middle();
+export { require_middle as t };
+
+```
+
+## top.js
+
+```js
+import { n as __commonJSMin } from "./base2.js";
+import { t as require_middle } from "./middle.js";
+// top.cjs
+var require_top = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = require_middle();
+}));
+export default require_top();
+
+```

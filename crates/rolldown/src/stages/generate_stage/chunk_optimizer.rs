@@ -875,10 +875,8 @@ impl GenerateStage<'_> {
     imported_bindings
   }
 
-  /// Whether `module` can be the facade of the chunk `chunk_idx`, as in Rollup's
-  /// `canModuleBeFacade`: other chunks import from the chunk only bindings that `module` exports.
-  /// The runtime is placed later, and the folded chunk keeps the reason of the group
-  /// (`CommonChunkMerge::inherit_group`), so the runtime does not move into it for other consumers.
+  /// Whether `module` exports every binding predicted to be imported from `chunk_idx`.
+  /// This follows Rollup's `canModuleBeFacade` rule.
   /// See internal-docs/code-splitting/implementation.md.
   fn can_module_be_facade(
     &self,
@@ -966,7 +964,15 @@ impl GenerateStage<'_> {
               }
               _ => true,
             };
-          if can_merge {
+          if can_merge
+            && (!is_emitted_entry_chunk
+              || self.can_module_be_facade(
+                module,
+                target_chunk_idx,
+                imported_bindings
+                  .get_or_insert_with(|| self.bindings_imported_from_other_chunks(chunk_graph)),
+              ))
+          {
             // merge all common chunk modules into entry chunk
             // swap original from_chunk_idx and target_chunk_idx
             common_chunk_merges.push(CommonChunkMerge {

@@ -1031,3 +1031,83 @@ fn test_collapse_sourcemaps_traced_beyond_stack_flags() {
   let token = dropped.get_tokens().next().unwrap();
   assert_eq!((token.get_source_id(), token.get_name_id()), (Some(0), Some(0)));
 }
+
+#[test]
+fn test_compose_sourcemap_run_keeps_a_token_at_each_position_of_the_last_map() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut first_builder = SourceMapBuilder::default();
+  let original_source = first_builder.add_source_and_content("original.js", "const value = 1;\n");
+  for (dst_col, src_col) in [(0, 0), (4, 6), (10, 14)] {
+    first_builder.add_token(0, dst_col, 0, src_col, Some(original_source), None);
+  }
+  let first_map = first_builder.into_sourcemap().into_owned();
+
+  // At column 3, the last map has an unmapped token and then a mapped token. A lookup at column 3
+  // finds the unmapped token. `collapse_sourcemaps` drops the second unmapped token, so the same
+  // lookup in its result finds the mapped token.
+  let last_map = SourceMap::new(
+    None,
+    vec![],
+    None,
+    vec![Some("first.js".into())],
+    vec![None],
+    Box::new([
+      Token::new(0, 0, 0, 0, None, None),
+      Token::new(0, 3, 0, 0, None, None),
+      Token::new(0, 3, 0, 4, Some(0), None),
+    ]),
+    None,
+  );
+
+  let composed = compose_sourcemap_run(&[&first_map, &last_map]).unwrap();
+  let tokens = composed
+    .get_tokens()
+    .map(|token| {
+      (token.get_dst_line(), token.get_dst_col(), token.get_src_col(), token.get_source_id())
+    })
+    .collect::<Vec<_>>();
+  assert_eq!(tokens, [(0, 0, 0, None), (0, 3, 0, None), (0, 3, 6, Some(0))]);
+  let lookup_table = composed.generate_lookup_table();
+  assert_eq!(composed.lookup_token_approx(&lookup_table, 0, 3).unwrap().get_source_id(), None);
+}
+
+#[test]
+fn test_compose_sourcemap_run_returns_none_for_an_unsorted_earlier_map() {
+  let map = |columns: &[u32]| {
+    SourceMap::new(
+      None,
+      vec![],
+      None,
+      vec![Some("source.js".into())],
+      vec![None],
+      columns.iter().map(|&column| Token::new(0, column, 0, column, Some(0), None)).collect(),
+      None,
+    )
+  };
+  let sorted = map(&[0, 2, 4]);
+  let unsorted = map(&[0, 4, 2]);
+
+  // A lookup in an unsorted map can depend on the earlier lookups.
+  assert!(compose_sourcemap_run(&[&unsorted, &sorted]).is_none());
+  assert!(compose_sourcemap_run(&[&sorted, &unsorted, &sorted]).is_none());
+  // The composition does not look up tokens in the last map, so its order does not matter.
+  assert!(compose_sourcemap_run(&[&sorted, &unsorted]).is_some());
+}
+
+#[test]
+fn test_compose_sourcemap_run_keeps_the_source_root_of_the_first_map() {
+  let parse = |json: &str| oxc_sourcemap::SourceMap::from_json_string(json).unwrap().into_owned();
+  let first = parse(
+    r#"{"version":3,"sourceRoot":"../lib","names":[],"sources":["a.ts"],"sourcesContent":["const a = 1;\n"],"mappings":"AAAA"}"#,
+  );
+  let last = parse(
+    r#"{"version":3,"sourceRoot":"other/","names":[],"sources":["a.js"],"sourcesContent":["const a = 1;\n"],"mappings":"AAAA"}"#,
+  );
+
+  let composed = compose_sourcemap_run(&[&first, &last]).unwrap();
+  assert_eq!(composed.get_source_root(), Some("../lib"));
+  assert_eq!(composed.get_sources().collect::<Vec<_>>(), [Some("a.ts")]);
+  // A run of one map gives a copy of that map.
+  assert_eq!(compose_sourcemap_run(&[&first]).unwrap().to_json_string(), first.to_json_string());
+}

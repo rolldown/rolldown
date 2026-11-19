@@ -55,7 +55,6 @@
     },
     "./filter": "./dist/filter-index.mjs",
     "./getLogFilter": "./dist/get-log-filter.mjs",
-    "./parallelPlugin": "./dist/parallel-plugin.mjs",
     "./parseAst": "./dist/parse-ast-index.mjs",
     "./package.json": "./package.json",
     "./utils": "./dist/utils-index.mjs"

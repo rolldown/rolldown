@@ -5,7 +5,6 @@ import { getLogger, getOnLog } from '../log/logger';
 import { LOG_LEVEL_INFO, type LogLevelOption } from '../log/logging';
 import { normalizeHook } from '../utils/normalize-hook';
 import { normalizePluginOption } from '../utils/normalize-plugin-option';
-import { getParallelPluginInfo } from '../utils/parallel-plugin';
 import type { Plugin } from './';
 import { MinimalPluginContextImpl } from './minimal-plugin-context';
 
@@ -72,9 +71,6 @@ export class PluginDriver {
 export function getObjectPlugins(plugins: RolldownPlugin[]): Plugin[] {
   return plugins.filter((plugin) => {
     if (!plugin) {
-      return undefined;
-    }
-    if (getParallelPluginInfo(plugin)) {
       return undefined;
     }
     if (plugin instanceof BuiltinPlugin) {

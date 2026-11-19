@@ -12,8 +12,3 @@ pub mod types;
 
 pub use binding_plugin_options::*;
 pub use js_plugin::*;
-
-#[cfg(not(target_family = "wasm"))]
-mod parallel_js_plugin;
-#[cfg(not(target_family = "wasm"))]
-pub use parallel_js_plugin::*;

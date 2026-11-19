@@ -92,6 +92,8 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
       self.result.ecma_view_meta.insert(EcmaViewMeta::IndependentInitialization);
     }
 
+    self.collect_side_effect_free_functions(program);
+
     let scoping = self.result.symbol_ref_db.scoping();
     if scoping
       .get_bindings(scoping.root_scope_id())

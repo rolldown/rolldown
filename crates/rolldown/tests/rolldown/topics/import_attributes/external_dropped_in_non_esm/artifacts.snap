@@ -1,0 +1,106 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## DROPPED_IMPORT_ATTRIBUTE
+
+```text
+[DROPPED_IMPORT_ATTRIBUTE] The import attributes of "named" are dropped in the `cjs` output format.
+   ╭─[ main.js:5:36 ]
+   │
+ 5 │ export { named } from 'named' with { type: 'css' };
+   │                                    ───────┬───────  
+   │                                           ╰───────── these are dropped
+───╯
+
+```
+
+## DROPPED_IMPORT_ATTRIBUTE
+
+```text
+[DROPPED_IMPORT_ATTRIBUTE] The import attributes of "sheet" are dropped in the `cjs` output format.
+   ╭─[ main.js:1:32 ]
+   │
+ 1 │ import sheet from 'sheet' with { type: 'css' };
+   │                                ───────┬───────  
+   │                                       ╰───────── these are dropped
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+let sheet = require("sheet");
+let data = require("data");
+let named = require("named");
+sheet = __toESM(sheet);
+data = __toESM(data);
+// main.js
+console.log(sheet.default, data.default, 1, import("lazy", { with: { type: "css" } }));
+Object.defineProperty(exports, "named", {
+	enumerable: true,
+	get: function() {
+		return named.named;
+	}
+});
+
+```
+
+# Variant: [format: Iife]
+
+## warnings
+
+### DROPPED_IMPORT_ATTRIBUTE
+
+```text
+[DROPPED_IMPORT_ATTRIBUTE] The import attributes of "named" are dropped in the `iife` output format.
+   ╭─[ main.js:5:36 ]
+   │
+ 5 │ export { named } from 'named' with { type: 'css' };
+   │                                    ───────┬───────  
+   │                                           ╰───────── these are dropped
+───╯
+
+```
+
+### DROPPED_IMPORT_ATTRIBUTE
+
+```text
+[DROPPED_IMPORT_ATTRIBUTE] The import attributes of "sheet" are dropped in the `iife` output format.
+   ╭─[ main.js:1:32 ]
+   │
+ 1 │ import sheet from 'sheet' with { type: 'css' };
+   │                                ───────┬───────  
+   │                                       ╰───────── these are dropped
+───╯
+
+```
+
+## Assets
+
+### main.js
+
+```js
+var lib = (function(exports, sheet, data, named) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	sheet = __toESM(sheet);
+	data = __toESM(data);
+	// main.js
+	console.log(sheet.default, data.default, 1, import("lazy", { with: { type: "css" } }));
+	Object.defineProperty(exports, "named", {
+		enumerable: true,
+		get: function() {
+			return named.named;
+		}
+	});
+	return exports;
+})({}, Sheet, Data, Named);
+
+```

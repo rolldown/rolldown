@@ -34,7 +34,7 @@
     },
     "packages/bench": {
       "entry": ["vue-entry.js"],
-      "ignoreDependencies": ["@babel/preset-.+", "react", "react-dom"],
+      "ignoreDependencies": ["react", "react-dom"],
     },
     "packages/browser": {
       "ignoreDependencies": ["@emnapi/core", "@emnapi/runtime", "@napi-rs/wasm-runtime"],

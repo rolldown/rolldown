@@ -56,6 +56,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
         dynamically_imported_ids: FxIndexSet::default(),
         exports: vec![],
         input_format: ExportsKind::None,
+        module_side_effects: Some(external_module_side_effects.reported),
       }),
     );
 
@@ -76,7 +77,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
       id: resolved_id.id.clone(),
       name: raw_id.into(),
       identifier_name: legitimized_identifier_name.into(),
-      side_effects: external_module_side_effects,
+      side_effects: external_module_side_effects.determined,
       need_renormalize_render_path,
       attributes: resolved_id.attributes.clone(),
     }));

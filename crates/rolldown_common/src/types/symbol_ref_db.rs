@@ -64,6 +64,10 @@ bitflags::bitflags! {
     /// A root `var` that code may read before its declarator assigns it, when it is `undefined`.
     /// Its value is not inlined. See `internal-docs/inline-const/design.md`.
     const ReadBeforeAssigned = 1 << 8;
+    /// Set with `SideEffectsFreeFunction` when `export { fn }` or `export default fn` exports the
+    /// function instead of its declaration. The linker checks initialization, the result, and
+    /// the rest of the statement before removing these calls. See `cross_module_optimization.rs`.
+    const ExportedSeparately = 1 << 9;
   }
 }
 

@@ -150,6 +150,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         resolve_file_url_errors: Vec::new(),
         surviving_import_meta_spans: FxIndexMap::default(),
         unsupported_jsx_element_names: Vec::new(),
+        dropped_import_attributes: Vec::new(),
       };
       finalizer.visit_program(oxc_program);
 
@@ -170,6 +171,18 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
           })
           .collect::<Vec<_>>()
       };
+
+      diagnostics.extend(finalizer.dropped_import_attributes.iter().map(|(rec_idx, span)| {
+        let module = finalizer.ctx.module;
+        BuildDiagnostic::dropped_import_attribute(
+          module.id.to_string(),
+          module.ecma_view.source.clone(),
+          *span,
+          module.import_records[*rec_idx].module_request.to_string(),
+          finalizer.ctx.options.format.as_str().into(),
+        )
+        .with_severity_warning()
+      }));
 
       let missing_file_reference_ids = finalizer.missing_file_reference_ids;
       if !missing_file_reference_ids.is_empty() {

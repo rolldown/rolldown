@@ -1098,6 +1098,20 @@ impl GenerateStage<'_> {
 
     if allow_merge_common_chunks {
       temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas);
+      // Empty entry facades also import the owners of their exported bindings.
+      // See internal-docs/code-splitting/implementation.md#common-module-merging-try_insert_common_module_to_exist_chunk.
+      for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+        if let Some(entry_module_idx) = chunk.entry_module_idx() {
+          let mut targets = vec![];
+          self.entry_export_service_targets(
+            entry_module_idx,
+            used_symbol_refs_builder.view(),
+            true,
+            &mut targets,
+          );
+          temp_chunk_graph.add_entry_export_dependencies(chunk_idx, &targets);
+        }
+      }
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,
         bits_to_chunk,
@@ -1107,18 +1121,7 @@ impl GenerateStage<'_> {
       );
     }
 
-    // The plain merges of the already-loaded analysis and of
-    // `try_insert_common_module_to_exist_chunk` can move modules of other entries into a pure
-    // dynamic entry chunk. One check finds the chunks that add keys to the namespace of `import()`.
-    // The check runs after module assignment and before runtime placement, also when the merge of
-    // common chunks is off (`issues/11397_merge_common_chunks_off`). See
-    // internal-docs/code-splitting/implementation.md#dynamic-entry-namespaces.
-    let namespace_extractions = self.find_leaking_dynamic_entry_namespaces(
-      chunk_graph,
-      &dynamic_entry_merge_targets,
-      used_symbol_refs_builder,
-    );
-    if allow_merge_common_chunks {
+    let facade_runtime_consumers = if allow_merge_common_chunks {
       self.optimize_facade_entry_chunks(
         chunk_graph,
         index_splitting_info,
@@ -1126,9 +1129,16 @@ impl GenerateStage<'_> {
         &mut module_is_assigned,
         &temp_chunk_graph,
         used_symbol_refs_builder,
-        &namespace_extractions,
-      );
-    } else if !namespace_extractions.is_empty() {
+      )
+    } else {
+      None
+    };
+    let namespace_extractions = self.find_leaking_dynamic_entry_namespaces(
+      chunk_graph,
+      &mut dynamic_entry_merge_targets,
+      used_symbol_refs_builder,
+    );
+    if !namespace_extractions.is_empty() {
       self.apply_dynamic_entry_namespace_extractions(
         chunk_graph,
         &namespace_extractions,
@@ -1144,12 +1154,14 @@ impl GenerateStage<'_> {
       );
     }
 
-    self.try_merge_runtime_chunk(
-      chunk_graph,
-      None,
-      RuntimeMergeCascade::Full,
-      used_symbol_refs_builder,
-    );
+    for consumers in facade_runtime_consumers.iter().map(Some).chain([None]) {
+      self.try_merge_runtime_chunk(
+        chunk_graph,
+        consumers,
+        RuntimeMergeCascade::Full,
+        used_symbol_refs_builder,
+      );
+    }
 
     Ok(())
   }

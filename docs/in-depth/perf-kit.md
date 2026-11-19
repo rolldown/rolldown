@@ -489,4 +489,3 @@ Edit 1 also moves `charts.js` and the 2 chart modules. Check that the first rend
 - A deferral moves work and does not delete it. The first request or interaction that needs the module pays for its load.
 - The rendered-output check sees the page as the server sends it, without interaction. It does not compare states behind a click, a login or live data, so keep the app's own tests green.
 - perf-kit does not collect metrics from real users. Field mode measures one account, one network and one machine.
-- `--ready exit` and a `stdout:` pattern that starts with `^` time out under the inspector at this time.

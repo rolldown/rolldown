@@ -34,7 +34,7 @@ export const POLL_MS = 1;
 
 const READY_MENU =
   '  --ready port:3000            a TCP listener is accepting (servers)\n' +
-  "  --ready 'stdout:ready on'    a line matching this regex is printed\n" +
+  "  --ready 'stdout:ready on'    a stdout line matches this regex\n" +
   '  --ready http://127.0.0.1:3000/health   an HTTP probe returns 2xx\n' +
   '  --ready exit                 the process exits 0 (CLIs, lambda-shaped entries)';
 
@@ -56,7 +56,9 @@ export function parseReadySpec(spec) {
   if (stdout) {
     let pattern;
     try {
-      pattern = new RegExp(stdout[1]);
+      // `m`: the spec names a line, so `^` and `$` anchor at each line of stdout, not only
+      // at the start and the end of everything printed so far.
+      pattern = new RegExp(stdout[1], 'm');
     } catch (err) {
       throw new Error(
         `--ready stdout:<regex> — ${stdout[1]} is not a valid regex (${err.message}).`,
@@ -114,9 +116,12 @@ export async function assertReadyPortFree(spec) {
 async function isReady(spec, state) {
   switch (spec.kind) {
     case 'exit':
-      return state.exitCode === 0;
+      // Under the inspector the process stays alive after the script ends, until the
+      // debugger disconnects; node announces that moment instead of exiting. The exit
+      // status arrives only after the disconnect, so `startupRun` checks it there.
+      return state.exitCode === 0 || state.waitingForDisconnect;
     case 'stdout':
-      return spec.pattern.test(state.output);
+      return spec.pattern.test(state.stdout);
     case 'port':
       return await portAccepting(spec.port);
     case 'http':
@@ -213,7 +218,14 @@ export async function startupRun({
   arm = null,
   atReady = null,
 }) {
-  const state = { output: '', exitCode: null, signal: null };
+  const state = {
+    output: '',
+    stdout: '',
+    stderr: '',
+    exitCode: null,
+    signal: null,
+    waitingForDisconnect: false,
+  };
   const argv = [...execArgv, ...(inspect ? ['--inspect-brk=0'] : []), entry, ...args];
 
   const started = process.hrtime.bigint();
@@ -231,6 +243,15 @@ export async function startupRun({
   };
   child.stdout.setEncoding('utf8');
   child.stderr.setEncoding('utf8');
+  // Each stream also keeps its own text. The stdout: probe reads stdout alone: under the
+  // inspector, stderr also carries the runtime's own lines ("Debugger listening on ws://…"),
+  // which a timed run never prints.
+  const keep = (stream) => (chunk) => {
+    state[stream] += chunk;
+    if (state[stream].length > 1_000_000) state[stream] = state[stream].slice(-500_000);
+  };
+  child.stdout.on('data', keep('stdout'));
+  child.stderr.on('data', keep('stderr'));
   child.stdout.on('data', collect);
   child.stderr.on('data', collect);
   child.once('exit', (code, signal) => {
@@ -253,6 +274,14 @@ export async function startupRun({
       }
       cdp = await connect(inspectorUrl);
       await cdp.send('Runtime.enable');
+      if (ready.kind === 'exit') {
+        // The exit probe cannot see an exit here: node holds the process until the debugger
+        // disconnects. It announces that moment, with the coverage and profile still readable.
+        cdp.on('NodeRuntime.waitingForDisconnect', () => {
+          state.waitingForDisconnect = true;
+        });
+        await cdp.send('NodeRuntime.notifyWhenWaitingForDisconnect', { enabled: true });
+      }
       if (arm) await arm(cdp);
       // Everything above happened while the process was paused at entry, so the
       // profiler sees module evaluation from its very first frame.
@@ -267,14 +296,11 @@ export async function startupRun({
         break;
       }
       // A non-zero exit can never become ready, whatever the probe is.
-      if (state.exitCode != null && state.exitCode !== 0) {
-        throw new Error(
-          `the target exited with code ${state.exitCode} before becoming ready (${describeReady(ready)}).\n${tail(state.output)}`,
-        );
-      }
+      if (state.exitCode != null && state.exitCode !== 0) throw exitedBeforeReady(ready, state);
       if (state.exitCode != null && ready.kind !== 'exit') {
         throw new Error(
           `the target exited cleanly but never signalled ${describeReady(ready)}.\n` +
+            stderrMatchNote(ready, state) +
             `If this entry is meant to finish rather than stay up, measure it with --ready exit.\n${tail(state.output)}`,
         );
       }
@@ -285,6 +311,22 @@ export async function startupRun({
     }
 
     const collected = atReady && cdp ? await atReady(cdp) : null;
+    if (state.waitingForDisconnect) {
+      // Node also waits here after process.exit(7), an uncaught exception or a non-zero
+      // process.exitCode, and it exits with the real status only after the debugger
+      // disconnects. As for a timed run, the run counts only when that status is 0.
+      cdp.close();
+      const exitDeadline = Date.now() + 10_000;
+      while (state.exitCode == null && state.signal == null) {
+        if (Date.now() > exitDeadline) {
+          throw new Error(
+            `the target did not exit within 10s after the debugger disconnected.\n${tail(state.output)}`,
+          );
+        }
+        await sleep(POLL_MS);
+      }
+      if (state.exitCode !== 0) throw exitedBeforeReady(ready, state);
+    }
     return { elapsedMs: readyMs, output: state.output, exitCode: state.exitCode, collected };
   } finally {
     try {
@@ -305,15 +347,36 @@ function readyTimeoutMessage(ready, timeoutMs, state) {
   const stillRunning = state.exitCode == null;
   if (ready.kind === 'exit' && stillRunning) {
     return (
-      `the target was still running after ${Math.round(timeoutMs / 1000)}s and --ready defaulted to "exit".\n` +
+      `the target was still running after ${Math.round(timeoutMs / 1000)}s with --ready "exit" (the default).\n` +
       'This looks like a long-lived server. Declare how it signals readiness:\n' +
       `${READY_MENU}\n${tail(state.output)}`
     );
   }
   return (
     `the target never signalled ${describeReady(ready)} within ${Math.round(timeoutMs / 1000)}s.\n` +
+    stderrMatchNote(ready, state) +
     `Check the spec matches what this build prints or listens on:\n${READY_MENU}\n${tail(state.output)}`
   );
+}
+
+function exitedBeforeReady(ready, state) {
+  const how =
+    state.exitCode != null ? `exited with code ${state.exitCode}` : `was killed by ${state.signal}`;
+  return new Error(
+    `the target ${how} before becoming ready (${describeReady(ready)}).\n${tail(state.output)}`,
+  );
+}
+
+/**
+ * The output tail shows stderr too, so a ready line printed there looks matched. Name the
+ * match, so that the reader does not look for a wrong regex. The pattern runs on stderr
+ * alone: a match that needs text from both streams is a line on neither.
+ */
+function stderrMatchNote(ready, state) {
+  const match = ready.kind === 'stdout' ? ready.pattern.exec(state.stderr) : null;
+  return match
+    ? `stderr has a match (${JSON.stringify(match[0])}), but a stdout: spec reads stdout only.\n`
+    : '';
 }
 
 function tail(output, lines = 12) {

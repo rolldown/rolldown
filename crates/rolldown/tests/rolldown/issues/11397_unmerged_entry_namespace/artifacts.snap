@@ -6,10 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## barrel.js
 
 ```js
-import "./page.js";
+// HIDDEN [\0rolldown/runtime.js]
 // barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({ NAME: () => NAME });
 const NAME = "layers";
-export { NAME };
+export { barrel_exports as n, NAME as t };
 
 ```
 
@@ -17,20 +18,18 @@ export { NAME };
 
 ```js
 // main.js
-globalThis.load = [() => import("./barrel.js").then((m) => m.NAME), () => import("./page.js").then((n) => n.t)];
+globalThis.load = [() => import("./barrel.js").then((n) => n.n).then((m) => m.NAME), () => import("./page.js")];
 
 ```
 
 ## page.js
 
 ```js
-import { NAME } from "./barrel.js";
-// HIDDEN [\0rolldown/runtime.js]
+import { t as NAME } from "./barrel.js";
 // helpers.js
 const shout = (s) => s.toUpperCase();
 // page.js
-var page_exports = /* @__PURE__ */ __exportAll({ TITLE: () => TITLE });
 const TITLE = shout(NAME);
-export { TITLE, shout as n, page_exports as t };
+export { TITLE };
 
 ```

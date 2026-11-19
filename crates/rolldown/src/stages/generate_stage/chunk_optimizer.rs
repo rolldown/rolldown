@@ -210,6 +210,16 @@ impl ChunkOptimizationGraph {
     }
   }
 
+  pub fn add_entry_export_dependencies(&mut self, chunk_idx: ChunkIdx, targets: &[ModuleIdx]) {
+    for &module_idx in targets {
+      if let Some(dep_chunk_idx) = self.module_to_chunk[module_idx]
+        && dep_chunk_idx != chunk_idx
+      {
+        self.chunks[chunk_idx].dependencies.insert(dep_chunk_idx);
+      }
+    }
+  }
+
   /// Checks if merging `source_chunk` into `target_chunk` would create a circular dependency.
   ///
   /// Returns `true` if the merge would create a cycle, `false` if it's safe to merge.

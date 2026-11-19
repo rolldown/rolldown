@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// log.js
+const log = [];
+// main.js
+using syncResource = { [Symbol.dispose]() {
+	log.push("sync disposed");
+} };
+await using asyncResource = { async [Symbol.asyncDispose]() {
+	await Promise.resolve();
+	log.push("async disposed");
+} };
+log.push("body", typeof syncResource, typeof asyncResource);
+export { log };
+
+```
+
+# Variant: [top_level_var: true]
+
+## Assets
+
+### main.js
+
+```js
+// log.js
+var log = [];
+// main.js
+using syncResource = { [Symbol.dispose]() {
+	log.push("sync disposed");
+} };
+await using asyncResource = { async [Symbol.asyncDispose]() {
+	await Promise.resolve();
+	log.push("async disposed");
+} };
+log.push("body", typeof syncResource, typeof asyncResource);
+export { log };
+
+```

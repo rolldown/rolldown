@@ -12,7 +12,10 @@ use crate::{
   utils::external_import_interop::import_record_needs_interop,
 };
 use itertools::Itertools;
-use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
+use oxc::ast::ast::{
+  AssignmentTarget, Declaration, ExportDefaultDeclarationKind, Expression, Statement,
+};
+use oxc::semantic::NodeId;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EcmaViewMeta, EntryPointKind, ImportKind, ImportRecordIdx,
@@ -29,6 +32,7 @@ use super::{
   GenerateStage,
   chunk_ext::{ChunkCreationReason, ChunkDebugExt},
   chunk_optimizer::RuntimeMergeCascade,
+  dynamic_entry_namespace::is_pure_dynamic_entry_chunk,
   order_analysis::{OrderAnalysis, OrderWrapPlan},
   order_wrap_state::{
     OrderCjsCarrierKey, OrderCjsCarrierSpec, OrderImportKey, OrderImportOverlay, OrderWrapState,
@@ -47,6 +51,8 @@ struct LiveDynamicImporter {
   /// `None` means the importer has no chunk of its own, so it cannot carry one.
   trigger_chunk: Option<ChunkIdx>,
 }
+
+type DynamicImportSite = (ModuleIdx, StmtInfoIdx, NodeId, ImportRecordIdx);
 
 pub(super) struct OrderLoweringInput<'a> {
   pub(super) plan: &'a OrderWrapPlan,
@@ -590,6 +596,92 @@ impl FrozenReexportUsage {
 }
 
 impl GenerateStage<'_> {
+  fn top_level_awaits_import(&self, &(importer, stmt, node, _): &DynamicImportSite) -> Option<()> {
+    let body = &self.ast_table[importer].as_ref()?.program().body;
+    let expr = match &body[stmt.index() - 1] {
+      Statement::VariableDeclaration(decl) => {
+        let [decl] = decl.declarations.as_slice() else { return None };
+        decl.init.as_ref()?
+      }
+      Statement::ExpressionStatement(stmt) => match stmt.expression.get_inner_expression() {
+        Expression::AssignmentExpression(assign)
+          if assign.operator.is_assign()
+            && matches!(assign.left, AssignmentTarget::AssignmentTargetIdentifier(_)) =>
+        {
+          &assign.right
+        }
+        expr => expr,
+      },
+      _ => return None,
+    };
+    let Expression::AwaitExpression(awaited) = expr.get_inner_expression() else { return None };
+    let argument = awaited.argument.get_inner_expression();
+    let Expression::ImportExpression(import) = argument else { return None };
+    (argument.node_id() == node && import.options.is_none()).then_some(())
+  }
+
+  pub(super) fn plan_grouped_dynamic_imports(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    order_state: &mut OrderWrapState,
+  ) -> Option<OrderAnalysis> {
+    if !self.options.has_manual_code_splitting_groups()
+      || !self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency)
+    {
+      return None;
+    }
+    let mut positions = index_vec![0; self.link_output.module_table.modules.len()];
+    let modules = chunk_graph.chunk_table.iter().flat_map(|chunk| &chunk.modules);
+    for (position, &module) in modules.enumerate() {
+      positions[module] = position;
+    }
+    let runtime = self.link_output.runtime.id();
+    let mut plan = OrderWrapPlan::default();
+    for (&target, entries) in &self.link_output.entries {
+      let [entry] = entries.as_slice() else { continue };
+      let Some(&facade) = chunk_graph.entry_module_to_entry_chunk.get(&target) else { continue };
+      let Some(host) = chunk_graph.module_to_chunk[target] else { continue };
+      let facade_chunk = &chunk_graph.chunk_table[facade];
+      let Some(module) = self.link_output.module_table[target].as_normal() else { continue };
+      let meta = &self.link_output.metas[target];
+      let sites = entry.related_stmt_infos.iter().filter(|&&(importer, stmt, _, record)| {
+        self.is_included_dynamic_import_record(importer, stmt, record, target)
+      });
+      if !is_pure_dynamic_entry_chunk(facade_chunk)
+        || facade_chunk.entry_module_idx() != Some(target)
+        || !facade_chunk.modules.is_empty()
+        || !module.importers_idx.is_empty()
+        || meta.is_tla_or_contains_tla_dependency
+        || meta.load_dependencies.iter().any(|&dep| dep != target && dep != runtime)
+        || !self.is_order_wrap_eligible(target)
+        || !sites.clone().any(|&(importer, ..)| {
+          chunk_graph.module_to_chunk[importer] == Some(host)
+            && positions[importer] < positions[target]
+        })
+        || sites.clone().any(|site| self.top_level_awaits_import(site).is_none())
+        || self.dynamic_entry_extraction_skip_reason(chunk_graph, facade, target).is_some()
+      {
+        continue;
+      }
+
+      plan.insert(target);
+      order_state.insert_simulated_facade_namespace(
+        module.namespace_object_ref,
+        host,
+        RuntimeHelper::ExportAll,
+        self.simulated_facade_namespace_exports(target),
+        sites.map(|site| site.0),
+      );
+      let namespaces = &mut chunk_graph.common_chunk_exported_facade_chunk_namespace;
+      namespaces.entry(host).or_default().insert(target);
+      chunk_graph.entry_module_to_entry_chunk.insert(target, host);
+      chunk_graph
+        .post_chunk_optimization_operations
+        .insert(facade, PostChunkOptimizationOperation::Removed);
+    }
+    (!plan.is_empty()).then_some(OrderAnalysis { plan })
+  }
+
   /// Returns whether the chunk topology changed.
   pub(super) fn apply_order_wraps(
     &mut self,
@@ -599,9 +691,9 @@ impl GenerateStage<'_> {
     order_state: &mut OrderWrapState,
   ) -> bool {
     let plan = &analysis.plan;
+    let strict = self.options.is_strict_execution_order_enabled();
     let code_splitting_disabled = self.options.code_splitting.is_disabled();
-    // Consumer-local re-export routing is plan-independent: the pre-chunk probe applied it
-    // unconditionally and chunk placement already routed each carrier barrel's leaves per
+    // In strict builds, chunk placement routes each carrier barrel's leaves per
     // consumer. Lowering must therefore materialize the same routes even when no module needs
     // an order wrapper — an unrouted emission would keep the barrel's monolithic interop body
     // while its leaves sit in per-consumer entry chunks, leaving those chunks `require()`ing
@@ -628,7 +720,10 @@ impl GenerateStage<'_> {
       );
     }
     let runtime_helper = self.esm_runtime_helper();
-    let cyclic_modules = synchronous_cycle_modules(&self.link_output.module_table.modules);
+    let mut cyclic_modules = FxHashSet::default();
+    if strict {
+      cyclic_modules = synchronous_cycle_modules(&self.link_output.module_table.modules);
+    }
     let input = OrderLoweringInput {
       plan,
       modules: &self.link_output.module_table.modules,
@@ -648,8 +743,8 @@ impl GenerateStage<'_> {
       code_splitting_disabled,
       runtime_idx: self.link_output.runtime.id(),
     };
-    let consumer_local_plan = consumer_local_reexport_plan(&input, order_state);
-    if plan.is_empty() && consumer_local_plan.is_empty() {
+    let reexport_plan = strict.then(|| consumer_local_reexport_plan(&input, order_state));
+    if plan.is_empty() && reexport_plan.as_ref().is_none_or(ConsumerLocalReexportPlan::is_empty) {
       return self.apply_inert_order_wrap_plan(
         chunk_graph,
         used_symbol_refs_builder,
@@ -660,8 +755,10 @@ impl GenerateStage<'_> {
 
     let mut output =
       OrderLoweringOutput { symbols: &mut self.link_output.symbol_db, state: order_state };
-    lower_order_state(&input, &mut output, runtime_helper, &consumer_local_plan);
-    self.populate_consumer_local_namespace_targets(order_state);
+    lower_order_state(&input, &mut output, runtime_helper, reexport_plan.as_ref());
+    if order_state.has_consumer_local_reexport_routes() {
+      self.populate_consumer_local_namespace_targets(order_state);
+    }
     let runtime_idx = self.link_output.runtime.id();
     order_state.compute_runtime_symbol_closure(
       &self.link_output.runtime,
@@ -677,7 +774,7 @@ impl GenerateStage<'_> {
     // facade's load then fires. Restoring is not itself a candidate for the necessity gate: it
     // exists because a chunk can host only one entry's top-level trigger, so an entry merged into
     // another entry's chunk has no trigger at all without its own file.
-    if self.restore_order_wrap_entry_facades(chunk_graph, plan, order_state) {
+    if strict && self.restore_order_wrap_entry_facades(chunk_graph, plan, order_state) {
       // An optimizer-eliminated facade that stays collapsed gains the same exact simulated
       // namespace requirement as a facade collapsed by the creation pass below. Close any late
       // runtime-helper dependencies before runtime placement and final cross-chunk linking.
@@ -704,7 +801,7 @@ impl GenerateStage<'_> {
     self.finalized_module_namespace_ref_usage(chunk_graph, order_state);
     // Collecting the candidates reads only the module graph, so it can run before the edges and
     // spare the query entirely when no entry could need a facade in the first place.
-    let candidates = self.entry_facade_candidates(plan);
+    let candidates = if strict { self.entry_facade_candidates(plan) } else { Vec::new() };
     if !candidates.is_empty() {
       let import_edges =
         self.entry_facade_import_edges(chunk_graph, used_symbol_refs_builder, order_state);
@@ -1556,7 +1653,7 @@ fn lower_order_state(
   input: &OrderLoweringInput<'_>,
   output: &mut OrderLoweringOutput<'_>,
   runtime_helper: RuntimeHelper,
-  consumer_local_plan: &ConsumerLocalReexportPlan,
+  consumer_local_plan: Option<&ConsumerLocalReexportPlan>,
 ) {
   for module_idx in
     input.plan.modules().sorted_unstable_by_key(|idx| input.modules[*idx].exec_order())
@@ -1579,6 +1676,7 @@ fn lower_order_state(
     }
   }
 
+  let Some(consumer_local_plan) = consumer_local_plan else { return };
   apply_consumer_local_reexport_plan(input, output, runtime_helper, consumer_local_plan);
 
   let reexport_usage = collect_frozen_reexport_usage(input, output.state);

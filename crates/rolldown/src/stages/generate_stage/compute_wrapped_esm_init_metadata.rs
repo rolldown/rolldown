@@ -91,7 +91,6 @@ impl GenerateStage<'_> {
     used_symbol_refs: UsedSymbolRefsView<'_>,
   ) -> Sealed<FinalEsmInitMetadata> {
     let keep_names = self.options.keep_names;
-    // Off-strict, lowering never mutates the chunk graph, so the liveness guard cannot fire.
     let strict = self.options.is_strict_execution_order_enabled();
     let metas = &self.link_output.metas;
     let modules = &self.link_output.module_table.modules;

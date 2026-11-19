@@ -2979,10 +2979,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // (init_xxx(), namespace_exports) — the `esm_init_target` view covers both interop
         // `WrapKind::Esm` wrappers and execution-order wrappers, so a merged dynamic entry
         // carries its trigger inline instead of resurrecting the facade chunk.
-        //
-        // This shape never awaits the init. A TLA-tainted entry cannot reach it today
-        // because facade elimination is globally disabled when any module is TLA-tainted
-        // (`allow_merge_common_chunks` in code_splitting.rs); pin that coupling here.
         debug_assert!(!target.tla_tainted);
         let wrapper_call_expr = self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, false);
 

@@ -25,10 +25,6 @@ describe('toSavableMetaEntries', () => {
     expect(JSON.parse(json!)).toStrictEqual(value);
   });
 
-  test('a property with the value `undefined` inside a value is left out', () => {
-    expect(jsonOf({ a: undefined, b: { c: undefined, d: 1 } })).toBe('{"b":{"d":1}}');
-  });
-
   test('each top-level key gets one entry, in the order of the keys', () => {
     expect(toSavableMetaEntries({ b: [1], a: 'text', 1: null })).toEqual([
       { key: '1', json: 'null' },
@@ -71,6 +67,7 @@ describe('toSavableMetaEntries', () => {
     ['a subclass of Array', new (class List extends Array {})()],
     ['an object without a prototype', Object.assign(Object.create(null), { a: 1 })],
     ['an `undefined` in an array', [1, undefined]],
+    ['a property with the value `undefined`', { a: undefined, b: 1 }],
     ['a hole in an array', sparse],
     ['an array with another property', arrayWithProperty],
     ['a property with a symbol key', { [Symbol('s')]: 1 }],

@@ -435,8 +435,6 @@ describe('persistent cache', () => {
                 meta: {
                   icons: [rel(id), { nested: [1, 'two', null, true, { deep: {} }] }],
                   shared: 'icons',
-                  // JSON leaves this property out.
-                  absent: { value: undefined, kept: 0 },
                 },
               };
             },
@@ -460,7 +458,6 @@ describe('persistent cache', () => {
         meta: {
           icons: ['a.js', { nested: [1, 'two', null, true, { deep: {} }] }],
           shared: 'second',
-          absent: { kept: 0 },
           second: 2,
         },
         moduleSideEffects: true,
@@ -469,7 +466,6 @@ describe('persistent cache', () => {
         loaded: true,
         shared: 'icons',
         icons: ['c.js', { nested: [1, 'two', null, true, { deep: {} }] }],
-        absent: { kept: 0 },
       });
       for (const hook of ['moduleParsed', 'buildEnd', 'renderChunk', 'generateBundle']) {
         expect(Object.keys(clean.seen)).toContain(`${hook}:c.js`);

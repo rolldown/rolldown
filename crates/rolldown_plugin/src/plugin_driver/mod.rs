@@ -32,6 +32,11 @@ use crate::{
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
 
+/// `PluginContext::{info,warn,debug}` are sync but the user's `onLog` callback
+/// is async, so each call spawns a detached task. The join handles are kept here
+/// so the build can await them at a barrier and report errors the callback produced
+pub type SharedLogHookTasks = Arc<Mutex<Vec<tokio::task::JoinHandle<anyhow::Result<()>>>>>;
+
 /// In devtools mode, the driver skips a call that the plugin's own hook filter rejects before it
 /// logs the call, so the hook log holds only calls that ran. The plugin returns `None` for that
 /// call anyway. See internal-docs/devtools/implementation.md.
@@ -57,9 +62,11 @@ pub struct PluginDriver {
   pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<WatchPath>>>>,
   context_load_completion_manager: ContextLoadCompletionManager,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
-  /// Outlives the `Bundle` through `BundleHandle`, which is how the binding reads them
-  /// once the build has finished.
-  pub build_timings: BuildTimings,
+  /// Shared, so the binding can keep the clocks of every build until the bundler closes
+  /// without keeping the driver of every build.
+  pub build_timings: Arc<BuildTimings>,
+  /// Pending `onLog` callback tasks spawned by `PluginContext::{info,warn,debug}`.
+  pub(crate) log_hook_tasks: SharedLogHookTasks,
 }
 
 impl PluginDriver {
@@ -70,6 +77,26 @@ impl PluginDriver {
     // by BundleFactory which manages its lifecycle (reset on full builds only)
     self.context_load_completion_manager.clear();
     self.file_emitter.clear();
+    // A task left over from the previous build must not fail the next one.
+    self.log_hook_tasks.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clear();
+  }
+
+  /// Await all pending `onLog` callback tasks and return the errors they produced.
+  /// Drains the collector, so it is safe to call more than once
+  pub async fn await_log_hook_tasks(&self) -> Vec<anyhow::Error> {
+    let handles = {
+      let mut guard = self.log_hook_tasks.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+      std::mem::take(&mut *guard)
+    };
+    let mut errors = Vec::new();
+    for handle in handles {
+      match handle.await {
+        Ok(Ok(())) => {}
+        Ok(Err(err)) => errors.push(err),
+        Err(join_err) => errors.push(anyhow::anyhow!("`onLog` hook task failed: {join_err}")),
+      }
+    }
+    errors
   }
 
   pub fn set_module_info(&self, module_id: &ModuleId, module_info: Arc<ModuleInfo>) {

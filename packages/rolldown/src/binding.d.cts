@@ -1578,7 +1578,7 @@ export declare class BindingCallableBuiltinPlugin {
   constructor(plugin: BindingBuiltinPlugin)
   getOrder(hookName: string): string | null
   resolveId(id: string, importer?: string | undefined | null, options?: BindingHookJsResolveIdOptions | undefined | null): Promise<BindingHookJsResolveIdOutput | undefined | null>
-  load(id: string): Promise<BindingHookJsLoadOutput | undefined | null>
+  load(id: string): Promise<BindingHookLoadOutput | undefined | null>
   transform(code: string, id: string, options: BindingTransformHookExtraArgs): Promise<BindingHookTransformOutput | undefined | null>
   watchChange(path: string, event: BindingJsWatchChangeEvent): Promise<undefined>
 }
@@ -1612,7 +1612,7 @@ export declare class BindingDecodedMap {
 }
 
 export declare class BindingDevEngine {
-  constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
+  constructor(options: BindingBundlerOptions, devOptions: BindingDevOptions)
   run(): Promise<void>
   ensureCurrentBuildFinish(): Promise<void>
   getBundleState(): Promise<BindingBundleState>
@@ -2044,6 +2044,7 @@ export interface BindingChecksOptions {
 export interface BindingChunkImportMap {
   baseUrl?: string
   fileName?: string
+  include?: Array<BindingStringOrRegex>
 }
 
 export declare enum BindingChunkModuleOrderBy {
@@ -2306,8 +2307,6 @@ export interface BindingEsmExternalRequirePluginConfig {
 
 export interface BindingExperimentalDevModeOptions {
   implement: string
-  /** @deprecated Common runtime injection will be disabled by default in the future. */
-  skipCommonRuntimeInjection?: boolean
   lazy?: boolean
   hotUpdate?: boolean
 }
@@ -2349,12 +2348,6 @@ export type BindingHmrUpdate =
 
 export interface BindingHookFilter {
   value?: Array<Array<BindingFilterToken>>
-}
-
-export interface BindingHookJsLoadOutput {
-  code: string
-  map?: string
-  moduleSideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingHookJsResolveIdOptions {
@@ -2560,6 +2553,7 @@ export interface BindingInputOptions {
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
   devtools?: BindingDevtoolsOptions
   invalidateJsSideCache?: () => void
+  resetJsModuleOptions?: (moduleIds: string[] | null) => void
   preserveEntrySignatures?: BindingPreserveEntrySignatures
   optimization?: BindingOptimization
   context?: string
@@ -2948,9 +2942,7 @@ export interface BindingResolveOptions {
   yarnPnp?: boolean
 }
 
-export interface BindingSourcemap {
-  inner: string | BindingJsonSourcemap
-}
+export type BindingSourcemap = string | BindingJsonSourcemap
 
 export interface BindingSourceMapOptions {
   /** The filename for the generated file (goes into `map.file`) */

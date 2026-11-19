@@ -1,27 +1,25 @@
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use napi::{
-  Env,
-  bindgen_prelude::{AsyncBlock, AsyncBlockBuilder},
-};
+use napi::{Env, bindgen_prelude::PromiseRaw};
 use napi_derive::napi;
 use rolldown::ModuleType;
 use rolldown_common::{ImportAttributes, WatcherChangeKind};
 use rolldown_plugin::{
-  __inner::SharedPluginable, CustomField, HookLoadArgs, HookLoadOutput, HookResolveIdArgs,
-  HookResolveIdOutput, HookTransformArgs, LoadPluginContext, PluginIdx, PluginOrder,
-  SharedTransformPluginContext, TransformPluginContext,
+  __inner::SharedPluginable, CustomField, HookLoadArgs, HookResolveIdArgs, HookResolveIdOutput,
+  HookTransformArgs, LoadPluginContext, PluginIdx, PluginOrder, SharedTransformPluginContext,
+  TransformPluginContext,
 };
 use rolldown_plugin_vite_resolve::ResolveIdOptionsScan;
 use rolldown_utils::unique_arc::UniqueArc;
 
 use crate::options::plugin::types::{
+  binding_hook_load_output::BindingHookLoadOutput,
   binding_hook_side_effects::BindingHookSideEffects,
   binding_hook_transform_output::BindingHookTransformOutput,
   binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
-  binding_shared_string::BindingSharedString,
 };
+use crate::utils::spawn_boxed_future;
 
 use super::{
   binding_builtin_plugin::BindingBuiltinPlugin,
@@ -80,13 +78,13 @@ impl BindingCallableBuiltinPlugin {
   }
 
   #[napi]
-  pub fn resolve_id(
+  pub fn resolve_id<'env>(
     &self,
-    env: Env,
+    env: &'env Env,
     id: String,
     importer: Option<String>,
     options: Option<BindingHookJsResolveIdOptions>,
-  ) -> napi::Result<AsyncBlock<Option<BindingHookJsResolveIdOutput>>> {
+  ) -> napi::Result<PromiseRaw<'env, Option<BindingHookJsResolveIdOutput>>> {
     let kind = options
       .as_ref()
       .and_then(|options| options.kind.as_deref())
@@ -94,8 +92,7 @@ impl BindingCallableBuiltinPlugin {
       .map_err(|err| napi::Error::new(napi::Status::InvalidArg, err))?;
     let plugin = Arc::clone(&self.inner);
     let context = Arc::clone(&self.context);
-    crate::start_async_runtime();
-    AsyncBlockBuilder::with(async move {
+    spawn_boxed_future(env, async move {
       let (importer_raw_id, importer_attributes) =
         match importer.as_deref().and_then(ImportAttributes::parse_module_id) {
           Some((raw_id, attributes)) => (Some(raw_id), attributes),
@@ -119,23 +116,17 @@ impl BindingCallableBuiltinPlugin {
         .map_err(AnyHowMaybeNapiError::into_napi_error)
         .map(|result| result.map(Into::into))
     })
-    .with_dispose(|_| {
-      crate::shutdown_async_runtime();
-      Ok(())
-    })
-    .build(&env)
   }
 
   #[napi]
-  pub fn load(
+  pub fn load<'env>(
     &self,
-    env: Env,
+    env: &'env Env,
     id: String,
-  ) -> napi::Result<AsyncBlock<Option<BindingHookJsLoadOutput>>> {
+  ) -> napi::Result<PromiseRaw<'env, Option<BindingHookLoadOutput>>> {
     let plugin = Arc::clone(&self.inner);
     let context = Arc::clone(&self.context);
-    crate::start_async_runtime();
-    AsyncBlockBuilder::with(async move {
+    spawn_boxed_future(env, async move {
       let module_idx = rolldown_common::ModuleIdx::new(0);
       let load_ctx = Arc::new(LoadPluginContext::new(context.inner.clone(), module_idx));
       let (raw_id, attributes) =
@@ -155,26 +146,20 @@ impl BindingCallableBuiltinPlugin {
         .map_err(AnyHowMaybeNapiError::into_napi_error)
         .map(|result| result.map(Into::into))
     })
-    .with_dispose(|_| {
-      crate::shutdown_async_runtime();
-      Ok(())
-    })
-    .build(&env)
   }
 
   #[napi]
-  pub fn transform(
+  pub fn transform<'env>(
     &self,
-    env: Env,
+    env: &'env Env,
     code: String,
     id: String,
     options: BindingTransformHookExtraArgs,
-  ) -> napi::Result<AsyncBlock<Option<BindingHookTransformOutput>>> {
+  ) -> napi::Result<PromiseRaw<'env, Option<BindingHookTransformOutput>>> {
     let module_type = ModuleType::from_known_str(&options.module_type)?;
     let plugin = Arc::clone(&self.inner);
     let context = Arc::clone(&self.context);
-    crate::start_async_runtime();
-    AsyncBlockBuilder::with(async move {
+    spawn_boxed_future(env, async move {
       let code_arc = ArcStr::from(code.as_str());
       let (raw_id, attributes) =
         ImportAttributes::parse_module_id(&id).unwrap_or((&id, ImportAttributes::default()));
@@ -193,35 +178,24 @@ impl BindingCallableBuiltinPlugin {
         .map_err(AnyHowMaybeNapiError::into_napi_error)
         .map(|result| result.map(Into::into))
     })
-    .with_dispose(|_| {
-      crate::shutdown_async_runtime();
-      Ok(())
-    })
-    .build(&env)
   }
 
   #[napi]
-  pub fn watch_change(
+  pub fn watch_change<'env>(
     &self,
-    env: Env,
+    env: &'env Env,
     path: String,
     event: BindingJsWatchChangeEvent,
-  ) -> napi::Result<AsyncBlock<()>> {
+  ) -> napi::Result<PromiseRaw<'env, ()>> {
     let kind = event.bindingify_watcher_change_kind()?;
     let plugin = Arc::clone(&self.inner);
     let context = Arc::clone(&self.context);
-    crate::start_async_runtime();
-    AsyncBlockBuilder::with(async move {
+    spawn_boxed_future(env, async move {
       plugin
         .call_watch_change(&context.inner, &path, kind)
         .await
         .map_err(AnyHowMaybeNapiError::into_napi_error)
     })
-    .with_dispose(|_| {
-      crate::shutdown_async_runtime();
-      Ok(())
-    })
-    .build(&env)
   }
 }
 
@@ -283,25 +257,6 @@ impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
       external: value.external.map(Into::into),
       module_side_effects: value.side_effects.map(Into::into),
       package_json_path: value.package_json_path,
-    }
-  }
-}
-
-#[napi_derive::napi(object, object_from_js = false)]
-pub struct BindingHookJsLoadOutput {
-  #[napi(ts_type = "string")]
-  pub code: BindingSharedString,
-  pub map: Option<String>,
-  #[napi(ts_type = "boolean | 'no-treeshake'")]
-  pub module_side_effects: Option<BindingHookSideEffects>,
-}
-
-impl From<HookLoadOutput> for BindingHookJsLoadOutput {
-  fn from(value: HookLoadOutput) -> Self {
-    Self {
-      code: BindingSharedString::from(value.code),
-      map: value.map.map(|map| map.to_json_string()),
-      module_side_effects: value.side_effects.map(Into::into),
     }
   }
 }

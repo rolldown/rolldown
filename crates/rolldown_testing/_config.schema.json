@@ -1087,13 +1087,6 @@
             "null"
           ]
         },
-        "skipCommonRuntimeInjection": {
-          "description": "Do not inject the common dev runtime before the custom implementation.\n\nDeprecated: common runtime injection will be disabled by default in the future.",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
         "lazy": {
           "description": "Enable lazy compilation for dynamic imports.",
           "type": [
@@ -1133,6 +1126,15 @@
             "string",
             "null"
           ]
+        },
+        "include": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false

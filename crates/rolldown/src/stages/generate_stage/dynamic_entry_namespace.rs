@@ -92,6 +92,13 @@ impl GenerateStage<'_> {
     reexports_commonjs_property.then_some("the entry re-exports a CommonJS property")
   }
 
+  /// Finds the pure dynamic entry chunks that export bindings that their entry module does not
+  /// export. `candidates` holds the chunks that a merge gave modules of other entries. The function
+  /// adds the chunks that own a binding that a live pure dynamic entry re-exports, since such a
+  /// chunk exports the binding to the entry's chunk. The check runs the link pass once, read-only,
+  /// on the current layout. Its symbol ownership stays in the pass-local table, so the symbol
+  /// database does not change.
+  ///
   /// The caller extracts the namespace of each returned entry on its own chunk. The chunk stays an
   /// entry chunk, so the order decisions of later steps do not change.
   pub(super) fn find_leaking_dynamic_entry_namespaces(

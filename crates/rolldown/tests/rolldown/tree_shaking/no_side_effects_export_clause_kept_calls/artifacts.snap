@@ -25,11 +25,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { r as noop } from "./iterable.js";
 
-//#region early.js
+// early.js
 noop(late);
 const late = 0;
 
-//#endregion
 ```
 
 ## entry.js
@@ -39,7 +38,7 @@ import { n as redeclared, r as replaced, t as restDefault } from "./rest-default
 import { n as iterable, r as noop, t as coercible } from "./iterable.js";
 
 // HIDDEN [\0rolldown/runtime.js]
-//#region getter.cjs
+// getter.cjs
 var require_getter = /* @__PURE__ */ __commonJSMin(((exports) => {
 	Object.defineProperty(exports, "value", { get() {
 		globalThis.calls.push("getter");
@@ -47,8 +46,7 @@ var require_getter = /* @__PURE__ */ __commonJSMin(((exports) => {
 	} });
 }));
 
-//#endregion
-//#region entry.js
+// entry.js
 var import_getter = /* @__PURE__ */ __toESM(require_getter());
 replaced();
 redeclared();
@@ -67,13 +65,12 @@ function early() {
 	noop(late);
 }
 
-//#endregion
 ```
 
 ## iterable.js
 
 ```js
-//#region iterable.js
+// iterable.js
 /* #__NO_SIDE_EFFECTS__ */
 function iterable(name) {
 	return { *[Symbol.iterator]() {
@@ -89,7 +86,6 @@ function coercible() {
 }
 function noop() {}
 
-//#endregion
 export { iterable as n, noop as r, coercible as t };
 ```
 
@@ -98,13 +94,12 @@ export { iterable as n, noop as r, coercible as t };
 ```js
 import { r as noop } from "./iterable.js";
 
-//#region loops.js
+// loops.js
 while (true) noop();
 do
 	noop();
 while (true);
 
-//#endregion
 ```
 
 ## other.js
@@ -119,19 +114,16 @@ export { coercible, iterable, noop, redeclared, replaced, restDefault };
 ## rest-default.js
 
 ```js
-//#region eval.js
+// eval.js
 let replaced = /* #__NO_SIDE_EFFECTS__ */ () => {};
 eval("replaced = () => globalThis.calls.push('eval')");
 
-//#endregion
-//#region redeclared.js
+// redeclared.js
 var redeclared = /* #__NO_SIDE_EFFECTS__ */ () => {};
 var redeclared = () => globalThis.calls.push("redeclared");
 
-//#endregion
-//#region rest-default.js
+// rest-default.js
 function restDefault(...[value = globalThis.calls.push("rest default")]) {}
 
-//#endregion
 export { redeclared as n, replaced as r, restDefault as t };
 ```

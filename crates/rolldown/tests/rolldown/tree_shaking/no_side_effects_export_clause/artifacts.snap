@@ -7,11 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { n as listed, t as reassigned } from "./reassigned.js";
-//#region entry-a.js
+// entry-a.js
 reassigned("kept: reassigned after the annotation");
 const [first] = listed("kept: destructuring runs the iterator of the result");
 const result = listed("kept: result is used");
-//#endregion
 export { result };
 
 ```
@@ -20,40 +19,35 @@ export { result };
 
 ```js
 import { n as listed, t as reassigned } from "./reassigned.js";
-//#region declared.js
+// declared.js
 /* #__NO_SIDE_EFFECTS__ */
 function declared(value) {
 	console.log(value);
 	return [];
 }
-//#endregion
-//#region aliased.js
+// aliased.js
 /* #__NO_SIDE_EFFECTS__ */
 function aliased(value) {
 	console.log(value);
 	return [];
 }
-//#endregion
-//#region arrow.js
+// arrow.js
 const arrow = /* #__NO_SIDE_EFFECTS__ */ (value) => {
 	console.log(value);
 	return [];
 };
-//#endregion
-//#region default-identifier.js
+// default-identifier.js
 /* #__NO_SIDE_EFFECTS__ */
 function defaultIdentifier(value) {
 	console.log(value);
 	return [];
 }
-//#endregion
-//#region default-specifier.js
+// default-specifier.js
 /* #__NO_SIDE_EFFECTS__ */
 function defaultSpecifier(value) {
 	console.log(value);
 	return [];
 }
-//#endregion
 export { aliased as alias, arrow, declared, defaultIdentifier, defaultSpecifier, listed, reassigned };
 
 ```
@@ -61,20 +55,18 @@ export { aliased as alias, arrow, declared, defaultIdentifier, defaultSpecifier,
 ## reassigned.js
 
 ```js
-//#region listed.js
+// listed.js
 /* #__NO_SIDE_EFFECTS__ */
 function listed(value) {
 	console.log(value);
 	return [];
 }
-//#endregion
-//#region reassigned.js
+// reassigned.js
 let reassigned = /* #__NO_SIDE_EFFECTS__ */ (value) => [];
 reassigned = (value) => {
 	console.log(value);
 	return [];
 };
-//#endregion
 export { listed as n, reassigned as t };
 
 ```

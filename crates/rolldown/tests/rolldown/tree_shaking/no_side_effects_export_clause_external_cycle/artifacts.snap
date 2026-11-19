@@ -8,10 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { noop } from "./lib.js";
 
-//#region caller.js
+// caller.js
 noop();
 
-//#endregion
 ```
 
 ## lib.js
@@ -19,9 +18,8 @@ noop();
 ```js
 import "./external.mjs";
 
-//#region lib.js
+// lib.js
 const noop = () => {};
 
-//#endregion
 export { noop };
 ```

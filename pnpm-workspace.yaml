@@ -24,9 +24,6 @@ allowBuilds:
   workerd: true
 
 catalog:
-  '@babel/core': ^7.29.7
-  '@babel/preset-env': ^7.29.7
-  '@babel/preset-typescript': ^7.29.7
   '@emnapi/core': 2.0.0-beta.2
   '@emnapi/runtime': 2.0.0-beta.2
   '@jridgewell/trace-mapping': ^0.3.31
@@ -40,7 +37,6 @@ catalog:
   '@rolldown/pluginutils': ^1.0.0
   '@rollup/plugin-commonjs': ^29.0.0
   '@rollup/plugin-node-resolve': ^16.0.0
-  '@types/babel__core': 7.20.5
   '@types/connect': ^3.4.38
   '@types/fs-extra': ^11.0.4
   '@types/lodash-es': ^4.17.12
@@ -122,7 +118,6 @@ trustPolicy: no-downgrade
 trustPolicyExcludePrune: true
 trustPolicyExclude:
   - chokidar@4.0.3
-  - semver@6.3.1
   - rxjs@7.8.2
 
 verifyDepsBeforeRun: install

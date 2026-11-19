@@ -3,6 +3,7 @@ use rolldown_common::{
   ImportKind, ImportRecordMeta, Module, ModuleIdx, StmtEvalFlags, WrapKind,
   side_effects::DeterminedSideEffects,
 };
+use rolldown_utils::IndexBitSet;
 
 use crate::stages::link_stage::LinkStage;
 
@@ -18,12 +19,16 @@ pub struct ScanTimeSideEffects {
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn determine_side_effects(&mut self) {
-    let mut has_side_effects: IndexVec<ModuleIdx, bool> = self
-      .module_table
-      .modules
-      .iter()
-      .map(|module| module.side_effects().has_side_effects())
-      .collect();
+    let mut has_side_effects: IndexBitSet<ModuleIdx> =
+      IndexBitSet::new(self.module_table.modules.len());
+    has_side_effects.extend(
+      self
+        .module_table
+        .modules
+        .iter()
+        .filter(|module| module.side_effects().has_side_effects())
+        .map(Module::idx),
+    );
     let mut dependents: IndexVec<ModuleIdx, Vec<ModuleIdx>> =
       oxc_index::index_vec![Vec::new(); self.module_table.modules.len()];
 
@@ -44,10 +49,13 @@ impl LinkStage<'_> {
           && let Module::Normal(importee) = &self.module_table[importee_idx]
         {
           let linking_info = &self.metas[importee.idx];
-          has_side_effects[module.idx] |= match linking_info.wrap_kind() {
+          let reexport_has_effects = match linking_info.wrap_kind() {
             WrapKind::None => linking_info.has_dynamic_exports,
             WrapKind::Cjs | WrapKind::Esm => true,
           };
+          if reexport_has_effects {
+            has_side_effects.set_bit(module.idx);
+          }
         }
       }
     }
@@ -56,14 +64,10 @@ impl LinkStage<'_> {
     // effect-free before visiting an effectful dependency of another member. Each module
     // enters this worklist at most once, so cycles converge in O(modules + imports).
     // See internal-docs/linking/reference-needed-symbols/implementation.md.
-    let mut pending: Vec<_> = has_side_effects
-      .iter_enumerated()
-      .filter_map(|(idx, &has_effects)| has_effects.then_some(idx))
-      .collect();
+    let mut pending: Vec<_> = has_side_effects.index_of_one().collect();
     while let Some(module_idx) = pending.pop() {
       for &importer_idx in &dependents[module_idx] {
-        if !has_side_effects[importer_idx] {
-          has_side_effects[importer_idx] = true;
+        if has_side_effects.set_bit(importer_idx) {
           pending.push(importer_idx);
         }
       }
@@ -71,7 +75,7 @@ impl LinkStage<'_> {
 
     for module in self.module_table.modules.iter_mut().filter_map(Module::as_normal_mut) {
       if matches!(module.side_effects, DeterminedSideEffects::Analyzed(false)) {
-        module.side_effects = DeterminedSideEffects::Analyzed(has_side_effects[module.idx]);
+        module.side_effects = DeterminedSideEffects::Analyzed(has_side_effects.has_bit(module.idx));
       }
     }
   }

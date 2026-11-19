@@ -36,12 +36,7 @@ describe('sanitizeFileName timings', () => {
         return `sanitized-${name}`;
       });
       const outputOptions: OutputOptions = { sanitizeFileName };
-      const { bundlerOptions } = await createBundlerOptions(
-        inputOptions,
-        outputOptions,
-        false,
-        true,
-      );
+      const bundlerOptions = await createBundlerOptions(inputOptions, outputOptions, false, true);
       const bindingSanitizeFileName = bundlerOptions.outputOptions.sanitizeFileName;
       expect(typeof bindingSanitizeFileName).toBe('function');
       if (typeof bindingSanitizeFileName !== 'function') {

@@ -35,7 +35,7 @@ it('counts a build that is still running when the next build starts', async () =
     onRenderStart: (linkStageUpperBoundMs: number) => Promise<void>,
   ) {
     let buildEndAt = 0;
-    const { bundlerOptions } = await createBundlerOptions(
+    const bundlerOptions = await createBundlerOptions(
       {
         input: 'entry',
         onLog,

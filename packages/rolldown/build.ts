@@ -126,8 +126,6 @@ function withShared({
         ? {
             cli: './src/cli/index',
             config: './src/config',
-            'parallel-plugin': './src/parallel-plugin',
-            'parallel-plugin-worker': './src/parallel-plugin-worker',
             'filter-index': './src/filter-index',
             'parse-ast-index': './src/parse-ast-index',
             'get-log-filter': './src/get-log-filter',

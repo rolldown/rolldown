@@ -1,0 +1,81 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+// lib.cjs
+var require_lib = /* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports, module) => {
+	module.exports = { value: 42 };
+}));
+module.exports = require_lib();
+
+```
+
+## b.js
+
+```js
+const require_a = require("./a.js");
+module.exports = require_a;
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+
+```
+
+## u.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+const require_a = require("./a.js");
+const v = (/* @__PURE__ */ require_rolldown_runtime.__toESM(require_a, 1)).default.value + 2;
+exports.v = v;
+
+```
+
+# Variant: [minify: true]
+
+## Assets
+
+### a.js
+
+```js
+var e=/* @__PURE__ */ require("./rolldown-runtime.js").t(((e,t)=>{t.exports={value:42}}));module.exports=e();
+```
+
+### b.js
+
+```js
+const e=require("./a.js");module.exports=e;
+```
+
+### rolldown-runtime.js
+
+```js
+var e=Object.create,t=Object.defineProperty,n=Object.getOwnPropertyDescriptor,r=Object.getOwnPropertyNames,i=Object.getPrototypeOf,a=Object.prototype.hasOwnProperty,o=(e,t)=>()=>(t||(e((t={exports:{}}).exports,t,t.exports),e=null),t.exports),s=(e,i,o,s)=>{if(i&&typeof i==`object`||typeof i==`function`)for(var c=r(i),l=0,u=c.length,d;l<u;l++)d=c[l],!a.call(e,d)&&d!==o&&t(e,d,{get:(e=>i[e]).bind(null,d),enumerable:!(s=n(i,d))||s.enumerable});return e},c=(n,r,o)=>(o=n==null?{}:e(i(n)),s(r||!n||!n.__esModule||!a.call(n,`default`)?t(o,`default`,{value:n,enumerable:!0}):o,n));Object.defineProperty(exports,"n",{enumerable:!0,get:function(){return c}}),Object.defineProperty(exports,"t",{enumerable:!0,get:function(){return o}});
+```
+
+### u.js
+
+```js
+Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});const e=require("./rolldown-runtime.js"),t=require("./a.js"),n=(/* @__PURE__ */ e.n(t,1)).default.value+2;exports.v=n;
+```

@@ -37,6 +37,12 @@ impl SymbolRef {
     db.local_db(self.owner).ast_scopes.scoping().symbol_flags(self.symbol).is_const_variable()
   }
 
+  /// Whether a function declaration declares the binding, so it is initialized before any code
+  /// of its module runs.
+  pub fn is_declared_by_function(&self, db: &SymbolRefDb) -> bool {
+    db.local_db(self.owner).ast_scopes.scoping().symbol_flags(self.symbol).is_function()
+  }
+
   /// Whether every read of the binding sees the value its declaration gives it: it is never
   /// reassigned, and no code reads it before the declaration assigns it. Direct `eval` can still
   /// assign it without a write reference; see `eval_can_assign` in the `rolldown` crate. A missing

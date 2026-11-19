@@ -1,0 +1,22 @@
+{
+  "config": {
+    "input": [
+      { "name": "a", "import": "./lib.cjs" },
+      { "name": "b", "import": "./lib.cjs" },
+      { "name": "primitive_a", "import": "./primitive.cjs" },
+      { "name": "primitive_b", "import": "./primitive.cjs" },
+      { "name": "callable_a", "import": "./callable.cjs" },
+      { "name": "callable_b", "import": "./callable.cjs" },
+      { "name": "null_a", "import": "./null.cjs" },
+      { "name": "null_b", "import": "./null.cjs" },
+      { "name": "empty_a", "import": "./empty.cjs" },
+      { "name": "empty_b", "import": "./empty.cjs" }
+    ],
+    "format": "cjs"
+  },
+  "configVariants": [
+    { "exports": "default" },
+    { "minify": true },
+    { "exports": "default", "minify": true }
+  ]
+}

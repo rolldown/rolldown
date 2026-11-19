@@ -22,6 +22,7 @@ pub mod commonjs_variable_in_esm;
 pub mod configuration_field_conflict;
 pub mod could_not_clean_directory;
 pub mod deprecated_import_assertion;
+pub mod dropped_import_attribute;
 pub mod duplicate_shebang;
 pub mod empty_import_meta;
 pub mod eval;

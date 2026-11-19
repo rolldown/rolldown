@@ -6,10 +6,11 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
   COVERAGE_FLAGS,
@@ -35,9 +36,16 @@ import {
   WS_QUIET_MS,
   wsRequest,
 } from '../lib/worker/measure.mjs';
-import { evaluatingModules, shortModule, topLevelCalls, whyModule } from '../lib/worker/attrib.mjs';
+import {
+  evaluatingModules,
+  graphChainResolver,
+  shortModule,
+  topLevelCalls,
+  whyModule,
+} from '../lib/worker/attrib.mjs';
 import { attribOutDir, viteConfigShim } from '../lib/worker/config.mjs';
-import { entryIdx, minCut } from '../lib/min-cut.mjs';
+import { minCut } from '../lib/min-cut.mjs';
+import { entryIndices } from '../lib/module-graph.mjs';
 import { indexOf, makeGraph } from './graph-fixtures.mjs';
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'perf-kit-worker-'));
@@ -541,7 +549,7 @@ test('with the class module as a root, the min cut lands below it instead of at 
   const cls = indexOf(graph, 'worker/agents/ThinkAgent.ts');
   const withoutRoot = minCut(graph, lib);
   assert.equal(withoutRoot.flow, 1);
-  const withRoot = minCut(graph, lib, [], [...entryIdx(graph), cls]);
+  const withRoot = minCut(graph, lib, [], [...entryIndices(graph), cls]);
   assert.deepEqual(withRoot.cutEdges, [{ from: cls, to: lib }]);
 });
 
@@ -555,6 +563,76 @@ test('why: direct importers and the chain from the entry', () => {
   );
   assert.deepEqual(why.chain, ['worker/index.ts', 'worker/agents/ThinkAgent.ts']);
 });
+
+test('why: the chain holds only real static imports', () => {
+  // main -> a, b -> shared -> lib. The dominator of shared is main, which only loads it dynamically.
+  const graph = makeGraph(
+    [
+      {
+        id: 'src/main.js',
+        bytes: 10,
+        imports: [
+          [1, false],
+          [2, false],
+          [3, true],
+          [5, true],
+        ],
+      },
+      { id: 'src/a.js', bytes: 10, imports: [[3, false]] },
+      { id: 'src/b.js', bytes: 10, imports: [[3, false]] },
+      { id: 'src/shared.js', bytes: 10, imports: [[4, false]] },
+      { id: 'src/lib.js', bytes: 10, imports: [] },
+      { id: 'src/lazy.js', bytes: 10, imports: [] },
+    ],
+    ['src/main.js'],
+  );
+  const main = indexOf(graph, 'src/main.js');
+  assert.equal(graph.modules[indexOf(graph, 'src/shared.js')].idom, main);
+  const chain = ['src/main.js', 'src/a.js', 'src/shared.js'];
+  assert.deepEqual(whyModule(graph, indexOf(graph, 'src/lib.js')).chain, chain);
+  assert.deepEqual(graphChainResolver(graph)('src/lib.js'), chain);
+  assert.deepEqual(whyModule(graph, main).chain, []);
+  assert.deepEqual(whyModule(graph, indexOf(graph, 'src/lazy.js')).chain, []);
+});
+
+// Reports keep the NUL prefix of a virtual id; an escaped `\0` in an id must print the same.
+for (const [form, virtual] of [
+  ['a NUL prefix', '\0virtual:bridge'],
+  ['an escaped \\0 prefix', '\\0virtual:bridge'],
+]) {
+  test(`why and worker attribution keep virtual hops in a shared import chain (${form})`, (t) => {
+    const graph = makeGraph(
+      [
+        { id: 'a-entry.js', bytes: 10, imports: [[2, false]] },
+        { id: 'b-entry.js', bytes: 10, imports: [[3, false]] },
+        { id: virtual, bytes: 10, imports: [[4, false]] },
+        { id: 'b-bridge.js', bytes: 10, imports: [[4, false]] },
+        { id: 'z-bridge.js', bytes: 10, imports: [[5, false]] },
+        { id: 'shared.js', bytes: 10 },
+      ],
+      ['a-entry.js', 'b-entry.js'],
+    );
+    assert.deepEqual(graphChainResolver(graph)('shared.js'), [
+      'a-entry.js',
+      virtual,
+      'z-bridge.js',
+    ]);
+
+    const dir = tmp();
+    t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+    const report = write(dir, 'module-graph.json', JSON.stringify(graph));
+    const cli = fileURLToPath(new URL('../harness.mjs', import.meta.url));
+    const run = spawnSync(process.execPath, [cli, 'why', 'shared.js', '--report', report], {
+      cwd: dir,
+      encoding: 'utf8',
+      timeout: 20_000,
+    });
+    assert.equal(run.status, 0, run.stderr);
+    // Both forms print as the two characters `\0`.
+    const shown = ['a-entry.js', '\\0virtual:bridge', 'z-bridge.js', 'shared.js'].join(' -> ');
+    assert.ok(run.stdout.includes(`chain from the entry: ${shown}`), run.stdout);
+  });
+}
 
 // --- the config shim ---------------------------------------------------------------------
 

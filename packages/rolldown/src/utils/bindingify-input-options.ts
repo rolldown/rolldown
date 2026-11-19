@@ -27,7 +27,6 @@ import {
   type NormalizedTransformOptions,
   normalizeTransformOptions,
 } from './normalize-transform-options';
-import { getParallelPluginInfo } from './parallel-plugin';
 import { getDefaultDevRuntime } from './default-dev-runtime';
 import {
   INPUT_OPTIONS_OWNER,
@@ -49,9 +48,6 @@ export function bindingifyInputOptions(
   timings: PluginTimingsRecorder | undefined,
 ): BindingInputOptions {
   const plugins = rawPlugins.map((plugin) => {
-    if (getParallelPluginInfo(plugin)) {
-      return undefined;
-    }
     if (plugin instanceof BuiltinPlugin) {
       switch (plugin.name) {
         case 'builtin:vite-manifest':

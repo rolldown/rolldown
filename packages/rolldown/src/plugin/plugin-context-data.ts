@@ -57,11 +57,7 @@ export class PluginContextData {
   moduleOptionMap: Map<string, StoredModuleOptions> = new Map();
   /** The module options set by `resolveId` and `this.load`. */
   private resolvedModuleOptionMap: Map<string, StoredModuleOptions> = new Map();
-  /**
-   * The cache is `null` in parallel plugin workers. In a worker, each plugin has its own
-   * `PluginContextData`, so the cache never finds a match. See `parallel-plugin-worker.ts`.
-   */
-  outputCodeCache: Map<string, OutputCodeCacheEntry> | null;
+  outputCodeCache: Map<string, OutputCodeCacheEntry> = new Map();
   resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map();
   /** The next `this.resolve` receipt. See `saveResolveOptions`. */
   private nextResolveOptionsReceipt = 0;
@@ -77,10 +73,7 @@ export class PluginContextData {
     private outputOptions: OutputOptions,
     private normalizedInputPlugins: RolldownPlugin[],
     private normalizedOutputPlugins: RolldownPlugin[],
-    cacheOutputCode = true,
-  ) {
-    this.outputCodeCache = cacheOutputCode ? new Map() : null;
-  }
+  ) {}
 
   /**
    * The module id of `rawId` imported with `attributes`, as JS keys it. Without
@@ -266,7 +259,7 @@ export class PluginContextData {
     this.renderedChunkMeta = null;
     this.loadModulePromiseMap.clear();
     // Watch mode reuses this object across rebuilds; entries hold the previous build's chunk data.
-    this.outputCodeCache?.clear();
+    this.outputCodeCache.clear();
     // `resolveOptionsMap` and its receipt counter stay as they are: a `this.resolve` call of the
     // previous build may still be in flight, and its receipt must not be given out again.
   }

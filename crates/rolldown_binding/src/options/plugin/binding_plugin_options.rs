@@ -34,9 +34,8 @@ use super::{
   },
 };
 
-/// none is parallel js plugin
-pub type BindingPluginOrParallelJsPluginPlaceholder<'env> =
-  Option<Either<BindingPluginOptions, BindingBuiltinPlugin<'env>>>;
+pub type BindingPluginOrBuiltinPlugin<'env> =
+  Either<BindingPluginOptions, BindingBuiltinPlugin<'env>>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Default)]
@@ -291,11 +290,4 @@ impl BindingPluginOptions {
 
     Ok(cache)
   }
-}
-
-#[napi_derive::napi(object, object_to_js = false)]
-#[derive(Debug, Default)]
-pub struct BindingPluginWithIndex {
-  pub index: u32,
-  pub plugin: BindingPluginOptions,
 }

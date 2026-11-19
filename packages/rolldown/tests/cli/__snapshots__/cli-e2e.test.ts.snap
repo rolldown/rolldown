@@ -32,6 +32,7 @@ OPTIONS
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
   --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
+  --checks.droppedImportAttribute Whether to emit warnings when the import attributes of an external module are dropped because the output format is not ESM.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -189,6 +190,7 @@ OPTIONS
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
   --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
+  --checks.droppedImportAttribute Whether to emit warnings when the import attributes of an external module are dropped because the output format is not ESM.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -346,6 +348,7 @@ OPTIONS
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
   --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
+  --checks.droppedImportAttribute Whether to emit warnings when the import attributes of an external module are dropped because the output format is not ESM.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -503,6 +506,7 @@ OPTIONS
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
   --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
+  --checks.droppedImportAttribute Whether to emit warnings when the import attributes of an external module are dropped because the output format is not ESM.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.

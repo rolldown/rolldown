@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'vitest';
-import { metaFromEntriesJson, toSavableMetaEntries } from '../../src/plugin/savable-meta';
+import {
+  isSavableAsJson,
+  metaFromEntriesJson,
+  toSavableMetaEntries,
+} from '../../src/plugin/savable-meta';
 
 class Icon {
   name = 'home';
@@ -77,9 +81,40 @@ describe('toSavableMetaEntries', () => {
     ['a function in an object', { nested: { fn() {} } }],
     ['a Set in an array', [[new Set()]]],
     ['an object with `toJSON`', { toJSON: () => 1 }],
+    [
+      'a getter',
+      {
+        get a() {
+          return 1;
+        },
+      },
+    ],
+    ['a setter', { set a(_v: unknown) {} }],
+    ['a frozen object', Object.freeze({ a: 1 })],
+    ['a sealed object', Object.seal({ a: 1 })],
+    ['an object that cannot be extended', Object.preventExtensions({ a: 1 })],
+    ['a frozen array', Object.freeze([1])],
   ])('%s cannot be saved as a value', (_name, value) => {
     expect(toSavableMetaEntries({ value })).toBeUndefined();
     expect(toSavableMetaEntries({ before: 1, nested: { value } })).toBeUndefined();
+  });
+
+  test('a getter or a frozen object at the top level is saved as the copy of `meta` sees it', () => {
+    expect(
+      toSavableMetaEntries({
+        get a() {
+          return 1;
+        },
+      }),
+    ).toEqual([{ key: 'a', json: '1' }]);
+    expect(toSavableMetaEntries(Object.freeze({ a: 1 }))).toEqual([{ key: 'a', json: '1' }]);
+  });
+
+  test('isSavableAsJson checks a whole value, such as a log', () => {
+    expect(isSavableAsJson({ message: 'm', code: 'C', meta: { n: 1 } })).toBe(true);
+    expect(isSavableAsJson({ message: 'm', cause: new Error('y') })).toBe(false);
+    expect(isSavableAsJson(new Error('m'))).toBe(false);
+    expect(isSavableAsJson({ message: 'm', loc: undefined })).toBe(false);
   });
 
   test('the same object under two top-level keys cannot be saved', () => {

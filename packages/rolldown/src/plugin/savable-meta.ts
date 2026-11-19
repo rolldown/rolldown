@@ -13,8 +13,9 @@ import type { BindingModuleMetaEntry } from '../binding.cjs';
  * JSON changes or drops is not: a function, a symbol, a `BigInt`, `NaN`, `Infinity`, `-0`, a
  * `Map`, a `Set`, a `Date`, an instance of a class, an object without a prototype, `undefined`
  * inside a value (an item, a hole, or the value of a property), a property with a symbol key, a
- * property that is not enumerable, and an object that is used two times or contains itself. A
- * top-level key that is not well-formed UTF-16 cannot be saved either.
+ * property that is not enumerable, a getter or a setter, an object that is frozen, sealed or
+ * cannot be extended, and an object that is used two times or contains itself. A top-level key
+ * that is not well-formed UTF-16 cannot be saved either.
  *
  * `undefined` under a top-level key gets an entry without JSON text. The copy writes `undefined`
  * over an older value of the key, so a reuse must do the same.
@@ -60,18 +61,42 @@ export function metaFromEntriesJson(text: string): Record<string, unknown> {
 }
 
 /**
+ * Whether `value` is the same after it is written as JSON and read back, as the values under the
+ * top-level keys of a saved `meta` must be. The persistent cache also saves the logs of plugins
+ * this way.
+ */
+export function isSavableAsJson(value: unknown): boolean {
+  try {
+    return isSavable(value, new Set());
+  } catch {
+    // For example, a value is nested too deeply.
+    return false;
+  }
+}
+
+/**
  * The keys of `value`, or `undefined` when `value` is not a plain object or a plain array: it
- * has another prototype, a property with a symbol key, or a property that is not enumerable.
+ * has another prototype, a property with a symbol key, a property that is not enumerable, a
+ * getter or a setter, or it cannot be extended. JSON keeps none of these: a getter becomes the
+ * value that it returned once, and a frozen or sealed object becomes a normal one.
  */
 function keysOfPlain(value: object): string[] | undefined {
   const isArray = Array.isArray(value);
   if (Object.getPrototypeOf(value) !== (isArray ? Array.prototype : Object.prototype)) {
     return undefined;
   }
+  if (!Object.isExtensible(value)) {
+    return undefined;
+  }
   const keys = Object.keys(value);
   // An array has the own property `length`, which is not enumerable.
   if (Reflect.ownKeys(value).length !== keys.length + (isArray ? 1 : 0)) {
     return undefined;
+  }
+  for (const key of keys) {
+    if (!('value' in Object.getOwnPropertyDescriptor(value, key)!)) {
+      return undefined;
+    }
   }
   return keys;
 }

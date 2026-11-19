@@ -2,7 +2,10 @@ use std::sync::OnceLock;
 
 use oxc::semantic::SymbolId;
 use oxc_index::IndexVec;
-use petgraph::graph::{DiGraph, NodeIndex};
+use petgraph::{
+  graph::{DiGraph, NodeIndex},
+  visit::{Dfs, Reversed},
+};
 use rolldown_common::{
   ConstExportMeta, ConstantValue, ExportsKind, GetLocalDb, IndexModules, ModuleIdx, Specifier,
   StmtEvalFlags, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
@@ -21,17 +24,20 @@ use super::LinkStage;
 /// Iterative DFS handles deep graphs.
 #[derive(Debug, Default)]
 pub(super) struct ImportCycles {
-  components: OnceLock<IndexVec<ModuleIdx, ModuleIdx>>,
+  components: OnceLock<Components>,
+}
+
+#[derive(Debug)]
+struct Components {
+  /// One module of the component of each module.
+  representatives: IndexVec<ModuleIdx, ModuleIdx>,
+  /// Whether each module is in a cycle or can reach an external module.
+  imports_may_run_later: IndexVec<ModuleIdx, bool>,
 }
 
 impl ImportCycles {
-  pub(super) fn same_cycle(
-    &self,
-    modules: &IndexModules,
-    importer: ModuleIdx,
-    exporter: ModuleIdx,
-  ) -> bool {
-    let components = self.components.get_or_init(|| {
+  fn components(&self, modules: &IndexModules) -> &Components {
+    self.components.get_or_init(|| {
       let mut graph = DiGraph::<(), ()>::with_capacity(modules.len(), 0);
       for _ in modules {
         graph.add_node(());
@@ -47,16 +53,51 @@ impl ImportCycles {
           }
         }
       }
-      let mut components = (0..modules.len()).map(ModuleIdx::new).collect::<IndexVec<_, _>>();
+      let mut representatives = (0..modules.len()).map(ModuleIdx::new).collect::<IndexVec<_, _>>();
+      let mut imports_may_run_later =
+        (0..modules.len()).map(|_| false).collect::<IndexVec<ModuleIdx, _>>();
       for component in petgraph::algo::kosaraju_scc(&graph) {
         let representative = ModuleIdx::new(component[0].index());
+        let is_cycle = component.len() > 1;
         for node in component {
-          components[ModuleIdx::new(node.index())] = representative;
+          representatives[ModuleIdx::new(node.index())] = representative;
+          imports_may_run_later[ModuleIdx::new(node.index())] = is_cycle;
         }
       }
-      components
-    });
-    components[importer] == components[exporter]
+      // An external module can import emitted modules and complete a cycle we cannot see.
+      let reverse_graph = Reversed(&graph);
+      let mut dfs = Dfs::empty(reverse_graph);
+      dfs.stack.extend(
+        modules.iter().filter_map(|module| {
+          module.is_external().then_some(NodeIndex::new(module.idx().index()))
+        }),
+      );
+      while let Some(node) = dfs.next(reverse_graph) {
+        imports_may_run_later[ModuleIdx::new(node.index())] = true;
+      }
+      Components { representatives, imports_may_run_later }
+    })
+  }
+
+  pub(super) fn same_cycle(
+    &self,
+    modules: &IndexModules,
+    importer: ModuleIdx,
+    exporter: ModuleIdx,
+  ) -> bool {
+    let representatives = &self.components(modules).representatives;
+    representatives[importer] == representatives[exporter]
+  }
+
+  /// Whether the static imports of `module` finish before its own code runs, regardless of
+  /// which entry loads first.
+  /// See `internal-docs/linking/module-execution-order/implementation.md`.
+  pub(super) fn imports_finish_before_evaluation(
+    &self,
+    modules: &IndexModules,
+    module: ModuleIdx,
+  ) -> bool {
+    !self.components(modules).imports_may_run_later[module]
   }
 }
 

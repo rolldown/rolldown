@@ -198,6 +198,10 @@ pub struct AstScanner<'me, 'ast> {
   root_writes: Vec<(SymbolId, StmtInfoIdx, bool)>,
   /// Literal bindings that `add_constant_symbol` rejected only because code writes them.
   mutated_constant_candidates: Vec<(SymbolId, ConstExportMeta)>,
+  /// Top-level functions that are side-effect free but not declared with `export`, keyed by
+  /// symbol. The value is `true` when only the `@__NO_SIDE_EFFECTS__` annotation makes them
+  /// side-effect free. See [`Self::collect_side_effect_free_functions`].
+  side_effect_free_functions: FxHashMap<SymbolId, bool>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -304,6 +308,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       mutated_root_lets: FxHashSet::default(),
       root_writes: Vec::new(),
       mutated_constant_candidates: Vec::new(),
+      side_effect_free_functions: FxHashMap::default(),
     }
   }
 
@@ -914,8 +919,67 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     decl.specifiers.iter().for_each(|spec| {
       if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {
         self.add_local_export(spec.exported.name().as_str(), local_symbol_id, spec.span);
+        self.mark_exported_side_effect_free_function(local_symbol_id);
       }
     });
+  }
+
+  /// Collects the top-level functions that are side-effect free (empty body or
+  /// `@__NO_SIDE_EFFECTS__`) but not declared with `export`, so that a later `export { fn }` or
+  /// `export default fn` can mark them the same way `export function fn` is marked.
+  fn collect_side_effect_free_functions(&mut self, program: &Program<'ast>) {
+    for stmt in &program.body {
+      match stmt {
+        ast::Statement::FunctionDeclaration(fn_decl) => {
+          if let Some(id) = &fn_decl.id
+            && let Some(is_pure_annotation_only) = side_effect_free_function_kind(
+              fn_decl.is_side_effect_free() && has_plain_rest(&fn_decl.params),
+              fn_decl.pure,
+            )
+          {
+            self.side_effect_free_functions.insert(id.symbol_id(), is_pure_annotation_only);
+          }
+        }
+        ast::Statement::VariableDeclaration(var_decl) => {
+          for decl in &var_decl.declarations {
+            let BindingPattern::BindingIdentifier(binding) = &decl.id else { continue };
+            let kind = match &decl.init {
+              Some(Expression::FunctionExpression(func)) => side_effect_free_function_kind(
+                func.is_side_effect_free() && has_plain_rest(&func.params),
+                func.pure,
+              ),
+              Some(Expression::ArrowFunctionExpression(func)) => side_effect_free_function_kind(
+                func.is_side_effect_free() && has_plain_rest(&func.params),
+                func.pure,
+              ),
+              _ => None,
+            };
+            if let Some(is_pure_annotation_only) = kind {
+              self.side_effect_free_functions.insert(binding.symbol_id(), is_pure_annotation_only);
+            }
+          }
+        }
+        _ => {}
+      }
+    }
+  }
+
+  fn mark_exported_side_effect_free_function(&mut self, symbol_id: SymbolId) {
+    let Some(&is_pure_annotation_only) = self.side_effect_free_functions.get(&symbol_id) else {
+      return;
+    };
+    // Direct `eval` and a repeated `var` declaration can replace the function without a write
+    // reference, which `IsNotReassigned` cannot see. The declaration forms do not check this yet.
+    let scoping = self.result.symbol_ref_db.scoping();
+    if eval_can_assign(scoping, symbol_id) || !scoping.symbol_redeclarations(symbol_id).is_empty() {
+      return;
+    }
+    self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
+    let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
+    flags.insert(SymbolRefFlags::SideEffectsFreeFunction | SymbolRefFlags::ExportedSeparately);
+    if is_pure_annotation_only {
+      flags.insert(SymbolRefFlags::PureAnnotationOnly);
+    }
   }
 
   fn scan_export_decl(&mut self, export_decl: &ExportDeclaration<'ast>) {
@@ -1010,6 +1074,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             || scoping.get_resolved_references(symbol_id).any(Reference::is_write);
           if !cannot_reuse_symbol {
             self.result.default_export_ref.symbol = symbol_id;
+            self.mark_exported_side_effect_free_function(symbol_id);
           }
         }
         None
@@ -1437,4 +1502,20 @@ pub enum IdentifierReferenceKind {
   Root(SymbolRef),
   /// rest
   Other,
+}
+
+/// Returns `Some(is_pure_annotation_only)` when a function is side-effect free, either because its
+/// body is empty or because it carries `@__NO_SIDE_EFFECTS__`.
+fn side_effect_free_function_kind(empty: bool, pure: bool) -> Option<bool> {
+  (empty || pure).then_some(pure && !empty)
+}
+
+/// `FunctionExt::is_side_effect_free` does not check the rest parameter, so it treats
+/// `function f(...[a = effect()]) {}` as empty. Only a plain `...rest` keeps the function empty.
+/// The declaration forms do not check this yet.
+fn has_plain_rest(params: &ast::FormalParameters) -> bool {
+  params
+    .rest
+    .as_ref()
+    .is_none_or(|rest| matches!(rest.rest.argument, BindingPattern::BindingIdentifier(_)))
 }

@@ -13,6 +13,8 @@ It writes data; it does not decide what is included. `include_statements` is the
 
 Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 
+Before this pass, cross-module optimization can re-analyze a statement that calls a pure function. For separate exports, it keeps potentially effectful reads even when the AST shows a simple identifier or a namespace member. A `NamespaceAlias` or unresolved namespace member can lower to a property read that invokes a CommonJS getter.
+
 ## Pipeline placement
 
 ```

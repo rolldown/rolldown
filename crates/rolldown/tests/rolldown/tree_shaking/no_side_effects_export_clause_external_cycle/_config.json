@@ -1,0 +1,12 @@
+{
+  "_comment": "The external module imports the emitted caller. Loading lib first runs the caller before lib initializes noop.",
+  "config": {
+    "input": [
+      { "name": "caller", "import": "./caller.js" },
+      { "name": "lib", "import": "./lib.js" }
+    ],
+    "external": ["./external.mjs"],
+    "preserveModules": true,
+    "minify": false
+  }
+}

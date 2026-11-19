@@ -1105,11 +1105,6 @@ impl GenerateStage<'_> {
   /// (e.g., a common chunk, manual code splitting group, or user-defined entry chunk).
   /// Instead of keeping an empty facade chunk, we rewrite references to point directly to the target chunk
   /// and ensure proper symbol inclusion.
-  ///
-  /// The same inclusion replay also extracts `namespace_extractions`, the dynamic entry namespaces
-  /// that `find_leaking_dynamic_entry_namespaces` returns. See
-  /// internal-docs/code-splitting/implementation.md#dynamic-entry-namespaces.
-  #[expect(clippy::too_many_arguments)]
   pub(super) fn optimize_facade_entry_chunks(
     &mut self,
     chunk_graph: &mut ChunkGraph,
@@ -1118,8 +1113,7 @@ impl GenerateStage<'_> {
     module_is_assigned: &mut IndexBitSet<ModuleIdx>,
     temp_chunk_opt_graph: &ChunkOptimizationGraph,
     used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
-    namespace_extractions: &[(ChunkIdx, ModuleIdx)],
-  ) {
+  ) -> Option<FxHashSet<ChunkIdx>> {
     // Find empty dynamic entry chunks that should be merged with their target common chunks
     let (mut facade_eliminations, common_chunk_merges, emitted_chunk_groups) =
       self.find_facade_chunk_merge_ops(chunk_graph, temp_chunk_opt_graph);
@@ -1127,9 +1121,8 @@ impl GenerateStage<'_> {
     if facade_eliminations.is_empty()
       && common_chunk_merges.is_empty()
       && emitted_chunk_groups.is_empty()
-      && namespace_extractions.is_empty()
     {
-      return;
+      return None;
     }
 
     self.resolve_emitted_chunk_group_conflicts(
@@ -1144,10 +1137,6 @@ impl GenerateStage<'_> {
         used_symbol_refs_builder,
       );
     }
-    for &(_, entry_module_idx) in namespace_extractions {
-      self.narrow_namespace_stmt_to_used_symbols(entry_module_idx, used_symbol_refs_builder);
-    }
-
     let mut runtime_dependent_chunks = FxHashSet::default();
 
     self.replay_link_stage_inclusion(used_symbol_refs_builder, |context| {
@@ -1226,12 +1215,6 @@ impl GenerateStage<'_> {
           needs_export_all_helper = true;
         }
       }
-      // Do not use `||` here. It skips the extractions when a facade needs `__exportAll`.
-      needs_export_all_helper |= Self::include_dynamic_entry_namespace_extractions(
-        context,
-        chunk_graph,
-        namespace_extractions,
-      );
       needs_export_all_helper
     });
 
@@ -1247,12 +1230,7 @@ impl GenerateStage<'_> {
       chunk_graph,
       input_base,
     );
-    self.try_merge_runtime_chunk(
-      chunk_graph,
-      Some(&runtime_dependent_chunks),
-      RuntimeMergeCascade::Full,
-      used_symbol_refs_builder,
-    );
+    Some(runtime_dependent_chunks)
   }
 
   /// Merge the standalone runtime chunk into a safe existing host. Prefer a

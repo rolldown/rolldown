@@ -34,7 +34,7 @@ export const POLL_MS = 1;
 
 const READY_MENU =
   '  --ready port:3000            a TCP listener is accepting (servers)\n' +
-  "  --ready 'stdout:ready on'    a line matching this regex is printed\n" +
+  "  --ready 'stdout:ready on'    a stdout line matches this regex\n" +
   '  --ready http://127.0.0.1:3000/health   an HTTP probe returns 2xx\n' +
   '  --ready exit                 the process exits 0 (CLIs, lambda-shaped entries)';
 
@@ -56,8 +56,8 @@ export function parseReadySpec(spec) {
   if (stdout) {
     let pattern;
     try {
-      // `m`: the spec names a line, and an instrumented run's output starts with node's
-      // own "Debugger listening" banner, so `^` must anchor at a line, not at the buffer.
+      // `m`: the spec names a line, so `^` and `$` anchor at each line of stdout, not only
+      // at the start and the end of everything printed so far.
       pattern = new RegExp(stdout[1], 'm');
     } catch (err) {
       throw new Error(
@@ -117,10 +117,11 @@ async function isReady(spec, state) {
   switch (spec.kind) {
     case 'exit':
       // Under the inspector the process stays alive after the script ends, until the
-      // debugger disconnects; node announces that moment instead of exiting.
+      // debugger disconnects; node announces that moment instead of exiting. The exit
+      // status arrives only after the disconnect, so `startupRun` checks it there.
       return state.exitCode === 0 || state.waitingForDisconnect;
     case 'stdout':
-      return spec.pattern.test(state.output);
+      return spec.pattern.test(state.stdout);
     case 'port':
       return await portAccepting(spec.port);
     case 'http':
@@ -217,7 +218,14 @@ export async function startupRun({
   arm = null,
   atReady = null,
 }) {
-  const state = { output: '', exitCode: null, signal: null, waitingForDisconnect: false };
+  const state = {
+    output: '',
+    stdout: '',
+    stderr: '',
+    exitCode: null,
+    signal: null,
+    waitingForDisconnect: false,
+  };
   const argv = [...execArgv, ...(inspect ? ['--inspect-brk=0'] : []), entry, ...args];
 
   const started = process.hrtime.bigint();
@@ -235,6 +243,15 @@ export async function startupRun({
   };
   child.stdout.setEncoding('utf8');
   child.stderr.setEncoding('utf8');
+  // Each stream also keeps its own text. The stdout: probe reads stdout alone: under the
+  // inspector, stderr also carries the runtime's own lines ("Debugger listening on ws://…"),
+  // which a timed run never prints.
+  const keep = (stream) => (chunk) => {
+    state[stream] += chunk;
+    if (state[stream].length > 1_000_000) state[stream] = state[stream].slice(-500_000);
+  };
+  child.stdout.on('data', keep('stdout'));
+  child.stderr.on('data', keep('stderr'));
   child.stdout.on('data', collect);
   child.stderr.on('data', collect);
   child.once('exit', (code, signal) => {
@@ -279,14 +296,11 @@ export async function startupRun({
         break;
       }
       // A non-zero exit can never become ready, whatever the probe is.
-      if (state.exitCode != null && state.exitCode !== 0) {
-        throw new Error(
-          `the target exited with code ${state.exitCode} before becoming ready (${describeReady(ready)}).\n${tail(state.output)}`,
-        );
-      }
+      if (state.exitCode != null && state.exitCode !== 0) throw exitedBeforeReady(ready, state);
       if (state.exitCode != null && ready.kind !== 'exit') {
         throw new Error(
           `the target exited cleanly but never signalled ${describeReady(ready)}.\n` +
+            stderrMatchNote(ready, state) +
             `If this entry is meant to finish rather than stay up, measure it with --ready exit.\n${tail(state.output)}`,
         );
       }
@@ -297,9 +311,23 @@ export async function startupRun({
     }
 
     const collected = atReady && cdp ? await atReady(cdp) : null;
-    // A script that reached "waiting for disconnect" ran to its end: that is a clean exit.
-    const exitCode = state.exitCode ?? (state.waitingForDisconnect ? 0 : null);
-    return { elapsedMs: readyMs, output: state.output, exitCode, collected };
+    if (state.waitingForDisconnect) {
+      // Node also waits here after process.exit(7), an uncaught exception or a non-zero
+      // process.exitCode, and it exits with the real status only after the debugger
+      // disconnects. As for a timed run, the run counts only when that status is 0.
+      cdp.close();
+      const exitDeadline = Date.now() + 10_000;
+      while (state.exitCode == null && state.signal == null) {
+        if (Date.now() > exitDeadline) {
+          throw new Error(
+            `the target did not exit within 10s after the debugger disconnected.\n${tail(state.output)}`,
+          );
+        }
+        await sleep(POLL_MS);
+      }
+      if (state.exitCode !== 0) throw exitedBeforeReady(ready, state);
+    }
+    return { elapsedMs: readyMs, output: state.output, exitCode: state.exitCode, collected };
   } finally {
     try {
       cdp?.close();
@@ -326,8 +354,29 @@ function readyTimeoutMessage(ready, timeoutMs, state) {
   }
   return (
     `the target never signalled ${describeReady(ready)} within ${Math.round(timeoutMs / 1000)}s.\n` +
+    stderrMatchNote(ready, state) +
     `Check the spec matches what this build prints or listens on:\n${READY_MENU}\n${tail(state.output)}`
   );
+}
+
+function exitedBeforeReady(ready, state) {
+  const how =
+    state.exitCode != null ? `exited with code ${state.exitCode}` : `was killed by ${state.signal}`;
+  return new Error(
+    `the target ${how} before becoming ready (${describeReady(ready)}).\n${tail(state.output)}`,
+  );
+}
+
+/**
+ * The output tail shows stderr too, so a ready line printed there looks matched. Name the
+ * match, so that the reader does not look for a wrong regex. The pattern runs on stderr
+ * alone: a match that needs text from both streams is a line on neither.
+ */
+function stderrMatchNote(ready, state) {
+  const match = ready.kind === 'stdout' ? ready.pattern.exec(state.stderr) : null;
+  return match
+    ? `stderr has a match (${JSON.stringify(match[0])}), but a stdout: spec reads stdout only.\n`
+    : '';
 }
 
 function tail(output, lines = 12) {

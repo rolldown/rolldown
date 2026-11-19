@@ -5680,7 +5680,7 @@ server startup mode (node/deno - a process coming up, not a page loading):
   --ready <spec>            how the target signals it is up. This is part of the target -
                             two scans with different specs are not comparable:
                               port:3000            a TCP listener is accepting
-                              'stdout:ready on'    a line matching this regex is printed
+                              'stdout:ready on'    a stdout line matches this regex
                               http://127.0.0.1:3000/health   an HTTP probe returns 2xx
                               exit                 the process exits 0 (CLIs, lambda entries)
   --cache cold|warm|off     V8 compile cache. cold (default) gives every run an empty cache,

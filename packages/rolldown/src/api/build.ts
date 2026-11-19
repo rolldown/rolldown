@@ -59,6 +59,11 @@ async function build(
     return Promise.all(options.map((opts) => build(opts)));
   } else {
     const { output, write = true, ...inputOptions } = options;
+    if (inputOptions.watch) {
+      console.warn(
+        '`watch` option is ignored because `build()` does not support watch mode. Please use the `watch()` API instead.',
+      );
+    }
     const build = await rolldown(inputOptions);
     try {
       if (write) {

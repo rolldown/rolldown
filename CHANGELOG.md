@@ -1,4 +1,142 @@
 
+## [1.3.3] - 2026-11-18
+
+### 🚀 Features
+
+- rolldown_plugin_chunk_import_map: add `include` option (#11750) by @shulaoda
+- show plugin timings as a table (#11726) by @shulaoda
+- inline-common-chunks: inline chunks that `import()` also loads (#11656) by @hyfdev
+
+### 🐛 Bug Fixes
+
+- binding: don't crash WASI calls made after `close()` (#11783) by @hyfdev
+- reset plugin module options when modules are fetched again (#11456) by @Vladimir-Pirotskiy
+- prevent UMD dependencies from using host AMD loaders (#10648) by @rohit-jsfreaky
+- binding: count builds that overlap in the plugin timings report (#11775) by @IWANABETHATGUY
+- new-url: decode percent-encoded paths in `new URL()` (#11419) by @theRizwan
+- new-url: emit the asset when a plugin loads a `new URL()` target as code (#11418) by @theRizwan
+- hmr: don't treat modules in unloaded chunks as already run (#11772) by @hyfdev
+- binding: keep only the latest build's handle in `BindingBundler` (#11769) by @shulaoda
+- plugin: propagate onLog hook errors to fail the build (#9907) by @jaehafe
+- rolldown_plugin_vite_resolve: clear the resolver cache on update watch events (#11666) by @lazerg
+- print the `url` of plugin errors and warnings (#11744) by @lazerg
+- dev: recover from a rebuild that fails in `buildEnd` (#11713) by @hyfdev
+- inline-const: do not inline an exported `var` read early through an import cycle (#11751) by @hyfdev
+- cjs: keep a CommonJS entry's `module.exports` in CJS output (#11752) by @hyfdev
+- keep internal chunk exports out of dynamic import namespaces (#11737) by @IWANABETHATGUY
+- deconflict: keep block function and class names when a catch/var binding is renamed (#11743) by @hyfdev
+- keep data URL modules in execution order with `chunkModulesOrder: 'module-id'` (#11735) by @shulaoda
+- stop special-casing module ids that start with `rolldown:` (#11731) by @shulaoda
+- inline-const: do not inline a `var` read early inside a function (#11673) by @hyfdev
+- tla: ignore top-level await in tree-shaken statements (#11724) by @hyfdev
+- cli: correct the help text of `--polyfillRequire`, `--makeAbsoluteExternalsRelative` and `--format` (#11725) by @shulaoda
+- code-splitting: keep the source order of external imports (#11687) by @danielroe
+- preserve-modules: create chunks in execution order (#11705) by @hyfdev
+- join the option path in a validation warning with dots (#11723) by @shulaoda
+- rolldown_plugin_vite_reporter: cut the progress line at a character boundary (#11721) by @shulaoda
+- dev: keep preserved-JSX handling when a rebuild adds the first JSX module (#11707) by @hyfdev
+- plugin: reject `this.load()` in `buildStart` (#11720) by @hyfdev
+- keep dynamic entry as the facade of its `codeSplitting` group chunk (#11507) by @danielroe
+- order entry chunks by their first-executed module (#11506) by @danielroe
+- reject an unknown `output.esModule` string (#11719) by @shulaoda
+- jsx: error instead of panicking when a preserved JSX tag imports a non-identifier name (#11706) by @hyfdev
+- optimization: recover inline-const for exports whose writers are tree-shaken (#9992) by @linyiru
+- perf-kit: read `index.html` as the browser does when detecting the entry (#11668) by @IWANABETHATGUY
+- sourcemap: resolve relative sources of plugin maps against the module (#11691) by @BoussonKarel
+- keep_names: don't emit class static blocks for targets without them (#11497) by @thelastbackspace
+- inline-common-chunks: avoid an entry facade when a lazy chunk loads one of its modules (#11689) by @hyfdev
+- inline-const: do not inline a constant used as a JSX element name (#11678) by @shulaoda
+- reject a `moduleSideEffects` rule without `test` and `external` (#11684) by @shulaoda
+- code-splitting: retry `avoidRedundantChunkLoads` moves that an unmoved atom blocked (#11659) by @Tom4ikss
+- json: preserve lone UTF-16 surrogates (#11677) by @shuvroroy
+- initialize an entry's re-exported modules in source order (#11548) by @Aschenbath
+- support function replacers in `MagicString.replace`/`replaceAll` (#11624) by @btea
+- inline-const: treat `pass: 0` as disabled (#11663) by @shulaoda
+- release the old name when a deduplicated asset re-picks a shorter one (#11664) by @olivier-thatch
+- honor `output.exports` for non-entry modules under `preserveModules` (#11218) by @Marve10s
+- do not treat `require` passed as a call argument as a `require()` call (#11660) by @shulaoda
+- include sourcemap comments in chunk hashes (#11547) by @shuvroroy
+- deps: update rustix to 1.1.6 to fix musl builds on ppc64le and s390x (#11665) by @WhyNotHugo
+- allow plugins to be garbage collected after `bundle.close()` (#11467) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- remove `BindingHookJsLoadOutput` and use `BindingHookLoadOutput` (#11746) by @sapphi-red
+- dev: enable `skipCommonRuntimeInjection` by default and remove the option (#11776) by @sapphi-red
+- simplify `BindingSourcemap` with `#napi(transparent)` (#11745) by @sapphi-red
+- remove unused and constant parameters (#11758) by @shulaoda
+- remove the unused `block_on_spawn_all` and the `async-scoped` dependency (#11754) by @shulaoda
+- remove fields that are never read (#11757) by @shulaoda
+- use the public sourcemap lookup cursor (#11580) by @Dunqing
+- remove unused types, methods and trait impls (#11742) by @shulaoda
+- make `InstantiatedChunk` Ecma-only and drop the `Generator` trait (#11730) by @shulaoda
+- remove the unused `InstantiationKind::None` variant (#11728) by @shulaoda
+
+### 📚 Documentation
+
+- linking: remove the stale `Module::CssModule` mention (#11729) by @shulaoda
+- magic-string: recommend `'boundary'` over `hires: true` (#11652) by @IWANABETHATGUY
+- readme: remove the DeepWiki badge (#11722) by @hyfdev
+
+### ⚡ Performance
+
+- sourcemap: avoid a source map copy when plugins return maps (#11764) by @anonrig
+- keep `g`/`d` regex flags on the fast matcher (#11762) by @anonrig
+- minify: minify each chunk as soon as its renderChunk hooks return (#11703) by @Boshen
+- free each module's AST as soon as it is printed (#11733) by @Boshen
+- code-splitting: compute already-loaded atoms without per-importer clones (#11700) by @Boshen
+- bitset: visit only set bits in `index_of_one` and vectorize `union` (#11699) by @Boshen
+- manual-code-splitting: skip modules already in the group (#11698) by @Boshen
+- binding: compress embedded oxc runtime helpers (#10751) by @Boshen
+- avoid per-chunk hash sets when hashing transitive chunk dependencies (#11681) by @Boshen
+- collect cross-chunk declared symbols without a shared AppendOnlyVec (#11682) by @Boshen
+- shrink sourcemap JSON buffers before retaining them as assets (#11407) by @h-a-n-a
+- read output chunk and asset metadata lazily in output hooks (#11683) by @Boshen
+- plugin: avoid promises for synchronous hooks (#11674) by @Boshen
+- skip sourcemap generation in `RenderedModule::code()` (#11654) by @camc314
+
+### 🧪 Testing
+
+- dev: run the in-flight `ensureLatestBuildOutput` close test with the WASI binding (#11785) by @shulaoda
+- json: ensure transform generates empty sourcemap (#11747) by @sapphi-red
+- render-chunk: stop pinning the renderChunk call order (#11759) by @hyfdev
+- render-chunk: check only the guaranteed renderChunk call order (#11755) by @hyfdev
+- sourcemap: build the expected source path from separate segments (#11749) by @hyfdev
+- fix the flaky normalized options memory check on WASI (#11738) by @hyfdev
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update rust crate oxc_index to v5.0.1 (#11761) by @renovate[bot]
+- deps: update dependency vite-plus to v1.7.0 (#11748) by @renovate[bot]
+- deps: update rollup submodule for tests to v4.68.4 (#11740) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#11741) by @rolldown-guard[bot]
+- deps: upgrade oxc to 0.159.0 (#11736) by @camc314
+- wasi: remove the Node Test retry (#11732) by @shulaoda
+- bump .node-version to 24.22.3 (#11717) by @shulaoda
+- deps: update dependency ws to v8.23.0 (#11718) by @renovate[bot]
+- deps: update rust crates (#11715) by @renovate[bot]
+- deps: update npm packages (#11714) by @renovate[bot]
+- deps: update github actions (#11716) by @renovate[bot]
+- exclude compressed oxc runtime helpers from EOL normalization (#11704) by @hyfdev
+- deps: update dependency rolldown-plugin-dts to v0.30.2 (#11711) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.52.2 (#11701) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.30.1 (#11686) by @renovate[bot]
+- deps: update rust to v1.100.0 (#11685) by @Boshen
+- deps: update crate-ci/typos action to v1.52.1 (#11679) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @Vladimir-Pirotskiy made their first contribution in [#11456](https://github.com/rolldown/rolldown/pull/11456)
+* @rohit-jsfreaky made their first contribution in [#10648](https://github.com/rolldown/rolldown/pull/10648)
+* @BoussonKarel made their first contribution in [#11691](https://github.com/rolldown/rolldown/pull/11691)
+* @thelastbackspace made their first contribution in [#11497](https://github.com/rolldown/rolldown/pull/11497)
+* @Tom4ikss made their first contribution in [#11659](https://github.com/rolldown/rolldown/pull/11659)
+* @Aschenbath made their first contribution in [#11548](https://github.com/rolldown/rolldown/pull/11548)
+* @olivier-thatch made their first contribution in [#11664](https://github.com/rolldown/rolldown/pull/11664)
+* @Marve10s made their first contribution in [#11218](https://github.com/rolldown/rolldown/pull/11218)
+* @WhyNotHugo made their first contribution in [#11665](https://github.com/rolldown/rolldown/pull/11665)
+
+
 ## [1.3.2] - 2026-11-11
 
 ### 🚀 Features

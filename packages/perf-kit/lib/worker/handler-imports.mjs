@@ -10,6 +10,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { entryIndices } from '../module-graph.mjs';
 import { isVirtual } from './startup-cpu.mjs';
 
 /** rolldown's `parseAst`: from the rolldown that the app's vite uses, else any reachable one. */
@@ -511,16 +512,13 @@ export function matchImportTargets(graph, mainIndex, sources, rootDir) {
  * modules from packages.
  */
 export function mainModuleIndex(graph, isApp) {
-  const byId = new Map(graph.modules.map((m, i) => [m.id, i]));
   let best = null;
   const consider = (i) => {
     const m = graph.modules[i];
     if (isVirtual(m.id) || !isApp(m.id)) return;
     if (best == null || (m.retainedBytes ?? 0) > (graph.modules[best].retainedBytes ?? 0)) best = i;
   };
-  for (const id of graph.entryModules ?? []) {
-    const start = byId.get(id);
-    if (start == null) continue;
+  for (const start of entryIndices(graph)) {
     if (!isVirtual(graph.modules[start].id)) {
       consider(start);
       continue;

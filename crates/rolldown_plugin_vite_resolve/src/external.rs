@@ -41,7 +41,7 @@ impl ResolveOptionsNoExternal {
     if value.is_empty() {
       Self(ResolveOptionsNoExternalInner::Empty)
     } else {
-      Self(ResolveOptionsNoExternalInner::Vec(UtilsFilter::new(vec![], value)))
+      Self(ResolveOptionsNoExternalInner::Vec(UtilsFilter::new(value)))
     }
   }
 

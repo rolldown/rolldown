@@ -324,7 +324,7 @@ fn hash_sourcemap_comment(
       let normalized_filename =
         String::from_utf8(normalized_filename).expect("placeholder normalization preserves UTF-8");
       hasher.update(b"\n//# sourceMappingURL=");
-      hasher.update(sourcemap_file_url(options, &normalized_filename, false)?.as_bytes());
+      hasher.update(sourcemap_file_url(options, &normalized_filename)?.as_bytes());
     }
   }
   Ok(())
@@ -368,14 +368,9 @@ fn finalize_sourcemaps(
             .sourcemap_filename
             .clone()
             .unwrap_or_else(|| concat_string!(asset.filename, ".map"));
-          if let Some(sourcemap_asset) = emit_sourcemap(
-            options,
-            &mut code,
-            map,
-            &map_filename,
-            ecma_meta.debug_id,
-            /*is_css*/ false,
-          )? {
+          if let Some(sourcemap_asset) =
+            emit_sourcemap(options, &mut code, map, &map_filename, ecma_meta.debug_id)?
+          {
             derived_assets.push(Asset {
               originate_from: None,
               content: sourcemap_asset.source,

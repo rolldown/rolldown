@@ -1,0 +1,25 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "empty",
+        "import": "./empty.cjs"
+      },
+      {
+        "name": "other",
+        "import": "./other.mjs"
+      }
+    ],
+    "preserveEntrySignatures": "strict",
+    "format": "cjs",
+    "exports": "auto",
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "group",
+          "test": "cjs_empty_entry_manual_group"
+        }
+      ]
+    }
+  }
+}

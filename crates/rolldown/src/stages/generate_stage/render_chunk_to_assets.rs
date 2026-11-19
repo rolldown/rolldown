@@ -4,9 +4,8 @@ use futures::future::try_join_all;
 use oxc_index::{IndexVec, index_vec};
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Asset, ChunkIdx, EmittedChunkInfo, InstantiationKind, ModuleIdx, ModuleRenderArgs,
-  ModuleRenderOutput, Output, OutputAsset, OutputChunk, SharedFileEmitter, SymbolRef,
-  UsedSymbolRefs,
+  Asset, ChunkIdx, EmittedChunkInfo, InstantiationKind, ModuleIdx, ModuleRenderOutput, Output,
+  OutputAsset, OutputChunk, SharedFileEmitter, SymbolRef, UsedSymbolRefs,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildResult, Diagnostics};
@@ -301,7 +300,12 @@ impl GenerateStage<'_> {
               .expect("should have ast");
             #[expect(clippy::bool_to_int_with_if)]
             let initial_indent = if needs_extra_indent { 1 } else { 0 };
-            Some(module.render(self.options, &ModuleRenderArgs::Ecma { ast }, initial_indent))
+            Some(crate::utils::render_ecma_module::render_normal_module(
+              module,
+              self.options,
+              ast,
+              initial_indent,
+            ))
             // `owned_ast` is dropped here, releasing this module's arena.
           })
           .collect::<Vec<_>>()

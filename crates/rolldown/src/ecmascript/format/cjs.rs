@@ -9,8 +9,7 @@ use crate::{
   utils::external_import_interop::{ChunkAssignments, chunk_external_interop_modes},
 };
 use itertools::Either;
-use rolldown_common::{AddonRenderContext, OutputExports, StaticImport};
-use rolldown_error::BuildDiagnostic;
+use rolldown_common::{AddonRenderContext, ExportsKind, OutputExports, StaticImport};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{
   concat_string,
@@ -25,7 +24,6 @@ pub fn render_cjs<'code>(
   ctx: &GenerateContext<'_>,
   addon_render_context: AddonRenderContext<'code>,
   module_sources: &'code RenderedModuleSources,
-  _warnings: &mut Vec<BuildDiagnostic>,
 ) -> SourceJoiner<'code> {
   let mut source_joiner = SourceJoiner::default();
   let AddonRenderContext { hashbang, banner, intro, outro, footer, directives } =
@@ -61,12 +59,10 @@ pub fn render_cjs<'code>(
 
     // Only `named` export can we render the namespace markers.
     if entry_module.exports_kind.is_esm() {
-      // Symbol.toStringTag should only be added to module facades (chunks that represent a specific module)
       if let Some(marker) = render_namespace_markers(
         ctx.options.es_module,
         has_default_export,
         &ctx.options.generated_code,
-        ctx.chunk.is_entry_point(),
       ) {
         source_joiner.append_source(marker);
       }
@@ -148,6 +144,16 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
           .get(&exporter_id)
           .expect("every chunk of `static_imports` is in `imports_from_other_chunks`");
         if items.is_empty() {
+          let forwards_cjs_entry =
+            ctx.chunk.entry_module(&ctx.link_output.module_table).is_some_and(|entry| {
+              matches!(entry.exports_kind, ExportsKind::CommonJs)
+                && ctx.link_output.metas[entry.idx].wrap_kind().is_none()
+                && ctx.chunk_graph.module_to_chunk[entry.idx] == Some(exporter_id)
+                && importee_chunk.entry_module_idx() == Some(entry.idx)
+            });
+          if forwards_cjs_entry {
+            s.push_str("module.exports = ");
+          }
           s.push_str(&require_path_str);
         } else {
           s.push_str("const ");

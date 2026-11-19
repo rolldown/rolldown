@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## empty.js
+
+```js
+require("./group.js");
+
+```
+
+## group.js
+
+```js
+// other.mjs
+const n = 19;
+Object.defineProperty(exports, "n", {
+	enumerable: true,
+	get: function() {
+		return n;
+	}
+});
+
+```
+
+## other.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_group = require("./group.js");
+exports.n = require_group.n;
+
+```

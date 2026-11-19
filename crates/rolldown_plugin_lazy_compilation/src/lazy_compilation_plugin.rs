@@ -9,7 +9,6 @@ pub type SharedLazyEntries = Arc<FxDashSet<ArcStr>>;
 
 #[derive(Clone)]
 pub struct LazyCompilationContext {
-  pub lazy_entries: SharedLazyEntries,
   pub fetched_entries: SharedLazyEntries,
 }
 
@@ -33,10 +32,7 @@ impl LazyCompilationPlugin {
   }
 
   pub fn context(&self) -> LazyCompilationContext {
-    LazyCompilationContext {
-      lazy_entries: Arc::clone(&self.lazy_entries),
-      fetched_entries: Arc::clone(&self.fetched_entries),
-    }
+    LazyCompilationContext { fetched_entries: Arc::clone(&self.fetched_entries) }
   }
 }
 

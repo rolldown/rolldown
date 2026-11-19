@@ -21,9 +21,9 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleId, ModuleIdx, ModuleNamespaceIncludedReason,
-  ModuleTag, ModuleTagBitSet, ModuleTagRegistry, ModuleType, NormalModule,
-  PostChunkOptimizationOperation, PreserveEntrySignatures, RetainedExportSymbols, SymbolRef,
-  UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
+  ModuleTag, ModuleTagBitSet, ModuleTagRegistry, ModuleType, NormalModule, OutputExports,
+  OutputFormat, PostChunkOptimizationOperation, PreserveEntrySignatures, RetainedExportSymbols,
+  SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_std_utils::PathBufExt as _;
@@ -129,7 +129,6 @@ impl GenerateStage<'_> {
               );
               meta
             },
-            bit: count,
             module: module.idx,
           },
           input_base.clone(),
@@ -876,6 +875,15 @@ impl GenerateStage<'_> {
       let is_user_defined_entry = self.link_output.user_defined_entry_modules.contains(&module.idx);
       let preserve_entry_signature = if is_user_defined_entry {
         match finalized_preserve_entry_signatures {
+          // A CJS default entry returns module.exports; extra exports would overwrite that value.
+          // See internal-docs/code-splitting/implementation.md.
+          _ if matches!(entry_point.kind, EntryPointKind::UserDefined)
+            && matches!(self.options.format, OutputFormat::Cjs)
+            && matches!(self.options.exports, OutputExports::Auto | OutputExports::Default)
+            && matches!(self.link_output.metas[module.idx].wrap_kind(), WrapKind::Cjs) =>
+          {
+            Some(PreserveEntrySignatures::Strict)
+          }
           PreserveEntrySignatures::AllowExtension
           | PreserveEntrySignatures::Strict
           | PreserveEntrySignatures::False => Some(finalized_preserve_entry_signatures),
@@ -907,7 +915,6 @@ impl GenerateStage<'_> {
             meta.set(ChunkMeta::EmittedChunk, entry_point.kind.is_emitted_user_defined());
             meta
           },
-          bit: count,
           module: module_idx,
         },
         input_base.clone(),
@@ -1153,13 +1160,13 @@ impl GenerateStage<'_> {
     module_is_assigned: &mut IndexBitSet<ModuleIdx>,
     chunk_graph: &mut ChunkGraph,
     input_base: &ArcStr,
-  ) -> Option<ChunkIdx> {
+  ) {
     let runtime_module_idx = self.link_output.runtime.id();
     if self.options.code_splitting.is_disabled()
       || !self.link_output.metas[runtime_module_idx].is_included
       || module_is_assigned.has_bit(runtime_module_idx)
     {
-      return None;
+      return;
     }
 
     debug_assert!(
@@ -1192,7 +1199,6 @@ impl GenerateStage<'_> {
       self.link_output.metas[runtime_module_idx].depended_runtime_helper,
     );
     module_is_assigned.set_bit(runtime_module_idx);
-    Some(runtime_chunk_idx)
   }
 
   // See internal-docs/code-splitting/implementation.md#reachability-propagation.

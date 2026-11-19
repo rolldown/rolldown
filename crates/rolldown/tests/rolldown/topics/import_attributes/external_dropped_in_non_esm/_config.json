@@ -1,0 +1,19 @@
+{
+  "_comment": "In a non-ESM format, a static import or re-export of an external loses its attributes and warns. `type: 'json'`, `import()` and a module that is tree-shaken away do not warn.",
+  "config": {
+    "format": "cjs",
+    "name": "lib",
+    "external": ["sheet", "named", "data", "lazy", "unused"],
+    "globals": {
+      "sheet": "Sheet",
+      "named": "Named",
+      "data": "Data"
+    }
+  },
+  "configVariants": [
+    {
+      "format": "iife"
+    }
+  ],
+  "expectExecuted": false
+}

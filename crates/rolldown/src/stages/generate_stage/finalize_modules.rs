@@ -49,7 +49,7 @@ impl GenerateStage<'_> {
           })
           .collect()
       };
-    // Off-strict, lowering never mutates the chunk graph, so the liveness guard cannot fire.
+    // Strict order lowering can leave assigned modules in removed chunks.
     let strict = self.options.is_strict_execution_order_enabled();
 
     let finalized = debug_span!("finalize_modules").in_scope(|| {
@@ -60,10 +60,12 @@ impl GenerateStage<'_> {
             let is_required_order_runtime =
               m.idx == self.link_output.runtime.id() && has_required_order_runtime;
             (self.link_output.metas[m.idx].is_included || is_required_order_runtime)
-              && (!strict || chunk_graph.module_is_in_live_chunk(*idx))
               // A record's modules are finalized per carrier, on clones, by
               // `finalize_inline_copies` below.
-              && !chunk_graph.module_to_chunk[*idx].is_some_and(|c| self.inline_state.is_record(c))
+              && chunk_graph.module_to_chunk[*idx].is_some_and(|chunk_idx| {
+                (!strict || chunk_graph.chunk_is_live(chunk_idx))
+                  && !self.inline_state.is_record(chunk_idx)
+              })
           })
         })
         .filter_map(|(idx, ast)| {

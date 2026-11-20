@@ -42,20 +42,22 @@ pub fn resolve_sources_against_module(map: &SourceMap, module_id: &str) -> Optio
   Some(map)
 }
 
-/// Returns whether a source names the module. It can be the module id, an absolute path that
-/// normalizes to it, or a relative path that [`resolve_sources_against_module`] resolves to it.
+/// Returns whether a source names the module. It can be the module id, or a path that equals the
+/// normalized module id: an absolute path after normalization, or a relative path that
+/// [`resolve_sources_against_module`] resolves.
 pub fn source_names_module(source: &str, source_root: Option<&str>, module_id: &str) -> bool {
   if source == module_id {
     return true;
   }
-  let module_path = Path::new(module_id);
+  // A `resolveId` result can keep `.` or `..` segments.
+  let module_path = Path::new(module_id).normalize();
   let source_path = Path::new(source);
   if source_path.is_absolute() {
-    return module_path.is_absolute() && source_path.normalize().as_ref() == module_path;
+    return module_path.is_absolute() && source_path.normalize() == module_path;
   }
   is_relative_path(source)
     && source_base(module_id, source_root)
-      .is_some_and(|base| base.join(source_path).into_normalized() == module_path)
+      .is_some_and(|base| base.join(source_path).into_normalized() == *module_path)
 }
 
 /// The directory that relative sources resolve against: `resolve(dirname(module_id), sourceRoot)`.
@@ -215,5 +217,22 @@ mod tests {
     }
     let other = format!("{dir}{sep}.{sep}y.js");
     assert!(!source_names_module(&other, None, id));
+  }
+
+  #[test]
+  fn source_names_module_normalizes_the_module_id() {
+    let dir = std::env::current_dir().unwrap().join("src");
+    let dir = dir.to_str().unwrap();
+    let sep = std::path::MAIN_SEPARATOR;
+    // A `resolveId` result can keep `..` segments.
+    let id = format!("{dir}{sep}..{sep}src{sep}x.js");
+    for (source, root) in
+      [("x.js", None), ("./x.js", None), ("../src/x.js", None), ("../x.js", Some("lib"))]
+    {
+      assert!(source_names_module(source, root, &id), "{source} {root:?}");
+    }
+    assert!(source_names_module(&format!("{dir}{sep}x.js"), None, &id));
+    assert!(!source_names_module("y.js", None, &id));
+    assert!(!source_names_module(&format!("{dir}{sep}y.js"), None, &id));
   }
 }

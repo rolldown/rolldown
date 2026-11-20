@@ -8,7 +8,8 @@ use rolldown_sourcemap::{SourceMap, source_names_module};
 /// A map with at most one source maps back to the transform input, so that source is the module.
 /// A map with more sources names its own files (e.g. it was chained from the input's sourcemap),
 /// so only sources that name the module get the module's content. `source_names_module` checks
-/// the module id, absolute path aliases, and relative paths that resolve to the id.
+/// the module id, absolute path aliases, and relative paths that resolve to the id, after
+/// normalization.
 /// See internal-docs/sourcemap-chain/implementation.md.
 pub fn normalize_transform_sourcemap(map: SourceMap, id: &str, original_code: &str) -> SourceMap {
   let mut parts = map.into_parts();

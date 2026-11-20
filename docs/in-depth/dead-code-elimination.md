@@ -311,7 +311,7 @@ The priority order for determining a module's side effects is:
 
 1. `transform` hook's returned `moduleSideEffects`
 2. `load` hook's returned `moduleSideEffects`
-3. `resolveId` hook's returned `moduleSideEffects`, from the resolution that first loaded the module. Later resolutions of the same id, including `this.resolve`, do not change it.
+3. `resolveId` hook's returned `moduleSideEffects`, from the resolution that first loaded the module.
 4. [`treeshake.moduleSideEffects`](/reference/InputOptions.treeshake#modulesideeffects) option
 5. `sideEffects` field in `package.json`, only when Rolldown has the `package.json` data of the module: when Rolldown's own resolver resolved it, or when the resolution that created it returned `packageJsonPath`
 

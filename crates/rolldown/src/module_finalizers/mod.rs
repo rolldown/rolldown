@@ -2328,13 +2328,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           }
         } else if let Some(export_all_decl) = top_stmt.as_export_all_declaration() {
           let rec_idx = self.ctx.module.imports[&export_all_decl.node_id()];
-          // "export * as ns from 'path'"
-          if let Some(_alias) = &export_all_decl.exported {
+          if export_all_decl.exported.is_some()
+            || self.ctx.module.import_records[rec_idx]
+              .meta
+              .contains(ImportRecordMeta::CjsStarNamedExports)
+          {
             if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
               return;
             }
           } else {
-            // "export * from 'path'"
             if self.ctx.order_wrap_state.is_consumer_local_reexport_route(self.ctx.idx) {
               return;
             }

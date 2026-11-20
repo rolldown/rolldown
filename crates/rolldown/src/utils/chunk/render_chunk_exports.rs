@@ -3,8 +3,9 @@ use std::fmt::Write as _;
 
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Chunk, ChunkKind, ExportsKind, GetLocalDb, IndexModules, ModuleIdx, NormalizedBundlerOptions,
-  OutputExports, OutputFormat, Platform, SymbolRef, SymbolRefDb, SymbolRefFlags, WrapKind,
+  Chunk, ChunkKind, ExportsKind, GetLocalDb, ImportRecordMeta, IndexModules, ModuleIdx,
+  NormalizedBundlerOptions, OutputExports, OutputFormat, Platform, SymbolRef, SymbolRefDb,
+  SymbolRefFlags, WrapKind,
 };
 use rolldown_utils::{
   concat_string,
@@ -246,14 +247,26 @@ pub fn render_chunk_exports(
               .symbol_db
               .canonical_name_for_or_original(ns_alias.namespace_ref, &chunk.canonical_names);
             let property_name = &ns_alias.property_name;
+            let owner = link_output.module_table[canonical_ref.owner].as_normal().unwrap();
+            let own_name = owner.named_imports.get(&canonical_ref).is_some_and(|import| {
+              let record = &owner.import_records[import.record_idx];
+              record.meta.contains(ImportRecordMeta::CjsStarNamedExports)
+            });
+            let ns_name = escape_non_ascii(canonical_ns_name, ascii_only);
             s.push_str("var ");
             s.push_str(&rendered_canonical_name);
             s.push_str(" = ");
-            s.push_str(&property_access_str_with_ascii(
-              &escape_non_ascii(canonical_ns_name, ascii_only),
-              property_name,
-              ascii_only,
-            ));
+            if own_name {
+              let key = to_ecma_string_literal(property_name, ascii_only);
+              let helper =
+                &chunk.canonical_names[&link_output.runtime.resolve_symbol("__hasOwnProp")];
+              write!(s, "{helper}.call({ns_name}, {key}) ? ")
+                .expect("writing to a string cannot fail");
+            }
+            s.push_str(&property_access_str_with_ascii(&ns_name, property_name, ascii_only));
+            if own_name {
+              s.push_str(" : void 0");
+            }
             s.push_str(";\n");
           }
 

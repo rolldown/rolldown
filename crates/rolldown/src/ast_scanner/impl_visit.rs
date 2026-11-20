@@ -331,6 +331,11 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
               .and_then(|(span, name)| Some((span, name.as_str()?)))
             {
               // `exports.test = ...`
+              if id.span.source_text(self.immutable_ctx.source) == "exports"
+                && let Some(name) = self.literal_cjs_export(node)
+              {
+                self.result.cjs_literal_export_names.push(name);
+              }
               let exported_symbol =
                 self.result.symbol_ref_db.create_facade_root_symbol_ref(export_name);
 
@@ -355,13 +360,20 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
           }
         }
         // `module.exports.test` is also considered as commonjs keyword
-        Expression::StaticMemberExpression(member_expr) => {
-          if let Expression::Identifier(ref id) = member_expr.object {
+        Expression::StaticMemberExpression(module_exports) => {
+          if let Expression::Identifier(ref id) = module_exports.object {
             if id.name == "module"
-              && member_expr.property.name == "exports"
+              && module_exports.property.name == "exports"
               && self.is_global_identifier_reference(id)
             {
               self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
+              if id.span.source_text(self.immutable_ctx.source) == "module"
+                && module_exports.span.start == id.span.start
+                && module_exports.property.span.source_text(self.immutable_ctx.source) == "exports"
+                && let Some(name) = self.literal_cjs_export(node)
+              {
+                self.result.cjs_literal_export_names.push(name);
+              }
             }
           }
         }

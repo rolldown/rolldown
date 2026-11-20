@@ -18,8 +18,8 @@ impl BindingTransformPluginContext {
 
   #[napi]
   // TODO: should use `&str` instead. (claude code) Attempt failed due to performs JSON serialization to generate new String
-  pub fn get_combined_sourcemap(&self) -> String {
-    self.inner.get_combined_sourcemap().to_json_string()
+  pub fn get_combined_sourcemap(&self) -> napi::Result<String> {
+    Ok(self.inner.get_combined_sourcemap()?.to_json_string())
   }
 
   #[napi]

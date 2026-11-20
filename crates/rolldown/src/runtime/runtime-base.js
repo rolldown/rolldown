@@ -48,14 +48,15 @@ export var __exportAll = (all, flags) => {
   }
   return flags & 2 ? target : Object.preventExtensions(target);
 };
+// See internal-docs/runtime-helpers/implementation.md
 export var __copyProps = (to, from, except, desc) => {
   if ((from && typeof from === 'object') || typeof from === 'function') {
-    for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
-      key = keys[i];
+    for (let key of __getOwnPropNames(from)) {
       if (!__hasOwnProp.call(to, key) && key !== except) {
+        desc = __getOwnPropDesc(from, key);
         __defProp(to, key, {
-          get: ((k) => from[k]).bind(null, key),
-          enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable,
+          get: desc && desc.get && !desc.configurable ? desc.get : () => from[key],
+          enumerable: !desc || desc.enumerable,
         });
       }
     }

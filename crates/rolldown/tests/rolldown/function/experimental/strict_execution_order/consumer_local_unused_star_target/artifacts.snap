@@ -48,7 +48,7 @@ var init_consumer = __esmMin((() => {
 // main.js
 function init_main() {
 	return (init_main = __esmMin((() => {
-		globalThis.out = (init_consumer(), __toCommonJS(consumer_exports)).out;
+		globalThis.out = (init_consumer(), __requireESM(consumer_exports)).out;
 	})))();
 }
 init_main();

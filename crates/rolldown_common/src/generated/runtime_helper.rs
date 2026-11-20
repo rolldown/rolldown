@@ -30,7 +30,8 @@ bitflags! {
     const ShareExport = 1 << 20;
     const ToBinaryNode = 1 << 21;
     const ToBinary = 1 << 22;
-    const Require = 1 << 23;
+    const RequireEsm = 1 << 23;
+    const Require = 1 << 24;
   }
 }
 
@@ -77,7 +78,7 @@ impl DependedRuntimeHelperMap {
   }
 }
 
-pub const RUNTIME_HELPER_NAMES: [&str; 24] = [
+pub const RUNTIME_HELPER_NAMES: [&str; 25] = [
   "__create",
   "__defProp",
   "__name",
@@ -101,5 +102,6 @@ pub const RUNTIME_HELPER_NAMES: [&str; 24] = [
   "__share_export",
   "__toBinaryNode",
   "__toBinary",
+  "__requireESM",
   "__require",
 ];

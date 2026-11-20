@@ -1,0 +1,99 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+import { createRequire } from "node:module";
+// HIDDEN [\0rolldown/runtime.js]
+// peer.cjs
+var require_peer = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.during = (init_esm(), __toCommonJS(esm_exports));
+}));
+// late.cjs
+var require_late = /* @__PURE__ */ __commonJSMin(((exports) => {
+	const key = "late";
+	exports[key] = 42;
+}));
+// esm.mjs
+var esm_exports = /* @__PURE__ */ __exportAll({ during: () => import_peer.during }, 2);
+var import_peer;
+var init_esm = __esmMin((() => {
+	import_peer = require_peer();
+	__reExport(esm_exports, /* @__PURE__ */ __toESM(require_late(), 1));
+}));
+// closed-peer.cjs
+var require_closed_peer = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.during = (init_closed(), __requireESM(closed_exports));
+}));
+// closed.mjs
+var closed_exports = /* @__PURE__ */ __exportAll({
+	during: () => import_closed_peer.during,
+	value: () => 42
+}), import_closed_peer;
+var init_closed = __esmMin((() => {
+	import_closed_peer = require_closed_peer();
+}));
+// entry.cjs
+var require_entry = /* @__PURE__ */ __commonJSMin((() => {
+	const assert = __require("node:assert/strict");
+	const ns = (init_esm(), __toCommonJS(esm_exports));
+	assert.strictEqual(ns.late, 42);
+	assert.notStrictEqual(ns, (init_esm(), __toCommonJS(esm_exports)));
+	const closed = (init_closed(), __requireESM(closed_exports));
+	assert.strictEqual(closed.value, 42);
+	assert.strictEqual(closed.during, closed);
+}));
+export default require_entry();
+export {};
+
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// peer.cjs
+var require_peer = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.during = (init_esm(), __toCommonJS(esm_exports));
+}));
+// late.cjs
+var require_late = /* @__PURE__ */ __commonJSMin(((exports) => {
+	const key = "late";
+	exports[key] = 42;
+}));
+// esm.mjs
+var esm_exports = /* @__PURE__ */ __exportAll({ during: () => import_peer.during }, 2);
+var import_peer;
+var init_esm = __esmMin((() => {
+	import_peer = require_peer();
+	__reExport(esm_exports, /* @__PURE__ */ __toESM(require_late(), 1));
+}));
+// closed-peer.cjs
+var require_closed_peer = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.during = (init_closed(), __requireESM(closed_exports));
+}));
+// closed.mjs
+var closed_exports = /* @__PURE__ */ __exportAll({
+	during: () => import_closed_peer.during,
+	value: () => 42
+}), import_closed_peer;
+var init_closed = __esmMin((() => {
+	import_closed_peer = require_closed_peer();
+}));
+// entry.cjs
+const assert = require("node:assert/strict");
+const ns = (init_esm(), __toCommonJS(esm_exports));
+assert.strictEqual(ns.late, 42);
+assert.notStrictEqual(ns, (init_esm(), __toCommonJS(esm_exports)));
+const closed = (init_closed(), __requireESM(closed_exports));
+assert.strictEqual(closed.value, 42);
+assert.strictEqual(closed.during, closed);
+
+```

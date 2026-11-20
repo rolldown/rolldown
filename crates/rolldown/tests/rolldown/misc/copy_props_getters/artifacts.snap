@@ -43,7 +43,7 @@ var init_esm = __esmMin((() => {
 }));
 // req.cjs
 var require_req = /* @__PURE__ */ __commonJSMin(((exports) => {
-	exports.esm = (init_esm(), __toCommonJS(esm_exports));
+	exports.esm = (init_esm(), __requireESM(esm_exports));
 }));
 // main.js
 var import_lib = /* @__PURE__ */ __toESM(require_lib());

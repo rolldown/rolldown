@@ -63,7 +63,7 @@ assert.deepStrictEqual(tags, [
 	"b",
 	"c"
 ]);
-const fromEsm = (init_esm(), __toCommonJS(esm_exports));
+const fromEsm = (init_esm(), __requireESM(esm_exports));
 assert.strictEqual(fromEsm.X, 1);
 assert.strictEqual(fromEsm.default, "esm-default");
 assert.strictEqual(fromEsm.__esModule, true);

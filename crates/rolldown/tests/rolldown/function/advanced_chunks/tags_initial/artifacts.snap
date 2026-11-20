@@ -15,7 +15,7 @@ var required$1;
 // main.js
 const required = (__esmMin((() => {
 	required$1 = "required-value";
-}))(), __toCommonJS(required_exports));
+}))(), __requireESM(required_exports));
 const lazy = import("./lazy.js");
 export { required as n, shared as r, lazy as t };
 

@@ -105,12 +105,12 @@ For each `(importer, stmt_info, rec)` triple this pass dispatches on `rec.kind`,
   //   → const f = require_foo();
   ```
 
-- **`Require`, `WrapKind::Esm`** — push `wrapper_ref` and importee namespace ref; push `__toCommonJS` unless `IsRequireUnused`.
+- **`Require`, `WrapKind::Esm`** — push `wrapper_ref` and the importee namespace ref. A used result requests `__requireESM` and records `UseCachedEsmRequire` when export names are fixed, the module has no explicit `module.exports` export, and the record is non-JSON. All other used results request `__toCommonJS`.
 
   ```js
   // foo.js (esm, wrapped): export const x = 1;
   // index.js: const f = require('./foo');
-  //   → const f = (init_foo(), __toCommonJS(foo_exports));
+  //   → const f = (init_foo(), __requireESM(foo_exports));
   ```
 
 - **`DynamicImport`, code-splitting on, CJS importee** — push `__toESM`; the chunk produced for the importee gets normalized at the call site.
@@ -212,7 +212,7 @@ builds emit a chunk no entry loads. The consumer then initializes the canonical 
 ## Implementation constraints
 
 - **Parallel mutation through raw-pointer casts.** The pass walks modules in parallel via `par_iter()` (which yields `&NormalModule`) but writes to two of the importer's fields, `stmt_infos` and `depended_runtime_helper`. Both are mutated through `addr_of!(...).cast_mut()`. Safety relies on per-module isolation: each closure mutates only the importer it was handed, and all cross-module reads (e.g. `self.module_table[importee_idx]`, `self.metas[..]`) touch other modules' state through `&self`. Don't widen the casts beyond those two fields without rebuilding the safety argument.
-- **Cross-record metadata writes are deferred.** The closure cannot mutate `importer.import_records[rec_id].meta` directly (the iterator gives `&NormalModule`), so the runtime-`__require` polyfill arm collects `(rec_id, ImportRecordMeta::CallRuntimeRequire)` into a per-module `record_meta_pairs` and applies the writes serially after the parallel walk joins. This is the only deferred write; if a future arm needs to mutate other per-record state, route it through the same defer list rather than introducing a second mechanism.
+- **Cross-record metadata writes are deferred.** The parallel walk borrows each importer as `&NormalModule`. It collects `CallRuntimeRequire` and `UseCachedEsmRequire` with their record IDs in the per-module `record_meta_pairs`. A serial pass applies the flags after the parallel walk joins.
 
 ## Notes for editors
 

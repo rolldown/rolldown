@@ -19,9 +19,9 @@ function bar$1() {
 	return "bar";
 }
 // entry.js
-const { foo } = __toCommonJS(foo_exports);
+const { foo } = __requireESM(foo_exports);
 assert.equal(foo(), "foo");
 assert.equal(bar(), "bar");
-const { bar } = __toCommonJS(bar_exports);
+const { bar } = __requireESM(bar_exports);
 
 ```

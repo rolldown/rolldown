@@ -1047,8 +1047,9 @@ export type AdvancedChunksGroup = CodeSplittingGroup;
 export type ExperimentalInlineCommonChunksOptions = {
   /**
    * Inline eligible automatic common chunks whose size is strictly smaller than this value.
-   * Size is the sum of their modules' transformed source sizes in bytes, before rendering,
-   * minification and compression.
+   * Size is the sum of their modules' sizes in bytes, before rendering, minification and
+   * compression. A module's size is the `declaredModuleSize` a `load` or `transform` hook
+   * returns, or else the size of its transformed source.
    *
    * Must be a non-negative safe integer or `Infinity`. `0` disables inlining.
    * `Infinity` removes the size limit.

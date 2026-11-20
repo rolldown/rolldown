@@ -344,6 +344,7 @@ function bindingifyTransformResult(
       bindingifySourcemap(prepareTransformHookSourcemap(map)) ??
       (mapHandledByNativeChannel || ret.map === null ? null : undefined),
     moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
+    declaredModuleSize: ret.declaredModuleSize,
     moduleType: ret.moduleType,
   };
 }
@@ -408,6 +409,7 @@ function bindingifyLoadResult(
     map: bindingifySourcemap(map),
     moduleType: ret.moduleType,
     moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
+    declaredModuleSize: ret.declaredModuleSize,
   };
 }
 

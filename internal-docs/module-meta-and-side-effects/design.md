@@ -213,7 +213,9 @@ not go back to a value that a hook returned before the write.
 [Reading `moduleSideEffects`](#reading-modulesideeffects) says what Rolldown uses then.
 
 Tree shaking uses the writes that are made up to the end of `buildEnd`. A
-write in a later hook, such as `renderChunk`, does not change tree shaking.
+write in a later hook, such as `renderChunk`, or in a `codeSplitting.groups`
+function, does not change tree shaking. Rolldown warns about the first such
+write in a build (`MODULE_SIDE_EFFECTS_WRITE_AFTER_BUILD_END`).
 
 In the example, `buildEnd` writes `false`, and tree shaking uses `false`
 (step 4). If it wrote `null`, the value would be "not decided" again.

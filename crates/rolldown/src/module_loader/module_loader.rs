@@ -182,6 +182,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     is_full_scan: bool,
     magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
   ) -> BuildResult<Self> {
+    plugin_driver.module_side_effects_overrides.start_scan();
     if is_full_scan {
       // TODO: drop the cache in another thread
       // Since we may also run a full fetch in hmr mode when multiple files changed at the same time, we need to clear the cache

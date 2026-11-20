@@ -191,6 +191,7 @@ impl BindingPluginContext {
   /// A write to `getModuleInfo(moduleId).moduleSideEffects`. `null` and `undefined` mean
   /// "not decided". After such a write, the module shows the value without hooks, so
   /// `callOption` runs here if that value needs it. Tree shaking then reuses the result.
+  /// Returns `true` when the caller should warn that the write does not change tree shaking.
   #[napi(
     ts_args_type = "moduleId: string, sideEffects: boolean | 'no-treeshake' | null | undefined, callOption?: (id: string, external: boolean) => boolean | undefined | null"
   )]
@@ -199,15 +200,15 @@ impl BindingPluginContext {
     module_id: String,
     side_effects: Option<BindingHookSideEffects>,
     call_option: Option<BindingModuleSideEffectsOptionFn<'_>>,
-  ) -> napi::Result<()> {
+  ) -> napi::Result<bool> {
     let side_effects = side_effects.map(TryInto::try_into).transpose()?;
-    self.inner.set_module_side_effects(&module_id, side_effects);
+    let should_warn = self.inner.set_module_side_effects_without_warning(&module_id, side_effects);
     if side_effects.is_none() && call_option.is_some() {
       self.inner.get_module_side_effects_or_call(&module_id, |raw_id, external| {
         call_module_side_effects_option(call_option.as_ref(), raw_id, external)
       })?;
     }
-    Ok(())
+    Ok(should_warn)
   }
 
   #[napi]

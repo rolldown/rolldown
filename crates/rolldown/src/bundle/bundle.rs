@@ -230,6 +230,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     }
 
     self.plugin_driver.build_end(None).await?;
+    self.plugin_driver.module_side_effects_overrides.mark_build_end_done();
     trace_action!(action::BuildEnd { action: "BuildEnd" });
 
     // `getModuleInfo(id).moduleSideEffects` writes in `buildEnd` reach tree shaking, and the

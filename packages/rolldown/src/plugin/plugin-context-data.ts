@@ -186,7 +186,11 @@ export class PluginContextData {
     return option;
   }
 
-  getModuleInfo(id: string, context: BindingPluginContext): ModuleInfo | null {
+  getModuleInfo(
+    id: string,
+    context: BindingPluginContext,
+    warnWriteAfterBuildEnd: (moduleId: string) => void,
+  ): ModuleInfo | null {
     const bindingInfo = context.getModuleInfo(id);
     if (bindingInfo) {
       return transformModuleInfo(
@@ -194,6 +198,7 @@ export class PluginContextData {
         this.getModuleOption(id),
         context,
         this.moduleSideEffectsOption,
+        warnWriteAfterBuildEnd,
       );
     }
     return null;

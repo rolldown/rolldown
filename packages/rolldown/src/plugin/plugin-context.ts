@@ -8,7 +8,12 @@ import type {
 } from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
-import { error, logCycleLoading, logFailedValidation } from '../log/logs';
+import {
+  error,
+  logCycleLoading,
+  logFailedValidation,
+  logModuleSideEffectsWriteAfterBuildEnd,
+} from '../log/logs';
 import type { OutputOptions } from '../options/output-options';
 import { parseAst } from '../parse-ast-index';
 import {
@@ -319,8 +324,17 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     private currentLoadingModule?: string,
   ) {
     super(onLog, logLevel, plugin.name!, watchMode);
-    this.getModuleInfo = (id: string) => this.data.getModuleInfo(id, context);
+    this.getModuleInfo = (id: string) =>
+      this.data.getModuleInfo(id, context, this.warnWriteAfterBuildEnd);
   }
+
+  /** @internal */
+  public warnWriteAfterBuildEnd = (moduleId: string): void => {
+    this.onLog(LOG_LEVEL_WARN, {
+      ...logModuleSideEffectsWriteAfterBuildEnd(moduleId),
+      plugin: this.pluginName,
+    });
+  };
 
   public async load(
     options: {
@@ -334,7 +348,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       this.onLog(LOG_LEVEL_WARN, logCycleLoading(this.pluginName, this.currentLoadingModule));
     }
     // resolveDependencies always true at rolldown
-    const moduleInfo = this.data.getModuleInfo(id, this.context);
+    const moduleInfo = this.data.getModuleInfo(id, this.context, this.warnWriteAfterBuildEnd);
     if (moduleInfo && moduleInfo.code !== null /* module already parsed */) {
       return moduleInfo;
     }
@@ -359,7 +373,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     }
 
     await loadPromise;
-    return this.data.getModuleInfo(id, this.context)!;
+    return this.data.getModuleInfo(id, this.context, this.warnWriteAfterBuildEnd)!;
   }
 
   public async resolve(

@@ -409,14 +409,16 @@ export function bindingifyModuleParsed(
 ): PluginHookWithBindingExt<BindingPluginOptions['moduleParsed']> {
   return bindingifyHook(args.plugin.moduleParsed, ({ handler }) => ({
     plugin: (ctx, moduleInfo) => {
+      const pluginContext = createPluginContext(args, ctx);
       return discardResult(
         handler.call(
-          createPluginContext(args, ctx),
+          pluginContext,
           transformModuleInfo(
             moduleInfo,
             args.pluginContextData.getModuleOption(moduleInfo.id),
             ctx,
             args.pluginContextData.moduleSideEffectsOption,
+            pluginContext.warnWriteAfterBuildEnd,
           ),
         ),
       );

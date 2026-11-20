@@ -1,13 +1,29 @@
-use std::sync::Arc;
+use std::sync::{
+  Arc,
+  atomic::{AtomicBool, Ordering},
+};
 
 use arcstr::ArcStr;
 use rolldown_utils::dashmap::FxDashMap;
 
 use crate::{
-  ImportAttributes, ModuleInfo, ModuleInfoSideEffects, NormalizedBundlerOptions,
+  ImportAttributes, LogWithoutPlugin, ModuleInfo, ModuleInfoSideEffects, NormalizedBundlerOptions,
   SideEffectsWithoutHook,
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
+
+/// The warning for the first write to `moduleSideEffects` after `buildEnd`. The JS side builds
+/// the same log in `logModuleSideEffectsWriteAfterBuildEnd`.
+pub fn log_module_side_effects_write_after_build_end(module_id: &str) -> LogWithoutPlugin {
+  LogWithoutPlugin {
+    code: Some("MODULE_SIDE_EFFECTS_WRITE_AFTER_BUILD_END".to_string()),
+    message: format!(
+      "`moduleSideEffects` of \"{module_id}\" was changed after the `buildEnd` hook. Tree shaking already used the value, so this change does not affect the output. Rolldown warns only about the first such change in a build."
+    ),
+    id: Some(module_id.to_string()),
+    ..Default::default()
+  }
+}
 
 pub type SharedModuleSideEffectsOverrides = Arc<ModuleSideEffectsOverrides>;
 
@@ -30,6 +46,10 @@ pub struct ModuleSideEffectsOverrides {
   /// Without `experimental.importAttributes`, the key is the raw id, so one write reaches every
   /// external with that raw id.
   key_by_raw_id: bool,
+  /// Tree shaking takes the writes after `buildEnd`. A later write in the same build does not
+  /// change it, so Rolldown warns about the first such write.
+  build_end_done: AtomicBool,
+  late_write_warned: AtomicBool,
 }
 
 impl ModuleSideEffectsOverrides {
@@ -38,7 +58,29 @@ impl ModuleSideEffectsOverrides {
       values: FxDashMap::default(),
       option_fn_results: FxDashMap::default(),
       key_by_raw_id: !import_attributes_enabled,
+      build_end_done: AtomicBool::new(false),
+      late_write_warned: AtomicBool::new(false),
     }
+  }
+
+  /// All `buildEnd` hooks of the build finished.
+  pub fn mark_build_end_done(&self) {
+    self.build_end_done.store(true, Ordering::Release);
+  }
+
+  /// A scan starts, so writes reach tree shaking again.
+  pub fn start_scan(&self) {
+    self.build_end_done.store(false, Ordering::Release);
+    self.late_write_warned.store(false, Ordering::Release);
+  }
+
+  /// `true` for the first write after `buildEnd` in a build. The caller warns about it.
+  pub fn should_warn_late_write(&self) -> bool {
+    self.build_end_done.load(Ordering::Acquire)
+      && self
+        .late_write_warned
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        .is_ok()
   }
 
   fn key<'a>(&self, module_id: &'a str) -> &'a str {

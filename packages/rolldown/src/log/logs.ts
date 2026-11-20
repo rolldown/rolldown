@@ -7,6 +7,7 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   INPUT_HOOK_IN_OUTPUT_PLUGIN = 'INPUT_HOOK_IN_OUTPUT_PLUGIN',
   CYCLE_LOADING = 'CYCLE_LOADING',
   MISSING_CODE_SPLITTING_GROUP_DEBUG_NAME = 'MISSING_CODE_SPLITTING_GROUP_DEBUG_NAME',
+  MODULE_SIDE_EFFECTS_WRITE_AFTER_BUILD_END = 'MODULE_SIDE_EFFECTS_WRITE_AFTER_BUILD_END',
   PARSE_ERROR = 'PARSE_ERROR',
   NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER',
   VALIDATION_ERROR = 'VALIDATION_ERROR';
@@ -52,6 +53,15 @@ export function logMissingCodeSplittingGroupDebugName(groupPath: string): Rolldo
   return {
     code: MISSING_CODE_SPLITTING_GROUP_DEBUG_NAME,
     message: `\`${groupPath}.name\` is a function. Set \`${groupPath}.debugName\` so the bundler timing report can identify this group.`,
+  };
+}
+
+/** The same log as `log_module_side_effects_write_after_build_end` in Rust. */
+export function logModuleSideEffectsWriteAfterBuildEnd(moduleId: string): RolldownLog {
+  return {
+    code: MODULE_SIDE_EFFECTS_WRITE_AFTER_BUILD_END,
+    id: moduleId,
+    message: `\`moduleSideEffects\` of "${moduleId}" was changed after the \`buildEnd\` hook. Tree shaking already used the value, so this change does not affect the output. Rolldown warns only about the first such change in a build.`,
   };
 }
 

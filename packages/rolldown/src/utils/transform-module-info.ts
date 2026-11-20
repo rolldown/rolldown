@@ -3,7 +3,10 @@ import type { JsModuleOptions } from '../plugin/plugin-context-data';
 import type { ModuleInfo } from '../types/module-info';
 import { unsupported } from './misc';
 
-/** The binding calls behind `ModuleInfo.moduleSideEffects`. Only Rust keeps the value. */
+/**
+ * The binding calls behind `ModuleInfo.moduleSideEffects`. Only Rust keeps the value.
+ * `setModuleSideEffects` returns `true` for the first write after `buildEnd` in a build.
+ */
 export type ModuleSideEffectsAccess = Pick<
   BindingPluginContext,
   'getModuleSideEffects' | 'setModuleSideEffects'
@@ -17,6 +20,7 @@ export function transformModuleInfo(
   option: JsModuleOptions,
   access: ModuleSideEffectsAccess,
   callOption: ModuleSideEffectsOptionFn | undefined,
+  warnWriteAfterBuildEnd: (moduleId: string) => void,
 ): ModuleInfo {
   const id = info.id;
   return {
@@ -40,7 +44,10 @@ export function transformModuleInfo(
       return access.getModuleSideEffects(id, callOption);
     },
     set moduleSideEffects(value: ModuleInfo['moduleSideEffects']) {
-      access.setModuleSideEffects(id, value, callOption);
+      // Tree shaking takes the writes after `buildEnd`, so a later write changes nothing.
+      if (access.setModuleSideEffects(id, value, callOption)) {
+        warnWriteAfterBuildEnd(id);
+      }
     },
   };
 }

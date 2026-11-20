@@ -133,8 +133,19 @@ impl PluginContext {
   }
 
   /// Like a JS write to `getModuleInfo(module_id).moduleSideEffects`. `None` is a write of `null`.
+  /// The first write after `buildEnd` in a build logs a warning.
   pub fn set_module_side_effects(&self, module_id: &str, side_effects: Option<HookSideEffects>) {
     call_native_only!(self, "set_module_side_effects", ctx => ctx.set_module_side_effects(module_id, side_effects));
+  }
+
+  /// Like `set_module_side_effects`, but returns `true` for the first write after `buildEnd`
+  /// instead of warning, so the caller can warn.
+  pub fn set_module_side_effects_without_warning(
+    &self,
+    module_id: &str,
+    side_effects: Option<HookSideEffects>,
+  ) -> bool {
+    call_native_only!(self, "set_module_side_effects_without_warning", ctx => ctx.set_module_side_effects_without_warning(module_id, side_effects))
   }
 
   pub fn cwd(&self) -> &PathBuf {

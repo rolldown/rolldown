@@ -5,7 +5,7 @@ use std::{
 };
 
 use arcstr::ArcStr;
-use rolldown::{Bundler, BundlerOptions, InputItem};
+use rolldown::{Bundler, BundlerOptions, InputItem, Log, LogLevel, OnLog};
 use rolldown_common::{
   InnerOptions, ModuleSideEffects, Output, TreeshakeOptions,
   side_effects::{DeterminedSideEffects, HookSideEffects},
@@ -13,8 +13,8 @@ use rolldown_common::{
 use rolldown_error::BuildResult;
 use rolldown_plugin::{
   HookBuildEndArgs, HookLoadArgs, HookLoadOutput, HookLoadReturn, HookNoopReturn,
-  HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, HookTransformArgs,
-  HookTransformOutput, HookTransformReturn, HookUsage, Plugin, PluginContext,
+  HookRenderStartArgs, HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn,
+  HookTransformArgs, HookTransformOutput, HookTransformReturn, HookUsage, Plugin, PluginContext,
   SharedLoadPluginContext, SharedTransformPluginContext,
 };
 use rolldown_std_utils::PathExt as _;
@@ -224,4 +224,82 @@ async fn option_function_runs_only_when_needed() {
   let mut calls = calls.lock().unwrap().clone();
   calls.sort();
   assert_eq!(calls, ["entry.js", "null-write.js"]);
+}
+
+/// Writes in `renderStart`, after tree shaking took the writes.
+#[derive(Debug)]
+struct LateWriter {
+  cwd: PathBuf,
+}
+
+impl Plugin for LateWriter {
+  fn name(&self) -> Cow<'static, str> {
+    "late-writer".into()
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::RenderStart
+  }
+
+  async fn render_start(
+    &self,
+    ctx: &PluginContext,
+    _args: &HookRenderStartArgs<'_>,
+  ) -> HookNoopReturn {
+    for name in ["build-end.js", "null-write.js"] {
+      ctx
+        .set_module_side_effects(self.cwd.join(name).expect_to_str(), Some(HookSideEffects::False));
+    }
+    Ok(())
+  }
+}
+
+/// The writes of `Writer` up to `buildEnd` do not warn. Of the two writes of `LateWriter`, only
+/// the first one warns.
+#[tokio::test(flavor = "multi_thread")]
+async fn only_the_first_write_after_build_end_warns() {
+  let cwd = std::env::current_dir().unwrap();
+  let warnings = Arc::new(Mutex::new(vec![]));
+  let on_log = {
+    let warnings = Arc::clone(&warnings);
+    OnLog::new(Arc::new(move |level: LogLevel, log: Log| {
+      let warnings = Arc::clone(&warnings);
+      Box::pin(async move {
+        if matches!(level, LogLevel::Warn)
+          && log.code.as_deref() == Some("MODULE_SIDE_EFFECTS_WRITE_AFTER_BUILD_END")
+        {
+          warnings.lock().unwrap().push((log.plugin, log.id));
+        }
+        Ok(())
+      })
+    }))
+  };
+  let mut bundler = Bundler::with_plugins(
+    BundlerOptions {
+      input: Some(vec![InputItem {
+        name: Some("entry".to_string()),
+        import: cwd.join("entry.js").expect_to_str().to_string(),
+      }]),
+      on_log: Some(on_log),
+      ..Default::default()
+    },
+    vec![
+      Plugin::new_shared(Writer { cwd: cwd.clone() }),
+      Plugin::new_shared(LateWriter { cwd: cwd.clone() }),
+    ],
+  )
+  .unwrap();
+  let output = bundler.generate().await.unwrap();
+  let code = output
+    .assets
+    .iter()
+    .find_map(|output| match output {
+      Output::Chunk(chunk) => Some(chunk.code.clone()),
+      Output::Asset(_) => None,
+    })
+    .expect("the build should emit a chunk");
+  // The late `false` does not change tree shaking.
+  assert!(code.contains("BUILD_END"), "{code}");
+  let first = cwd.join("build-end.js").expect_to_str().to_string();
+  assert_eq!(*warnings.lock().unwrap(), vec![(Some("late-writer".to_string()), Some(first))]);
 }

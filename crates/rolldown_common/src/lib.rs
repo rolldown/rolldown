@@ -190,7 +190,7 @@ pub use crate::{
   types::module_render_output::ModuleRenderOutput,
   types::module_side_effects_overrides::{
     ModuleSideEffectsOverrides, OptionFnResult, SharedModuleSideEffectsOverrides,
-    WrittenSideEffects,
+    WrittenSideEffects, log_module_side_effects_write_after_build_end,
   },
   types::module_table::{IndexModules, ModuleTable},
   types::module_tag::{ModuleTag, ModuleTagBitSet, ModuleTagRegistry},

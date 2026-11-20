@@ -47,12 +47,12 @@ Call `getRuntimeSupport()` from `rolldown/experimental` to check the loaded
 build instead of guessing from environment variables. Its field names are in
 parentheses below.
 
-| Feature (field)                                 | Native | Threaded WASI                  | Threadless WASI             |
-| ----------------------------------------------- | ------ | ------------------------------ | --------------------------- |
-| One-shot `rolldown()` / `build()`               | Yes    | Yes                            | Yes                         |
-| `dev()` (`dev`)                                 | Yes    | Yes on `MultiThread` (default) | No                          |
-| `watch()` (`watch`)                             | Yes    | No                             | No                          |
-| `@rolldown/browser/workerd` (`workerd`)         | No     | No                             | Through `@rolldown/browser` |
+| Feature (field)                         | Native | Threaded WASI                  | Threadless WASI             |
+| --------------------------------------- | ------ | ------------------------------ | --------------------------- |
+| One-shot `rolldown()` / `build()`       | Yes    | Yes                            | Yes                         |
+| `dev()` (`dev`)                         | Yes    | Yes on `MultiThread` (default) | No                          |
+| `watch()` (`watch`)                     | Yes    | No                             | No                          |
+| `@rolldown/browser/workerd` (`workerd`) | No     | No                             | Through `@rolldown/browser` |
 
 `threadlessWasi` is true when the loaded binding is the threadless build.
 Unsupported features throw `ERR_ROLLDOWN_UNSUPPORTED_RUNTIME_FEATURE` before

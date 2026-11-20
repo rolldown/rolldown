@@ -286,11 +286,7 @@ async function runCase(mode, fixture) {
       const { getRuntimeSupport } = await import('rolldown/experimental');
       const support = getRuntimeSupport();
       // Watch mode runs only on the native binary; `dev` needs MultiThread.
-      facts.target = support.watch
-        ? 'native'
-        : support.threadlessWasi
-          ? 'wasi'
-          : 'wasi-threads';
+      facts.target = support.watch ? 'native' : support.threadlessWasi ? 'wasi' : 'wasi-threads';
       facts.flavor = support.dev ? 'MultiThread' : 'CurrentThread';
     } catch (error) {
       facts.error = String(error?.message ?? error);

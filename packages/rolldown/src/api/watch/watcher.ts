@@ -56,11 +56,7 @@ class Watcher {
   emitter: WatcherEmitter;
   releaseOptionBoxes: (() => void)[];
 
-  constructor(
-    emitter: WatcherEmitter,
-    inner: BindingWatcher,
-    releaseOptionBoxes: (() => void)[],
-  ) {
+  constructor(emitter: WatcherEmitter, inner: BindingWatcher, releaseOptionBoxes: (() => void)[]) {
     this.closed = false;
     this.inner = inner;
     this.emitter = emitter;

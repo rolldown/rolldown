@@ -1,15 +1,16 @@
 use std::{borrow::Cow, path::Path};
 
 use rolldown_common::{
-  ModuleIdx, ModuleType, NormalizedBundlerOptions, ResolvedId, SourcemapChainElement, StrOrBytes,
-  side_effects::HookSideEffects,
+  EmittedAsset, ModuleIdx, ModuleType, NormalizedBundlerOptions, ResolvedId, SourcemapChainElement,
+  StrOrBytes, side_effects::HookSideEffects,
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
+use rolldown_utils::url::clean_url;
 use rustc_hash::FxHashMap;
 
 #[expect(clippy::too_many_arguments)]
-pub async fn load_source<Fs: FileSystem + 'static>(
+pub async fn load_source<Fs: FileSystem + Clone + 'static>(
   plugin_driver: &PluginDriver,
   resolved_id: &ResolvedId,
   fs: Fs,
@@ -43,14 +44,14 @@ pub async fn load_source<Fs: FileSystem + 'static>(
       .unwrap_or_default()
   };
 
-  // If we're given a specific module type to use and the load hook did not provide a
-  // module_type, apply the asserted type. When a plugin's load hook returns a module_type
-  // (e.g. the asset module plugin returns Js after handling the asset), we trust the plugin's
-  // decision, even if it also returned source.
-  if let Some(asserted) = asserted_module_type {
-    if maybe_module_type.is_none() {
-      maybe_module_type = Some(asserted.clone());
-    }
+  // A plugin can load a `new URL()` target as code; the URL still needs its file.
+  // See internal-docs/plugin-asset-module/implementation.md
+  if matches!(asserted_module_type, Some(ModuleType::Asset))
+    && resolved_id.id.is_path()
+    && fs.exists(Path::new(clean_url(resolved_id.id.raw_id())))
+    && plugin_driver.file_emitter.file_ref_for_module(&resolved_id.id).is_none()
+  {
+    emit_new_url_asset(plugin_driver, options, &resolved_id.id, fs.clone()).await?;
   }
   // A `type` attribute with a built-in meaning beats the file extension, but not the plugin.
   let attributes_module_type = resolved_id.attributes.module_type();
@@ -153,6 +154,36 @@ pub async fn load_source<Fs: FileSystem + 'static>(
       Ok((read_file_by_module_type(Path::new(raw_id), &ty, fs).await?, ty))
     }
   }
+}
+
+/// Emit `id` as an asset and associate it with the module, as the builtin asset-module plugin
+/// would have done if a user plugin had not loaded the module first.
+async fn emit_new_url_asset<Fs: FileSystem + 'static>(
+  plugin_driver: &PluginDriver,
+  options: &NormalizedBundlerOptions,
+  id: &str,
+  fs: Fs,
+) -> anyhow::Result<()> {
+  let clean_id = clean_url(id);
+  // The file is read from disk here, so watch it like the asset plugin does.
+  plugin_driver.watch_files.insert(clean_id.into());
+  let path = Path::new(clean_id).to_path_buf();
+  let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("asset").to_string();
+  let original_file_name =
+    path.strip_prefix(&options.cwd).unwrap_or(&path).to_string_lossy().into_owned();
+  let source = read_file_by_module_type(&path, &ModuleType::Binary, fs).await?;
+  let file = EmittedAsset {
+    name: Some(file_name),
+    original_file_name: Some(original_file_name),
+    source,
+    ..Default::default()
+  };
+  let asset_filename = options.asset_filename_with_file(&file).await?;
+  let sanitized_file_name = options.sanitize_file_name_with_file(&file).await?;
+  let reference_id =
+    plugin_driver.file_emitter.emit_file(file, asset_filename, sanitized_file_name)?;
+  plugin_driver.file_emitter.associate_module_with_file_ref(id, &reference_id);
+  Ok(())
 }
 
 /// ref: https://github.com/evanw/esbuild/blob/9c13ae1f06dfa909eb4a53882e3b7e4216a503fe/internal/bundler/bundler.go#L1161-L1183

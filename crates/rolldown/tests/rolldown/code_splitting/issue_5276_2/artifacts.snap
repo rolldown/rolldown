@@ -17,8 +17,8 @@ export { imp_exports as n, imp22 as t };
 ## main.js
 
 ```js
-import "./imp.js";
 import assert from "node:assert";
+import "./imp.js";
 // main.js
 assert.strictEqual(2, 2);
 assert.strictEqual(22, 22);
@@ -60,8 +60,8 @@ Object.defineProperty(exports, "imp_exports", {
 
 ```js
 const require_rolldown_runtime = require("./rolldown-runtime.js");
-require("./imp.js");
 let node_assert = require("node:assert");
+require("./imp.js");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
 // main.js
 node_assert.default.strictEqual(2, 2);

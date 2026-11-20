@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { ModuleInfo, RolldownWatcher, WatchOptions } from 'rolldown';
 import { rolldown, watch as _watch } from 'rolldown';
+import { esmExternalRequirePlugin } from 'rolldown/plugins';
 import { sleep } from 'rolldown-tests/utils';
 import { test, vi } from 'vitest';
 
@@ -1489,6 +1490,49 @@ test.concurrent(
   },
 );
 
+// https://github.com/rolldown/rolldown/issues/9922
+test.concurrent(
+  'watch should fail when onLog rejects a native plugin warning',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('watch-native-plugin-warning-error', retryCount, {
+      'main.js': `const ext = require('ext');\nconsole.log(ext);`,
+    });
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const buildEndFn = vi.fn();
+    const watcher = watch({
+      input: path.join(dir, 'main.js'),
+      output: { dir: path.join(dir, 'dist') },
+      external: ['ext'],
+      plugins: [
+        esmExternalRequirePlugin({ external: ['ext'] }),
+        {
+          name: 'observe-build-end',
+          buildEnd(error) {
+            buildEndFn(error?.message);
+          },
+        },
+      ],
+      onLog(_level, log) {
+        if (log.message.includes('duplicate external')) {
+          throw new Error('convert log to error');
+        }
+      },
+    });
+    onTestFinished(async () => await watcher.close());
+
+    await expect(waitBuildFinished(watcher)).rejects.toThrow('convert log to error');
+    expect(buildEndFn).toHaveBeenCalledWith(expect.stringContaining('convert log to error'));
+    expect(fs.existsSync(path.join(dir, 'dist'))).toBe(false);
+  },
+);
+
 // https://github.com/rolldown/rolldown/issues/8912
 test.concurrent(
   'watch should not emit false FILE_NAME_CONFLICT on rebuild',
@@ -1857,5 +1901,55 @@ test.concurrent(
     releaseHook();
     await closed;
     expect(resolved).toBe(true);
+  },
+);
+
+// https://github.com/rolldown/rolldown/issues/11223
+test.concurrent(
+  'a later build does not keep the `moduleSideEffects: false` of an earlier build',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, output, dir } = createTestInputAndOutput('watch-reset-side-effects', retryCount);
+    onTestFinished(() => {
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+    const source = path.join(dir, 'mod-source.js');
+    fs.writeFileSync(input, `import 'virtual:mod'`);
+    fs.writeFileSync(source, 'export const value = 1');
+
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'toggle-side-effects',
+          resolveId: (id) => (id === 'virtual:mod' ? '\0virtual:mod' : undefined),
+          load(id) {
+            if (id !== '\0virtual:mod') return;
+            this.addWatchFile(source);
+            return fs.readFileSync(source, 'utf8');
+          },
+          transform(code, id) {
+            if (id !== '\0virtual:mod') return;
+            // No opinion once the module has a top-level effect.
+            return code.includes('EFFECT') ? { code } : { code, moduleSideEffects: false };
+          },
+        },
+      ],
+    });
+
+    try {
+      await waitBuildFinished(watcher);
+      expect(fs.readFileSync(output, 'utf-8')).not.toContain('EFFECT');
+
+      await editFile(source, 'globalThis.EFFECT = true\nexport const value = 1');
+      await waitBuildFinished(watcher);
+      expect(fs.readFileSync(output, 'utf-8')).toContain('EFFECT');
+    } finally {
+      await watcher.close();
+    }
   },
 );

@@ -10,6 +10,7 @@ import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
 // leaflet.js
 var require_leaflet = /* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+	var define;
 	(function(global, factory) {
 		typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.leaflet = {}));
 	})(this$1, function(exports) {

@@ -23,10 +23,6 @@ impl SymbolRef {
     db[self.owner].unpack_ref().ast_scopes.symbol_name(self.symbol)
   }
 
-  pub fn set_name(&self, db: &mut SymbolRefDb, name: &str) {
-    db[self.owner].unpack_ref_mut().ast_scopes.set_symbol_name(self.symbol, name);
-  }
-
   /// Not all symbols have flags info, we only care about part of them.
   /// If you want to ensure the flags info exists, use `flags_mut` instead.
   pub fn flags<'db, T: GetLocalDb>(&self, db: &'db T) -> Option<&'db SymbolRefFlags> {
@@ -41,10 +37,21 @@ impl SymbolRef {
     db.local_db(self.owner).ast_scopes.scoping().symbol_flags(self.symbol).is_const_variable()
   }
 
-  /// Whether the binding is guaranteed never reassigned. A missing flag means we don't know,
-  /// which is treated conservatively as "possibly reassigned" (`false`).
+  /// Whether a function declaration declares the binding, so it is initialized before any code
+  /// of its module runs.
+  pub fn is_declared_by_function(&self, db: &SymbolRefDb) -> bool {
+    db.local_db(self.owner).ast_scopes.scoping().symbol_flags(self.symbol).is_function()
+  }
+
+  /// Whether every read of the binding sees the value its declaration gives it: it is never
+  /// reassigned, and no code reads it before the declaration assigns it. Direct `eval` can still
+  /// assign it without a write reference; see `eval_can_assign` in the `rolldown` crate. A missing
+  /// flag means we don't know, which is treated conservatively as "possibly reassigned" (`false`).
   pub fn is_not_reassigned(&self, db: &SymbolRefDb) -> bool {
-    self.flags(db).is_some_and(|flags| flags.contains(SymbolRefFlags::IsNotReassigned))
+    self.flags(db).is_some_and(|flags| {
+      flags.contains(SymbolRefFlags::IsNotReassigned)
+        && !flags.contains(SymbolRefFlags::ReadBeforeAssigned)
+    })
   }
 
   pub fn is_side_effect_free_function(&self, db: &SymbolRefDb, modules: &IndexModules) -> bool {

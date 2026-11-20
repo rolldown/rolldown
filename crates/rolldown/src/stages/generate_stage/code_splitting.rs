@@ -21,9 +21,9 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleId, ModuleIdx, ModuleNamespaceIncludedReason,
-  ModuleTag, ModuleTagBitSet, ModuleTagRegistry, ModuleType, NormalModule,
-  PostChunkOptimizationOperation, PreserveEntrySignatures, RetainedExportSymbols, SymbolRef,
-  UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
+  ModuleTag, ModuleTagBitSet, ModuleTagRegistry, ModuleType, NormalModule, OutputExports,
+  OutputFormat, PostChunkOptimizationOperation, PreserveEntrySignatures, RetainedExportSymbols,
+  SymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_std_utils::PathBufExt as _;
@@ -88,7 +88,12 @@ impl GenerateStage<'_> {
         .len()
         .try_into()
         .expect("Entry length exceeds u32::MAX");
-      for (idx, module) in self.link_output.module_table.modules.iter_enumerated() {
+      // Module indices follow the order in which modules finished loading, so the chunks are created
+      // in execution order instead. Their order decides which of two identical chunks keeps the
+      // hashed file name.
+      let mut modules = self.link_output.module_table.modules.iter_enumerated().collect::<Vec<_>>();
+      modules.sort_by_key(|(_, module)| module.exec_order());
+      for (idx, module) in modules {
         let Module::Normal(module) = module else {
           continue;
         };
@@ -124,7 +129,6 @@ impl GenerateStage<'_> {
               );
               meta
             },
-            bit: count,
             module: module.idx,
           },
           input_base.clone(),
@@ -188,7 +192,8 @@ impl GenerateStage<'_> {
   /// Assign each live chunk a render `exec_order` from the execution order of its lead module, so
   /// that both `sorted_chunk_idx_vec` and the cross-chunk import sort (`compute_cross_chunk_links`)
   /// reflect real evaluation order. A `Common` chunk keys on `modules[0]` — the lowest-`exec_order`
-  /// module after `sort_chunk_modules`.
+  /// module after `sort_chunk_modules`. An `EntryPoint` chunk keys on `entry_chunk_exec_order`,
+  /// which skips the runtime module, so hosting the runtime does not move it.
   ///
   /// This keying is sensitive to chunk *membership*: the runtime module has `exec_order` 0 and
   /// `sort_chunk_modules` always places it first, so any chunk hosting the runtime keys on 0. The
@@ -218,6 +223,7 @@ impl GenerateStage<'_> {
   /// and guarantees entry chunks precede others, static chunks precede dynamic ones, and every chunk
   /// has a stable order at the per-entry-chunk level.
   pub(super) fn assign_chunk_exec_orders(&self, chunk_graph: &mut ChunkGraph) {
+    let module_to_chunk = &chunk_graph.module_to_chunk;
     chunk_graph
       .chunk_table
       .iter_mut_enumerated()
@@ -225,7 +231,7 @@ impl GenerateStage<'_> {
         chunk_graph.post_chunk_optimization_operations.get(chunk_idx).copied()
           != Some(PostChunkOptimizationOperation::Removed)
       })
-      .sorted_by(|(_ai, a), (_bi, b)| {
+      .sorted_by(|(ai, a), (bi, b)| {
         let a_should_be_first = Ordering::Less;
         let b_should_be_first = Ordering::Greater;
 
@@ -233,11 +239,12 @@ impl GenerateStage<'_> {
           (
             ChunkKind::EntryPoint { module: a_module_id, .. },
             ChunkKind::EntryPoint { module: b_module_id, .. },
-          ) => self.link_output.module_table[*a_module_id]
-            .exec_order()
-            .cmp(&self.link_output.module_table[*b_module_id].exec_order()),
+          ) => self
+            .entry_chunk_exec_order(module_to_chunk, *ai, a, *a_module_id)
+            .cmp(&self.entry_chunk_exec_order(module_to_chunk, *bi, b, *b_module_id)),
           (ChunkKind::EntryPoint { module: a_module_id, .. }, ChunkKind::Common) => {
-            let a_module_exec_order = self.link_output.module_table[*a_module_id].exec_order();
+            let a_module_exec_order =
+              self.entry_chunk_exec_order(module_to_chunk, *ai, a, *a_module_id);
             let b_chunk_first_module_exec_order =
               self.link_output.module_table[b.modules[0]].exec_order();
             if a_module_exec_order == b_chunk_first_module_exec_order {
@@ -247,7 +254,8 @@ impl GenerateStage<'_> {
             }
           }
           (ChunkKind::Common, ChunkKind::EntryPoint { module: b_module_id, .. }) => {
-            let b_module_exec_order = self.link_output.module_table[*b_module_id].exec_order();
+            let b_module_exec_order =
+              self.entry_chunk_exec_order(module_to_chunk, *bi, b, *b_module_id);
             let a_chunk_first_module_exec_order =
               self.link_output.module_table[a.modules[0]].exec_order();
             if a_chunk_first_module_exec_order == b_module_exec_order {
@@ -269,6 +277,31 @@ impl GenerateStage<'_> {
       .for_each(|(i, (_chunk_idx, chunk))| {
         chunk.exec_order = i.try_into().expect("Too many chunks, u32 overflowed.");
       });
+  }
+
+  /// The key of an `EntryPoint` chunk in `assign_chunk_exec_orders`: the earlier of its entry
+  /// module and its first non-runtime module. A chunk whose entry module is in another chunk keys
+  /// on its entry module.
+  pub(super) fn entry_chunk_exec_order(
+    &self,
+    module_to_chunk: &IndexVec<ModuleIdx, Option<ChunkIdx>>,
+    chunk_idx: ChunkIdx,
+    chunk: &Chunk,
+    entry_module_idx: ModuleIdx,
+  ) -> u32 {
+    let module_table = &self.link_output.module_table;
+    let runtime_idx = self.link_output.runtime.id();
+    let entry_exec_order = module_table[entry_module_idx].exec_order();
+    if module_to_chunk[entry_module_idx] != Some(chunk_idx) {
+      return entry_exec_order;
+    }
+    chunk
+      .modules
+      .iter()
+      .find(|&&module_idx| module_idx != runtime_idx)
+      .map_or(entry_exec_order, |&first_module_idx| {
+        entry_exec_order.min(module_table[first_module_idx].exec_order())
+      })
   }
 
   /// Merge symbols that import the same binding from the same external module, now that chunk
@@ -842,6 +875,15 @@ impl GenerateStage<'_> {
       let is_user_defined_entry = self.link_output.user_defined_entry_modules.contains(&module.idx);
       let preserve_entry_signature = if is_user_defined_entry {
         match finalized_preserve_entry_signatures {
+          // A CJS default entry returns module.exports; extra exports would overwrite that value.
+          // See internal-docs/code-splitting/implementation.md.
+          _ if matches!(entry_point.kind, EntryPointKind::UserDefined)
+            && matches!(self.options.format, OutputFormat::Cjs)
+            && matches!(self.options.exports, OutputExports::Auto | OutputExports::Default)
+            && matches!(self.link_output.metas[module.idx].wrap_kind(), WrapKind::Cjs) =>
+          {
+            Some(PreserveEntrySignatures::Strict)
+          }
           PreserveEntrySignatures::AllowExtension
           | PreserveEntrySignatures::Strict
           | PreserveEntrySignatures::False => Some(finalized_preserve_entry_signatures),
@@ -873,7 +915,6 @@ impl GenerateStage<'_> {
             meta.set(ChunkMeta::EmittedChunk, entry_point.kind.is_emitted_user_defined());
             meta
           },
-          bit: count,
           module: module_idx,
         },
         input_base.clone(),
@@ -949,6 +990,9 @@ impl GenerateStage<'_> {
     let allow_avoid_redundant_chunk_loads =
       self.options.experimental.is_avoid_redundant_chunk_loads_enabled()
         && !has_tla_or_tla_dependency;
+    // The pure dynamic entry chunks that a merge gives modules of other entries. See
+    // `find_leaking_dynamic_entry_namespaces`.
+    let mut dynamic_entry_merge_targets = FxHashSet::default();
     // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
     if allow_avoid_redundant_chunk_loads {
       let entries_len: u32 = self
@@ -964,6 +1008,7 @@ impl GenerateStage<'_> {
         chunk_graph,
         entries_len,
         used_symbol_refs_builder,
+        &mut dynamic_entry_merge_targets,
       );
     }
     self.extract_standalone_runtime_chunk(
@@ -1053,13 +1098,30 @@ impl GenerateStage<'_> {
 
     if allow_merge_common_chunks {
       temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas);
+      // Empty entry facades also import the owners of their exported bindings.
+      // See internal-docs/code-splitting/implementation.md#common-module-merging-try_insert_common_module_to_exist_chunk.
+      for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+        if let Some(entry_module_idx) = chunk.entry_module_idx() {
+          let mut targets = vec![];
+          self.entry_export_service_targets(
+            entry_module_idx,
+            used_symbol_refs_builder.view(),
+            true,
+            &mut targets,
+          );
+          temp_chunk_graph.add_entry_export_dependencies(chunk_idx, &targets);
+        }
+      }
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,
         bits_to_chunk,
         input_base,
         &mut temp_chunk_graph,
+        &mut dynamic_entry_merge_targets,
       );
+    }
 
+    let facade_runtime_consumers = if allow_merge_common_chunks {
       self.optimize_facade_entry_chunks(
         chunk_graph,
         index_splitting_info,
@@ -1067,15 +1129,39 @@ impl GenerateStage<'_> {
         &mut module_is_assigned,
         &temp_chunk_graph,
         used_symbol_refs_builder,
+      )
+    } else {
+      None
+    };
+    let namespace_extractions = self.find_leaking_dynamic_entry_namespaces(
+      chunk_graph,
+      &mut dynamic_entry_merge_targets,
+      used_symbol_refs_builder,
+    );
+    if !namespace_extractions.is_empty() {
+      self.apply_dynamic_entry_namespace_extractions(
+        chunk_graph,
+        &namespace_extractions,
+        used_symbol_refs_builder,
+      );
+      // The extraction can include `__exportAll`. Then the runtime module can need its own chunk,
+      // as after the replay in `optimize_facade_entry_chunks`.
+      self.extract_standalone_runtime_chunk(
+        index_splitting_info,
+        &mut module_is_assigned,
+        chunk_graph,
+        input_base,
       );
     }
 
-    self.try_merge_runtime_chunk(
-      chunk_graph,
-      None,
-      RuntimeMergeCascade::Full,
-      used_symbol_refs_builder,
-    );
+    for consumers in facade_runtime_consumers.iter().map(Some).chain([None]) {
+      self.try_merge_runtime_chunk(
+        chunk_graph,
+        consumers,
+        RuntimeMergeCascade::Full,
+        used_symbol_refs_builder,
+      );
+    }
 
     Ok(())
   }
@@ -1086,13 +1172,13 @@ impl GenerateStage<'_> {
     module_is_assigned: &mut IndexBitSet<ModuleIdx>,
     chunk_graph: &mut ChunkGraph,
     input_base: &ArcStr,
-  ) -> Option<ChunkIdx> {
+  ) {
     let runtime_module_idx = self.link_output.runtime.id();
     if self.options.code_splitting.is_disabled()
       || !self.link_output.metas[runtime_module_idx].is_included
       || module_is_assigned.has_bit(runtime_module_idx)
     {
-      return None;
+      return;
     }
 
     debug_assert!(
@@ -1125,7 +1211,6 @@ impl GenerateStage<'_> {
       self.link_output.metas[runtime_module_idx].depended_runtime_helper,
     );
     module_is_assigned.set_bit(runtime_module_idx);
-    Some(runtime_chunk_idx)
   }
 
   // See internal-docs/code-splitting/implementation.md#reachability-propagation.

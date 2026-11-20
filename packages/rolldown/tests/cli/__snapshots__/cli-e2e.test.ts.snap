@@ -10,7 +10,7 @@ OPTIONS
   --config -c, <filename>     Path to the config file (default: \`rolldown.config.js\`).
   --dir -d, <dir>             Output directory, defaults to \`dist\` if \`file\` is not set.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
-  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
+  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, iife, and umd).
   --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key:value\`).
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
@@ -32,6 +32,7 @@ OPTIONS
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
   --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
+  --checks.droppedImportAttribute Whether to emit warnings when the import attributes of an external module are dropped because the output format is not ESM.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -80,17 +81,17 @@ OPTIONS
   --keepNames                 Keep function and class names after bundling.
   --legalComments <legalComments>Control legal comments in the output.
   --logLevel <logLevel>       Log level (silent, info, debug, warn).
-  --makeAbsoluteExternalsRelative Prevent normalization of external imports.
   --minifyInternalExports     Minify internal exports.
   --moduleTypes <types>       Module types for customized extensions.
   --no-externalLiveBindings   Disable external live bindings.
+  --no-makeAbsoluteExternalsRelative Disable normalization of external imports.
+  --no-polyfillRequire        Disable require polyfill injection.
   --no-preserveEntrySignatures Avoid facade chunks for entry points.
   --no-treeshake              Disable treeshaking.
   --optimization.inlineConst <optimization.inlineConst>Enable crossmodule constant inlining.
   --optimization.pifeForModuleWrappers Use PIFE pattern for module wrappers.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --paths <paths>             Maps external module IDs to paths.
-  --polyfillRequire           Disable require polyfill injection.
   --postBanner <postBanner>   A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
   --postFooter <postFooter>   A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
   --preserveModules           Preserve module structure.
@@ -167,7 +168,7 @@ OPTIONS
   --config -c, <filename>     Path to the config file (default: \`rolldown.config.js\`).
   --dir -d, <dir>             Output directory, defaults to \`dist\` if \`file\` is not set.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
-  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
+  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, iife, and umd).
   --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key:value\`).
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
@@ -189,6 +190,7 @@ OPTIONS
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
   --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
+  --checks.droppedImportAttribute Whether to emit warnings when the import attributes of an external module are dropped because the output format is not ESM.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -237,17 +239,17 @@ OPTIONS
   --keepNames                 Keep function and class names after bundling.
   --legalComments <legalComments>Control legal comments in the output.
   --logLevel <logLevel>       Log level (silent, info, debug, warn).
-  --makeAbsoluteExternalsRelative Prevent normalization of external imports.
   --minifyInternalExports     Minify internal exports.
   --moduleTypes <types>       Module types for customized extensions.
   --no-externalLiveBindings   Disable external live bindings.
+  --no-makeAbsoluteExternalsRelative Disable normalization of external imports.
+  --no-polyfillRequire        Disable require polyfill injection.
   --no-preserveEntrySignatures Avoid facade chunks for entry points.
   --no-treeshake              Disable treeshaking.
   --optimization.inlineConst <optimization.inlineConst>Enable crossmodule constant inlining.
   --optimization.pifeForModuleWrappers Use PIFE pattern for module wrappers.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --paths <paths>             Maps external module IDs to paths.
-  --polyfillRequire           Disable require polyfill injection.
   --postBanner <postBanner>   A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
   --postFooter <postFooter>   A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
   --preserveModules           Preserve module structure.
@@ -324,7 +326,7 @@ OPTIONS
   --config -c, <filename>     Path to the config file (default: \`rolldown.config.js\`).
   --dir -d, <dir>             Output directory, defaults to \`dist\` if \`file\` is not set.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
-  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
+  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, iife, and umd).
   --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key:value\`).
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
@@ -346,6 +348,7 @@ OPTIONS
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
   --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
+  --checks.droppedImportAttribute Whether to emit warnings when the import attributes of an external module are dropped because the output format is not ESM.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -394,17 +397,17 @@ OPTIONS
   --keepNames                 Keep function and class names after bundling.
   --legalComments <legalComments>Control legal comments in the output.
   --logLevel <logLevel>       Log level (silent, info, debug, warn).
-  --makeAbsoluteExternalsRelative Prevent normalization of external imports.
   --minifyInternalExports     Minify internal exports.
   --moduleTypes <types>       Module types for customized extensions.
   --no-externalLiveBindings   Disable external live bindings.
+  --no-makeAbsoluteExternalsRelative Disable normalization of external imports.
+  --no-polyfillRequire        Disable require polyfill injection.
   --no-preserveEntrySignatures Avoid facade chunks for entry points.
   --no-treeshake              Disable treeshaking.
   --optimization.inlineConst <optimization.inlineConst>Enable crossmodule constant inlining.
   --optimization.pifeForModuleWrappers Use PIFE pattern for module wrappers.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --paths <paths>             Maps external module IDs to paths.
-  --polyfillRequire           Disable require polyfill injection.
   --postBanner <postBanner>   A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
   --postFooter <postFooter>   A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
   --preserveModules           Preserve module structure.
@@ -481,7 +484,7 @@ OPTIONS
   --config -c, <filename>     Path to the config file (default: \`rolldown.config.js\`).
   --dir -d, <dir>             Output directory, defaults to \`dist\` if \`file\` is not set.
   --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
-  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
+  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, iife, and umd).
   --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key:value\`).
   --help -h,                  Show help.
   --minify -m,                Minify the bundled file.
@@ -503,6 +506,7 @@ OPTIONS
   --checks.configurationFieldConflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.couldNotCleanDirectory Whether to emit warnings when Rolldown could not clean the output directory.
   --checks.deprecatedImportAssertion Whether to emit warnings when an import uses the legacy \`assert\` keyword instead of \`with\`.
+  --checks.droppedImportAttribute Whether to emit warnings when the import attributes of an external module are dropped because the output format is not ESM.
   --checks.duplicateShebang   Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.emptyImportMeta    Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
@@ -551,17 +555,17 @@ OPTIONS
   --keepNames                 Keep function and class names after bundling.
   --legalComments <legalComments>Control legal comments in the output.
   --logLevel <logLevel>       Log level (silent, info, debug, warn).
-  --makeAbsoluteExternalsRelative Prevent normalization of external imports.
   --minifyInternalExports     Minify internal exports.
   --moduleTypes <types>       Module types for customized extensions.
   --no-externalLiveBindings   Disable external live bindings.
+  --no-makeAbsoluteExternalsRelative Disable normalization of external imports.
+  --no-polyfillRequire        Disable require polyfill injection.
   --no-preserveEntrySignatures Avoid facade chunks for entry points.
   --no-treeshake              Disable treeshaking.
   --optimization.inlineConst <optimization.inlineConst>Enable crossmodule constant inlining.
   --optimization.pifeForModuleWrappers Use PIFE pattern for module wrappers.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --paths <paths>             Maps external module IDs to paths.
-  --polyfillRequire           Disable require polyfill injection.
   --postBanner <postBanner>   A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
   --postFooter <postFooter>   A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
   --preserveModules           Preserve module structure.
@@ -839,6 +843,22 @@ called output options hook
 "
 `;
 
+exports[`watch cli > should report a finished failed watch round 1`] = `
+[
+  "Rebuilt dist/a.js",
+  "UNRESOLVED_IMPORT",
+  "waiting for changes...",
+]
+`;
+
+exports[`watch cli > should report a finished successful watch round 1`] = `
+[
+  "Rebuilt dist/a.js",
+  "Rebuilt dist/b.js",
+  "waiting for changes...",
+]
+`;
+
 exports[`watch cli > should require both ROLLDOWN_WATCH and this.meta.watchMode to be false 1`] = `
 "process.env.ROLLUP_WATCH undefined
 process.env.ROLLDOWN_WATCH undefined
@@ -857,7 +877,6 @@ closeBundle called:"
 exports[`watch cli > should require both ROLLDOWN_WATCH and this.meta.watchMode to be true 1`] = `
 "process.env.ROLLUP_WATCH true
 process.env.ROLLDOWN_WATCH true
-Waiting for changes...
 options called:
 this.meta.watchMode true
 process.env.ROLLUP_WATCH true

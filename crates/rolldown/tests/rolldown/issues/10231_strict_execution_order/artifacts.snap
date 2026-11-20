@@ -105,8 +105,8 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_runtime = require("./_virtual/_rolldown/runtime.js");
 const require_cn = require("./barrel/cn.js");
 const require_clone_deep = require("./barrel/clone-deep.js");
-require("./barrel/index.js");
 let node_assert = require("node:assert");
+require("./barrel/index.js");
 node_assert = require_runtime.__toESM(node_assert);
 // main.js
 var ready;

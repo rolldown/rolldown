@@ -20,8 +20,8 @@ export { require_dynamic as t };
 ## main.js
 
 ```js
-import { t as require_dynamic } from "./dynamic.js";
 import { strictEqual } from "node:assert";
+import { t as require_dynamic } from "./dynamic.js";
 require_dynamic();
 globalThis.a = 2;
 // main.js

@@ -24,9 +24,6 @@ allowBuilds:
   workerd: true
 
 catalog:
-  '@babel/core': ^7.29.7
-  '@babel/preset-env': ^7.29.7
-  '@babel/preset-typescript': ^7.29.7
   '@emnapi/core': 2.0.0-beta.2
   '@emnapi/runtime': 2.0.0-beta.2
   '@jridgewell/trace-mapping': ^0.3.31
@@ -34,13 +31,12 @@ catalog:
   '@napi-rs/wasm-runtime': 1.2.6
   '@oxc-node/cli': ^0.1.0
   '@oxc-node/core': ^0.1.0
-  '@oxc-project/runtime': '=0.158.0'
-  '@oxc-project/types': '=0.158.0'
+  '@oxc-project/runtime': '=0.159.0'
+  '@oxc-project/types': '=0.159.0'
   '@pnpm/find-workspace-packages': ^6.0.9
   '@rolldown/pluginutils': ^1.0.0
   '@rollup/plugin-commonjs': ^29.0.0
   '@rollup/plugin-node-resolve': ^16.0.0
-  '@types/babel__core': 7.20.5
   '@types/connect': ^3.4.38
   '@types/fs-extra': ^11.0.4
   '@types/lodash-es': ^4.17.12
@@ -68,13 +64,13 @@ catalog:
   glob: ^14.0.0
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
-  oxc-parser: '=0.158.0'
-  oxc-transform: '=0.158.0'
+  oxc-parser: '=0.159.0'
+  oxc-transform: '=0.159.0'
   pathe: ^2.0.3
   react: ^19.0.0
   react-dom: ^19.0.0
   remark-parse: ^11.0.0
-  remeda: ^2.57.0
+  remeda: ^2.60.0
   rolldown-plugin-dts: ^0.30.0
   rollup: ^4.63.0
   semver: ^7.8.0
@@ -91,7 +87,7 @@ catalog:
   vitest: ^4.1.6
   vue: ^3.5.35
   web-tree-sitter: ^0.27.0
-  ws: ^8.22.0
+  ws: ^8.23.0
   yaml: ^2.9.1
   zx: ^8.1.2
 
@@ -122,7 +118,6 @@ trustPolicy: no-downgrade
 trustPolicyExcludePrune: true
 trustPolicyExclude:
   - chokidar@4.0.3
-  - semver@6.3.1
   - rxjs@7.8.2
 
 verifyDepsBeforeRun: install
@@ -137,12 +132,10 @@ minimumReleaseAgeExclude:
   - oxc-transform
   - '@voidzero-dev/*'
   - vite-plus
-  - vitepress-plugin-feedback-tracker@0.2.0-alpha.1
   - void
   - '@napi-rs/wasm-runtime'
   - '@emnapi/*'
   - emnapi
-  - vitepress-plugin-group-icons@1.8.2
 
 # avoid accidentally relying on `NODE_PATH` env var
 extendNodePath: false

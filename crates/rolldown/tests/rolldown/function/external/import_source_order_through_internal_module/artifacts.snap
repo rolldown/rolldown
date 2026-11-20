@@ -1,0 +1,66 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import "side-a";
+import "side-b";
+
+```
+
+## b.js
+
+```js
+import "side-b";
+import "side-a";
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### a.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import "side-a";
+import "side-b";
+// a.js
+function init_a() {
+	return (init_a = __esmMin((() => {})))();
+}
+init_a();
+
+```
+
+### b.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import "side-b";
+import "side-a";
+// mid.js
+function init_mid() {
+	return (init_mid = __esmMin((() => {})))();
+}
+// b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		init_mid();
+	})))();
+}
+init_b();
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

@@ -745,7 +745,6 @@ impl GenerateStage<'_> {
       &input,
       &reexport_usage,
       &mut probe_state,
-      self.options.code_splitting.is_disabled(),
       reverse_static_imports,
     );
     probe_state

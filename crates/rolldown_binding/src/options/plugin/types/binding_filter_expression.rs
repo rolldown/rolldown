@@ -36,13 +36,6 @@ impl BindingFilterTokenPayloadInner {
       other => anyhow::bail!("expected a number payload, but got {other:?}"),
     }
   }
-
-  pub fn try_into_regex(self) -> anyhow::Result<HybridRegex> {
-    match self {
-      BindingFilterTokenPayloadInner::StringOrRegex(inner) => inner.try_into_regex(),
-      other => anyhow::bail!("expected a regex payload, but got {other:?}"),
-    }
-  }
 }
 
 #[derive(Debug, Clone)]

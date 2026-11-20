@@ -1,0 +1,128 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## d.js
+
+```js
+import { t as q } from "./w.js";
+// d.js
+globalThis.entryLog.push(`d runs ${q()}`);
+const d = 1;
+export { d };
+
+```
+
+## main.js
+
+```js
+export { t as q } from "./w.js";
+// main.js
+(globalThis.entryLog ??= []).push("entry runs");
+globalThis.loadD = () => import("./d.js");
+
+```
+
+## w.js
+
+```js
+// w.js
+function q() {
+	return "q";
+}
+export { q as t };
+
+```
+
+# Variant: false: [preserve_entry_signatures: False]
+
+## Assets
+
+### d.js
+
+```js
+// w.js
+function q() {
+	return "q";
+}
+// d.js
+globalThis.entryLog.push(`d runs ${q()}`);
+const d = 1;
+export { d };
+
+```
+
+### main.js
+
+```js
+// main.js
+(globalThis.entryLog ??= []).push("entry runs");
+globalThis.loadD = () => import("./d.js");
+
+```
+
+# Variant: allow-extension: [preserve_entry_signatures: AllowExtension]
+
+## Assets
+
+### d.js
+
+```js
+import { q } from "./main.js";
+// d.js
+globalThis.entryLog.push(`d runs ${q()}`);
+const d = 1;
+export { d };
+
+```
+
+### main.js
+
+```js
+// w.js
+function q() {
+	return "q";
+}
+// main.js
+(globalThis.entryLog ??= []).push("entry runs");
+globalThis.loadD = () => import("./d.js");
+export { q };
+
+```
+
+# Variant: strict: [preserve_entry_signatures: Strict]
+
+## Assets
+
+### d.js
+
+```js
+import { t as q } from "./w.js";
+// d.js
+globalThis.entryLog.push(`d runs ${q()}`);
+const d = 1;
+export { d };
+
+```
+
+### main.js
+
+```js
+export { t as q } from "./w.js";
+// main.js
+(globalThis.entryLog ??= []).push("entry runs");
+globalThis.loadD = () => import("./d.js");
+
+```
+
+### w.js
+
+```js
+// w.js
+function q() {
+	return "q";
+}
+export { q as t };
+
+```

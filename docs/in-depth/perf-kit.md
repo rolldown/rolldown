@@ -25,7 +25,7 @@ You need:
 - For a page: Chrome or Edge on the machine. `CHROME_PATH` selects the browser.
 - For a Worker: `@cloudflare/vite-plugin` and `wrangler` as dev dependencies of the app. Coverage needs Wrangler 4.108.0 or later.
 
-perf-kit has no dependencies, so it runs without an install step:
+You can run perf-kit without adding it as a project dependency:
 
 ::: code-group
 
@@ -489,4 +489,3 @@ Edit 1 also moves `charts.js` and the 2 chart modules. Check that the first rend
 - A deferral moves work and does not delete it. The first request or interaction that needs the module pays for its load.
 - The rendered-output check sees the page as the server sends it, without interaction. It does not compare states behind a click, a login or live data, so keep the app's own tests green.
 - perf-kit does not collect metrics from real users. Field mode measures one account, one network and one machine.
-- `--ready exit` and a `stdout:` pattern that starts with `^` time out under the inspector at this time.

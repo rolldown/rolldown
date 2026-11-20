@@ -813,11 +813,12 @@ Then, across all files of the batch:
 8. **Per-client patch** — for each `ClientHmrInput`, the carried set is
    `(affected ∖ shipped[C]) ∪ { m : latest[m] > shipped[C][m] }`: modules
    the client lacks, plus every module the client holds at an older
-   stamp. When the rebuild added static imports, the carried set also
-   gets the part of their static closure the client does not hold
-   (`collect_unheld_sync_deps`, which reads the ship map and the
-   boot-evaluated map; see [hmr/design.md](../hmr/design.md),
-   principle 2). `render_hmr_patch` returns `HmrUpdate::Noop` when
+   stamp. The carried set also gets the part of the static closure the
+   client does not hold, walked from each carried module in the client's
+   ship map or boot-evaluated map (at any stamp) and from each static
+   import the rebuild added (`collect_unheld_sync_deps`, which reads both
+   maps; see [hmr/design.md](../hmr/design.md), principle 2).
+   `render_hmr_patch` returns `HmrUpdate::Noop` when
    nothing is carried and no id changed; otherwise an `HmrPatch` with
    `changed_ids`, `carried`, and `seq: 0` — the dev engine assigns the
    real `seq` afterwards.
@@ -901,10 +902,9 @@ Known gaps in this walk, kept on purpose for now:
   false, else `bundler.incremental_generate(scan_mode)`.
 - On error, sets `self.rebuild_errored = true`.
 - On success, recomputes `DevContext::top_level_evaluated` from the new
-  snapshot (`compute_top_level_evaluated_modules`,
-  `impl_bundler_hmr.rs:81`; call at `bundling_task.rs:397-401`). A
-  client that connects after this rebuild freezes this map into its
-  session at hello.
+  snapshot and output (`compute_top_level_evaluated_modules` in
+  `impl_bundler_hmr.rs`). A client that connects after this rebuild
+  freezes this map into its session at hello.
 - Invokes the `on_output` callback if configured.
 
 Only `TaskInput::FullBuild` produces `ScanMode::Full`. Every other

@@ -59,12 +59,13 @@ impl From<bool> for EsModuleFlag {
   }
 }
 
-impl From<String> for EsModuleFlag {
-  fn from(value: String) -> Self {
-    if value == "if-default-prop" {
-      Self::IfDefaultProp
-    } else {
-      unreachable!("unknown es module type")
+impl TryFrom<String> for EsModuleFlag {
+  type Error = String;
+
+  fn try_from(value: String) -> Result<Self, Self::Error> {
+    match value.as_str() {
+      "if-default-prop" => Ok(Self::IfDefaultProp),
+      _ => Err(format!("Unknown es module flag: {value}")),
     }
   }
 }

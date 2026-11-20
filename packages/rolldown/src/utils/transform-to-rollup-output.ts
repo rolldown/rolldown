@@ -73,7 +73,12 @@ function transformToMutableRollupOutputChunk(
       return code;
     },
     fileName,
-    name: bindingChunk.getName(),
+    // Metadata is read lazily: the bundle is rebuilt for every JS `generateBundle`/`writeBundle`
+    // hook, and most hooks read only a few fields of a few outputs. Each read crosses NAPI, and
+    // the Proxy below caches the first read, so a field is still fetched at most once per hook.
+    get name() {
+      return bindingChunk.getName();
+    },
     get modules() {
       return transformChunkModules(bindingChunk.getModules());
     },
@@ -83,10 +88,18 @@ function transformToMutableRollupOutputChunk(
     get dynamicImports() {
       return bindingChunk.getDynamicImports();
     },
-    exports: bindingChunk.getExports(),
-    isEntry: bindingChunk.getIsEntry(),
-    facadeModuleId: bindingChunk.getFacadeModuleId() || null,
-    isDynamicEntry: bindingChunk.getIsDynamicEntry(),
+    get exports() {
+      return bindingChunk.getExports();
+    },
+    get isEntry() {
+      return bindingChunk.getIsEntry();
+    },
+    get facadeModuleId() {
+      return bindingChunk.getFacadeModuleId() || null;
+    },
+    get isDynamicEntry() {
+      return bindingChunk.getIsDynamicEntry();
+    },
     get moduleIds() {
       return bindingChunk.getModuleIds();
     },
@@ -94,8 +107,12 @@ function transformToMutableRollupOutputChunk(
       const map = bindingChunk.getMap();
       return map ? transformToRollupSourceMap(map) : null;
     },
-    sourcemapFileName: bindingChunk.getSourcemapFileName() || null,
-    preliminaryFileName: bindingChunk.getPreliminaryFileName(),
+    get sourcemapFileName() {
+      return bindingChunk.getSourcemapFileName() || null;
+    },
+    get preliminaryFileName() {
+      return bindingChunk.getPreliminaryFileName();
+    },
   } as OutputChunk;
   const cache: Record<string | symbol, any> = {};
   let assigned: Set<string | symbol> | undefined;
@@ -223,13 +240,22 @@ function transformToMutableRollupOutputAsset(
   const asset = {
     type: 'asset',
     fileName: bindingAsset.getFileName(),
-    originalFileName: bindingAsset.getOriginalFileName() || null,
-    originalFileNames: bindingAsset.getOriginalFileNames(),
+    // Lazy for the same reason as chunk metadata above.
+    get originalFileName() {
+      return bindingAsset.getOriginalFileName() || null;
+    },
+    get originalFileNames() {
+      return bindingAsset.getOriginalFileNames();
+    },
     get source(): AssetSource {
       return transformAssetSource(bindingAsset.getSource());
     },
-    name: bindingAsset.getName() ?? undefined,
-    names: bindingAsset.getNames(),
+    get name() {
+      return bindingAsset.getName() ?? undefined;
+    },
+    get names() {
+      return bindingAsset.getNames();
+    },
   } as OutputAsset;
   const cache: Record<string | symbol, any> = {};
   return new Proxy(asset, {

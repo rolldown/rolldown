@@ -255,3 +255,89 @@ describe('chunkImportMap', () => {
     },
   );
 });
+
+describe('chunkImportMap.include', () => {
+  type Include = string | RegExp | (string | RegExp)[];
+
+  // `main` imports `editor` dynamically. `editor` imports `common`, which imports `vendor`.
+  function modules({ vendor = 'V', common = 'C' } = {}) {
+    return {
+      './main.js': `globalThis.open = () => import('./editor.js');`,
+      './editor.js': `import { common } from './common.js'; export const editor = () => common();`,
+      './common.js': `import { vendor } from './vendor.js'; export const common = () => vendor() + '${common}';`,
+      './vendor.js': `export const vendor = () => '${vendor}';`,
+    };
+  }
+
+  async function build(files: Record<string, string>, include: Include, plugins: Plugin[] = []) {
+    const bundle = await rolldown({
+      input: { main: './main.js' },
+      experimental: { chunkImportMap: { include } },
+      plugins: [virtualPlugin(files), ...plugins],
+    });
+    onTestFinished(() => bundle.close());
+    return bundle.generate({
+      entryFileNames: '[name]-[hash].js',
+      chunkFileNames: '[name]-[hash].js',
+      codeSplitting: {
+        includeDependenciesRecursively: false,
+        groups: ['common', 'vendor'].map((name) => ({ name, test: new RegExp(name) })),
+      },
+    });
+  }
+
+  const chunk = (output: RolldownOutput, name: string) =>
+    getOutputChunk(output).find((chunk) => chunk.name === name)!;
+
+  const stableName = (output: RolldownOutput, name: string) =>
+    alias(output, chunk(output, name)).slice(1);
+
+  const renamed = (a: RolldownOutput, b: RolldownOutput) =>
+    getOutputChunk(a)
+      .map((chunk) => chunk.name)
+      .filter((name) => chunk(a, name).fileName !== chunk(b, name).fileName)
+      .sort();
+
+  test.each<[string, Include]>([
+    ['a string', 'common'],
+    ['a regex', /^comm/],
+    // a string has to equal the chunk name, so `edit` does not match `editor`
+    ['an array', ['edit', /^common$/]],
+  ])('maps only the chunks matched by %s', async (_, include) => {
+    const output = await build(modules(), include);
+    expect(Object.values(importMap(output))).toEqual([`/${chunk(output, 'common').fileName}`]);
+    expect(chunk(output, 'editor').code).toContain(`"./${stableName(output, 'common')}"`);
+    expect(chunk(output, 'common').code).toContain(`"./${chunk(output, 'vendor').fileName}"`);
+  });
+
+  test('a chunk is renamed only when its content changes', async () => {
+    const base = await build(modules(), 'common');
+    expect(renamed(base, await build(modules({ common: 'C2' }), 'common'))).toEqual(['common']);
+    // `editor` only holds the stable name of `common`, so `editor` and `main` keep their names.
+    expect(renamed(base, await build(modules({ vendor: 'V2' }), 'common'))).toEqual([
+      'common',
+      'vendor',
+    ]);
+  });
+
+  // Vite lists the files that a dynamic import loads in the importer this way.
+  test('a file name written in `renderChunk` is covered by the hash', async () => {
+    const listChunks: Plugin = {
+      name: 'list-chunks',
+      renderChunk(code, chunk, _options, { chunks }) {
+        if (chunk.name !== 'main') return null;
+        const files = Object.keys(chunks).filter((file) => file !== chunk.fileName);
+        return { code: `${code}\nglobalThis.files = ${JSON.stringify(files)};`, map: null };
+      },
+    };
+    const base = await build(modules(), 'common', [listChunks]);
+    const main = chunk(base, 'main').code;
+    expect(main).toContain(`"${stableName(base, 'common')}"`);
+    expect(main).toContain(`"${chunk(base, 'vendor').fileName}"`);
+
+    const edit = async (edit: Parameters<typeof modules>[0]) =>
+      renamed(base, await build(modules(edit), 'common', [listChunks]));
+    expect(await edit({ common: 'C2' })).toEqual(['common']);
+    expect(await edit({ vendor: 'V2' })).toEqual(['common', 'main', 'vendor']);
+  });
+});

@@ -114,6 +114,9 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
         dynamically_imported_ids: FxIndexSet::default(),
         exports: vec![],
         input_format: ExportsKind::None,
+        // Filled in once the module has been parsed. Hook values recorded on the JS side
+        // are still visible before that.
+        module_side_effects: None,
       }),
     );
 
@@ -147,7 +150,6 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
           warnings: &mut warnings,
           module_type: module_type.clone(),
           replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
-          is_user_defined_entry: self.is_user_defined_entry,
           flat_options: self.flat_options,
         },
         CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
@@ -301,7 +303,6 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       })
     })?;
     let source = match source {
-      _ if self.resolved_id.id.starts_with("rolldown:") => source,
       StrOrBytes::Str(source) => {
         // Run plugin transform.
         let source = transform_source(

@@ -1,20 +1,15 @@
 use std::fmt::Debug;
 
-use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
-  DebugStmtInfoForTreeShaking, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta,
-  ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord, ResolvedId,
-  StableModuleId, StmtInfoIdx,
+  EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta, ModuleId, ModuleIdx,
+  ModuleInfo, RawImportRecord, ResolvedId, StableModuleId,
 };
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
 
 use itertools::Itertools;
 use oxc_index::IndexVec;
-use oxc_str::CompactStr;
-use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
-use rolldown_utils::IndexBitSet;
-use rustc_hash::FxHashSet;
+use oxc_str::{CompactStr, format_compact_str};
 
 #[derive(Debug, Clone)]
 pub struct NormalModule {
@@ -50,24 +45,6 @@ impl NormalModule {
     self.ecma_view.meta.has_star_export()
   }
 
-  pub fn to_debug_normal_module_for_tree_shaking(
-    &self,
-    stmt_infos: &crate::StmtInfos,
-    is_included: bool,
-    stmt_info_included: &IndexBitSet<StmtInfoIdx>,
-  ) -> DebugNormalModuleForTreeShaking {
-    DebugNormalModuleForTreeShaking {
-      id: self.repr_name.clone(),
-      is_included,
-      stmt_infos: stmt_infos
-        .iter_enumerated()
-        .map(|(idx, stmt)| {
-          stmt.to_debug_stmt_info_for_tree_shaking(stmt_info_included.has_bit(idx))
-        })
-        .collect(),
-    }
-  }
-
   pub fn to_module_info(
     &self,
     raw_import_records: Option<&IndexVec<ImportRecordIdx, RawImportRecord>>,
@@ -91,7 +68,15 @@ impl NormalModule {
       dynamically_imported_ids: self.ecma_view.dynamically_imported_ids.clone(),
       // https://github.com/rollup/rollup/blob/7a8ac460c62b0406a749e367dbd0b74973282449/src/Module.ts#L331
       exports: {
-        let mut exports = self.ecma_view.named_exports.keys().cloned().collect_vec();
+        let mut exports = self
+          .ecma_view
+          .named_exports
+          .keys()
+          .map(|name| {
+            // A lone `*` represents an `export * from` record.
+            if name.starts_with('*') { format_compact_str!("*{name}") } else { name.clone() }
+          })
+          .collect_vec();
         if let Some(e) = raw_import_records {
           exports.extend(
             e.iter()
@@ -111,37 +96,13 @@ impl NormalModule {
         exports
       },
       input_format: self.ecma_view.exports_kind,
+      module_side_effects: Some(self.ecma_view.reported_side_effects),
     }
   }
 
   // The runtime module and module which path starts with `\0` shouldn't generate sourcemap. Ref see https://github.com/rollup/rollup/blob/master/src/Module.ts#L279.
   pub fn is_virtual(&self) -> bool {
-    self.id.starts_with('\0') || self.id.starts_with("rolldown:")
-  }
-
-  // https://tc39.es/ecma262/#sec-getexportednames
-  pub fn get_exported_names<'modules>(
-    &'modules self,
-    export_star_set: &mut FxHashSet<ModuleIdx>,
-    modules: &'modules IndexModules,
-    include_default: bool,
-    ret: &mut FxHashSet<&'modules CompactStr>,
-  ) {
-    if export_star_set.contains(&self.idx) {
-      return;
-    }
-
-    export_star_set.insert(self.idx);
-
-    self
-      .star_export_module_ids()
-      .filter_map(|id| modules[id].as_normal())
-      .for_each(|module| module.get_exported_names(export_star_set, modules, false, ret));
-    if include_default {
-      ret.extend(self.ecma_view.named_exports.keys());
-    } else {
-      ret.extend(self.ecma_view.named_exports.keys().filter(|name| name.as_str() != "default"));
-    }
+    self.id.starts_with('\0')
   }
 
   pub fn star_exports_from_external_modules<'me>(
@@ -187,48 +148,6 @@ impl NormalModule {
     self.ecma_view.def_format.is_esm() || self.ecma_view.def_format.is_commonjs()
   }
 
-  pub fn render(
-    &self,
-    options: &NormalizedBundlerOptions,
-    args: &ModuleRenderArgs,
-    initial_indent: u32,
-  ) -> ModuleRenderOutput {
-    match args {
-      ModuleRenderArgs::Ecma { ast } => {
-        let enable_sourcemap = options.sourcemap.is_some() && !self.is_virtual();
-
-        // Because oxc codegen sourcemap is last of sourcemap chain,
-        // If here no extra sourcemap need remapping, we using it as final module sourcemap.
-        // So here make sure using correct `source_name` and `source_content.
-        let render_output = EcmaCompiler::print_with(
-          ast,
-          PrintOptions {
-            sourcemap: enable_sourcemap,
-            filename: self.id.to_string(),
-            comments: {
-              let mut c: rolldown_ecmascript::PrintCommentsOptions = options.comments.into();
-              // Annotation comments must survive into the rendered text because
-              // `minify_chunks` re-parses it; without them the parser won't set
-              // `expr.pure` and DCE can't eliminate unused pure calls.
-              // `minify_chunks` codegen will honour the user's `comments.annotation`
-              // setting when it emits the final output.
-              // Only `annotation` needs this override — `legal` and `jsdoc` comments
-              // have no effect on DCE behaviour.
-              c.annotation = true;
-              c
-            },
-            initial_indent,
-            ascii_only: options.charset.is_ascii(),
-          },
-        );
-        ModuleRenderOutput {
-          code: render_output.code,
-          map: render_output.map.map(oxc_sourcemap::SourceMap::into_owned),
-        }
-      }
-    }
-  }
-
   #[expect(clippy::cast_precision_loss)]
   pub fn size(&self) -> f64 {
     self.ecma_view.source.len() as f64
@@ -247,13 +166,6 @@ impl NormalModule {
   }
 }
 
-#[derive(Debug)]
-pub struct DebugNormalModuleForTreeShaking {
-  pub id: String,
-  pub is_included: bool,
-  pub stmt_infos: Vec<DebugStmtInfoForTreeShaking>,
-}
-
 impl Deref for NormalModule {
   type Target = EcmaView;
 
@@ -266,8 +178,4 @@ impl DerefMut for NormalModule {
   fn deref_mut(&mut self) -> &mut Self::Target {
     &mut self.ecma_view
   }
-}
-
-pub enum ModuleRenderArgs<'any> {
-  Ecma { ast: &'any EcmaAst },
 }

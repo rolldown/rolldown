@@ -22,6 +22,7 @@ pub mod commonjs_variable_in_esm;
 pub mod configuration_field_conflict;
 pub mod could_not_clean_directory;
 pub mod deprecated_import_assertion;
+pub mod dropped_import_attribute;
 pub mod duplicate_shebang;
 pub mod empty_import_meta;
 pub mod eval;
@@ -66,7 +67,7 @@ pub mod unsupported_feature;
 pub mod unsupported_tsconfig_option;
 pub mod untranspiled_syntax;
 
-pub trait BuildEvent: Sync + Send + AsAny + AsAnyMut {
+pub trait BuildEvent: Sync + Send + AsAnyMut {
   fn kind(&self) -> EventKind;
 
   fn message(&self, opts: &DiagnosticOptions) -> String;
@@ -107,16 +108,6 @@ where
 {
   fn from(e: T) -> Self {
     Box::new(e)
-  }
-}
-
-pub trait AsAny {
-  fn as_any(&self) -> &dyn Any;
-}
-
-impl<T: 'static + BuildEvent> AsAny for T {
-  fn as_any(&self) -> &dyn Any {
-    self
   }
 }
 

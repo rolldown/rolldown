@@ -63,7 +63,8 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
     let guard = TaskMessageGuard::new(&self.ctx, RUNTIME_MODULE_ID);
     if let Err(errs) = self.run_inner().await {
       // If the main thread is dead, nothing we can do to handle these send failures.
-      let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
+      let message = ModuleLoaderMsg::RuntimeModuleErrors(errs.into_vec().into_boxed_slice());
+      let _ = self.ctx.tx.send(message);
     }
     guard.mark_sent();
   }
@@ -177,6 +178,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         imported_ids: FxIndexSet::default(),
         dynamically_imported_ids: FxIndexSet::default(),
         side_effects: determined_side_effects,
+        reported_side_effects: determined_side_effects.to_module_side_effects(),
         named_imports,
         named_exports,
         imports,
@@ -198,6 +200,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         directive_range: vec![],
         dummy_record_set,
         constant_export_map: FxHashMap::default(),
+        deferred_write_constants: Vec::new(),
         enum_member_value_map: FxHashMap::default(),
         json_module_none_self_reference_included_symbol: None,
         cjs_reexport_import_record_ids: Vec::new(),

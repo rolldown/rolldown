@@ -24,8 +24,8 @@ use oxc::{
       ExportDefaultDeclarationKind, ExportSpecifier, Expression, FormalParameter,
       FormalParameterKind, FormalParameters, FunctionBody, FunctionType, IdentifierName,
       ImportDeclarationSpecifier, ImportOrExportKind, MemberExpression, ModuleExportName,
-      NumberBase, ObjectExpression, ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
-      StringLiteral, VariableDeclarationKind, VariableDeclarator,
+      NumberBase, ObjectExpression, ObjectPropertyKind, PropertyDefinitionType, PropertyKey,
+      PropertyKind, Statement, StringLiteral, VariableDeclarationKind, VariableDeclarator,
     },
     builder::GetAstBuilder,
   },
@@ -468,6 +468,42 @@ pub trait ClassElementFactoryExt<'ast> {
         ),
         builder,
       )],
+      builder,
+    )
+  }
+
+  /// `static #<key> = <callee>(this, "<name>");`
+  fn new_private_static_field_keep_name<B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
+    key: &str,
+    name: &str,
+    callee: Expression<'ast>,
+    builder: &B,
+  ) -> ClassElement<'ast> {
+    ClassElement::new_property_definition(
+      SPAN,
+      PropertyDefinitionType::PropertyDefinition,
+      [],
+      PropertyKey::new_private_identifier(
+        SPAN,
+        oxc::ast::ast::Str::from_str_in(key, builder),
+        builder,
+      ),
+      None,
+      Some(Expression::new_keep_name_call(
+        name,
+        Expression::new_this_expression(SPAN, builder),
+        callee,
+        false,
+        builder,
+      )),
+      false,
+      true, // static
+      false,
+      false,
+      false,
+      false,
+      false,
+      None,
       builder,
     )
   }

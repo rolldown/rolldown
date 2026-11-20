@@ -1,0 +1,9 @@
+{
+  "config": {
+    "keepNames": true,
+    "transform": {
+      "target": "es2018"
+    }
+  },
+  "_comment": "No class fields: oxc moves static fields after the class, behind the `__name` call"
+}

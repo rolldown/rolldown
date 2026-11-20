@@ -80,7 +80,7 @@ A binding that a `require()` call initializes stays a local of the CJS closure, 
 
    One function, `cjs_wrapper_fixed_params`, gives the fixed parameters of the CJS closure: `exports` and `module`. The printer and the top-level reservation both use this function, so no top-level binding has the name of a fixed parameter. After the fixed parameters, the finalizer (`cjs_wrapper_params`) adds the `this` binding, which is synthesized, so invariant S keeps all bindings of the chunk off its name. Thus a parameter cannot capture a reference to a top-level binding.
 
-   Under ESM output for `platform: 'node'`, the CJS closure also declares `__dirname` and `__filename` when the module reads them without a declaration: `var __dirname = import.meta.dirname`. Such a read is an unresolved reference, and the chunk reserves each unresolved reference at its top level. Thus this local cannot capture a reference to a top-level binding either.
+   Under ESM output for `platform: 'node'`, the CJS closure also declares `__dirname` and `__filename` when the module reads them without a declaration: `var __dirname = import.meta.dirname`. A CommonJS module with an unresolved `define` also gets `var define;` in its CJS closure or HMR factory, so bundled UMD code takes its CommonJS branch even when the host has an AMD loader. The chunk reserves each unresolved reference at its top level. Thus these locals cannot capture references to top-level bindings either.
 
 ## Rejected alternatives
 

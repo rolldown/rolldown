@@ -31,7 +31,7 @@ describe('checks.bundlerTimings alias', () => {
       expect(validateCliOptions({ checks })[1]).toBeUndefined();
       const onLog = vi.fn();
       let beforeLinkStartedAt = 0;
-      const { bundlerOptions } = await createBundlerOptions(
+      const bundlerOptions = await createBundlerOptions(
         {
           input: 'entry',
           checks,
@@ -67,6 +67,7 @@ describe('checks.bundlerTimings alias', () => {
             hook: 'renderStart',
             calls: 1,
             ms: 4_000,
+            maxMs: 4_000,
             maxInFlight: 1,
             overlapMs: 0,
             rankable: true,
@@ -103,7 +104,7 @@ describe('checks.bundlerTimings alias', () => {
   it.each(['bundlerTimings', 'pluginTimings'] as const)(
     'does not enable %s when measurement is disabled',
     async (option) => {
-      const { bundlerOptions } = await createBundlerOptions(
+      const bundlerOptions = await createBundlerOptions(
         { checks: { [option]: true } },
         {},
         false,

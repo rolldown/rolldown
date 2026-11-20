@@ -2,6 +2,7 @@ use rolldown_common::{
   ModuleIdx, ModuleNamespaceIncludedReason, RuntimeHelper, StmtInfos, SymbolRef,
   UsedSymbolRefsBuilder, WrapKind,
 };
+use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -102,7 +103,7 @@ impl GenerateStage<'_> {
       external_importer_modes: FxHashMap::default(),
       inlined_constant_owner_side_effects: FxHashMap::default(),
       kept_inlined_constant_reads: FxHashSet::default(),
-      module_inclusion_changed: false,
+      pending_dynamic_entries: FxIndexSet::default(),
       module_namespace_included_reason: &mut module_namespace_reason_vec,
       inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
       json_module_none_self_reference_included_symbol: FxHashMap::default(),

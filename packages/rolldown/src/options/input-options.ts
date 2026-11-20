@@ -216,13 +216,6 @@ export type DevModeOptions =
       host?: string;
       port?: number;
       implement?: string;
-      /**
-       * Prevent Rolldown from prepending its common dev runtime to {@link implement}.
-       * @deprecated Common runtime injection will be disabled by default in the future.
-       * Include the common runtime in {@link implement} instead.
-       * @default false
-       */
-      skipCommonRuntimeInjection?: boolean;
       lazy?: boolean;
       /**
        * Call the `hotUpdate` plugin hook. The `hotUpdate` option of `dev()` also turns it on.
@@ -617,6 +610,10 @@ export interface InputOptions {
      * Keeping these keys independent of content hashes reduces cascading cache invalidation when
      * a dependency changes.
      *
+     * Set `include` to map only the chunks whose name matches, which keeps the map small in a
+     * large app. A string has to equal the chunk name. A regular expression is tested against
+     * it. Chunks outside the map are imported by their content-hashed filename as usual.
+     *
      * The output defaults to `importmap.json` unless overridden via `fileName`. A base URL prefix
      * (default `"/"`) can be applied to all paths. The resulting JSON is a valid import map and can be
      * directly injected into HTML via `<script type="importmap">`.
@@ -658,7 +655,9 @@ export interface InputOptions {
      *
      * @default false
      */
-    chunkImportMap?: boolean | { baseUrl?: string; fileName?: string };
+    chunkImportMap?:
+      | boolean
+      | { baseUrl?: string; fileName?: string; include?: StringOrRegExp | StringOrRegExp[] };
 
     /**
      * Under `output.strictExecutionOrder`, derive a conservative wrapping plan from predicted

@@ -225,4 +225,12 @@ export interface ChecksOptions {
    * @default true
    * */
   invalidImportAttribute?: boolean;
+
+  /**
+   * Whether to emit warnings when the import attributes of an external module are dropped because the output format is not ESM.
+   *
+   * See [Import attributes in Non-ESM Output Formats page](https://rolldown.rs/in-depth/non-esm-output-formats#import-attributes) for more details.
+   * @default true
+   * */
+  droppedImportAttribute?: boolean;
 }

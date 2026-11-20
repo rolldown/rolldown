@@ -1,0 +1,6 @@
+{
+  "config": {
+    "treeshake": { "commonjs": false },
+    "minify": false
+  }
+}

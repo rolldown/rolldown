@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { n as used } from "./sdk.js";
+// a.mjs
+function a() {
+	return used();
+}
+export { a };
+
+```
+
+## entry.js
+
+```js
+import { n as used, t as deadA } from "./sdk.js";
+// entry.mjs
+console.log(typeof used);
+if ((await deadA()).a() !== 1) throw new Error("a");
+export {};
+
+```
+
+## sdk.js
+
+```js
+// sdk.mjs
+function used() {
+	return 1;
+}
+function deadA() {
+	return import("./a.js");
+}
+export { used as n, deadA as t };
+
+```

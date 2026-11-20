@@ -3,8 +3,8 @@ use std::fmt::Write as _;
 
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions, OutputExports,
-  OutputFormat, Platform, SymbolRef, SymbolRefDb, WrapKind,
+  Chunk, ChunkKind, ExportsKind, GetLocalDb, IndexModules, ModuleIdx, NormalizedBundlerOptions,
+  OutputExports, OutputFormat, Platform, SymbolRef, SymbolRefDb, SymbolRefFlags, WrapKind,
 };
 use rolldown_utils::{
   concat_string,
@@ -16,6 +16,7 @@ use rolldown_utils::{
 };
 use rustc_hash::FxHashSet;
 
+use crate::ast_scanner::const_eval::eval_can_assign;
 use crate::esm_init_obligations::{WrappedEsmInitTarget, collect_entry_reexported_wrapper_inits};
 use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
 
@@ -26,6 +27,14 @@ pub fn render_wrapped_entry_chunk(
   if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     let entry_meta = &ctx.link_output.metas[entry_id];
     if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
+      if matches!(ctx.options.format, OutputFormat::Cjs)
+        && let Some(host_idx) = ctx.chunk_graph.module_to_chunk[entry_id]
+        && host_idx != ctx.chunk_idx
+        && ctx.chunk_graph.chunk_table[host_idx].entry_module_idx() == Some(entry_id)
+      {
+        let require_binding = &ctx.chunk.require_binding_names_for_other_chunks[&host_idx];
+        return Some(concat_string!("module.exports = ", require_binding, ";\n"));
+      }
       let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
 
       let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
@@ -542,8 +551,14 @@ fn must_keep_live_binding(
     return false;
   }
 
-  if canonical_ref.is_not_reassigned(symbol_db) {
-    // For unknown case, we consider it as reassigned.
+  // Unlike `is_not_reassigned`, this ignores `ReadBeforeAssigned`: a read before the declaration
+  // assigns the binding does not change the value the export ends up with. `IsNotReassigned` does
+  // not see an assignment inside direct `eval`. For unknown case, we consider it as reassigned.
+  if canonical_ref
+    .flags(symbol_db)
+    .is_some_and(|flags| flags.contains(SymbolRefFlags::IsNotReassigned))
+    && !eval_can_assign(symbol_db.local_db(canonical_ref.owner).scoping(), canonical_ref.symbol)
+  {
     return false;
   }
 

@@ -68,6 +68,7 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
         self.render_built_url,
         self.is_relative_base,
         ctx.options().format.is_esm(),
+        ctx.options().experimental.is_import_attributes_enabled(),
         preload_marker_module_id,
       );
       visitor.visit_program(fields.program);

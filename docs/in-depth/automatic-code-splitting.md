@@ -401,6 +401,25 @@ digraph {
 
 This example shows the problem, before bundling, the code outputs `hello, world`, but after bundling, it outputs `undefined`. Currently, there's no easy way to solve this problem, as well for other bundlers that output ESM.
 
+The same happens when all entries are static. A module that only one entry imports stays in that entry's chunk, and the code of a chunk runs after the chunks it imports. So the module runs after the modules in a common chunk that the entry imports, even when the entry imports it first:
+
+```js
+// e0.js (included in `input` option)
+import './s1.js';
+
+// e1.js (included in `input` option)
+import './s0.js';
+import './s1.js';
+
+// s0.js
+console.log('s0');
+
+// s1.js
+console.log('s1');
+```
+
+`s1.js` goes into a common chunk because both entries import it, and `s0.js` stays in the `e1.js` chunk. Before bundling, `e1.js` prints `s0` and then `s1`. After bundling, it prints `s1` and then `s0`. If your code depends on this order, enable [`strictExecutionOrder`](/reference/OutputOptions.strictExecutionOrder).
+
 ::: info Related issues for other bundlers
 
 - [evanw/esbuild#399](https://github.com/evanw/esbuild/issues/399)

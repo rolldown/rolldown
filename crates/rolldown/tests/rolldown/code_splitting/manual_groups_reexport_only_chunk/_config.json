@@ -1,0 +1,30 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "index.ts"
+      },
+      {
+        "name": "index-1",
+        "import": "index-1.ts"
+      }
+    ],
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "bundle-a",
+          "test": "a.js"
+        },
+        {
+          "name": "bundle-b",
+          "test": "b.js"
+        },
+        {
+          "name": "bundle-c",
+          "test": "c.js"
+        }
+      ]
+    }
+  }
+}

@@ -33,7 +33,7 @@ pub struct BindingPluginContext {
 #[napi]
 impl BindingPluginContext {
   #[napi(
-    ts_args_type = "rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string",
+    ts_args_type = "rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, resolveDependencies: boolean, packageJsonPath?: string",
     ts_return_type = "Promise<void>"
   )]
   pub fn load<'env>(
@@ -42,6 +42,7 @@ impl BindingPluginContext {
     raw_id: String,
     attributes: BindingImportAttributes,
     side_effects: Option<BindingHookSideEffects>,
+    resolve_dependencies: bool,
     package_json_path: Option<String>,
   ) -> napi::Result<PromiseRaw<'env, ()>> {
     let inner = Arc::clone(&self.inner);
@@ -57,6 +58,7 @@ impl BindingPluginContext {
           from_binding_import_attributes(attributes),
           side_effects.map(TryInto::try_into).transpose()?,
           module_def_format,
+          resolve_dependencies,
         )
         .await
         .map_err(|program_err| napi_error::load_error(&raw_id, program_err))

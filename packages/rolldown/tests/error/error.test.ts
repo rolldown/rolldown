@@ -122,6 +122,26 @@ describe('Plugin buildEnd hook', async () => {
     expect(error).toBeUndefined();
     expect(buildEndFn).toHaveBeenCalledTimes(1);
   });
+
+  test('preserves the build failure when buildEnd also fails', async () => {
+    const buildEndFn = vi.fn();
+    const error = await buildWithPlugin({
+      name: 'test',
+      buildStart() {
+        this.error('build failed');
+      },
+      async buildEnd(error) {
+        buildEndFn(error?.message);
+        throw new Error('buildEnd failed');
+      },
+    });
+
+    expect(buildEndFn).toHaveBeenCalledExactlyOnceWith(expect.stringContaining('build failed'));
+    expect(error).toMatchObject({
+      message: expect.stringMatching(/build failed[\s\S]*buildEnd failed/),
+      errors: [{ message: 'build failed' }, { message: 'buildEnd failed' }],
+    });
+  });
 });
 
 describe('Plugin closeBundle hook', async () => {

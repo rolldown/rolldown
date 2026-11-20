@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
-use rolldown_common::{ModuleId, ModuleLoaderMsg};
+use rolldown_common::{ModuleId, ModuleInfo, ModuleLoaderMsg};
 use rolldown_error::BuildDiagnostic;
 use rolldown_fs::FileSystem;
-use rolldown_plugin::SharedPluginDriver;
+use rolldown_plugin::{ContextLoadProgress, SharedPluginDriver};
+use rolldown_utils::dashmap::FxDashSet;
 
 use crate::{SharedOptions, SharedResolver};
 
@@ -16,6 +17,29 @@ pub struct TaskContext<Fs: FileSystem> {
   pub fs: Fs,
   pub plugin_driver: SharedPluginDriver,
   pub meta: TaskContextMeta,
+  /// Entries whose module task started before they were resolved.
+  pub late_entries: FxDashSet<ModuleId>,
+}
+
+impl<Fs: FileSystem> TaskContext<Fs> {
+  pub fn set_module_info(&self, mut module_info: ModuleInfo) -> Arc<ModuleInfo> {
+    // `mark_entry` waits for this entry, so it cannot run between the check and the insert.
+    let entry = self.plugin_driver.module_infos.entry(module_info.id.as_arc_str().clone());
+    module_info.is_entry |= self.late_entries.contains(&module_info.id);
+    let module_info = Arc::new(module_info);
+    entry.insert(Arc::clone(&module_info));
+    module_info
+  }
+
+  /// Marks a module as an entry after its module task has started as a non-entry.
+  pub fn mark_entry(&self, module_id: &ModuleId) {
+    self.late_entries.insert(module_id.clone());
+    if let Some(mut module_info) = self.plugin_driver.module_infos.get_mut(module_id.as_arc_str())
+      && !module_info.is_entry
+    {
+      Arc::make_mut(module_info.value_mut()).is_entry = true;
+    }
+  }
 }
 
 pub struct TaskContextMeta {
@@ -47,7 +71,10 @@ impl<Fs: FileSystem> Drop for TaskMessageGuard<Fs> {
       return;
     }
     // A `this.load` of this module waits until the module is loaded. End that wait too.
-    self.ctx.plugin_driver.ensure_context_load_module_completion(self.module_id.clone());
+    self
+      .ctx
+      .plugin_driver
+      .mark_context_load_progress(self.module_id.clone(), ContextLoadProgress::Completed);
     let diagnostic = BuildDiagnostic::unhandleable_error(anyhow::anyhow!(
       "the task that loads `{}` panicked before it sent its result",
       self.module_id.stabilize(&self.ctx.options.cwd)

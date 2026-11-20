@@ -1,0 +1,11 @@
+{
+  "_comment": "Direct `eval` replaces side-effect-free functions without a write reference, so the calls must stay. `eval` cannot assign the `const`, so only the call to `kept` should be removed. The other entry puts lib.js in a shared chunk. local.js stays in the chunk of main.js, where the minifier sees its annotation.",
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "other", "import": "./other.js" }
+    ],
+    "minify": false
+  },
+  "configVariants": [{ "minify": true, "_snapshot": false }]
+}

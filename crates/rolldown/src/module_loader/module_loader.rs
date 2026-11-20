@@ -4,29 +4,30 @@ use std::path::Path;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use futures::future::join_all;
-use itertools::Itertools;
-use oxc::semantic::NodeId;
+use futures::StreamExt;
+use futures::stream::FuturesUnordered;
+use itertools::{Either, Itertools};
 use oxc::semantic::{ScopeId, Scoping};
 use oxc::span::Span;
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::{
-  EcmaModuleAstUsage, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule,
-  ExternalModuleTaskResult, FlatOptions, HybridIndexVec, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, ImportedExports, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg,
-  ModuleType, NormalModuleTaskResult, PreserveEntrySignatures, RUNTIME_MODULE_ID, ResolvedId,
-  RuntimeModuleBrief, RuntimeModuleTaskResult, ScanMode, SourceMapGenMsg, StmtInfoIdx, StmtInfos,
-  SymbolRefDb, SymbolRefDbForModule,
+  AddEntryModuleMsg, EcmaModuleAstUsage, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule,
+  ExternalModuleTaskResult, FlatOptions, HybridIndexVec, ImportKind, ImportRecordMeta,
+  ImportedExports, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType,
+  NormalModuleTaskResult, PreserveEntrySignatures, RUNTIME_MODULE_ID, ResolvedId,
+  RuntimeModuleBrief, RuntimeModuleTaskResult, ScanMode, SourceMapGenMsg, StmtInfos, SymbolRefDb,
+  SymbolRefDbForModule,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{
-  BuildDiagnostic, BuildResult, DiagnosableResolveError, consolidate_diagnostics,
+  BuildDiagnostic, BuildResult, DiagnosableResolveError, SingleBuildResult, consolidate_diagnostics,
 };
 use rolldown_fs::FileSystem;
-use rolldown_plugin::SharedPluginDriver;
+use rolldown_plugin::{ContextLoadProgress, SharedPluginDriver};
 use rolldown_utils::commondir;
+use rolldown_utils::dashmap::FxDashSet;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
@@ -107,6 +108,18 @@ impl VisitState {
       VisitState::Seen(idx) | VisitState::Invalidate(idx) => idx,
     }
   }
+}
+
+enum PendingEntry {
+  UserDefined { index: usize, name: Option<ArcStr> },
+  Emitted { index: usize, msg: Box<AddEntryModuleMsg> },
+}
+
+#[derive(Default)]
+#[expect(clippy::type_complexity)]
+struct ResolvedEntries {
+  user_defined: Vec<Option<SingleBuildResult<(Option<ArcStr>, ResolvedId, ModuleIdx)>>>,
+  emitted: Vec<Option<SingleBuildResult<(Box<AddEntryModuleMsg>, ModuleIdx)>>>,
 }
 
 pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
@@ -210,7 +223,15 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     // the consumer may need the JS thread — pinned by `block_on` — to run
     // plugin hooks first. Keeping the channel unbounded removes that edge.
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-    let shared_context = Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta });
+    let shared_context = Arc::new(TaskContext {
+      options,
+      tx,
+      resolver,
+      fs,
+      plugin_driver,
+      meta,
+      late_entries: FxDashSet::default(),
+    });
 
     let importers = std::mem::take(&mut cache.importers);
     let intermediate_normal_modules = IntermediateNormalModules::new(is_full_scan, importers);
@@ -445,37 +466,44 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       self.remaining += 1;
     }
 
-    let user_defined_entries = match fetch_mode {
-      ScanMode::Full => self.resolve_user_defined_entries().await?,
-      ScanMode::Partial(_) => vec![],
+    // The message loop below runs while the entries resolve, so a `resolveId` hook of an entry
+    // can wait for other modules, as in Rollup. All resolutions come from this one closure, so
+    // `pending_entries` holds one future type.
+    let ctx = Arc::clone(&self.shared_context);
+    let resolve_entry = move |specifier: String, importer: Option<String>, entry: PendingEntry| {
+      let ctx = Arc::clone(&ctx);
+      async move {
+        let result = load_entry_module(
+          &ctx.options,
+          &ctx.resolver,
+          &ctx.plugin_driver,
+          &specifier,
+          importer.as_deref(),
+        )
+        .await;
+        (entry, result)
+      }
     };
 
-    let entries_count = user_defined_entries.len() + /* runtime */ 1;
+    let mut pending_entries = FuturesUnordered::new();
+    let mut resolved_entries = ResolvedEntries::default();
+    if fetch_mode.is_full() {
+      for input_item in &self.shared_context.options.input {
+        let entry = PendingEntry::UserDefined {
+          index: resolved_entries.user_defined.len(),
+          name: input_item.name.as_ref().map(Into::into),
+        };
+        resolved_entries.user_defined.push(None);
+        pending_entries.push(resolve_entry(input_item.import.clone(), None, entry));
+      }
+    }
+
+    let entries_count = resolved_entries.user_defined.len() + /* runtime */ 1;
     self.intermediate_normal_modules.modules.reserve(entries_count);
     self.intermediate_normal_modules.index_ecma_ast.reserve(entries_count);
 
-    // Store the already consider as entry module
-    let mut entry_points = FxIndexSet::default();
-    let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
-    for (name, resolved_id) in user_defined_entries.iter().cloned() {
-      let idx = self.try_spawn_new_task(resolved_id, None, true, None);
-      user_defined_entry_ids.insert(idx);
-      entry_points.insert(EntryPoint {
-        idx,
-        name,
-        kind: EntryPointKind::UserDefined,
-        file_name: None,
-        related_stmt_infos: vec![],
-      });
-    }
-
-    if self.is_full_scan && self.shared_context.options.experimental.is_incremental_build_enabled()
-    {
-      self
-        .cache
-        .user_defined_entry
-        .extend(user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.clone()));
-    }
+    // The modules of user-defined and emitted entries
+    let mut user_defined_entry_ids = FxHashSet::with_capacity(entries_count);
 
     // If it is in partial scan mode, we need to invalidate the changed modules
     // and re-fetch them, do nothing in full scan mode. Files re-queued by a
@@ -517,22 +545,46 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       self.try_spawn_new_task(resolved_id, None, is_user_defined_entry, None);
     }
 
-    let mut work_queue: VecDeque<(ModuleIdx, ImportedExports)> = VecDeque::new();
-    let mut dynamic_import_entry_ids: FxHashMap<
-      ModuleIdx,
-      Vec<(ModuleIdx, StmtInfoIdx, NodeId, ImportRecordIdx)>,
-    > = FxHashMap::default();
-
-    let mut dynamic_import_exports_usage_pairs = vec![];
-    let mut extra_entry_points = vec![];
-    let mut entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>> = FxHashMap::default();
-
     let mut runtime_brief = None;
-    let mut overrode_preserve_entry_signature_map = FxHashMap::default();
+    let mut work_queue: VecDeque<(ModuleIdx, ImportedExports)> = VecDeque::new();
+    let mut dynamic_import_entry_ids = FxHashMap::default();
+    let mut dynamic_import_exports_usage_pairs = vec![];
 
-    while self.remaining > 0 {
-      let Some(msg) = self.rx.recv().await else {
-        break;
+    while self.remaining > 0 || !pending_entries.is_empty() {
+      let event = if pending_entries.is_empty() {
+        let Some(msg) = self.rx.recv().await else { break };
+        Either::Left(msg)
+      } else {
+        tokio::select! {
+          Some(msg) = self.rx.recv() => Either::Left(msg),
+          Some(resolved_entry) = pending_entries.next() => Either::Right(resolved_entry),
+          else => break,
+        }
+      };
+      let msg = match event {
+        Either::Left(msg) => msg,
+        Either::Right((entry, result)) => {
+          let result = result.map(|resolved_id| {
+            // Another module can import an entry before the entry is resolved. The module
+            // task has then started as a non-entry.
+            if self.cache.module_id_to_idx.contains_key(&resolved_id.id) {
+              self.shared_context.mark_entry(&resolved_id.id);
+            }
+            let idx = self.try_spawn_new_task(resolved_id.clone(), None, true, None);
+            user_defined_entry_ids.insert(idx);
+            (resolved_id, idx)
+          });
+          match entry {
+            PendingEntry::UserDefined { index, name } => {
+              resolved_entries.user_defined[index] =
+                Some(result.map(|(resolved_id, idx)| (name, resolved_id, idx)));
+            }
+            PendingEntry::Emitted { index, msg } => {
+              resolved_entries.emitted[index] = Some(result.map(|(_, idx)| (msg, idx)));
+            }
+          }
+          continue;
+        }
       };
       match msg {
         ModuleLoaderMsg::NormalModuleDone(task_result) => {
@@ -659,10 +711,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             // - `load_entry_module()` rejects an external resolution with
             //   `entry_cannot_be_external`.
             // - `try_spawn_new_task` rejects an entry whose id is already an external module.
-            if matches!(raw_rec.kind, ImportKind::DynamicImport)
-              && !is_external
-              && !user_defined_entry_ids.contains(&idx)
-            {
+            if matches!(raw_rec.kind, ImportKind::DynamicImport) && !is_external {
               match dynamic_import_entry_ids.entry(idx) {
                 Entry::Vacant(vac) => match raw_rec.dynamic_import_expr_info.as_ref() {
                   Some(info) => {
@@ -775,56 +824,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
           runtime_brief = Some(runtime);
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {
-          let module_id = resolve_id.id.clone();
-          let idx = self.try_spawn_new_task(*resolve_id, None, false, None);
-          // `this.load` waits for a load signal, and only a normal module task sends it.
-          // A `this.load` of an id that is already external is a conflict, and
-          // `try_spawn_new_task` records it as an error. The code below ends the wait, so
-          // the build stops with that error and does not hang. No normal module task runs
-          // for an external module in this scan, so the wait gets no second signal.
-          if self.is_external_module(idx) {
-            self.shared_context.plugin_driver.ensure_context_load_module_completion(module_id);
-          }
+          self.fetch_module(*resolve_id);
         }
         ModuleLoaderMsg::AddEntryModule(msg) => {
-          let data = msg.chunk;
-          let result = load_entry_module(
-            &self.shared_context.options,
-            &self.shared_context.resolver,
-            &self.shared_context.plugin_driver,
-            &data.id,
-            data.importer.as_deref(),
-          )
-          .await;
-
-          let module_idx = match result {
-            Ok(resolved_id) => self.try_spawn_new_task(resolved_id, None, true, None),
-            Err(e) => {
-              self.errors.push(e);
-              continue;
-            }
-          };
-
-          if let Some(preserve_entry_signatures) = data.preserve_entry_signatures {
-            overrode_preserve_entry_signature_map.insert(module_idx, preserve_entry_signatures);
-          }
-
-          user_defined_entry_ids.insert(module_idx);
-
-          let entry = EntryPoint {
-            name: data.name.clone(),
-            idx: module_idx,
-            kind: EntryPointKind::EmittedUserDefined,
-            file_name: data.file_name.clone(),
-            related_stmt_infos: vec![],
-          };
-
-          entry_point_to_reference_ids
-            .entry(entry.clone())
-            .or_default()
-            .push(msg.reference_id.clone());
-
-          extra_entry_points.push(entry);
+          let specifier = msg.chunk.id.clone();
+          let importer = msg.chunk.importer.clone();
+          let entry = PendingEntry::Emitted { index: resolved_entries.emitted.len(), msg };
+          resolved_entries.emitted.push(None);
+          pending_entries.push(resolve_entry(specifier, importer, entry));
         }
         ModuleLoaderMsg::BuildErrors(e) => {
           self.errors.extend(e);
@@ -833,9 +840,64 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       }
     }
 
+    // The entries are in input and emit order, whatever order their resolution finished in.
+    let mut errors = vec![];
+    let mut entry_points = FxIndexSet::default();
+    let mut user_defined_entries = Vec::with_capacity(resolved_entries.user_defined.len());
+    for result in resolved_entries.user_defined.into_iter().flatten() {
+      match result {
+        Ok((name, resolved_id, idx)) => {
+          entry_points.insert(EntryPoint {
+            idx,
+            name: name.clone(),
+            kind: EntryPointKind::UserDefined,
+            file_name: None,
+            related_stmt_infos: vec![],
+          });
+          user_defined_entries.push((name, resolved_id));
+        }
+        Err(err) => errors.push(err),
+      }
+    }
+
+    let mut extra_entry_points = vec![];
+    let mut entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>> = FxHashMap::default();
+    let mut overrode_preserve_entry_signature_map = FxHashMap::default();
+    for result in resolved_entries.emitted.into_iter().flatten() {
+      match result {
+        Ok((msg, idx)) => {
+          let data = &msg.chunk;
+          if let Some(preserve_entry_signatures) = data.preserve_entry_signatures {
+            overrode_preserve_entry_signature_map.insert(idx, preserve_entry_signatures);
+          }
+          let entry = EntryPoint {
+            name: data.name.clone(),
+            idx,
+            kind: EntryPointKind::EmittedUserDefined,
+            file_name: data.file_name.clone(),
+            related_stmt_infos: vec![],
+          };
+          entry_point_to_reference_ids
+            .entry(entry.clone())
+            .or_default()
+            .push(msg.reference_id.clone());
+          extra_entry_points.push(entry);
+        }
+        Err(err) => errors.push(err),
+      }
+    }
+
+    if self.is_full_scan && self.shared_context.options.experimental.is_incremental_build_enabled()
+    {
+      self
+        .cache
+        .user_defined_entry
+        .extend(user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.clone()));
+    }
+
     self.render_new_external_paths(&user_defined_entries, &extra_entry_points);
 
-    let mut errors = std::mem::take(&mut self.errors);
+    errors.append(&mut self.errors);
     if !errors.is_empty() {
       // Enrich UNRESOLVED_IMPORT errors with import chain. Must run before
       // the revert below, which erases the failed scan's modules from the
@@ -849,11 +911,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
           }
         }
       }
-
       self.revert_partial_scan(changed_resolved_ids, barrel_state_backup);
-
-      let errors = consolidate_diagnostics(errors);
-      return Err(errors.into());
+      return Err(consolidate_diagnostics(errors).into());
     }
     if let Some(tx) = self.magic_string_tx.as_ref() {
       tx.send(SourceMapGenMsg::Terminate).expect(
@@ -919,10 +978,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       HybridIndexVec::Map(map)
     };
 
-    // Some module was not treated as an entry, but was emitted by `this.emitFile` during
-    // processing, those module info also need to be updated
-    // see https://github.com/rolldown/rolldown/issues/5030 as an example
-    idx_of_module_info_need_update.extend(extra_entry_points.iter().map(|item| item.idx));
+    // An import, `this.load` or an emitted chunk (#5030) can load an entry module before its
+    // entry resolves. Then its module info says that it is not an entry.
+    idx_of_module_info_need_update.extend(user_defined_entry_ids.iter().copied());
     idx_of_module_info_need_update.into_par_iter().for_each(|idx| {
       // A partial scan only holds re-scanned modules. A chunk emitted for an
       // unchanged module (e.g. by `buildStart` on the rebuild after a lazy
@@ -940,14 +998,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       );
     });
 
-    // Collect module indices from emitted entries to filter dynamic imports
-    // When a module is both dynamically imported AND emitted via this.emitFile,
-    // the emitted entry takes priority (it has user-specified name, fileName, preserveSignature)
-    let emitted_entry_indices: FxHashSet<ModuleIdx> =
-      extra_entry_points.iter().map(|e| e.idx).collect();
-
+    // When a module is both dynamically imported and a user-defined or emitted entry, the
+    // entry takes priority (it has user-specified name, fileName, preserveSignature)
     for (idx, related_stmt_infos) in dynamic_import_entry_ids {
-      if !emitted_entry_indices.contains(&idx) {
+      if !user_defined_entry_ids.contains(&idx) {
         entry_points.insert(EntryPoint {
           name: None,
           idx,
@@ -1031,43 +1085,20 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     }
   }
 
-  #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
-  pub async fn resolve_user_defined_entries(
-    &self,
-  ) -> BuildResult<Vec<(Option<ArcStr>, ResolvedId)>> {
-    let resolved_ids =
-      join_all(self.shared_context.options.input.iter().map(|input_item| async move {
-        let resolved = load_entry_module(
-          &self.shared_context.options,
-          &self.shared_context.resolver,
-          &self.shared_context.plugin_driver,
-          &input_item.import,
-          None,
-        )
-        .await;
-
-        resolved.map(|info| (input_item.name.as_ref().map(Into::into), info))
-      }))
-      .await;
-
-    let mut ret = Vec::with_capacity(self.shared_context.options.input.len());
-
-    let mut errors = vec![];
-
-    for resolve_id in resolved_ids {
-      match resolve_id {
-        Ok(item) => {
-          ret.push(item);
-        }
-        Err(e) => errors.push(e),
-      }
+  fn fetch_module(&mut self, resolve_id: ResolvedId) {
+    let module_id = resolve_id.id.clone();
+    let idx = self.try_spawn_new_task(resolve_id, None, false, None);
+    // `this.load` waits for a load signal, and only a normal module task sends it.
+    // A `this.load` of an id that is already external is a conflict, and
+    // `try_spawn_new_task` records it as an error. The code below ends the wait, so
+    // the build stops with that error and does not hang. No normal module task runs
+    // for an external module in this scan, so the wait gets no second signal.
+    if self.is_external_module(idx) {
+      self
+        .shared_context
+        .plugin_driver
+        .mark_context_load_progress(module_id, ContextLoadProgress::Completed);
     }
-
-    if !errors.is_empty() {
-      Err(errors)?;
-    }
-
-    Ok(ret)
   }
 
   /// Traces the import chain from a module back to an entry point.
@@ -1284,7 +1315,7 @@ mod tests {
     module_loader::task_context::{TaskContext, TaskContextMeta},
   };
 
-  use super::{ExternalModuleTask, ModuleTask};
+  use super::{ExternalModuleTask, FxDashSet, ModuleTask};
 
   /// A module task that finishes after its build was dropped must not panic when it sends.
   #[tokio::test]
@@ -1305,6 +1336,7 @@ mod tests {
       fs: bundle.fs,
       plugin_driver: bundle.plugin_driver,
       meta: TaskContextMeta { replace_global_define_config: None },
+      late_entries: FxDashSet::default(),
     });
 
     let normal = ResolvedId { id: ModuleId::new_empty("empty"), ..Default::default() };

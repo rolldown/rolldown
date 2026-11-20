@@ -288,6 +288,8 @@ The trade-off of merging: entry chunks may include modules that not all consumer
 
 For chunks shared only by dynamic entries, the optimizer does not infer a merge target from dynamic-import reachability alone. Sibling dynamic imports from the same loaded entry can be requested independently, so "the entry can reach both chunks" does not prove either dynamic chunk is already loaded before the other. In that case, Rolldown keeps a separate common chunk unless the existing static-import merge-target check proves a safe target.
 
+With multiple inputs and manual code-splitting groups, the common-chunk optimizer can skip allocating a chunk for a single ESM re-export barrel. Each importer must be the entry module of its input chunk and remain that chunk's only module after pending common-chunk assignments. All of its source imports must be static imports of the barrel, and a live binding or an inlined constant must already load the same named chunk. Every effectful module that the barrel directly re-exports from must belong to that chunk and precede the barrel in execution order. Removing the entry's sole source import target preserves the order of its surviving imports. The optimizer does not skip the barrel's chunk when the group chunk can reach it through imports, or when the barrel keeps code, legal comments, or an explicit `moduleSideEffects: 'no-treeshake'` marker.
+
 ### Facade Elimination (`optimize_facade_entry_chunks`)
 
 Dynamic/emitted entries can become empty facades when all their modules are pulled into other chunks by the optimizer. The optimizer identifies these and either:

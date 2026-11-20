@@ -9,6 +9,7 @@ use crate::{
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped, hook_transform_ast_args::HookTransformAstArgs,
   },
+  utils::normalize_transform_sourcemap::normalize_transform_sourcemap,
 };
 use anyhow::{Context, Result};
 use arcstr::ArcStr;
@@ -18,7 +19,6 @@ use rolldown_common::{
 };
 use rolldown_devtools::{action, trace_action};
 use rolldown_error::CausedPlugin;
-use rolldown_sourcemap::SourceMap;
 use rolldown_utils::{IndexBitSet, unique_arc::UniqueArc};
 use tracing::{Instrument, debug_span};
 
@@ -319,25 +319,32 @@ impl PluginDriver {
         plugin_id: plugin_idx.raw(),
         call_id: call_id.clone().unwrap_or_default(),
       });
-      let result = plugin
-        .call_transform(
-          Arc::new(TransformPluginContext::new(
-            ctx.clone(),
-            plugin_sourcemap_chain.weak_ref(),
-            code_arc_ref.clone(),
-            id.into(),
-            module_idx,
-            plugin_idx,
-            magic_string_tx.clone(),
-          )),
-          &args,
-        )
-        .await;
+      let transform_ctx = Arc::new(TransformPluginContext::new(
+        ctx.clone(),
+        plugin_sourcemap_chain.weak_ref(),
+        code_arc_ref.clone(),
+        id.into(),
+        module_idx,
+        magic_string_tx.is_some(),
+      ));
+      let result = plugin.call_transform(Arc::clone(&transform_ctx), &args).await;
+      // Close the slot right after the hook and before `?`, so that a result, `null` and
+      // an error all release the map. From here, the context keeps no reference to it, and
+      // a later `sendMagicString` through a context that a plugin keeps fails.
+      let pending_sourcemap = transform_ctx.take_pending_sourcemap();
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
         let map_was_omitted = matches!(r.map, crate::HookTransformOutputMap::Omitted);
         let map_was_null = matches!(r.map, crate::HookTransformOutputMap::Null);
-        if let Some(map) = Self::normalize_transform_sourcemap(r.map.into_sourcemap(), id, &code) {
+        // The hook returned a native MagicString and no `map` (`bindingifyTransformResult`
+        // sends the MagicString only then). Push its map here, in plugin order, so a later
+        // hook's `getCombinedSourcemap` sees it. If a plugin calls `sendMagicString` itself,
+        // the sent map takes precedence over `r.map`.
+        if let Some(pending) = pending_sourcemap.filter(|_| r.code.is_some()) {
+          original_sourcemap_chain.push(SourcemapChainElement::MagicString((plugin_idx, pending)));
+        } else if let Some(map) =
+          r.map.into_sourcemap().map(|map| normalize_transform_sourcemap(map, id, &code))
+        {
           original_sourcemap_chain.push(SourcemapChainElement::Transform((plugin_idx, map)));
         } else if map_was_omitted && r.code.is_some() {
           original_sourcemap_chain.push(SourcemapChainElement::Omitted {
@@ -380,30 +387,20 @@ impl PluginDriver {
       });
     }
     *sourcemap_chain = plugin_sourcemap_chain.into_inner();
+    if let Some(tx) = &magic_string_tx {
+      // Only now can no hook generate these maps on the JS thread anymore, so
+      // the worker can take them without either thread waiting for the other.
+      // See `PendingSourcemap`.
+      for element in sourcemap_chain.iter() {
+        if let SourcemapChainElement::MagicString((_, pending)) = element {
+          if !pending.is_generated() {
+            // Sending only fails if the worker panicked, which joining it reports.
+            let _ = tx.send(rolldown_common::SourceMapGenMsg::MagicString(Arc::clone(pending)));
+          }
+        }
+      }
+    }
     Ok(code)
-  }
-
-  #[inline]
-  fn normalize_transform_sourcemap(
-    map: Option<SourceMap>,
-    id: &str,
-    original_code: &str,
-  ) -> Option<SourceMap> {
-    let mut map = map?;
-    // Single-source transforms may omit the input name; multi-source maps retain null slots.
-    let source_count = map.get_sources().len();
-    let source = map.get_source(0);
-    if source_count == 0
-      || source.is_some_and(str::is_empty)
-      || (source_count == 1 && source.is_none_or(|source| source != id))
-    {
-      map.set_sources(vec![Some(id)]);
-    }
-    // If sourcemap hasn't `sourcesContent`, using original code to fill it.
-    if map.get_source(0).is_some() && map.get_source_content(0).is_none_or(str::is_empty) {
-      map.set_source_contents(vec![Some(original_code)]);
-    }
-    Some(map)
   }
 
   #[tracing::instrument(
@@ -479,38 +476,5 @@ impl PluginDriver {
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::{PluginDriver, SourceMap};
-
-  #[test]
-  fn normalize_transform_sourcemap_preserves_null_sources() {
-    for json in [
-      r#"{"version":3,"sources":[null,"other.js"],"sourcesContent":[null,"other code"],"names":[],"mappings":"ACAA"}"#,
-      r#"{"version":3,"sources":[null,null],"sourcesContent":[null,null],"names":[],"mappings":"AAAA"}"#,
-    ] {
-      let map = SourceMap::from_json_string(json).unwrap();
-      let expected = map.to_json_string();
-      let map =
-        PluginDriver::normalize_transform_sourcemap(Some(map), "id.js", "original code").unwrap();
-      assert_eq!(map.to_json_string(), expected);
-    }
-  }
-
-  #[test]
-  fn normalize_transform_sourcemap_fills_missing_sources() {
-    for json in [
-      r#"{"version":3,"sources":[],"sourcesContent":[],"names":[],"mappings":""}"#,
-      r#"{"version":3,"sources":[null],"sourcesContent":[null],"names":[],"mappings":"AAAA"}"#,
-    ] {
-      let map = SourceMap::from_json_string(json).unwrap();
-      let map =
-        PluginDriver::normalize_transform_sourcemap(Some(map), "id.js", "original code").unwrap();
-      assert_eq!(map.get_source(0), Some("id.js"));
-      assert_eq!(map.get_source_content(0), Some("original code"));
-    }
   }
 }

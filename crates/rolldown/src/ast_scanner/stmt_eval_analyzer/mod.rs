@@ -601,7 +601,14 @@ impl<'a> StmtEvalAnalyzer<'a> {
             BindingPattern::ArrayPattern(pat)
               if pat.elements.iter().any(|p| {
                 p.as_ref().is_some_and(|pat| !matches!(pat, BindingPattern::BindingIdentifier(_)))
-              }) =>
+              }) || pat
+                .rest
+                .as_ref()
+                .is_some_and(|rest| !matches!(rest.argument, BindingPattern::BindingIdentifier(_)))
+                // Destructuring calls the iterator of the value, which can be any code. Only the
+                // iterator of an array literal is known to be side-effect free.
+                || (self.flat_options.property_read_side_effects()
+                  && !matches!(declarator.init, Some(Expression::ArrayExpression(_)))) =>
             {
               StmtEvalFacts::from_unknown_side_effect()
             }

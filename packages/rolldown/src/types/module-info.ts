@@ -58,7 +58,9 @@ export interface ModuleInfo extends ModuleOptions {
    */
   dynamicallyImportedIds: string[];
   /**
-   * All exported variables
+   * All exported variables.
+   *
+   * `*` stands for `export * from`. Names starting with `*` are listed with an additional `*` to keep them apart from it.
    */
   exports: string[];
   /**

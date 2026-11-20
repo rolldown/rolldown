@@ -9,7 +9,7 @@ pub enum SourcemapChainElement {
   Transform((PluginIdx, SourceMap)),
   /// An inline source map represented as a JSON string.
   Load(SourceMap),
-  /// A transform hook returned changed code without a sourcemap.
+  /// A transform hook returned code without a sourcemap, even if the code did not change.
   Omitted { plugin_idx: PluginIdx, plugin_name: ArcStr },
   /// A transform hook returned changed code together with an explicit
   /// `map: null`.

@@ -142,7 +142,6 @@
   "rollup@form@external-namespace-optimzation-in-operator: disables optimization for external namespace when using the in operator",
   "rollup@form@namespace-optimization-default-export: it does not include all namespace members when a namespace is re-exported as default",
   "rollup@form@paths-drive-root: does not let \"..\" climb above a drive root when rendering the import path of an external remapped via output.paths",
-  "rollup@function@arbitrary-module-namespace-identifiers-star: executes reassigned and synthetic exports with names that start with \"*\"",
   "rollup@function@catch-scope-nested-deconflicting: deconflicts nested catch scope parameters correctly",
   "rollup@function@emit-file@no-input: It is not necessary to provide an input if a dynamic entry is emitted",
   "rollup@function@error-file-name-windows-drive-relative-emitted-asset: throws when a plugin emits an asset with a Windows drive-relative file name",

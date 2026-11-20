@@ -367,6 +367,7 @@
 
 ### The `syntheticNamedExports` is not supported
  - rollup@form@synthetic-named-exports: synthetic named exports
+ - rollup@function@arbitrary-module-namespace-identifiers-star: executes reassigned and synthetic exports with names that start with "*"
  - rollup@function@synthetic-named-exports-fallback-es2015: adds a fallback in case synthetic named exports are falsy
  - rollup@function@synthetic-named-exports-fallback: adds a fallback in case synthetic named exports are falsy
  - rollup@function@synthetic-named-exports@circular-synthetic-exports2: handles circular synthetic exports

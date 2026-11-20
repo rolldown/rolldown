@@ -7,7 +7,7 @@ use std::borrow::Cow;
 use oxc_sourcemap::{LookupCursor, SourceMapParts, Token};
 
 pub use oxc_sourcemap::{JSONSourceMap, OwnedSourceMap, SourceMapBuilder, SourcemapVisualizer};
-pub use resolve_sources::resolve_sources_against_module;
+pub use resolve_sources::{resolve_sources_against_module, source_names_module};
 pub use source_joiner::SourceJoiner;
 
 /// Rolldown always stores and produces owned sourcemaps, so we alias the

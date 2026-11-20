@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
-use rolldown_common::{ModuleId, ModuleLoaderMsg, ResolvedId};
+use rolldown_common::{ModuleId, ModuleLoaderMsg, RUNTIME_MODULE_ID, ResolvedId};
 use rolldown_error::BuildDiagnostic;
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
@@ -64,6 +64,12 @@ impl<Fs: FileSystem> Drop for TaskMessageGuard<Fs> {
       "the task that loads `{}` panicked before it sent its result",
       self.module_id.stabilize(&self.ctx.options.cwd)
     ));
-    let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(vec![diagnostic].into_boxed_slice()));
+    let errors = vec![diagnostic].into_boxed_slice();
+    let message = if self.module_id == RUNTIME_MODULE_ID {
+      ModuleLoaderMsg::RuntimeModuleErrors(errors)
+    } else {
+      ModuleLoaderMsg::BuildErrors(errors)
+    };
+    let _ = self.ctx.tx.send(message);
   }
 }

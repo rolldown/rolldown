@@ -9,6 +9,7 @@ use crate::{
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped, hook_transform_ast_args::HookTransformAstArgs,
   },
+  utils::normalize_transform_sourcemap::normalize_transform_sourcemap,
 };
 use anyhow::{Context, Result};
 use arcstr::ArcStr;
@@ -18,7 +19,6 @@ use rolldown_common::{
 };
 use rolldown_devtools::{action, trace_action};
 use rolldown_error::CausedPlugin;
-use rolldown_sourcemap::SourceMap;
 use rolldown_utils::{IndexBitSet, unique_arc::UniqueArc};
 use tracing::{Instrument, debug_span};
 
@@ -337,7 +337,9 @@ impl PluginDriver {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
         let map_was_omitted = matches!(r.map, crate::HookTransformOutputMap::Omitted);
         let map_was_null = matches!(r.map, crate::HookTransformOutputMap::Null);
-        if let Some(map) = Self::normalize_transform_sourcemap(r.map.into_sourcemap(), id, &code) {
+        if let Some(map) =
+          r.map.into_sourcemap().map(|map| normalize_transform_sourcemap(map, id, &code))
+        {
           original_sourcemap_chain.push(SourcemapChainElement::Transform((plugin_idx, map)));
         } else if map_was_omitted && r.code.is_some() {
           original_sourcemap_chain.push(SourcemapChainElement::Omitted {
@@ -382,29 +384,6 @@ impl PluginDriver {
     }
     *sourcemap_chain = plugin_sourcemap_chain.into_inner();
     Ok(code)
-  }
-
-  #[inline]
-  fn normalize_transform_sourcemap(
-    map: Option<SourceMap>,
-    id: &str,
-    original_code: &str,
-  ) -> Option<SourceMap> {
-    let mut map = map?;
-    // Single-source transforms may omit the input name; multi-source maps retain null slots.
-    let source_count = map.get_sources().len();
-    let source = map.get_source(0);
-    if source_count == 0
-      || source.is_some_and(str::is_empty)
-      || (source_count == 1 && source.is_none_or(|source| source != id))
-    {
-      map.set_sources(vec![Some(id)]);
-    }
-    // If sourcemap hasn't `sourcesContent`, using original code to fill it.
-    if map.get_source(0).is_some() && map.get_source_content(0).is_none_or(str::is_empty) {
-      map.set_source_contents(vec![Some(original_code)]);
-    }
-    Some(map)
   }
 
   #[tracing::instrument(
@@ -482,38 +461,5 @@ impl PluginDriver {
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::{PluginDriver, SourceMap};
-
-  #[test]
-  fn normalize_transform_sourcemap_preserves_null_sources() {
-    for json in [
-      r#"{"version":3,"sources":[null,"other.js"],"sourcesContent":[null,"other code"],"names":[],"mappings":"ACAA"}"#,
-      r#"{"version":3,"sources":[null,null],"sourcesContent":[null,null],"names":[],"mappings":"AAAA"}"#,
-    ] {
-      let map = SourceMap::from_json_string(json).unwrap();
-      let expected = map.to_json_string();
-      let map =
-        PluginDriver::normalize_transform_sourcemap(Some(map), "id.js", "original code").unwrap();
-      assert_eq!(map.to_json_string(), expected);
-    }
-  }
-
-  #[test]
-  fn normalize_transform_sourcemap_fills_missing_sources() {
-    for json in [
-      r#"{"version":3,"sources":[],"sourcesContent":[],"names":[],"mappings":""}"#,
-      r#"{"version":3,"sources":[null],"sourcesContent":[null],"names":[],"mappings":"AAAA"}"#,
-    ] {
-      let map = SourceMap::from_json_string(json).unwrap();
-      let map =
-        PluginDriver::normalize_transform_sourcemap(Some(map), "id.js", "original code").unwrap();
-      assert_eq!(map.get_source(0), Some("id.js"));
-      assert_eq!(map.get_source_content(0), Some("original code"));
-    }
   }
 }

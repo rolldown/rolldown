@@ -5,16 +5,15 @@ use arcstr::ArcStr;
 use oxc::ast::ast::CommentContent;
 use oxc::ast::ast::Program;
 use oxc::ast::ast::{
-  ArrowFunctionExpression, AwaitExpression, BindingPattern, Declaration,
-  ExportDefaultDeclarationKind, ExportSpecifier, Expression, ForOfStatement, Function,
-  IdentifierReference, Statement, StaticBlock, VariableDeclaration, VariableDeclarationKind,
-  VariableDeclarator,
+  ArrowFunctionExpression, AwaitExpression, BindingIdentifier, BindingPattern,
+  ConditionalExpression, Declaration, ExportDefaultDeclarationKind, ExportSpecifier, Expression,
+  ForOfStatement, Function, IdentifierReference, IfStatement, LogicalExpression, LogicalOperator,
+  Statement, StaticBlock, VariableDeclaration, VariableDeclarationKind, VariableDeclarator,
 };
 use oxc::ast_visit::{VisitJs, VisitJsMut, walk_js, walk_js_mut};
 use oxc::diagnostics::{LabeledSpan, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
 use oxc::semantic::{ScopeFlags, ScopeId, Scoping, Stats, SymbolId};
-use oxc::span::GetSpan;
 use oxc::syntax::symbol::SymbolFlags;
 use oxc::transformer::Transformer;
 use oxc::transformer_plugins::{
@@ -110,7 +109,6 @@ impl PreProcessEcmaAst {
 
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
-    self.clear_unsafe_no_side_effects(&mut ast, &mut scoping);
 
     // Extract enum member values before the transformer converts enums.
     // This runs before Step 3 (transformer) because `optimize_const_enums` / `optimize_enums`
@@ -170,6 +168,10 @@ impl PreProcessEcmaAst {
         }
       });
     }
+
+    // `define` can insert a read of a binding or an annotated function, so this check runs after
+    // Step 2. It runs before Step 3, which can add code.
+    self.clear_unsafe_no_side_effects(&mut ast, &mut scoping);
 
     // Step 3: Transform TypeScript and jsx.
     // Note: Currently, the newest syntax oxc_transform can lower is ES2026
@@ -310,7 +312,10 @@ impl PreProcessEcmaAst {
   ///   function, sees the binding before it is initialized. See
   ///   `internal-docs/linking/module-execution-order/implementation.md`.
   fn clear_unsafe_no_side_effects(&mut self, ast: &mut EcmaAst, scoping: &mut Option<Scoping>) {
-    let scoping_ref = scoping.as_ref().unwrap();
+    // `define` drops the scoping when it changes the AST, and it can add an annotation. The next
+    // pass uses the rebuilt scoping.
+    let rebuilt = self.recreate_scoping(scoping, ast.program());
+    let scoping_ref = &*scoping.insert(rebuilt);
     let no_side_effects = scoping_ref.no_side_effects();
     if no_side_effects.is_empty() {
       return;
@@ -319,8 +324,7 @@ impl PreProcessEcmaAst {
       .iter()
       .copied()
       .filter(|&symbol_id| !scoping_ref.symbol_flags(symbol_id).is_function())
-      .map(|symbol_id| (symbol_id, scoping_ref.symbol_span(symbol_id).start))
-      .collect::<FxHashMap<_, _>>();
+      .collect::<FxHashSet<_>>();
     let mut symbols = if candidates.is_empty() {
       FxHashSet::default()
     } else {
@@ -468,11 +472,15 @@ impl<'ast> VisitJs<'ast> for TopLevelAwaitFinder {
 
 /// Finds the `@__NO_SIDE_EFFECTS__` bindings that code reads before their declaration, outside a
 /// function nested in the declaring scope. Such a read sees the binding before it is initialized.
+///
+/// "Before" is AST order, not span order, because `define` gives the reads that it inserts an
+/// empty span at 0. The walk skips a branch that a literal condition never runs, such as
+/// `if (false) f();`, because that read never runs.
 struct ReadBeforeDeclarationFinder<'a> {
   scoping: &'a Scoping,
-  /// The declaration start of each `let`, `const` or `var` binding to check.
-  candidates: FxHashMap<SymbolId, u32>,
-  last_declaration_start: u32,
+  /// The `let`, `const` and `var` bindings to check whose declaration the walk has not reached,
+  /// and that are not in `found`.
+  pending: FxHashSet<SymbolId>,
   /// Whether a binding to check is declared below the root scope. If not, a read inside a
   /// function never counts, so the walk skips functions.
   visit_functions: bool,
@@ -484,17 +492,15 @@ struct ReadBeforeDeclarationFinder<'a> {
 impl ReadBeforeDeclarationFinder<'_> {
   fn find(
     scoping: &Scoping,
-    candidates: FxHashMap<SymbolId, u32>,
+    candidates: FxHashSet<SymbolId>,
     program: &Program<'_>,
   ) -> FxHashSet<SymbolId> {
-    let last_declaration_start = candidates.values().copied().max().unwrap_or_default();
     let root_scope_id = scoping.root_scope_id();
     let visit_functions =
-      candidates.keys().any(|&symbol_id| scoping.symbol_scope_id(symbol_id) != root_scope_id);
+      candidates.iter().any(|&symbol_id| scoping.symbol_scope_id(symbol_id) != root_scope_id);
     let mut finder = ReadBeforeDeclarationFinder {
       scoping,
-      candidates,
-      last_declaration_start,
+      pending: candidates,
       visit_functions,
       scopes: vec![],
       found: FxHashSet::default(),
@@ -504,14 +510,77 @@ impl ReadBeforeDeclarationFinder<'_> {
   }
 }
 
+/// The truthiness of a literal condition, such as `false` or `0`. `None` for other expressions.
+fn literal_truthiness(expr: &Expression<'_>) -> Option<bool> {
+  match expr.without_parentheses() {
+    Expression::BooleanLiteral(lit) => Some(lit.value),
+    Expression::NullLiteral(_) => Some(false),
+    // A numeric literal is never negative or `NaN`.
+    Expression::NumericLiteral(lit) => Some(lit.value > 0.0),
+    Expression::StringLiteral(lit) => Some(!lit.value.is_empty()),
+    _ => None,
+  }
+}
+
+/// Whether a literal is `null`, for the left operand of `??`. `None` for other expressions.
+fn literal_is_nullish(expr: &Expression<'_>) -> Option<bool> {
+  match expr.without_parentheses() {
+    Expression::NullLiteral(_) => Some(true),
+    Expression::BooleanLiteral(_)
+    | Expression::NumericLiteral(_)
+    | Expression::StringLiteral(_) => Some(false),
+    _ => None,
+  }
+}
+
 impl<'ast> VisitJs<'ast> for ReadBeforeDeclarationFinder<'_> {
   fn visit_program(&mut self, program: &Program<'ast>) {
     self.scopes.push((program.scope_id.get(), false));
     for stmt in &program.body {
-      if stmt.span().start >= self.last_declaration_start {
+      if self.pending.is_empty() {
         break;
       }
       self.visit_statement(stmt);
+    }
+  }
+
+  fn visit_binding_identifier(&mut self, ident: &BindingIdentifier<'ast>) {
+    if let Some(symbol_id) = ident.symbol_id.get() {
+      self.pending.remove(&symbol_id);
+    }
+  }
+
+  fn visit_if_statement(&mut self, it: &IfStatement<'ast>) {
+    let Some(value) = literal_truthiness(&it.test) else {
+      walk_js::walk_if_statement(self, it);
+      return;
+    };
+    self.visit_expression(&it.test);
+    if value {
+      self.visit_statement(&it.consequent);
+    } else if let Some(alternate) = &it.alternate {
+      self.visit_statement(alternate);
+    }
+  }
+
+  fn visit_conditional_expression(&mut self, it: &ConditionalExpression<'ast>) {
+    let Some(value) = literal_truthiness(&it.test) else {
+      walk_js::walk_conditional_expression(self, it);
+      return;
+    };
+    self.visit_expression(&it.test);
+    self.visit_expression(if value { &it.consequent } else { &it.alternate });
+  }
+
+  fn visit_logical_expression(&mut self, it: &LogicalExpression<'ast>) {
+    self.visit_expression(&it.left);
+    let right_runs = match it.operator {
+      LogicalOperator::And => literal_truthiness(&it.left),
+      LogicalOperator::Or => literal_truthiness(&it.left).map(|value| !value),
+      LogicalOperator::Coalesce => literal_is_nullish(&it.left),
+    };
+    if right_runs != Some(false) {
+      self.visit_expression(&it.right);
     }
   }
 
@@ -544,7 +613,7 @@ impl<'ast> VisitJs<'ast> for ReadBeforeDeclarationFinder<'_> {
     else {
       return;
     };
-    if self.candidates.get(&symbol_id).is_none_or(|&start| ident.span.start >= start) {
+    if !self.pending.contains(&symbol_id) {
       return;
     }
     let declaring_scope = Some(self.scoping.symbol_scope_id(symbol_id));
@@ -555,6 +624,7 @@ impl<'ast> VisitJs<'ast> for ReadBeforeDeclarationFinder<'_> {
       .take_while(|(scope_id, _)| *scope_id != declaring_scope)
       .any(|&(_, is_function)| is_function);
     if !in_nested_function {
+      self.pending.remove(&symbol_id);
       self.found.insert(symbol_id);
     }
   }

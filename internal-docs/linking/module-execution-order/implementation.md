@@ -45,6 +45,8 @@ The linker keeps an early call for both export forms. For a function that `expor
 
 A call in the same module gets a similar check before the linker runs. oxc treats every call of an annotated binding as pure, with no TDZ check. So before the per-module dead code elimination, `PreProcessEcmaAst` removes the `@__NO_SIDE_EFFECTS__` annotation of a `let`, `const` or `var` binding that code reads before its declaration, outside a nested function. `export { fn }` does not read the binding.
 
+The check runs after `define` and before the transform. `define` can insert a read of a binding, and it can insert an annotated function. "Before" is AST order, not span order, because `define` gives an inserted read an empty span at 0. The check does not count a read in a branch that a literal condition never runs, such as `if (false) fn();`, `false && fn()` or `0 ?? fn()`. Other dead code still counts, for example code after a `throw` or `if ('a' === 'b') fn();`. Then the annotation goes and the output keeps the later calls, which costs size only. The fixtures are `tree_shaking/call_before_init`, `tree_shaking/call_before_init_dead_branch` and `tree_shaking/call_before_init_define_read`.
+
 Some early calls stay out of reach:
 
 - oxc keeps a summary of each function whose body has no side effects, with or without the annotation. A later pass of its dead code elimination uses the summary to remove a call that comes before the declaration. This applies to the per-module pass and to the chunk minifier, also with `minify: 'dce-only'`. The first pass makes the summary when it gets to the declaration, so such a call stays only when the first pass changes nothing. The oxc minifier documents this as an assumption: code does not violate the TDZ.

@@ -1,0 +1,7 @@
+{
+  "_comment": "Each read before a declaration is in a branch that a literal condition never runs, also after `define` replaces `DEV`. The read never runs, so each binding keeps its `@__NO_SIDE_EFFECTS__` annotation and the calls after the declarations should be removed.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "define": { "DEV": "false" }
+  }
+}

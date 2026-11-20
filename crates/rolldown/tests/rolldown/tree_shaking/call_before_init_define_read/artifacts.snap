@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+try {
+	early();
+} catch (error) {
+	globalThis.calls.push(`define: ${error.name}`);
+}
+try {
+	coalesced();
+} catch (error) {
+	globalThis.calls.push(`coalesce: ${error.name}`);
+}
+const early = () => globalThis.calls.push("early");
+const coalesced = () => globalThis.calls.push("coalesced");
+
+```

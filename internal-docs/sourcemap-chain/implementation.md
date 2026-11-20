@@ -10,12 +10,12 @@ Each module keeps a `sourcemap_chain` of the maps that the `load` and `transform
 
 - `Load(map)`: the `load` hook map (`crates/rolldown/src/utils/load_source.rs`). It is always first.
 - `Transform((plugin_idx, map))`: a `transform` hook map (`PluginDriver::transform` in `crates/rolldown_plugin/src/plugin_driver/build_hooks.rs`), or a native MagicString map (`create_sourcemap_channel` in `crates/rolldown/src/stages/scan_stage.rs`).
-- `Omitted`: the hook changed the code and returned no map. It collapses as an empty map, so the module map has no mappings, and the build warns `SOURCEMAP_BROKEN`.
+- `Omitted`: the hook returned code without a map, even if the code did not change. It collapses as an empty map, so the module map has no mappings, and the build warns `SOURCEMAP_BROKEN`.
 - `Null`: the hook changed the code and returned `map: null`. Positions pass through unchanged. If no real map is in the chain, its pre-transform code becomes the content.
 
 ## Collapse rule
 
-`collapse_sourcemaps_traced` (`crates/rolldown_sourcemap/src/lib.rs`) takes `sources` and `sourcesContent` from the first map only. It traces each token back through the earlier maps by line and column, and it ignores the source id of each later map. So only the first map's `sources` and `sourcesContent` ship, and a later map only moves positions. As Rollup's `traceMappings()` does, it keeps only the sources and names that a traced token references.
+`collapse_sourcemaps_traced` (`crates/rolldown_sourcemap/src/lib.rs`) takes `sources` and `sourcesContent` from the first map only. It traces each token back through the earlier maps by line and column, and it ignores the source id of each later map. So only the first map's `sources` and `sourcesContent` ship. Names can come from a later map too: each token takes its name from the earliest map that has a name for it, so a later map's name stays when the earlier maps have none. As Rollup's `traceMappings()` does, it keeps only the sources and names that a traced token references.
 
 Before the collapse, `resolve_sources_against_module` (`crates/rolldown_sourcemap/src/resolve_sources.rs`) resolves the relative `sources` of the first map against the module directory and `sourceRoot`. The chain itself does not change, because `this.getCombinedSourcemap()` reads it.
 
@@ -28,4 +28,4 @@ Before the collapse, `resolve_sources_against_module` (`crates/rolldown_sourcema
 ## Known gaps
 
 - An unnamed `''` source or a URL source that a map keeps becomes a path under the cwd in the output map (for example `..` or `../https:/example.test/a.ts`), because `crates/rolldown/src/utils/process_code_and_sourcemap.rs` makes each source path that is not `null` relative to the output file. A `null` source stays `null`. A relative source under a URL `sourceRoot` also becomes a path under the cwd, because the output map drops the `sourceRoot`.
-- A map with more than one source keeps its names only when it is the first map in the chain. In a later position, the collapse rule above traces its tokens as if they pointed into the previous code.
+- A map with more than one source keeps its own `sources` only when it is the first map in the chain. In a later position, the collapse rule above traces its tokens as if they pointed into the previous code.

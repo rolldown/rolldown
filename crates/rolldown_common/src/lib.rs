@@ -17,7 +17,10 @@ mod utils;
 pub mod bundler_options {
   pub use crate::generated::{
     checks_options::ChecksOptions,
-    runtime_helper::{DependedRuntimeHelperMap, RUNTIME_HELPER_NAMES, RuntimeHelper},
+    runtime_helper::{
+      DependedRuntimeHelperMap, RUNTIME_HELPER_NAMES, RUNTIME_IMPORT_DEFER_HELPER_NAMES,
+      RuntimeHelper,
+    },
   };
 
   #[cfg(feature = "deserialize_bundler_options")]
@@ -125,8 +128,9 @@ pub use crate::{
     dynamic_import_usage,
     ecma_asset_meta::EcmaAssetMeta,
     ecma_view::{
-      EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ExportOrigin, RolldownFileUrlReference,
-      ThisExprReplaceKind, generate_replace_this_expr_map,
+      DeferredNamespaceWrite, EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ExportOrigin,
+      ImportDeferScan, RolldownFileUrlReference, ThisExprReplaceKind,
+      generate_replace_this_expr_map,
     },
     json_to_program::{json_value_to_ecma_ast, json_value_to_expression, parse_json_to_ecma_ast},
     module_idx::ModuleIdx,

@@ -100,3 +100,9 @@ They agree because the wrap arrives through exactly **two channels**, each carry
 So the invariant is pairwise, not one source answering both questions. Narrowing a channel's wrap without its edge — or the more tempting inverse, registering `ToEsm` only for imports tree-shaking kept alive — reopens the panic for the cases the other channel does not cover.
 
 Chunks do not exist yet when `patch_module_dependencies` runs, so `is_included` stands in for "will have a chunk". An observer that is not included cannot be attributed to one, and rendering falls back to wrapping every chunk emitting the external — so every referencing module keeps the edge, matching that fallback.
+
+## The helpers of `import defer`: only with the option
+
+The helpers of `import defer` (`__deferNs`) are in `crates/rolldown/src/runtime/runtime-defer.js`, not in `runtime-base.js`. `RuntimeModuleTask` adds the file to the runtime source only when `experimental.importDefer` is on. Each build parses and scans the full runtime source, also the helpers that tree shaking removes later, and the `transform` hook of a plugin gets that source. With the helpers in `runtime-base.js`, a build without the option would pay for them and give a different runtime source to plugins.
+
+The generator (`tasks/generator/src/generators/runtime_helper.rs`) reads the file last, so the other helpers keep their bits in `RuntimeHelper`. It also writes the names of the file to `RUNTIME_IMPORT_DEFER_HELPER_NAMES`. When the option is off, the module loader leaves these names out of the runtime symbol check, and no code path may resolve them: `RuntimeModuleBrief::resolve_symbol` panics on a missing name.

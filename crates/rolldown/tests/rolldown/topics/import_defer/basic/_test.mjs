@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import * as m from './dist/main.js';
 
-// `experimental.importDefer` has no effect yet, so `dep.js` evaluates before `main.js`.
-assert.deepStrictEqual(m.before, ['dep']);
+// `dep.js` evaluates at the first access to `dep.value`, after `before` reads the log.
+assert.deepStrictEqual(m.before, []);
 assert.strictEqual(m.value, 1);
 assert.deepStrictEqual(m.after, ['dep']);

@@ -1,0 +1,50 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+// x.js
+var x_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
+var x_deferred = /* @__PURE__ */ __deferNs(() => (init_x(), x_exports), x_exports);
+function init_x() {
+	return (init_x = __esmMin((() => {
+		init_log();
+		log.push("x");
+	})))();
+}
+// main.js
+init_log();
+const errorName = (fn) => {
+	try {
+		fn();
+		return "none";
+	} catch (error) {
+		return error.constructor.name;
+	}
+};
+const setError = errorName(() => {
+	x_deferred.value = 2;
+});
+const afterSet = [...log];
+const updateError = errorName(() => {
+	x_deferred.value += 1;
+});
+const afterUpdate = [...log];
+const deleteError = errorName(() => {
+	delete x_deferred.value;
+});
+const value = (init_x(), 1);
+export { afterSet, afterUpdate, deleteError, setError, updateError, value };
+
+```

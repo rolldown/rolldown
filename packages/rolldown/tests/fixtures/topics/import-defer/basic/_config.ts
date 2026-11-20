@@ -34,10 +34,11 @@ export default defineTest({
     expect(
       consoleWarnings.filter((message) => message.includes('Invalid input options')),
     ).toStrictEqual([]);
-    // The option has no effect yet: `import defer` is still a normal import, with a warning.
-    expect(warnings.map((log) => log.code)).toStrictEqual(['UNSUPPORTED_FEATURE']);
+    // The build keeps the deferred evaluation, so it gives no warning.
+    expect(warnings.map((log) => log.code)).toStrictEqual([]);
     const m = await import('./dist/main.js' as string);
-    expect(m.before).toStrictEqual(['dep']);
+    // `dep.js` evaluates at the first access to `dep.value`, after `before` reads the log.
+    expect(m.before).toStrictEqual([]);
     expect(m.value).toBe(1);
     expect(m.after).toStrictEqual(['dep']);
   },

@@ -22,6 +22,7 @@ use rolldown_error::EmptyImportMetaKind;
 
 use crate::{
   module_finalizers::{FinalizedExprProcessHint, KeepNameId, ModuleWrapperMode, TraverseState},
+  types::linking_metadata::DeferredAccess,
   utils::renamer::cjs_wrapper_fixed_params,
 };
 
@@ -572,11 +573,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             } else {
               EsmWrapperBodyKind::Sync
             },
-            decl_kind: if matches!(wrapper_mode, ModuleWrapperMode::ExecutionOrder(_)) {
-              EsmWrapperDeclKind::HoistedFunction
-            } else {
-              EsmWrapperDeclKind::Var
-            },
+            decl_kind: self.esm_wrapper_decl_kind(wrapper_mode),
           },
           self,
         ));
@@ -658,222 +655,17 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
-    if self.try_finalize_constant_expression(expr) {
-      return;
+    // This runs for each expression. A module without an access to a deferred namespace pays
+    // only for the empty check.
+    let deferred_target = if self.ctx.linking_info.deferred_access_targets.is_empty() {
+      None
+    } else {
+      self.deferred_access_target(expr)
+    };
+    self.visit_expression_body(expr);
+    if let Some(target) = deferred_target {
+      self.wrap_deferred_access(expr, target);
     }
-    // Handle keep_names for named class/function expressions in any expression context
-    // (return statements, function args, array elements, etc.)
-    if self.ctx.options.keep_names && self.ctx.runtime.id() != self.ctx.idx {
-      match expr {
-        ast::Expression::ClassExpression(class_expression) => {
-          let class = &mut **class_expression;
-          if let Some(id) = class.id.as_mut()
-            && let Some(symbol_id) = id.symbol_id.get()
-          {
-            let keep_name_id = Some(KeepNameId::SymbolId(symbol_id));
-            if let Some(element) = self.keep_name_helper_for_class(keep_name_id, &class.body) {
-              class.body.body.insert(0, element);
-            } else if !self.can_keep_class_name_in_class_body()
-              && self.keep_name_for_class(keep_name_id, &class.body).is_some()
-            {
-              // Neither class static blocks nor class fields in the target: wrap the class
-              // like the function expression below, `__name(class Foo$1 {}, "Foo")`.
-              let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
-              id.name = oxc::ast::ast::Str::from_str_in(canonical_name, self).into();
-              // Clear symbol_id so that the walk neither wraps nor renames this class again.
-              id.symbol_id.get_mut().take();
-              self.wrap_class_expr_with_keep_name(keep_name_id, expr);
-            }
-          }
-        }
-        ast::Expression::FunctionExpression(fn_expression) => {
-          if let Some(id) = fn_expression.id.as_mut() {
-            if let Some(symbol_id) = id.symbol_id.get() {
-              let keep_name_id = KeepNameId::SymbolId(symbol_id);
-              if let Some((_insert_position, original_name, _)) =
-                self.process_fn(Some(keep_name_id), Some(keep_name_id))
-              {
-                // Manually rename the binding identifier before clearing symbol_id
-                let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
-                let canonical_name = self.canonical_name_for(symbol_ref);
-                if id.name != canonical_name {
-                  id.name = oxc::ast::ast::Str::from_str_in(canonical_name, self).into();
-                }
-                // Clear symbol_id to prevent double processing:
-                // - visit_expression won't re-wrap when walker visits inner fn
-                // - visit_binding_identifier won't re-rename
-                id.symbol_id.get_mut().take();
-
-                let name_ref = self.canonical_ref_for_runtime("__name");
-                let (finalized_callee, _) =
-                  self.finalized_expr_for_symbol_ref(name_ref, false, false);
-                expr.replace_with(|fn_expr| {
-                  Expression::new_keep_name_call(
-                    &original_name,
-                    fn_expr,
-                    finalized_callee,
-                    true,
-                    self,
-                  )
-                });
-              }
-            }
-          }
-        }
-        _ => {}
-      }
-    }
-
-    match expr {
-      ast::Expression::CallExpression(call_expr) => {
-        self.rewrite_hot_accept_call_deps(call_expr);
-        if let Some(new_expr) = self.try_rewrite_global_require_call(call_expr) {
-          *expr = new_expr;
-        } else {
-          self.rewrite_call_callee(call_expr);
-        }
-      }
-      ast::Expression::TaggedTemplateExpression(tagged) => {
-        // A tag is called like a callee: a bridge member tag keeps `this === undefined`.
-        if let Some(new_tag) = self.try_rewrite_bridge_callee(&tagged.tag) {
-          tagged.tag = new_tag;
-        }
-      }
-      // inline dynamic import
-      ast::Expression::ImportExpression(import_expr) => {
-        if let Some(new_expr) = self.try_rewrite_inline_dynamic_import_expr(import_expr) {
-          *expr = new_expr;
-        }
-        if self.try_rewrite_import_expression(expr) {
-          // If the import expression is rewritten, we don't need to walk it again.
-          // Otherwise, it might cause infinite recursion in some cases.
-          return;
-        }
-      }
-      ast::Expression::NewExpression(new_expr) => {
-        self.handle_new_url_with_string_literal_and_import_meta_url(new_expr);
-      }
-      ast::Expression::BinaryExpression(binary_expr) => {
-        if let Some(&value) =
-          self.ctx.linking_info.folded_namespace_in_checks.get(&binary_expr.node_id())
-        {
-          *expr = Expression::new_boolean_literal(binary_expr.span, value, self);
-          return;
-        }
-      }
-      ast::Expression::Identifier(ident_ref) => {
-        if let Some(new_expr) = self.try_rewrite_identifier_reference_expr(ident_ref, false) {
-          *expr = new_expr;
-        }
-      }
-      ast::Expression::ThisExpression(this_expr) => {
-        if let Some(kind) =
-          self.ctx.module.ecma_view.this_expr_replace_map.get(&this_expr.node_id())
-        {
-          match kind {
-            ThisExprReplaceKind::Exports => {
-              if let Some(this_name) = self.cjs_this_name() {
-                *expr = Expression::new_id_ref_expr(SPAN, this_name, self);
-              }
-            }
-            ThisExprReplaceKind::Context if self.ctx.options.context.is_empty() => {
-              *expr = ast::Expression::new_void_0(SPAN, self);
-            }
-            ThisExprReplaceKind::Context => {
-              *expr = Expression::new_id_ref_expr(SPAN, self.ctx.options.context.as_str(), self);
-            }
-          }
-        }
-      }
-      ast::Expression::ImportMeta(import_meta) => {
-        if !self.ctx.options.format.keep_esm_import_export_syntax() {
-          self.record_surviving_import_meta(import_meta.span, EmptyImportMetaKind::Plain);
-          *expr = ast::Expression::new_object_expression(SPAN, [], self);
-        }
-      }
-      ast::Expression::ChainExpression(_) => {
-        // Try inline as enum access first (`E?.x` → literal). Enum bindings are
-        // always defined (the IIFE produces `{}`, never null/undefined), so `?.`
-        // is equivalent to `.` here.
-        if self.ctx.has_enum_inlining
-          && let Some(new_expr) = self.try_inline_enum_access(expr)
-        {
-          *expr = new_expr;
-          self.rewrite_import_meta_hot(expr);
-          walk_js_mut::walk_expression(self, expr);
-          return;
-        }
-
-        let ast::Expression::ChainExpression(chain_expr) = expr else { unreachable!() };
-        // import.meta.hot?.accept()
-        if let ast::ChainElement::CallExpression(call_expr) = &mut chain_expr.expression {
-          self.rewrite_hot_accept_call_deps(call_expr);
-          // `f?.()` / `ns.f?.()` of a bridge member: the optional callee needs the same `this`
-          // guard as a plain call.
-          if let Some(new_callee) = self.try_rewrite_bridge_callee(&call_expr.callee) {
-            call_expr.callee = new_callee;
-          }
-        }
-        let chain_span = chain_expr.span;
-        if let Some(new_expr) = chain_expr
-          .expression
-          .as_member_expression_mut()
-          .and_then(|expr| self.try_rewrite_member_expr(expr))
-        {
-          // If the rewritten expression contains optional member accesses (?.),
-          // it must remain wrapped in a ChainExpression for valid JavaScript output.
-          if has_optional_member_access(&new_expr) {
-            match new_expr {
-              ast::Expression::StaticMemberExpression(member) => {
-                *expr = ast::Expression::new_chain_expression(
-                  chain_span,
-                  ast::ChainElement::StaticMemberExpression(member),
-                  self,
-                );
-              }
-              ast::Expression::ComputedMemberExpression(member) => {
-                *expr = ast::Expression::new_chain_expression(
-                  chain_span,
-                  ast::ChainElement::ComputedMemberExpression(member),
-                  self,
-                );
-              }
-              _ => {
-                *expr = new_expr;
-              }
-            }
-          } else {
-            *expr = new_expr;
-          }
-        }
-      }
-      _ => {
-        // Try to inline enum member accesses (e.g., `Direction.Up` → `0`, `ns.c.x` → `"c"`)
-        if self.ctx.has_enum_inlining {
-          if let Some(new_expr) = self.try_inline_enum_access(expr) {
-            *expr = new_expr;
-            self.rewrite_import_meta_hot(expr);
-            walk_js_mut::walk_expression(self, expr);
-            return;
-          }
-        }
-        if let Some(new_expr) =
-          expr.as_member_expression().and_then(|expr| self.try_rewrite_member_expr(expr))
-        {
-          *expr = new_expr;
-          // After namespace rewriting (e.g., `ns.c` → `c`), the result may be
-          // an enum member access that can be inlined.
-          if self.ctx.has_enum_inlining {
-            if let Some(inlined) = self.try_inline_enum_access(expr) {
-              *expr = inlined;
-            }
-          }
-        }
-      }
-    }
-    self.rewrite_import_meta_hot(expr);
-
-    walk_js_mut::walk_expression(self, expr);
   }
 
   fn visit_jsx_closing_element(&mut self, it: &mut ast::JSXClosingElement<'ast>) {
@@ -1168,5 +960,278 @@ fn has_optional_member_access(expr: &Expression) -> bool {
       }
       _ => return false,
     }
+  }
+}
+
+impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
+  /// Returns the hoisted form `function init_x()` for each module with
+  /// `ModuleWrapperMode::ExecutionOrder` and for each module that `import defer` wraps. A call of
+  /// `init_x` can run before the declaration of the module, for example from a member of a module
+  /// cycle that the order puts first. A hoisted function is callable at such a call.
+  /// `var init_x = ...` is not. A deferred access calls `init_x` at the position of the access, so
+  /// the hoisted form does not depend on the position of the declaration. The cost: the module
+  /// code sees the `arguments` of `init_x`, and direct `eval` code sees its function context.
+  fn esm_wrapper_decl_kind(&self, wrapper_mode: ModuleWrapperMode) -> EsmWrapperDeclKind {
+    if matches!(wrapper_mode, ModuleWrapperMode::ExecutionOrder(_))
+      || self.ctx.linking_info.wrapped_by_import_defer
+    {
+      EsmWrapperDeclKind::HoistedFunction
+    } else {
+      EsmWrapperDeclKind::Var
+    }
+  }
+
+  /// The deferred module that an access to a deferred namespace (`ns.foo`, `'foo' in ns`)
+  /// evaluates first.
+  #[cold]
+  #[inline(never)]
+  fn deferred_access_target(&self, expr: &ast::Expression<'ast>) -> Option<DeferredAccess> {
+    let node_id = match expr {
+      ast::Expression::BinaryExpression(binary_expr) => binary_expr.node_id(),
+      ast::Expression::ChainExpression(chain_expr) => {
+        chain_expr.expression.as_member_expression()?.node_id()
+      }
+      _ => expr.as_member_expression()?.node_id(),
+    };
+    self.ctx.linking_info.deferred_access_targets.get(&node_id).copied()
+  }
+
+  /// The body of `visit_expression`. It has one call site. `inline(always)` keeps it in
+  /// `visit_expression`, so that an expression does not cost a second call.
+  #[expect(clippy::inline_always, reason = "the finalizer calls this for each expression")]
+  #[inline(always)]
+  fn visit_expression_body(&mut self, expr: &mut ast::Expression<'ast>) {
+    if self.try_finalize_constant_expression(expr) {
+      return;
+    }
+    // Handle keep_names for named class/function expressions in any expression context
+    // (return statements, function args, array elements, etc.)
+    if self.ctx.options.keep_names && self.ctx.runtime.id() != self.ctx.idx {
+      match expr {
+        ast::Expression::ClassExpression(class_expression) => {
+          let class = &mut **class_expression;
+          if let Some(id) = class.id.as_mut()
+            && let Some(symbol_id) = id.symbol_id.get()
+          {
+            let keep_name_id = Some(KeepNameId::SymbolId(symbol_id));
+            if let Some(element) = self.keep_name_helper_for_class(keep_name_id, &class.body) {
+              class.body.body.insert(0, element);
+            } else if !self.can_keep_class_name_in_class_body()
+              && self.keep_name_for_class(keep_name_id, &class.body).is_some()
+            {
+              // Neither class static blocks nor class fields in the target: wrap the class
+              // like the function expression below, `__name(class Foo$1 {}, "Foo")`.
+              let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
+              id.name = oxc::ast::ast::Str::from_str_in(canonical_name, self).into();
+              // Clear symbol_id so that the walk neither wraps nor renames this class again.
+              id.symbol_id.get_mut().take();
+              self.wrap_class_expr_with_keep_name(keep_name_id, expr);
+            }
+          }
+        }
+        ast::Expression::FunctionExpression(fn_expression) => {
+          if let Some(id) = fn_expression.id.as_mut() {
+            if let Some(symbol_id) = id.symbol_id.get() {
+              let keep_name_id = KeepNameId::SymbolId(symbol_id);
+              if let Some((_insert_position, original_name, _)) =
+                self.process_fn(Some(keep_name_id), Some(keep_name_id))
+              {
+                // Manually rename the binding identifier before clearing symbol_id
+                let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+                let canonical_name = self.canonical_name_for(symbol_ref);
+                if id.name != canonical_name {
+                  id.name = oxc::ast::ast::Str::from_str_in(canonical_name, self).into();
+                }
+                // Clear symbol_id to prevent double processing:
+                // - visit_expression won't re-wrap when walker visits inner fn
+                // - visit_binding_identifier won't re-rename
+                id.symbol_id.get_mut().take();
+
+                let name_ref = self.canonical_ref_for_runtime("__name");
+                let (finalized_callee, _) =
+                  self.finalized_expr_for_symbol_ref(name_ref, false, false);
+                expr.replace_with(|fn_expr| {
+                  Expression::new_keep_name_call(
+                    &original_name,
+                    fn_expr,
+                    finalized_callee,
+                    true,
+                    self,
+                  )
+                });
+              }
+            }
+          }
+        }
+        _ => {}
+      }
+    }
+
+    match expr {
+      ast::Expression::CallExpression(call_expr) => {
+        self.rewrite_hot_accept_call_deps(call_expr);
+        if let Some(new_expr) = self.try_rewrite_global_require_call(call_expr) {
+          *expr = new_expr;
+        } else {
+          self.rewrite_call_callee(call_expr);
+        }
+      }
+      ast::Expression::TaggedTemplateExpression(tagged) => {
+        // A tag is called like a callee: a bridge member tag keeps `this === undefined`.
+        if let Some(new_tag) = self.try_rewrite_bridge_callee(&tagged.tag) {
+          tagged.tag = new_tag;
+        }
+      }
+      // inline dynamic import
+      ast::Expression::ImportExpression(import_expr) => {
+        if let Some(new_expr) = self.try_rewrite_inline_dynamic_import_expr(import_expr) {
+          *expr = new_expr;
+        }
+        if self.try_rewrite_import_expression(expr) {
+          // If the import expression is rewritten, we don't need to walk it again.
+          // Otherwise, it might cause infinite recursion in some cases.
+          return;
+        }
+      }
+      ast::Expression::NewExpression(new_expr) => {
+        self.handle_new_url_with_string_literal_and_import_meta_url(new_expr);
+      }
+      ast::Expression::BinaryExpression(binary_expr) => {
+        if let Some(&value) =
+          self.ctx.linking_info.folded_namespace_in_checks.get(&binary_expr.node_id())
+        {
+          *expr = Expression::new_boolean_literal(binary_expr.span, value, self);
+          return;
+        }
+      }
+      ast::Expression::Identifier(ident_ref) => {
+        if let Some(new_expr) = self.try_rewrite_identifier_reference_expr(ident_ref, false) {
+          *expr = new_expr;
+        }
+      }
+      ast::Expression::ThisExpression(this_expr) => {
+        if let Some(kind) =
+          self.ctx.module.ecma_view.this_expr_replace_map.get(&this_expr.node_id())
+        {
+          match kind {
+            ThisExprReplaceKind::Exports => {
+              if let Some(this_name) = self.cjs_this_name() {
+                *expr = Expression::new_id_ref_expr(SPAN, this_name, self);
+              }
+            }
+            ThisExprReplaceKind::Context if self.ctx.options.context.is_empty() => {
+              *expr = ast::Expression::new_void_0(SPAN, self);
+            }
+            ThisExprReplaceKind::Context => {
+              *expr = Expression::new_id_ref_expr(SPAN, self.ctx.options.context.as_str(), self);
+            }
+          }
+        }
+      }
+      ast::Expression::ImportMeta(import_meta) => {
+        if !self.ctx.options.format.keep_esm_import_export_syntax() {
+          self.record_surviving_import_meta(import_meta.span, EmptyImportMetaKind::Plain);
+          *expr = ast::Expression::new_object_expression(SPAN, [], self);
+        }
+      }
+      ast::Expression::ChainExpression(_) => {
+        // Try inline as enum access first (`E?.x` → literal). Enum bindings are
+        // always defined (the IIFE produces `{}`, never null/undefined), so `?.`
+        // is equivalent to `.` here.
+        if self.ctx.has_enum_inlining
+          && let Some(new_expr) = self.try_inline_enum_access(expr)
+        {
+          *expr = new_expr;
+          self.rewrite_import_meta_hot(expr);
+          walk_js_mut::walk_expression(self, expr);
+          return;
+        }
+
+        let ast::Expression::ChainExpression(chain_expr) = expr else { unreachable!() };
+        // import.meta.hot?.accept()
+        if let ast::ChainElement::CallExpression(call_expr) = &mut chain_expr.expression {
+          self.rewrite_hot_accept_call_deps(call_expr);
+          // `f?.()` / `ns.f?.()` of a bridge member: the optional callee needs the same `this`
+          // guard as a plain call.
+          if let Some(new_callee) = self.try_rewrite_bridge_callee(&call_expr.callee) {
+            call_expr.callee = new_callee;
+          }
+        }
+        let chain_span = chain_expr.span;
+        if let Some(new_expr) = chain_expr
+          .expression
+          .as_member_expression_mut()
+          .and_then(|expr| self.try_rewrite_member_expr(expr))
+        {
+          // If the rewritten expression contains optional member accesses (?.),
+          // it must remain wrapped in a ChainExpression for valid JavaScript output.
+          if has_optional_member_access(&new_expr) {
+            match new_expr {
+              ast::Expression::StaticMemberExpression(member) => {
+                *expr = ast::Expression::new_chain_expression(
+                  chain_span,
+                  ast::ChainElement::StaticMemberExpression(member),
+                  self,
+                );
+              }
+              ast::Expression::ComputedMemberExpression(member) => {
+                *expr = ast::Expression::new_chain_expression(
+                  chain_span,
+                  ast::ChainElement::ComputedMemberExpression(member),
+                  self,
+                );
+              }
+              _ => {
+                *expr = new_expr;
+              }
+            }
+          } else {
+            *expr = new_expr;
+          }
+        }
+      }
+      _ => {
+        // Try to inline enum member accesses (e.g., `Direction.Up` → `0`, `ns.c.x` → `"c"`)
+        if self.ctx.has_enum_inlining {
+          if let Some(new_expr) = self.try_inline_enum_access(expr) {
+            *expr = new_expr;
+            self.rewrite_import_meta_hot(expr);
+            walk_js_mut::walk_expression(self, expr);
+            return;
+          }
+        }
+        if let Some(new_expr) =
+          expr.as_member_expression().and_then(|expr| self.try_rewrite_member_expr(expr))
+        {
+          *expr = new_expr;
+          // After namespace rewriting (e.g., `ns.c` → `c`), the result may be
+          // an enum member access that can be inlined.
+          if self.ctx.has_enum_inlining {
+            if let Some(inlined) = self.try_inline_enum_access(expr) {
+              *expr = inlined;
+            }
+          }
+        }
+      }
+    }
+    self.rewrite_import_meta_hot(expr);
+
+    walk_js_mut::walk_expression(self, expr);
+  }
+
+  /// The access evaluates the deferred module `x` first: `(init_x(), <access>)`.
+  fn wrap_deferred_access(&self, expr: &mut ast::Expression<'ast>, access: DeferredAccess) {
+    let DeferredAccess::Esm(target) = access;
+    let evaluate = self.deferred_init_call_expr(target);
+    let access = expr.take_in(self);
+    *expr = ast::Expression::new_parenthesized_expression(
+      SPAN,
+      ast::Expression::new_sequence_expression(
+        SPAN,
+        allocator::Vec::from_array_in([evaluate, access], self),
+        self,
+      ),
+      self,
+    );
   }
 }

@@ -6,6 +6,7 @@ pub mod defer_drop;
 pub mod external_import_interop;
 pub mod file_url;
 pub mod fs_utils;
+pub mod import_defer_fallback;
 pub mod load_entry_module;
 pub mod load_source;
 pub mod module_id_matcher;

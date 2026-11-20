@@ -12,6 +12,13 @@ use rolldown_utils::IndexBitSet;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
+/// The module that a deferred access (`ns.foo`) evaluates first.
+#[derive(Debug, Clone, Copy)]
+pub enum DeferredAccess {
+  /// An ESM module: `(init_x(), <access>)`.
+  Esm(ModuleIdx),
+}
+
 /// Module metadata about linking
 #[derive(Debug, Default)]
 #[expect(clippy::struct_excessive_bools)]
@@ -87,6 +94,20 @@ pub struct LinkingMetadata {
   /// Results of the `'key' in ns` checks (see `EcmaView::namespace_in_checks`) that are known at
   /// link time.
   pub folded_namespace_in_checks: FxHashMap<NodeId, bool>,
+  /// Set on each target of `import defer` and on each module of its static dependency closure.
+  /// The ESM wrapper of such a module is a hoisted function, so that a call that runs before the
+  /// declaration works.
+  pub wrapped_by_import_defer: bool,
+  /// The deferred namespace object of this module (`x_deferred`), when an `import defer * as ns`
+  /// targets this ESM module. Each deferred star import of the module links to this symbol, so
+  /// that all of them read one object, also through `export { ns }`.
+  pub deferred_namespace_ref: Option<SymbolRef>,
+  /// The facade statement that declares `deferred_namespace_ref`.
+  pub deferred_namespace_stmt_info: Option<StmtInfoIdx>,
+  /// The accesses to a deferred namespace (`ns.foo`, `'foo' in ns`) that evaluate the deferred
+  /// module first. The keys are the node ids of `resolved_member_expr_refs` and
+  /// `folded_namespace_in_checks`.
+  pub deferred_access_targets: FxHashMap<NodeId, DeferredAccess>,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
   pub is_tla_or_contains_tla_dependency: bool,
   /// Used to to track a facade binding referenced cjs module

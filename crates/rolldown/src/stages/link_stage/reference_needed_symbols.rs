@@ -1,6 +1,6 @@
 use rolldown_common::{
   ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, OutputFormat, RuntimeHelper,
-  StmtInfoMeta, SymbolRefDb, TaggedSymbolRef, WrapKind,
+  StmtInfoMeta, SymbolOrMemberExprRef, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -10,6 +10,7 @@ use rolldown_utils::{
 };
 
 use super::LinkStage;
+use crate::types::linking_metadata::DeferredAccess;
 use crate::utils::external_import_interop::import_record_needs_interop;
 
 struct DeferUpdateInfo {
@@ -43,7 +44,33 @@ impl LinkStage<'_> {
         let mut record_meta_pairs: Vec<(ImportRecordIdx, ImportRecordMeta)> = vec![];
         let importer_idx = importer.idx;
         let mut symbols_to_be_declared = vec![];
+        let deferred_access_targets = &self.metas[importer_idx].deferred_access_targets;
         stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
+          // A deferred access (`ns.foo`) calls the wrapper of the deferred module first.
+          // See internal-docs/import-defer/implementation.md.
+          if !deferred_access_targets.is_empty() {
+            let mut targets = stmt_info
+              .referenced_symbols
+              .iter()
+              .filter_map(|symbol| match symbol {
+                SymbolOrMemberExprRef::MemberExpr(member) => {
+                  deferred_access_targets.get(&member.node_id)
+                }
+                SymbolOrMemberExprRef::Symbol(_) => None,
+              })
+              .map(|access| match *access {
+                DeferredAccess::Esm(target) => target,
+              })
+              .collect::<Vec<_>>();
+            targets.sort_unstable();
+            targets.dedup();
+            stmt_info.referenced_symbols.extend(
+              targets
+                .into_iter()
+                .filter_map(|target| self.metas[target].wrapper_ref)
+                .map(Into::into),
+            );
+          }
           if stmt_info.meta.contains(StmtInfoMeta::HasDummyRecord) {
             depended_runtime_helper_map.push(RuntimeHelper::Require, stmt_info_idx);
           }

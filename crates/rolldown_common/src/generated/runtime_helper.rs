@@ -31,6 +31,7 @@ bitflags! {
     const ToBinaryNode = 1 << 21;
     const ToBinary = 1 << 22;
     const Require = 1 << 23;
+    const DeferNs = 1 << 24;
   }
 }
 
@@ -77,7 +78,7 @@ impl DependedRuntimeHelperMap {
   }
 }
 
-pub const RUNTIME_HELPER_NAMES: [&str; 24] = [
+pub const RUNTIME_HELPER_NAMES: [&str; 25] = [
   "__create",
   "__defProp",
   "__name",
@@ -102,4 +103,8 @@ pub const RUNTIME_HELPER_NAMES: [&str; 24] = [
   "__toBinaryNode",
   "__toBinary",
   "__require",
+  "__deferNs",
 ];
+
+/// The helpers that the runtime module has only when `experimental.importDefer` is on.
+pub const RUNTIME_IMPORT_DEFER_HELPER_NAMES: [&str; 1] = ["__deferNs"];

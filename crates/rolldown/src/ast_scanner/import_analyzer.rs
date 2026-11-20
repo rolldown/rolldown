@@ -7,7 +7,7 @@ use oxc::{
   span::Span,
   str::JSStr,
 };
-use rolldown_common::{MemberExprWriteKind, Specifier, SymbolRef};
+use rolldown_common::{DeferredNamespaceWrite, MemberExprWriteKind, Specifier, SymbolRef};
 use rolldown_error::BuildDiagnostic;
 
 use super::AstScanner;
@@ -52,6 +52,19 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         if let Some((span, name)) = self.get_span_if_namespace_specifier_updated() {
           // For namespace imports, get the actual imported name (the namespace identifier)
           let imported_name = self.result.symbol_ref_db.symbol_name(symbol_id);
+          let is_deferred = named_import
+            .is_some_and(|import| self.result.import_records[import.record_idx].is_defer_phase());
+          if is_deferred {
+            // A build that keeps the deferral keeps the write. See `EcmaView::import_defer_scan`.
+            let write = DeferredNamespaceWrite {
+              span,
+              name: name.display().to_string().into(),
+              import_decl_span,
+              imported_name: imported_name.into(),
+            };
+            self.result.import_defer_scan.get_or_insert_default().namespace_writes.push(write);
+            return;
+          }
           self.result.errors.push(BuildDiagnostic::assign_to_import(
             self.immutable_ctx.id.as_arc_str().clone(),
             self.immutable_ctx.source.clone(),

@@ -1,33 +1,29 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## UNSUPPORTED_FEATURE
-
-```text
-[UNSUPPORTED_FEATURE] `import defer` is currently lowered to a normal import. This changes execution timing because side effects run immediately instead of when the deferred import is first used.
-   ╭─[ main.js:1:1 ]
-   │
- 1 │ import defer * as dep from './dep.js';
-   │ ───────────────────┬──────────────────  
-   │                    ╰──────────────────── The deferred phase is removed here.
-───╯
-
-```
-
 # Assets
 
 ## main.js
 
 ```js
+// HIDDEN [\0rolldown/runtime.js]
 // log.js
-const log = [];
-// dep.js
-log.push("dep");
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+function init_dep() {
+	return (init_dep = __esmMin((() => {
+		init_log();
+		log.push("dep");
+	})))();
+}
 // main.js
+init_log();
 const before = [...log];
-const value = 1;
+const value = (init_dep(), 1);
 const after = [...log];
 export { after, before, value };
 

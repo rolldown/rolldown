@@ -288,6 +288,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
+  /// `init_foo()`, the call that evaluates a deferred module before an access to its namespace.
+  fn deferred_init_call_expr(&self, target: ModuleIdx) -> ast::Expression<'ast> {
+    self.wrapped_esm_init_call_expr(target, SPAN, false, false)
+  }
+
   fn order_cjs_carrier_init_call_expr(
     &self,
     key: OrderCjsCarrierKey,
@@ -737,6 +742,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // Replace the import statement with `init_foo()` if `ImportDeclaration` is not a plain import
       // or the importee have side effects.
       WrapKind::Esm => {
+        // A deferred import evaluates nothing at its statement. Each deferred access calls the
+        // init instead.
+        if rec.is_defer_phase() {
+          return true;
+        }
         if self.generated_init_esm_importee_ids.contains(&importee.idx) {
           return true;
         }
@@ -1355,8 +1365,56 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let mut ret = vec![decl_stmt];
     ret.extend(re_export_external_stmts.unwrap_or_default());
+    ret.extend(self.generate_declaration_of_deferred_namespace());
 
     ret
+  }
+
+  /// `var x_deferred = __deferNs(() => (init_x(), x_exports), x_exports)`, when tree shaking keeps
+  /// the deferred namespace of this module (`import defer`). It comes after the namespace object
+  /// that it reads.
+  fn generate_declaration_of_deferred_namespace(&self) -> Option<Statement<'ast>> {
+    let meta = self.ctx.linking_info;
+    let stmt_idx = meta.deferred_namespace_stmt_info?;
+    if !meta.stmt_info_included.has_bit(stmt_idx) {
+      return None;
+    }
+    // `apply_import_defer_support` keeps the deferral only when the closure has no CommonJS and
+    // no external module, so the keys of the namespace are known.
+    debug_assert!(!meta.has_dynamic_exports, "a deferred ES module has static exports");
+    let deferred_name = self.canonical_name_for(meta.deferred_namespace_ref?);
+    let namespace_expr =
+      || self.finalized_expr_for_symbol_ref(self.ctx.module.namespace_object_ref, false, false).0;
+    // The arrow calls `init_x` through its binding: a hoisted `init_x` replaces itself at the
+    // first call, and the old function would evaluate the module again.
+    let init_body = ast::Expression::new_parenthesized_expression(
+      SPAN,
+      ast::Expression::new_sequence_expression(
+        SPAN,
+        allocator::Vec::from_array_in(
+          [self.deferred_init_call_expr(self.ctx.idx), namespace_expr()],
+          self,
+        ),
+        self,
+      ),
+      self,
+    );
+    let mut call = CallExpression::new(
+      SPAN,
+      self.finalized_expr_for_runtime_symbol("__deferNs"),
+      None,
+      [],
+      false,
+      self,
+    );
+    call.pure = true;
+    call.arguments.push(Expression::new_arrow_returning(init_body, self).into());
+    call.arguments.push(namespace_expr().into());
+    Some(Statement::new_var_decl(
+      deferred_name,
+      Expression::CallExpression(call.into_in(self.allocator())),
+      self,
+    ))
   }
 
   // Handle `import.meta.xxx`, `import.meta['xxx']`, `import.meta?.xxx` and `import.meta?.['xxx']`

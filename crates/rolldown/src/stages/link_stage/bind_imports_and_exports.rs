@@ -35,7 +35,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   SharedOptions,
   types::{
-    linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+    linking_metadata::{DeferredAccess, LinkingMetadata, LinkingMetadataVec},
     member_read_star_reexport_path::MemberReadStarReexportPath,
   },
 };
@@ -1020,6 +1020,8 @@ impl LinkStage<'_> {
           let mut side_effects_dependency = vec![];
           let mut written_cjs_exports: Vec<SymbolRef> = vec![];
           let mut star_reexport_consumptions: Vec<MemberReadConsumption> = vec![];
+          let mut deferred_access_targets = FxHashMap::default();
+          let import_defer = self.options.experimental.is_import_defer_enabled();
           stmt_infos.iter_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               // `depended_refs` is used to store necessary symbols that must be included once the resolved symbol gets included
@@ -1030,6 +1032,46 @@ impl LinkStage<'_> {
               let mut star_reexport_steps: Vec<(ModuleIdx, CompactStr)> = vec![];
 
               if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = symbol_ref {
+                let deferred_access = if import_defer {
+                  let canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
+                  (self.metas[canonical_ref.owner].deferred_namespace_ref == Some(canonical_ref))
+                    .then_some(DeferredAccess::Esm(canonical_ref.owner))
+                } else {
+                  None
+                };
+                if let Some(deferred_access) = deferred_access {
+                  // A write (`ns.foo = v`, `ns.a.b++`, `delete ns.foo`) keeps the deferred
+                  // namespace object, whose traps reject it.
+                  if member_expr_ref.is_write {
+                    return;
+                  }
+                  // The key `then` of a deferred namespace is always absent, and reading it
+                  // does not evaluate the module (spec `GetModuleNamespace`, defer phase).
+                  let in_check_key =
+                    module.ecma_view.namespace_in_checks.get(&member_expr_ref.node_id);
+                  let key = member_expr_ref
+                    .prop_and_span_list
+                    .first()
+                    .map(|prop| prop.name.as_str())
+                    .or_else(|| in_check_key.map(CompactStr::as_str));
+                  if key == Some("then") {
+                    if in_check_key.is_some() {
+                      folded_namespace_in_checks.insert(member_expr_ref.node_id, false);
+                    }
+                    resolved_map.insert(
+                      member_expr_ref.node_id,
+                      MemberExprRefResolution {
+                        resolved: None,
+                        prop_and_related_span_list: member_expr_ref.prop_and_span_list.clone(),
+                        depended_refs: vec![],
+                        target_commonjs_exported_symbol: None,
+                        reference_id: member_expr_ref.reference_id,
+                      },
+                    );
+                    return;
+                  }
+                  deferred_access_targets.insert(member_expr_ref.node_id, deferred_access);
+                }
                 if member_expr_ref.prop_and_span_list.is_empty() {
                   // `'key' in ns` with a known result reads nothing from `ns`. Without a
                   // resolution, the reference falls back to `ns` itself.
@@ -1080,8 +1122,10 @@ impl LinkStage<'_> {
                     .prop_and_span_list
                     .first()
                     .is_none_or(|prop| prop.name.as_str() != "default");
-                let mut is_namespace_ref =
-                  canonical_ref_owner.namespace_object_ref == canonical_ref || is_json_import_ns;
+                let mut is_namespace_ref = canonical_ref_owner.namespace_object_ref
+                  == canonical_ref
+                  || is_json_import_ns
+                  || matches!(deferred_access, Some(DeferredAccess::Esm(_)));
                 if strict_execution_order
                   && is_namespace_ref
                   && let Some(import) = module.named_imports.get(&member_expr_ref.object_ref)
@@ -1354,9 +1398,12 @@ impl LinkStage<'_> {
             side_effects_dependency,
             written_cjs_exports,
             star_reexport_consumptions,
+            deferred_access_targets,
           )
         }
-        Module::External(_) => (FxHashMap::default(), FxHashMap::default(), vec![], vec![], vec![]),
+        Module::External(_) => {
+          (FxHashMap::default(), FxHashMap::default(), vec![], vec![], vec![], FxHashMap::default())
+        }
       })
       .collect::<Vec<_>>();
 
@@ -1369,7 +1416,7 @@ impl LinkStage<'_> {
     // `cjs[name] = value`, or writes through `ns.default`), bail out all CJS exports of the
     // target module since we can't determine which specific property is affected.
     let mut written_cjs_export_symbols: Vec<SymbolRef> = Vec::new();
-    for (meta, (_, _, _, written_cjs_exports, _)) in
+    for (meta, (_, _, _, written_cjs_exports, _, _)) in
       self.metas.iter().zip(resolved_meta_data.iter())
     {
       written_cjs_export_symbols.extend(written_cjs_exports);
@@ -1400,7 +1447,7 @@ impl LinkStage<'_> {
     // retains each recorded path while its reading statement is included.
     if strict_execution_order {
       let mut recorded = FxHashSet::default();
-      for (module, (_, _, _, _, star_reexport_consumptions)) in
+      for (module, (_, _, _, _, star_reexport_consumptions, _)) in
         self.module_table.modules.iter().zip(&resolved_meta_data)
       {
         for (stmt_info_idx, resolved, steps) in star_reexport_consumptions {
@@ -1432,9 +1479,20 @@ impl LinkStage<'_> {
       }
     }
     self.metas.iter_mut().zip(resolved_meta_data).for_each(
-      |(meta, (resolved_map, folded_namespace_in_checks, side_effects_dependency, _, _))| {
+      |(
+        meta,
+        (
+          resolved_map,
+          folded_namespace_in_checks,
+          side_effects_dependency,
+          _,
+          _,
+          deferred_access_targets,
+        ),
+      )| {
         meta.resolved_member_expr_refs = resolved_map;
         meta.folded_namespace_in_checks = folded_namespace_in_checks;
+        meta.deferred_access_targets = deferred_access_targets;
         meta.dependencies.extend(side_effects_dependency);
       },
     );
@@ -1446,7 +1504,8 @@ impl LinkStage<'_> {
     let canonical_ref = self.symbols.canonical_ref_for(namespace_ref);
     let module = self.module_table[canonical_ref.owner].as_normal()?;
     let meta = &self.metas[module.idx];
-    if module.namespace_object_ref != canonical_ref
+    if (module.namespace_object_ref != canonical_ref
+      && meta.deferred_namespace_ref != Some(canonical_ref))
       || matches!(module.exports_kind, ExportsKind::CommonJs)
       || meta.has_dynamic_exports
     {
@@ -1799,7 +1858,11 @@ impl BindImportsAndExportsContext<'_> {
 
     match &named_import.imported {
       Specifier::Star => ImportStatus::Found {
-        symbol: importee.namespace_object_ref,
+        // `import defer * as ns` reads the deferred namespace object of the module.
+        symbol: self.metas[importee_id]
+          .deferred_namespace_ref
+          .filter(|_| importer.import_records[named_import.record_idx].is_defer_phase())
+          .unwrap_or(importee.namespace_object_ref),
         // owner: importee_id,
         potentially_ambiguous_export_star_refs: vec![],
       },

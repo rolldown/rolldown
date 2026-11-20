@@ -751,10 +751,31 @@ export interface InputOptions {
      */
     importAttributes?: boolean;
     /**
-     * Keep the deferred evaluation of `import defer * as ns from './x'` and `import.defer('./x')`.
+     * Keep the deferred evaluation of `import defer * as ns from './x'`.
      *
-     * Not implemented yet. With either value, Rolldown lowers each deferred import to a normal
-     * import and emits a warning.
+     * When this option is on, a deferred module evaluates at the first access to its namespace,
+     * not when its importer evaluates. When this option is off, Rolldown lowers each deferred
+     * import to a normal import and emits a warning.
+     *
+     * For now, Rolldown keeps the deferred evaluation only in a build that makes one chunk in
+     * `esm` or `cjs` format, with no `import()`, no static import cycle and no top-level `await`.
+     * Each module that a deferred import evaluates must be an ES module of the build. In any
+     * other build, Rolldown lowers each deferred import to a normal import and emits a warning
+     * with the reason. Rolldown always lowers `import.defer('./x')` to `import('./x')`, with a
+     * warning.
+     *
+     * Rolldown evaluates a deferred module, and each module that it imports directly or through
+     * other modules, inside a function. Thus a top-level `arguments` in such a module is the
+     * arguments object of that function, and `typeof arguments` gives `"object"`, not
+     * `"undefined"`. Direct `eval` code in such a module also runs in that function. For example,
+     * `eval("new.target")` gives `undefined` and does not throw a `SyntaxError`.
+     *
+     * Tree shaking can keep more modules than in a build without `import defer`:
+     * - A module that only re-exports other modules stays in the output when a deferred module
+     *   imports a binding through it. Its init calls the init of each re-exported module that
+     *   stays in the output.
+     * - The target of an `export *` in a deferred module stays in the output also when no code
+     *   uses it.
      *
      * @see {@link https://github.com/tc39/proposal-defer-import-eval | Proposal}
      * @default false

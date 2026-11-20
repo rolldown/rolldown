@@ -1,0 +1,10 @@
+{
+  "_comment": "Dev mode has no HMR support for `import defer` yet, so dev mode turns `experimental.importDefer` off. Rolldown lowers each deferred import to a normal import, with the warning of a build with the option off. `x.js` evaluates before the code of `main.js`.",
+  "config": {
+    "experimental": {
+      "devMode": {},
+      "importDefer": true
+    }
+  },
+  "expectWarning": true
+}

@@ -160,6 +160,9 @@ pub struct StmtEvalAnalyzer<'a> {
   /// Property reads on ES module namespace objects are guaranteed side-effect-free
   /// because namespace objects are frozen/sealed by spec with no getters.
   namespace_object_symbol_ids: Option<&'a FxHashSet<SymbolId>>,
+  /// The namespaces of `import defer * as ns`, when a property read of them is not pure: the read
+  /// evaluates the deferred module. See [`Self::with_deferred_namespaces`].
+  deferred_namespace_symbol_ids: Option<&'a FxHashSet<SymbolId>>,
   /// The constant values of bindings. See [`ConstantSymbolLookup`].
   constant_symbols: Option<&'a dyn ConstantSymbolLookup>,
   /// Whether the analysis of the current statement read a value from `constant_symbols`.
@@ -187,6 +190,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
       side_effect_free_call_expr_node_ids,
       pure_callee_node_ids: None,
       namespace_object_symbol_ids,
+      deferred_namespace_symbol_ids: None,
       constant_symbols,
       read_constant: Cell::new(false),
       use_constants: Cell::new(true),
@@ -203,6 +207,15 @@ impl<'a> StmtEvalAnalyzer<'a> {
   #[must_use]
   pub fn with_pure_callees(mut self, node_ids: &'a FxHashSet<NodeId>) -> Self {
     self.pure_callee_node_ids = Some(node_ids);
+    self
+  }
+
+  /// A property read of one of these namespaces is not pure, also when the namespace is in
+  /// `namespace_object_symbol_ids`. Use it for the namespaces of `import defer * as ns` in a build
+  /// that keeps the deferral.
+  #[must_use]
+  pub fn with_deferred_namespaces(mut self, ids: &'a FxHashSet<SymbolId>) -> Self {
+    self.deferred_namespace_symbol_ids = Some(ids);
     self
   }
 
@@ -285,7 +298,10 @@ impl<'a> StmtEvalAnalyzer<'a> {
     let ident = member_expr.object().as_identifier()?;
     let ref_id = ident.reference_id.get()?;
     let symbol_id = self.scope.symbol_id_for(ref_id)?;
-    Some(namespace_ids.contains(&symbol_id))
+    Some(
+      namespace_ids.contains(&symbol_id)
+        && !self.deferred_namespace_symbol_ids.is_some_and(|ids| ids.contains(&symbol_id)),
+    )
   }
 
   /// `import.meta.url` is a spec-defined side-effect-free property read, and

@@ -1470,6 +1470,13 @@ pub(super) fn module_namespace_is_referenced(
     || reason.contains(ModuleNamespaceIncludedReason::SimulateFacadeChunk)
   {
     true
+  } else if meta
+    .deferred_namespace_stmt_info
+    .is_some_and(|stmt_info_idx| meta.stmt_info_included.has_bit(stmt_info_idx))
+  {
+    // The kept deferred namespace object (`x_deferred`) reads the namespace, also when the module
+    // has no exports. The finalizer declares it with the namespace.
+    true
   } else if matches!(module.exports_kind, ExportsKind::Esm) {
     reason.contains(ModuleNamespaceIncludedReason::Unknown)
       || (reason.contains(ModuleNamespaceIncludedReason::ReExportDynamicExports)

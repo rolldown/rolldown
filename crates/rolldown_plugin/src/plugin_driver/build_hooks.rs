@@ -328,6 +328,10 @@ impl PluginDriver {
         magic_string_tx.is_some(),
       ));
       let result = plugin.call_transform(Arc::clone(&transform_ctx), &args).await;
+      // Close the slot right after the hook and before `?`, so that a result, `null` and
+      // an error all release the map. From here, the context keeps no reference to it, and
+      // a later `sendMagicString` through a context that a plugin keeps fails.
+      let pending_sourcemap = transform_ctx.take_pending_sourcemap();
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
         let map_was_omitted = matches!(r.map, crate::HookTransformOutputMap::Omitted);
@@ -336,7 +340,7 @@ impl PluginDriver {
         // sends the MagicString only then). Push its map here, in plugin order, so a later
         // hook's `getCombinedSourcemap` sees it. If a plugin calls `sendMagicString` itself,
         // the sent map takes precedence over `r.map`.
-        if let Some(pending) = transform_ctx.pending_sourcemap().filter(|_| r.code.is_some()) {
+        if let Some(pending) = pending_sourcemap.filter(|_| r.code.is_some()) {
           original_sourcemap_chain.push(SourcemapChainElement::MagicString((plugin_idx, pending)));
         } else if let Some(map) =
           r.map.into_sourcemap().map(|map| normalize_transform_sourcemap(map, id, &code))

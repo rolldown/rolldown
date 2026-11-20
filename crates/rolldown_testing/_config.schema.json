@@ -1073,6 +1073,12 @@
             "boolean",
             "null"
           ]
+        },
+        "importDefer": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

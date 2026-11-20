@@ -773,8 +773,7 @@ impl GenerateStage<'_> {
   /// An entry chunk imports the canonical symbol of every live resolved export it serves
   /// (`register_entry_export_depended_symbols`), even when no included statement of the entry
   /// references it — a re-export the entry never uses still becomes a real import of the owner's
-  /// chunk. `load_dependencies` only carries the narrowed `referenced_symbols_by_entry_point_chunk`
-  /// set, so these targets are derived separately from the full `resolved_exports`.
+  /// chunk. These targets supplement `load_dependencies` using the same export candidates as registration.
   ///
   /// With `assume_all_live: false` the liveness gate mirrors emission exactly: a dead export
   /// produces no import. `assume_all_live: true` skips the gate for consumers that need a stable
@@ -791,16 +790,12 @@ impl GenerateStage<'_> {
       return;
     }
     let meta = &self.link_output.metas[module_idx];
-    if matches!(meta.wrap_kind(), WrapKind::Cjs) {
-      // A CJS entry is consumed through its wrapper, not through per-export symbols.
+    if !self.entry_can_export_bindings(meta.wrap_kind()) {
       return;
     }
     let symbol_db = &self.link_output.symbol_db;
     let mut verdicts = FxHashMap::default();
-    for resolved_export in meta.resolved_exports.values() {
-      if resolved_export.came_from_commonjs {
-        continue;
-      }
+    for (_, resolved_export) in self.entry_exports_requiring_bindings(module_idx) {
       let served = symbol_db.canonical_ref_resolving_namespace(resolved_export.symbol_ref);
       if !self.entry_export_needs_service(module_idx, served.owner, &mut verdicts) {
         continue;
@@ -835,8 +830,9 @@ impl GenerateStage<'_> {
   }
 
   /// Whether the entry chunk must import `owner`, the module behind one of its exports. Without a
-  /// preserved signature, only when `owner` or anything it statically imports has a side effect,
-  /// so startup still runs it. `sideEffects: false` modules are crossed without counting their own
+  /// preserved signature, a CommonJS entry runs its dependencies through its wrapper. For other
+  /// entries, a service import is needed only when `owner` or a static dependency has side effects.
+  /// `sideEffects: false` modules are crossed without counting their own
   /// statements, and `Analyzed` verdicts are not used because they also count dynamic imports.
   /// `verdicts` holds the answer for each owner already walked and maps every module of a walk
   /// without a side effect to `false`, so each module is walked at most once per cache.
@@ -858,6 +854,9 @@ impl GenerateStage<'_> {
       )
     {
       return true;
+    }
+    if matches!(self.link_output.metas[entry].wrap_kind(), WrapKind::Cjs) {
+      return false;
     }
     let mut pending = vec![owner];
     let mut visited = FxHashSet::default();

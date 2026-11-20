@@ -208,7 +208,7 @@ pub fn collect_entry_reexported_wrapper_inits(
   // the wrong module and observe an uninitialized binding (issue #11231). Wrap propagation and
   // the wrapper's import calls already initialize those owners in the entry's source order.
   // See internal-docs/linking/module-execution-order/implementation.md.
-  if matches!(entry_meta.wrap_kind(), WrapKind::Esm) {
+  if !entry_meta.wrap_kind().is_none() {
     return vec![];
   }
   // Filter before sorting: entries whose exports resolve to no wrapped module at all — the

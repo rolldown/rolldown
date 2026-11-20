@@ -333,33 +333,41 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     if (id === this.currentLoadingModule) {
       this.onLog(LOG_LEVEL_WARN, logCycleLoading(this.pluginName, this.currentLoadingModule));
     }
-    // resolveDependencies always true at rolldown
+    const resolveDependencies = options.resolveDependencies === true;
     const moduleInfo = this.data.getModuleInfo(id, this.context);
-    if (moduleInfo && moduleInfo.code !== null /* module already parsed */) {
-      return moduleInfo;
+    // The code is set once the module is parsed, which can be before its imports are resolved.
+    if (moduleInfo !== null && moduleInfo.code !== null) {
+      if (!resolveDependencies) {
+        return moduleInfo;
+      }
+    } else {
+      const rawOptions: ModuleOptions = {
+        meta: options.meta || {},
+        moduleSideEffects: options.moduleSideEffects || null,
+        invalidate: false,
+      };
+      this.data.updateModuleOption(id, rawOptions, true);
     }
-    const rawOptions: ModuleOptions = {
-      meta: options.meta || {},
-      moduleSideEffects: options.moduleSideEffects || null,
-      invalidate: false,
-    };
-    this.data.updateModuleOption(id, rawOptions, true);
 
-    let loadPromise = this.data.loadModulePromiseMap.get(id);
+    const loadPromiseMap = resolveDependencies
+      ? this.data.loadModuleWithDependenciesPromiseMap
+      : this.data.loadModulePromiseMap;
+    let loadPromise = loadPromiseMap.get(id);
     if (!loadPromise) {
       loadPromise = this.context
         .load(
           rawId,
           attributes,
           options.moduleSideEffects ?? undefined,
+          resolveDependencies,
           options.packageJsonPath ?? undefined,
         )
         .catch(() => {
           // avoid reusing the promise if it's an error
           // because the error may happen only in non-supported hooks (e.g. `buildStart` hook)
-          this.data.loadModulePromiseMap.delete(id);
+          loadPromiseMap.delete(id);
         });
-      this.data.loadModulePromiseMap.set(id, loadPromise);
+      loadPromiseMap.set(id, loadPromise);
     }
 
     await loadPromise;

@@ -5,8 +5,10 @@ use arcstr::ArcStr;
 use oxc::ast::ast::CommentContent;
 use oxc::ast::ast::Program;
 use oxc::ast::ast::{
-  ArrowFunctionExpression, BindingPattern, Declaration, ExportDefaultDeclarationKind,
-  ExportSpecifier, Expression, Function, IdentifierReference, Statement, VariableDeclarator,
+  ArrowFunctionExpression, AwaitExpression, BindingPattern, Declaration,
+  ExportDefaultDeclarationKind, ExportSpecifier, Expression, ForOfStatement, Function,
+  IdentifierReference, Statement, StaticBlock, VariableDeclaration, VariableDeclarationKind,
+  VariableDeclarator,
 };
 use oxc::ast_visit::{VisitJs, VisitJsMut, walk_js, walk_js_mut};
 use oxc::diagnostics::{LabeledSpan, Severity as OxcSeverity};
@@ -159,13 +161,15 @@ impl PreProcessEcmaAst {
     };
 
     // Step 2: Run define plugin.
+    let mut define_changed = false;
     if let Some(replace_global_define_config) = replace_global_define_config {
-      ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
+      define_changed = ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
         let ret = ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone())
           .build(scoping.take().unwrap(), program);
         if !ret.changed {
           scoping = Some(ret.scoping);
         }
+        ret.changed
       });
     }
 
@@ -236,6 +240,17 @@ impl PreProcessEcmaAst {
       });
     }
 
+    // Node treats a module with a top-level `await` as async, also when the `await` never runs.
+    // Step 5 and `dropLabels` in Step 6 can remove such an `await` before the scan, so look for
+    // one here. The source text has every `await` of the AST, except one that `define` inserts.
+    // See internal-docs/linking/module-execution-order/implementation.md.
+    let source_has_top_level_await = (bundle_options.treeshake.is_some()
+      || !bundle_options.drop_labels.is_empty())
+      && (ast.source().contains("await")
+        || (define_changed
+          && bundle_options.define.iter().any(|(_, replacement)| replacement.contains("await"))))
+      && TopLevelAwaitFinder::find(ast.program());
+
     // Step 5: Run DCE.
     // Avoid DCE for lazy export.
     if bundle_options.treeshake.is_some() && !has_lazy_export {
@@ -287,6 +302,7 @@ impl PreProcessEcmaAst {
       warnings,
       preserve_jsx,
       enum_member_value_map,
+      source_has_top_level_await,
     })
   }
 
@@ -398,6 +414,58 @@ impl<'ast> VisitJs<'ast> for FunctionDeclarationStartMatcher {
     }
     if self.remaining_target_count > 0 {
       walk_js::walk_statement(self, stmt);
+    }
+  }
+}
+
+/// Finds a top-level `await`: an `await` expression, `for await` or `await using` outside a
+/// function and a class static block. This is the scanner's rule for `TopLevelAwait`.
+#[derive(Default)]
+struct TopLevelAwaitFinder {
+  found: bool,
+}
+
+impl TopLevelAwaitFinder {
+  fn find(program: &Program<'_>) -> bool {
+    let mut finder = Self::default();
+    finder.visit_program(program);
+    finder.found
+  }
+}
+
+impl<'ast> VisitJs<'ast> for TopLevelAwaitFinder {
+  fn visit_program(&mut self, program: &Program<'ast>) {
+    for stmt in &program.body {
+      self.visit_statement(stmt);
+      if self.found {
+        return;
+      }
+    }
+  }
+
+  fn visit_function(&mut self, _func: &Function<'ast>, _flags: ScopeFlags) {}
+
+  fn visit_arrow_function_expression(&mut self, _func: &ArrowFunctionExpression<'ast>) {}
+
+  fn visit_static_block(&mut self, _block: &StaticBlock<'ast>) {}
+
+  fn visit_await_expression(&mut self, _it: &AwaitExpression<'ast>) {
+    self.found = true;
+  }
+
+  fn visit_for_of_statement(&mut self, it: &ForOfStatement<'ast>) {
+    if it.r#await {
+      self.found = true;
+    } else {
+      walk_js::walk_for_of_statement(self, it);
+    }
+  }
+
+  fn visit_variable_declaration(&mut self, it: &VariableDeclaration<'ast>) {
+    if it.kind == VariableDeclarationKind::AwaitUsing {
+      self.found = true;
+    } else {
+      walk_js::walk_variable_declaration(self, it);
     }
   }
 }
@@ -580,7 +648,24 @@ mod tests {
   use rolldown_ecmascript::EcmaCompiler;
   use rolldown_error::Severity;
 
-  use super::invalid_annotation_warnings;
+  use super::{TopLevelAwaitFinder, invalid_annotation_warnings};
+
+  #[test]
+  fn top_level_await_finder_skips_functions() {
+    for (source, expected) in [
+      ("if (false) await 0;", true),
+      ("for await (const x of []) {}", true),
+      ("{ await using r = null; }", true),
+      ("class A { [await 0]() {} }", true),
+      ("async function f() { await 0; } const g = async () => { await 0; };", false),
+      ("class A { async m() { await 0; } static { } }", false),
+      ("for (const x of []) {} using r = null;", false),
+    ] {
+      let ast = EcmaCompiler::parse("main.js", source, SourceType::mjs()).unwrap();
+      let found = ast.program.with_dependent(|_owner, dep| TopLevelAwaitFinder::find(&dep.program));
+      assert_eq!(found, expected, "{source}");
+    }
+  }
 
   #[test]
   fn invalid_annotations_have_warning_severity_and_matching_guidance() {

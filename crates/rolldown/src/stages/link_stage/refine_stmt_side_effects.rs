@@ -41,8 +41,8 @@ struct Components {
   topological_order: Vec<ModuleIdx>,
   /// Whether each module is in a cycle or can reach an external module.
   imports_may_run_later: IndexBitSet<ModuleIdx>,
-  /// Whether each module has a top-level `await` or is external, or reaches such a module through
-  /// static imports. `None` when the build has no such module.
+  /// Whether each module has a top-level `await` in its source or is external, or reaches such a
+  /// module through static imports. `None` when the build has no such module.
   imports_may_await: Option<IndexBitSet<ModuleIdx>>,
 }
 
@@ -62,9 +62,10 @@ struct Regions {
 impl ImportCycles {
   /// Whether the code of `module_idx` can wait for an `await`. Then Node can run modules that come
   /// later in `exec_order` before that code, but the output runs them after it. The module, or a
-  /// module that it reaches through static imports, has a top-level `await` or is external. An
-  /// external module can have a top-level `await`, also a Node builtin that `output.paths` maps to
-  /// another module.
+  /// module that it reaches through static imports, has a top-level `await` in its source or is
+  /// external. Node treats a module as async also when its `await` never runs, such as
+  /// `if (false) await 0;`. An external module can have a top-level `await`, also a Node builtin
+  /// that `output.paths` maps to another module.
   /// See `internal-docs/linking/module-execution-order/implementation.md`.
   pub(super) fn imports_may_await(&self, modules: &IndexModules, module_idx: ModuleIdx) -> bool {
     self
@@ -123,9 +124,11 @@ impl ImportCycles {
         .iter()
         .filter_map(|module| {
           let may_await = module.is_external()
-            || module
-              .as_normal()
-              .is_some_and(|module| module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait));
+            || module.as_normal().is_some_and(|module| {
+              module.ast_usage.intersects(
+                EcmaModuleAstUsage::TopLevelAwait | EcmaModuleAstUsage::SourceTopLevelAwait,
+              )
+            });
           may_await.then_some(NodeIndex::new(module.idx().index()))
         })
         .peekable();

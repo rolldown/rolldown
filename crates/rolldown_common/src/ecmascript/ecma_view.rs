@@ -246,6 +246,11 @@ bitflags! {
         const TopLevelReturn = 1 << 8;
         /// `import.meta.hot.acceptExports(...)` is called somewhere in the module
         const HmrAcceptExports = 1 << 9;
+        /// The module has a top-level `await` before the pre-scan dead code elimination and
+        /// `dropLabels` remove code, so Node treats it as async. `TopLevelAwait` comes from the
+        /// scan of the code that is left. Set only when one of these steps can remove code.
+        /// See internal-docs/linking/module-execution-order/implementation.md.
+        const SourceTopLevelAwait = 1 << 10;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
 }

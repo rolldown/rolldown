@@ -445,8 +445,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       self.remaining += 1;
     }
 
+    let mut pending_messages = VecDeque::new();
     let user_defined_entries = match fetch_mode {
-      ScanMode::Full => self.resolve_user_defined_entries().await?,
+      ScanMode::Full => self.resolve_user_defined_entries(&mut pending_messages).await?,
       ScanMode::Partial(_) => vec![],
     };
 
@@ -457,7 +458,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     // Store the already consider as entry module
     let mut entry_points = FxIndexSet::default();
     let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
+    let mut idx_of_module_info_need_update = vec![];
     for (name, resolved_id) in user_defined_entries.iter().cloned() {
+      // A module loaded during resolution did not know it was an entry.
+      if let Some(VisitState::Seen(idx)) = self.cache.module_id_to_idx.get(&resolved_id.id) {
+        idx_of_module_info_need_update.push(*idx);
+      }
       let idx = self.try_spawn_new_task(resolved_id, None, true, None);
       user_defined_entry_ids.insert(idx);
       entry_points.insert(EntryPoint {
@@ -531,7 +537,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let mut overrode_preserve_entry_signature_map = FxHashMap::default();
 
     while self.remaining > 0 {
-      let Some(msg) = self.rx.recv().await else {
+      let msg = if let Some(msg) = pending_messages.pop_front() {
+        msg
+      } else if let Some(msg) = self.rx.recv().await {
+        msg
+      } else {
         break;
       };
       match msg {
@@ -775,27 +785,19 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
           runtime_brief = Some(runtime);
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {
-          let module_id = resolve_id.id.clone();
-          let idx = self.try_spawn_new_task(*resolve_id, None, false, None);
-          // `this.load` waits for a load signal, and only a normal module task sends it.
-          // A `this.load` of an id that is already external is a conflict, and
-          // `try_spawn_new_task` records it as an error. The code below ends the wait, so
-          // the build stops with that error and does not hang. No normal module task runs
-          // for an external module in this scan, so the wait gets no second signal.
-          if self.is_external_module(idx) {
-            self.shared_context.plugin_driver.ensure_context_load_module_completion(module_id);
-          }
+          self.fetch_module(*resolve_id);
         }
         ModuleLoaderMsg::AddEntryModule(msg) => {
           let data = msg.chunk;
-          let result = load_entry_module(
-            &self.shared_context.options,
-            &self.shared_context.resolver,
-            &self.shared_context.plugin_driver,
+          let ctx = Arc::clone(&self.shared_context);
+          let resolution = load_entry_module(
+            &ctx.options,
+            &ctx.resolver,
+            &ctx.plugin_driver,
             &data.id,
             data.importer.as_deref(),
-          )
-          .await;
+          );
+          let result = self.await_entry_resolution(resolution, &mut pending_messages).await;
 
           let module_idx = match result {
             Ok(resolved_id) => self.try_spawn_new_task(resolved_id, None, true, None),
@@ -826,7 +828,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
 
           extra_entry_points.push(entry);
         }
-        ModuleLoaderMsg::BuildErrors(e) => {
+        ModuleLoaderMsg::BuildErrors(e) | ModuleLoaderMsg::RuntimeModuleErrors(e) => {
           self.errors.extend(e);
           self.remaining -= 1;
         }
@@ -876,7 +878,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       },
     );
 
-    let mut idx_of_module_info_need_update = vec![];
     let is_dense_index_vec = self.intermediate_normal_modules.modules.is_index_vec();
 
     let modules_iter = std::mem::take(&mut self.intermediate_normal_modules.modules)
@@ -1031,24 +1032,61 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     }
   }
 
+  fn fetch_module(&mut self, resolve_id: ResolvedId) {
+    let module_id = resolve_id.id.clone();
+    let idx = self.try_spawn_new_task(resolve_id, None, false, None);
+    // `this.load` waits for a load signal, and only a normal module task sends it.
+    // A `this.load` of an id that is already external is a conflict, and
+    // `try_spawn_new_task` records it as an error. The code below ends the wait, so
+    // the build stops with that error and does not hang. No normal module task runs
+    // for an external module in this scan, so the wait gets no second signal.
+    if self.is_external_module(idx) {
+      self.shared_context.plugin_driver.ensure_context_load_module_completion(module_id);
+    }
+  }
+
+  async fn await_entry_resolution<T>(
+    &mut self,
+    resolution: impl Future<Output = T>,
+    pending_messages: &mut VecDeque<ModuleLoaderMsg>,
+  ) -> T {
+    tokio::pin!(resolution);
+    // A resolveId hook can await this.load, which sends FetchModule to this receiver.
+    // Leave other messages for the normal loop after the entry is registered.
+    loop {
+      tokio::select! {
+        biased;
+        result = &mut resolution => return result,
+        Some(msg) = self.rx.recv() => match msg {
+          ModuleLoaderMsg::FetchModule(resolved_id) => self.fetch_module(*resolved_id),
+          msg => pending_messages.push_back(msg),
+        },
+      }
+    }
+  }
+
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
-  pub async fn resolve_user_defined_entries(
-    &self,
+  async fn resolve_user_defined_entries(
+    &mut self,
+    pending_messages: &mut VecDeque<ModuleLoaderMsg>,
   ) -> BuildResult<Vec<(Option<ArcStr>, ResolvedId)>> {
-    let resolved_ids =
-      join_all(self.shared_context.options.input.iter().map(|input_item| async move {
+    let mut pending_runtime = self.remaining;
+    let ctx = Arc::clone(&self.shared_context);
+    let resolutions = ctx.options.input.iter().map(|input_item| {
+      let ctx = &ctx;
+      async move {
         let resolved = load_entry_module(
-          &self.shared_context.options,
-          &self.shared_context.resolver,
-          &self.shared_context.plugin_driver,
+          &ctx.options,
+          &ctx.resolver,
+          &ctx.plugin_driver,
           &input_item.import,
           None,
         )
         .await;
-
         resolved.map(|info| (input_item.name.as_ref().map(Into::into), info))
-      }))
-      .await;
+      }
+    });
+    let resolved_ids = self.await_entry_resolution(join_all(resolutions), pending_messages).await;
 
     let mut ret = Vec::with_capacity(self.shared_context.options.input.len());
 
@@ -1064,6 +1102,34 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     }
 
     if !errors.is_empty() {
+      // Collect errors from tasks started by this.load. The runtime can be
+      // waiting on an entry that this failed scan will never resolve.
+      while self.remaining > pending_runtime {
+        let msg = if let Some(msg) = pending_messages.pop_front() {
+          Some(msg)
+        } else {
+          self.rx.recv().await
+        };
+        match msg {
+          Some(ModuleLoaderMsg::BuildErrors(module_errors)) => {
+            errors.extend(module_errors);
+            self.remaining -= 1;
+          }
+          Some(ModuleLoaderMsg::NormalModuleDone(_) | ModuleLoaderMsg::ExternalModuleDone(_)) => {
+            self.remaining -= 1;
+          }
+          Some(
+            ModuleLoaderMsg::RuntimeNormalModuleDone(_) | ModuleLoaderMsg::RuntimeModuleErrors(_),
+          ) => {
+            self.remaining -= 1;
+            pending_runtime -= 1;
+          }
+          Some(ModuleLoaderMsg::FetchModule(resolved_id)) => self.fetch_module(*resolved_id),
+          Some(ModuleLoaderMsg::AddEntryModule(_)) => {}
+          None => break,
+        }
+      }
+      errors.append(&mut self.errors);
       Err(errors)?;
     }
 

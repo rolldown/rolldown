@@ -1,0 +1,6 @@
+{
+  "_comment": "Counterpart of `static_import_of_code_less_dynamic_entry`: `lib/index.js` is a side-effect-free barrel that is both a dynamic entry (main) and statically imported (a, b), but it declares code of its own (`own`). Its static importers must not join its bit pattern, or `a.js`, which only reads the re-exported `foo`, shares a chunk with `bar.js` and statically loads `heavy.js`.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }]
+  }
+}

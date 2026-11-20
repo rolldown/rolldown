@@ -47,6 +47,7 @@ impl Plugin for IsolatedDeclarationPlugin {
               resolved_id.attributes.clone(),
               None,
               resolved_id.module_def_format,
+              false,
             )
             .await?;
         }

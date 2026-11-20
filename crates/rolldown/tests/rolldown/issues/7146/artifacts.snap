@@ -67,10 +67,16 @@ export { require_config };
 ### main.js
 
 ```js
-import { __require } from "./_virtual/_rolldown/runtime.js";
+import "./_virtual/_rolldown/runtime.js";
 import { require_config } from "./config.json.js";
+import { createRequire as __createRequire } from "node:module";
+function __require() {
+	const require = __createRequire(import.meta.url);
+	__require = () => require;
+	return require;
+}
 // main.js
-const assert = __require("assert/strict");
+const assert = (/* @__PURE__ */ __require())("assert/strict");
 const config = require_config();
 assert.deepEqual(config, { foo: 1 });
 export {};

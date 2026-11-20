@@ -394,6 +394,12 @@ impl GenerateStage<'_> {
         return Some(reason);
       }
       let meta = &self.link_output.metas[module_idx];
+      if self.options.is_esm_format_with_node_platform()
+        && meta.depended_runtime_helper.contains(RuntimeHelper::Require)
+      {
+        // See internal-docs/inline-common-chunks/design.md ("Why each candidate rule exists").
+        return Some("member uses the Node require helper");
+      }
       if order_state.esm_init_target(module_idx, meta).is_none()
         && !matches!(meta.wrap_kind(), WrapKind::Cjs)
       {

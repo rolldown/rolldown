@@ -52,10 +52,8 @@
  - rollup@hooks@opts-out transform hook cache for custom cache
 
 ### The `PluginContext.load` is not fully supported
- - rollup@function@preload-cyclic-module: handles pre-loading a cyclic module in the resolveId hook (load entry module at resolveId hook)
- - rollup@function@preload-module: allows pre-loading modules via this.load (load entry module at resolveId hook)
- - rollup@function@module-side-effects@writable: ModuleInfo.moduleSideEffects should be writable during build time(load entry module at resolveId hook)
- - rollup@function@modify-meta: allows to freely modify moduleInfo.meta and maintain object identity
+ - rollup@function@preload-module: allows pre-loading modules via this.load (`ModuleInfo.ast`)
+ - rollup@function@modify-meta: allows to freely modify moduleInfo.meta and maintain object identity (`this.load` in `buildStart`)
 
 ### The `maxParallelFileOps` is not supported
  - rollup@function@max-parallel-file-operations@default: maxParallelFileOps not set
@@ -371,6 +369,7 @@
 
 ### The `syntheticNamedExports` is not supported
  - rollup@form@synthetic-named-exports: synthetic named exports
+ - rollup@function@arbitrary-module-namespace-identifiers-star: executes reassigned and synthetic exports with names that start with "*"
  - rollup@function@synthetic-named-exports-fallback-es2015: adds a fallback in case synthetic named exports are falsy
  - rollup@function@synthetic-named-exports-fallback: adds a fallback in case synthetic named exports are falsy
  - rollup@function@synthetic-named-exports@circular-synthetic-exports2: handles circular synthetic exports

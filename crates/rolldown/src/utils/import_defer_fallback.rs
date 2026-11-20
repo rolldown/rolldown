@@ -4,9 +4,8 @@
 use oxc::diagnostics::LabeledSpan;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, ImportKind, ImportRecordMeta, IndexModules, Module, ModuleIdx,
-  ModuleType, NormalizedBundlerOptions, OutputFormat, ResolvedImportRecord, StmtEvalFlags,
-  side_effects::DeterminedSideEffects,
+  EcmaModuleAstUsage, ImportRecordMeta, IndexModules, Module, ModuleIdx, NormalizedBundlerOptions,
+  OutputFormat, ResolvedImportRecord, StmtEvalFlags, side_effects::DeterminedSideEffects,
 };
 use rolldown_error::{BuildDiagnostic, EventKind};
 use rolldown_utils::IndexBitSet;
@@ -59,17 +58,8 @@ enum UnsupportedReason {
   DynamicImport,
   TopLevelAwait,
   ImportCycle,
-  ClosureModule(ModuleIdx, ClosureModuleKind),
-}
-
-/// A module of a deferred closure that the deferral does not support yet.
-#[derive(Debug)]
-enum ClosureModuleKind {
-  External,
-  CommonJs,
-  NotJavaScript,
-  Required,
-  OtherImportKind,
+  /// A deferred closure has this external module.
+  ExternalModule(ModuleIdx),
 }
 
 impl UnsupportedReason {
@@ -85,25 +75,8 @@ impl UnsupportedReason {
       Self::DynamicImport => "the build has an `import()`".to_string(),
       Self::TopLevelAwait => "a module of the build has a top-level `await`".to_string(),
       Self::ImportCycle => "the build has a static import cycle".to_string(),
-      Self::ClosureModule(idx, kind) => {
-        let id = modules[*idx].stable_id();
-        match kind {
-          ClosureModuleKind::External => {
-            format!("a deferred import evaluates the external module `{id}`")
-          }
-          ClosureModuleKind::CommonJs => {
-            format!("a deferred import evaluates the CommonJS module `{id}`")
-          }
-          ClosureModuleKind::NotJavaScript => {
-            format!("a deferred import evaluates `{id}`, which is not a JavaScript module")
-          }
-          ClosureModuleKind::Required => {
-            format!("a deferred import evaluates `{id}`, which a `require()` call also loads")
-          }
-          ClosureModuleKind::OtherImportKind => format!(
-            "a deferred import evaluates `{id}`, which has a `require()` call or another import that is not an `import` statement"
-          ),
-        }
+      Self::ExternalModule(idx) => {
+        format!("a deferred import evaluates the external module `{}`", modules[*idx].stable_id())
       }
     };
     format!(
@@ -189,21 +162,11 @@ fn has_static_import_cycle(modules: &IndexModules) -> bool {
   false
 }
 
-/// The first module of a deferred closure that the deferral does not support. A closure is a
-/// deferred target and its static dependencies. This is the same walk as
-/// `wrap_import_defer_closures` in the link stage.
+/// The first external module of a deferred closure. A closure is a deferred target and its static
+/// dependencies. This is the same walk as `wrap_import_defer_closures` in the link stage.
 fn closure_reason(output: &NormalizedScanStageOutput) -> Option<UnsupportedReason> {
   let modules = &output.module_table.modules;
   let runtime_idx = output.runtime.id();
-  // A `require()` makes a module with `ExportsKind::None` a CommonJS module in the link stage.
-  let mut required = IndexBitSet::new(modules.len());
-  for module in modules.iter().filter_map(Module::as_normal) {
-    for rec in module.import_records.iter().filter(|rec| rec.kind == ImportKind::Require) {
-      if let Some(idx) = rec.resolved_module {
-        required.set_bit(idx);
-      }
-    }
-  }
   let mut stack = modules
     .iter()
     .filter_map(Module::as_normal)
@@ -217,26 +180,9 @@ fn closure_reason(output: &NormalizedScanStageOutput) -> Option<UnsupportedReaso
       continue;
     }
     let Module::Normal(module) = &modules[idx] else {
-      return Some(UnsupportedReason::ClosureModule(idx, ClosureModuleKind::External));
+      return Some(UnsupportedReason::ExternalModule(idx));
     };
-    let kind = if matches!(module.exports_kind, ExportsKind::CommonJs) {
-      ClosureModuleKind::CommonJs
-    } else if !matches!(
-      module.module_type,
-      ModuleType::Js | ModuleType::Jsx | ModuleType::Ts | ModuleType::Tsx
-    ) {
-      ClosureModuleKind::NotJavaScript
-    } else if required.has_bit(idx) {
-      ClosureModuleKind::Required
-    } else if module.import_records.iter().any(|rec| {
-      rec.kind.is_static() && rec.kind != ImportKind::Import && rec.resolved_module.is_some()
-    }) {
-      ClosureModuleKind::OtherImportKind
-    } else {
-      stack.extend(module.import_records.iter().filter_map(|rec| rec.resolved_module));
-      continue;
-    };
-    return Some(UnsupportedReason::ClosureModule(idx, kind));
+    stack.extend(module.import_records.iter().filter_map(|rec| rec.resolved_module));
   }
   None
 }

@@ -17,6 +17,19 @@ use rustc_hash::{FxHashMap, FxHashSet};
 pub enum DeferredAccess {
   /// An ESM module: `(init_x(), <access>)`.
   Esm(ModuleIdx),
+  /// The import record of a CommonJS module:
+  /// `(import_x || (import_x = __toESM(require_x())), <access>)`.
+  Cjs(ImportRecordIdx),
+}
+
+/// The deferred namespace object of one `import defer * as ns from './x'`, where `./x` is a
+/// CommonJS module: `x_deferred = __deferNs(() => import_x || (import_x = __toESM(require_x())))`.
+/// The importer declares it next to `import_x`, and the two share one namespace object.
+#[derive(Debug, Clone, Copy)]
+pub struct DeferredCjsNamespace {
+  pub symbol_ref: SymbolRef,
+  /// The facade statement that declares `symbol_ref`.
+  pub stmt_info_idx: StmtInfoIdx,
 }
 
 /// Module metadata about linking
@@ -104,6 +117,13 @@ pub struct LinkingMetadata {
   pub deferred_namespace_ref: Option<SymbolRef>,
   /// The facade statement that declares `deferred_namespace_ref`.
   pub deferred_namespace_stmt_info: Option<StmtInfoIdx>,
+  /// The local bindings of `import defer * as ns from './x'` in this module where `./x` is a
+  /// CommonJS module, mapped to the import record of `./x`. An access through the local binding
+  /// reads `import_x` directly (`DeferredAccess::Cjs`).
+  pub deferred_cjs_namespace_imports: FxHashMap<SymbolRef, ImportRecordIdx>,
+  /// The deferred namespace object of each import record in `deferred_cjs_namespace_imports`.
+  /// The local binding links to it, so that an escape (`f(ns)`, `export { ns }`) reads the object.
+  pub deferred_cjs_namespaces: FxHashMap<ImportRecordIdx, DeferredCjsNamespace>,
   /// The accesses to a deferred namespace (`ns.foo`, `'foo' in ns`) that evaluate the deferred
   /// module first. The keys are the node ids of `resolved_member_expr_refs` and
   /// `folded_namespace_in_checks`.

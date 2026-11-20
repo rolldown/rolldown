@@ -759,10 +759,9 @@ export interface InputOptions {
      *
      * For now, Rolldown keeps the deferred evaluation only in a build that makes one chunk in
      * `esm` or `cjs` format, with no `import()`, no static import cycle and no top-level `await`.
-     * Each module that a deferred import evaluates must be an ES module of the build. In any
-     * other build, Rolldown lowers each deferred import to a normal import and emits a warning
-     * with the reason. Rolldown always lowers `import.defer('./x')` to `import('./x')`, with a
-     * warning.
+     * A deferred import must not evaluate an external module. In any other build, Rolldown
+     * lowers each deferred import to a normal import and emits a warning with the reason.
+     * Rolldown always lowers `import.defer('./x')` to `import('./x')`, with a warning.
      *
      * Rolldown evaluates a deferred module, and each module that it imports directly or through
      * other modules, inside a function. Thus a top-level `arguments` in such a module is the

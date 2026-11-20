@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration/test262.rs
 expression: snapshot
 ---
-Summary: 227 passed, 25 failed, 252 total
+Summary: 228 passed, 24 failed, 252 total
 
 ---
 
@@ -23,13 +23,9 @@ Runtime error: Failed to import test module: Test262Error {
 ---
 
 # language/import/import-defer/deferred-namespace-object/json-module.js
-Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation of a JSON module yet, so Rolldown lowers `import defer` to a normal import
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: Test262Error {
-  message: 'Symbol(Symbol.toStringTag) descriptor value should be Deferred Module; Symbol(Symbol.toStringTag) value should be Deferred Module'
-}
+Actual: Runtime execution succeeded
 ---
 
 # language/import/import-defer/deferred-namespace-object/reexport-deferred-ns-evaluation.js

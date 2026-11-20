@@ -1,0 +1,85 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.cjs
+var require_log = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.log = [];
+}));
+// x.cjs
+var require_x = /* @__PURE__ */ __commonJSMin(((exports) => {
+	require_log().log.push("x");
+	exports.foo = "x-foo";
+}));
+// c.js
+var import_log = require_log();
+require_x();
+// y.cjs
+var require_y = /* @__PURE__ */ __commonJSMin(((exports) => {
+	require_log().log.push("y");
+	exports.foo = "y-foo";
+}));
+const yFoo = require_y().foo;
+// main.js
+var import_x, x_deferred = /* @__PURE__ */ __deferNs(() => import_x || (import_x = /* @__PURE__ */ __toESM(require_x())));
+var import_y;
+const before = [...import_log.log];
+const values = [
+	(import_x || (import_x = /* @__PURE__ */ __toESM(require_x())), "x-foo"),
+	(import_y || (import_y = /* @__PURE__ */ __toESM(require_y())), "y-foo"),
+	yFoo,
+	typeof x_deferred
+];
+const after = [...import_log.log];
+export { after, before, values };
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+// log.cjs
+var require_log = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.log = [];
+}));
+// x.cjs
+var require_x = /* @__PURE__ */ __commonJSMin(((exports) => {
+	require_log().log.push("x");
+	exports.foo = "x-foo";
+}));
+// c.js
+var import_log = require_log();
+require_x();
+// y.cjs
+var require_y = /* @__PURE__ */ __commonJSMin(((exports) => {
+	require_log().log.push("y");
+	exports.foo = "y-foo";
+}));
+const yFoo = require_y().foo;
+// main.js
+var import_x, x_deferred = /* @__PURE__ */ __deferNs(() => import_x || (import_x = /* @__PURE__ */ __toESM(require_x())));
+var import_y;
+const before = [...import_log.log];
+const values = [
+	(import_x || (import_x = /* @__PURE__ */ __toESM(require_x())), "x-foo"),
+	(import_y || (import_y = /* @__PURE__ */ __toESM(require_y())), "y-foo"),
+	yFoo,
+	typeof x_deferred
+];
+const after = [...import_log.log];
+exports.after = after;
+exports.before = before;
+exports.values = values;
+
+```

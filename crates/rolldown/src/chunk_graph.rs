@@ -19,6 +19,11 @@ pub struct ChunkGraph {
   /// If the namespace is not merged, `Key` == `Value`.
   /// If the namespace is merged, `Key` is the original namespace symbol, and `Value` is the linked namespace symbol.
   pub finalized_cjs_ns_map_idx_vec: IndexVec<ChunkIdx, FxHashMap<SymbolRef, SymbolRef>>,
+  /// The `import_x` and `x_deferred` symbols of `import defer * as ns from './x.cjs'` that the
+  /// finalizer does not declare. `merge_deferred_cjs_namespaces` puts each symbol of a group here
+  /// except the first one by execution order. The first record declares the shared binding under
+  /// the name of the canonical symbol, also when a later record owns that symbol.
+  pub merged_deferred_cjs_namespace_refs: FxHashSet<SymbolRef>,
   /// This map stores the reference IDs from `this.emitFile({ type: 'chunk' })`.
   /// Each key is the index of an entry chunk.
   /// If the chunk optimizer removes a facade, the map keeps the index and IDs of that facade.
@@ -47,6 +52,7 @@ impl ChunkGraph {
       sorted_chunk_idx_vec: Vec::new(),
       entry_module_to_entry_chunk: FxHashMap::default(),
       finalized_cjs_ns_map_idx_vec: index_vec![],
+      merged_deferred_cjs_namespace_refs: FxHashSet::default(),
       chunk_idx_to_reference_ids: FxHashMap::default(),
       common_chunk_exported_facade_chunk_namespace: FxHashMap::default(),
       common_chunk_preserve_export_names_modules: FxHashMap::default(),

@@ -229,6 +229,7 @@ impl<'a> GenerateStage<'a> {
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);
 
     self.merge_cjs_namespace(&mut chunk_graph, &order_state);
+    self.merge_deferred_cjs_namespaces(&mut chunk_graph);
 
     self.trace_action_chunks_infos(&chunk_graph);
 

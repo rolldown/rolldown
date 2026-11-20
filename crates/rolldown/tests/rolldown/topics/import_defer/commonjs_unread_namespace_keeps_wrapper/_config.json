@@ -1,0 +1,9 @@
+{
+  "_comment": "One entry with an unread `import defer` of each of two CommonJS modules. No other module imports them, so each deferred import statement is the only reference to the wrapper of its module. The statement keeps the side-effect flag of the module, so the wrapper stays and the body of the module stays in it: the entry runs neither module. Both modules declare `snapshot`. Without the wrappers, the two bodies would declare it twice in one scope. No access reads a namespace, so the output has no `__toESM`. `minify` stays off, so that the helper keeps its name for the check in `_test.mjs`.",
+  "config": {
+    "minify": false,
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

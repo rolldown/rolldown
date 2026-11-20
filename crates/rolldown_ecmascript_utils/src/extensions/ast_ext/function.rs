@@ -28,6 +28,9 @@ impl FunctionExt for oxc::ast::ast::FormalParameters<'_> {
           param.initializer.is_none()
         }
       }
+    }) && self.rest.as_ref().is_none_or(|rest| {
+      // `function foo(...[x = global()]) {}` runs the default value when it is called
+      matches!(rest.rest.argument, oxc::ast::ast::BindingPattern::BindingIdentifier(_))
     })
   }
 }

@@ -932,10 +932,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       match stmt {
         ast::Statement::FunctionDeclaration(fn_decl) => {
           if let Some(id) = &fn_decl.id
-            && let Some(is_pure_annotation_only) = side_effect_free_function_kind(
-              fn_decl.is_side_effect_free() && has_plain_rest(&fn_decl.params),
-              fn_decl.pure,
-            )
+            && let Some(is_pure_annotation_only) =
+              side_effect_free_function_kind(fn_decl.is_side_effect_free(), fn_decl.pure)
           {
             self.side_effect_free_functions.insert(id.symbol_id(), is_pure_annotation_only);
           }
@@ -944,14 +942,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           for decl in &var_decl.declarations {
             let BindingPattern::BindingIdentifier(binding) = &decl.id else { continue };
             let kind = match &decl.init {
-              Some(Expression::FunctionExpression(func)) => side_effect_free_function_kind(
-                func.is_side_effect_free() && has_plain_rest(&func.params),
-                func.pure,
-              ),
-              Some(Expression::ArrowFunctionExpression(func)) => side_effect_free_function_kind(
-                func.is_side_effect_free() && has_plain_rest(&func.params),
-                func.pure,
-              ),
+              Some(Expression::FunctionExpression(func)) => {
+                side_effect_free_function_kind(func.is_side_effect_free(), func.pure)
+              }
+              Some(Expression::ArrowFunctionExpression(func)) => {
+                side_effect_free_function_kind(func.is_side_effect_free(), func.pure)
+              }
               _ => None,
             };
             if let Some(is_pure_annotation_only) = kind {
@@ -1508,14 +1504,4 @@ pub enum IdentifierReferenceKind {
 /// body is empty or because it carries `@__NO_SIDE_EFFECTS__`.
 fn side_effect_free_function_kind(empty: bool, pure: bool) -> Option<bool> {
   (empty || pure).then_some(pure && !empty)
-}
-
-/// `FunctionExt::is_side_effect_free` does not check the rest parameter, so it treats
-/// `function f(...[a = effect()]) {}` as empty. Only a plain `...rest` keeps the function empty.
-/// The declaration forms do not check this yet.
-fn has_plain_rest(params: &ast::FormalParameters) -> bool {
-  params
-    .rest
-    .as_ref()
-    .is_none_or(|rest| matches!(rest.rest.argument, BindingPattern::BindingIdentifier(_)))
 }

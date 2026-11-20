@@ -1,0 +1,7 @@
+{
+  "_comment": "A rest parameter pattern with a default value runs code when the function is called, so an exported function with an empty body still has side effects. Only the call to `plainRest` should be removed.",
+  "config": {
+    "minify": false
+  },
+  "configVariants": [{ "minify": true, "_snapshot": false }]
+}

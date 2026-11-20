@@ -23,7 +23,6 @@ use rolldown_plugin::{
   HookBuildEndArgs, HookCloseBundleArgs, HookRenderErrorArgs, SharedPluginDriver,
 };
 use rolldown_utils::dashmap::FxDashSet;
-use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt as _;
 use rustc_hash::FxHashSet;
 use std::{
@@ -31,14 +30,6 @@ use std::{
   sync::Arc,
 };
 use sugar_path::SugarPath;
-
-#[cfg(not(target_family = "wasm"))]
-static OUTPUT_WRITE_POOL: std::sync::LazyLock<rayon::ThreadPool> = std::sync::LazyLock::new(|| {
-  rayon::ThreadPoolBuilder::new()
-    .num_threads(2)
-    .build()
-    .expect("could not start the output write pool")
-});
 
 #[expect(
   clippy::struct_field_names,
@@ -381,13 +372,26 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       // Large builds emit tens of thousands of files; writing them one at a time leaves the
       // output stage bound by per-file syscall latency. Distinct paths are independent, so write
       // them in parallel and report the first failure in output order to keep errors stable.
-      let write_destinations =
-        || destinations.par_iter().map(|(chunk, dest)| write(chunk, dest)).collect::<Vec<_>>();
       #[cfg(not(target_family = "wasm"))]
-      let results = OUTPUT_WRITE_POOL.install(write_destinations);
+      let results = {
+        let write_destinations = |first| {
+          destinations
+            .iter()
+            .skip(first)
+            .step_by(2)
+            .map(|(chunk, dest)| write(chunk, dest))
+            .collect::<Vec<_>>()
+        };
+        std::thread::scope(|scope| {
+          let odd = scope.spawn(|| write_destinations(1));
+          let even = write_destinations(0);
+          itertools::interleave(even, odd.join().expect("output writer thread panicked"))
+        })
+      };
       #[cfg(target_family = "wasm")]
-      let results = write_destinations();
-      results.into_iter().collect::<anyhow::Result<()>>()?;
+      let results =
+        destinations.iter().map(|(chunk, dest)| write(chunk, dest)).collect::<Vec<_>>().into_iter();
+      results.collect::<anyhow::Result<()>>()?;
     } else {
       // Several outputs target the same path: keep sequential last-writer-wins semantics.
       for (chunk, dest) in &destinations {

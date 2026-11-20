@@ -1,0 +1,65 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { createIcon } from "./factory.js";
+
+// a.js
+const IconA = createIcon("a");
+
+export { IconA };
+```
+
+## app.js
+
+```js
+import { version } from "./index.js";
+import { createIcon, getVersion } from "./factory.js";
+import { IconA } from "./a.js";
+import { IconB } from "./b.js";
+
+export { IconA, IconB, createIcon, getVersion, version };
+```
+
+## b.js
+
+```js
+import { createIcon } from "./factory.js";
+
+// b.js
+const IconB = createIcon("b");
+
+export { IconB };
+```
+
+## factory.js
+
+```js
+import { version } from "./index.js";
+
+// factory.js
+const getVersion = () => version;
+const createIcon = (name) => {
+	(globalThis.loadOrder ??= []).push(name);
+	return name;
+};
+
+export { createIcon, getVersion };
+```
+
+## index.js
+
+```js
+import { IconA } from "./a.js";
+import { IconB } from "./b.js";
+import { createIcon, getVersion } from "./factory.js";
+
+// index.js
+const version = "1.0.0";
+
+export { IconA, IconB, createIcon, getVersion, version };
+```

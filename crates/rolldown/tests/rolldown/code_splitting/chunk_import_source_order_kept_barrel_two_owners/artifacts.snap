@@ -1,0 +1,54 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { name } from "./ui/o.js";
+import "./ui/button.js";
+import "./ui/index.js";
+
+// main.js
+(globalThis.loadOrder ??= []).push(`main ${"md"} ${name()}`);
+
+```
+
+## ui/button.css.js
+
+```js
+// ui/button.css.js
+(globalThis.loadOrder ??= []).push("style");
+
+```
+
+## ui/button.js
+
+```js
+import "./button.css.js";
+
+```
+
+## ui/index.js
+
+```js
+import { name } from "./o.js";
+
+// ui/index.js
+(globalThis.loadOrder ??= []).push("barrel");
+
+export { name };
+```
+
+## ui/o.js
+
+```js
+// ui/o.js
+(globalThis.loadOrder ??= []).push("o");
+function name() {
+	return "o";
+}
+
+export { name };
+```

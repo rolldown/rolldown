@@ -1302,14 +1302,15 @@ pub(super) fn grow_static_import_backward_closure(
 
 /// Nontrivial strongly connected components (two or more chunks, or a self-loop) of the
 /// predicted chunk-import graph. Both cycle consumers read it: the per-root bailout and the
-/// plan closure.
-struct ChunkCycles {
+/// plan closure. The source order walk of the chunk imports reads it too.
+#[derive(Default)]
+pub(super) struct ChunkCycles {
   scc_of_chunk: FxHashMap<ChunkIdx, usize>,
   sccs: Vec<Vec<ChunkIdx>>,
 }
 
 impl ChunkCycles {
-  fn from_import_edges(import_edges: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>) -> Self {
+  pub(super) fn from_import_edges(import_edges: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>) -> Self {
     let mut graph = DiGraphMap::<ChunkIdx, ()>::new();
     for (importer_idx, importees) in import_edges.iter_enumerated() {
       graph.add_node(importer_idx);
@@ -1329,6 +1330,16 @@ impl ChunkCycles {
       sccs.push(scc);
     }
     Self { scc_of_chunk, sccs }
+  }
+
+  /// Whether a chunk is in a cycle.
+  pub(super) fn has_chunk(&self, chunk_idx: ChunkIdx) -> bool {
+    self.scc_of_chunk.contains_key(&chunk_idx)
+  }
+
+  /// Whether two chunks are in one cycle.
+  pub(super) fn same_cycle(&self, a: ChunkIdx, b: ChunkIdx) -> bool {
+    self.scc_of_chunk.get(&a).is_some_and(|scc| self.scc_of_chunk.get(&b) == Some(scc))
   }
 
   /// Whether any static chunk cycle is reachable from `root_chunk` over the predicted edges.

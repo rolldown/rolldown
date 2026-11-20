@@ -300,12 +300,11 @@ It is used for an HMR update, and for a rebuild with
 `experimental.incrementalBuild`.
 
 Before the hooks run, each changed module goes back to the values that its
-creating resolution gave. Rolldown kept these values when it created the
-module. It does not use the result of a new `resolveId` call for them. For
-an HMR update, it does not call `resolveId` for the changed module. For an
-incremental rebuild, it calls `resolveId` again for the id of the changed
-module, without an importer, but it does not use the `meta` or
-`moduleSideEffects` of that call. So:
+creating resolution gave. Rolldown kept this resolution when it created the
+module, and fetches the module again from it. It does not call `resolveId`
+for the changed module: a `resolveId` hook gets a specifier, and the id of
+a module, such as the id of a virtual module, can resolve to another
+module. So:
 
 - `meta` becomes a new copy of the `meta` of the creating resolution. Keys
   that hooks wrote, and keys that the last `load` and `transform` results

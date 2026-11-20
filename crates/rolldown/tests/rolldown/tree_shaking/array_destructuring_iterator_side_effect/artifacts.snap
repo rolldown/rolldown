@@ -1,0 +1,55 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lib.js
+
+```js
+// lib.js
+const iterable = (name) => ({ [Symbol.iterator]() {
+	globalThis.calls.push(name);
+	return [][Symbol.iterator]();
+} });
+/* @__NO_SIDE_EFFECTS__ */
+function make(name) {
+	return iterable(name);
+}
+const plain = (name) => iterable(name);
+const imported = iterable("imported");
+
+export { make as n, plain as r, imported as t };
+```
+
+## main.js
+
+```js
+import { n as make, r as plain, t as imported } from "./lib.js";
+
+// exported.js
+const [first] = /* @__PURE__ */ make("export declaration");
+
+// main.js
+const local = { [Symbol.iterator]() {
+	globalThis.calls.push("local");
+	return [][Symbol.iterator]();
+} };
+const [fromMake] = /* @__PURE__ */ make("no side effects");
+const [fromPure] = /* @__PURE__ */ plain("pure");
+const [fromNamespace] = make("namespace");
+const [fromImport] = imported;
+let [fromLocal] = local;
+const [] = /* @__PURE__ */ make("empty pattern");
+const [, second] = /* @__PURE__ */ make("hole");
+const [...rest] = /* @__PURE__ */ make("rest element");
+const [...[withDefault = globalThis.calls.push("rest default")]] = [];
+
+```
+
+## other.js
+
+```js
+import { n as make } from "./lib.js";
+
+export { make };
+```

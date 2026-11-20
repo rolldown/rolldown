@@ -39,6 +39,25 @@ These differences from a native namespace object stay:
 
 These fixtures check the shape: `misc/namespace_object_shape`, `misc/namespace_object_shape_empty`, `misc/namespace_object_shape_open` and `misc/namespace_object_shape_open_flattened_external_star`. The Rust test `test262_module_code` runs the test262 tests of `language/module-code`, and the tests in `namespace/internals` also check the shape. `crates/rolldown/tests/test262_failures.json` lists each namespace test that still fails, with its reason.
 
+## `__copyProps`: getters without `Function.prototype.bind`
+
+`__copyProps(to, from)` defines a getter on `to` for each own property of `from`, so a read sees the live value. `__toESM`, `__reExport`, and `__toCommonJS` use it. So code reads through these getters for `import * as ns` of a CommonJS module, for `default` when the module sets `__esModule` and has its own `default`, for `export *` of a CommonJS module, and for `require()` of an ES module. A named import of a CommonJS module reads `module.exports` directly and does not use these getters.
+
+Each getter is a closure `() => from[key]`, or the getter of `from` itself. It is not a bound function such as `((k) => from[k]).bind(null, key)`:
+
+- V8 and SpiderMonkey do not cache a property read that calls a bound function as a getter. The load inline cache of V8 handles only a getter that is a `JSFunction` or a `FunctionTemplateInfo`, and `IsCacheableGetPropCall` in SpiderMonkey handles only a `JSFunction`. In a microbenchmark, a read through a bound getter took 75 to 90 ns in V8 and SpiderMonkey, and 4 to 5 ns in Safari 26, Safari 27, and Bun 1.4. A read through a closure took less than 1 ns. JavaScriptCore inlines a bound getter since 325006@main (WebKit bug 329028).
+- When the property of `from` is a non-configurable accessor, the copy uses the same getter. A non-configurable accessor cannot change, so the copy still sees the live value. Without this rule, a read calls two getters in these cases: `__toCommonJS` copies the getters of an `__exportAll` namespace, `__reExport` copies the getters of a `__toESM` namespace, and the CommonJS output of TypeScript defines non-configurable getters for re-exports. When one read site reads many modules, `from[key]` in the closure misses the inline cache: in JavaScriptCore trunk, a read through two closures took about 44 ns, a read through two bound functions about 1 ns, and a read through one getter 0.2 ns.
+- The loop is `for (let key of ...)`, so each closure has its own `key`. (esbuild uses `.bind(null, key)` only in the runtime for ES5, where `var key` is shared by all iterations.) The runtime already uses arrow functions and `let`, so this form needs nothing newer.
+
+A reused getter runs with `this` set to `to`, not to `from`. A getter that reads another property through `this` gets the same value when `__copyProps` copied that property to `to`. It reads a different value for a name that `to` already has, such as an export that an ES module declares next to `export * from` a CommonJS module, for `default` when it is not copied, for a symbol key, and for an inherited property unless `__toESM` created `to` with the prototype of `from`. A getter that compares `this` with `from` also sees a different object.
+
+These costs stay:
+
+- In JavaScriptCore, many getters share the code of one closure. So the inlined getter keeps the `GetClosureVar` loads of `from` and `key`. In bundle benchmarks, a read took 0.6 to 2.2 ns more than through a bound getter in JavaScriptCore trunk. Safari 26, Safari 27, and Bun 1.4 do not inline bound getters, so the closure is faster there.
+- V8 gives an object dictionary-mode properties when the object gets an accessor that has the name of an existing map transition but a different getter (`TransitionToDifferentAccessor` in `Map::TransitionToAccessorProperty`). TypeScript and Babel output defines `__esModule` first, so the namespace objects of the second and later such modules are in dictionary mode. A read from them takes about 12 to 18 ns.
+
+The fixture `misc/copy_props_getters` checks the getters.
+
 ## `__share`, `__share_require`, `__share_export`: the inline common chunk registry
 
 `experimentalInlineCommonChunks` (see `internal-docs/inline-common-chunks/`) prints a common chunk's modules into the files that read them, wrapped in a factory. The registry makes those copies one module instance:

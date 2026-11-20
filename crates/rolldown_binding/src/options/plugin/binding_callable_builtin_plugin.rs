@@ -7,7 +7,7 @@ use rolldown::ModuleType;
 use rolldown_common::{ImportAttributes, WatcherChangeKind};
 use rolldown_plugin::{
   __inner::SharedPluginable, CustomField, HookLoadArgs, HookResolveIdArgs, HookResolveIdOutput,
-  HookTransformArgs, LoadPluginContext, PluginIdx, PluginOrder, SharedTransformPluginContext,
+  HookTransformArgs, LoadPluginContext, PluginOrder, SharedTransformPluginContext,
   TransformPluginContext,
 };
 use rolldown_plugin_vite_resolve::ResolveIdOptionsScan;
@@ -47,8 +47,7 @@ impl BindingCallableBuiltinPlugin {
         ArcStr::default(),
         ArcStr::default(),
         rolldown_common::ModuleIdx::new(0),
-        PluginIdx::new(0),
-        None,
+        false,
       )),
     })
   }

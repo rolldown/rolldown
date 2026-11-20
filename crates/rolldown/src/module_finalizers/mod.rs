@@ -2699,7 +2699,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
         if self.ctx.options.top_level_var {
           if let Statement::VariableDeclaration(var_decl) = &mut top_stmt {
-            var_decl.kind = ast::VariableDeclarationKind::Var;
+            if matches!(
+              var_decl.kind,
+              ast::VariableDeclarationKind::Let | ast::VariableDeclarationKind::Const
+            ) {
+              var_decl.kind = ast::VariableDeclarationKind::Var;
+            }
           }
           if let Statement::ClassDeclaration(class_decl) = top_stmt {
             top_stmt = match self.get_transformed_class_decl(class_decl) {

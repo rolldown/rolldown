@@ -1,6 +1,7 @@
 import { stripAnsi } from 'consola/utils';
 import { $, execa } from 'execa';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { isWasiTest, testsDir } from 'rolldown-tests/utils';
 import { describe, expect, it, test, vi } from 'vitest';
@@ -611,7 +612,7 @@ describe('watch cli', () => {
       cancelSignal: controller.signal,
     })`rolldown index.ts -d dist -w -s`;
     const stdoutWaiter = createStreamWaiter(process.stdout);
-    await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
+    await stdoutWaiter.waitFor('waiting for changes...', { timeout: 5_000 });
     await vi.waitFor(() => {
       expect(fs.existsSync(path.join(cwd, 'dist'))).toBe(true);
       expect(fs.existsSync(path.join(cwd, 'dist/index.js.map'))).toBe(true);
@@ -630,7 +631,7 @@ describe('watch cli', () => {
       cancelSignal: controller.signal,
     })`rolldown -c rolldown.config.ts -d watch-dist-options -w`;
     const stdoutWaiter = createStreamWaiter(process.stdout);
-    await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
+    await stdoutWaiter.waitFor('waiting for changes...', { timeout: 5_000 });
     await vi.waitFor(() => {
       expect(fs.existsSync(path.join(cwd, 'watch-dist-options/esm.js'))).toBe(true);
       expect(fs.existsSync(path.join(cwd, 'watch-dist-options/cjs.js'))).toBe(true);
@@ -649,7 +650,7 @@ describe('watch cli', () => {
       cancelSignal: controller.signal,
     })`rolldown -c rolldown.config.ts -d watch-dist-output -w`;
     const stdoutWaiter = createStreamWaiter(process.stdout);
-    await stdoutWaiter.waitFor('Waiting for changes...', { timeout: 5_000 });
+    await stdoutWaiter.waitFor('waiting for changes...', { timeout: 5_000 });
     await vi.waitFor(() => {
       expect(fs.existsSync(path.join(cwd, 'watch-dist-output/esm.js'))).toBe(true);
       expect(fs.existsSync(path.join(cwd, 'watch-dist-output/cjs.js'))).toBe(true);
@@ -678,6 +679,39 @@ describe('watch cli', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
+  it.each(['successful', 'failed'])('should report a finished %s watch round', async (round) => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-watch-round-'));
+    try {
+      fs.cpSync(cliFixturesDir('watch-round'), cwd, { recursive: true });
+      if (round === 'failed') {
+        fs.writeFileSync(path.join(cwd, 'b.js'), `import './missing.js';\n`);
+      }
+      const controller = new AbortController();
+      const child = execa({ cwd, reject: false, cancelSignal: controller.signal })`rolldown -c -w`;
+      let stdout: string;
+      try {
+        await createStreamWaiter(child.stdout).waitFor('waiting for changes...', {
+          timeout: 5_000,
+        });
+      } finally {
+        controller.abort();
+        ({ stdout } = await child);
+      }
+      const messages = stripAnsi(stdout)
+        .split(/\r?\n/)
+        .flatMap((line) => {
+          const rebuilt = line.match(/Rebuilt .*?(?= in )/)?.[0];
+          if (rebuilt) return [rebuilt.replaceAll('\\', '/')];
+          if (line.includes('UNRESOLVED_IMPORT')) return ['UNRESOLVED_IMPORT'];
+          if (/waiting for changes\.\.\./i.test(line)) return [line.trim()];
+          return [];
+        });
+      expect(messages).toMatchSnapshot();
+    } finally {
+      fs.rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   it.skipIf(process.platform === 'win32')(
     'should close with exit code 0 even when there are errors',
     async () => {
@@ -689,8 +723,6 @@ describe('watch cli', () => {
         cancelSignal: controller.signal,
       })`rolldown index.ts -d dist -w`;
       const stdoutWaiter = createStreamWaiter(process.stdout);
-      // "Waiting for changes..." is printed before the first build, which watches index.ts only
-      // after reading it, so an edit in between is never reported. "Rebuilt" comes after that.
       await stdoutWaiter.waitFor('Rebuilt', { timeout: 5_000 });
 
       fs.writeFileSync(

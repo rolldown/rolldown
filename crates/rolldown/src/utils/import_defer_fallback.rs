@@ -4,8 +4,9 @@
 use oxc::diagnostics::LabeledSpan;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaModuleAstUsage, ImportRecordMeta, IndexModules, Module, ModuleIdx, NormalizedBundlerOptions,
-  OutputFormat, ResolvedImportRecord, StmtEvalFlags, side_effects::DeterminedSideEffects,
+  EcmaModuleAstUsage, ImportKind, ImportRecordMeta, IndexModules, Module, ModuleIdx,
+  NormalizedBundlerOptions, OutputFormat, ResolvedImportRecord, StmtEvalFlags,
+  side_effects::DeterminedSideEffects,
 };
 use rolldown_error::{BuildDiagnostic, EventKind};
 use rolldown_utils::IndexBitSet;
@@ -56,10 +57,12 @@ enum UnsupportedReason {
   ChunkGroups,
   InlineCommonChunks,
   DynamicImport,
-  TopLevelAwait,
   ImportCycle,
   /// A deferred closure has this external module.
   ExternalModule(ModuleIdx),
+  /// This module is outside the deferred closures. It has a deferred import of a module that
+  /// reaches a top-level `await`, and a later import of a module outside the closures.
+  ImportAfterAsyncDeferredImport(ModuleIdx),
 }
 
 impl UnsupportedReason {
@@ -73,11 +76,14 @@ impl UnsupportedReason {
         "`output.codeSplitting.experimentalInlineCommonChunks` is on".to_string()
       }
       Self::DynamicImport => "the build has an `import()`".to_string(),
-      Self::TopLevelAwait => "a module of the build has a top-level `await`".to_string(),
       Self::ImportCycle => "the build has a static import cycle".to_string(),
       Self::ExternalModule(idx) => {
         format!("a deferred import evaluates the external module `{}`", modules[*idx].stable_id())
       }
+      Self::ImportAfterAsyncDeferredImport(idx) => format!(
+        "an import in `{}` comes after a deferred import of a module that has a top-level `await` or imports one",
+        modules[*idx].stable_id()
+      ),
     };
     format!(
       "`import defer` is currently lowered to a normal import, because {condition}. This changes execution timing because side effects run immediately instead of when the deferred import is first used. `experimental.importDefer` does not keep the deferred evaluation in this build yet."
@@ -112,13 +118,15 @@ fn unsupported_reason(
   if normal_modules().any(|module| module.import_records.iter().any(|rec| rec.kind.is_dynamic())) {
     return Some(UnsupportedReason::DynamicImport);
   }
-  if normal_modules().any(|module| module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait)) {
-    return Some(UnsupportedReason::TopLevelAwait);
-  }
   if has_static_import_cycle(modules) {
     return Some(UnsupportedReason::ImportCycle);
   }
-  closure_reason(output)
+  let closures = match deferred_closures(output) {
+    Ok(closures) => closures,
+    Err(external) => return Some(UnsupportedReason::ExternalModule(external)),
+  };
+  import_after_async_deferred_import(output, &closures)
+    .map(UnsupportedReason::ImportAfterAsyncDeferredImport)
 }
 
 /// Whether the static import records make a cycle. An iterative walk, for deep graphs.
@@ -162,9 +170,13 @@ fn has_static_import_cycle(modules: &IndexModules) -> bool {
   false
 }
 
-/// The first external module of a deferred closure. A closure is a deferred target and its static
-/// dependencies. This is the same walk as `wrap_import_defer_closures` in the link stage.
-fn closure_reason(output: &NormalizedScanStageOutput) -> Option<UnsupportedReason> {
+/// The modules of the deferred closures, or `Err` with the first external module of a closure. A
+/// closure is a deferred target and its static dependencies. The link stage wraps these modules
+/// (`wrap_import_defer_closures`). That walk follows only the static records, but here the build
+/// has no `import()`, so the two walks find the same modules.
+fn deferred_closures(
+  output: &NormalizedScanStageOutput,
+) -> Result<IndexBitSet<ModuleIdx>, ModuleIdx> {
   let modules = &output.module_table.modules;
   let runtime_idx = output.runtime.id();
   let mut stack = modules
@@ -180,11 +192,76 @@ fn closure_reason(output: &NormalizedScanStageOutput) -> Option<UnsupportedReaso
       continue;
     }
     let Module::Normal(module) = &modules[idx] else {
-      return Some(UnsupportedReason::ExternalModule(idx));
+      return Err(idx);
     };
     stack.extend(module.import_records.iter().filter_map(|rec| rec.resolved_module));
   }
-  None
+  Ok(visited)
+}
+
+/// The first module outside the deferred closures with an import of a module outside the closures
+/// after a deferred import of a module that reaches a top-level `await` (the early flag of
+/// `mark_tla_before_tree_shaking`).
+///
+/// The preparation of the deferred import (`__esmGather`) waits for the modules with top-level
+/// `await` in the body of the importer. A module outside the closures has no wrapper, so the code
+/// of its imports runs before its body: the later import runs before the modules with top-level
+/// `await` start. In native order, they start first. A module of a closure has a wrapper that runs
+/// its import statements in order, and so does a later import of a closure module. An external
+/// module runs first also in a build without the deferral, so it does not count.
+fn import_after_async_deferred_import(
+  output: &NormalizedScanStageOutput,
+  closures: &IndexBitSet<ModuleIdx>,
+) -> Option<ModuleIdx> {
+  let modules = &output.module_table.modules;
+  let normal_modules = || modules.iter().filter_map(Module::as_normal);
+  let mut queue = normal_modules()
+    .filter(|module| module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait))
+    .map(|module| module.idx)
+    .collect::<Vec<_>>();
+  if queue.is_empty() {
+    return None;
+  }
+  let mut importers = IndexVec::<ModuleIdx, Vec<ModuleIdx>>::from_vec(vec![vec![]; modules.len()]);
+  for module in normal_modules() {
+    for rec in &module.import_records {
+      if matches!(rec.kind, ImportKind::Import)
+        && let Some(dependency) = rec.resolved_module
+      {
+        importers[dependency].push(module.idx);
+      }
+    }
+  }
+  let mut reaches_tla = IndexBitSet::new(modules.len());
+  for &idx in &queue {
+    reaches_tla.set_bit(idx);
+  }
+  while let Some(dependency) = queue.pop() {
+    for &importer in &importers[dependency] {
+      if reaches_tla.set_bit(importer) {
+        queue.push(importer);
+      }
+    }
+  }
+  normal_modules().filter(|module| !closures.has_bit(module.idx)).find_map(|module| {
+    let mut after_async_deferred_import = false;
+    for rec in &module.import_records {
+      let Some(target) = rec.resolved_module else { continue };
+      if !matches!(rec.kind, ImportKind::Import) {
+        continue;
+      }
+      if rec.is_defer_phase() {
+        after_async_deferred_import |= reaches_tla.has_bit(target);
+      } else if after_async_deferred_import
+        && !closures.has_bit(target)
+        && target != output.runtime.id()
+        && matches!(modules[target], Module::Normal(_))
+      {
+        return Some(module.idx);
+      }
+    }
+    None
+  })
 }
 
 /// Writes the saved results of the deferral into the scan output.

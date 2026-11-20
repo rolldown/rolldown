@@ -6,7 +6,7 @@
 use bitflags::bitflags;
 bitflags! {
   #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-  pub struct RuntimeHelper: u32 {
+  pub struct RuntimeHelper: u64 {
     const Create = 1 << 0;
     const DefProp = 1 << 1;
     const Name = 1 << 2;
@@ -31,7 +31,17 @@ bitflags! {
     const ToBinaryNode = 1 << 21;
     const ToBinary = 1 << 22;
     const Require = 1 << 23;
-    const DeferNs = 1 << 24;
+    const EsmStack = 1 << 24;
+    const EsmState = 1 << 25;
+    const EsmEnd = 1 << 26;
+    const EsmFail = 1 << 27;
+    const EsmError = 1 << 28;
+    const EsmComplete = 1 << 29;
+    const EsmOnStack = 1 << 30;
+    const EsmDepDone = 1 << 31;
+    const EsmGather = 1 << 32;
+    const EsmDefer = 1 << 33;
+    const DeferNs = 1 << 34;
   }
 }
 
@@ -47,8 +57,16 @@ impl RuntimeHelper {
 use crate::StmtInfoIdx;
 
 /// Maps each single-bit `RuntimeHelper` to the `StmtInfoIdx`s that depend on it.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct DependedRuntimeHelperMap([Vec<StmtInfoIdx>; RUNTIME_HELPER_NAMES.len()]);
+
+// A manual `Default`: the standard library implements `Default` only for arrays of 32 or fewer
+// elements.
+impl Default for DependedRuntimeHelperMap {
+  fn default() -> Self {
+    Self(std::array::from_fn(|_| Vec::new()))
+  }
+}
 
 impl DependedRuntimeHelperMap {
   /// Record that `stmt_info_idx` depends on `helper`. `helper` must have exactly one bit set.
@@ -78,7 +96,7 @@ impl DependedRuntimeHelperMap {
   }
 }
 
-pub const RUNTIME_HELPER_NAMES: [&str; 25] = [
+pub const RUNTIME_HELPER_NAMES: [&str; 35] = [
   "__create",
   "__defProp",
   "__name",
@@ -103,8 +121,30 @@ pub const RUNTIME_HELPER_NAMES: [&str; 25] = [
   "__toBinaryNode",
   "__toBinary",
   "__require",
+  "__esmStack",
+  "__esmState",
+  "__esmEnd",
+  "__esmFail",
+  "__esmError",
+  "__esmComplete",
+  "__esmOnStack",
+  "__esmDepDone",
+  "__esmGather",
+  "__esmDefer",
   "__deferNs",
 ];
 
 /// The helpers that the runtime module has only when `experimental.importDefer` is on.
-pub const RUNTIME_IMPORT_DEFER_HELPER_NAMES: [&str; 1] = ["__deferNs"];
+pub const RUNTIME_IMPORT_DEFER_HELPER_NAMES: [&str; 11] = [
+  "__esmStack",
+  "__esmState",
+  "__esmEnd",
+  "__esmFail",
+  "__esmError",
+  "__esmComplete",
+  "__esmOnStack",
+  "__esmDepDone",
+  "__esmGather",
+  "__esmDefer",
+  "__deferNs",
+];

@@ -14,6 +14,15 @@ import { afterAll, describe, expect, test } from 'vitest';
 const LOG_JS = 'export const log = [];\n';
 const X_JS = "import { log } from './log.js';\nlog.push('x');\nexport const value = 1;\n";
 const MAIN_JS = "import defer * as ns from './x.js';\nexport const read = () => ns.value;\n";
+// The closure of `x.js` has a module with top-level await. An import after the deferred import
+// makes the build fall back.
+const AFTER_ASYNC_DEFER = {
+  'x.js': "import './t.js';\n" + X_JS,
+  't.js': 'await 0;\n',
+  'y.js': "import { log } from './log.js';\nlog.push('y');\n",
+};
+const AFTER_ASYNC_DEFER_REASON =
+  'an import in `main.js` comes after a deferred import of a module that has a top-level `await` or imports one';
 
 interface Case {
   name: string;
@@ -107,9 +116,9 @@ const cases: Case[] = [
     reason: 'the build has an `import()`',
   },
   {
-    name: 'top-level await',
-    files: { 'main.js': MAIN_JS + 'await 0;\n' },
-    reason: 'a module of the build has a top-level `await`',
+    name: 'an import after a deferred import of a module with top-level await',
+    files: { 'main.js': MAIN_JS + "import './y.js';\n", ...AFTER_ASYNC_DEFER },
+    reason: AFTER_ASYNC_DEFER_REASON,
   },
   {
     name: 'import cycle',
@@ -130,8 +139,11 @@ const cases: Case[] = [
   },
   {
     name: 'a read statement',
-    files: { 'main.js': "import defer * as ns from './x.js';\nns.value;\nawait 0;\n" },
-    reason: 'a module of the build has a top-level `await`',
+    files: {
+      'main.js': "import defer * as ns from './x.js';\nimport './y.js';\nns.value;\n",
+      ...AFTER_ASYNC_DEFER,
+    },
+    reason: AFTER_ASYNC_DEFER_REASON,
   },
 ];
 
@@ -317,7 +329,10 @@ describe('import defer fallback', () => {
   test('a write with the option off and in a fallback', async () => {
     const c: Case = {
       name: 'write',
-      files: { 'main.js': "import defer * as ns from './x.js';\nns.value = 2;\nawait 0;\n" },
+      files: {
+        'main.js': "import defer * as ns from './x.js';\nimport './y.js';\nns.value = 2;\n",
+        ...AFTER_ASYNC_DEFER,
+      },
     };
     const root = writeFiles(c.files);
     const off = await build(root, c, false);

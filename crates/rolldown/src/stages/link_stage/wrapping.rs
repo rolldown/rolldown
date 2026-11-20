@@ -1,10 +1,11 @@
+use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
-  ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
+  ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
   RuntimeHelper, RuntimeModuleBrief, Specifier, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRefDb,
   TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::IndexBitSet;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::smallvec;
 
 use crate::types::linking_metadata::{DeferredCjsNamespace, LinkingMetadata, LinkingMetadataVec};
@@ -182,6 +183,7 @@ impl LinkStage<'_> {
     // The runtime module has `__deferNs` only when the option is on.
     if self.options.experimental.is_import_defer_enabled() {
       self.create_deferred_cjs_namespaces();
+      self.reference_tracked_dependency_wrappers();
     }
     deferred_esm_targets
   }
@@ -245,7 +247,57 @@ impl LinkStage<'_> {
           .filter_map(|rec| rec.resolved_module),
       );
     }
+    self.track_import_defer_modules(&visited);
     esm_targets
+  }
+
+  /// Marks the modules that need the state records of `__esmState`, in the graph of the requested
+  /// modules (`import` and `import defer`) between the ESM modules of the deferred closures: each
+  /// module with top-level await or a dependency with top-level await
+  /// (`is_tla_or_contains_tla_dependency`), and the other modules of its strongly connected
+  /// component. A deferred import waits for these modules first (spec
+  /// `GatherAsynchronousTransitiveDependencies`).
+  ///
+  /// The dependency list of a tracked module has its tracked requested modules, in source order.
+  fn track_import_defer_modules(&mut self, closure: &IndexBitSet<ModuleIdx>) {
+    let requested = |module: &NormalModule| {
+      let mut deps = module
+        .import_records
+        .iter()
+        .filter(|rec| matches!(rec.kind, ImportKind::Import))
+        .filter_map(|rec| rec.resolved_module)
+        .filter(|&dep| {
+          closure.has_bit(dep)
+            && self.module_table.modules[dep]
+              .as_normal()
+              .is_some_and(|dep| !matches!(dep.exports_kind, ExportsKind::CommonJs))
+        })
+        .collect::<Vec<_>>();
+      let mut seen = FxHashSet::default();
+      deps.retain(|dep| seen.insert(*dep));
+      deps
+    };
+    let mut graph = DiGraphMap::<ModuleIdx, ()>::new();
+    for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
+      if !closure.has_bit(module.idx) || matches!(module.exports_kind, ExportsKind::CommonJs) {
+        continue;
+      }
+      graph.add_node(module.idx);
+      for dep in requested(module) {
+        graph.add_edge(module.idx, dep, ());
+      }
+    }
+    let mut tracked = FxHashSet::default();
+    for component in petgraph::algo::tarjan_scc(&graph) {
+      if component.iter().any(|&idx| self.metas[idx].is_tla_or_contains_tla_dependency) {
+        tracked.extend(component);
+      }
+    }
+    for &idx in &tracked {
+      let Module::Normal(module) = &self.module_table.modules[idx] else { continue };
+      let deps = requested(module).into_iter().filter(|dep| tracked.contains(dep)).collect();
+      self.metas[idx].import_defer_tracked_deps = Some(deps);
+    }
   }
 
   /// Creates the deferred namespace object `x_deferred` of each ESM target of `import defer`:
@@ -264,6 +316,9 @@ impl LinkStage<'_> {
         vec![self.runtime.resolve_symbol("__deferNs").into(), module.namespace_object_ref.into()];
       if let Some(wrapper_ref) = meta.wrapper_ref {
         referenced_symbols.push(wrapper_ref.into());
+      }
+      if meta.import_defer_tracked_deps.is_some() {
+        referenced_symbols.push(self.runtime.resolve_symbol("__esmDefer").into());
       }
       let stmt_info = StmtInfo {
         declared_symbols: smallvec![TaggedSymbolRef::normal(deferred_ref)],
@@ -336,6 +391,21 @@ impl LinkStage<'_> {
       }
     }
   }
+
+  /// The wrapper of a tracked module lists the init functions of its tracked dependencies, for the
+  /// ready check: `__esmState(() => { ... }, () => [init_y, init_z])`.
+  fn reference_tracked_dependency_wrappers(&mut self) {
+    for idx in self.metas.indices() {
+      let Some(deps) = &self.metas[idx].import_defer_tracked_deps else { continue };
+      let Some(stmt_idx) = self.metas[idx].wrapper_stmt_info else { continue };
+      let wrappers = deps
+        .iter()
+        .filter_map(|&dep| self.metas[dep].wrapper_ref)
+        .map(Into::into)
+        .collect::<Vec<_>>();
+      self.stmt_infos[idx][stmt_idx].referenced_symbols.extend(wrappers);
+    }
+  }
 }
 
 fn create_wrapper(
@@ -391,11 +461,22 @@ fn create_wrapper(
 
       let stmt_info = StmtInfo {
         declared_symbols: smallvec![TaggedSymbolRef::normal(wrapper_ref)],
-        referenced_symbols: vec![if options.profiler_names {
-          runtime.resolve_symbol("__esm").into()
+        referenced_symbols: if linking_info.import_defer_tracked_deps.is_none() {
+          vec![if options.profiler_names {
+            runtime.resolve_symbol("__esm").into()
+          } else {
+            runtime.resolve_symbol("__esmMin").into()
+          }]
+        } else if linking_info.is_tla_or_contains_tla_dependency {
+          // An async body: `try { ... } catch (e) { throw __esmFail(init_x, e) } __esmEnd(init_x)`.
+          vec![
+            runtime.resolve_symbol("__esmState").into(),
+            runtime.resolve_symbol("__esmEnd").into(),
+            runtime.resolve_symbol("__esmFail").into(),
+          ]
         } else {
-          runtime.resolve_symbol("__esmMin").into()
-        }],
+          vec![runtime.resolve_symbol("__esmState").into()]
+        },
         eval_flags: true.into(),
         import_records: Vec::new(),
         #[cfg(debug_assertions)]

@@ -117,6 +117,13 @@ pub struct LinkingMetadata {
   pub deferred_namespace_ref: Option<SymbolRef>,
   /// The facade statement that declares `deferred_namespace_ref`.
   pub deferred_namespace_stmt_info: Option<StmtInfoIdx>,
+  /// Set when a deferred access must observe this module: the module has top-level await or a
+  /// dependency with top-level await, in the graph of the requested modules of the deferred
+  /// closures (`track_import_defer_modules`). The wrapper is then `__esmState`, which keeps a
+  /// record of the evaluation state, and a deferred access checks the records first
+  /// (`__esmDefer`). The list has the tracked modules that this module requests, in source order,
+  /// for the ready check.
+  pub import_defer_tracked_deps: Option<Vec<ModuleIdx>>,
   /// The local bindings of `import defer * as ns from './x'` in this module where `./x` is a
   /// CommonJS module, mapped to the import record of `./x`. An access through the local binding
   /// reads `import_x` directly (`DeferredAccess::Cjs`).

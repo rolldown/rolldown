@@ -44,6 +44,7 @@ impl LinkStage<'_> {
         let mut record_meta_pairs: Vec<(ImportRecordIdx, ImportRecordMeta)> = vec![];
         let importer_idx = importer.idx;
         let mut symbols_to_be_declared = vec![];
+        let mut references_esm_dep_done = false;
         let deferred_access_targets = &self.metas[importer_idx].deferred_access_targets;
         stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
           // A deferred access (`ns.foo`) calls the wrapper of the deferred module first. The
@@ -78,6 +79,10 @@ impl LinkStage<'_> {
             }
             targets.sort_unstable();
             targets.dedup();
+            if targets.iter().any(|&target| self.metas[target].import_defer_tracked_deps.is_some())
+            {
+              stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__esmDefer").into());
+            }
             stmt_info.referenced_symbols.extend(
               targets
                 .into_iter()
@@ -237,6 +242,24 @@ impl LinkStage<'_> {
                         stmt_info
                           .referenced_symbols
                           .push(importee_linking_info.wrapper_ref.unwrap().into());
+                        if importee_linking_info.import_defer_tracked_deps.is_some()
+                          && importee_linking_info.is_tla_or_contains_tla_dependency
+                        {
+                          if rec.is_defer_phase() {
+                            // The preparation, `__esmGather(init_foo, init_bar) || await
+                            // __esmGather()`, must stay also when `foo` has no side effects.
+                            stmt_info.eval_flags = true.into();
+                            stmt_info
+                              .referenced_symbols
+                              .push(self.runtime.resolve_symbol("__esmGather").into());
+                          } else if self.metas[importer_idx].import_defer_tracked_deps.is_some() {
+                            // `__esmDepDone(init_foo(init_bar), init_foo, init_bar) || await ...`.
+                            // The wrapper of `bar` references the helper, not this statement:
+                            // when tree shaking removes the statement, the finalizer can still
+                            // restore the call (`remove_unused_top_level_stmt`).
+                            references_esm_dep_done = true;
+                          }
+                        }
 
                         if is_reexport_all && importee_linking_info.has_dynamic_exports {
                           // Turn `export * from 'bar_esm'` into `init_bar_esm();__reExport(foo_exports, bar_esm_exports);`
@@ -320,6 +343,14 @@ impl LinkStage<'_> {
         symbols_to_be_declared.into_iter().for_each(|(symbol_ref, idx)| {
           stmt_infos.declare_symbol_for_stmt(idx, TaggedSymbolRef::normal(symbol_ref));
         });
+        // Tree shaking keeps the wrapper statement of a module together with the module.
+        if references_esm_dep_done
+          && let Some(wrapper_stmt_idx) = self.metas[importer_idx].wrapper_stmt_info
+        {
+          stmt_infos[wrapper_stmt_idx]
+            .referenced_symbols
+            .push(self.runtime.resolve_symbol("__esmDepDone").into());
+        }
         (importer_idx, DeferUpdateInfo { record_meta_pairs })
       })
       .collect::<Vec<_>>();

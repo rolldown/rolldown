@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration/test262.rs
 expression: snapshot
 ---
-Summary: 228 passed, 24 failed, 252 total
+Summary: 230 passed, 22 failed, 252 total
 
 ---
 
@@ -50,7 +50,7 @@ Runtime error: Failed to import test module: Test262Error { message: 'evaluating
 
 # language/import/import-defer/errors/get-other-while-dep-evaluating-async/main.js
 Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with a top-level `await` yet, so Rolldown lowers `import defer` to a normal import
+Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import
 Expected: success
 Actual:
 Async test failed: Test262Error: Test262Error: ns.foo while evaluating throws a TypeError
@@ -68,7 +68,7 @@ Runtime error: Failed to import test module: Test262Error {
 
 # language/import/import-defer/errors/get-other-while-evaluating-async/main.js
 Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with a top-level `await` yet, so Rolldown lowers `import defer` to a normal import
+Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import
 Expected: success
 Actual:
 Async test failed: Test262Error: Test262Error: ns.foo while evaluating throws a TypeError
@@ -84,7 +84,7 @@ Runtime error: Failed to import test module: Test262Error { message: 'ns.foo whi
 
 # language/import/import-defer/errors/get-self-while-evaluating-async/main.js
 Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with a top-level `await` yet, so Rolldown lowers `import defer` to a normal import
+Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import
 Expected: success
 Actual:
 Runtime error: Failed to import test module: Test262Error { message: 'ns.foo while evaluating throws a TypeError' }
@@ -159,7 +159,7 @@ Async test failed: Test262Error: $DONE was not called
 
 # language/import/import-defer/evaluation-top-level-await/flattening-order/main.js
 Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with a top-level `await` yet, so Rolldown lowers `import defer` to a normal import
+Reason: `experimental.importDefer` does not keep the deferred evaluation yet when an import comes after a deferred import of a module that has a top-level `await` or imports one, so Rolldown lowers `import defer` to a normal import
 Expected: success
 Actual:
 Runtime error: Failed to import test module: Test262Error {
@@ -174,23 +174,15 @@ Actual: Async test completed successfully
 ---
 
 # language/import/import-defer/evaluation-top-level-await/import-defer-transitive-async-module/main.js
-Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with a top-level `await` yet, so Rolldown lowers `import defer` to a normal import
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: Test262Error {
-  message: 'Actual [tla start, tla end, imports-tla] and expected [tla start, tla end] should have the same contents. '
-}
+Actual: Async test completed successfully
 ---
 
 # language/import/import-defer/evaluation-top-level-await/sync-dependency-of-deferred-async-module/main.js
-Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with a top-level `await` yet, so Rolldown lowers `import defer` to a normal import
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: Test262Error {
-  message: 'Actual [dep, tla-with-dep start, tla-with-dep end, imports-tla-with-dep] and expected [dep, tla-with-dep start, tla-with-dep end] should have the same contents. '
-}
+Actual: Async test completed successfully
 ---
 
 # language/import/import-defer/evaluation-triggers/ignore-exported-then-defineOwnProperty.js

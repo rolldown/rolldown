@@ -22,7 +22,7 @@ function fakeClock() {
 }
 
 function getBindingGroups(
-  bundlerOptions: Awaited<ReturnType<typeof createBundlerOptions>>,
+  bundlerOptions: Awaited<ReturnType<typeof createBundlerOptions>>['bundlerOptions'],
 ): BindingMatchGroup[] {
   const groups = bundlerOptions.outputOptions.manualCodeSplitting?.groups;
   if (groups === undefined) {
@@ -89,7 +89,12 @@ describe('code-splitting group timings', () => {
     };
 
     for (let index = 0; index < 2; index++) {
-      const bundlerOptions = await createBundlerOptions(inputOptions, outputOptions, false, true);
+      const { bundlerOptions } = await createBundlerOptions(
+        inputOptions,
+        outputOptions,
+        false,
+        true,
+      );
       const groups = getBindingGroups(bundlerOptions);
       runTest(groups[0]);
       runTest(groups[1]);
@@ -126,7 +131,7 @@ describe('code-splitting group timings', () => {
         return 'shared';
       },
     };
-    const bundlerOptions = await createBundlerOptions(
+    const { bundlerOptions } = await createBundlerOptions(
       inputOptions,
       { codeSplitting: { groups: [slow, fast] } },
       false,
@@ -157,7 +162,7 @@ describe('code-splitting group timings', () => {
         return true;
       },
     };
-    const bundlerOptions = await createBundlerOptions(
+    const { bundlerOptions } = await createBundlerOptions(
       inputOptions,
       { codeSplitting: { groups: [group] } },
       false,
@@ -185,7 +190,7 @@ describe('code-splitting group timings', () => {
       name: 'chunk name',
       test: () => true,
     };
-    const bundlerOptions = await createBundlerOptions(
+    const { bundlerOptions } = await createBundlerOptions(
       inputOptions,
       { codeSplitting: { groups: [group] } },
       false,
@@ -218,7 +223,12 @@ describe('code-splitting group timings', () => {
     };
 
     for (let index = 0; index < 2; index++) {
-      const bundlerOptions = await createBundlerOptions(inputOptions, outputOptions, false, true);
+      const { bundlerOptions } = await createBundlerOptions(
+        inputOptions,
+        outputOptions,
+        false,
+        true,
+      );
       runName(getBindingGroups(bundlerOptions)[0]);
     }
 
@@ -244,7 +254,7 @@ describe('code-splitting group timings', () => {
     const group: CodeSplittingGroup = {
       name: () => 'shared',
     };
-    const bundlerOptions = await createBundlerOptions(
+    const { bundlerOptions } = await createBundlerOptions(
       inputOptions,
       { advancedChunks: { groups: [group] } },
       false,
@@ -316,7 +326,12 @@ describe('code-splitting group timings', () => {
     const outputOptions: OutputOptions = { manualChunks };
 
     for (let index = 0; index < 2; index++) {
-      const bundlerOptions = await createBundlerOptions(inputOptions, outputOptions, false, true);
+      const { bundlerOptions } = await createBundlerOptions(
+        inputOptions,
+        outputOptions,
+        false,
+        true,
+      );
       const [bindingGroup] = getBindingGroups(bundlerOptions);
       runName(bindingGroup);
     }

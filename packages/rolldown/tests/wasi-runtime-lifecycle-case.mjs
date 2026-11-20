@@ -12,7 +12,7 @@ const [rolldownApi, experimentalApi] = await withTimeout(
   'the threaded-WASI package did not finish loading',
 );
 const { rolldown, watch } = rolldownApi;
-const { dev, getRuntimeSupport } = experimentalApi;
+const { dev, getRuntimeSupport, scan } = experimentalApi;
 
 const require = createRequire(import.meta.url);
 const packageDir = path.dirname(require.resolve('rolldown/package.json'));

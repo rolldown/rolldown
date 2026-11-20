@@ -161,15 +161,13 @@ impl PreProcessEcmaAst {
     };
 
     // Step 2: Run define plugin.
-    let mut define_changed = false;
     if let Some(replace_global_define_config) = replace_global_define_config {
-      define_changed = ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
+      ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
         let ret = ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone())
           .build(scoping.take().unwrap(), program);
         if !ret.changed {
           scoping = Some(ret.scoping);
         }
-        ret.changed
       });
     }
 
@@ -242,18 +240,16 @@ impl PreProcessEcmaAst {
 
     // Node treats a module with a top-level `await` as async, also when the `await` never runs.
     // Step 5 and `dropLabels` in Step 6 can remove such an `await` before the scan, so look for
-    // one here. The source text has every `await` of the AST, except one that `define` inserts.
+    // one here. The walk reads the AST, not the source text, because `define` and the
+    // `transform_ast` hook can insert an `await` that the text does not have.
     // See internal-docs/linking/module-execution-order/implementation.md.
-    let source_has_top_level_await = (bundle_options.treeshake.is_some()
-      || !bundle_options.drop_labels.is_empty())
-      && (ast.source().contains("await")
-        || (define_changed
-          && bundle_options.define.iter().any(|(_, replacement)| replacement.contains("await"))))
+    let runs_dce = bundle_options.treeshake.is_some() && !has_lazy_export;
+    let source_has_top_level_await = (runs_dce || !bundle_options.drop_labels.is_empty())
       && TopLevelAwaitFinder::find(ast.program());
 
     // Step 5: Run DCE.
     // Avoid DCE for lazy export.
-    if bundle_options.treeshake.is_some() && !has_lazy_export {
+    if runs_dce {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
         let scoping = self.recreate_scoping(&mut scoping, program);
         let mut treeshake = TreeShakeOptions::from(&bundle_options.treeshake);

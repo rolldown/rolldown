@@ -171,7 +171,9 @@ In the example, the `transform` hook of `vite:css-post` returns
 Any hook can change the values of any module through
 `this.getModuleInfo(id)`.
 
-**`meta`.** `getModuleInfo(id).meta` is the `meta` object of the module
+### `meta`
+
+`getModuleInfo(id).meta` is the `meta` object of the module
 itself, so a hook changes the `meta` by changing its keys. Every later reader
 sees the change. A later `load` or `transform` result of the module merges
 into the same object, as [Hook results](#hook-results) says, so the written
@@ -199,7 +201,9 @@ info.meta.checked; // false
 this.getModuleInfo('/src/x.css').meta.checked; // true: the module did not change
 ```
 
-**`moduleSideEffects`.** A hook can assign `true`, `false`, `'no-treeshake'`,
+### `moduleSideEffects`
+
+A hook can assign `true`, `false`, `'no-treeshake'`,
 `null` or `undefined`. Another value throws. `true`, `false` or
 `'no-treeshake'` replaces the current value. The value stays until a later
 write, or until a later `load` or `transform` hook of the module returns a

@@ -1,0 +1,7 @@
+{
+  "config": {
+    "input": [{ "name": "app", "import": "./app.js" }],
+    "preserveModules": true,
+    "minify": false
+  }
+}

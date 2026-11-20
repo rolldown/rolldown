@@ -24,7 +24,7 @@ use super::{
   GenerateStage, chunk_ext::ChunkCreationReason, chunk_ext::ChunkDebugExt,
   code_splitting::IndexSplittingInfo, compute_cross_chunk_links::chunk_evaluation_order,
   compute_cross_chunk_links::sort_chunk_importees_by,
-  dynamic_entry_namespace::is_pure_dynamic_entry_chunk,
+  dynamic_entry_namespace::is_pure_dynamic_entry_chunk, order_analysis::ChunkCycles,
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
@@ -1643,6 +1643,7 @@ impl GenerateStage<'_> {
     let exec_order = |chunk_idx: ChunkIdx| chunk_graph.chunk_table[chunk_idx].exec_order;
     // `chunk_importee_ranks` walks the modules of a chunk, so each chunk gets its ranks only once.
     let mut ranks = FxHashMap::default();
+    let chunk_cycles = LazyCell::new(|| ChunkCycles::from_import_edges(import_edges));
     // The imports of a chunk in the order that `sort_chunk_importees` gives, with the runtime in its
     // own chunk or in the host. The runtime chunk is not in the output when the runtime moves into
     // the host, so neither order has it.
@@ -1655,7 +1656,7 @@ impl GenerateStage<'_> {
       if importees.len() > 1 {
         let ranks = ranks
           .entry(chunk_idx)
-          .or_insert_with(|| self.chunk_importee_ranks(chunk_graph, chunk_idx));
+          .or_insert_with(|| self.chunk_importee_ranks(chunk_graph, chunk_idx, &chunk_cycles));
         if hosted {
           sort_chunk_importees_by(
             &mut importees,

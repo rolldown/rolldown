@@ -203,13 +203,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       ast::Expression::LogicalExpression(mut it) => {
         // A logical expression yields a value, not a reference. Preserve indirect calls,
         // including `eval` and member callees, when replacing it with its left operand.
-        expressions.push(ast::Expression::new_numeric_literal(
-          SPAN,
-          0.0,
-          None,
-          ast::NumberBase::Decimal,
-          self,
-        ));
+        expressions.push(ast::Expression::new_numeric_literal(SPAN, 0.0, None, self));
         let mut left = it.left.take_in(self);
         let pre = self.state;
         self.state.insert(TraverseState::SmartInlineConst);

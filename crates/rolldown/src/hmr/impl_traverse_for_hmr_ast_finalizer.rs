@@ -1,6 +1,6 @@
 use oxc::{
   allocator::TakeIn,
-  ast::ast::{self, Expression, NumberBase},
+  ast::ast::{self, Expression},
   span::SPAN,
 };
 use oxc_traverse::Traverse;
@@ -271,7 +271,6 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
         SPAN,
         f64::from(self.stamp),
         None,
-        ast::NumberBase::Decimal,
         self,
       ));
     }
@@ -388,7 +387,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     }
     let member = callee.take_in(self);
     *callee = Expression::new_seq_in_parens(
-      Expression::new_numeric_literal(SPAN, 0.0, Some("0".into()), NumberBase::Decimal, self),
+      Expression::new_numeric_literal(SPAN, 0.0, Some("0".into()), self),
       member,
       self,
     );

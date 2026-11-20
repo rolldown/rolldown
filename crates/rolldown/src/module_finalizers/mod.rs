@@ -6,7 +6,7 @@ use oxc::semantic::{NodeId, ReferenceId, ScopeFlags, SymbolId};
 use oxc::{
   allocator::{self, Allocator, CloneIn, Dummy, IntoIn, ReplaceWith, TakeIn},
   ast::ast::{
-    self, ClassElement, Expression, IdentifierReference, ImportExpression, NumberBase, Statement,
+    self, ClassElement, Expression, IdentifierReference, ImportExpression, Statement,
     VariableDeclarationKind,
   },
   span::{GetSpan, GetSpanMut, SPAN, Span},
@@ -842,13 +842,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     if needs_this_guard && preserve_this_semantic_if_needed {
       expr = Expression::new_seq_in_parens(
-        ast::Expression::new_numeric_literal(
-          SPAN,
-          0.0,
-          Some("0".into()),
-          NumberBase::Decimal,
-          self,
-        ),
+        ast::Expression::new_numeric_literal(SPAN, 0.0, Some("0".into()), self),
         expr,
         self,
       );
@@ -2002,8 +1996,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let args = if flags == 0 {
       oxc::allocator::Vec::from_iter_in([obj_expr], self)
     } else {
-      let flags_expr =
-        ast::Argument::new_numeric_literal(SPAN, f64::from(flags), None, NumberBase::Decimal, self);
+      let flags_expr = ast::Argument::new_numeric_literal(SPAN, f64::from(flags), None, self);
       oxc::allocator::Vec::from_iter_in([obj_expr, flags_expr], self)
     };
     ast::Expression::new_call_expression_with_pure(

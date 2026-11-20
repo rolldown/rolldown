@@ -158,13 +158,7 @@ pub fn json_value_to_expression<'a>(
       // signed `±Infinity`. `as_f64` can't be used here because it filters out those
       // non-finite results and returns `None`, which is what used to panic.
       let f = n.as_str().parse::<f64>().expect("a JSON number is always a valid f64 literal");
-      oxc::ast::ast::Expression::new_numeric_literal(
-        SPAN,
-        f,
-        None,
-        oxc::ast::ast::NumberBase::Decimal,
-        builder,
-      )
+      oxc::ast::ast::Expression::new_numeric_literal(SPAN, f, None, builder)
     }
 
     Value::String(s) => oxc::ast::ast::Expression::new_string_literal(

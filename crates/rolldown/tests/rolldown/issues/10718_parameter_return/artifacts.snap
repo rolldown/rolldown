@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+console.log("ready");
+
+```
+
+# Variant: [minify: true]
+
+## Assets
+
+### main.js
+
+```js
+console.log(`ready`);
+```

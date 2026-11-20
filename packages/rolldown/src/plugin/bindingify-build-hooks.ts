@@ -17,7 +17,7 @@ import { transformModuleInfo } from '../utils/transform-module-info';
 import {
   copySourcemapObject,
   isEmptySourcemapFiled,
-  normalizeTransformHookSourcemap,
+  prepareTransformHookSourcemap,
 } from '../utils/transform-sourcemap';
 import {
   bindingifyLoadFilter,
@@ -281,11 +281,9 @@ export function bindingifyTransform(
       const ret = handler.call(transformCtx, code, id, meta);
 
       if (isPromiseLike(ret)) {
-        return Promise.resolve(ret).then((ret) =>
-          bindingifyTransformResult(args, ret, ctx, code, id),
-        );
+        return Promise.resolve(ret).then((ret) => bindingifyTransformResult(args, ret, ctx, id));
       }
-      return bindingifyTransformResult(args, ret, ctx, code, id);
+      return bindingifyTransformResult(args, ret, ctx, id);
     },
     filter: bindingifyTransformFilter(options.filter),
   }));
@@ -295,7 +293,6 @@ function bindingifyTransformResult(
   args: BindingifyPluginArgs,
   ret: TransformResult,
   ctx: BindingTransformPluginContext,
-  code: string,
   id: string,
 ): BindingHookTransformOutput | undefined {
   if (ret == null) {
@@ -344,7 +341,7 @@ function bindingifyTransformResult(
     code: normalizedCode,
     // Preserve the `map: null` (intentional opt-out) vs `map: undefined`
     map:
-      bindingifySourcemap(normalizeTransformHookSourcemap(id, code, map)) ??
+      bindingifySourcemap(prepareTransformHookSourcemap(map)) ??
       (mapHandledByNativeChannel || ret.map === null ? null : undefined),
     moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
     moduleType: ret.moduleType,

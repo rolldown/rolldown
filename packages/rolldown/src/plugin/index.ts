@@ -566,6 +566,8 @@ export interface FunctionPluginHooks {
    * Called when Rolldown has finished bundling, but before Output Generation Hooks.
    * If an error occurred during the build, it is passed on to this hook.
    *
+   * {@include ./docs/plugin-hooks-buildend.md}
+   *
    * @kind async parallel
    * @group Build Hooks
    */
@@ -660,6 +662,8 @@ export interface FunctionPluginHooks {
    *
    * To get notified when generation completes successfully, use the
    * {@linkcode generateBundle} hook.
+   *
+   * {@include ./docs/plugin-hooks-rendererror.md}
    *
    * @kind async parallel
    * @group Output Generation Hooks

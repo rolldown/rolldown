@@ -1,0 +1,92 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// log.js
+const log = [];
+// main.js
+using syncResource = { [Symbol.dispose]() {
+	log.push("sync disposed");
+} };
+await using asyncResource = { async [Symbol.asyncDispose]() {
+	await Promise.resolve();
+	log.push("async disposed");
+} };
+log.push("body", typeof syncResource, typeof asyncResource);
+export { log };
+
+```
+
+## referenced.js
+
+```js
+// referenced.js
+const log = [];
+using syncResource = {
+	kind: "sync",
+	[Symbol.dispose]() {
+		log.push("sync disposed");
+	}
+};
+await using asyncResource = {
+	kind: "async",
+	async [Symbol.asyncDispose]() {
+		await Promise.resolve();
+		log.push("async disposed");
+	}
+};
+const getSync = () => syncResource;
+const getAsync = () => asyncResource;
+export { getAsync, getSync, log };
+
+```
+
+# Variant: [top_level_var: true]
+
+## Assets
+
+### main.js
+
+```js
+// log.js
+var log = [];
+// main.js
+using syncResource = { [Symbol.dispose]() {
+	log.push("sync disposed");
+} };
+await using asyncResource = { async [Symbol.asyncDispose]() {
+	await Promise.resolve();
+	log.push("async disposed");
+} };
+log.push("body", typeof syncResource, typeof asyncResource);
+export { log };
+
+```
+
+### referenced.js
+
+```js
+// referenced.js
+var log = [];
+using syncResource = {
+	kind: "sync",
+	[Symbol.dispose]() {
+		log.push("sync disposed");
+	}
+};
+await using asyncResource = {
+	kind: "async",
+	async [Symbol.asyncDispose]() {
+		await Promise.resolve();
+		log.push("async disposed");
+	}
+};
+var getSync = () => syncResource;
+var getAsync = () => asyncResource;
+export { getAsync, getSync, log };
+
+```

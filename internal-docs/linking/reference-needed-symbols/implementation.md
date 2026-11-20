@@ -13,7 +13,9 @@ It writes data; it does not decide what is included. `include_statements` is the
 
 Source: `crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs`.
 
-Before this pass, cross-module optimization can re-analyze a statement that calls a pure function. For separate exports, it keeps potentially effectful reads even when the AST shows a simple identifier or a namespace member. A `NamespaceAlias` or unresolved namespace member can lower to a property read that invokes a CommonJS getter.
+Before this pass, cross-module optimization can re-analyze a statement that calls a pure function. For separate exports and direct parameter returns, it keeps potentially effectful reads even when the AST shows a simple identifier or a namespace member. A `NamespaceAlias` or unresolved namespace member can lower to a property read that invokes a CommonJS getter.
+
+A synchronous `export function` whose parameters have no effectful defaults and whose only statement returns one of its plain parameters is pure once the linker has resolved its stable binding. The linker can discard a statement using this proof when it only stores or discards plain values, including ordinary object properties, array elements and calls covered by the same proof. A statement with a computed key, a spread, or an operator or other call that consumes the result is analyzed without the proof, because these can run conversion code. The return value can carry a callback, so this proof cannot make a dynamic import in that callback unreachable.
 
 ## Pipeline placement
 

@@ -649,7 +649,19 @@ impl GenerateStage<'_> {
             .contains(&dependency))
     };
     let mut binding_owners = None;
-    for (record_idx, record) in module.import_records.iter_enumerated() {
+    // With `import defer`, the deferred imports come after the eager imports, as in `sort_modules`:
+    // a module that only a deferred import reaches runs after the eager dependencies of the
+    // importer.
+    let import_defer = self.options.experimental.is_import_defer_enabled();
+    let deferred = import_defer.then(|| {
+      module.import_records.iter_enumerated().filter(|(_, record)| record.is_defer_phase())
+    });
+    let records = module
+      .import_records
+      .iter_enumerated()
+      .filter(move |(_, record)| !import_defer || !record.is_defer_phase())
+      .chain(deferred.into_iter().flatten());
+    for (record_idx, record) in records {
       if !record.kind.is_static() {
         continue;
       }

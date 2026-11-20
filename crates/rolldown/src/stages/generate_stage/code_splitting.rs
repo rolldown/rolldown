@@ -179,6 +179,8 @@ impl GenerateStage<'_> {
         )
         .await?;
     }
+    // Before the merge of the external import symbols: it groups the symbols by chunk.
+    self.split_modules_before_deferred_imports(&mut chunk_graph);
     self.merge_external_import_symbols(&chunk_graph, used_symbol_refs_builder);
 
     chunk_graph.sort_chunk_modules(self.link_output, self.options);

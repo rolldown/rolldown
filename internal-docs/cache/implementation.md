@@ -89,12 +89,9 @@ Rust keeps it (see below).
 
 - `Bundle::scan_modules_impl` passes `None` before `buildStart` of a full scan. All options are
   cleared.
-- `ScanStage::scan` passes the changed files of a partial scan before it resolves them again
-  without an importer, so the `resolveId` hooks of that resolution do not see the options of the
-  last fetch.
 - `ModuleLoader::fetch_modules` passes the changed modules of a partial scan. Each one goes back
-  to the options it started with (`resolvedModuleOptionMap`), because its importers do not
-  resolve it again. The HMR stage and lazy compilation reset only here.
+  to the options it started with (`resolvedModuleOptionMap`), because the scan fetches it again
+  from the resolution that created it, and its importers do not resolve it again.
 
 As in Rollup, only the resolution that creates a module sets its start options. Later
 resolutions of the same id, `this.resolve`, and `this.load` options for a module that exists do
@@ -411,7 +408,10 @@ produces only the changed + newly discovered modules → sparse `Map`.
    In a partial scan, the kind of a module comes from one of two places:
 
    - A module that the scan re-scans or adds gets its kind from this scan.
-     Thus a changed file that was external can become a normal module.
+     A changed external module is not re-scanned: `changed_resolved_ids` in
+     `scan_stage.rs` marks it as invalidated, so the first resolution of its
+     id in this scan sets its kind again. Thus a changed file that was
+     external can become a normal module.
    - An unchanged module keeps its kind from the snapshot.
 
    Known gap: a partial scan also reports this error when an edit only

@@ -782,7 +782,7 @@ test.concurrent(
 );
 
 test.concurrent(
-  'an incremental rebuild resolves a changed module again with its start options',
+  'an incremental rebuild fetches a changed module again with its start options',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {
     const retryCount = task.result?.retryCount ?? 0;
@@ -795,8 +795,10 @@ test.concurrent(
     fs.writeFileSync(dep, `console.log('EFFECT_1')`);
 
     const outputs: string[] = [];
-    const seenByResolve: unknown[] = [];
+    const seenByRebuild: unknown[] = [];
+    let edited = false;
     let inHmrStage = false;
+    let inRebuild = false;
     const engine = await dev(
       {
         input,
@@ -804,21 +806,23 @@ test.concurrent(
           {
             name: 'test-plugin',
             buildStart() {
+              // The HMR stage does not call `buildStart`; the rebuild after it does.
               inHmrStage = false;
+              inRebuild = edited;
             },
             resolveId(source, importer) {
               if (source === './dep.js' && importer) {
                 return { id: dep, meta: { creator: true } };
               }
-              if (source === dep && !importer) {
-                const { meta, moduleSideEffects } = this.getModuleInfo(dep)!;
-                seenByResolve.push({ meta: { ...meta }, moduleSideEffects });
-                return { id: dep };
-              }
             },
             transform(code, id) {
-              if (id === dep && inHmrStage) {
+              if (id !== dep) return;
+              if (inHmrStage) {
                 return { code, meta: { fromHmrStage: true }, moduleSideEffects: false };
+              }
+              if (inRebuild) {
+                const { meta, moduleSideEffects } = this.getModuleInfo(dep)!;
+                seenByRebuild.push({ meta: { ...meta }, moduleSideEffects });
               }
             },
           },
@@ -844,9 +848,12 @@ test.concurrent(
     expect(outputs[0]).toContain('EFFECT_1');
 
     inHmrStage = true;
+    edited = true;
     await editFile(dep, `console.log('EFFECT_2')`);
     await expect.poll(() => outputs.length).toBe(2);
-    expect.soft(seenByResolve).toEqual([{ meta: { creator: true }, moduleSideEffects: true }]);
+    // The values that the HMR stage gave `dep.js` are gone: it starts again from the resolution
+    // in `main.js`.
+    expect.soft(seenByRebuild).toEqual([{ meta: { creator: true }, moduleSideEffects: true }]);
     expect.soft(outputs[1]).toContain('EFFECT_2');
   },
 );
@@ -1135,5 +1142,92 @@ test.concurrent(
     // At most the options saved by the previous HMR update.
     expect(Math.max(...saved)).toBeLessThanOrEqual(1);
     expect(probeMeta).toEqual(Array(EDITS + 1).fill({ dep: true }));
+  },
+);
+
+test.concurrent(
+  'a rebuild fetches a changed module again without calling resolveId for it',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput(
+      'dev-refetch-no-resolve',
+      retryCount,
+    );
+    const source = path.join(dir, 'mod-source.js');
+    const lib = path.join(dir, 'lib.js');
+    fs.writeFileSync(input, `import 'virtual:mod'; import './lib.js'`);
+    fs.writeFileSync(source, `console.log('SOURCE_1')`);
+    fs.writeFileSync(lib, `console.log('LIB_1')`);
+
+    const resolveCalls: { source: string; importer: string | undefined }[] = [];
+    const loads: string[] = [];
+    const outputs: RolldownOutput[] = [];
+    const outputCode = () =>
+      outputs
+        .at(-1)
+        ?.output.map((chunk) => (chunk.type === 'chunk' ? chunk.code : ''))
+        .join('\n');
+
+    const engine = await dev(
+      {
+        input,
+        plugins: [
+          {
+            name: 'virtual-module',
+            resolveId(id, importer) {
+              resolveCalls.push({ source: id, importer });
+              if (id === 'virtual:mod') return '\0virtual:mod';
+            },
+            load(id) {
+              loads.push(id);
+              if (id !== '\0virtual:mod') return;
+              this.addWatchFile(source);
+              return fs.readFileSync(source, 'utf8');
+            },
+          },
+        ],
+      },
+      { dir: outputDir },
+      {
+        rebuildStrategy: 'always',
+        onOutput: (result) => {
+          if (!(result instanceof Error)) outputs.push(result);
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await expect.poll(() => outputs.length).toBeGreaterThan(0);
+    resolveCalls.length = 0;
+    loads.length = 0;
+
+    // The file that only `addWatchFile` added: the virtual module loads again, and the file is
+    // not loaded as a module.
+    await editFile(source, `console.log('SOURCE_2')`);
+    await expect
+      .poll(async () => {
+        await engine.ensureLatestBuildOutput();
+        return outputCode();
+      })
+      .toContain('SOURCE_2');
+    expect(loads).toContain('\0virtual:mod');
+    expect(loads).not.toContain(source);
+
+    // A changed module is fetched again from the resolution that created it.
+    await editFile(lib, `console.log('LIB_2')`);
+    await expect
+      .poll(async () => {
+        await engine.ensureLatestBuildOutput();
+        return outputCode();
+      })
+      .toContain('LIB_2');
+    expect(resolveCalls).toEqual([]);
   },
 );

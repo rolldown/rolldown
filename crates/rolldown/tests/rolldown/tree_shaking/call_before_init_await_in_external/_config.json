@@ -1,0 +1,8 @@
+{
+  "_comment": "`call_before_init_await_in_dependency`, but pause.mjs is external, so the linker cannot see its top-level `await`. `_test.mjs` copies pause.mjs next to the output.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "external": ["./pause.mjs"],
+    "minify": false
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "_comment": "`call_before_init_after_await`, but the `await` and the call are in one statement. With `minify: false`, the output keeps the call in the kept statement and throws, also without the early-call rule.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }]
+  }
+}

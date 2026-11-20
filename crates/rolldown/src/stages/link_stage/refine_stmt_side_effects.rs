@@ -7,8 +7,9 @@ use petgraph::{
   visit::{Dfs, Reversed},
 };
 use rolldown_common::{
-  ConstExportMeta, ConstantValue, EntryPoint, ExportsKind, GetLocalDb, IndexModules, ModuleIdx,
-  Specifier, StmtEvalFlags, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  ConstExportMeta, ConstantValue, EcmaModuleAstUsage, EntryPoint, ExportsKind, GetLocalDb,
+  IndexModules, ModuleIdx, Specifier, StmtEvalFlags, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
+  SymbolRefDb,
 };
 use rolldown_utils::{
   IndexBitSet,
@@ -40,6 +41,9 @@ struct Components {
   topological_order: Vec<ModuleIdx>,
   /// Whether each module is in a cycle or can reach an external module.
   imports_may_run_later: IndexBitSet<ModuleIdx>,
+  /// Whether each module has a top-level `await` or is external, or reaches such a module through
+  /// static imports. `None` when the build has no such module.
+  imports_may_await: Option<IndexBitSet<ModuleIdx>>,
 }
 
 /// A region is a component and the components that only it imports, directly or through other
@@ -56,6 +60,20 @@ struct Regions {
 }
 
 impl ImportCycles {
+  /// Whether the code of `module_idx` can wait for an `await`. Then Node can run modules that come
+  /// later in `exec_order` before that code, but the output runs them after it. The module, or a
+  /// module that it reaches through static imports, has a top-level `await` or is external. An
+  /// external module can have a top-level `await`, also a Node builtin that `output.paths` maps to
+  /// another module.
+  /// See `internal-docs/linking/module-execution-order/implementation.md`.
+  pub(super) fn imports_may_await(&self, modules: &IndexModules, module_idx: ModuleIdx) -> bool {
+    self
+      .components(modules)
+      .imports_may_await
+      .as_ref()
+      .is_some_and(|may_await| may_await.has_bit(module_idx))
+  }
+
   fn components(&self, modules: &IndexModules) -> &Components {
     self.components.get_or_init(|| {
       let mut graph = DiGraph::<(), ()>::with_capacity(modules.len(), 0);
@@ -101,7 +119,26 @@ impl ImportCycles {
       while let Some(node) = dfs.next(reverse_graph) {
         imports_may_run_later.set_bit(ModuleIdx::new(node.index()));
       }
-      Components { representatives, topological_order, imports_may_run_later }
+      let mut async_modules = modules
+        .iter()
+        .filter_map(|module| {
+          let may_await = module.is_external()
+            || module
+              .as_normal()
+              .is_some_and(|module| module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait));
+          may_await.then_some(NodeIndex::new(module.idx().index()))
+        })
+        .peekable();
+      let imports_may_await = async_modules.peek().is_some().then(|| {
+        let mut may_await = IndexBitSet::new(modules.len());
+        let mut dfs = Dfs::empty(reverse_graph);
+        dfs.stack.extend(async_modules);
+        while let Some(node) = dfs.next(reverse_graph) {
+          may_await.set_bit(ModuleIdx::new(node.index()));
+        }
+        may_await
+      });
+      Components { representatives, topological_order, imports_may_run_later, imports_may_await }
     })
   }
 

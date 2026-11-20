@@ -523,7 +523,8 @@ impl<'ast> CrossModuleOptimizationRunnerContext<'_, 'ast> {
   /// Whether the current call runs at the top level of the module before the binding of the
   /// callee is initialized. In another module, the owner of the binding must run after the caller,
   /// and every entry must run both modules in `exec_order`. This check does not include a call
-  /// inside a function or a class, or a call in a build where the order is not sure.
+  /// inside a function or a class, a call from a module whose code can wait for an `await`, or a
+  /// call in a build where the order is not sure.
   /// See `internal-docs/linking/module-execution-order/implementation.md`.
   fn call_runs_before_init(&self, symbol_ref: SymbolRef, flags: SymbolRefFlags) -> bool {
     // The only side-effect-free facade is the binding of `export default function () {}`, which a
@@ -541,8 +542,9 @@ impl<'ast> CrossModuleOptimizationRunnerContext<'_, 'ast> {
     if symbol_ref.owner == module_idx {
       return !self.binding_is_initialized(symbol_ref);
     }
-    self.runs_in_exec_order(module_idx, symbol_ref.owner)
-      && self.modules[module_idx].exec_order() < self.modules[symbol_ref.owner].exec_order()
+    self.modules[module_idx].exec_order() < self.modules[symbol_ref.owner].exec_order()
+      && !self.import_cycles.imports_may_await(self.modules, module_idx)
+      && self.runs_in_exec_order(module_idx, symbol_ref.owner)
   }
 
   /// Whether every entry runs the code of `caller` and `owner` in `exec_order`. With one entry,

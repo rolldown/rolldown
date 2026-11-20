@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// default.js
+function default_default(...[value = globalThis.calls.push("default export")]) {}
+
+// lib.js
+function restFunction(...[value = globalThis.calls.push("function")]) {}
+const restArrow = (...[value = globalThis.calls.push("arrow")]) => {};
+const restFunctionExpression = function(...[value = globalThis.calls.push("function expression")]) {};
+function restObjectPattern(...{ value = globalThis.calls.push("object pattern") }) {}
+
+// main.js
+restFunction();
+restArrow();
+restFunctionExpression();
+restObjectPattern();
+default_default();
+restFunction();
+
+```

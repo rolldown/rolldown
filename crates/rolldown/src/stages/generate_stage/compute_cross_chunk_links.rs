@@ -541,6 +541,41 @@ impl GenerateStage<'_> {
         .has_side_effectful_dependency(&self.link_output.module_table.modules)
   }
 
+  /// Whether an included statement already imports a chunk through a live binding
+  /// or an inlined constant whose owner must run.
+  pub(super) fn imports_chunk_via_included_reference(
+    &self,
+    importer: ModuleIdx,
+    importee: ChunkIdx,
+    chunk_graph: &ChunkGraph,
+    used_symbol_refs: UsedSymbolRefsView<'_>,
+  ) -> bool {
+    let meta = &self.link_output.metas[importer];
+    let symbols = &self.link_output.symbol_db;
+    let order_live_symbols = FxHashSet::default();
+    self.link_output.stmt_infos[importer].iter_enumerated().any(|(stmt_idx, stmt)| {
+      meta.stmt_info_included.has_bit(stmt_idx)
+        && stmt.referenced_symbols.iter().any(|reference| {
+          let symbol = match reference {
+            SymbolOrMemberExprRef::Symbol(symbol) => Some(*symbol),
+            SymbolOrMemberExprRef::MemberExpr(member) => {
+              member.represent_symbol_ref(&meta.resolved_member_expr_refs)
+            }
+          };
+          symbol.is_some_and(|symbol| {
+            let symbol = symbols.canonical_ref_resolving_namespace(symbol);
+            chunk_graph.module_to_chunk[symbol.owner] == Some(importee)
+              && self.cross_chunk_symbol_is_live(used_symbol_refs, &order_live_symbols, symbol)
+          })
+        })
+    }) || self.read_constant_owners(importer).into_iter().any(|module_idx| {
+      // Included constant references survive the filter in predicted_static_import_targets.
+      chunk_graph.module_to_chunk[module_idx] == Some(importee)
+        && meta.load_dependencies.contains(&module_idx)
+        && self.keeps_constant_owner(module_idx)
+    })
+  }
+
   /// The inlined constants that the included statements of a module read through a namespace
   /// import, such as `ns.SIZE` for `import * as ns from './ui.js'`, each with the record of that
   /// import. Only constants whose module the output keeps count, because the output imports the

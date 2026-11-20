@@ -196,7 +196,7 @@ postFooter: option, sync
 augmentChunkHash(/reference/Interface.Plugin#augmentchunkhash): sequential, async
 generateBundle(/reference/Interface.Plugin#generatebundle): sequential, sync
 writeBundle(/reference/Interface.Plugin#writebundle): parallel, sync
-renderError(/reference/Interface.Plugin#rendererror): parallel, sync
+renderError(/reference/Interface.Plugin#rendererror): parallel, async
 closeBundle(/reference/Interface.Plugin#closebundle): parallel, sync
 beforeImportMeta: invisible
 beforeAddons: invisible

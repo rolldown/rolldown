@@ -44,7 +44,7 @@ function runName(group: BindingMatchGroup): void {
   const context: BindingChunkingContext = {
     getModuleInfo: () => null,
     getModuleSideEffects: () => null,
-    setModuleSideEffects: () => {},
+    setModuleSideEffects: () => false,
   };
   group.name(['entry.js'], context);
 }

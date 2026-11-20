@@ -98,7 +98,10 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
         .mark_context_load_progress(self.resolved_id.id.clone(), ContextLoadProgress::Completed);
       // The send fails only when the build was dropped before this task finished.
       // Then nothing reads the result, so ignore the error.
-      let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
+      let _ = self
+        .ctx
+        .tx
+        .unbounded_send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
     guard.mark_sent();
   }
@@ -266,7 +269,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
 
     // The send fails only when the build was dropped before this task finished.
     // Then nothing reads the result, so ignore the error.
-    let _ = self.ctx.tx.send(result);
+    let _ = self.ctx.tx.unbounded_send(result);
 
     Ok(())
   }

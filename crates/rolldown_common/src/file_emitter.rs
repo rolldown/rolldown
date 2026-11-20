@@ -374,6 +374,11 @@ impl FileEmitter {
     Ok(())
   }
 
+  pub fn asset_and_prebuilt_chunk_filenames(&self) -> impl Iterator<Item = ArcStr> + '_ {
+    let assets = self.files.iter().map(|file| file.filename.clone());
+    assets.chain(self.prebuilt_chunks.iter().map(|chunk| chunk.file_name.clone()))
+  }
+
   pub fn add_additional_files(
     &self,
     bundle: &mut Vec<Output>,

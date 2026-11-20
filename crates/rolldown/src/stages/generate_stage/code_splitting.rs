@@ -1118,6 +1118,7 @@ impl GenerateStage<'_> {
         input_base,
         &mut temp_chunk_graph,
         &mut dynamic_entry_merge_targets,
+        used_symbol_refs_builder.view(),
       );
     }
 

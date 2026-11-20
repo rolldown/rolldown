@@ -1,0 +1,8 @@
+{
+  "_comment": "The entry defers `e.js` first, and then imports `f.js`, which is in a static import cycle with `e.js`. The deferred import evaluates nothing, so the evaluation enters the cycle through `f.js`, as in native order: `e` before `f`, and both before `n.js`.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

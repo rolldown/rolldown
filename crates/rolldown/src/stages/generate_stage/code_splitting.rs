@@ -350,6 +350,12 @@ impl GenerateStage<'_> {
       // guaranteed.
       return;
     }
+    // A build that keeps the deferral of `import defer` wraps each module of a deferred closure. A
+    // deferred record evaluates nothing, and a wrapped importer can come early in chunk order but
+    // run late. Thus the init position of a wrapped module is the record that starts it in an eager
+    // walk. See `eager_import_order`.
+    let keeps_deferral = self.options.experimental.is_import_defer_enabled()
+      && self.link_output.metas.iter().any(|meta| meta.wrapped_by_import_defer);
     chunk_graph.chunk_table.iter_mut().for_each(|chunk| {
       // Determine DFS roots based on chunk kind.
       // For entry chunks, the root is the entry module.
@@ -415,7 +421,11 @@ impl GenerateStage<'_> {
       // the value is the how many wrapped modules did the none wrapped module depends on.
       // when getting all depended wrapped modules, just use wrapped_modules[0..none_wrapped_module_to_wrapped_dependency_length[none_wrap_module_idx]].
       let mut none_wrapped_module_to_wrapped_dependency_length = FxHashMap::default();
-      let js_import_order = self.js_import_order(&roots, &chunk_module_to_exec_order);
+      let (js_import_order, start_records) = if keeps_deferral {
+        self.eager_import_order(&roots, &chunk_module_to_exec_order)
+      } else {
+        (self.js_import_order(&roots, &chunk_module_to_exec_order), FxHashMap::default())
+      };
       for idx in js_import_order {
         match self.link_output.metas[idx].wrap_kind() {
           WrapKind::None => {
@@ -452,6 +462,16 @@ impl GenerateStage<'_> {
 
       // Record each module in `modules_need_to_check` first init position.
       let mut module_init_position = FxIndexMap::default();
+      let is_wrapped = |idx: ModuleIdx| !self.link_output.metas[idx].wrap_kind().is_none();
+      // With the deferral kept, a record is the init position of a wrapped module only when it
+      // starts the module and its importer has no wrapper. A start record in a wrapped importer
+      // runs inside the start of the importer, for example in a cycle, so the module needs no
+      // move of its own.
+      let is_init_position =
+        |importer: ModuleIdx, rec_idx: ImportRecordIdx, importee: ModuleIdx| {
+          !is_wrapped(importee)
+            || (!is_wrapped(importer) && start_records.get(&importee) == Some(&(importer, rec_idx)))
+        };
 
       for idx in &chunk.modules {
         let Some(module) = self.link_output.module_table[*idx].as_normal() else {
@@ -464,6 +484,12 @@ impl GenerateStage<'_> {
             rec.resolved_module.map(|module_idx| (rec_idx, rec, module_idx))
           })
           .for_each(|(rec_idx, rec, module_idx)| {
+            // With the deferral kept, a deferred record evaluates nothing.
+            if keeps_deferral
+              && (rec.is_defer_phase() || !is_init_position(*idx, rec_idx, module_idx))
+            {
+              return;
+            }
             if rec.kind == ImportKind::Import && modules_need_to_check.contains(&module_idx) {
               module_init_position.entry(module_idx).or_insert((*idx, rec_idx));
             }
@@ -507,6 +533,50 @@ impl GenerateStage<'_> {
       chunk.insert_map = insert_map;
       chunk.remove_map = remove_map;
     });
+  }
+
+  /// The walk of `js_import_order` for a build that keeps the deferral of `import defer`. It also
+  /// skips the deferred records, because such a record evaluates nothing. Returns the modules in
+  /// the order of the walk, and the start record of each module that is not a root: the record
+  /// through which the walk first reaches the module, as the native evaluation does.
+  ///
+  /// The first importer of a module in chunk order is not always its start. It can be a deferred
+  /// module, which comes early in chunk order through the deferred record but runs late. In a
+  /// cycle, it can be another module of the cycle, or a later module that imports a module of the
+  /// cycle other than the module that the evaluation enters first.
+  /// See internal-docs/import-defer/implementation.md ("Cycles").
+  fn eager_import_order(
+    &self,
+    roots: &[ModuleIdx],
+    chunk_modules_map: &FxHashMap<ModuleIdx, u32>,
+  ) -> (Vec<ModuleIdx>, FxHashMap<ModuleIdx, (ModuleIdx, ImportRecordIdx)>) {
+    let mut stack: Vec<(ModuleIdx, Option<(ModuleIdx, ImportRecordIdx)>)> =
+      roots.iter().rev().map(|&idx| (idx, None)).collect();
+    let mut visited = FxHashSet::default();
+    let mut order = vec![];
+    let mut start_records = FxHashMap::default();
+    while let Some((module_idx, start_record)) = stack.pop() {
+      if !visited.insert(module_idx) {
+        continue;
+      }
+      let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
+        continue;
+      };
+      order.push(module_idx);
+      if let Some(start_record) = start_record {
+        start_records.insert(module_idx, start_record);
+      }
+      for (rec_idx, rec) in module.import_records.iter_enumerated().rev() {
+        if let Some(dependency) = rec.resolved_module
+          && rec.kind == ImportKind::Import
+          && !rec.is_defer_phase()
+          && chunk_modules_map.contains_key(&dependency)
+        {
+          stack.push((dependency, Some((module_idx, rec_idx))));
+        }
+      }
+    }
+    (order, start_records)
   }
 
   /// Only considering module eager initialization order, both `require()` and `import()` are lazy

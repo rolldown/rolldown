@@ -30,12 +30,12 @@ globalThis.order.push("z");
 var foo;
 function init_a() {
 	return (init_a = __esmMin((() => {
+		init_b();
 		globalThis.order.push("a sees " + typeof bar);
 		foo = String("foo");
 	})))();
 }
 // main.js
-init_b();
 const access = () => (init_a(), foo);
 export { access };
 

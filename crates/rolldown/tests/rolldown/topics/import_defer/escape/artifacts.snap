@@ -32,8 +32,9 @@ function init_x() {
 		count$1 = 0;
 	})))();
 }
-// main.js
+// other.js
 init_log();
+// main.js
 const use = (value) => value;
 const same = x_deferred === x_deferred;
 const tag = Object.prototype.toString.call(use(x_deferred));

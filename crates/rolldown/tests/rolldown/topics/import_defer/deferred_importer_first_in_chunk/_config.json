@@ -1,0 +1,8 @@
+{
+  "_comment": "`a.js` defers `d.js`, and the entry imports `d.js` eagerly after `a.js`. `d.js` comes before `a.js` in chunk order, so its import of `w.js` is the first import of `w.js` in chunk order, but `d.js` runs late. The import in the entry starts `w.js`, so its init call moves before `a.js`: `w` before `a`, as in native order.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

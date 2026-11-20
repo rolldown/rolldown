@@ -1,0 +1,55 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+// b.js
+var x;
+function init_b() {
+	return (init_b = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_a(init_b), init_a, init_b) || await init_a(init_b);
+			x = "unset";
+			log.push("b start");
+			await new Promise((r) => setTimeout(r, 10));
+			x = "set";
+			log.push("b end");
+		} catch (e) {
+			throw __esmFail(init_b, e);
+		}
+		__esmEnd(init_b);
+	}), () => [init_a], 3))(arguments[0]);
+}
+// a.js
+function init_a() {
+	return (init_a = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_b(init_a), init_b, init_a) || await init_b(init_a);
+			log.push("a sees " + x);
+		} catch (e) {
+			throw __esmFail(init_a, e);
+		}
+		__esmEnd(init_a);
+	}), () => [init_b], 1))(arguments[0]);
+}
+// main.js
+init_log();
+await init_a();
+__esmGather(init_b) || await __esmGather();
+log.push("main nsB.x=" + (__esmDefer(init_b), x));
+export { log };
+
+```

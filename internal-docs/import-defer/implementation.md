@@ -48,9 +48,8 @@ The build keeps the deferral when all of these conditions are true:
 
 1. The output format is `esm` or `cjs`.
 2. The build makes one chunk: one entry record (each `EntryPoint`, also when one module has several), no `preserveModules`, no chunk groups, no `output.codeSplitting.experimentalInlineCommonChunks`, and no `import()`.
-3. The static import records make no cycle.
-4. No module of a deferred closure (a target and its dependencies) is an external module.
-5. A module outside the closures has no import of a module outside the closures after a deferred import of a module that reaches a top-level `await` (see "Top-level await"). An import of an external module does not count.
+3. No module of a deferred closure (a target and its dependencies) is an external module.
+4. A module outside the closures has no import of a module outside the closures after a deferred import of a module that reaches a top-level `await` (see "Top-level await"). An import of an external module does not count.
 
 When the build keeps the deferral, the saved `eval_flags` go into `stmt_infos`. The new flags are the union of both runs, because the deferred run only adds side effects. A module with `DeterminedSideEffects::Analyzed(false)` gets `Analyzed(true)` when one of its statements gets `UnknownSideEffect`.
 
@@ -120,9 +119,32 @@ A deferred import of a module that has a top-level `await`, or that reaches one 
 - The preparation. The statement of a deferred import of a module with the early flag becomes `__esmGather(init_foo, init_bar) || await __esmGather();` (`deferred_import_preparation_stmt`). `init_bar` is absent when the importer is not tracked. The first call walks the records from `foo` and returns `true` when nothing is pending. Else the second call waits: first for each module with its own top-level `await`, then for each started module that waits. `reference_needed_symbols` keeps the statement also when `foo` has no side effects.
 - The access. A deferred access to a tracked module calls `__esmDefer(init_foo)`, not `init_foo()` (`deferred_init_call_expr`).
 
-The order rule (condition 5 of the fallback): the preparation is a statement in the body of the importer. A module outside the closures has no wrapper, so the code of its imports runs before its body. An import after the deferred import then runs before the modules with top-level `await` start, but native Node starts them first. A module of a closure has a wrapper that runs its import statements in order. A later import of a module of a closure is an init call in the body of the importer, so it runs after the preparation. The check does not know the wrappers of the link stage, so it also applies with `strictExecutionOrder`. The reasons are in [design.md](./design.md#top-level-await).
+The order rule (condition 4 of the fallback): the preparation is a statement in the body of the importer. A module outside the closures has no wrapper, so the code of its imports runs before its body. An import after the deferred import then runs before the modules with top-level `await` start, but native Node starts them first. A module of a closure has a wrapper that runs its import statements in order. A later import of a module of a closure is an init call in the body of the importer, so it runs after the preparation. The check does not know the wrappers of the link stage, so it also applies with `strictExecutionOrder`. The reasons are in [design.md](./design.md#top-level-await).
 
 Tests: `tla_transitive`, `tla_gather_order`, `tla_diamond_evaluates_once`, `tla_error_after_preparation`, `tla_defer_in_closure` and `tla_restored_reexport_helper`. The Node test `packages/rolldown/tests/import-defer-fallback.test.ts` checks the fallback of the order rule.
+
+## Init order
+
+In one chunk, `ensure_lazy_module_initialization_order` (`crates/rolldown/src/stages/generate_stage/code_splitting.rs`) moves the init call of a wrapped module before the code of a later module with no wrapper. Without a kept deferral, the position of the call is the first import of the module in chunk order. A build that keeps a deferral uses the start record of the module instead (`eager_import_order`): the import through which a walk of the eager imports from the entry first reaches the module, as the native evaluation does.
+
+- The walk skips the deferred records, because such a record evaluates nothing. Thus a module that only a deferred record reaches before a later module is not a dependency of that later module (fixture `cycle_through_defer_later_import`).
+- A start record in a wrapped importer is not a position. It runs inside the start of its importer, so the module needs no move of its own. In a cycle of wrapped modules, only the module that the evaluation enters first has a start record in a module with no wrapper. Its init call runs the other modules of the cycle in native order.
+- The first import in chunk order is not always the start. A deferred module comes early in chunk order through its deferred record (`sort_modules`), but its wrapper runs late (fixture `deferred_importer_first_in_chunk`). In a cycle, the first import can be in another module of the cycle (fixture `cycle_eager_import_order`), or in a later module that imports a module of the cycle other than the module that the evaluation enters first (fixture `cycle_member_later_import`).
+- A moved call can come just before a call of the same module at the start of the later module (fixture `eager_and_deferred`). The second call does nothing.
+- The rule applies only when the build keeps a deferral. A build without `import defer` can also wrap modules, for example an ES module that a `require()` loads and its dependencies. Its output does not change.
+
+Example (fixture `cycle_eager_import_order`): `main.js` imports `b.js`, defers `a.js` and then imports `z.js`, and `a.js` and `b.js` import each other. The call `init_b()` moves from the body of `main.js` to the start of `z.js`. Thus the cycle runs before `z.js`, as in native order.
+
+Tests: `deferred_importer_first_in_chunk`, `cycle_eager_import_order`, `cycle_eager_import_order_long`, `cycle_member_later_import`, `cycle_entry_after_deferred_import` and `cycle_through_defer_later_import`.
+
+## Cycles
+
+A static import cycle can contain a deferred target, also through the deferred record itself: `a.js` defers `d.js`, and `d.js` imports `a.js`.
+
+- Tracked modules. `track_import_defer_modules` also tracks each module of a strongly connected component that contains a deferred ES module target, when the component has more than one module or a module that imports itself. Only these modules can still be evaluating at a deferred access to the target. `__esmDefer` then throws a `TypeError`, and evaluates nothing, when the target or a module that it needs is in a cycle that did not finish (spec `ReadyForSyncExecution`). The records keep the cycle root and the ancestor index of spec `InnerModuleEvaluation`, so an error of one member goes to each member of its cycle.
+- The init order of a cycle follows the start records (see "Init order").
+
+Tests: `cycle_deferred_read`, `cycle_root_error`, `escape_cycle`, `empty_star_state`, `mutual_defer_failed`, `mutual_defer_read_after`, `mutual_defer_read_in_body` and `placement_cycle`. With top-level `await`: `tla_ancestor_wait`, `tla_cycle_child_wait`, `tla_cycle_cross_edge_wait`, `tla_cycle_export_star_wait`, `tla_cycle_in_sync_part` and `tla_on_stack`. The Node test `packages/rolldown/tests/import-defer-fallback.test.ts` runs a cycle through the deferred record and a cycle that only the deferred import reaches.
 
 ## Known gaps
 

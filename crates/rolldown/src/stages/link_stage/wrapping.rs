@@ -247,19 +247,24 @@ impl LinkStage<'_> {
           .filter_map(|rec| rec.resolved_module),
       );
     }
-    self.track_import_defer_modules(&visited);
+    self.track_import_defer_modules(&visited, &esm_targets);
     esm_targets
   }
 
   /// Marks the modules that need the state records of `__esmState`, in the graph of the requested
-  /// modules (`import` and `import defer`) between the ESM modules of the deferred closures: each
-  /// module with top-level await or a dependency with top-level await
-  /// (`is_tla_or_contains_tla_dependency`), and the other modules of its strongly connected
-  /// component. A deferred import waits for these modules first (spec
-  /// `GatherAsynchronousTransitiveDependencies`).
+  /// modules (`import` and `import defer`) between the ESM modules of the deferred closures:
+  /// - each module of a strongly connected component that contains a defer target. Only these
+  ///   modules can be evaluating at a deferred access to the target.
+  /// - each module with top-level await or a dependency with top-level await
+  ///   (`is_tla_or_contains_tla_dependency`), and the other modules of its component. A deferred
+  ///   import waits for these modules first (spec `GatherAsynchronousTransitiveDependencies`).
   ///
   /// The dependency list of a tracked module has its tracked requested modules, in source order.
-  fn track_import_defer_modules(&mut self, closure: &IndexBitSet<ModuleIdx>) {
+  fn track_import_defer_modules(
+    &mut self,
+    closure: &IndexBitSet<ModuleIdx>,
+    targets: &[ModuleIdx],
+  ) {
     let requested = |module: &NormalModule| {
       let mut deps = module
         .import_records
@@ -287,9 +292,14 @@ impl LinkStage<'_> {
         graph.add_edge(module.idx, dep, ());
       }
     }
+    let targets = targets.iter().copied().collect::<FxHashSet<_>>();
     let mut tracked = FxHashSet::default();
     for component in petgraph::algo::tarjan_scc(&graph) {
-      if component.iter().any(|&idx| self.metas[idx].is_tla_or_contains_tla_dependency) {
+      let is_cycle = component.len() > 1 || graph.contains_edge(component[0], component[0]);
+      let has_target = is_cycle && component.iter().any(|idx| targets.contains(idx));
+      if has_target
+        || component.iter().any(|&idx| self.metas[idx].is_tla_or_contains_tla_dependency)
+      {
         tracked.extend(component);
       }
     }

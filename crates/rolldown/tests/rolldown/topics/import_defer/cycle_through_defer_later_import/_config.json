@@ -1,0 +1,8 @@
+{
+  "_comment": "`b.js` defers `a.js`, and `a.js` imports `b.js`. The cycle goes only through the deferred import, which evaluates nothing. `x.js` imports `a.js` after `n.js`, so `a.js` runs there, after `n.js`, as in native order.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

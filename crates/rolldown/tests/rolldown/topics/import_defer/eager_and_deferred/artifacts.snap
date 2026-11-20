@@ -22,10 +22,10 @@ function init_x() {
 }
 // y.js
 init_log();
+init_log();
 init_x();
 log.push("y");
 // main.js
-init_log();
 const order = [...log];
 const value = (init_x(), "foo");
 export { order, value };

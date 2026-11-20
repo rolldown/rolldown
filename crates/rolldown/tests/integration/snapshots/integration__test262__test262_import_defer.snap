@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration/test262.rs
 expression: snapshot
 ---
-Summary: 230 passed, 22 failed, 252 total
+Summary: 237 passed, 15 failed, 252 total
 
 ---
 
@@ -41,63 +41,45 @@ Actual: Runtime execution succeeded
 ---
 
 # language/import/import-defer/errors/get-other-while-dep-evaluating/main.js
-Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: Test262Error { message: 'evaluating dep2.foo throws a TypeError' }
+Actual: Runtime execution succeeded
 ---
 
 # language/import/import-defer/errors/get-other-while-dep-evaluating-async/main.js
-Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import
+Result: PASS
 Expected: success
-Actual:
-Async test failed: Test262Error: Test262Error: ns.foo while evaluating throws a TypeError
+Actual: Async test completed successfully
 ---
 
 # language/import/import-defer/errors/get-other-while-evaluating/main.js
-Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: Test262Error {
-  message: 'main.foo while evaluating throws a TypeError'
-}
+Actual: Runtime execution succeeded
 ---
 
 # language/import/import-defer/errors/get-other-while-evaluating-async/main.js
-Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import
+Result: PASS
 Expected: success
-Actual:
-Async test failed: Test262Error: Test262Error: ns.foo while evaluating throws a TypeError
+Actual: Async test completed successfully
 ---
 
 # language/import/import-defer/errors/get-self-while-defer-evaluating/main.js
-Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: Test262Error { message: 'ns.foo while evaluating throws a TypeError' }
+Actual: Runtime execution succeeded
 ---
 
 # language/import/import-defer/errors/get-self-while-evaluating-async/main.js
-Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: Test262Error { message: 'ns.foo while evaluating throws a TypeError' }
+Actual: Async test completed successfully
 ---
 
 # language/import/import-defer/errors/get-self-while-evaluating.js
-Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: Test262Error {
-  message: 'Expected a TypeError to be thrown but no exception was thrown at all'
-}
+Actual: Runtime execution succeeded
 ---
 
 # language/import/import-defer/errors/module-throws/defer-import-after-evaluation.js

@@ -155,18 +155,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     .await
     {
       Ok(v) => v,
-      Err(errs) => {
-        debug_assert!(errs.iter().all(|e| e.severity() == Severity::Error));
-        self
-          .plugin_driver
-          .build_end(Some(&HookBuildEndArgs { errors: &errs, cwd: &self.options.cwd }))
-          .await?;
-        self
-          .plugin_driver
-          .close_bundle(Some(&HookCloseBundleArgs { errors: &errs, cwd: &self.options.cwd }))
-          .await?;
-        return Err(errs);
-      }
+      Err(errors) => return Err(self.handle_build_error(errors).await),
     };
     self.cache.pending_build_rescans.clear();
 
@@ -216,21 +205,33 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
   ) -> BuildResult<()> {
     Self::trace_action_module_graph_ready(scan_stage_output);
     // Drain before `buildEnd` so the hook receives an error thrown by `onLog` during the scan.
-    if let Err(errs) = self.merge_log_hook_errors(Ok(())).await {
-      self
-        .plugin_driver
-        .build_end(Some(&HookBuildEndArgs { errors: &errs, cwd: &self.options.cwd }))
-        .await?;
-      self
-        .plugin_driver
-        .close_bundle(Some(&HookCloseBundleArgs { errors: &errs, cwd: &self.options.cwd }))
-        .await?;
-      return Err(errs);
+    if let Err(errors) = self.merge_log_hook_errors(Ok(())).await {
+      return Err(self.handle_build_error(errors).await);
     }
 
     self.plugin_driver.build_end(None).await?;
     trace_action!(action::BuildEnd { action: "BuildEnd" });
     Ok(())
+  }
+
+  async fn handle_build_error(&self, mut errors: BatchedBuildDiagnostic) -> BatchedBuildDiagnostic {
+    debug_assert!(errors.iter().all(|e| e.severity() == Severity::Error));
+    if let Err(error) = self
+      .plugin_driver
+      .build_end(Some(&HookBuildEndArgs { errors: &errors, cwd: &self.options.cwd }))
+      .await
+    {
+      errors.extend(BatchedBuildDiagnostic::from(error).into_vec());
+      return errors;
+    }
+    match self
+      .plugin_driver
+      .close_bundle(Some(&HookCloseBundleArgs { errors: &errors, cwd: &self.options.cwd }))
+      .await
+    {
+      Ok(()) => errors,
+      Err(error) => error.into(),
+    }
   }
 
   /// Leaves the cache whole after a build failed between updating it and `bundle_up`, and queues

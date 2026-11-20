@@ -782,6 +782,8 @@ export interface OutputOptions {
    *
    * When enabled, Rolldown wraps ESM modules so their bodies run in source order regardless of chunk placement. Interop wrappers for CommonJS and require-of-ESM modules are unchanged, and external modules are not affected. `experimental.onDemandWrapping` replaces wrap-all with a conservative plan derived from predicted chunk execution hazards.
    *
+   * Without this option, a module in an entry chunk runs after the common chunks that the entry imports, even when the entry imports it first. See [Respecting Execution Order doesn't take precedence](https://rolldown.rs/in-depth/automatic-code-splitting#respecting-execution-order-doesn-t-take-precedence).
+   *
    * > [!WARNING]
    * > Enabling this option increases bundle size because wrapped modules need runtime init helpers.
    *

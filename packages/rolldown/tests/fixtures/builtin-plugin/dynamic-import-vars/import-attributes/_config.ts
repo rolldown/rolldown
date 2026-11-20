@@ -35,6 +35,6 @@ export default defineTest({
   },
   async afterTest() {
     await import('./assert.mjs');
-    expect(deprecatedAssertionWarnings).toBe(2);
+    expect(deprecatedAssertionWarnings).toBe(1);
   },
 });

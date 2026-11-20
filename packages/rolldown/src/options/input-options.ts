@@ -757,11 +757,16 @@ export interface InputOptions {
      * not when its importer evaluates. When this option is off, Rolldown lowers each deferred
      * import to a normal import and emits a warning.
      *
-     * For now, Rolldown keeps the deferred evaluation only in a build that makes one chunk in
-     * `esm` or `cjs` format, with no `import()`. A deferred import must not evaluate an external
-     * module. When a deferred module, or a module that it imports, has a top-level `await`, each
-     * later import in the same importer must import an external module or a module that a
-     * deferred import evaluates. This rule does not apply to an importer that a deferred import
+     * For now, Rolldown keeps the deferred evaluation only in `esm` or `cjs` format, and not with
+     * `output.codeSplitting.experimentalInlineCommonChunks` or with a code splitting group that
+     * sets `includeDependenciesRecursively: false`. A deferred import must not evaluate an
+     * external module. With `preserveModules` and `esm` format, a deferred import must not evaluate
+     * a CommonJS module. In `cjs` format, it must not evaluate a CommonJS module that is an entry.
+     * When a deferred module, or a module that it imports, has a top-level `await`, each later
+     * import in the same importer must import a module that a deferred import evaluates. In a build
+     * that makes one chunk, an import of an external module is also allowed. A build makes one
+     * chunk with `codeSplitting: false`, or with one entry and no `import()`, `preserveModules` or
+     * code splitting groups. This rule does not apply to an importer that a deferred import
      * evaluates. In any other build, Rolldown lowers each deferred import to a normal import and
      * emits a warning with the reason. Rolldown always lowers `import.defer('./x')` to
      * `import('./x')`, with a warning.

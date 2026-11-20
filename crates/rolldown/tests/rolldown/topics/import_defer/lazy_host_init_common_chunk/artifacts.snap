@@ -1,0 +1,138 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.init.js
+
+```js
+import { t as init_a } from "./a.js";
+init_a();
+
+```
+
+## a.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+function init_a() {
+	return (init_a = __esmMin((() => {
+		globalThis.__initLog.push("a");
+	})))();
+}
+export { init_a as t };
+
+```
+
+## b.js
+
+```js
+import "./a.js";
+import "./a.init.js";
+import { seen } from "./y.js";
+// b.js
+const value = seen;
+export { value };
+
+```
+
+## main.js
+
+```js
+// main.js
+const access = async () => {
+	const b = await import("./b.js");
+	const r = await import("./r.js");
+	await import("./y.js");
+	return [b.value, r.read()];
+};
+export { access };
+
+```
+
+## r.js
+
+```js
+import { t as init_a } from "./a.js";
+// r.js
+const read = () => (init_a(), "a");
+export { read };
+
+```
+
+## y.js
+
+```js
+// y.js
+globalThis.__initLog.push("y");
+const seen = globalThis.__initLog.includes("a");
+export { seen };
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### a.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+function init_a() {
+	return (init_a = __esmMin((() => {
+		globalThis.__initLog.push("a");
+	})))();
+}
+Object.defineProperty(exports, "init_a", {
+	enumerable: true,
+	get: function() {
+		return init_a;
+	}
+});
+
+```
+
+### b.js
+
+```js
+require("./a.js").init_a();
+// b.js
+const value = require("./y.js").seen;
+exports.value = value;
+
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// main.js
+const access = async () => {
+	const b = await Promise.resolve().then(() => require("./b.js"));
+	const r = await Promise.resolve().then(() => require("./r.js"));
+	await Promise.resolve().then(() => require("./y.js"));
+	return [b.value, r.read()];
+};
+exports.access = access;
+
+```
+
+### r.js
+
+```js
+const require_a = require("./a.js");
+// r.js
+const read = () => (require_a.init_a(), "a");
+exports.read = read;
+
+```
+
+### y.js
+
+```js
+// y.js
+globalThis.__initLog.push("y");
+const seen = globalThis.__initLog.includes("a");
+exports.seen = seen;
+
+```

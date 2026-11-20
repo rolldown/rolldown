@@ -48,6 +48,11 @@ pub struct ChunkGraph {
   /// The deferred modules that a chunk initializes at its imports
   /// (`GenerateStage::plan_lazy_host_inits`).
   pub lazy_host_inits: LazyHostInits,
+  /// The deferred modules (`import defer`) that their common chunk runs at load, at their place in
+  /// the chunk, as the build without `import defer` does. The chunk cannot move its later modules
+  /// out (`GenerateStage::split_modules_before_deferred_imports`), and an init after the import of
+  /// the chunk would run after them. These modules have no host (`deferred_init_host`).
+  pub deferred_modules_run_at_load: FxHashSet<ModuleIdx>,
 }
 
 /// An eager importer of a deferred module that runs when its chunk loads. The host of the module
@@ -132,6 +137,7 @@ impl ChunkGraph {
       common_chunk_preserve_export_names_modules: FxHashMap::default(),
       post_chunk_optimization_operations: FxHashMap::default(),
       lazy_host_inits: LazyHostInits::default(),
+      deferred_modules_run_at_load: FxHashSet::default(),
     }
   }
 
@@ -173,12 +179,12 @@ impl ChunkGraph {
       != Some(&PostChunkOptimizationOperation::Removed)
   }
 
-  /// For an ESM module of a deferred closure (`import defer` or `import.defer()`), the dynamic
-  /// entry chunk that holds the code of the module. The tail of this chunk does not call
-  /// `init_x()`: another chunk can import this chunk statically for a deferred access, and the
-  /// load must not evaluate the module. Each `import()` of the module then calls `init_x()`
-  /// itself. `None` when the module is in a chunk with no such tail (a common chunk behind a
-  /// facade) or in a user-defined or emitted entry chunk, whose tail must stay.
+  /// For an ESM module of a deferred closure (`import defer`), the dynamic entry chunk that holds
+  /// the code of the module. The tail of this chunk does not call `init_x()`: another chunk can
+  /// import this chunk statically for a deferred access, and the load must not evaluate the
+  /// module. Each `import()` of the module then calls `init_x()` itself. `None` when the module is
+  /// in a chunk with no such tail (a common chunk behind a facade) or in a user-defined or emitted
+  /// entry chunk, whose tail must stay.
   pub fn lazy_dynamic_defer_host(
     &self,
     module_idx: ModuleIdx,
@@ -203,13 +209,17 @@ impl ChunkGraph {
   /// not run the module when it loads: the lazy host of the module (`lazy_dynamic_defer_host`), or
   /// a common chunk. A common chunk has no tail, so only an init function runs the module. An eager
   /// importer in another chunk calls `init_x()` in its body
-  /// (`GenerateStage::plan_lazy_host_inits`).
+  /// (`GenerateStage::plan_lazy_host_inits`). `None` for a module that its common chunk runs at
+  /// load (`deferred_modules_run_at_load`).
   pub fn deferred_init_host(
     &self,
     module_idx: ModuleIdx,
     meta: &LinkingMetadata,
   ) -> Option<ChunkIdx> {
-    if !meta.wrapped_by_import_defer || !matches!(meta.wrap_kind(), WrapKind::Esm) {
+    if !meta.wrapped_by_import_defer
+      || !matches!(meta.wrap_kind(), WrapKind::Esm)
+      || self.deferred_modules_run_at_load.contains(&module_idx)
+    {
       return None;
     }
     let chunk_idx = self.module_to_chunk[module_idx]?;

@@ -23,6 +23,10 @@ const AFTER_ASYNC_DEFER = {
 };
 const AFTER_ASYNC_DEFER_REASON =
   'an import in `main.js` comes after a deferred import of a module that has a top-level `await` or imports one';
+const CJS_MAIN_JS = "import defer * as ns from './x.cjs';\nexport const read = () => ns.value;\n";
+const CJS_X = 'exports.value = 1;\n';
+const CJS_RUN_AT_LOAD_REASON = (id: string) =>
+  `a deferred import evaluates the CommonJS module \`${id}\`, and the output file of that module runs it when the file loads`;
 
 interface Case {
   name: string;
@@ -48,51 +52,6 @@ const cases: Case[] = [
     reason: 'the output format is not `esm` or `cjs`',
   },
   {
-    name: 'two entries',
-    files: { 'main.js': MAIN_JS, 'other.js': 'export const other = 1;\n' },
-    input: ['main.js', 'other.js'],
-    reason: 'the build has more than one entry',
-  },
-  {
-    name: 'two entries of one module',
-    files: { 'main.js': MAIN_JS },
-    input: { a: 'main.js', b: 'main.js' },
-    reason: 'the build has more than one entry',
-  },
-  {
-    name: 'an emitted chunk',
-    files: { 'main.js': MAIN_JS, 'other.js': 'export const other = 1;\n' },
-    inputOptions: {
-      plugins: [
-        {
-          name: 'emit-chunk',
-          buildStart() {
-            this.emitFile({ type: 'chunk', id: './other.js' });
-          },
-        },
-      ],
-    },
-    reason: 'the build has more than one entry',
-  },
-  {
-    name: 'preserveModules',
-    files: { 'main.js': MAIN_JS },
-    output: { preserveModules: true },
-    reason: '`output.preserveModules` is on',
-  },
-  {
-    name: 'code splitting groups',
-    files: { 'main.js': MAIN_JS },
-    output: { codeSplitting: { groups: [{ name: 'shared', test: /log\.js/ }] } },
-    reason: 'the build has code splitting groups',
-  },
-  {
-    name: 'manualChunks',
-    files: { 'main.js': MAIN_JS },
-    output: { manualChunks: (id) => (id.endsWith('log.js') ? 'shared' : undefined) },
-    reason: 'the build has code splitting groups',
-  },
-  {
     name: 'inline common chunks',
     files: { 'main.js': MAIN_JS },
     inputOptions: { preserveEntrySignatures: false },
@@ -100,24 +59,28 @@ const cases: Case[] = [
     reason: '`output.codeSplitting.experimentalInlineCommonChunks` is on',
   },
   {
-    name: 'import()',
-    files: {
-      'main.js': MAIN_JS + "export const load = () => import('./other.js');\n",
-      'other.js': 'export const other = 1;\n',
+    name: 'a code splitting group with includeDependenciesRecursively: false',
+    files: { 'main.js': MAIN_JS },
+    inputOptions: { preserveEntrySignatures: 'allow-extension' },
+    output: {
+      codeSplitting: {
+        groups: [{ name: 'x', test: /[\\/]x\.js$/, includeDependenciesRecursively: false }],
+      },
     },
-    reason: 'the build has an `import()`',
-  },
-  {
-    name: 'import.defer()',
-    files: {
-      'main.js': MAIN_JS + "export const load = () => import.defer('./other.js');\n",
-      'other.js': 'export const other = 1;\n',
-    },
-    reason: 'the build has an `import()`',
+    reason: 'a code splitting group sets `includeDependenciesRecursively: false`',
   },
   {
     name: 'an import after a deferred import of a module with top-level await',
     files: { 'main.js': MAIN_JS + "import './y.js';\n", ...AFTER_ASYNC_DEFER },
+    reason: AFTER_ASYNC_DEFER_REASON,
+  },
+  {
+    // With more than one chunk, the file of `main.js` imports `ext` before its body prepares the
+    // deferred import.
+    name: 'an import of an external module after a deferred import of a module with top-level await',
+    files: { 'main.js': MAIN_JS + "import 'ext';\n", ...AFTER_ASYNC_DEFER },
+    inputOptions: { external: ['ext'] },
+    output: { preserveModules: true },
     reason: AFTER_ASYNC_DEFER_REASON,
   },
   {
@@ -131,6 +94,32 @@ const cases: Case[] = [
     files: { 'main.js': MAIN_JS, 'x.js': "import 'ext';\n" + X_JS },
     inputOptions: { external: ['ext'] },
     reason: 'a deferred import evaluates the external module `ext`',
+  },
+  {
+    // The file of `x.cjs` ends with `export default require_x();`.
+    name: 'a CommonJS module in a deferred closure, with preserveModules',
+    files: { 'main.js': CJS_MAIN_JS, 'x.cjs': CJS_X },
+    output: { preserveModules: true },
+    reason: CJS_RUN_AT_LOAD_REASON('x.cjs'),
+  },
+  {
+    // The `require()` makes `c.js` a CommonJS module, though `c.js` has no module syntax.
+    name: 'a required module in a deferred closure, with preserveModules',
+    files: {
+      'main.js': MAIN_JS,
+      'x.js': "require('./c.js');\n" + X_JS,
+      'c.js': 'globalThis.c = 1;\n',
+    },
+    output: { preserveModules: true },
+    reason: CJS_RUN_AT_LOAD_REASON('c.js'),
+  },
+  {
+    // The chunk of the entry `x.cjs` ends with `module.exports = require_x();`.
+    name: 'a CommonJS user entry in a deferred closure, with cjs output',
+    files: { 'main.js': CJS_MAIN_JS, 'x.cjs': CJS_X },
+    input: ['main.js', 'x.cjs'],
+    output: { format: 'cjs' },
+    reason: CJS_RUN_AT_LOAD_REASON('x.cjs'),
   },
   {
     name: 'a read statement',
@@ -151,8 +140,15 @@ const LOGGED_MAIN = (target: string, extra = '') =>
 interface KeptCase {
   name: string;
   files: Record<string, string>;
+  input?: InputOptions['input'];
+  inputOptions?: InputOptions;
+  output?: OutputOptions;
+  // A text of each warning of the build.
+  warnings?: string[];
   steps: [name: string, value: unknown, log: string[]][];
 }
+
+const OTHER_JS = 'export const other = 1;\n';
 
 const keptCases: KeptCase[] = [
   {
@@ -221,6 +217,89 @@ const keptCases: KeptCase[] = [
       'y.js': "import { log } from './log.js';\nimport './x.js';\nlog.push('y');\n",
     },
     steps: [['read', 1, ['y', 'x']]],
+  },
+  {
+    name: 'two entries',
+    files: { 'main.js': LOGGED_MAIN('./x.js'), 'other.js': OTHER_JS },
+    input: ['main.js', 'other.js'],
+    steps: [['read', 1, ['x']]],
+  },
+  {
+    name: 'two entries of one module',
+    files: { 'main.js': LOGGED_MAIN('./x.js') },
+    input: { a: 'main.js', b: 'main.js' },
+    steps: [['read', 1, ['x']]],
+  },
+  {
+    name: 'an emitted chunk',
+    files: { 'main.js': LOGGED_MAIN('./x.js'), 'other.js': OTHER_JS },
+    inputOptions: {
+      plugins: [
+        {
+          name: 'emit-chunk',
+          buildStart() {
+            this.emitFile({ type: 'chunk', id: './other.js' });
+          },
+        },
+      ],
+    },
+    steps: [['read', 1, ['x']]],
+  },
+  {
+    name: 'preserveModules',
+    files: { 'main.js': LOGGED_MAIN('./x.js') },
+    output: { preserveModules: true },
+    steps: [['read', 1, ['x']]],
+  },
+  {
+    name: 'code splitting groups',
+    files: { 'main.js': LOGGED_MAIN('./x.js') },
+    output: { codeSplitting: { groups: [{ name: 'shared', test: /log\.js/ }] } },
+    steps: [['read', 1, ['x']]],
+  },
+  {
+    name: 'manualChunks',
+    files: { 'main.js': LOGGED_MAIN('./x.js') },
+    output: { manualChunks: (id) => (id.endsWith('log.js') ? 'shared' : undefined) },
+    steps: [['read', 1, ['x']]],
+  },
+  {
+    name: 'import()',
+    files: {
+      'main.js': LOGGED_MAIN(
+        './x.js',
+        "export const load = async () => (await import('./other.js')).other;\n",
+      ),
+      'other.js': OTHER_JS,
+    },
+    steps: [
+      ['load', 1, []],
+      ['read', 1, ['x']],
+    ],
+  },
+  {
+    name: 'import() of a deferred module',
+    files: {
+      'main.js': LOGGED_MAIN(
+        './x.js',
+        "export const load = async () => (await import('./x.js')).value;\n",
+      ),
+    },
+    // The deferred import is a static import, so `x.js` stays in the chunk of `main.js`.
+    warnings: ['x.js is dynamically imported by main.js but also statically imported by main.js'],
+    steps: [
+      ['load', 1, ['x']],
+      ['read', 1, ['x']],
+    ],
+  },
+  {
+    name: 'import.defer()',
+    files: {
+      'main.js': LOGGED_MAIN('./x.js', "export const load = () => import.defer('./other.js');\n"),
+      'other.js': OTHER_JS,
+    },
+    warnings: ['`import.defer()` is currently lowered to `import()`'],
+    steps: [['read', 1, ['x']]],
   },
   {
     name: 'new URL() in a closure module',
@@ -307,7 +386,7 @@ function run(dir: string, entry: string, steps: string[]): unknown {
     const ns = await import(${JSON.stringify(url)});
     const m = ${JSON.stringify(entry)}.endsWith('.cjs') ? ns.default : ns;
     const result = { before: [...m.log], steps: [] };
-    for (const name of ${JSON.stringify(steps)}) result.steps.push([m[name](), [...m.log]]);
+    for (const name of ${JSON.stringify(steps)}) result.steps.push([await m[name](), [...m.log]]);
     console.log(JSON.stringify(result));
   `;
   return JSON.parse(
@@ -370,16 +449,21 @@ describe('import defer fallback', () => {
     keptCases.flatMap((c) => (['esm', 'cjs'] as const).map((format) => ({ ...c, format }))),
   )('a build keeps the deferral: $name, $format output', async (c) => {
     const root = writeFiles(c.files);
+    const ext = c.format === 'esm' ? 'mjs' : 'cjs';
     const output: OutputOptions = {
+      ...c.output,
       format: c.format,
-      entryFileNames: c.format === 'esm' ? '[name].mjs' : '[name].cjs',
+      entryFileNames: `[name].${ext}`,
+      chunkFileNames: `[name].${ext}`,
     };
-    const on = await build(root, { name: c.name, files: c.files, output }, true);
+    const on = await build(root, { ...c, output }, true);
     expect(on.error).toBeUndefined();
-    expect(on.warnings).toStrictEqual([]);
+    expect(on.warnings.map((log) => log.message)).toStrictEqual(
+      (c.warnings ?? []).map((text) => expect.stringContaining(text)),
+    );
     const dir = path.join(root, 'out');
-    fs.mkdirSync(dir);
     for (const file of on.output) {
+      fs.mkdirSync(path.dirname(path.join(dir, file.fileName)), { recursive: true });
       fs.writeFileSync(path.join(dir, file.fileName), file.content);
     }
     expect(

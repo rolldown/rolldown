@@ -1,0 +1,18 @@
+{
+  "_comment": "Two entries, so `a1.js`, `w1.js`, `a2.js` and `w2.js` are in one common chunk. `main.js` defers `a1.js` and `a2.js`, and `b.js` imports the four modules in that order. A new chunk with `w1.js` and `w2.js` would load at one place, so no init of `a2.js` could run between them. Thus the chunk keeps its modules, and runs `a1.js` and `a2.js` at load, at their places, as the build without `import defer` does.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "other",
+        "import": "./other.js"
+      }
+    ],
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

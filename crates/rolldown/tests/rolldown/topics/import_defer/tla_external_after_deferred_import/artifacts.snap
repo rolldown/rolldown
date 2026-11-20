@@ -1,0 +1,66 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import defer` is currently lowered to a normal import, because an import in `main.js` comes after a deferred import of a module that has a top-level `await` or imports one. This changes execution timing because side effects run immediately instead of when the deferred import is first used. `experimental.importDefer` does not keep the deferred evaluation in this build yet.
+   ╭─[ main.js:1:1 ]
+   │
+ 1 │ import defer * as wait from './wait.js';
+   │ ────────────────────┬───────────────────  
+   │                     ╰───────────────────── The deferred phase is removed here.
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import "./wait.js";
+import "ext";
+// main.js
+const read = () => 1;
+export { read };
+
+```
+
+## wait.js
+
+```js
+// wait.js
+globalThis.__log?.push("wait");
+await Promise.resolve();
+
+```
+
+# Variant: one-chunk: [preserve_modules: false]
+
+## Assets
+
+### main.js
+
+```js
+import "ext";
+// HIDDEN [\0rolldown/runtime.js]
+function init_wait() {
+	return (init_wait = __esmState((async () => {
+		try {
+			globalThis.__log?.push("wait");
+			await Promise.resolve();
+		} catch (e) {
+			throw __esmFail(init_wait, e);
+		}
+		__esmEnd(init_wait);
+	}), () => [], 3))(arguments[0]);
+}
+// main.js
+__esmGather(init_wait) || await __esmGather();
+const read = () => (__esmDefer(init_wait), 1);
+export { read };
+
+```

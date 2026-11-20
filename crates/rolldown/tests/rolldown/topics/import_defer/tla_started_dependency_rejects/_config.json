@@ -1,0 +1,8 @@
+{
+  "config": {
+    "codeSplitting": false,
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

@@ -1,0 +1,55 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## import-defer-throws.js
+
+```js
+export { n as ns } from "./throws.js";
+
+```
+
+## main.js
+
+```js
+// main.js
+let err1;
+await import("./throws2.js").catch((e) => {
+	err1 = e;
+});
+const { ns } = await import("./import-defer-throws.js");
+let err2;
+try {
+	ns.foo;
+} catch (e) {
+	err2 = e;
+}
+const result = [err1?.someError, err1 === err2];
+export { result };
+
+```
+
+## throws.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// throws.js
+var throws_exports = /* @__PURE__ */ __exportAll({});
+var throws_deferred = /* @__PURE__ */ __deferNs(() => (init_throws(), throws_exports), throws_exports);
+function init_throws() {
+	return (init_throws = __esmMin((() => {
+		throw { someError: "the error from throws" };
+	})))();
+}
+export { throws_deferred as n, init_throws as t };
+
+```
+
+## throws2.js
+
+```js
+import { t as init_throws } from "./throws.js";
+init_throws();
+
+```

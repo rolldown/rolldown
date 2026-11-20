@@ -1,0 +1,17 @@
+{
+  "_comment": "`main.js` defers `wait.js`, which has a top-level `await`, and then imports the external module `ext`. Native ESM runs `wait` before `ext`. With `preserveModules`, the file of `main.js` imports `ext` at load, and only its body prepares `wait.js`, so the build lowers the deferred import (the warning). In a build with one chunk, `ext` runs first also without `import defer`, so that build keeps the deferral.",
+  "config": {
+    "preserveModules": true,
+    "external": ["ext"],
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "one-chunk",
+      "preserveModules": false
+    }
+  ],
+  "expectExecuted": false
+}

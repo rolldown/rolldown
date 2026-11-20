@@ -1,0 +1,18 @@
+{
+  "_comment": "Two entries, so `a.js` and `w.js` are in one common chunk. `main.js` defers `a.js`, and `b.js` imports `a.js`, then `w.js`. The chunk runs `w.js` at load, and `w.js` has a top-level `await`, so it cannot move to a new chunk. Thus the chunk runs `a.js` at load, at its place, as the build without `import defer` does. The output runs `a` before `w`, as native ESM does.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "other",
+        "import": "./other.js"
+      }
+    ],
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

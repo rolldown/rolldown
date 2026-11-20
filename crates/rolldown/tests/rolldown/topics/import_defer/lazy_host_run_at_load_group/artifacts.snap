@@ -1,0 +1,50 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { i as __esmGather, t as __esmDefer } from "./rolldown-runtime.js";
+import { t as init_a } from "./vendor.js";
+// b.js
+await init_a();
+globalThis.log.push("b");
+// main.js
+__esmGather(init_a) || await __esmGather();
+const read = () => (__esmDefer(init_a), "a");
+export { read };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmState as a, __esmGather as i, __esmEnd as n, __esmFail as r, __esmDefer as t };
+
+```
+
+## vendor.js
+
+```js
+import { a as __esmState, n as __esmEnd, r as __esmFail } from "./rolldown-runtime.js";
+function init_a() {
+	return (init_a = __esmState((async () => {
+		try {
+			globalThis.log.push("a-start");
+			await 0;
+			globalThis.log.push("a");
+		} catch (e) {
+			throw __esmFail(init_a, e);
+		}
+		__esmEnd(init_a);
+	}), () => [], 3))(arguments[0]);
+}
+await init_a();
+// w.js
+globalThis.log.push("w");
+export { init_a as t };
+
+```

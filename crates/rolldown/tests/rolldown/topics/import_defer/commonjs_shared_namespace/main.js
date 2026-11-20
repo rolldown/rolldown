@@ -15,5 +15,6 @@ export const results = {
   wrappedFoo: wrapped.getW().foo,
 };
 export const after = [...log];
+export const loadOther = () => import('./other.js');
 export { getB };
 export { one, two } from './c.js';

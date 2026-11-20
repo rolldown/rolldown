@@ -11,7 +11,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   chunk_graph::{ChunkGraph, LazyHostInit, LazyHostInits},
   esm_init_obligations::{
-    ObligationPurpose, WrappedEsmInitTargetContext,
+    ObligationPurpose, WrappedEsmInitTarget, WrappedEsmInitTargetContext,
     collect_wrapped_esm_init_targets_for_import_record, record_is_init_obligation,
   },
   stages::link_stage::LinkStageOutput,
@@ -34,6 +34,28 @@ enum ImportLoadStep {
   /// `init_x()`, `require_x()`, a read of a `default` getter, or the preparation of a deferred
   /// import.
   InBody,
+}
+
+/// What `GenerateStage::split_modules_before_deferred_imports` does with a common chunk that holds
+/// deferred modules (`GenerateStage::modules_after_deferred_modules`).
+enum HostSplit {
+  /// The chunk runs no module at load after its first deferred module with an eager importer in
+  /// another chunk.
+  Keep,
+  /// The modules that move to a new common chunk.
+  Move(Vec<ModuleIdx>),
+  /// The deferred modules that the chunk runs at load, at their place
+  /// (`ChunkGraph::deferred_modules_run_at_load`).
+  RunAtLoad(Vec<ModuleIdx>),
+}
+
+/// An init of `LazyHostInitPlanner::add_declined_inits`, and the call that it moves out of the
+/// body of its importer.
+struct DeclinedInit {
+  /// The position in the `static_imports` of the chunk of the import that the init follows.
+  position: usize,
+  init: LazyHostInit,
+  moved_call: Option<(ModuleIdx, ModuleIdx)>,
 }
 
 impl GenerateStage<'_> {
@@ -137,7 +159,8 @@ impl GenerateStage<'_> {
   ///   external. Before a later import of a module of the chunk,
   ///   `ensure_lazy_module_initialization_order` already calls `init_a()`.
   ///
-  /// Before that, a common host gives up its later modules (`modules_after_deferred_modules`).
+  /// Before that, a common host gives up its later modules, or runs its deferred modules at load
+  /// (`modules_after_deferred_modules`).
   ///
   /// Call it after the modules have their chunks, and before the chunk modules are sorted.
   /// See internal-docs/import-defer/implementation.md ("Split before a deferred import").
@@ -150,9 +173,6 @@ impl GenerateStage<'_> {
       || options.inline_common_chunks.is_some()
       || options.code_splitting.is_disabled()
       || !matches!(options.format, OutputFormat::Esm | OutputFormat::Cjs)
-      // `split_keeps_import_order` and `modules_after_deferred_modules` read the chunk modules in
-      // execution order.
-      || matches!(options.experimental.chunk_modules_order, Some(ChunkModulesOrderBy::ModuleId))
       || !self.link_output.metas.iter().any(|meta| meta.wrapped_by_import_defer)
     {
       return;
@@ -161,18 +181,34 @@ impl GenerateStage<'_> {
     if eagerly_imported.is_empty() {
       return;
     }
+    // `split_keeps_import_order` reads the chunk modules in execution order.
+    let module_id_order =
+      matches!(options.experimental.chunk_modules_order, Some(ChunkModulesOrderBy::ModuleId));
     // The common hosts first, so that the importers see the final chunk of each module.
     let host_splits = chunk_graph
       .chunk_table
       .iter_enumerated()
-      .filter_map(|(chunk_idx, _)| {
-        self
-          .modules_after_deferred_modules(chunk_graph, chunk_idx, &eagerly_imported)
-          .map(|moved| (chunk_idx, moved))
+      .map(|(chunk_idx, _)| {
+        let split = self.modules_after_deferred_modules(
+          chunk_graph,
+          chunk_idx,
+          &eagerly_imported,
+          !module_id_order,
+        );
+        (chunk_idx, split)
       })
       .collect::<Vec<_>>();
-    for (chunk_idx, moved) in host_splits {
-      self.move_modules_to_new_common_chunk(chunk_graph, chunk_idx, &moved);
+    for (chunk_idx, split) in host_splits {
+      match split {
+        HostSplit::Keep => {}
+        HostSplit::Move(moved) => {
+          self.move_modules_to_new_common_chunk(chunk_graph, chunk_idx, &moved);
+        }
+        HostSplit::RunAtLoad(modules) => chunk_graph.deferred_modules_run_at_load.extend(modules),
+      }
+    }
+    if module_id_order {
+      return;
     }
     let splits = chunk_graph
       .chunk_table
@@ -273,28 +309,36 @@ impl GenerateStage<'_> {
   /// (`deferred_modules_with_eager_importers`).
   ///
   /// The host splits only when the move keeps the load of each part:
+  /// - `chunkModulesOrder` is not `module-id` (`can_move`), and the chunk is not the chunk of a
+  ///   code splitting group.
+  /// - Each later deferred module of the host comes before all moved modules or after all of them.
+  ///   The importers load the new chunk at one place, so in `import './a1.js'; import './w1.js';
+  ///   import './a2.js'; import './w2.js'`, no init of `a2` runs between `w1` and `w2`.
   /// - The modules that stay do not import the moved modules: else the host loads the new chunk.
   /// - No dynamic import goes from one part to the other.
   /// - The moved modules have no top-level await, and the chunk does not keep their exports for a
   ///   facade.
+  ///
+  /// Else the host runs at load, at their place, its deferred modules that come before a module
+  /// that it runs at load (`ChunkGraph::deferred_modules_run_at_load`). The build without `import
+  /// defer` runs them there too, so the importers keep the order of that build. A deferred-only
+  /// importer then also runs them at load.
   fn modules_after_deferred_modules(
     &self,
     chunk_graph: &ChunkGraph,
     chunk_idx: ChunkIdx,
     eagerly_imported: &FxHashSet<ModuleIdx>,
-  ) -> Option<Vec<ModuleIdx>> {
+    can_move: bool,
+  ) -> HostSplit {
     let link_output = &*self.link_output;
     let module_table = &link_output.module_table;
     let metas = &link_output.metas;
     let chunk = &chunk_graph.chunk_table[chunk_idx];
-    if !matches!(chunk.kind, ChunkKind::Common)
-      || !chunk_graph.chunk_is_live(chunk_idx)
-      || chunk.chunk_reason_type.group_index().is_some()
-    {
-      return None;
+    if !matches!(chunk.kind, ChunkKind::Common) || !chunk_graph.chunk_is_live(chunk_idx) {
+      return HostSplit::Keep;
     }
     let exec_order = |module_idx: ModuleIdx| module_table[module_idx].exec_order();
-    let first_deferred = chunk
+    let mut deferred = chunk
       .modules
       .iter()
       .copied()
@@ -302,8 +346,9 @@ impl GenerateStage<'_> {
         eagerly_imported.contains(&module_idx)
           && chunk_graph.deferred_init_host(module_idx, &metas[module_idx]) == Some(chunk_idx)
       })
-      .map(exec_order)
-      .min()?;
+      .collect::<Vec<_>>();
+    deferred.sort_unstable_by_key(|&module_idx| exec_order(module_idx));
+    let Some(&first_deferred) = deferred.first() else { return HostSplit::Keep };
     let runtime_idx = link_output.runtime.id();
     let mut moved = chunk
       .modules
@@ -312,13 +357,41 @@ impl GenerateStage<'_> {
       .filter(|&module_idx| {
         module_idx != runtime_idx
           && matches!(metas[module_idx].wrap_kind(), WrapKind::None)
-          && exec_order(module_idx) > first_deferred
+          && exec_order(module_idx) > exec_order(first_deferred)
       })
       .collect::<Vec<_>>();
-    if moved.is_empty() {
-      return None;
-    }
     moved.sort_unstable_by_key(|&module_idx| exec_order(module_idx));
+    let (Some(&first_moved), Some(&last_moved)) = (moved.first(), moved.last()) else {
+      return HostSplit::Keep;
+    };
+    let (first_moved, last_moved) = (exec_order(first_moved), exec_order(last_moved));
+    let one_place = deferred[1..].iter().all(|&module_idx| {
+      let order = exec_order(module_idx);
+      order < first_moved || order > last_moved
+    });
+    if can_move
+      && one_place
+      && chunk.chunk_reason_type.group_index().is_none()
+      && self.host_can_move(chunk_graph, chunk_idx, &moved)
+    {
+      return HostSplit::Move(moved);
+    }
+    deferred.retain(|&module_idx| exec_order(module_idx) < last_moved);
+    HostSplit::RunAtLoad(deferred)
+  }
+
+  /// Whether the moved modules of `modules_after_deferred_modules` can leave the host and keep the
+  /// load of each part.
+  fn host_can_move(
+    &self,
+    chunk_graph: &ChunkGraph,
+    chunk_idx: ChunkIdx,
+    moved: &[ModuleIdx],
+  ) -> bool {
+    let link_output = &*self.link_output;
+    let module_table = &link_output.module_table;
+    let metas = &link_output.metas;
+    let chunk = &chunk_graph.chunk_table[chunk_idx];
     let moved_set = moved.iter().copied().collect::<FxHashSet<_>>();
     if moved.iter().any(|&module_idx| metas[module_idx].is_tla_or_contains_tla_dependency)
       || chunk_graph
@@ -329,7 +402,7 @@ impl GenerateStage<'_> {
         .flatten()
         .any(|module_idx| moved_set.contains(module_idx))
     {
-      return None;
+      return false;
     }
     let mut importees = vec![];
     for &module_idx in &chunk.modules {
@@ -342,16 +415,16 @@ impl GenerateStage<'_> {
               && moved_set.contains(&target_idx) != is_moved
           })
       }) {
-        return None;
+        return false;
       }
       if !is_moved {
         self.push_kept_static_importees(module_idx, &mut importees);
         if importees.drain(..).any(|importee| moved_set.contains(&importee)) {
-          return None;
+          return false;
         }
       }
     }
-    Some(moved)
+    true
   }
 
   /// The modules that `split_modules_before_deferred_imports` moves out of the chunk, in execution
@@ -844,6 +917,15 @@ impl LazyHostInitPlanner<'_> {
             {
               earlier_imports_at_load = false;
             }
+            for &rec_idx in &stmt_info.import_records {
+              match self.unkept_import_load_step(chunk_idx, importer, rec_idx) {
+                ImportLoadStep::AtLoad(position) => {
+                  last_position = Some(last_position.map_or(position, |last| last.max(position)));
+                }
+                ImportLoadStep::NoCode => {}
+                ImportLoadStep::InBody => earlier_imports_at_load = false,
+              }
+            }
             continue;
           }
           for &rec_idx in &stmt_info.import_records {
@@ -910,8 +992,15 @@ impl LazyHostInitPlanner<'_> {
   /// the host or of the last earlier import of the importer that runs at load. The build without
   /// `import defer` runs the module when its chunk loads, so also before the code of the body.
   /// Thus the init keeps the order of that build where the plan cannot give the native order. Each
-  /// module of the body takes part, also after the first one.
-  /// See internal-docs/import-defer/implementation.md ("Init after the import of a host").
+  /// module of the body takes part, also after the first one, and so does each module that an
+  /// import initializes through a module with no wrapper (a barrel).
+  ///
+  /// Some code in the body is there only because of `import defer`: the call of a deferred module
+  /// in another chunk that gets no init, and the preparation of a deferred import
+  /// (`__esmGather`). The build without `import defer` runs that module when the chunk loads its
+  /// chunk. Thus an init at or after that import would run the other module first in the opposite
+  /// order, and the chunk does not add it: the call stays in the body.
+  /// See internal-docs/import-defer/implementation.md ("Declined inits").
   fn add_declined_inits(
     &mut self,
     chunk_idx: ChunkIdx,
@@ -921,6 +1010,21 @@ impl LazyHostInitPlanner<'_> {
     let chunk_graph = self.chunk_graph;
     let link_output = self.link_output;
     let runtime_idx = link_output.runtime.id();
+    let static_imports = &chunk_graph.chunk_table[chunk_idx].static_imports;
+    let mut declined: Vec<DeclinedInit> = vec![];
+    // The first import of the chunk whose module stays in the body only because of `import defer`.
+    let mut limit = usize::MAX;
+    let stays_in_body = |module_idx: ModuleIdx, limit: &mut usize| {
+      let Some(module_chunk_idx) = chunk_graph.module_to_chunk[module_idx] else { return };
+      if module_chunk_idx != chunk_idx {
+        // A chunk that the chunk does not import runs nothing at load before the body.
+        let position = static_imports
+          .iter()
+          .position(|import| *import == StaticImport::Chunk(module_chunk_idx))
+          .unwrap_or(0);
+        *limit = (*limit).min(position);
+      }
+    };
     for &importer_idx in &chunk_graph.chunk_table[chunk_idx].modules {
       let Some(importer) = link_output.module_table[importer_idx].as_normal() else {
         continue;
@@ -936,37 +1040,82 @@ impl LazyHostInitPlanner<'_> {
       let mut last_position: Option<usize> = None;
       for (stmt_idx, stmt_info) in link_output.stmt_infos[importer_idx].iter_enumerated() {
         if !importer_meta.stmt_info_included.has_bit(stmt_idx) {
+          for &rec_idx in &stmt_info.import_records {
+            if let ImportLoadStep::AtLoad(position) =
+              self.unkept_import_load_step(chunk_idx, importer, rec_idx)
+            {
+              last_position = Some(last_position.map_or(position, |last| last.max(position)));
+            }
+          }
           continue;
         }
         for &rec_idx in &stmt_info.import_records {
           let rec = &importer.import_records[rec_idx];
           let Some(target_idx) = rec.resolved_module else { continue };
-          if rec.kind != ImportKind::Import || rec.is_defer_phase() {
+          if rec.kind != ImportKind::Import {
             continue;
           }
-          match self.lazy_host_to_init(chunk_idx, target_idx, last_position) {
-            Some((init, position)) => {
-              // An init of the plan, or of an earlier importer, already runs the module at load.
-              if !inits
-                .iter()
-                .any(|(_, other)| other.host == init.host && other.module == init.module)
-              {
-                if !keeps_call {
-                  moved_calls.insert((importer_idx, target_idx));
-                }
-                inits.push((position, init));
+          if rec.is_defer_phase() {
+            if self.deferred_import_has_preparation(target_idx) {
+              stays_in_body(target_idx, &mut limit);
+            }
+            continue;
+          }
+          let forwarded = self.init_obligation_targets(chunk_idx, importer, rec_idx, target_idx);
+          let is_forwarded = !forwarded.is_empty();
+          let modules = if is_forwarded {
+            forwarded
+              .into_iter()
+              .filter_map(|target| match target {
+                WrappedEsmInitTarget::Module(module_idx) => Some(module_idx),
+                WrappedEsmInitTarget::CjsCarrier(_) => None,
+              })
+              .collect()
+          } else {
+            vec![target_idx]
+          };
+          let mut has_init = false;
+          for module_idx in modules {
+            // An init of the plan, or of an earlier importer, already runs the module at load.
+            let has_other_init = inits.iter().any(|(_, other)| other.module == module_idx)
+              || declined.iter().any(|other| other.init.module == module_idx);
+            if let Some((init, position)) =
+              self.lazy_host_to_init(chunk_idx, module_idx, last_position)
+            {
+              if !has_other_init {
+                declined.push(DeclinedInit {
+                  position,
+                  init,
+                  moved_call: (!keeps_call).then_some((importer_idx, module_idx)),
+                });
               }
               last_position = Some(position);
-            }
-            None => {
-              if let ImportLoadStep::AtLoad(position) =
-                self.import_load_step(chunk_idx, importer, rec_idx, target_idx)
-              {
-                last_position = Some(last_position.map_or(position, |last| last.max(position)));
-              }
+              has_init = true;
+            } else if !has_other_init
+              && self.init_host(module_idx).is_some_and(|host_idx| host_idx != chunk_idx)
+            {
+              stays_in_body(module_idx, &mut limit);
             }
           }
+          let step = if is_forwarded {
+            // The module with no wrapper loads with its chunk. The importer calls the init
+            // functions of the modules behind it.
+            self.chunk_load_step(chunk_idx, target_idx)
+          } else if has_init {
+            ImportLoadStep::NoCode
+          } else {
+            self.import_load_step(chunk_idx, importer, rec_idx, target_idx)
+          };
+          if let ImportLoadStep::AtLoad(position) = step {
+            last_position = Some(last_position.map_or(position, |last| last.max(position)));
+          }
         }
+      }
+    }
+    for DeclinedInit { position, init, moved_call } in declined {
+      if position < limit {
+        inits.push((position, init));
+        moved_calls.extend(moved_call);
       }
     }
   }
@@ -1050,11 +1199,34 @@ impl LazyHostInitPlanner<'_> {
     false
   }
 
-  /// Where the import `rec_idx` of the importer runs, when the chunk loads. An external module and
-  /// a module with no wrapper in another chunk run when their chunk loads. A wrapped module runs at
-  /// load only through the tail of its own entry chunk (`runs_by_tail`). A module of the same
-  /// chunk runs in the body. An import through which the importer calls init functions runs in the
-  /// body (`has_init_obligation_targets`).
+  /// Where the import `rec_idx` of the importer runs when the chunk loads, for an import with no
+  /// kept statement. Tree shaking keeps such an import when its module is in `load_dependencies`,
+  /// as for `import './x.js'` (`push_kept_static_importees`), and the body calls no init function
+  /// for it.
+  fn unkept_import_load_step(
+    &self,
+    chunk_idx: ChunkIdx,
+    importer: &NormalModule,
+    rec_idx: ImportRecordIdx,
+  ) -> ImportLoadStep {
+    let link_output = self.link_output;
+    let rec = &importer.import_records[rec_idx];
+    let Some(target_idx) = rec.resolved_module else { return ImportLoadStep::NoCode };
+    if rec.kind != ImportKind::Import
+      || rec.is_defer_phase()
+      || !link_output.metas[importer.idx].load_dependencies.contains(&target_idx)
+      || link_output.module_table[target_idx]
+        .as_normal()
+        .is_some_and(|_| !matches!(link_output.metas[target_idx].wrap_kind(), WrapKind::None))
+    {
+      return ImportLoadStep::NoCode;
+    }
+    self.chunk_load_step(chunk_idx, target_idx)
+  }
+
+  /// Where the import `rec_idx` of the importer runs, when the chunk loads. An import through
+  /// which the importer calls init functions runs in the body (`init_obligation_targets`). Else
+  /// the module runs where its chunk runs it (`chunk_load_step`).
   fn import_load_step(
     &self,
     chunk_idx: ChunkIdx,
@@ -1062,6 +1234,20 @@ impl LazyHostInitPlanner<'_> {
     rec_idx: ImportRecordIdx,
     target_idx: ModuleIdx,
   ) -> ImportLoadStep {
+    if self.link_output.module_table[target_idx].as_normal().is_some()
+      && !self.init_obligation_targets(chunk_idx, importer, rec_idx, target_idx).is_empty()
+    {
+      return ImportLoadStep::InBody;
+    }
+    self.chunk_load_step(chunk_idx, target_idx)
+  }
+
+  /// Where the module `target_idx` runs, when the chunk `chunk_idx` loads. An external module and
+  /// a module with no wrapper in another chunk run when their chunk loads. A wrapped module runs at
+  /// load only through the tail of its own entry chunk (`runs_by_tail`), or when its common chunk
+  /// runs it at load (`ChunkGraph::deferred_modules_run_at_load`). A module of the same chunk runs
+  /// in the body.
+  fn chunk_load_step(&self, chunk_idx: ChunkIdx, target_idx: ModuleIdx) -> ImportLoadStep {
     let chunk_graph = self.chunk_graph;
     let link_output = self.link_output;
     let static_imports = &chunk_graph.chunk_table[chunk_idx].static_imports;
@@ -1074,9 +1260,6 @@ impl LazyHostInitPlanner<'_> {
     if link_output.module_table[target_idx].as_normal().is_none() {
       return step_of(StaticImport::External(target_idx));
     }
-    if self.has_init_obligation_targets(chunk_idx, importer, rec_idx, target_idx) {
-      return ImportLoadStep::InBody;
-    }
     let Some(target_chunk_idx) = chunk_graph.module_to_chunk[target_idx] else {
       return ImportLoadStep::NoCode;
     };
@@ -1086,7 +1269,10 @@ impl LazyHostInitPlanner<'_> {
     let meta = &link_output.metas[target_idx];
     let has_no_wrapper =
       matches!(meta.wrap_kind(), WrapKind::None) && !self.order_state.has_order_wrapper(target_idx);
-    if has_no_wrapper || self.runs_by_tail(target_chunk_idx, target_idx) {
+    if has_no_wrapper
+      || chunk_graph.deferred_modules_run_at_load.contains(&target_idx)
+      || self.runs_by_tail(target_chunk_idx, target_idx)
+    {
       step_of(StaticImport::Chunk(target_chunk_idx))
     } else {
       ImportLoadStep::InBody
@@ -1115,24 +1301,24 @@ impl LazyHostInitPlanner<'_> {
       && self.order_state.esm_init_target(target_idx, meta).is_some()
   }
 
-  /// Whether the body calls init functions for the import `rec_idx`: the importer reaches wrapped
-  /// modules through an unwrapped module (`wrapped_esm_init_stmt_for_import_record`). The names of
-  /// the chunk do not exist yet, so a wrapper of a module of the chunk and a wrapper that the chunk
-  /// imports count as reachable in the chunk.
-  fn has_init_obligation_targets(
+  /// The init functions that the body calls for the import `rec_idx`: the importer reaches wrapped
+  /// modules through an unwrapped module (`wrapped_esm_init_stmt_for_import_record`). Empty when
+  /// the body calls none. The names of the chunk do not exist yet, so a wrapper of a module of the
+  /// chunk and a wrapper that the chunk imports count as reachable in the chunk.
+  fn init_obligation_targets(
     &self,
     chunk_idx: ChunkIdx,
     importer: &NormalModule,
     rec_idx: ImportRecordIdx,
     target_idx: ModuleIdx,
-  ) -> bool {
+  ) -> Vec<WrappedEsmInitTarget> {
     let link_output = self.link_output;
     let options = self.options;
     let order_state = self.order_state;
     if !matches!(link_output.metas[target_idx].wrap_kind(), WrapKind::None)
       && !order_state.is_consumer_local_reexport_route(target_idx)
     {
-      return false;
+      return vec![];
     }
     let rec = &importer.import_records[rec_idx];
     if !record_is_init_obligation(
@@ -1143,7 +1329,7 @@ impl LazyHostInitPlanner<'_> {
       rec_idx,
       true,
     ) {
-      return false;
+      return vec![];
     }
     let symbol_db = &link_output.symbol_db;
     let module_to_chunk = &self.chunk_graph.module_to_chunk;
@@ -1160,7 +1346,7 @@ impl LazyHostInitPlanner<'_> {
       order_wrap_state: order_state,
       strict_execution_order: options.is_strict_execution_order_enabled(),
     };
-    !collect_wrapped_esm_init_targets_for_import_record(
+    collect_wrapped_esm_init_targets_for_import_record(
       &ctx,
       rec_idx,
       |symbol_ref| self.used_symbol_refs.contains(&symbol_ref),
@@ -1175,7 +1361,6 @@ impl LazyHostInitPlanner<'_> {
       },
       |forwarding_module_idx| module_to_chunk[forwarding_module_idx] == Some(chunk_idx),
     )
-    .is_empty()
   }
 
   /// Whether the importer prepares a deferred import of the module in its body:

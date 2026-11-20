@@ -1,0 +1,9 @@
+{
+  "_comment": "`b.js` imports `foo` from the side-effect-free barrel `lib/barrel.js`, then the lazy host `a.js`, then `y.js`. `main.js` defers `z.js` and `a.js`. Native ESM runs `z`, `a`, `y`. The import of the barrel initializes `z.js` in the body of `b.js`, after `y` runs at load, so the plan does not take `b.js`. The chunk of `b.js` initializes `z.js` right after its import of `z.js`, and then `a.js` right after its import of `a.js`. `y.js` only gives the chunk of `b.js` a reason to initialize the modules at its imports. It does not write to the log, and the test only checks that it runs.",
+  "config": {
+    "preserveModules": true,
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

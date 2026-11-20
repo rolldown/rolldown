@@ -167,17 +167,11 @@
   "language/import/import-defer/deferred-namespace-object/identity.js": {
     "reason": "`experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`"
   },
-  "language/import/import-defer/errors/module-throws/defer-import-after-evaluation.js": {
-    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with an `import()` yet, so Rolldown lowers `import defer` to a normal import"
-  },
-  "language/import/import-defer/errors/module-throws/third-party-evaluation-after-defer-import.js": {
-    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with an `import()` yet, so Rolldown lowers `import defer` to a normal import"
-  },
   "language/import/import-defer/errors/resolution-error/import-defer-of-missing-module-fails.js": {
     "reason": "Rolldown reports a module that it cannot resolve as a build error, not as a rejection of `import()` at runtime"
   },
   "language/import/import-defer/evaluation-top-level-await/async-cycle-dependency-of-deferred-module/main.js": {
-    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with an `import()` yet, so Rolldown lowers `import defer` to a normal import"
+    "reason": "Rolldown does not support preserving TLA semantics perfectly"
   },
   "language/import/import-defer/evaluation-top-level-await/flattening-order/main.js": {
     "reason": "`experimental.importDefer` does not keep the deferred evaluation yet when an import comes after a deferred import of a module that has a top-level `await` or imports one, so Rolldown lowers `import defer` to a normal import"

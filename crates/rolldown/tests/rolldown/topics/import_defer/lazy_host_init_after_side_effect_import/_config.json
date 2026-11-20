@@ -1,0 +1,22 @@
+{
+  "_comment": "Three entries, so `a1.js` and `a2.js` are in one common chunk, and `w.js` is in another common chunk. `main.js` defers `a1.js` and `a2.js`, and `b.js` imports `a1.js`, `w.js`, then `a2.js`. `import './w.js'` keeps no statement, but the chunk of `b.js` still imports the chunk of `w.js`, so the init of `a2.js` must come after that import. The output runs `a1`, `w`, then `a2`, as native ESM does.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "other",
+        "import": "./other.js"
+      },
+      {
+        "name": "third",
+        "import": "./third.js"
+      }
+    ],
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

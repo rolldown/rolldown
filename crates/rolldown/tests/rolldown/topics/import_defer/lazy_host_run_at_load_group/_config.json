@@ -1,0 +1,16 @@
+{
+  "_comment": "`vendor` is a code splitting group with `a.js` and `w.js`. `main.js` defers `a.js`, and `b.js` imports `a.js`, then `w.js`. The chunk of a group does not move its modules to a new chunk, so the chunk runs `a.js` at load, at its place, as the build without `import defer` does. `a.js` has a top-level `await`, so the chunk awaits the init function of `a.js`.",
+  "config": {
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "vendor",
+          "test": "/(a|w)\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

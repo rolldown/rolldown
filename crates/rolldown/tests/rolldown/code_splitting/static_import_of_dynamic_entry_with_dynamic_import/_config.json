@@ -1,0 +1,6 @@
+{
+  "_comment": "Variant of `static_import_of_dynamic_entry_with_code`: the barrel's own declaration holds an `import()`. A statement with a dynamic import record still declares code, so `lib/index.js` is not a code-less entry and `a.js`, which only reads the re-exported `foo`, must not statically load `heavy.js`.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }]
+  }
+}

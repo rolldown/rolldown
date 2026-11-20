@@ -46,6 +46,7 @@ mod refine_stmt_side_effects;
 mod sort_modules;
 mod tree_shaking;
 
+pub use tree_shaking::include_statements::is_inlined_enum_member_access;
 pub use tree_shaking::{
   IncludeContext, ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec,
   SymbolIncludeReason, compute_body_demand_keys, include_runtime_symbol, include_symbol,

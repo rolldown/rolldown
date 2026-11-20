@@ -366,6 +366,32 @@ Two input classes are outside the ordering promise, yet the emitted code must st
 
 ## Rejected Alternatives
 
+### Group chunk re-exports for merged emitted entries
+
+An emitted `allow-extension` entry that merges into a group chunk can re-export a binding from another chunk. In this case, Rollup makes the group chunk import that binding and export it with the export name of the entry (`ensureReexportsAreAvailableForModule`). This approach caused these failures in a trial for [#11767](https://github.com/rolldown/rolldown/issues/11767):
+
+- A CommonJS entry that forwards ESM exports (`module.exports = require('./dep.js')`) put an undeclared export into the group chunk. Thus Node could not load the group chunk.
+- A re-exported `then` made the namespace of the group chunk a thenable (an object with a `then` method). Thus `import()` of a sibling entry returned the wrong value.
+- The group chunk exported a binding of a wrapped ESM module, but the group chunk did not call the `init_*()` function of that module. Thus a program that imported only the group chunk got `undefined`.
+- An ambiguous `export *` name gave the group chunk an extra import. The module-level import prediction (`predicted_static_import_targets`) did not include this import, so a debug assertion in `compute_cross_chunk_links` panicked.
+- When one binding had two export names, the group chunk exported it with only one of the names.
+
+Each failure needs its own guard. Also, the module-level import prediction must include the new imports. Thus the chunk optimizer keeps the facade of such an entry instead (see [implementation.md](./implementation.md#facade-elimination-optimize_facade_entry_chunks)). The cost is one more chunk for each such entry. A later optimization can export the aliases from the group chunk when the group chunk already imports their bindings. That optimization needs its own tests for names, initialization, cycles and a sibling `then` export.
+
+A kept facade is a different object than the namespace object of the entry in the group chunk. `import()` of the entry returns that namespace object when the facade is removed. Another module can also read the namespace object as a value (`import * as ns`), and `import()` must return that same object. Thus the facade stays for code outside the bundle, and each `import()` of the entry in the bundle reads the namespace object in the group chunk. `entry_module_to_entry_chunk` still names the facade, and a second map gives the target of `import()`.
+
+The redirect applies only when the cross-chunk check is the only reason for the facade. A facade that the name check keeps is still the target of `import()`. In strict execution order, an emitted entry in the order wrap plan keeps a facade in all layouts, so `import()` of such an entry also loads the facade.
+
+**Only ESM exports.** A facade can read a CommonJS export when it loads. Then a getter can run one more time, or earlier than in Node. In a trial, a separate entry that forwarded such an export ran a CommonJS getter three times in ESM output, and its CJS output threw a `ReferenceError`. Node ran the getter one time. CommonJS exports need their own design. Until then, an entry with an export that can come from CommonJS gets the result of the name check for all of its exports. The same applies to an entry with an `export *` from an external module, because the check uses one flag (`has_dynamic_exports`) for both kinds of `export *`. A separate check for each kind is possible, but the issue does not need it.
+
+**Named imports from external modules in CJS output.** In CJS output, the linker makes such an import a property of the namespace of the external module. Thus the check treats it as a named import from a CommonJS module. In a trial, an emitted entry re-exported `x` from an external module with a getter that throws, and it also exported `own = 17`. With `externalLiveBindings: false`, the group chunk loaded, and `own` was `17`. A forced facade wrote `exports.x = counter.x`, so its load threw. In ESM output, the facade imports the binding and does not read it when it loads.
+
+**Rejected alternative: ignore the namespace of an external module in the `namespace_alias` rule.** Then the entry also keeps its facade in CJS output. But with `externalLiveBindings: false`, that facade can throw when it loads, as in the trial. A test with `node:path` does not show this risk, because `sep` has no getter.
+
+**Rejected alternative: a facade with only the ESM exports of such an entry.** Code outside the bundle then gets an interface that matches neither the source nor the output of the name check.
+
+**Rejected alternative: remove the facade of an `import()` target.** Then `import()` and a static namespace import get the same object without a redirect. But the entry loses its re-exports from other chunks for code outside the bundle, as in the issue.
+
 ### Late `WrapKind` override
 
 This was the original proof-of-concept bridge. It reused mature wrapper code, but it conflated representation with scheduling and required generate-stage code to repair link-owned metadata. Keeping the bridge would preserve the architectural problem even if every known fixture passed.

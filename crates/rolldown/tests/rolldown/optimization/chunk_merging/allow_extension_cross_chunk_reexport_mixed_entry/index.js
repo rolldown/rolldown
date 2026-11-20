@@ -1,0 +1,10 @@
+export { foreign } from './dep.js';
+export { required } from './required.js';
+export const loadPure = () => import('./seg_pure.js');
+export const loadStar = () => import('./seg_star.js');
+export const loadBarrel = () => import('./seg_barrel.js');
+export const loadExternal = () => import('./seg_external.js');
+export const loadExternalNamed = () => import('./seg_external_named.js');
+export const loadNamespace = () => import('./seg_namespace.js');
+export const loadNamed = () => import('./seg_named.js');
+export const loadCommonjs = () => import('./seg_commonjs.cjs');

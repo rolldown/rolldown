@@ -1197,14 +1197,86 @@ impl GenerateStage<'_> {
     (facade_eliminations, common_chunk_merges, emitted_chunk_groups)
   }
 
-  /// Batch process emitted chunk groups to detect export name conflicts.
-  /// Chunks with conflicting export names need to keep their facade chunks.
+  /// Returns `true` if the module exports an ESM binding that is in a chunk other than
+  /// `chunk_idx`. The chunk `chunk_idx` does not export such a binding with the export name of the
+  /// module. Thus an emitted entry with such an export keeps its facade (issue #11767).
+  ///
+  /// The function returns `false` if one export of the module can come from CommonJS or, in CJS
+  /// output, from an external module. It also returns `false` if the linker does not know all
+  /// exports of the module. Then the entry gets the same result as an entry with only exports of
+  /// the group chunk. The function returns `false` for:
+  /// - A CommonJS module.
+  /// - A module with dynamic exports: an `export *` chain reaches a CommonJS module or an
+  ///   external module. The linker does not know all names of such a chain.
+  /// - A property of a namespace, for example a named import from a CommonJS module. In CJS
+  ///   output, a named import from an external module is also such a property. When
+  ///   `externalLiveBindings` is `false`, a facade reads it when the facade loads.
+  /// - The namespace of a CommonJS module, for example `export * as lib from './lib.cjs'`. The
+  ///   facade reads no property of it, but its value comes from CommonJS.
+  ///
+  /// A binding that a CommonJS module owns gets to an ESM module only through an `export *` chain
+  /// or as a property of a namespace. A binding that an external module owns is in no chunk,
+  /// because each chunk imports it from the external module itself. The function does not count
+  /// such a binding.
+  ///
+  /// See internal-docs/code-splitting/implementation.md.
+  fn exports_binding_from_other_chunk(
+    &self,
+    chunk_graph: &ChunkGraph,
+    module_idx: ModuleIdx,
+    chunk_idx: ChunkIdx,
+  ) -> bool {
+    let module_meta = &self.link_output.metas[module_idx];
+    let is_commonjs = self.link_output.module_table[module_idx]
+      .as_normal()
+      .is_some_and(|module| module.exports_kind.is_commonjs());
+    // The flag still has its value from the link stage, which includes an `export *` from an
+    // external module. The generate stage computes it again after the chunk optimizer.
+    if is_commonjs || module_meta.has_dynamic_exports {
+      return false;
+    }
+    let symbol_db = &self.link_output.symbol_db;
+    let mut has_binding_from_other_chunk = false;
+    for name in module_meta.sorted_and_non_ambiguous_resolved_exports.keys() {
+      let binding = symbol_db.canonical_ref_for(module_meta.resolved_exports[name].symbol_ref);
+      if symbol_db.get(binding).namespace_alias.is_some()
+        || self.link_output.metas[binding.owner]
+          .import_record_ns_to_cjs_module
+          .contains_key(&binding)
+      {
+        return false;
+      }
+      has_binding_from_other_chunk |= chunk_graph.module_to_chunk[binding.owner]
+        .is_some_and(|owner_chunk| owner_chunk != chunk_idx);
+    }
+    has_binding_from_other_chunk
+  }
+
+  /// Decides which emitted entries keep their facade chunks when a group chunk holds their
+  /// modules. It adds a facade elimination for all other entries. The function checks the
+  /// entries of each group chunk in reverse execution order. An entry keeps its facade in two
+  /// cases:
+  /// - Name check: an entry that the function checked before has the same export name for a
+  ///   different binding.
+  /// - Cross-chunk check: the entry exports an ESM binding that is in another chunk
+  ///   (`exports_binding_from_other_chunk`).
+  ///
+  /// The function returns the entries that keep their facades only because of the cross-chunk
+  /// check and that the bundle also loads with `import()`. Each item is the group chunk and the
+  /// entry module. The facade stays for code outside the bundle. An `import()` in the bundle loads
+  /// the group chunk and reads the namespace object of the entry, as it does when the facade is
+  /// removed (`ChunkGraph::entry_module_to_dynamic_import_chunk`). Thus a static namespace import
+  /// and an `import()` of the entry get the same object. The facade does not give that object:
+  /// for example, in CJS output the exports object of the facade is writable.
+  ///
+  /// See internal-docs/code-splitting/implementation.md.
   fn resolve_emitted_chunk_group_conflicts(
     &self,
     chunk_graph: &ChunkGraph,
     emitted_chunks_by_target: FxHashMap<ChunkIdx, Vec<ChunkIdx>>,
     facade_eliminations: &mut Vec<FacadeChunkElimination>,
-  ) {
+  ) -> Vec<(ChunkIdx, ModuleIdx)> {
+    let mut dynamic_import_redirects = vec![];
     for (target_chunk_idx, emitted_chunk_indices) in emitted_chunks_by_target {
       let Some(_target_chunk) = chunk_graph.chunk_table.get(target_chunk_idx) else {
         continue;
@@ -1227,7 +1299,12 @@ impl GenerateStage<'_> {
       // its facade chunk cannot be removed.
       for (chunk_idx, entry_module_idx) in emitted_entry_modules {
         let module_meta = &self.link_output.metas[entry_module_idx];
-        let needs_facade =
+        // The name check runs first, so the names that it assigns do not depend on the
+        // cross-chunk check. Thus the cross-chunk check only keeps more facades. It does not
+        // change the decision for the other entries. If the cross-chunk check runs first, it can
+        // cause a merge that does not occur without that check. Then the group chunk can export
+        // the wrong binding when `minifyInternalExports` is `false` (issue #10500).
+        let has_name_conflict =
           module_meta.resolved_exports.iter().any(|(export_name, resolved_export)| {
             let canonical_ref =
               resolved_export.symbol_ref.canonical_ref(&self.link_output.symbol_db);
@@ -1239,16 +1316,24 @@ impl GenerateStage<'_> {
               }
             }
           });
-        if !needs_facade {
-          facade_eliminations.push(FacadeChunkElimination {
-            reason: FacadeChunkEliminationReason::EmittedChunkMergedIntoManualGroup,
-            entry_module_idx,
-            from_chunk_idx: chunk_idx,
-            to_chunk_idx: target_chunk_idx,
-          });
+        if has_name_conflict {
+          continue;
         }
+        if self.exports_binding_from_other_chunk(chunk_graph, entry_module_idx, target_chunk_idx) {
+          if chunk_graph.chunk_table[chunk_idx].is_async_entry() {
+            dynamic_import_redirects.push((target_chunk_idx, entry_module_idx));
+          }
+          continue;
+        }
+        facade_eliminations.push(FacadeChunkElimination {
+          reason: FacadeChunkEliminationReason::EmittedChunkMergedIntoManualGroup,
+          entry_module_idx,
+          from_chunk_idx: chunk_idx,
+          to_chunk_idx: target_chunk_idx,
+        });
       }
     }
+    dynamic_import_redirects
   }
 
   /// This optimization handles the case where a facade entry chunk (dynamic, emitted, or user-defined)
@@ -1276,7 +1361,7 @@ impl GenerateStage<'_> {
       return None;
     }
 
-    self.resolve_emitted_chunk_group_conflicts(
+    let dynamic_import_redirects = self.resolve_emitted_chunk_group_conflicts(
       chunk_graph,
       emitted_chunk_groups,
       &mut facade_eliminations,
@@ -1288,6 +1373,10 @@ impl GenerateStage<'_> {
         used_symbol_refs_builder,
       );
     }
+    for &(_, entry_module_idx) in &dynamic_import_redirects {
+      self.narrow_namespace_stmt_to_used_symbols(entry_module_idx, used_symbol_refs_builder);
+    }
+
     let mut runtime_dependent_chunks = FxHashSet::default();
 
     self.replay_link_stage_inclusion(used_symbol_refs_builder, |context| {
@@ -1364,6 +1453,21 @@ impl GenerateStage<'_> {
           target_chunk.depended_runtime_helper.insert(RuntimeHelper::ExportAll);
           runtime_dependent_chunks.insert(*to_chunk_idx);
           needs_export_all_helper = true;
+        }
+      }
+      // An entry that keeps its facade only for code outside the bundle: the group chunk exports
+      // the namespace of the entry for the `import()` calls of the bundle, the same as for a
+      // removed facade above. The facade and `entry_module_to_entry_chunk` stay. Do not use
+      // `||` here. It skips the extractions when a facade needs `__exportAll`.
+      needs_export_all_helper |= Self::include_dynamic_entry_namespace_extractions(
+        context,
+        chunk_graph,
+        &dynamic_import_redirects,
+      );
+      for &(host_chunk_idx, entry_module_idx) in &dynamic_import_redirects {
+        chunk_graph.entry_module_to_dynamic_import_chunk.insert(entry_module_idx, host_chunk_idx);
+        if matches!(context.metas[entry_module_idx].wrap_kind(), WrapKind::Cjs | WrapKind::Esm) {
+          runtime_dependent_chunks.insert(host_chunk_idx);
         }
       }
       needs_export_all_helper
@@ -2236,7 +2340,11 @@ impl GenerateStage<'_> {
         .insert(merge.from_chunk_idx, PostChunkOptimizationOperation::Removed);
 
       // Retarget entry mappings that point at the removed chunk
-      for entry_chunk_idx in chunk_graph.entry_module_to_entry_chunk.values_mut() {
+      for entry_chunk_idx in chunk_graph
+        .entry_module_to_entry_chunk
+        .values_mut()
+        .chain(chunk_graph.entry_module_to_dynamic_import_chunk.values_mut())
+      {
         if *entry_chunk_idx == merge.from_chunk_idx {
           *entry_chunk_idx = merge.to_chunk_idx;
         }

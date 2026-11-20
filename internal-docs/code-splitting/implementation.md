@@ -4,7 +4,7 @@ The rationale and target architecture are documented in [design.md](./design.md)
 
 ## Summary
 
-Code splitting determines which modules go into which output chunks. Rolldown uses a BitSet-based reachability model — the same fundamental approach as esbuild and Rollup. Each entry point gets a bit position, modules are marked with the set of entries that can reach them, and modules with identical reachability patterns are grouped into the same chunk.
+Rolldown uses a BitSet to track the roots that can reach each module. Entries supply the initial roots. Once non-recursive manual chunks are assigned, the automatic assignment uses the entries and those manual chunks as roots. Unassigned modules with the same root set go into the same chunk.
 
 ## Why BitSet-Based Reachability?
 
@@ -53,6 +53,8 @@ generate_chunks()
     │    ├─ determine_reachable_modules_for_entry()   BFS + importer-local route bits per entry
     │    │
     │    ├─ apply_manual_code_splitting()             User-defined chunk groups (manualChunks)
+    │    │
+    │    ├─ include_manual_chunk_roots()               Recompute placement bits with non-recursive manual roots
     │    │
     │    ├─ Module assignment         Group modules by identical BitSet → chunks
     │    │
@@ -245,7 +247,11 @@ A consumer-local barrel's ordinary `load_dependencies` is a bundle-wide union, s
 
 The resulting entry bits place each carrier in the same chunk as its CJS importee. Later order lowering assigns the carrier's synthetic statement to that chunk, while the carrier symbol still belongs to the re-exporting module for binding identity. Symbol assignment and deconfliction therefore use the synthetic statement's explicit chunk rather than assuming that every declared symbol is hosted by its owner module. CJS namespace merging and lazy-init transfer skip these carrier records because moving or coalescing their require sites would destroy the per-record route boundary.
 
-After all entries are processed, each module's `bits` encodes which entries can reach it:
+Group matching reads the tags and share counts from the entry walk. After non-recursive manual chunks are assigned, `include_manual_chunk_roots()` recomputes the placement bits from the entries and those chunks. When the walk reaches a member of a manual chunk, it visits that chunk's other members too.
+
+An existing entry chunk can hold a root set when the set matches its entry module and the entry-only assignment maps all unassigned modules in that set to the same chunk. This preserves the placement that entry-based import ordering and facade selection use.
+
+Each module's `bits` encodes which roots can reach it. In an entry-only build:
 
 ```
 shared.js:    bits = 1111  (reachable from all 4 entries)
@@ -259,12 +265,12 @@ This is equivalent to Rollup's "dependent entry set" and esbuild's `EntryBits`. 
 
 After reachability propagation, `split_chunks()` assigns modules to chunks by their `bits` pattern:
 
-1. Entry chunks already exist from `init_entry_point()` with their single-bit patterns
-2. For each non-entry module (iterated in `sorted_modules` order), look up `bits_to_chunk[module.bits]`
+1. Entry chunks already exist from `init_entry_point()`, with placement keys updated by `include_manual_chunk_roots()` when it adds manual roots
+2. For each unassigned module (iterated in `sorted_modules` order), look up `bits_to_chunk[module.bits]`
 3. If a chunk exists for that pattern, add the module to it
 4. Otherwise, create a new `Common` chunk
 
-Modules with the same reachability pattern always land in the same chunk. This is the core invariant that guarantees zero code duplication — a module is emitted exactly once, in the chunk matching its reachability fingerprint.
+Automatic assignment puts unassigned modules with the same root set in the same chunk. Each module is emitted once.
 
 ## Chunk Optimizer
 
@@ -333,7 +339,7 @@ Runtime placement and order lowering can also add exports. `debug_assert_dynamic
 
 The assertion skips two layouts that the check does not cover. In both, `import()` can still give extra keys, as before:
 
-- A group with `includeDependenciesRecursively: false` takes the entry module and leaves its dependencies in the chunk of the entry. That chunk then exports them to the group chunk. The manual code splitting guide documents this (`issues/11155`).
+- A non-recursive manual group hosts the dynamic entry module and imports bindings from dependencies that stay in the dynamic entry chunk.
 - An entry with `preserveEntrySignatures: false` drops its exports, but `register_entry_export_depended_symbols` still imports their bindings into the entry chunk. When only the chunk of a dynamic entry holds such a binding, that chunk exports it, and the entry chunk imports that chunk statically (`optimization/chunk_merging/already_loaded_entry_reexport_service_edge`).
 
 ### Runtime Module Placement

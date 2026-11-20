@@ -1,5 +1,5 @@
 {
-  "_comment": "The non-recursive group `g` takes `e.js` and `s.js` and leaves their dependency `p.js` in the entry chunk `e.js`, which then imports `g.js` while `g.js` imports it back. `main.js` must import `g.js` first: entering the cycle through `e.js` runs `s.js` and `e.js` before `p.js`. Only the order of entry `main` is asserted.",
+  "_comment": "The non-recursive group captures `e.js` and `s.js`. The emitted `e.js` imports a separate `p.js` chunk. Running `main.js` asserts the order `p`, `s`, `e`.",
   "config": {
     "input": [
       {

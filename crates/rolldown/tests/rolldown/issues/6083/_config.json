@@ -1,0 +1,12 @@
+{
+  "config": {
+    "preserveEntrySignatures": "false",
+    "codeSplitting": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        { "name": "manual1", "test": "[\\\\/]manual1\\.js$" },
+        { "name": "manual2", "test": "[\\\\/]manual2\\.js$" }
+      ]
+    }
+  }
+}

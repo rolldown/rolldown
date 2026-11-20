@@ -231,9 +231,8 @@ impl GenerateStage<'_> {
       if self.dynamic_entry_extraction_skip_reason(chunk_graph, chunk_idx, module).is_some() {
         continue;
       }
-      // The check covers only a chunk that holds its entry module. A group with
-      // `includeDependenciesRecursively: false` can take the entry module and leave its
-      // dependencies in this chunk, which then exports them to the group chunk (`issues/11155`).
+      // A non-recursive group can host the entry module while its dependencies stay in this
+      // chunk and supply bindings to the group.
       if chunk_graph.module_to_chunk[module] != Some(chunk_idx) {
         continue;
       }

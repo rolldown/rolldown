@@ -8,12 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 // example2.js
-var example2_exports = /* @__PURE__ */ __exportAll({ example2: () => example2 });
 async function example2() {
 	console.log("example2");
 }
+var example2_exports;
 function init_example2() {
 	return (init_example2 = __esmMin((() => {
+		example2_exports = /* @__PURE__ */ __exportAll({ example2: () => example2 });
 		globalThis.example2Runs = (globalThis.example2Runs ?? 0) + 1;
 	})))();
 }

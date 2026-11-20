@@ -412,7 +412,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // 2. shimmed_exports
     // 3. hoisted_names
     // 4. wrapped module declaration
-    let declaration_of_module_namespace_object =
+    let mut declaration_of_module_namespace_object =
       self.generate_declaration_of_module_namespace_object();
 
     let mut shimmed_exports =
@@ -482,6 +482,18 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
         let mut fn_stmts = allocator::Vec::new_in(self);
         let mut stmts_inside_closure = allocator::Vec::new_in(self);
+        if self.ctx.final_esm_init_metadata.initializes_namespace(self.ctx.idx) {
+          let Statement::VariableDeclaration(mut decl) =
+            declaration_of_module_namespace_object.remove(0)
+          else {
+            unreachable!("the namespace initializer starts with a variable declaration");
+          };
+          let (expr, bindings) = self
+            .var_declaration_to_expr_seq_and_bindings(&mut decl, TraverseState::TopLevel)
+            .expect("the namespace variable must be hoistable");
+          self.top_level_var_bindings.extend(bindings);
+          stmts_inside_closure.push(Statement::new_expression_statement(SPAN, expr, self));
+        }
 
         // Hoist all top-level "var" and "function" declarations out of the closure
         old_body.into_iter().for_each(|mut stmt| match &mut stmt {

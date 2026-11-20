@@ -3,7 +3,7 @@ import { $, execa } from 'execa';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { isWasiTest, testsDir } from 'rolldown-tests/utils';
+import { isWasiTest, projectDir, testsDir } from 'rolldown-tests/utils';
 import { describe, expect, it, test, vi } from 'vitest';
 
 function cliFixturesDir(...joined: string[]) {
@@ -18,6 +18,18 @@ function cleanStdout(stdout: string) {
     .replace(/rolldown v(?<version>\S+) Finished in \d+(\.\d+)? (s|ms|us|ns)/g, '')
     .replace(/* Match `rolldown v*)` */ /rolldown\sv.*\)/, 'rolldown VERSION)');
 }
+
+// Run the CLI entry with node directly: on Windows the `rolldown` bin is a `.cmd` shim, and
+// cancelling it kills only `cmd.exe`, leaving rolldown running.
+function startRolldown(args: string[], options: { cwd: string; cancelSignal: AbortSignal }) {
+  return execa(process.execPath, [projectDir('bin/cli.mjs'), ...args], {
+    ...options,
+    reject: false,
+  });
+}
+
+// Windows has no SIGTERM: cancelling terminates the process instead of letting it exit with 0.
+const CANCELLED_EXIT = process.platform === 'win32' ? [null, 'SIGTERM'] : [0, null];
 
 function createStreamWaiter(stream: NodeJS.ReadableStream) {
   let output = '';
@@ -567,11 +579,7 @@ describe('config', () => {
   it('should handle `-c -w` without `-w` being consumed as config filename (#3248)', async () => {
     const cwd = cliFixturesDir('cli-config-with-watch');
     const controller = new AbortController();
-    execa({
-      cwd,
-      reject: false,
-      cancelSignal: controller.signal,
-    })`rolldown -c -w`;
+    startRolldown(['-c', '-w'], { cwd, cancelSignal: controller.signal });
     await vi.waitFor(
       () => {
         expect(fs.existsSync(path.join(cwd, 'dist/index.js'))).toBe(true);
@@ -603,61 +611,58 @@ describe('watch cli', () => {
     expect(status.exitCode).toBe(0);
   });
 
-  it.skipIf(process.platform === 'win32')('should handle output options', async () => {
+  it('should handle output options', async () => {
     const cwd = cliFixturesDir('watch-cli-option');
     const controller = new AbortController();
-    const process = execa({
+    const child = startRolldown(['index.ts', '-d', 'dist', '-w', '-s'], {
       cwd,
-      reject: false,
       cancelSignal: controller.signal,
-    })`rolldown index.ts -d dist -w -s`;
-    const stdoutWaiter = createStreamWaiter(process.stdout);
+    });
+    const stdoutWaiter = createStreamWaiter(child.stdout);
     await stdoutWaiter.waitFor('waiting for changes...', { timeout: 5_000 });
     await vi.waitFor(() => {
       expect(fs.existsSync(path.join(cwd, 'dist'))).toBe(true);
       expect(fs.existsSync(path.join(cwd, 'dist/index.js.map'))).toBe(true);
     });
     controller.abort();
-    await process;
-    expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
+    await child;
+    expect([child.exitCode, child.signalCode]).toStrictEqual(CANCELLED_EXIT);
   });
 
-  it.skipIf(process.platform === 'win32')('should allow multiply options', async () => {
+  it('should allow multiply options', async () => {
     const cwd = cliFixturesDir('config-multiply-options');
     const controller = new AbortController();
-    const process = execa({
+    const child = startRolldown(['-c', 'rolldown.config.ts', '-d', 'watch-dist-options', '-w'], {
       cwd,
-      reject: false,
       cancelSignal: controller.signal,
-    })`rolldown -c rolldown.config.ts -d watch-dist-options -w`;
-    const stdoutWaiter = createStreamWaiter(process.stdout);
+    });
+    const stdoutWaiter = createStreamWaiter(child.stdout);
     await stdoutWaiter.waitFor('waiting for changes...', { timeout: 5_000 });
     await vi.waitFor(() => {
       expect(fs.existsSync(path.join(cwd, 'watch-dist-options/esm.js'))).toBe(true);
       expect(fs.existsSync(path.join(cwd, 'watch-dist-options/cjs.js'))).toBe(true);
     });
     controller.abort();
-    await process;
-    expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
+    await child;
+    expect([child.exitCode, child.signalCode]).toStrictEqual(CANCELLED_EXIT);
   });
 
-  it.skipIf(process.platform === 'win32')('should allow multiply output', async () => {
+  it('should allow multiply output', async () => {
     const cwd = cliFixturesDir('config-multiply-output');
     const controller = new AbortController();
-    const process = execa({
+    const child = startRolldown(['-c', 'rolldown.config.ts', '-d', 'watch-dist-output', '-w'], {
       cwd,
-      reject: false,
       cancelSignal: controller.signal,
-    })`rolldown -c rolldown.config.ts -d watch-dist-output -w`;
-    const stdoutWaiter = createStreamWaiter(process.stdout);
+    });
+    const stdoutWaiter = createStreamWaiter(child.stdout);
     await stdoutWaiter.waitFor('waiting for changes...', { timeout: 5_000 });
     await vi.waitFor(() => {
       expect(fs.existsSync(path.join(cwd, 'watch-dist-output/esm.js'))).toBe(true);
       expect(fs.existsSync(path.join(cwd, 'watch-dist-output/cjs.js'))).toBe(true);
     });
     controller.abort();
-    await process;
-    expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
+    await child;
+    expect([child.exitCode, child.signalCode]).toStrictEqual(CANCELLED_EXIT);
   });
 
   it('should allow multiply output + call options hook once + call outputOptions hook', async () => {
@@ -687,7 +692,7 @@ describe('watch cli', () => {
         fs.writeFileSync(path.join(cwd, 'b.js'), `import './missing.js';\n`);
       }
       const controller = new AbortController();
-      const child = execa({ cwd, reject: false, cancelSignal: controller.signal })`rolldown -c -w`;
+      const child = startRolldown(['-c', '-w'], { cwd, cancelSignal: controller.signal });
       let stdout: string;
       try {
         await createStreamWaiter(child.stdout).waitFor('waiting for changes...', {
@@ -712,17 +717,17 @@ describe('watch cli', () => {
     }
   });
 
+  // Windows has no SIGTERM to exit with 0 on.
   it.skipIf(process.platform === 'win32')(
     'should close with exit code 0 even when there are errors',
     async () => {
       const cwd = cliFixturesDir('watch-error');
       const controller = new AbortController();
-      const process = execa({
+      const child = startRolldown(['index.ts', '-d', 'dist', '-w'], {
         cwd,
-        reject: false,
         cancelSignal: controller.signal,
-      })`rolldown index.ts -d dist -w`;
-      const stdoutWaiter = createStreamWaiter(process.stdout);
+      });
+      const stdoutWaiter = createStreamWaiter(child.stdout);
       await stdoutWaiter.waitFor('Rebuilt', { timeout: 5_000 });
 
       fs.writeFileSync(
@@ -732,8 +737,8 @@ describe('watch cli', () => {
       try {
         await stdoutWaiter.waitFor('UNRESOLVED_IMPORT', { timeout: 5_000 });
         controller.abort();
-        await process;
-        expect([process.exitCode, process.signalCode]).toStrictEqual([0, null]);
+        await child;
+        expect([child.exitCode, child.signalCode]).toStrictEqual([0, null]);
       } finally {
         fs.writeFileSync(path.join(cwd, 'index.ts'), `var foo = '';\n\nconsole.log(foo);\n`);
       }

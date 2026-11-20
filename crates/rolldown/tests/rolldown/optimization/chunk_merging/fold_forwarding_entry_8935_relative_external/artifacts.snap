@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entries/index.mjs
+
+```js
+export { t as foo } from "../shared/fold_forwarding_entry_8935_relative_external.mjs";
+
+```
+
+## entries/mod.mjs
+
+```js
+export { t as foo } from "../shared/fold_forwarding_entry_8935_relative_external.mjs";
+
+```
+
+## shared/fold_forwarding_entry_8935_relative_external.mjs
+
+```js
+import value from "./sidecar.mjs";
+// is-odd.mjs
+function isOdd(value) {
+	return value % 2 !== 0;
+}
+// index.mjs
+const foo = isOdd(value);
+export { foo as t };
+
+```

@@ -964,15 +964,32 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let Some(&is_pure_annotation_only) = self.side_effect_free_functions.get(&symbol_id) else {
       return;
     };
-    // Direct `eval` and a repeated `var` declaration can replace the function without a write
-    // reference, which `IsNotReassigned` cannot see. The declaration forms do not check this yet.
-    let scoping = self.result.symbol_ref_db.scoping();
-    if eval_can_assign(scoping, symbol_id) || !scoping.symbol_redeclarations(symbol_id).is_empty() {
+    // A repeated `var` declaration can replace the function without a write reference.
+    if !self.result.symbol_ref_db.scoping().symbol_redeclarations(symbol_id).is_empty() {
+      return;
+    }
+    self.mark_side_effect_free_function(
+      symbol_id,
+      is_pure_annotation_only,
+      SymbolRefFlags::ExportedSeparately,
+    );
+  }
+
+  /// Marks a top-level function binding side-effect free, with `extra_flags`. Direct `eval` can
+  /// replace a `let`, a `var` or a function declaration without a write reference, which
+  /// `IsNotReassigned` cannot see, so such a binding is not marked.
+  fn mark_side_effect_free_function(
+    &mut self,
+    symbol_id: SymbolId,
+    is_pure_annotation_only: bool,
+    extra_flags: SymbolRefFlags,
+  ) {
+    if eval_can_assign(self.result.symbol_ref_db.scoping(), symbol_id) {
       return;
     }
     self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
     let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
-    flags.insert(SymbolRefFlags::SideEffectsFreeFunction | SymbolRefFlags::ExportedSeparately);
+    flags.insert(SymbolRefFlags::SideEffectsFreeFunction | extra_flags);
     if is_pure_annotation_only {
       flags.insert(SymbolRefFlags::PureAnnotationOnly);
     }
@@ -1006,12 +1023,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               })
               .unwrap_or((false, false));
             if is_side_effect_free_function {
-              self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-              let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
-              flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
-              if is_pure_annotation_only {
-                flags.insert(SymbolRefFlags::PureAnnotationOnly);
-              }
+              self.mark_side_effect_free_function(
+                symbol_id,
+                is_pure_annotation_only,
+                SymbolRefFlags::empty(),
+              );
             }
           }
         });
@@ -1022,12 +1038,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         self.add_local_export(binding_id.name.as_str(), symbol_id, binding_id.span);
         let empty = fn_decl.is_side_effect_free();
         if empty || fn_decl.pure {
-          self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-          let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
-          flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
-          if fn_decl.pure && !empty {
-            flags.insert(SymbolRefFlags::PureAnnotationOnly);
-          }
+          self.mark_side_effect_free_function(
+            symbol_id,
+            fn_decl.pure && !empty,
+            SymbolRefFlags::empty(),
+          );
         }
       }
       ast::Declaration::ClassDeclaration(cls_decl) => {

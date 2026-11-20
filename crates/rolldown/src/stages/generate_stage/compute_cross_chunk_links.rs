@@ -1771,6 +1771,37 @@ impl GenerateStage<'_> {
     // covers `DynamicImport`-kind entries; emitted entries that are also dynamically
     // imported (e.g. via `this.emitFile` + `import()` in the same build) wouldn't be
     // found that way. Walking import_records directly catches both.
+    // `import()` of a module whose chunk does not evaluate it at load
+    // (`ChunkGraph::lazy_dynamic_defer_host`) reads `init_x` and `x_exports` from the chunk that
+    // holds the module, when the importer is in another chunk. Key: that chunk.
+    let lazy_host_exports: FxHashMap<ChunkIdx, Vec<ModuleIdx>> = {
+      let mut map: FxHashMap<ChunkIdx, Vec<ModuleIdx>> = FxHashMap::default();
+      if self.options.experimental.is_import_defer_enabled() {
+        for (importer_idx, module) in self.link_output.module_table.iter_enumerated() {
+          let Some(module) = module.as_normal() else { continue };
+          let Some(importer_chunk) = chunk_graph.module_to_chunk[importer_idx] else { continue };
+          for rec in &module.import_records {
+            if rec.kind != ImportKind::DynamicImport {
+              continue;
+            }
+            let Some(target) = rec.resolved_module else { continue };
+            let Some(host) =
+              chunk_graph.lazy_dynamic_defer_host(target, &self.link_output.metas[target])
+            else {
+              continue;
+            };
+            if host != importer_chunk {
+              let targets = map.entry(host).or_default();
+              if !targets.contains(&target) {
+                targets.push(target);
+              }
+            }
+          }
+        }
+      }
+      map
+    };
+
     let dynamic_importers_by_target: FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>> = {
       let mut map: FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>> = FxHashMap::default();
       let absorbed_targets: FxHashSet<ModuleIdx> = chunk_graph
@@ -1937,6 +1968,20 @@ impl GenerateStage<'_> {
                 .namespace_object_ref()
                 .expect("dynamic entry should be normal module");
               index_chunk_exported_symbols[chunk_id].entry(ns_ref).or_default();
+            }
+          }
+        }
+
+        if let Some(targets) = lazy_host_exports.get(&chunk_id) {
+          for &target in targets {
+            let meta = &self.link_output.metas[target];
+            let wrapper_ref = order_state.esm_init_target(target, meta).map(|t| t.wrapper_ref);
+            for symbol_ref in
+              [wrapper_ref, self.link_output.module_table[target].namespace_object_ref()]
+                .into_iter()
+                .flatten()
+            {
+              index_chunk_exported_symbols[chunk_id].entry(symbol_ref).or_default();
             }
           }
         }

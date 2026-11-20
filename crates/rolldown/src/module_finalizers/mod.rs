@@ -427,6 +427,195 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     )
   }
 
+  /// `(async (<param>) => <body>)()`
+  fn async_arrow_iife(&self, param: &str, body: Expression<'ast>) -> Expression<'ast> {
+    let mut params = oxc::allocator::Vec::with_capacity_in(1, self);
+    params.push(ast::FormalParameter::new(
+      SPAN,
+      [],
+      ast::BindingPattern::new_binding_identifier(
+        SPAN,
+        oxc::ast::ast::Str::from_str_in(param, self),
+        self,
+      ),
+      None,
+      None,
+      false,
+      None,
+      false,
+      false,
+      self,
+    ));
+    let arrow = Expression::new_arrow_function_expression(
+      SPAN,
+      true,
+      None,
+      ast::FormalParameters::boxed(
+        SPAN,
+        ast::FormalParameterKind::ArrowFormalParameters,
+        params,
+        None,
+        self,
+      ),
+      None,
+      ast::ArrowFunctionBody::from(body),
+      self,
+    );
+    Expression::new_call_expression(
+      SPAN,
+      Expression::new_parenthesized_expression(SPAN, arrow, self),
+      None,
+      [],
+      false,
+      self,
+    )
+  }
+
+  /// `n.<name>`
+  fn chunk_namespace_member(name: &str, builder: &Self) -> Expression<'ast> {
+    Expression::new_static_member_expression(
+      SPAN,
+      Expression::new_identifier(SPAN, "n", builder),
+      IdentifierName::new(SPAN, oxc::ast::ast::Str::from_str_in(name, builder), builder),
+      false,
+      builder,
+    )
+  }
+
+  /// The lowering of `import('./foo')` when the chunk that holds `foo` does not evaluate it at
+  /// load (`ChunkGraph::lazy_dynamic_defer_host`). Each form calls `init_foo` itself.
+  /// - Same chunk: `Promise.resolve().then(() => (init_foo(), foo_exports))`, or
+  ///   `init_foo().then(() => foo_exports)` when `foo` is TLA-tainted.
+  /// - Other chunk: `import('./chunk.js').then((n) => (n.init_foo(), n.foo_exports))`, or
+  ///   `(async (n) => (n = await import('./chunk.js'), await n.init_foo(), n.foo_exports))()`
+  ///   when `foo` is TLA-tainted. In CommonJS output, `require('./chunk.js')` loads the chunk.
+  fn rewrite_dynamic_import_of_lazy_module(
+    &self,
+    expr: &mut ast::ImportExpression<'ast>,
+    importee_idx: ModuleIdx,
+  ) -> Option<Expression<'ast>> {
+    let info = &self.ctx.linking_infos[importee_idx];
+    let target = self.ctx.order_wrap_state.esm_init_target(importee_idx, info)?;
+    let namespace_ref = self.ctx.modules[importee_idx].namespace_object_ref()?;
+    let host = self.ctx.chunk_graph.module_to_chunk[importee_idx]?;
+
+    if host == self.ctx.chunk_idx {
+      let namespace = self.finalized_expr_for_symbol_ref(namespace_ref, false, false).0;
+      let init_expr = self.finalized_expr_for_symbol_ref(target.wrapper_ref, false, false).0;
+      let init_call = Expression::new_call_expression(SPAN, init_expr, None, [], false, self);
+      return Some(if target.tla_tainted {
+        Expression::new_callee_then_call(init_call, namespace, self)
+      } else {
+        Expression::new_promise_resolve_then(
+          Expression::new_seq_in_parens(init_call, namespace, self),
+          self,
+        )
+      });
+    }
+
+    // A lazy host is an entry chunk, so it is a file and has exports.
+    debug_assert!(self.ctx.inline_state.record(host).is_none());
+    let host_chunk = &self.ctx.chunk_graph.chunk_table[host];
+    let name_of = |symbol_ref: SymbolRef| {
+      host_chunk.exports_to_other_chunks.get(&symbol_ref).and_then(|names| names.first())
+    };
+    let init_name = name_of(target.wrapper_ref)?;
+    let namespace_name = name_of(namespace_ref)?;
+    let import_path = self.ctx.chunk.import_path_for(host_chunk);
+    // `import('./chunk.js')`, or `require('./chunk.js')` in CommonJS output.
+    let load_expr = if matches!(self.ctx.options.format, OutputFormat::Cjs) {
+      ast::Expression::new_call_expression(
+        SPAN,
+        ast::Expression::new_identifier(SPAN, "require", self),
+        None,
+        [ast::Argument::new_string_literal(
+          expr.span,
+          oxc::ast::ast::Str::from_str_in(&import_path, self),
+          None,
+          self,
+        )],
+        false,
+        self,
+      )
+    } else {
+      expr.source = Expression::new_string_literal(
+        expr.source.span(),
+        oxc::ast::ast::Str::from_str_in(&import_path, self),
+        None,
+        self,
+      );
+      expr.options = None;
+      Expression::ImportExpression(expr.take_in_box(self))
+    };
+
+    if !target.tla_tainted {
+      // `import('./chunk.js').then((n) => (n.init_foo(), n.foo_exports))`
+      let load_expr = if matches!(self.ctx.options.format, OutputFormat::Cjs) {
+        Expression::new_promise_resolve_then(load_expr, self)
+      } else {
+        load_expr
+      };
+      return Some(Expression::CallExpression(
+        CallExpression::new_then_call_esm_wrappers_with_namespace(
+          load_expr,
+          None,
+          &[init_name.as_str()],
+          namespace_name.as_str(),
+          self,
+        ),
+      ));
+    }
+
+    // `n = await import('./chunk.js')`. In CommonJS output, `await 0` first: `require()` loads
+    // at once, and the module must not load in the call of `import()`.
+    let loaded = if matches!(self.ctx.options.format, OutputFormat::Cjs) {
+      let mut expressions = oxc::allocator::Vec::with_capacity_in(2, self);
+      expressions.push(Expression::new_await_expression(
+        SPAN,
+        Expression::new_number_0(SPAN, self),
+        self,
+      ));
+      expressions.push(load_expr);
+      Expression::new_parenthesized_expression(
+        SPAN,
+        Expression::new_sequence_expression(SPAN, expressions, self),
+        self,
+      )
+    } else {
+      Expression::new_await_expression(SPAN, load_expr, self)
+    };
+    let mut expressions = oxc::allocator::Vec::with_capacity_in(3, self);
+    expressions.push(Expression::new_assignment_expression(
+      SPAN,
+      ast::AssignmentOperator::Assign,
+      ast::AssignmentTarget::new_assignment_target_identifier(SPAN, "n", self),
+      loaded,
+      self,
+    ));
+    // `await n.init_foo()`
+    expressions.push(Expression::new_await_expression(
+      SPAN,
+      Expression::new_call_expression(
+        SPAN,
+        Self::chunk_namespace_member(init_name, self),
+        None,
+        [],
+        false,
+        self,
+      ),
+      self,
+    ));
+    expressions.push(Self::chunk_namespace_member(namespace_name, self));
+    Some(self.async_arrow_iife(
+      "n",
+      Expression::new_parenthesized_expression(
+        SPAN,
+        Expression::new_sequence_expression(SPAN, expressions, self),
+        self,
+      ),
+    ))
+  }
+
   /// `__esmDefer(init_foo)` for a deferred access to a tracked module, else `init_foo()`.
   fn deferred_init_call_expr(&self, target: ModuleIdx) -> ast::Expression<'ast> {
     let target_info = &self.ctx.linking_infos[target];
@@ -593,6 +782,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     self.ctx.chunk.remove_map.get(&self.ctx.idx).is_some_and(|recs| recs.contains(&rec_idx))
   }
 
+  /// The chunk of this module initializes the lazy host of `importee_idx` right after its import
+  /// of the host (`plan_lazy_host_inits`), so the body does not call `init_x()`.
+  /// See internal-docs/import-defer/implementation.md ("Init after the import of a host").
+  fn is_lazy_host_init_moved(&self, importee_idx: ModuleIdx) -> bool {
+    self.ctx.chunk_graph.lazy_host_inits.moved_calls.contains(&(self.ctx.idx, importee_idx))
+  }
+
   /// Captures the finalized `stmt` when its record is transferred, and returns whether it should
   /// be removed here. `finalize_modules` prepends it to the recipient after every finalizer ran.
   /// See internal-docs/ast-mutation/implementation.md ("Transferred Finalized Imports").
@@ -693,7 +889,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     );
     let mut init_exprs = targets.into_iter().filter_map(|target| match target {
       WrappedEsmInitTarget::Module(module_idx) => {
-        if !self.generated_init_esm_importee_ids.insert(module_idx) {
+        if !self.generated_init_esm_importee_ids.insert(module_idx)
+          || self.is_lazy_host_init_moved(module_idx)
+        {
           return None;
         }
         Some(self.import_stmt_init_expr(module_idx, SPAN))
@@ -996,6 +1194,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             return true;
           }
           self.generated_init_esm_importee_ids.insert(importee.idx);
+          if self.is_lazy_host_init_moved(importee.idx) {
+            return true;
+          }
           // `init_foo()` / `await init_foo()`
           let init_expr = self.import_stmt_init_expr(importee.idx, stmt.span());
           *stmt = ast::Statement::new_expression_statement(SPAN, init_expr, self);
@@ -2612,7 +2813,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             for &target in targets {
               let init_expr = match target {
                 WrappedEsmInitTarget::Module(importee_idx) => {
-                  if !self.generated_init_esm_importee_ids.insert(importee_idx) {
+                  if !self.generated_init_esm_importee_ids.insert(importee_idx)
+                    || self.is_lazy_host_init_moved(importee_idx)
+                  {
                     continue;
                   }
                   // An excluded re-export can forward to a TLA-tainted wrapper. The current
@@ -2738,10 +2941,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 {
                   // Recorded so the entry prelude does not call it again ahead of this statement.
                   self.generated_init_esm_importee_ids.insert(importee.idx);
-                  let init_expr = self.import_stmt_init_expr(importee.idx, SPAN);
-                  program
-                    .body
-                    .push(ast::Statement::new_expression_statement(SPAN, init_expr, self));
+                  if !self.is_lazy_host_init_moved(importee.idx) {
+                    let init_expr = self.import_stmt_init_expr(importee.idx, SPAN);
+                    program
+                      .body
+                      .push(ast::Statement::new_expression_statement(SPAN, init_expr, self));
+                  }
                 }
 
                 match importee.exports_kind {
@@ -3743,6 +3948,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     match &self.ctx.modules[importee_idx] {
       Module::Normal(importee) => {
+        // A module of a deferred closure in its own dynamic entry chunk
+        // (`ChunkGraph::lazy_dynamic_defer_host`). The chunk does not evaluate the module at load,
+        // so `import()` loads the chunk and calls `init_x()`.
+        if self
+          .ctx
+          .chunk_graph
+          .lazy_dynamic_defer_host(importee_idx, &self.ctx.linking_infos[importee_idx])
+          .is_some()
+          && let Some(new_expr) = self.rewrite_dynamic_import_of_lazy_module(expr, importee_idx)
+        {
+          *node = new_expr;
+          return true;
+        }
         let Some(&importee_chunk_idx) =
           self.ctx.chunk_graph.entry_module_to_entry_chunk.get(&importee_idx)
         else {

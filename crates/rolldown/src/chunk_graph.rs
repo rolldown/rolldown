@@ -1,6 +1,7 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
+use oxc_str::CompactStr;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx,
   PostChunkOptimizationOperation, RuntimeHelper, SymbolRef, WrapKind,
@@ -78,6 +79,43 @@ pub struct LazyHostInit {
   /// The host of the module.
   pub host: ChunkIdx,
   pub module: ModuleIdx,
+}
+
+impl LazyHostInits {
+  /// The modules that the chunk initializes right after its import of `after_idx`, in order.
+  pub fn inits_after(
+    &self,
+    chunk_idx: ChunkIdx,
+    after_idx: ChunkIdx,
+  ) -> impl Iterator<Item = LazyHostInit> + '_ {
+    self
+      .inits_by_chunk
+      .get(&chunk_idx)
+      .into_iter()
+      .flatten()
+      .filter(move |init| init.after == after_idx)
+      .copied()
+  }
+
+  /// The name under which the host exports the init function of the module (`init_x`, or a short
+  /// name with `minifyInternalExports`).
+  pub fn init_export_name(
+    chunk_graph: &ChunkGraph,
+    link_output: &LinkStageOutput,
+    host_idx: ChunkIdx,
+    module_idx: ModuleIdx,
+  ) -> Option<CompactStr> {
+    let host = &chunk_graph.chunk_table[host_idx];
+    let symbol_db = &link_output.symbol_db;
+    let wrapper_ref = symbol_db.canonical_ref_for(link_output.metas[module_idx].wrapper_ref?);
+    host
+      .exports_to_other_chunks
+      .iter()
+      .filter(|(export_ref, _)| symbol_db.canonical_ref_for(**export_ref) == wrapper_ref)
+      .flat_map(|(_, names)| names)
+      .min_by(|a, b| a.as_str().cmp(b.as_str()))
+      .cloned()
+  }
 }
 
 impl ChunkGraph {

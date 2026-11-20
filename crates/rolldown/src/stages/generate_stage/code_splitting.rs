@@ -1646,7 +1646,11 @@ pub(super) fn module_namespace_is_referenced(
     // The kept deferred namespace object (`x_deferred`) reads the namespace, also when the module
     // has no exports. The finalizer declares it with the namespace.
     true
-  } else if matches!(module.exports_kind, ExportsKind::Esm) {
+  } else if matches!(module.exports_kind, ExportsKind::Esm)
+    // A module of a deferred closure is wrapped as ESM also with no exports, and `import()` of it
+    // can read its namespace from its chunk (`ChunkGraph::lazy_dynamic_defer_host`).
+    || (meta.wrapped_by_import_defer && matches!(module.exports_kind, ExportsKind::None))
+  {
     reason.contains(ModuleNamespaceIncludedReason::Unknown)
       || (reason.contains(ModuleNamespaceIncludedReason::ReExportDynamicExports)
         && meta.has_dynamic_exports)

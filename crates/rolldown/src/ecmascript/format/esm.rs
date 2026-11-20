@@ -102,6 +102,10 @@ pub fn render_esm<'code>(
     source_joiner.append_source(source);
   }
 
+  if let Some(source) = render_lazy_host_init_call(ctx) {
+    source_joiner.append_source(source);
+  }
+
   if let Some(exports) = render_chunk_exports(ctx, None) {
     source_joiner.append_source(exports);
   }
@@ -268,6 +272,26 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
     ));
   }
   (!s.is_empty()).then_some(s)
+}
+
+/// The call in the init chunk of a deferred module (`plan_lazy_host_inits`): `init_x();`, or
+/// `await init_x();` when the module can evaluate top-level await. The init chunk imports
+/// `init_x` from the host of the module.
+/// See internal-docs/import-defer/implementation.md ("Init after the import of a host").
+fn render_lazy_host_init_call(ctx: &GenerateContext<'_>) -> Option<String> {
+  let (_, module) = *ctx.chunk_graph.lazy_host_inits.host_by_init_chunk.get(&ctx.chunk_idx)?;
+  let target = ctx.esm_init_target(module)?;
+  let name = ctx.finalized_string_pattern_for_symbol_ref(
+    target.wrapper_ref,
+    ctx.chunk_idx,
+    &ctx.chunk.canonical_names,
+  );
+  let name = escape_non_ascii(&name, ctx.options.charset.is_ascii());
+  Some(if target.tla_tainted {
+    concat_string!("await ", name, "();\n")
+  } else {
+    concat_string!(name, "();\n")
+  })
 }
 
 fn create_import_declaration(

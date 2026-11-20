@@ -6,3 +6,6 @@ export function wrapper(load) {
 }
 
 export const pages = [wrapper(() => import('./page.js'))];
+import { noop } from './noop.js';
+
+noop(() => import('./unused.js'));

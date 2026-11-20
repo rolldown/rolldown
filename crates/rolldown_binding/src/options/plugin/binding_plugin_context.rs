@@ -83,15 +83,26 @@ impl BindingPluginContext {
         .map_err(|program_err| napi_error::resolve_error(&specifier, program_err))?
         .ok();
 
-      Ok(ret.map(|info| BindingPluginContextResolvedId {
+      let Some(info) = ret else {
+        return Ok(None);
+      };
+      // Report the value this id would be bundled with, not only a hook return.
+      // `ResolvedId::side_effects` stays the raw hook value so loading the module
+      // still runs the normal side-effect decision.
+      let module_side_effects = inner
+        .reported_module_side_effects(&info)
+        .await
+        .map_err(|err| napi::Error::from_reason(err.to_string()))?;
+      Ok(Some(BindingPluginContextResolvedId {
         // TODO: should use `&str` instead. (claude code) Attempt failed due to NAPI object field must be String type
         id: info.id.raw_id().to_string(),
         attributes: to_binding_import_attributes(&info.attributes).unwrap_or_default(),
         external: info.external.into(),
-        module_side_effects: info.side_effects.map(Into::into),
+        module_side_effects: Some(module_side_effects.into()),
         // TODO: should use `&str` instead. (claude code) Attempt failed due to PathBuf conversion requires to_string_lossy()
-        package_json_path:
-          info.package_json.map(|item| item.realpath().to_string_lossy().to_string()),
+        package_json_path: info
+          .package_json
+          .map(|item| item.realpath().to_string_lossy().to_string()),
       }))
     })
   }

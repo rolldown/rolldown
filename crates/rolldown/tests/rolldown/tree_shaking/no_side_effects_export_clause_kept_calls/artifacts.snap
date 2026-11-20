@@ -1,0 +1,129 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## EVAL
+
+```text
+[EVAL] Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[ eval.js:2:1 ]
+   │
+ 2 │ eval("replaced = () => globalThis.calls.push('eval')");
+   │ ──┬─  
+   │   ╰─── Use of direct `eval` here.
+   │ 
+   │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
+───╯
+
+```
+
+# Assets
+
+## early.js
+
+```js
+import { r as noop } from "./iterable.js";
+
+// early.js
+noop(late);
+const late = 0;
+
+```
+
+## entry.js
+
+```js
+import { n as redeclared, r as replaced, t as restDefault } from "./rest-default.js";
+import { n as iterable, r as noop, t as coercible } from "./iterable.js";
+
+// HIDDEN [\0rolldown/runtime.js]
+// getter.cjs
+var require_getter = /* @__PURE__ */ __commonJSMin(((exports) => {
+	Object.defineProperty(exports, "value", { get() {
+		globalThis.calls.push("getter");
+		return 0;
+	} });
+}));
+
+// entry.js
+var import_getter = /* @__PURE__ */ __toESM(require_getter());
+replaced();
+redeclared();
+restDefault();
+const [first] = iterable("destructuring");
+String(coercible());
+noop(import_getter.value);
+noop(import_getter.value);
+try {
+	early();
+} catch (error) {
+	globalThis.calls.push(error.name);
+}
+const late = globalThis.calls.length;
+function early() {
+	noop(late);
+}
+
+```
+
+## iterable.js
+
+```js
+// iterable.js
+/* #__NO_SIDE_EFFECTS__ */
+function iterable(name) {
+	return { *[Symbol.iterator]() {
+		globalThis.calls.push(name);
+	} };
+}
+/* @__NO_SIDE_EFFECTS__ */
+function coercible() {
+	return { [Symbol.toPrimitive]() {
+		globalThis.calls.push("coercion");
+		return "value";
+	} };
+}
+function noop() {}
+
+export { iterable as n, noop as r, coercible as t };
+```
+
+## loops.js
+
+```js
+import { r as noop } from "./iterable.js";
+
+// loops.js
+while (true) noop();
+do
+	noop();
+while (true);
+
+```
+
+## other.js
+
+```js
+import { n as redeclared, r as replaced, t as restDefault } from "./rest-default.js";
+import { n as iterable, r as noop, t as coercible } from "./iterable.js";
+
+export { coercible, iterable, noop, redeclared, replaced, restDefault };
+```
+
+## rest-default.js
+
+```js
+// eval.js
+let replaced = () => {};
+eval("replaced = () => globalThis.calls.push('eval')");
+
+// redeclared.js
+var redeclared = /* #__NO_SIDE_EFFECTS__ */ () => {};
+var redeclared = () => globalThis.calls.push("redeclared");
+
+// rest-default.js
+function restDefault(...[value = globalThis.calls.push("rest default")]) {}
+
+export { redeclared as n, replaced as r, restDefault as t };
+```

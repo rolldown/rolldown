@@ -9,7 +9,7 @@ use std::ops::{Deref, DerefMut};
 
 use itertools::Itertools;
 use oxc_index::IndexVec;
-use oxc_str::CompactStr;
+use oxc_str::{CompactStr, format_compact_str};
 
 #[derive(Debug, Clone)]
 pub struct NormalModule {
@@ -68,7 +68,15 @@ impl NormalModule {
       dynamically_imported_ids: self.ecma_view.dynamically_imported_ids.clone(),
       // https://github.com/rollup/rollup/blob/7a8ac460c62b0406a749e367dbd0b74973282449/src/Module.ts#L331
       exports: {
-        let mut exports = self.ecma_view.named_exports.keys().cloned().collect_vec();
+        let mut exports = self
+          .ecma_view
+          .named_exports
+          .keys()
+          .map(|name| {
+            // A lone `*` represents an `export * from` record.
+            if name.starts_with('*') { format_compact_str!("*{name}") } else { name.clone() }
+          })
+          .collect_vec();
         if let Some(e) = raw_import_records {
           exports.extend(
             e.iter()
@@ -88,6 +96,7 @@ impl NormalModule {
         exports
       },
       input_format: self.ecma_view.exports_kind,
+      module_side_effects: Some(self.ecma_view.reported_side_effects),
     }
   }
 

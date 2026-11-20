@@ -280,6 +280,8 @@ For each common chunk, translates its `bits` to chunk indices (bit positions dir
 - **Change an entry's export signature** — when `preserveEntrySignatures: 'strict'`, adding modules to an entry chunk would expose symbols that the original entry didn't export. Only an export whose _canonical_ symbol is owned by one of the merged modules counts: a chunk exports the symbols it declares, so a re-export barrel resolving its names to symbols living elsewhere is served by whichever chunk holds those owners, and folding the barrel in adds nothing.
 - **Pollute dynamic-import namespaces** — dynamic entries that form static cycles are not merged asymmetrically when a non-target pending entry module has observable exports. The check uses linked export metadata, so re-export-only entries (`export * from ...`) are treated the same as direct named exports.
 
+The temporary graph includes entry-export service dependencies from `entry_export_service_targets`, including those of empty entry facades. These use the same preserved-entry rules as cross-chunk linking and assume every registered export is live, because later inclusion replays can add uses. Otherwise an empty re-export entry can absorb a common chunk before its eventual export imports reveal a cycle (#11068).
+
 The namespace guard checks only the other pending entry modules. Other merged modules can still add keys to the namespace of a dynamic entry. [Dynamic Entry Namespaces](#dynamic-entry-namespaces) handles those keys after the merge.
 
 The trade-off of merging: entry chunks may include modules that not all consumers of that entry need. This adds a small amount of unnecessary code loading but significantly reduces chunk count and HTTP requests.

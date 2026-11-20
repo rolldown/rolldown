@@ -1,0 +1,89 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## EVAL
+
+```text
+[EVAL] Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+    ╭─[ lib.js:10:1 ]
+    │
+ 10 │ eval(`
+    │ ──┬─  
+    │   ╰─── Use of direct `eval` here.
+    │ 
+    │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
+────╯
+
+```
+
+## EVAL
+
+```text
+[EVAL] Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+   ╭─[ local.js:6:3 ]
+   │
+ 6 │   eval("local = () => globalThis.calls.push('local')");
+   │   ──┬─  
+   │     ╰─── Use of direct `eval` here.
+   │ 
+   │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
+───╯
+
+```
+
+# Assets
+
+## lib.js
+
+```js
+// lib.js
+let replacedLet = () => {};
+var replacedVar = () => {};
+function replacedFunction() {
+	return 1;
+}
+function replacedEmpty() {}
+const kept = /* @__NO_SIDE_EFFECTS__ */ () => {};
+eval(`
+  replacedLet = () => globalThis.calls.push('let');
+  replacedVar = () => globalThis.calls.push('var');
+  replacedFunction = () => globalThis.calls.push('function');
+  replacedEmpty = () => globalThis.calls.push('empty function');
+`);
+
+export { replacedVar as i, replacedFunction as n, replacedLet as r, replacedEmpty as t };
+```
+
+## main.js
+
+```js
+import { i as replacedVar, n as replacedFunction, r as replacedLet, t as replacedEmpty } from "./lib.js";
+
+// local.js
+function local() {
+	return 1;
+}
+function setup() {
+	eval("local = () => globalThis.calls.push('local')");
+}
+setup();
+local();
+
+// main.js
+replacedLet();
+replacedVar();
+replacedFunction();
+replacedEmpty();
+replacedLet();
+
+```
+
+## other.js
+
+```js
+import { r as replacedLet } from "./lib.js";
+
+export { replacedLet };
+```

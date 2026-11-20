@@ -19,6 +19,10 @@ pub struct ChunkGraph {
   /// If the namespace is not merged, `Key` == `Value`.
   /// If the namespace is merged, `Key` is the original namespace symbol, and `Value` is the linked namespace symbol.
   pub finalized_cjs_ns_map_idx_vec: IndexVec<ChunkIdx, FxHashMap<SymbolRef, SymbolRef>>,
+  /// The reference IDs of `this.emitFile({ type: 'chunk' })`, keyed by the entry chunk of each
+  /// emitted entry. The facade elimination does not move them, so a removed facade keeps its
+  /// reference IDs. Read the file of a reference ID through
+  /// [`ChunkGraph::emitted_chunk_reference_ids_by_file`].
   pub chunk_idx_to_reference_ids: FxHashMap<ChunkIdx, Vec<ArcStr>>,
   pub common_chunk_exported_facade_chunk_namespace: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>>,
   /// Modules from emitted chunks with AllowExtension that were merged into common chunks.
@@ -47,6 +51,31 @@ impl ChunkGraph {
       common_chunk_preserve_export_names_modules: FxHashMap::default(),
       post_chunk_optimization_operations: FxHashMap::default(),
     }
+  }
+
+  /// The reference IDs of the emitted chunks, keyed by the chunk whose file holds the exports of
+  /// each emitted entry. When the chunk optimizer removes the facade of an emitted entry, the chunk
+  /// that holds the entry module exports the signature of the entry, and the removed facade is not
+  /// in the output. Then the reference IDs of the facade name the file of the chunk in
+  /// `entry_module_to_entry_chunk`. See internal-docs/code-splitting/implementation.md
+  /// ("ChunkGraph").
+  pub fn emitted_chunk_reference_ids_by_file(&self) -> FxHashMap<ChunkIdx, Vec<ArcStr>> {
+    let mut reference_ids_by_file: FxHashMap<ChunkIdx, Vec<ArcStr>> = FxHashMap::default();
+    for (&chunk_idx, reference_ids) in &self.chunk_idx_to_reference_ids {
+      let file_chunk_idx = match self.chunk_table[chunk_idx].kind {
+        ChunkKind::EntryPoint { module, .. }
+          if self.post_chunk_optimization_operations.contains_key(&chunk_idx) =>
+        {
+          self.entry_module_to_entry_chunk.get(&module).copied().unwrap_or(chunk_idx)
+        }
+        ChunkKind::EntryPoint { .. } | ChunkKind::Common => chunk_idx,
+      };
+      reference_ids_by_file
+        .entry(file_chunk_idx)
+        .or_default()
+        .extend(reference_ids.iter().cloned());
+    }
+    reference_ids_by_file
   }
 
   pub fn add_chunk(&mut self, chunk: Chunk) -> ChunkIdx {

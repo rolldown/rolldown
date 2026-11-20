@@ -631,6 +631,7 @@ pub struct ChunkGraph {
 
 - `chunk_table` — All chunks, indexed by `ChunkIdx`. May contain removed chunks (marked in `post_chunk_optimization_operations`) since re-indexing would be expensive.
 - `module_to_chunk` — Which chunk each module belongs to. O(1) lookup.
+- `chunk_idx_to_reference_ids` — The reference IDs of `this.emitFile({ type: 'chunk' })`, keyed by the entry chunk of each emitted entry. `create_entry_facade` moves them to the new facade. The facade elimination does not move them, so a removed facade keeps its reference IDs. `emitted_chunk_reference_ids_by_file` gives the file of each reference ID. For a removed facade, the file is the chunk in `entry_module_to_entry_chunk`: the chunk that holds the module and the exports of the entry. The facade elimination and `apply_common_chunk_merges` update that map, and `restore_order_wrap_entry_facades` sets it back to a restored facade. `set_emitted_chunk_preliminary_filenames` and `set_emitted_chunk_filenames` use the same function. Thus `getFileName()` names a file of the output, also with a `[hash]` pattern (`plugin/context/emit-chunk-in-code-splitting-group`).
 
 ## Related
 

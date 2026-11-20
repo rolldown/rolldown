@@ -146,9 +146,10 @@ interface SpecifiedModuleOptions {
    * 2. {@linkcode Plugin.load | load} hook's returned `moduleSideEffects` option
    * 3. {@linkcode Plugin.resolveId | resolveId} hook's returned `moduleSideEffects` option
    * 4. {@linkcode TreeshakingOptions.moduleSideEffects | treeshake.moduleSideEffects} option
-   * 5. `sideEffects` field in the `package.json` file, only when Rolldown has the `package.json`
-   *    data of the module: when Rolldown's own resolver resolved it, or when the resolution that
-   *    created it returned `packageJsonPath`
+   * 5. `sideEffects` field in the `package.json` file. Rolldown uses this field only when its own
+   *    resolver resolved the module. This is also the case when a `resolveId` hook returned a
+   *    `this.resolve` result that Rolldown's resolver gave. When a hook returned its own id, such
+   *    as a virtual module, Rolldown does not use the field.
    * 6. `true` (default)
    *
    * `this.getModuleInfo(id).moduleSideEffects` and `this.resolve(id).moduleSideEffects` report

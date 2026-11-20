@@ -1,7 +1,8 @@
 use itertools::Itertools;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkReasonType, EntryPointKind, ImportKind, ImportRecordMeta,
-  ModuleIdx, RuntimeHelper, StmtInfoMeta, SymbolOrMemberExprRef, WrapKind,
+  ModuleIdx, NormalModule, RuntimeHelper, StmtInfo, StmtInfoMeta, SymbolOrMemberExprRef, WrapKind,
+  side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -192,23 +193,7 @@ impl GenerateStage<'_> {
         }
       }
     }
-    for component in petgraph::algo::tarjan_scc(&graph) {
-      let selected =
-        component.iter().copied().filter(|chunk_idx| candidates.contains(chunk_idx)).collect_vec();
-      if selected.is_empty() || selected.len() == component.len() {
-        continue;
-      }
-      for chunk_idx in selected {
-        candidates.shift_remove(&chunk_idx);
-        tracing::debug!(
-          target: LOG_TARGET,
-          chunk = chunk_idx.raw(),
-          modules = ?self.module_ids_of(&chunk_graph.chunk_table[chunk_idx]),
-          reason = "in a static import cycle with a file",
-          "kept as file"
-        );
-      }
-    }
+    self.keep_cycle_members_as_files(&graph, &mut candidates, chunk_graph);
 
     // A dynamic entry host that another chunk's `import()` loads gets a loader file, unless every
     // path that runs such an `import()` has registered the record already. The loaders are created
@@ -394,7 +379,11 @@ impl GenerateStage<'_> {
         return Some(reason);
       }
       let meta = &self.link_output.metas[module_idx];
-      if order_state.esm_init_target(module_idx, meta).is_none()
+      // Without strict execution order, `inline_common_chunk_module_bailout` already rejected an
+      // unwrapped member whose statements run for their effect alone; an unwrapped member runs in
+      // the factory.
+      if self.options.is_strict_execution_order_enabled()
+        && order_state.esm_init_target(module_idx, meta).is_none()
         && !matches!(meta.wrap_kind(), WrapKind::Cjs)
       {
         return Some("member has no wrapper");
@@ -483,6 +472,26 @@ impl GenerateStage<'_> {
     if module.meta.has_eval() {
       return Some("member uses direct eval");
     }
+    // A factory runs when its first reader starts, after that reader's earlier imports and,
+    // unlike the file it replaces, after its later ones too. An analyzed verdict also counts the
+    // effects of every dependency, but a dependency outside the record still runs before the
+    // carrier, so only the member's own included statements decide. Without strict execution
+    // order, an effect that initializes a binding may move with it; a statement that binds
+    // nothing runs for its effect alone and keeps the member a file.
+    if !self.options.is_strict_execution_order_enabled()
+      && matches!(meta.wrap_kind(), WrapKind::None)
+      && module.side_effects.has_side_effects()
+      && (!matches!(module.side_effects, DeterminedSideEffects::Analyzed(_))
+        || self.link_output.stmt_infos[module_idx].iter_enumerated().any(
+          |(stmt_info_idx, stmt_info)| {
+            meta.stmt_info_included.has_bit(stmt_info_idx)
+              && stmt_info.eval_flags.has_side_effect_for_tree_shaking()
+              && !Self::stmt_only_initializes_bindings(module, stmt_info)
+          },
+        ))
+    {
+      return Some("member has side effects and strict execution order is off");
+    }
     for (stmt_info_idx, stmt_info) in self.link_output.stmt_infos[module_idx].iter_enumerated() {
       if !meta.stmt_info_included.has_bit(stmt_info_idx) {
         continue;
@@ -536,6 +545,42 @@ impl GenerateStage<'_> {
     None
   }
 
+  /// Removes the candidates in a static import cycle with a file. Without strict execution order a
+  /// factory runs its unwrapped members' code when required, so a cycle of records would read a
+  /// record whose factory is still running, and every candidate in a cycle stays a file.
+  fn keep_cycle_members_as_files(
+    &self,
+    graph: &petgraph::prelude::DiGraphMap<ChunkIdx, ()>,
+    candidates: &mut FxIndexSet<ChunkIdx>,
+    chunk_graph: &ChunkGraph,
+  ) {
+    let strict = self.options.is_strict_execution_order_enabled();
+    for component in petgraph::algo::tarjan_scc(graph) {
+      let selected =
+        component.iter().copied().filter(|chunk_idx| candidates.contains(chunk_idx)).collect_vec();
+      if selected.is_empty() || (strict && selected.len() == component.len()) {
+        continue;
+      }
+      if component.len() == 1 {
+        continue;
+      }
+      for chunk_idx in selected {
+        candidates.shift_remove(&chunk_idx);
+        tracing::debug!(
+          target: LOG_TARGET,
+          chunk = chunk_idx.raw(),
+          modules = ?self.module_ids_of(&chunk_graph.chunk_table[chunk_idx]),
+          reason = if strict {
+            "in a static import cycle with a file"
+          } else {
+            "in a static import cycle and strict execution order is off"
+          },
+          "kept as file"
+        );
+      }
+    }
+  }
+
   /// Common chunks that dynamic entry modules' chunks were merged into, with those modules: every
   /// module that names the chunk in `entry_module_to_entry_chunk` is a dynamic entry (and no other
   /// kind of entry) placed in the chunk, whose namespace the chunk exports for the `import()` call
@@ -568,6 +613,25 @@ impl GenerateStage<'_> {
     }
     hosts.retain(|chunk_idx, _| !rejected.contains(chunk_idx));
     hosts
+  }
+
+  /// A declaration, or an import whose wrapper call (`require_x()`, `init_x()`) produces the
+  /// bindings it imports. A bare import or an export star binds nothing of its own.
+  fn stmt_only_initializes_bindings(module: &NormalModule, stmt_info: &StmtInfo) -> bool {
+    let mut is_import = false;
+    for rec_idx in &stmt_info.import_records {
+      let rec = &module.import_records[*rec_idx];
+      if !matches!(rec.kind, ImportKind::Import) {
+        continue;
+      }
+      is_import = true;
+      if rec.meta.contains(ImportRecordMeta::IsExportStar)
+        || !module.named_imports.values().any(|named| named.record_idx == *rec_idx)
+      {
+        return false;
+      }
+    }
+    is_import || !stmt_info.declared_symbols.is_empty()
   }
 
   fn foreign_exported_owner_chunks(

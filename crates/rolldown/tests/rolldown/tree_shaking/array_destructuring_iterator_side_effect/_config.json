@@ -1,0 +1,11 @@
+{
+  "_comment": "Array destructuring calls the iterator of the value, so the declarations must stay even when the value is unused and comes from a side-effect-free call. Only the destructuring of an array literal should be removed. The other entry puts lib.js in a shared chunk.",
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "other", "import": "./other.js" }
+    ],
+    "minify": false
+  },
+  "configVariants": [{ "minify": true, "_snapshot": false }]
+}

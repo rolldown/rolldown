@@ -14,7 +14,7 @@ The order decision can only be made after provisional chunk placement. Reusing `
 - User module and statement liveness are fixed before order planning starts.
 - Order lowering may add only synthetic wrapper, init, runtime, facade, symbol, and topology state.
 - Finalization and cross-chunk linking consume interop wrappers and order wrappers through an explicit shared read interface.
-- Disabling `strictExecutionOrder` leaves order-wrapper state empty and disables execution-order facades.
+- Strict order analysis and entry-trigger facade creation require `strictExecutionOrder`. [Manual groups also use order wrappers to break cycles caused by awaited dynamic entry facades.](./implementation.md#pipeline)
 - The external differential fuzzer remains the semantic verifier. Rolldown does not add a test-only execution model or assertions that merely turn lowering bugs into build failures.
 
 ## Modes
@@ -393,7 +393,7 @@ Rolldown could independently simulate final execution and reject output when the
 
 ### `OrderWrapState`
 
-Generate-stage finalization creates a side table that remains empty unless strict lowering records order-owned state:
+Generate-stage finalization stores order wrappers from strict execution-order planning and eligible manual-group imports in `OrderWrapState`.
 
 ```rust
 pub struct OrderWrapState {
@@ -635,7 +635,7 @@ link + tree shaking
 - Wrap-all and on-demand preserve the same link-stage statement and binding liveness; only their wrapper plans may differ.
 - Emit, Register, Project, and pre-chunk placement resolve consumer-local records through the same target model.
 - Every order-wrapped entry has an explicit entry trigger.
-- Execution-order wrappers and facades require `strictExecutionOrder`; signature facades obey `preserveEntrySignatures` independently.
+- Strict ordering can create entry-trigger facades. The grouped dynamic import path removes eligible empty facades. Signature facades obey `preserveEntrySignatures` independently.
 
 ## Verification
 

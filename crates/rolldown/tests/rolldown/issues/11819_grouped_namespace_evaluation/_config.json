@@ -1,0 +1,8 @@
+{
+  "config": {
+    "codeSplitting": {
+      "groups": [{ "name": "group", "test": "(?:main|target)\\.js$" }]
+    }
+  },
+  "snapshot": false
+}

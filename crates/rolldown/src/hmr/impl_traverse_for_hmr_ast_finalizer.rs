@@ -129,7 +129,6 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
           empty_exports_object,
           true,
           false,
-          false,
           self,
         )],
         self,

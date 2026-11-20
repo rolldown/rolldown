@@ -111,7 +111,6 @@ pub trait HmrAstBuilder<'any, 'ast> {
             namespace_object_ref_expr,
             true,
             false,
-            false,
             &self.builder(),
           )],
           &self.builder(),

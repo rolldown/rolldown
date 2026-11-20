@@ -419,7 +419,6 @@ pub trait ObjectPropertyKindFactoryExt<'ast> {
       Expression::new_arrow_returning(expr, builder),
       true,
       false,
-      computed,
       builder,
     )
   }
@@ -490,7 +489,6 @@ pub trait ClassElementFactoryExt<'ast> {
         false,
         builder,
       )),
-      false,
       true, // static
       false,
       false,
@@ -837,7 +835,7 @@ pub trait StatementFactoryExt<'ast> {
         [ObjectPropertyKind::new_object_property(
           SPAN,
           PropertyKind::Init,
-          PropertyKey::new_string_literal(
+          PropertyKey::new_static_string_literal(
             SPAN,
             oxc::ast::ast::Str::from_str_in(stable_id, builder),
             None,
@@ -845,7 +843,6 @@ pub trait StatementFactoryExt<'ast> {
           ),
           Expression::ArrowFunctionExpression(arrow_expr),
           true,
-          false,
           false,
           builder,
         )],
@@ -897,14 +894,13 @@ pub trait StatementFactoryExt<'ast> {
         [ObjectPropertyKind::new_object_property(
           SPAN,
           PropertyKind::Init,
-          PropertyKey::new_string_literal(
+          PropertyKey::new_static_string_literal(
             SPAN,
             oxc::ast::ast::Str::from_str_in(stable_id, builder),
             None,
             builder,
           ),
           Expression::ArrowFunctionExpression(arrow_expr),
-          false,
           false,
           false,
           builder,

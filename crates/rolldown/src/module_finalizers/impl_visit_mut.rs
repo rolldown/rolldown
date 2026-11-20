@@ -1025,7 +1025,6 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           Span::default(),
           ast::PropertyKey::new_static_identifier(prop.span, prop.binding.name, self),
           binding,
-          false,
           self,
         );
       } else {

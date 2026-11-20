@@ -1174,23 +1174,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           return None;
         }
         // prop_name: () => returned
-        let prop_name = export;
         let (returned, _) =
           self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
-        // `__proto__` has special semantics in object literals - it sets the prototype
-        // instead of creating a property. Use computed property syntax for it.
-        let key = if is_validate_identifier_name(prop_name) && prop_name != "__proto__" {
-          ast::PropertyKey::StaticIdentifier(
-            IdentifierName::new_id_name(SPAN, prop_name, self).into_in(self.allocator()),
-          )
-        } else {
-          ast::PropertyKey::new_string_literal(
-            SPAN,
-            oxc::ast::ast::Str::from_str_in(prop_name, self),
-            None,
-            self,
-          )
-        };
+        let key = self.own_data_property_key(export);
         Some(ast::ObjectPropertyKind::new_object_property(
           SPAN,
           ast::PropertyKind::Init,
@@ -1198,7 +1184,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           Expression::new_arrow_returning(returned, self),
           false,
           false,
-          prop_name == "__proto__",
           self,
         ))
       },
@@ -2023,7 +2008,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         ast::Expression::new_null_literal(SPAN, self),
         false,
         false,
-        false,
         self,
       )],
       self,
@@ -2071,7 +2055,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         ast::PropertyKind::Init,
         ast::PropertyKey::new_static_identifier(SPAN, name, self),
         value,
-        false,
         false,
         false,
         self,
@@ -3219,6 +3202,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ))
   }
 
+  /// An own key in an object initializer. The computed form of `__proto__` avoids setting the
+  /// object's prototype.
+  fn own_data_property_key(&self, name: &str) -> ast::PropertyKey<'ast> {
+    let value = ast::Str::from_str_in(name, self);
+    if name == "__proto__" {
+      ast::PropertyKey::new_string_literal(SPAN, value, None, self)
+    } else if is_validate_identifier_name(name) {
+      ast::PropertyKey::new_static_identifier(SPAN, value, self)
+    } else {
+      ast::PropertyKey::new_static_string_literal(SPAN, value, None, self)
+    }
+  }
+
   /// Makes the options of `import()` of an external carry the module's final attributes, like
   /// the `with` clause of a static import (`ecmascript/format/esm.rs`). `written` is what the
   /// scanner read from the options; options it read nothing from are only replaced when there
@@ -3238,12 +3234,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return;
     }
     let entries = attributes.iter().map(|(key, value)| {
-      let is_proto = key == "__proto__";
-      let key = if is_validate_identifier_name(key) && !is_proto {
-        ast::PropertyKey::new_static_identifier(SPAN, ast::Str::from_str_in(key, self), self)
-      } else {
-        ast::PropertyKey::new_string_literal(SPAN, ast::Str::from_str_in(key, self), None, self)
-      };
+      let key = self.own_data_property_key(key);
       let value =
         ast::Expression::new_string_literal(SPAN, ast::Str::from_str_in(value, self), None, self);
       ObjectPropertyKind::new_object_property(
@@ -3253,7 +3244,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         value,
         false,
         false,
-        is_proto,
         self,
       )
     });
@@ -3271,7 +3261,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         with,
         false,
         false,
-        false,
         self,
       )],
       self,
@@ -3282,19 +3271,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// unless the options already have one.
   fn rename_import_options_assert_key(&self, expr: &mut ast::ImportExpression<'ast>) {
     let Some(Expression::ObjectExpression(options)) = &mut expr.options else { return };
-    let static_key = |property: &ObjectPropertyKind<'ast>| match property {
-      ObjectPropertyKind::ObjectProperty(property) if !property.computed => {
-        property.key.static_name()
-      }
-      _ => None,
+    let literal_key = |property: &ObjectPropertyKind<'ast>| match property {
+      ObjectPropertyKind::ObjectProperty(property) => property.key.literal_name(),
+      ObjectPropertyKind::SpreadProperty(_) => None,
     };
-    if options.properties.iter().any(|property| static_key(property).is_some_and(|k| k == "with")) {
+    if options.properties.iter().any(|property| literal_key(property).is_some_and(|k| k == "with"))
+    {
       return;
     }
     let assert = options
       .properties
       .iter_mut()
-      .find(|property| static_key(property).is_some_and(|key| key == "assert"));
+      .find(|property| literal_key(property).is_some_and(|key| key == "assert"));
     if let Some(ObjectPropertyKind::ObjectProperty(property)) = assert {
       property.key = ast::PropertyKey::new_static_identifier(SPAN, "with", self);
     }

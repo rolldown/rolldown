@@ -1,6 +1,6 @@
 use arcstr::ArcStr;
 use oxc::{
-  allocator::Allocator,
+  allocator::{Allocator, ReplaceWith},
   ast::{ast, builder::AstBuilder},
   ast_visit::{VisitJsMut, walk_js_mut},
   span::{SPAN, SourceType, Span},
@@ -74,12 +74,17 @@ impl<'a> VisitJsMut<'a> for JsonNormalizer<'a> {
       let ast::ObjectPropertyKind::ObjectProperty(object_property) = &mut property else {
         unreachable!("JSON objects only contain properties");
       };
-      let ast::PropertyKey::StringLiteral(key) = &object_property.key else {
+      let ast::PropertyKey::StaticStringLiteral(key) = &object_property.key else {
         unreachable!("JSON property names are strings");
       };
       let name = key.value;
       // JSON.parse creates an own data property, including for escaped __proto__ spellings.
-      object_property.computed = name == "__proto__";
+      if name == "__proto__" {
+        object_property.key.replace_with(|key| {
+          let ast::PropertyKey::StaticStringLiteral(key) = key else { unreachable!() };
+          ast::PropertyKey::StringLiteral(key)
+        });
+      }
       if let Some(&index) = indices.get(&name) {
         // Duplicate keys retain their first insertion position and their last value.
         object.properties[index] = property;
@@ -182,12 +187,18 @@ pub fn json_value_to_expression<'a>(
     Value::Object(obj) => {
       let properties = oxc::allocator::Vec::from_iter_in(
         obj.iter().map(|(key, val)| {
-          let key_expr = oxc::ast::ast::PropertyKey::new_string_literal(
+          let literal = ast::StringLiteral::boxed(
             SPAN,
             oxc::ast::ast::Str::from_str_in(key, builder),
             None,
             builder,
           );
+          // A computed key preserves JSON's own __proto__ data property.
+          let key_expr = if key == "__proto__" {
+            ast::PropertyKey::StringLiteral(literal)
+          } else {
+            ast::PropertyKey::StaticStringLiteral(literal)
+          };
           let value_expr = json_value_to_expression(val, builder);
 
           oxc::ast::ast::ObjectPropertyKind::new_object_property(
@@ -197,8 +208,6 @@ pub fn json_value_to_expression<'a>(
             value_expr,
             false, // method
             false, // shorthand
-            // JSON treats this as an own data property, not an object literal's prototype setter.
-            key == "__proto__", // computed
             builder,
           )
         }),
@@ -253,7 +262,7 @@ mod tests {
     let properties =
       object.properties.iter().map(|property| property.as_property().unwrap()).collect::<Vec<_>>();
     assert_eq!(properties.len(), 3);
-    let ast::PropertyKey::StringLiteral(first_key) = &properties[0].key else {
+    let ast::PropertyKey::StaticStringLiteral(first_key) = &properties[0].key else {
       panic!("JSON property names must remain strings");
     };
     assert_eq!(first_key.value.encode_utf16().collect::<Vec<_>>(), [0xd800]);
@@ -261,9 +270,10 @@ mod tests {
       panic!("the last duplicate value must survive");
     };
     assert_eq!(number.value.to_bits(), 2.0_f64.to_bits());
-    assert!(properties[1].key.is_specific_static_name("kept"));
-    assert!(properties[2].key.is_specific_static_name("__proto__"));
-    assert!(properties[2].computed);
+    assert!(properties[1].key.is_specific_literal_name("kept"));
+    assert!(
+      matches!(&properties[2].key, ast::PropertyKey::StringLiteral(key) if key.value == "__proto__")
+    );
   }
 
   #[test]

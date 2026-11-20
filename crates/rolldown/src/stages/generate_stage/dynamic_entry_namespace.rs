@@ -35,8 +35,8 @@ impl GenerateStage<'_> {
   /// - All known uses of the namespace read exports of the module
   ///   (`dynamic_entry_partial_usage_allows_plain_merge`).
   /// - The importers already read an extracted namespace of the module from `chunk_idx`.
-  /// - Each `import()` of the module reads a binding that the chunk exports for `import defer`
-  ///   (`dynamic_entry_reads_defer_bindings`).
+  /// - Each `import()` and `import.defer()` of the module reads a binding that the chunk exports
+  ///   for `import defer` (`dynamic_entry_reads_defer_bindings`).
   pub(super) fn dynamic_entry_namespace_is_observable(
     &self,
     chunk_graph: &ChunkGraph,
@@ -54,10 +54,13 @@ impl GenerateStage<'_> {
       && !self.dynamic_entry_reads_defer_bindings(chunk_graph, chunk_idx, module)
   }
 
-  /// Whether each `import()` of the dynamic entry `module` reads a binding that the chunk
-  /// `chunk_idx` exports for `import defer`, not the namespace of the chunk
-  /// (`rewrite_dynamic_import_of_lazy_module`). The chunk must be the lazy host of the module
-  /// (`ChunkGraph::lazy_dynamic_defer_host`). `import()` reads `init_x` and `x_exports`.
+  /// Whether each `import()` and `import.defer()` of the dynamic entry `module` reads a binding
+  /// that the chunk `chunk_idx` exports for `import defer`, not the namespace of the chunk
+  /// (`rewrite_dynamic_import_of_defer_target`). The chunk must hold the module. The module must
+  /// be an `import.defer()` target, or the chunk must be its lazy host
+  /// (`ChunkGraph::lazy_dynamic_defer_host`). `import()` reads `init_x` and `x_exports`, or only
+  /// `x_exports` for a module with no wrapper (a JSON module, when `strictExecutionOrder` does not
+  /// wrap it). `import.defer()` reads `x_deferred`.
   fn dynamic_entry_reads_defer_bindings(
     &self,
     chunk_graph: &ChunkGraph,
@@ -65,7 +68,8 @@ impl GenerateStage<'_> {
     module: ModuleIdx,
   ) -> bool {
     let meta = &self.link_output.metas[module];
-    chunk_graph.lazy_dynamic_defer_host(module, meta) == Some(chunk_idx)
+    chunk_graph.module_to_chunk[module] == Some(chunk_idx)
+      && (meta.dynamic_defer_target || chunk_graph.lazy_dynamic_defer_host(module, meta).is_some())
   }
 
   /// Why the importers of the dynamic entry `module` in the chunk `chunk_idx` cannot read an

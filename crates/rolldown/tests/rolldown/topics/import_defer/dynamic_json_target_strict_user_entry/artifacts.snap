@@ -1,0 +1,233 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## data.js
+
+```js
+import { n as b, o as init_data, r as data_default, t as a } from "./data2.js";
+init_data();
+export { a, b, data_default as default };
+
+```
+
+## data2.js
+
+```js
+import { n as __esmMin, r as __exportAll, t as __deferNs } from "./rolldown-runtime.js";
+// data.json
+var data_exports = /* @__PURE__ */ __exportAll({
+	a: () => a,
+	b: () => b,
+	default: () => data_default
+});
+var data_deferred = /* @__PURE__ */ __deferNs(() => (init_data(), data_exports), data_exports);
+var a, b, data_default;
+function init_data() {
+	return (init_data = __esmMin((() => {
+		a = 1;
+		b = "x";
+		data_default = {
+			a,
+			b
+		};
+	})))();
+}
+export { data_exports as a, data_deferred as i, b as n, init_data as o, data_default as r, a as t };
+
+```
+
+## main.js
+
+```js
+import { n as __esmMin } from "./rolldown-runtime.js";
+// main.js
+async function run() {
+	const eager = await import("./data2.js").then((n) => (n.o(), n.a));
+	const eagerEntries = entries(eager);
+	const deferred = await (async (n) => (n = await import("./data2.js"), n.i))();
+	const eagerAgain = await import("./data2.js").then((n) => (n.o(), n.a));
+	return {
+		eager: eagerEntries,
+		deferred: entries(deferred),
+		sameEager: eager === eagerAgain,
+		distinctDeferred: deferred !== eager
+	};
+}
+var entries;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		entries = (ns) => Object.keys(ns).map((key) => [key, ns[key]]);
+	})))();
+}
+init_main();
+export { run };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __exportAll as r, __deferNs as t };
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## warnings
+
+### MIXED_EXPORTS
+
+```text
+[MIXED_EXPORTS] Entry module "data.json" is using named (including "a", "b", "default") and default exports together. Consumers of your bundle will have to use `chunk.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
+
+```
+
+## Assets
+
+### data.js
+
+```js
+Object.defineProperties(exports, {
+	__esModule: { value: true },
+	[Symbol.toStringTag]: { value: "Module" }
+});
+const require_data = require("./data2.js");
+require_data.init_data();
+Object.defineProperty(exports, "a", {
+	enumerable: true,
+	get: function() {
+		return require_data.a;
+	}
+});
+Object.defineProperty(exports, "b", {
+	enumerable: true,
+	get: function() {
+		return require_data.b;
+	}
+});
+Object.defineProperty(exports, "default", {
+	enumerable: true,
+	get: function() {
+		return require_data.data_default;
+	}
+});
+
+```
+
+### data2.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+// data.json
+var data_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
+	a: () => a,
+	b: () => b,
+	default: () => data_default
+});
+var data_deferred = /* @__PURE__ */ require_rolldown_runtime.__deferNs(() => (init_data(), data_exports), data_exports);
+var a, b, data_default;
+function init_data() {
+	return (init_data = require_rolldown_runtime.__esmMin((() => {
+		a = 1;
+		b = "x";
+		data_default = {
+			a,
+			b
+		};
+	})))();
+}
+Object.defineProperty(exports, "a", {
+	enumerable: true,
+	get: function() {
+		return a;
+	}
+});
+Object.defineProperty(exports, "b", {
+	enumerable: true,
+	get: function() {
+		return b;
+	}
+});
+Object.defineProperty(exports, "data_default", {
+	enumerable: true,
+	get: function() {
+		return data_default;
+	}
+});
+Object.defineProperty(exports, "data_deferred", {
+	enumerable: true,
+	get: function() {
+		return data_deferred;
+	}
+});
+Object.defineProperty(exports, "data_exports", {
+	enumerable: true,
+	get: function() {
+		return data_exports;
+	}
+});
+Object.defineProperty(exports, "init_data", {
+	enumerable: true,
+	get: function() {
+		return init_data;
+	}
+});
+
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+// main.js
+async function run() {
+	const eager = await Promise.resolve().then(() => require("./data2.js")).then((n) => (n.init_data(), n.data_exports));
+	const eagerEntries = entries(eager);
+	const deferred = await (async (n) => (n = (await 0, require("./data2.js")), n.data_deferred))();
+	const eagerAgain = await Promise.resolve().then(() => require("./data2.js")).then((n) => (n.init_data(), n.data_exports));
+	return {
+		eager: eagerEntries,
+		deferred: entries(deferred),
+		sameEager: eager === eagerAgain,
+		distinctDeferred: deferred !== eager
+	};
+}
+var entries;
+function init_main() {
+	return (init_main = require_rolldown_runtime.__esmMin((() => {
+		entries = (ns) => Object.keys(ns).map((key) => [key, ns[key]]);
+	})))();
+}
+init_main();
+exports.run = run;
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__deferNs", {
+	enumerable: true,
+	get: function() {
+		return __deferNs;
+	}
+});
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+
+```

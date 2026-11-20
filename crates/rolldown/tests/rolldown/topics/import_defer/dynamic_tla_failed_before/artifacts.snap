@@ -1,0 +1,92 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { t as init_a } from "./a2.js";
+await init_a();
+
+```
+
+## a2.js
+
+```js
+import { l as __esmState, n as log, s as __esmFail, t as init_log } from "./log.js";
+function init_a() {
+	return (init_a = __esmState((async () => {
+		try {
+			init_log();
+			log.push("a");
+			await 0;
+			throw new Error("a failed");
+		} catch (e) {
+			throw __esmFail(init_a, e);
+		}
+	}), () => [], 3))(arguments[0]);
+}
+export { init_a as t };
+
+```
+
+## log.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+export { __esmDepDone as a, __esmGather as c, __esmDefer as i, __esmState as l, log as n, __esmEnd as o, __deferNs as r, __esmFail as s, init_log as t, __exportAll as u };
+
+```
+
+## main.js
+
+```js
+import { c as __esmGather, n as log, t as init_log } from "./log.js";
+// main.js
+init_log();
+await import("./a.js").catch(() => log.push("import(a) rejects"));
+const ns = await (async (n) => (n = await import("./x.js"), __esmGather(n.t) || await __esmGather(), n.n))();
+log.push("import.defer resolves");
+let result;
+try {
+	result = ns.value;
+} catch (e) {
+	result = e.message;
+}
+export { log, result };
+
+```
+
+## x.js
+
+```js
+import { a as __esmDepDone, i as __esmDefer, l as __esmState, n as log, o as __esmEnd, r as __deferNs, s as __esmFail, t as init_log, u as __exportAll } from "./log.js";
+import { t as init_a } from "./a2.js";
+// x.js
+var x_exports = /* @__PURE__ */ __exportAll({ value: () => "x" });
+var x_deferred = /* @__PURE__ */ __deferNs(() => (__esmDefer(init_x), x_exports), x_exports);
+var value;
+function init_x() {
+	return (init_x = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_a(init_x), init_a, init_x) || await init_a(init_x);
+			log.push("x");
+			value = "x";
+		} catch (e) {
+			throw __esmFail(init_x, e);
+		}
+		__esmEnd(init_x);
+	}), () => [init_a], 1))(arguments[0]);
+}
+export { x_deferred as n, x_exports as r, init_x as t, value };
+
+```

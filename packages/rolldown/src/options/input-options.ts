@@ -751,7 +751,7 @@ export interface InputOptions {
      */
     importAttributes?: boolean;
     /**
-     * Keep the deferred evaluation of `import defer * as ns from './x'`.
+     * Keep the deferred evaluation of `import defer * as ns from './x'` and `import.defer('./x')`.
      *
      * When this option is on, a deferred module evaluates at the first access to its namespace,
      * not when its importer evaluates. When this option is off, Rolldown lowers each deferred
@@ -762,14 +762,18 @@ export interface InputOptions {
      * sets `includeDependenciesRecursively: false`. A deferred import must not evaluate an
      * external module. With `preserveModules` and `esm` format, a deferred import must not evaluate
      * a CommonJS module. In `cjs` format, it must not evaluate a CommonJS module that is an entry.
+     * An `import.defer()` call must not load a CommonJS module. With `codeSplitting: false`, the
+     * target of an `import.defer()` call is also a CommonJS module when it has no `import` or
+     * `export` statement, unless its file extension or its `package.json` marks it as ESM.
      * When a deferred module, or a module that it imports, has a top-level `await`, each later
      * import in the same importer must import a module that a deferred import evaluates. In a build
      * that makes one chunk, an import of an external module is also allowed. A build makes one
      * chunk with `codeSplitting: false`, or with one entry and no `import()`, `preserveModules` or
      * code splitting groups. This rule does not apply to an importer that a deferred import
      * evaluates. In any other build, Rolldown lowers each deferred import to a normal import and
-     * emits a warning with the reason. Rolldown always lowers `import.defer('./x')` to
-     * `import('./x')`, with a warning.
+     * emits a warning with the reason. Rolldown also lowers `import.defer(specifier)` to
+     * `import(specifier)`, with a warning, when the specifier is not a string literal or a
+     * template literal with no expressions, or when the call has a `@vite-ignore` comment.
      *
      * A deferred import of a module with a top-level `await` waits for that module first. As in a
      * build without `import defer`, a module with a top-level `await` ends before the next import

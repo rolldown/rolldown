@@ -111,9 +111,17 @@ pub struct LinkingMetadata {
   /// The ESM wrapper of such a module is a hoisted function, so that a call that runs before the
   /// declaration works.
   pub wrapped_by_import_defer: bool,
+  /// Set on each ESM module that an `import.defer()` call targets. The chunk that holds the
+  /// module must not evaluate it when the chunk loads, unless the module has no interop wrapper
+  /// (a JSON module). Each `import.defer()` of the module reads `x_deferred` from that chunk. Each
+  /// `import()` of it reads `init_x` and `x_exports` when the chunk is a lazy host
+  /// (`ChunkGraph::lazy_dynamic_defer_host`). When the module has no interop wrapper, `import()`
+  /// reads `x_exports`, and also `init_x` when `strictExecutionOrder` gives the module an
+  /// execution-order wrapper (`rewrite_dynamic_import_of_defer_target`).
+  pub dynamic_defer_target: bool,
   /// The deferred namespace object of this module (`x_deferred`), when an `import defer * as ns`
-  /// targets this ESM module. Each deferred star import of the module links to this symbol, so
-  /// that all of them read one object, also through `export { ns }`.
+  /// or an `import.defer()` targets this ESM module. Each deferred star import of the module
+  /// links to this symbol, so that all of them read one object, also through `export { ns }`.
   pub deferred_namespace_ref: Option<SymbolRef>,
   /// The facade statement that declares `deferred_namespace_ref`.
   pub deferred_namespace_stmt_info: Option<StmtInfoIdx>,

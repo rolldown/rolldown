@@ -33,13 +33,18 @@ fn init_entry_point_stmt_info(
 
   // A module of a deferred closure does not evaluate when its own chunk loads
   // (`ChunkGraph::lazy_dynamic_defer_host`). So `import('./x')` reads `init_x` and `x_exports`
-  // from that chunk. No statement of the importer references these symbols, because that
-  // reference would import the chunk statically.
+  // from that chunk, and `import.defer('./x')` reads `x_deferred`. No statement of the importer
+  // references these symbols, because that reference would import the chunk statically.
   if meta.wrapped_by_import_defer
     && matches!(meta.wrap_kind(), WrapKind::Esm)
     && is_dynamic_imported
   {
     referenced_symbols.push((namespace_object_ref, false));
+  }
+  if meta.dynamic_defer_target
+    && let Some(deferred_ref) = meta.deferred_namespace_ref
+  {
+    referenced_symbols.push((deferred_ref, false));
   }
 
   let normalized_entry_signature =

@@ -90,6 +90,31 @@ const cases: Case[] = [
     reason: 'a deferred import evaluates the external module `ext`',
   },
   {
+    name: 'external target of import.defer()',
+    files: { 'main.js': "export const load = () => import.defer('ext');\n" },
+    inputOptions: { external: ['ext'] },
+    reason: 'a deferred import evaluates the external module `ext`',
+  },
+  {
+    name: 'import.defer() of a CommonJS module',
+    files: {
+      'main.js': MAIN_JS + "export const load = () => import.defer('./c.cjs');\n",
+      'c.cjs': CJS_X,
+    },
+    reason: 'an `import.defer()` call targets the CommonJS module `c.cjs`',
+  },
+  {
+    // With code splitting off, the `import()` makes `c.js` a CommonJS module, though `c.js` has no
+    // module syntax.
+    name: 'import.defer() of a module with no module syntax, with code splitting off',
+    files: {
+      'main.js': MAIN_JS + "export const load = () => import.defer('./c.js');\n",
+      'c.js': 'globalThis.c = 1;\n',
+    },
+    output: { codeSplitting: false },
+    reason: 'an `import.defer()` call targets the CommonJS module `c.js`',
+  },
+  {
     name: 'external module in the closure',
     files: { 'main.js': MAIN_JS, 'x.js': "import 'ext';\n" + X_JS },
     inputOptions: { external: ['ext'] },
@@ -295,11 +320,17 @@ const keptCases: KeptCase[] = [
   {
     name: 'import.defer()',
     files: {
-      'main.js': LOGGED_MAIN('./x.js', "export const load = () => import.defer('./other.js');\n"),
-      'other.js': OTHER_JS,
+      'main.js': LOGGED_MAIN(
+        './x.js',
+        "let other;\nexport const load = async () => ((other = await import.defer('./other.js')), 0);\nexport const readOther = () => other.other;\n",
+      ),
+      'other.js': "import { log } from './log.js';\nlog.push('other');\n" + OTHER_JS,
     },
-    warnings: ['`import.defer()` is currently lowered to `import()`'],
-    steps: [['read', 1, ['x']]],
+    steps: [
+      ['load', 0, []],
+      ['readOther', 1, ['other']],
+      ['read', 1, ['other', 'x']],
+    ],
   },
   {
     name: 'new URL() in a closure module',

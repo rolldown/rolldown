@@ -8,7 +8,7 @@ With `experimental.importDefer`, a build keeps the deferred evaluation of `impor
 
 A build with more than one chunk also keeps the deferral. The chunk that holds a deferred module does not run the module when it loads. A chunk with an eager importer of the module initializes it after its import of that chunk (see "Lazy hosts"). When a common chunk cannot keep that order, it runs the module at load, as the build without `import defer` does (see "Run at load").
 
-`import.defer()` is not supported yet: the pre-processor always lowers it to `import()`, with a warning (`crates/rolldown/src/utils/tweak_ast_for_scanning.rs`). Dev mode turns the option off (`crates/rolldown/src/utils/prepare_build_context.rs`).
+`import.defer('./x.js')` also keeps the deferral: its promise gives the deferred namespace object of `x.js`, and the call evaluates nothing (see "`import.defer()`"). Dev mode turns the option off (`crates/rolldown/src/utils/prepare_build_context.rs`).
 
 Example (fixture `topics/import_defer/basic`, output shortened):
 
@@ -36,7 +36,7 @@ const value = (init_dep(), 1);
 
 ## Scan
 
-- The scanner sets `ImportRecordMeta::DeferPhase` on the record of each `import defer` (`scan_import_decl` in `crates/rolldown/src/ast_scanner/mod.rs`). With the option off, the pre-processor removes the phase before the scan, so no record has the flag.
+- The scanner sets `ImportRecordMeta::DeferPhase` on the record of each `import defer` (`scan_import_decl` in `crates/rolldown/src/ast_scanner/mod.rs`), and on the `DynamicImport` record of each `import.defer()` (`crates/rolldown/src/ast_scanner/impl_visit.rs`). With the option off, the pre-processor removes the phase before the scan, so no record has the flag.
 - The scan results are the results of an eager import, as with the option off. A deferred namespace is in `namespace_object_symbol_ids`, so a read `ns.foo;` has no side effect, and a write `ns.foo = 1` gives the `assign_to_import` error.
 - The scanner also saves the results of the deferred import in `EcmaView::import_defer_scan`:
   - `eval_flags`: the flags of each statement that change when a read of a deferred namespace has a side effect (the read evaluates the module). A second `StmtEvalAnalyzer` run (`with_deferred_namespaces`) gives them. Both runs read the same `constant_export_map` of the scan.
@@ -51,18 +51,19 @@ The build keeps the deferral when all of these conditions are true:
 1. The output format is `esm` or `cjs`.
 2. The build does not use `output.codeSplitting.experimentalInlineCommonChunks`. With this option, the init plan does not run, so each eager importer of a deferred module in another chunk calls `init_x()` in its body, after the later imports of its chunk (see "Init after the import of a host").
 3. No code splitting group sets `includeDependenciesRecursively: false` (`has_non_recursive_dependency_capture`). Such a group can make two chunks import each other. In such a cycle, a chunk can run before the other chunk exports its init functions: `require_x.init_x is not a function` in `cjs` output. When the runtime is in the cycle, a chunk can also run before the runtime helpers exist: `__esmMin is not a function`. The build without `import defer` calls no init function or helper there.
-4. No module of a deferred closure (a target and its dependencies) is an external module.
-5. No output file of a CommonJS module of a closure runs the module when the file loads (`commonjs_module_run_at_load`). A deferred importer imports that file, so the module runs before the first access:
+4. No `import.defer()` call loads a CommonJS module (`dynamic_import_of_commonjs`). Native ESM defers the evaluation of a CommonJS module also for this form, but the deferred namespace of a CommonJS module exists only for the static form (see "CommonJS targets"). The check finds the CommonJS modules as `determine_module_exports_kind` does (`commonjs_modules`): the scan gives `ExportsKind::CommonJs`, or `ExportsKind::None` and a `require()` loads the module. With `codeSplitting: false`, an `import()` or an `import.defer()` also counts as a `require()`.
+5. No module of a deferred closure (a target and its dependencies) is an external module. The target of an `import.defer()` call is also the target of a closure.
+6. No output file of a CommonJS module of a closure runs the module when the file loads (`commonjs_module_run_at_load`). A deferred importer imports that file, so the module runs before the first access:
    - With `preserveModules` and `esm` output, the file of each CommonJS module ends with `export default require_x();`. In `cjs` output, the file exports a `default` getter, which runs the module at the first read.
    - In `cjs` output, the chunk of a user-defined entry resolves its own export mode (`export_mode_module`), so it can end with `module.exports = require_x();`. An emitted chunk keeps the `Named` mode and its getter. In `esm` output without `preserveModules`, the chunk of a user-defined entry gets a facade (see "Lazy hosts").
 
-   The check finds the CommonJS modules as `determine_module_exports_kind` does: the scan gives `ExportsKind::CommonJs`, or `ExportsKind::None` and a `require()` loads the module.
+   The check finds the CommonJS modules in the same way as the check of `import.defer()` (`commonjs_modules`).
 
-6. A module outside the closures has no import of a module outside the closures after a deferred import of a module that reaches a top-level `await` (see "Top-level await"). An import of an external module counts only when the build can make more than one chunk (`can_have_more_chunks`): code splitting is on, and the build has `preserveModules`, chunk groups, an `import()`, or more than one entry record (each user-defined or emitted `EntryPoint`, also when one module has several). In a build with one chunk, the chunk imports each external module at its top, so the external module also runs first without the deferral.
+7. A module outside the closures has no import of a module outside the closures after a deferred import of a module that reaches a top-level `await` (see "Top-level await"). An import of an external module counts only when the build can make more than one chunk (`can_have_more_chunks`): code splitting is on, and the build has `preserveModules`, chunk groups, an `import()`, or more than one entry record (each user-defined or emitted `EntryPoint`, also when one module has several). In a build with one chunk, the chunk imports each external module at its top, so the external module also runs first without the deferral.
 
 When the build keeps the deferral, the saved `eval_flags` go into `stmt_infos`. The new flags are the union of both runs, because the deferred run only adds side effects. A module with `DeterminedSideEffects::Analyzed(false)` gets `Analyzed(true)` when one of its statements gets `UnknownSideEffect`.
 
-When the build falls back, `DeferPhase` goes away from each record. If the build has a write to a deferred namespace, the saved errors fail the build with the hooks of a scan error (`buildEnd` and `closeBundle` get the errors). Else each deferred import gets an `UNSUPPORTED_FEATURE` warning that names the reason. All other scan results are already the results of an eager import, so the output is the output of the build with the option off.
+When the build falls back, `DeferPhase` goes away from each record. If the build has a write to a deferred namespace, the saved errors fail the build with the hooks of a scan error (`buildEnd` and `closeBundle` get the errors). Else each deferred import gets an `UNSUPPORTED_FEATURE` warning that names the reason. The warning of an `import.defer()` call says that the call becomes `import()` (`UnsupportedReason::messages`). All other scan results are already the results of an eager import, so the output is the output of the build with the option off.
 
 ## Link stage
 
@@ -157,12 +158,12 @@ Tests: `cycle_deferred_read`, `cycle_root_error`, `escape_cycle`, `empty_star_st
 
 ## Lazy hosts
 
-A lazy host is the entry chunk of an ES module of a deferred closure, when that chunk is not a user-defined or an emitted entry (`ChunkGraph::lazy_dynamic_defer_host` in `crates/rolldown/src/chunk_graph.rs`). With `preserveModules`, each such module gets one. Without `preserveModules`, the dynamic entry chunk of an `import()` of the module can be one. Another chunk can load a lazy host for a deferred access, so the load must not run the module:
+A lazy host is the entry chunk of an ES module of a deferred closure, when that chunk is not a user-defined or an emitted entry (`ChunkGraph::lazy_dynamic_defer_host` in `crates/rolldown/src/chunk_graph.rs`). With `preserveModules`, each such module gets one. Without `preserveModules`, the dynamic entry chunk of an `import()` or an `import.defer()` of the module can be one. Another chunk can load a lazy host for a deferred access, so the load must not run the module:
 
 - `render_wrapped_entry_chunk` (`crates/rolldown/src/utils/chunk/render_chunk_exports.rs`) writes no `init_x()` at the end of the chunk. The importer calls `init_x()` at the first access.
 - In `cjs` output, each export of a lazy host is a getter (`render_chunk_exports`), as in a common chunk. `init_x()` assigns the bindings after the load, so a copy (`exports.foo = foo`) keeps `undefined`, also for a `const`. An eager importer reads the bindings through the same exports: it calls `init_x()`, then reads them. The mode of a lazy host stays `Named`, because other chunks import `init_x`, which is not a declared export (`export_mode_module` in `crates/rolldown/src/stages/generate_stage/mod.rs`).
 - Each `import()` of the module calls `init_x()` (`rewrite_dynamic_import_of_lazy_module` in `crates/rolldown/src/module_finalizers/mod.rs`). From another chunk, the form is `import('./x.js').then((n) => (n.init_x(), n.x_exports))`. In the same chunk, the form is `Promise.resolve().then(() => (init_x(), x_exports))`. When the module reaches a top-level `await`, the form waits for `init_x()`.
-- Thus the chunk exports `init_x` and `x_exports` to each chunk with an `import()` of the module (`lazy_host_exports` in `crates/rolldown/src/stages/generate_stage/compute_cross_chunk_links.rs`), and no code reads the namespace of the chunk. The rule that a dynamic entry chunk exports only the exports of its entry does not apply to a lazy host (`dynamic_entry_reads_defer_bindings` in `crates/rolldown/src/stages/generate_stage/dynamic_entry_namespace.rs`).
+- Thus the chunk exports `init_x` and `x_exports` to each chunk with an `import()` of the module, and `x_deferred` to each chunk with an `import.defer()` of the module (`dynamic_defer_target_exports` in `crates/rolldown/src/stages/generate_stage/compute_cross_chunk_links.rs`). No code reads the namespace of the chunk. The rule that a dynamic entry chunk exports only the exports of its entry does not apply to a lazy host (`dynamic_entry_reads_defer_bindings` in `crates/rolldown/src/stages/generate_stage/dynamic_entry_namespace.rs`). The rule also does not apply to the chunk of a JSON module that `import.defer()` loads. A JSON module has no wrapper and is not a lazy host, but its chunk exports `x_exports` and `x_deferred`. So an `import()` of it in another chunk reads only `x_exports`: `import('./chunk.js').then((n) => n.x_exports)` (fixture `dynamic_json_target_eager_and_deferred`). With `strictExecutionOrder`, the JSON module can have an order wrapper, and its chunk does not always call `init_x()` at load: an entry facade calls it, and a deferred import in the same chunk does not call it. So each `import()` of the module also calls `init_x()`, and the chunk exports `init_x` to the other chunks (fixture `dynamic_json_target_strict_user_entry`).
 - No statement of the importer can reference `x_exports`, because that reference imports the chunk statically. Thus `init_entry_point_stmt_info` (`crates/rolldown/src/stages/link_stage/create_exports_for_ecma_modules.rs`) keeps the namespace of each ES module of a closure with an `import()`. `module_namespace_is_referenced` keeps it also for a module with no exports, because the closure wraps such a module as an ES module.
 
 The load of a lazy host runs nothing, also for code outside the bundle. With `preserveModules`, a direct import of the file of a deferred module that is not an entry does not run the module, and its exports stay uninitialized. Native ESM runs the module. This is an accepted difference. The docs of `input` already recommend an entry for each file whose export signatures must stay, instead of `preserveModules` (`packages/rolldown/src/options/docs/input.md`), and a user-defined entry chunk is not a lazy host.
@@ -271,12 +272,51 @@ A host that does not split still runs `w` at load, before the init of `a`. Thus 
 - Only a deferred module with an eager importer in another chunk, and with a later module of the host that runs at load in execution order, runs at load. A deferred module after the last such module keeps its init after the import of the host.
 - Such a module has no host (`ChunkGraph::deferred_init_host`), so the plan adds no init for it. Its importers keep their calls, which do nothing after the first call. The plan counts its import as an import that runs at load (`chunk_load_step`).
 - Only a common chunk takes part. The split of a common host does not change a lazy host either.
+- The declarations of an `import.defer()` target can move before the other modules of the chunk. The init call of such a module then stays at its old place (see "Declarations before the first call").
 
 #### Limits of both splits
 
 `move_modules_to_new_common_chunk` does both splits. The old chunk keeps the runtime helpers of its other modules, and it also keeps `ExportAll`, which the chunk optimizer adds for the namespace of an eliminated facade.
 
 The splits do not run with `strictExecutionOrder`, `preserveModules`, dev mode, `experimentalInlineCommonChunks` or `codeSplitting: false`, or for `iife` and `umd` output. With `preserveModules`, each module already has its own file. With `experimental.chunkModulesOrder: 'module-id'`, neither split moves a module, and a common host runs its deferred modules at load instead (see "Run at load"). Neither split changes the chunk of a code splitting group. Such a chunk also runs its deferred modules at load. The split of an importer chunk also skips a chunk that holds the runtime module, and an entry facade, whose entry module is in another chunk. Each new chunk adds a file to the output, only in a build with `import defer`.
+
+## `import.defer()`
+
+`import.defer('./x.js')` gives a promise for the deferred namespace object of `x.js`. The call loads the chunk of `x.js` and evaluates nothing. When the closure of `x.js` reaches a top-level `await`, the promise first waits for the modules with top-level `await`, as a static deferred import does (see "Top-level await").
+
+- The pre-processor lowers a call to `import()`, with a warning, when the specifier is not a string literal or a template literal with no expressions (`NonStaticSpecifier` in `crates/rolldown/src/utils/tweak_ast_for_scanning.rs`). The bundler does not know the target of such a call, so it cannot wrap a closure for it. The pre-processor also lowers a call with a `/* @vite-ignore */` comment, with a warning (`IgnoredByComment`). The scanner adds no import record for such a call (`is_import_expr_ignored_by_comment`), so the build cannot defer its module either.
+- The finalizer removes the phase from each import expression (`crates/rolldown/src/module_finalizers/impl_visit_mut.rs`). A call that the build keeps gets a new form (see below). In a build that falls back, each call becomes `import()`.
+- `wrap_import_defer_closures` (`crates/rolldown/src/stages/link_stage/wrapping.rs`) takes the ES module target of each call as the target of a closure, as for the static form, and sets `dynamic_defer_target` (`crates/rolldown/src/types/linking_metadata.rs`). `track_import_defer_modules` also follows these records. A JSON target loses its wrapper later (see "Link stage"), so the call gives its deferred namespace object with no init call. A CommonJS target makes the build fall back (see "Whole-build fallback").
+- `create_exports_for_ecma_modules` keeps `x_deferred` for each target, because the form of the call reads it. `reference_needed_symbols` adds `__esmGather` when the target reaches a top-level `await`.
+- `plan_grouped_dynamic_imports` (`crates/rolldown/src/stages/generate_stage/order_wrapping.rs`) reads no phase, so it can also take an `await import.defer()`. It takes only a target with no wrapper (`is_order_wrap_eligible`), and of the targets of a call, only a JSON target has no wrapper. The plan gives the JSON module an order wrapper and removes the facade chunk of the target. The call gets the form for the same chunk (`(async () => x_deferred)()`), so the wrapper runs at the first access, through `x_deferred`. A check of the phase gives the same results, but it keeps the facade chunk.
+- The form of the call (`rewrite_dynamic_import_of_defer_target` in `crates/rolldown/src/module_finalizers/mod.rs`):
+  - In the same chunk, and with `codeSplitting: false`: `(async () => x_deferred)()`.
+  - In another chunk: `(async (n) => (n = await import('./x.js'), n.x_deferred))()`. In `cjs` output, `require()` loads the chunk: `(n = (await 0, require('./x.js')), n.x_deferred)`. The chunk of the target exports `x_deferred` (see "Lazy hosts").
+  - With a preparation, the function first runs `__esmGather(init_x) || await __esmGather()`. A failed preparation rejects the promise.
+- Each call and each static deferred import of `x.js` give the same object, `x_deferred` (fixture `dynamic_identity`). The key `then` of the object is absent (see "Link stage"), so the promise does not evaluate the module when it resolves with the object.
+
+### Declarations before the first call
+
+In the same chunk, the call reads `x_deferred` when it runs. An earlier module of the chunk can call `import.defer()` before the code of `x.js` runs. A callback can also read the namespace during a pause at a top-level `await`. Without a move, the call reads `undefined`, or the read reaches a namespace object of the closure that does not exist yet.
+
+Thus `plan_dynamic_defer_declarations` (`crates/rolldown/src/stages/generate_stage/place_dynamic_defer_declarations.rs`) puts the code of each target, and of its static closure in that chunk, before the other modules of the chunk, after the runtime module:
+
+- Only a module whose code has only declarations moves: a module with an init wrapper, a CommonJS module, or a JSON module (`unwrap_json_module`). Thus the move does not change when a module evaluates.
+- A module before the first importer of the target in the chunk does not move. Its declarations already run before each call.
+- The plan runs before `finalize_modules`, and `place_dynamic_defer_declarations` applies it after `finalize_modules`. The order analyses and the finalizers read the order of a chunk as the order of execution.
+
+A module that its common chunk runs at load (see "Run at load") has an init call after its wrapper. When such a module moves, its call stays at its old place: the last module before it that keeps its place runs the call at the end of its code (`ChunkGraph::run_at_load_anchors`, and the finalizer in `crates/rolldown/src/module_finalizers/impl_visit_mut.rs`). When no such module exists, the module does not move. Without the anchor, the call moves with the declarations, and the module runs before the modules that came before it in the chunk (fixtures `dynamic_same_chunk_call_before_target` and `dynamic_same_chunk_top_level_await`).
+
+Tests:
+
+- `dynamic_same_chunk`, `dynamic_cross_chunk`, `dynamic_identity`, `dynamic_unused_result`, `dynamic_eager_and_deferred` and `dynamic_failed_before_defer`: the two forms of the call, the identity of the namespace, a call whose result no code reads, an eager import and a call of one module, and a call after a failed evaluation.
+- `dynamic_same_chunk_call_before_target`, `dynamic_same_chunk_read_during_tla` and `dynamic_same_chunk_top_level_await`: the declarations before the first call.
+- `dynamic_tla_same_chunk`, `dynamic_tla_cross_chunk` and `dynamic_tla_failed_before`: the preparation of a target that reaches a top-level `await`. `dynamic_eager_tla`: an eager `import()` of such a target, whose chunk does not run it at load.
+- `dynamic_json_target`, `dynamic_json_target_eager_and_deferred` and `dynamic_json_target_strict_user_entry`: JSON targets.
+- `preserve_modules` and `user_entry_dynamic_target`: a call with `preserveModules`, and a call of a user-defined entry.
+- `non_literal_specifier` and `vite_ignore_specifier`: the warnings for a specifier that is not static and for a call with a `/* @vite-ignore */` comment.
+- The Node test `packages/rolldown/tests/import-defer-fallback.test.ts`: the fallback for an external target, for a CommonJS target, and for a module with no module syntax with `codeSplitting: false`, and a kept call.
+- The test262 tests in `language/expressions/dynamic-import/import-defer` (`crates/rolldown/tests/integration/test262.rs`).
 
 ## Known gaps
 
@@ -287,8 +327,10 @@ The splits do not run with `strictExecutionOrder`, `preserveModules`, dev mode, 
 - In a closure module, a top-level `arguments` is the arguments object of `init_x`, and direct `eval` code runs in `init_x` (see the JSDoc of `experimental.importDefer`).
 - A call `ns.fn()` of a CommonJS target gets `import_x` as `this`, not the deferred namespace object. Thus `this === ns` gives `false` in `fn` when `ns` escapes (`ns` is then `x_deferred`). Native Node and the eager import give `true`. A call through `x_deferred` gives the native result, but each call then goes through the `Proxy`.
 - The deferred namespace object of a CommonJS module, or of a module with dynamic exports, gets its keys at the first evaluation. Before that, `Object.isExtensible(ns)` gives `true`, and after `Object.preventExtensions(ns)`, the first evaluation throws a `TypeError` when the namespace has keys (see `__deferNs`).
+- With `preserveModules`, an entry chunk gets no facade (`preserve_strict_entry_signatures` skips `preserveModules`). Thus the file of a user-defined or an emitted entry runs its module when it loads, also when the module is in a closure. A deferred import or an `import.defer()` of the module in another file loads that file, so the module runs before the first access. This is the order of the build without `import defer`, and the build gives no warning. With `strictExecutionOrder`, the order wrappers move the module into a common chunk, and the order is native.
+- The test262 test `promise-prototype-then-not-called` fails: the output loads the chunk of the target with a native `import()`, and the `import()` of Node.js calls `Promise.prototype.then`.
 
 ## Related
 
-- [design.md](./design.md) — why one fallback for the whole build, and why a chunk initializes a lazy host after its import
+- [design.md](./design.md) — why one fallback for the whole build, why a chunk initializes a lazy host after its import, and the decisions for `import.defer()`
 - `../runtime-helpers/implementation.md` — the runtime helpers of `import defer`

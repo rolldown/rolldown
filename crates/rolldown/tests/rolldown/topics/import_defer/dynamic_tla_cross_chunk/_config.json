@@ -1,0 +1,12 @@
+{
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    {
+      "strictExecutionOrder": true
+    }
+  ]
+}

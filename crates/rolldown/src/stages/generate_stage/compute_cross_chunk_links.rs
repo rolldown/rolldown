@@ -1771,10 +1771,11 @@ impl GenerateStage<'_> {
     // covers `DynamicImport`-kind entries; emitted entries that are also dynamically
     // imported (e.g. via `this.emitFile` + `import()` in the same build) wouldn't be
     // found that way. Walking import_records directly catches both.
-    // `import()` of a module whose chunk does not evaluate it at load
-    // (`ChunkGraph::lazy_dynamic_defer_host`) reads `init_x` and `x_exports` from the chunk that
-    // holds the module, when the importer is in another chunk. Key: that chunk.
-    let lazy_host_exports: FxHashMap<ChunkIdx, Vec<ModuleIdx>> = {
+    // `import()` and `import.defer()` of an `import.defer()` target, and `import()` of a module
+    // whose chunk does not evaluate it at load (`ChunkGraph::lazy_dynamic_defer_host`), read
+    // `init_x`, `x_exports` and `x_deferred` from the chunk that holds the module, when the
+    // importer is in another chunk. Key: that chunk.
+    let dynamic_defer_target_exports: FxHashMap<ChunkIdx, Vec<ModuleIdx>> = {
       let mut map: FxHashMap<ChunkIdx, Vec<ModuleIdx>> = FxHashMap::default();
       if self.options.experimental.is_import_defer_enabled() {
         for (importer_idx, module) in self.link_output.module_table.iter_enumerated() {
@@ -1785,11 +1786,13 @@ impl GenerateStage<'_> {
               continue;
             }
             let Some(target) = rec.resolved_module else { continue };
-            let Some(host) =
-              chunk_graph.lazy_dynamic_defer_host(target, &self.link_output.metas[target])
-            else {
+            let meta = &self.link_output.metas[target];
+            if !meta.dynamic_defer_target
+              && chunk_graph.lazy_dynamic_defer_host(target, meta).is_none()
+            {
               continue;
-            };
+            }
+            let Some(host) = chunk_graph.module_to_chunk[target] else { continue };
             if host != importer_chunk {
               let targets = map.entry(host).or_default();
               if !targets.contains(&target) {
@@ -1972,14 +1975,22 @@ impl GenerateStage<'_> {
           }
         }
 
-        if let Some(targets) = lazy_host_exports.get(&chunk_id) {
+        if let Some(targets) = dynamic_defer_target_exports.get(&chunk_id) {
           for &target in targets {
             let meta = &self.link_output.metas[target];
+            // Only an `import.defer()` target keeps its deferred namespace object as an entry
+            // export (`init_entry_point_stmt_info`).
+            let deferred_ref = meta.deferred_namespace_ref.filter(|_| meta.dynamic_defer_target);
+            // The interop wrapper, or the execution-order wrapper of a JSON module
+            // (`strictExecutionOrder`).
             let wrapper_ref = order_state.esm_init_target(target, meta).map(|t| t.wrapper_ref);
-            for symbol_ref in
-              [wrapper_ref, self.link_output.module_table[target].namespace_object_ref()]
-                .into_iter()
-                .flatten()
+            for symbol_ref in [
+              wrapper_ref,
+              self.link_output.module_table[target].namespace_object_ref(),
+              deferred_ref,
+            ]
+            .into_iter()
+            .flatten()
             {
               index_chunk_exported_symbols[chunk_id].entry(symbol_ref).or_default();
             }

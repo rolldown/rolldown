@@ -17,6 +17,10 @@ use crate::{
 };
 use arcstr::ArcStr;
 use itertools::Itertools;
+use oxc::ast::ast::{
+  ArrayExpressionElement, BindingPattern, Class, ClassElement, Declaration,
+  ExportDefaultDeclarationKind, Expression, ObjectPropertyKind, Statement,
+};
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
@@ -1018,6 +1022,7 @@ impl GenerateStage<'_> {
       input_base,
     );
 
+    let manual_chunk_start = chunk_graph.chunk_table.len();
     self
       .apply_manual_code_splitting(
         index_splitting_info,
@@ -1027,6 +1032,14 @@ impl GenerateStage<'_> {
         &tag_registry,
       )
       .await?;
+
+    self.extract_shared_manual_leaves(
+      index_splitting_info,
+      chunk_graph,
+      bits_to_chunk,
+      manual_chunk_start,
+      &mut module_is_assigned,
+    );
 
     // If it is allow to allow that entry chunks have the different exports as the underlying entry module.
     // This is used to generate less chunks when possible.
@@ -1164,6 +1177,86 @@ impl GenerateStage<'_> {
     }
 
     Ok(())
+  }
+
+  fn extract_shared_manual_leaves(
+    &self,
+    index_splitting_info: &IndexSplittingInfo,
+    chunk_graph: &mut ChunkGraph,
+    bits_to_chunk: &FxHashMap<BitSet, ChunkIdx>,
+    manual_chunk_start: usize,
+    module_is_assigned: &mut IndexBitSet<ModuleIdx>,
+  ) {
+    if chunk_graph.chunk_table.len() - manual_chunk_start < 2
+      || !self.options.format.is_esm()
+      || self.options.is_strict_execution_order_enabled()
+      || self.options.keep_names
+    {
+      return;
+    }
+    let Ok((bits, &entry_chunk)) = bits_to_chunk.iter().exactly_one() else {
+      return;
+    };
+    let options = self.options.manual_code_splitting.as_ref().unwrap();
+    if options.groups.as_ref().unwrap().iter().any(|group| {
+      group.include_dependencies_recursively.or(options.include_dependencies_recursively)
+        != Some(false)
+    }) {
+      return;
+    }
+    let entry_module = chunk_graph.chunk_table[entry_chunk].entry_module_idx().unwrap();
+    if chunk_graph.module_to_chunk[entry_module].is_some() {
+      return;
+    }
+
+    let mut first_consumer = FxHashMap::default();
+    let mut shared = IndexBitSet::new(self.link_output.module_table.modules.len());
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated().skip(manual_chunk_start) {
+      for &module in &chunk.modules {
+        for dependency in self.predicted_static_import_targets(module) {
+          let meta = &self.link_output.metas[dependency];
+          if dependency != entry_module
+            && chunk_graph.module_to_chunk[dependency].is_none()
+            && index_splitting_info[dependency].bits == *bits
+            && meta.is_included
+            && meta.load_dependencies.is_empty()
+            && !self.link_output.module_table[dependency].side_effects().has_side_effects()
+            && !meta.is_tla_or_contains_tla_dependency
+            && meta.wrap_kind() == WrapKind::None
+            && self.link_output.module_table[dependency]
+              .as_normal()
+              .is_some_and(|module| module.exports_kind == ExportsKind::Esm)
+            && *first_consumer.entry(dependency).or_insert(chunk_idx) != chunk_idx
+          {
+            shared.set_bit(dependency);
+          }
+        }
+      }
+    }
+
+    let input_base = chunk_graph.chunk_table[entry_chunk].input_base.clone();
+    for &module_idx in self.link_output.sorted_modules.iter().filter(|&&idx| shared.has_bit(idx)) {
+      // A side-effect-free initializer can still observe effects in the entry chunk.
+      if !self.ast_table[module_idx]
+        .as_ref()
+        .is_some_and(|ast| ast.program().body.iter().all(is_order_independent_leaf_statement))
+      {
+        continue;
+      }
+      let mut chunk =
+        Chunk::new(None, None, bits.clone(), vec![], ChunkKind::Common, input_base.clone(), None);
+      chunk.add_creation_reason(
+        ChunkCreationReason::CommonChunk { bits, link_output: self.link_output },
+        self.options,
+      );
+      let chunk_idx = chunk_graph.add_chunk(chunk);
+      chunk_graph.add_module_to_chunk(
+        module_idx,
+        chunk_idx,
+        self.link_output.metas[module_idx].depended_runtime_helper,
+      );
+      module_is_assigned.set_bit(module_idx);
+    }
   }
 
   pub(super) fn extract_standalone_runtime_chunk(
@@ -1455,6 +1548,62 @@ impl GenerateStage<'_> {
       }
     }
   }
+}
+
+fn is_order_independent_leaf_statement(statement: &Statement<'_>) -> bool {
+  let declaration = match statement {
+    Statement::ExportNamedDeclaration(_) => return true,
+    Statement::ExportDefaultDeclaration(export) => {
+      return match &export.declaration {
+        ExportDefaultDeclarationKind::FunctionDeclaration(_) => true,
+        ExportDefaultDeclarationKind::ClassDeclaration(class) => {
+          is_order_independent_leaf_class(class)
+        }
+        expression => expression.as_expression().is_some_and(is_order_independent_leaf_expression),
+      };
+    }
+    Statement::ExportDeclaration(export) => Some(&export.declaration),
+    statement => statement.as_declaration(),
+  };
+  match declaration {
+    Some(Declaration::FunctionDeclaration(_)) => true,
+    Some(Declaration::ClassDeclaration(class)) => is_order_independent_leaf_class(class),
+    Some(Declaration::VariableDeclaration(variable)) => {
+      !variable.kind.is_using()
+        && variable.declarations.iter().all(|declarator| {
+          matches!(declarator.id, BindingPattern::BindingIdentifier(_))
+            && declarator.init.as_ref().is_some_and(is_order_independent_leaf_expression)
+        })
+    }
+    _ => false,
+  }
+}
+
+fn is_order_independent_leaf_expression(expression: &Expression<'_>) -> bool {
+  match expression.get_inner_expression() {
+    Expression::FunctionExpression(_) | Expression::ArrowFunctionExpression(_) => true,
+    Expression::ClassExpression(class) => is_order_independent_leaf_class(class),
+    Expression::ObjectExpression(object) => object.properties.iter().all(|property| {
+      matches!(property, ObjectPropertyKind::ObjectProperty(property)
+        if !property.computed && is_order_independent_leaf_expression(&property.value))
+    }),
+    Expression::ArrayExpression(array) => array.elements.iter().all(|element| {
+      matches!(element, ArrayExpressionElement::Elision(_))
+        || element.as_expression().is_some_and(is_order_independent_leaf_expression)
+    }),
+    expression => expression.is_literal() || expression.is_no_substitution_template(),
+  }
+}
+
+fn is_order_independent_leaf_class(class: &Class<'_>) -> bool {
+  class.heritage.is_none()
+    && class.decorators.is_empty()
+    && class.body.body.iter().all(|element| {
+      !element.computed()
+        && !element.has_decorator()
+        && !matches!(element, ClassElement::StaticBlock(_) | ClassElement::TSIndexSignature(_))
+        && (!element.r#static() || matches!(element, ClassElement::MethodDefinition(_)))
+    })
 }
 
 pub(super) fn module_namespace_is_referenced(

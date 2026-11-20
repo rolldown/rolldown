@@ -68,7 +68,7 @@ console.log(void 0);
 	module.exports = 123;
 	console.log(this$1);
 })))();
-init_dummy(), __toCommonJS(dummy_exports);
+init_dummy(), __requireESM(dummy_exports);
 console.log(void 0);
 // es6-ns-export-variable.ts
 let ns$6;

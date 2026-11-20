@@ -1,0 +1,20 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "first",
+        "import": "./first.cjs"
+      },
+      {
+        "name": "second",
+        "import": "./second.cjs"
+      }
+    ],
+    "platform": "node"
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

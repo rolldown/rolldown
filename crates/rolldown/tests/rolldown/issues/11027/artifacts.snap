@@ -23,7 +23,7 @@ function value() {
 var init_shared = __esmMin((() => {}));
 // lib.cjs
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const shared = __toCommonJS(shared_exports);
+	const shared = __requireESM(shared_exports);
 	module.exports = {
 		value: 42,
 		default: "own-default",

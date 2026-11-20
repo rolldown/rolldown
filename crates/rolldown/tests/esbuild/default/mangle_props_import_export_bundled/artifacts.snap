@@ -14,17 +14,17 @@ var init_esm = __esmMin((() => {}));
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.cjs_foo_ = "foo";
 }));
-export { __toCommonJS as a, __commonJSMin as i, esm_exports as n, __toESM as o, init_esm as r, require_cjs as t };
+export { __requireESM as a, __commonJSMin as i, esm_exports as n, __toESM as o, init_esm as r, require_cjs as t };
 
 ```
 
 ## entry-cjs.js
 
 ```js
-import { a as __toCommonJS, i as __commonJSMin, n as esm_exports, r as init_esm, t as require_cjs } from "./cjs.js";
+import { a as __requireESM, i as __commonJSMin, n as esm_exports, r as init_esm, t as require_cjs } from "./cjs.js";
 // entry-cjs.js
 var require_entry_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
-	let { esm_foo_ } = (init_esm(), __toCommonJS(esm_exports));
+	let { esm_foo_ } = (init_esm(), __requireESM(esm_exports));
 	let { cjs_foo_ } = require_cjs();
 	exports.bar_ = [esm_foo_, cjs_foo_];
 }));

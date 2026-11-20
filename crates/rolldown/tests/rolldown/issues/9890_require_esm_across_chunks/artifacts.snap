@@ -1,0 +1,97 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## esm.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// esm.mjs
+var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+var value;
+var init_esm = __esmMin((() => {
+	value = {};
+}));
+export { __requireESM as i, init_esm as n, __commonJSMin as r, esm_exports as t };
+
+```
+
+## first.js
+
+```js
+import { i as __requireESM, n as init_esm, r as __commonJSMin, t as esm_exports } from "./esm.js";
+// first.cjs
+var require_first = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { namespace: (init_esm(), __requireESM(esm_exports)) };
+}));
+export default require_first();
+export {};
+
+```
+
+## second.js
+
+```js
+import { i as __requireESM, n as init_esm, r as __commonJSMin, t as esm_exports } from "./esm.js";
+// second.cjs
+var require_second = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { namespace: (init_esm(), __requireESM(esm_exports)) };
+}));
+export default require_second();
+export {};
+
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### esm.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// esm.mjs
+var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+var value;
+var init_esm = __esmMin((() => {
+	value = {};
+}));
+Object.defineProperty(exports, "__requireESM", {
+	enumerable: true,
+	get: function() {
+		return __requireESM;
+	}
+});
+Object.defineProperty(exports, "esm_exports", {
+	enumerable: true,
+	get: function() {
+		return esm_exports;
+	}
+});
+Object.defineProperty(exports, "init_esm", {
+	enumerable: true,
+	get: function() {
+		return init_esm;
+	}
+});
+
+```
+
+### first.js
+
+```js
+const require_esm = require("./esm.js");
+// first.cjs
+module.exports = { namespace: (require_esm.init_esm(), require_esm.__requireESM(require_esm.esm_exports)) };
+
+```
+
+### second.js
+
+```js
+const require_esm = require("./esm.js");
+// second.cjs
+module.exports = { namespace: (require_esm.init_esm(), require_esm.__requireESM(require_esm.esm_exports)) };
+
+```

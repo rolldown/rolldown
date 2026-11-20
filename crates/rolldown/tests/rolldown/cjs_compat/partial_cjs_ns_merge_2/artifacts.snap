@@ -23,7 +23,7 @@ var init_lib = __esmMin((() => {
 }));
 // cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_lib(), __toCommonJS(lib_exports));
+	module.exports = (init_lib(), __requireESM(lib_exports));
 }));
 // main.js
 var import_react = /* @__PURE__ */ __toESM(require_react());

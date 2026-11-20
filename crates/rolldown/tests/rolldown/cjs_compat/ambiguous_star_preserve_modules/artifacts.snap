@@ -28,7 +28,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __commonJSMin, __esmMin, __exportAll, __toCommonJS };
+export { __commonJSMin, __esmMin, __exportAll, __requireESM };
 
 ```
 
@@ -52,11 +52,11 @@ export { barrel_exports, init_barrel };
 ## e1.js
 
 ```js
-import { __commonJSMin, __toCommonJS } from "./_virtual/_rolldown/runtime.js";
+import { __commonJSMin, __requireESM } from "./_virtual/_rolldown/runtime.js";
 import { barrel_exports, init_barrel } from "./barrel.js";
 // src/e1.cjs
 var require_e1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_barrel(), __toCommonJS(barrel_exports));
+	module.exports = (init_barrel(), __requireESM(barrel_exports));
 }));
 export default require_e1();
 export {};

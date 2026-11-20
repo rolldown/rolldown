@@ -42,7 +42,7 @@ var init_leaf = __esmMin((() => {
 }));
 // proxy.cjs
 var require_proxy = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_leaf(), __toCommonJS(leaf_exports));
+	module.exports = (init_leaf(), __requireESM(leaf_exports));
 }));
 export { __commonJSMin as n, require_proxy as t };
 

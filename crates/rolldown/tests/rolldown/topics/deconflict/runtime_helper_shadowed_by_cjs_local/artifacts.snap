@@ -11,10 +11,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 var esm_exports = /* @__PURE__ */ __exportAll({ v: () => 1 });
 var init_esm = __esmMin((() => {}));
 var main_default = (/* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	var __toCommonJS = (mod) => "local";
+	var __requireESM = (mod) => "local";
 	module.exports = {
-		v: (init_esm(), __toCommonJS$1(esm_exports)).v,
-		local: __toCommonJS(1)
+		v: (init_esm(), __requireESM$1(esm_exports)).v,
+		local: __requireESM(1)
 	};
 })))())).default;
 export { main_default as default };

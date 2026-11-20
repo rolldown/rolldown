@@ -13,10 +13,10 @@ var init_esm = __esmMin((() => {}));
 // main.js
 init_esm();
 init_esm();
-init_esm(), __toCommonJS(esm_exports);
-(init_esm(), __toCommonJS(esm_exports)).default;
+init_esm(), __requireESM(esm_exports);
+(init_esm(), __requireESM(esm_exports)).default;
 console.log((init_esm(), 1));
-console.log((init_esm(), __toCommonJS(esm_exports)));
-console.log(((init_esm(), __toCommonJS(esm_exports)) + 1, 200));
+console.log((init_esm(), __requireESM(esm_exports)));
+console.log(((init_esm(), __requireESM(esm_exports)) + 1, 200));
 
 ```

@@ -208,15 +208,24 @@ impl LinkStage<'_> {
                         .push(importee_linking_info.wrapper_ref.unwrap().into());
                     }
                     WrapKind::Esm => {
-                      // convert require record into `(init_foo(), __toCommonJS(foo_exports))` if
-                      // `require('xxx)` is used, else convert it to `init_foo()`
+                      // Used requires become `(init_foo(), __requireESM(foo_exports))` or
+                      // `(init_foo(), __toCommonJS(foo_exports))`. Unused requires just call `init_foo()`.
                       stmt_info
                         .referenced_symbols
                         .push(importee_linking_info.wrapper_ref.unwrap().into());
                       stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
 
                       if !rec.meta.contains(ImportRecordMeta::IsRequireUnused) {
-                        depended_runtime_helper_map.push(RuntimeHelper::ToCommonJs, stmt_info_idx);
+                        let helper = if !rec.meta.contains(ImportRecordMeta::JsonModule)
+                          && !importee_linking_info.has_dynamic_exports
+                          && !importee_linking_info.resolved_exports.contains_key("module.exports")
+                        {
+                          record_meta_pairs.push((*rec_id, ImportRecordMeta::UseCachedEsmRequire));
+                          RuntimeHelper::RequireEsm
+                        } else {
+                          RuntimeHelper::ToCommonJs
+                        };
+                        depended_runtime_helper_map.push(helper, stmt_info_idx);
                       }
                     }
                   },

@@ -19,7 +19,7 @@ var init_esm = __esmMin((() => {
 }));
 // main.js
 var import_cjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_esm(), __toCommonJS(esm_exports));
+	module.exports = (init_esm(), __requireESM(esm_exports));
 })))());
 assert.deepStrictEqual(import_cjs.__esModule, true);
 assert.deepStrictEqual(import_cjs.foo, "foo");

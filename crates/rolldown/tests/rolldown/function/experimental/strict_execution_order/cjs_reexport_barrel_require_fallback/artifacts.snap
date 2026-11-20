@@ -54,18 +54,18 @@ export { required_barrel_exports as i, loadRoute as n, init_required_barrel as r
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __toESM as a, __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+export { __toESM as a, __requireESM as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ```
 
 ## route.js
 
 ```js
-import { i as __toCommonJS, t as __commonJSMin } from "./rolldown-runtime.js";
+import { i as __requireESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import { i as required_barrel_exports, r as init_required_barrel } from "./main2.js";
 // route.cjs
 var require_route = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const ns = (init_required_barrel(), __toCommonJS(required_barrel_exports));
+	const ns = (init_required_barrel(), __requireESM(required_barrel_exports));
 	globalThis.__events.push("route");
 	module.exports = ns.clone({ value: 1 });
 }));
@@ -128,18 +128,18 @@ export { required_barrel_exports as i, loadRoute as n, init_required_barrel as r
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __toESM as a, __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+export { __toESM as a, __requireESM as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ```
 
 ### route.js
 
 ```js
-import { i as __toCommonJS, t as __commonJSMin } from "./rolldown-runtime.js";
+import { i as __requireESM, t as __commonJSMin } from "./rolldown-runtime.js";
 import { i as required_barrel_exports, r as init_required_barrel } from "./main2.js";
 // route.cjs
 var require_route = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const ns = (init_required_barrel(), __toCommonJS(required_barrel_exports));
+	const ns = (init_required_barrel(), __requireESM(required_barrel_exports));
 	globalThis.__events.push("route");
 	module.exports = ns.clone({ value: 1 });
 }));

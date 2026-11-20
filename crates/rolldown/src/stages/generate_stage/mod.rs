@@ -7,7 +7,7 @@ use oxc_str::CompactStr;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ModuleIdx, NormalModule, OutputExports, PackageJson,
-  PathsOutputOption, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
+  PathsOutputOption, StaticImport, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -250,6 +250,10 @@ impl<'a> GenerateStage<'a> {
     // A file names its carried records' modules together with its own.
     // See internal-docs/inline-common-chunks/implementation.md ("Deconflicting").
     let inline_naming_inputs = self.inline_naming_inputs(&chunk_graph);
+    let node_require_ref = self
+      .options
+      .polyfill_require_for_esm_format_with_node_platform()
+      .then(|| self.link_output.runtime.resolve_symbol("__require"));
     debug_span!("deconflict_chunk_symbols").in_scope(|| {
       // Borrow the chunk table mutably alongside the assignment tables it does not touch, so
       // deconflicting can attribute recorded external interop to the chunk it belongs to.
@@ -267,6 +271,7 @@ impl<'a> GenerateStage<'a> {
             self.link_output,
             &order_state,
             self.options.format,
+            node_require_ref,
             &index_chunk_id_to_name,
             chunk_assignments,
             inline_naming_inputs.get(&chunk_idx),
@@ -300,6 +305,16 @@ impl<'a> GenerateStage<'a> {
       &order_state,
       &final_esm_init_metadata,
     )?;
+    if node_require_ref.is_some() {
+      for chunk in chunk_graph.chunk_table.iter_mut() {
+        if let Some((module, _)) = chunk.node_require_import() {
+          let import = StaticImport::External(module);
+          if !chunk.static_imports.contains(&import) {
+            chunk.static_imports.push(import);
+          }
+        }
+      }
+    }
     self.detect_ineffective_dynamic_imports(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs, &order_state).await
   }

@@ -59,6 +59,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "arc-swap"
+version = "1.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "84a22b5d51209f6de83d37a0b33d320acb8da88823e42a94c075140708f032a5"
+dependencies = [
+ "rustversion",
+]
+
+[[package]]
 name = "arcstr"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -75,6 +84,23 @@ name = "arrayvec"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
+
+[[package]]
+name = "async-lock"
+version = "3.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0876700b0d007ad25d5508865a4259c3af9af6d296bf663a0d586d0bc3369f6f"
+dependencies = [
+ "event-listener",
+ "event-listener-strategy",
+ "pin-project-lite",
+]
+
+[[package]]
+name = "async-task"
+version = "4.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b75356056920673b02621b35afd0f7dda9306d03c79a30f5c56c44cf256e3de"
 
 [[package]]
 name = "autocfg"
@@ -117,9 +143,9 @@ dependencies = [
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_tracking_allocator",
+ "rolldown_utils",
  "rolldown_workspace",
  "rustc-hash",
- "tokio",
 ]
 
 [[package]]
@@ -395,7 +421,6 @@ dependencies = [
  "oorandom",
  "serde",
  "serde_json",
- "tokio",
 ]
 
 [[package]]
@@ -549,6 +574,26 @@ name = "escape-simd"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0440157235aa4badd45ea073af8de2ba44ffead74bf8a7833b215533c36f08e"
+
+[[package]]
+name = "event-listener"
+version = "5.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a23add41df1562121a9393cb065eab5146a1242410f23a644851e90cfd669d2"
+dependencies = [
+ "parking",
+ "pin-project-lite",
+]
+
+[[package]]
+name = "event-listener-strategy"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8be9f3dfaaffdae2972880079a491a1a8bb7cbed0b8dd7a347f668b4150a3b93"
+dependencies = [
+ "event-listener",
+ "pin-project-lite",
+]
 
 [[package]]
 name = "fancy-regex"
@@ -1274,8 +1319,22 @@ dependencies = [
  "rustc-hash",
  "serde",
  "serde_json",
- "tokio",
  "tracing",
+]
+
+[[package]]
+name = "napi-async-runtime"
+version = "0.2.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf3331ceb305a967f08dddebef8ecd3f5517a10fa095cf57e7ba0cc17adff76f"
+dependencies = [
+ "arc-swap",
+ "async-task",
+ "crossbeam-deque",
+ "futures",
+ "napi-sys",
+ "rayon",
+ "rustc-hash",
 ]
 
 [[package]]
@@ -2106,6 +2165,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "parking"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f38d5652c16fde515bb1ecef450ab0f6a219d619a7274976324d5e377f7dceba"
+
+[[package]]
 name = "parking_lot"
 version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2128,8 +2193,7 @@ dependencies = [
 [[package]]
 name = "parking_lot_core"
 version = "0.9.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2621685985a2ebf1c516881c026032ac7deafcda1a2c9b7850dc81e3dfcb64c1"
+source = "git+https://github.com/napi-rs/parking_lot?rev=eb33ab62f79d27d1c7880b60e06187be1cbd21f4#eb33ab62f79d27d1c7880b60e06187be1cbd21f4"
 dependencies = [
  "cfg-if",
  "libc",
@@ -2651,6 +2715,7 @@ dependencies = [
  "dashmap",
  "derive_more",
  "fast-glob",
+ "futures",
  "insta",
  "itertools",
  "json-escape-simd",
@@ -2677,7 +2742,6 @@ dependencies = [
  "smallvec",
  "string_wizard",
  "sugar_path",
- "tokio",
 ]
 
 [[package]]
@@ -2686,6 +2750,7 @@ version = "1.3.3"
 dependencies = [
  "anyhow",
  "arcstr",
+ "async-lock",
  "dunce",
  "futures",
  "rolldown",
@@ -2820,6 +2885,8 @@ dependencies = [
  "bitflags",
  "dashmap",
  "derive_more",
+ "event-listener",
+ "futures",
  "nodejs-built-in-modules",
  "oxc_index",
  "rolldown_common",
@@ -2835,7 +2902,6 @@ dependencies = [
  "serde_json",
  "string_wizard",
  "sugar_path",
- "tokio",
  "tracing",
  "typedmap",
 ]
@@ -2993,7 +3059,6 @@ dependencies = [
  "rolldown_utils",
  "serde_json",
  "string_wizard",
- "tokio",
 ]
 
 [[package]]
@@ -3304,6 +3369,7 @@ dependencies = [
  "json-escape-simd",
  "memchr",
  "mime",
+ "napi-async-runtime",
  "nom",
  "oxc",
  "oxc_index",
@@ -3316,7 +3382,6 @@ dependencies = [
  "rustc-hash",
  "simdutf8",
  "sugar_path",
- "tokio",
  "uuid",
  "xxhash-rust",
 ]
@@ -3327,6 +3392,8 @@ version = "1.3.3"
 dependencies = [
  "anyhow",
  "arcstr",
+ "async-lock",
+ "event-listener",
  "futures",
  "oxc_index",
  "rolldown",

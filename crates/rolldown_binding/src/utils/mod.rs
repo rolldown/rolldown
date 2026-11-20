@@ -24,36 +24,13 @@ pub use normalize_binding_transform_options::normalize_binding_transform_options
 
 /// Spawn the future of an async binding method and return its promise.
 ///
-/// Boxing gives every async body one tokio task harness per output type, at one heap allocation
+/// Boxing gives every async body one task harness per output type, at one heap allocation
 /// per call.
-/// On wasm, the call also holds the shared runtime until its promise settles, so every async
-/// binding method that spawns, including the per-hook `this.resolve()` and `this.load()`, goes
-/// through here.
 pub fn spawn_boxed_future<T: 'static + Send + ToNapiValue>(
   env: &Env,
   fut: impl 'static + Send + Future<Output = napi::Result<T>>,
 ) -> napi::Result<PromiseRaw<'_, T>> {
   let fut: Pin<Box<dyn Future<Output = napi::Result<T>> + Send>> = Box::pin(fut);
-  #[cfg(all(target_family = "wasm", tokio_unstable))]
-  {
-    // Calls retain the runtime until their JS promise settles.
-    // See internal-docs/rust-classic-bundler/implementation.md.
-    crate::start_async_runtime();
-    let result = napi::bindgen_prelude::execute_tokio_future_with_finalize_callback(
-      env.raw(),
-      fut,
-      |env, value| unsafe { T::to_napi_value(env, value) },
-      Some(Box::new(|_| crate::shutdown_async_runtime())),
-    );
-    match result {
-      Ok(promise) => Ok(PromiseRaw::new(env.raw(), promise)),
-      Err(error) => {
-        crate::shutdown_async_runtime();
-        Err(error)
-      }
-    }
-  }
-  #[cfg(not(all(target_family = "wasm", tokio_unstable)))]
   env.spawn_future(fut)
 }
 

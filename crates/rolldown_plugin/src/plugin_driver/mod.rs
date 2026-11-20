@@ -20,7 +20,7 @@ use rolldown_common::{
 };
 use rolldown_devtools::trace_action_enabled;
 use rolldown_utils::dashmap::FxDashSet;
-use tokio::sync::watch;
+use event_listener::Event;
 
 use crate::{
   __inner::SharedPluginable,
@@ -35,7 +35,8 @@ pub type SharedPluginDriver = Arc<PluginDriver>;
 /// `PluginContext::{info,warn,debug}` are sync but the user's `onLog` callback
 /// is async, so each call spawns a detached task. The join handles are kept here
 /// so the build can await them at a barrier and report errors the callback produced
-pub type SharedLogHookTasks = Arc<Mutex<Vec<tokio::task::JoinHandle<anyhow::Result<()>>>>>;
+pub type SharedLogHookTasks =
+  Arc<Mutex<Vec<rolldown_utils::futures::JoinHandle<anyhow::Result<()>>>>>;
 
 /// In devtools mode, the driver skips a call that the plugin's own hook filter rejects before it
 /// logs the call, so the hook log holds only calls that ran. The plugin returns `None` for that
@@ -61,7 +62,7 @@ pub struct PluginDriver {
   /// Module dependencies tracked during load/transform hooks for HMR invalidation
   pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<WatchPath>>>>,
   context_load_completion_manager: ContextLoadCompletionManager,
-  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
+  pub(crate) tx: Arc<Mutex<Option<futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   /// Shared, so the binding can keep the clocks of every build until the bundler closes
   /// without keeping the driver of every build.
   pub build_timings: Arc<BuildTimings>,
@@ -105,7 +106,7 @@ impl PluginDriver {
 
   pub fn set_context_load_modules_tx(
     &self,
-    tx: Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>,
+    tx: Option<futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>>,
   ) -> anyhow::Result<()> {
     *self.tx.lock().ok().context("Failed to acquire PluginDriver tx lock")? = tx;
     Ok(())
@@ -173,9 +174,57 @@ pub enum ContextLoadProgress {
   Completed,
 }
 
+struct ProgressWatchState {
+  progress: Option<ContextLoadProgress>,
+  closed: bool,
+}
+
+struct ProgressWatch {
+  state: std::sync::Mutex<ProgressWatchState>,
+  event: Event,
+}
+
+impl ProgressWatch {
+  fn new(initial: Option<ContextLoadProgress>) -> Arc<Self> {
+    Arc::new(Self {
+      state: std::sync::Mutex::new(ProgressWatchState { progress: initial, closed: false }),
+      event: Event::new(),
+    })
+  }
+}
+
+struct ProgressSender(Arc<ProgressWatch>);
+
+impl ProgressSender {
+  fn advance(&self, progress: ContextLoadProgress) {
+    let changed = {
+      let mut guard = self.0.state.lock().expect("progress watch lock poisoned");
+      if guard.progress.is_some_and(|current| current >= progress) {
+        false
+      } else {
+        guard.progress = Some(progress);
+        true
+      }
+    };
+    if changed {
+      self.0.event.notify(usize::MAX);
+    }
+  }
+}
+
+impl Drop for ProgressSender {
+  fn drop(&mut self) {
+    {
+      let mut guard = self.0.state.lock().expect("progress watch lock poisoned");
+      guard.closed = true;
+    }
+    self.0.event.notify(usize::MAX);
+  }
+}
+
 enum ContextLoadState {
   Reached(ContextLoadProgress),
-  Waited(watch::Sender<Option<ContextLoadProgress>>),
+  Waited(ProgressSender),
 }
 
 #[derive(Default)]
@@ -185,31 +234,37 @@ struct ContextLoadCompletionManager {
 
 impl ContextLoadCompletionManager {
   pub async fn wait_for(&self, module_id: ModuleId, progress: ContextLoadProgress) {
-    let mut rx = match self.states.entry(module_id) {
+    let watch = match self.states.entry(module_id) {
       dashmap::Entry::Vacant(guard) => {
-        let (tx, rx) = watch::channel(None);
-        guard.insert(ContextLoadState::Waited(tx));
-        rx
+        let watch = ProgressWatch::new(None);
+        guard.insert(ContextLoadState::Waited(ProgressSender(Arc::clone(&watch))));
+        watch
       }
-      dashmap::Entry::Occupied(mut guard) => match *guard.get() {
-        ContextLoadState::Reached(reached) if reached >= progress => return,
+      dashmap::Entry::Occupied(mut guard) => match guard.get() {
+        ContextLoadState::Reached(reached) if *reached >= progress => return,
         ContextLoadState::Reached(reached) => {
-          let (tx, rx) = watch::channel(Some(reached));
-          guard.insert(ContextLoadState::Waited(tx));
-          rx
+          let watch = ProgressWatch::new(Some(*reached));
+          guard.insert(ContextLoadState::Waited(ProgressSender(Arc::clone(&watch))));
+          watch
         }
-        ContextLoadState::Waited(ref tx) => tx.subscribe(),
+        ContextLoadState::Waited(sender) => Arc::clone(&sender.0),
       },
     };
-    if let Err(err) =
-      rx.wait_for(|current| current.is_some_and(|current| current >= progress)).await
-    {
-      // This happens when `.invalidate` is called before the module completes, which is not expected
-      debug_assert!(
-        false,
-        "The sender was dropped while waiting for module load completion: {err}"
-      );
-      tracing::warn!("The sender was dropped while waiting for module load completion");
+    loop {
+      let listener = {
+        let guard = watch.state.lock().expect("progress watch lock poisoned");
+        if guard.progress.is_some_and(|current| current >= progress) {
+          return;
+        }
+        if guard.closed {
+          // This happens when `.invalidate` is called before the module completes, which is not expected
+          debug_assert!(false, "The sender was dropped while waiting for module load completion");
+          tracing::warn!("The sender was dropped while waiting for module load completion");
+          return;
+        }
+        watch.event.listen()
+      };
+      listener.await;
     }
   }
 
@@ -220,15 +275,7 @@ impl ContextLoadCompletionManager {
       }
       dashmap::Entry::Occupied(mut guard) => match guard.get_mut() {
         ContextLoadState::Reached(reached) => *reached = (*reached).max(progress),
-        ContextLoadState::Waited(tx) => {
-          tx.send_if_modified(|current| {
-            if current.is_some_and(|current| current >= progress) {
-              return false;
-            }
-            *current = Some(progress);
-            true
-          });
-        }
+        ContextLoadState::Waited(sender) => sender.advance(progress),
       },
     }
   }

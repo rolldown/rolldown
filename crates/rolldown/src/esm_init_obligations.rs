@@ -565,12 +565,7 @@ fn export_has_consumer_local_init(
   name: &str,
 ) -> bool {
   let Some(module) = ctx.modules[module_idx].as_normal() else { return false };
-  let record = module
-    .named_exports
-    .get(name)
-    .and_then(|export| module.named_imports.get(&export.referenced).map(|import| import.record_idx))
-    .or_else(|| ctx.metas[module_idx].star_export_record_by_name.get(name).copied());
-  record.is_some_and(|rec_idx| {
+  ctx.metas[module_idx].reexport_record_idx(module, name).is_some_and(|rec_idx| {
     ctx.order_wrap_state.is_consumer_local_reexport_record(module_idx, rec_idx)
   })
 }

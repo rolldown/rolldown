@@ -15,15 +15,14 @@ export { foo } from "./d.js";
 
 ```js
 import "./c.js";
-import "./d.js";
 
 ```
 
 ## c.js
 
 ```js
-export { foo } from "./d.js";
 import "./a.js";
+export { foo } from "./d.js";
 
 ```
 

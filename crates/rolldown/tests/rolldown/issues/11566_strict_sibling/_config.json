@@ -1,0 +1,17 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "other",
+        "import": "./other.js"
+      },
+      {
+        "name": "index",
+        "import": "./index.js"
+      }
+    ],
+    "preserveModules": true,
+    "strictExecutionOrder": true
+  },
+  "snapshot": false
+}

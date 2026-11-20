@@ -191,10 +191,9 @@ impl GenerateStage<'_> {
       &order_live_symbols,
     );
 
-    // The strict path keeps the `exec_order` sort of chunk importees: its order analysis models
-    // chunk evaluation with that order, and the plan's wrappers fix the module order. The analysis
-    // does not model external imports, so they get ranks on both paths. On the strict path the ranks
-    // of the chunk importees only place the external imports among the chunk imports.
+    // Strict order analysis models chunk evaluation in `exec_order`. The preserved ESM re-export pass
+    // also uses source ranks to decide which requests can move. Both modes use source ranks to place
+    // external imports.
     let is_strict_execution_order = self.options.is_strict_execution_order_enabled();
     let index_import_ranks = chunk_graph
       .chunk_table
@@ -213,6 +212,18 @@ impl GenerateStage<'_> {
       .map(|ranks| ranks.as_ref().filter(|_| !is_strict_execution_order).map(|ranks| &ranks.chunks))
       .collect::<Vec<_>>();
 
+    let reexport_hops = self.collect_reexport_hops(
+      chunk_graph,
+      &index_imports_from_other_chunks,
+      &index_import_ranks,
+    );
+    let sort_importees = |idx: ChunkIdx, importees: &mut [ChunkIdx]| {
+      sort_chunk_importees(chunk_graph, importees, index_importee_ranks[idx.index()]);
+      if let Some(hops) = reexport_hops.get(idx) {
+        move_reexport_owners(importees, hops, index_import_ranks[idx.index()].as_ref());
+      }
+    };
+
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
       .par_iter_enumerated()
       .map(|(chunk_idx, cross_chunk_imports)| {
@@ -224,11 +235,7 @@ impl GenerateStage<'_> {
           .copied()
           .chain(chunk_graph.chunk_table[chunk_idx].imports_from_other_chunks.keys().copied())
           .collect::<Vec<_>>();
-        sort_chunk_importees(
-          chunk_graph,
-          &mut cross_chunk_imports,
-          index_importee_ranks[chunk_idx.index()],
-        );
+        sort_importees(chunk_idx, &mut cross_chunk_imports);
         cross_chunk_imports
       })
       .collect::<Vec<_>>();
@@ -247,7 +254,7 @@ impl GenerateStage<'_> {
           importee_map.entry(*idx).or_default().extend_from_slice(items);
         }
         let mut importees = importee_map.keys().copied().collect::<Vec<_>>();
-        sort_chunk_importees(chunk_graph, &mut importees, index_importee_ranks[chunk_idx.index()]);
+        sort_importees(chunk_idx, &mut importees);
         importees
           .into_iter()
           .map(|importee| {
@@ -576,12 +583,8 @@ impl GenerateStage<'_> {
     })
   }
 
-  /// The inlined constants that the included statements of a module read through a namespace
-  /// import, such as `ns.SIZE` for `import * as ns from './ui.js'`, each with the record of that
-  /// import. Only constants whose module the output keeps count, because the output imports the
-  /// chunk of such a module for them. They are sorted by the `exec_order` of their modules, the
-  /// order that the chunks have without ranks.
-  fn namespace_constant_reads(&self, module: &NormalModule) -> Vec<(ImportRecordIdx, SymbolRef)> {
+  /// Included namespace reads in owner order, limited to kept inlined constants unless `all`.
+  fn namespace_reads(&self, module: &NormalModule, all: bool) -> Vec<(ImportRecordIdx, SymbolRef)> {
     if !module.named_imports.values().any(|named_import| named_import.imported.is_star()) {
       return vec![];
     }
@@ -606,8 +609,9 @@ impl GenerateStage<'_> {
           continue;
         };
         let canonical_ref = self.link_output.symbol_db.canonical_ref_for(symbol_ref);
-        if self.link_output.global_constant_symbol_map.contains_key(&canonical_ref)
-          && self.keeps_constant_owner(canonical_ref.owner)
+        if all
+          || (self.link_output.global_constant_symbol_map.contains_key(&canonical_ref)
+            && self.keeps_constant_owner(canonical_ref.owner))
         {
           reads.push((named_import.record_idx, symbol_ref));
         }
@@ -671,7 +675,7 @@ impl GenerateStage<'_> {
           .named_imports
           .values()
           .map(|named_import| (named_import.record_idx, named_import.imported_as))
-          .chain(self.namespace_constant_reads(module))
+          .chain(self.namespace_reads(module, false))
           .flat_map(|(record_idx, symbol_ref)| {
             let canonical_ref = symbol_db.canonical_ref_for(symbol_ref);
             let namespace_owner = symbol_db
@@ -1043,6 +1047,93 @@ impl GenerateStage<'_> {
     }
   }
 
+  fn collect_reexport_hops(
+    &self,
+    chunk_graph: &ChunkGraph,
+    imports: &IndexImportsFromOtherChunks,
+    ranks: &[Option<ChunkImportRanks>],
+  ) -> IndexVec<ChunkIdx, Vec<(ChunkIdx, ChunkIdx)>> {
+    if !(self.options.preserve_modules && self.options.format.is_esm()) {
+      return IndexVec::default();
+    }
+    let mut hops = index_vec![vec![]; imports.len()];
+    let modules = &self.link_output.module_table;
+    let symbols = &self.link_output.symbol_db;
+    let metas = &self.link_output.metas;
+    for (idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      if imports[idx].len() < 2 {
+        continue;
+      }
+      let Some(module) = chunk.entry_module(modules) else { continue };
+      let meta = &metas[module.idx];
+      let rank = |chunk| ranks[idx.index()].as_ref()?.chunks.get(&chunk).copied();
+      let exports = meta.canonical_exports(false).filter_map(|(name, export)| {
+        Some((meta.reexport_record_idx(module, name)?, export.symbol_ref, true))
+      });
+      let reads =
+        self.namespace_reads(module, true).into_iter().map(|(idx, sym)| (idx, sym, false));
+      // A named export can shadow an earlier star without removing its source request.
+      let stars = module.star_export_records().flat_map(|(record, module)| {
+        metas[module].canonical_exports(false).filter_map(move |(name, export)| {
+          (name.as_str() != "default").then_some((record, export.symbol_ref, false))
+        })
+      });
+      let requests = exports.chain(reads).chain(stars).map(|(record, symbol, reexport)| {
+        (record, symbols.canonical_ref_resolving_namespace(symbol), reexport)
+      });
+      let mut pairs = FxIndexSet::default();
+      let mut earlier_owners = FxHashSet::default();
+      for (record, binding, reexport) in requests.sorted_unstable_by_key(|&(record, binding, _)| {
+        (record, std::cmp::Reverse(modules[binding.owner].exec_order()))
+      }) {
+        let Some(owner) = chunk_graph.module_to_chunk[binding.owner] else { continue };
+        let imports_binding = |importer: ChunkIdx| {
+          imports[importer]
+            .get(&owner)
+            .is_some_and(|items| items.iter().any(|item| item.import_ref == binding))
+        };
+        if !imports_binding(idx) {
+          continue;
+        }
+        let Some(hop) = module.import_records[record]
+          .resolved_module
+          .and_then(|module_idx| chunk_graph.module_to_chunk[module_idx])
+          .filter(|hop| imports[idx].contains_key(hop))
+        else {
+          earlier_owners.insert(owner);
+          continue;
+        };
+        if reexport
+          && hop != owner
+          && !earlier_owners.contains(&owner)
+          && !pairs.contains(&(owner, hop))
+          && rank(owner)
+            .is_none_or(|owner_rank| rank(hop).is_some_and(|hop_rank| owner_rank >= hop_rank))
+          && imports_binding(hop)
+        {
+          pairs.insert((owner, hop));
+        }
+      }
+      hops[idx].extend(pairs);
+    }
+    if self.options.is_strict_execution_order_enabled() && hops.iter().any(|h| !h.is_empty()) {
+      let cyclic =
+        super::order_wrapping::synchronous_cycle_modules(&self.link_output.module_table.modules);
+      for hops in &mut hops {
+        hops.retain(|&(owner, hop)| {
+          // The strict order plan relies on `exec_order` for paths into synchronous cycles.
+          [owner, hop].into_iter().all(|chunk| {
+            !chunk_graph.chunk_table[chunk].modules.iter().any(|module| cyclic.contains(module))
+          }) && ranks[hop.index()]
+            .as_ref()
+            .and_then(|ranks| ranks.chunks.get(&owner))
+            .is_some_and(|&rank| rank > 0)
+        });
+      }
+    }
+    hops
+  }
+
   fn collect_external_import(
     &self,
     importer_idx: ModuleIdx,
@@ -1250,8 +1341,9 @@ impl GenerateStage<'_> {
               chunk_graph,
               order_state,
               depended_symbols,
-              entry.idx,
+              entry,
               entry_meta,
+              used_symbol_refs_view,
             );
           }
 
@@ -1351,11 +1443,12 @@ impl GenerateStage<'_> {
     }
   }
 
-  /// Register what a non-CJS entry's export signature makes the chunk depend on: the canonical
-  /// symbol of every re-exported binding, plus — off-strict, for unwrapped entries — the `init_*`
-  /// wrapper of every ESM-wrapped module backing one. The wrappers come from the same walk emission
-  /// consumes (`collect_entry_reexported_wrapper_inits`), so everything the entry chunk may call
-  /// is imported by construction; `None` for the names because registration runs before chunk
+  /// Register the canonical bindings needed by a non-CJS entry's exports and, for an unwrapped
+  /// non-strict entry, the ESM init wrappers those exports need. In non-strict preserved ESM, an
+  /// existing side-effectful forwarding request supplies evaluation for unused re-export aliases.
+  /// The wrappers come from the same walk emission consumes
+  /// (`collect_entry_reexported_wrapper_inits`), so everything the entry chunk may call is imported
+  /// by construction; `None` for the names because registration runs before chunk
   /// names exist — it is what makes a wrapper reachable. The entry's own wrapper is not part of
   /// the walk; the caller's `esm_init_target` arm covers it. `entry_export_needs_service` drops
   /// the owners that an entry without a preserved signature does not need to run.
@@ -1364,15 +1457,31 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
     order_state: &super::order_wrap_state::OrderWrapState,
     depended_symbols: &mut FxIndexSet<SymbolRef>,
-    entry_idx: ModuleIdx,
+    entry: &NormalModule,
     entry_meta: &crate::types::linking_metadata::LinkingMetadata,
+    used_symbol_refs: UsedSymbolRefsView<'_>,
   ) {
+    let entry_idx = entry.idx;
     let symbols = &self.link_output.symbol_db;
+    let can_skip_unused_reexports = self.options.preserve_modules
+      && self.options.format.is_esm()
+      && !self.options.is_strict_execution_order_enabled();
     let mut verdicts = FxHashMap::default();
     let sorted_export_refs = entry_meta
       .resolved_exports
       .iter()
       .sorted_unstable_by_key(|(name, _)| *name)
+      .filter(|(name, export)| {
+        !can_skip_unused_reexports
+          || used_symbol_refs.contains(&export.symbol_ref)
+          || !entry_meta
+            .reexport_record_idx(entry, name)
+            .and_then(|record| entry.import_records[record].resolved_module)
+            .is_some_and(|importee| {
+              chunk_graph.module_to_chunk[importee].is_some()
+                && self.link_output.module_table[importee].side_effects().has_side_effects()
+            })
+      })
       .map(|(_, export)| export)
       // A chunk should always consume a cjs export symbol by property access, so filter
       // out a exported symbol that came from a cjs module.
@@ -2339,6 +2448,26 @@ impl GenerateStage<'_> {
         symbol_ref,
       )
     })
+  }
+}
+
+fn move_reexport_owners(
+  importees: &mut [ChunkIdx],
+  hops: &[(ChunkIdx, ChunkIdx)],
+  ranks: Option<&ChunkImportRanks>,
+) {
+  let rank = |chunk| ranks?.chunks.get(&chunk);
+  for &(owner, hop) in hops {
+    if let (Some(owner_pos), Some(hop_pos)) =
+      (importees.iter().position(|&idx| idx == owner), importees.iter().position(|&idx| idx == hop))
+      && owner_pos < hop_pos
+      // A later source dependency can execute before the owner if the move crosses it.
+      && !rank(hop).is_some_and(|hop_rank| {
+        importees[owner_pos + 1..hop_pos].iter().any(|&sibling| rank(sibling) > Some(hop_rank))
+      })
+    {
+      importees[owner_pos..=hop_pos].rotate_left(1);
+    }
   }
 }
 

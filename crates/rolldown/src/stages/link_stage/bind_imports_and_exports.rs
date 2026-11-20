@@ -317,8 +317,9 @@ impl LinkStage<'_> {
 
       let mut module_stack = vec![];
       // Strict initialization routing and retained-path tracking share this star-export origin map.
-      let mut star_export_record_by_name =
-        self.options.is_strict_execution_order_enabled().then(FxHashMap::default);
+      let mut star_export_record_by_name = (self.options.is_strict_execution_order_enabled()
+        || (self.options.preserve_modules && self.options.format.is_esm()))
+      .then(FxHashMap::default);
       if module.has_star_export() || module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
         Self::add_exports_for_export_star(
           &self.module_table.modules,

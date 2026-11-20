@@ -13,8 +13,8 @@ use oxc::ast::builder::AstBuilder;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
   ClientHmrInput, ClientHmrUpdate, ExportsKind, HmrLazyChunkOutput, HmrPatch, HmrStampTable,
-  HmrUpdate, ImportKind, Module, ModuleIdx, ModuleTable, NormalModule, ScanMode, WatcherChangeKind,
-  is_lazy_proxy, lazy_proxy_target, write_lazy_proxy_id,
+  HmrUpdate, ImportKind, Module, ModuleIdx, ModuleTable, NormalModule, ResolvedId, ScanMode,
+  WatcherChangeKind, is_lazy_proxy, lazy_proxy_target, write_lazy_proxy_id,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
 use rolldown_error::BuildResult;
@@ -34,7 +34,7 @@ use sugar_path::SugarPath;
 use crate::{
   SharedOptions, SharedResolver,
   hmr::hmr_ast_finalizer::HmrAstFinalizer,
-  module_loader::ModuleLoader,
+  module_loader::{ModuleLoader, resolve_utils::refresh_package_json},
   type_alias::IndexEcmaAst,
   types::scan_stage_cache::ScanStageCache,
   utils::{
@@ -90,6 +90,28 @@ fn is_hidden_from_hot_update_hook(id: &str) -> bool {
 impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
   pub fn new(input: HmrStageInput<'a, Fs>) -> Self {
     Self { input }
+  }
+
+  /// Reads the `package.json` of the modules that this stage fetches again, as
+  /// `ScanStage::prepare_changed_modules` does for a rebuild.
+  /// See internal-docs/cache/implementation.md.
+  fn refresh_package_json_of(&mut self, changed: &mut [ResolvedId]) -> BuildResult<()> {
+    let HmrStageInput { cache, resolver, fs, .. } = &mut self.input;
+    let refreshed = changed
+      .iter_mut()
+      .chain(cache.pending_rescans.iter_mut())
+      .try_for_each(|resolved_id| refresh_package_json(resolved_id, resolver, fs));
+    if let Err(err) = refreshed {
+      // `fetch_modules` has not taken the changed modules yet. Queue them for the next scan,
+      // as a failed fetch does (`ModuleLoader::revert_partial_scan`).
+      for resolved_id in changed.iter() {
+        if cache.pending_rescans.iter().all(|queued| queued.id != resolved_id.id) {
+          cache.pending_rescans.push(resolved_id.clone());
+        }
+      }
+      return Err(err.into());
+    }
+    Ok(())
   }
 
   /// See `internal-docs/hmr/design.md` for the principles and invariants this
@@ -309,7 +331,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     let new_added_modules = if changed_modules.is_empty() {
       FxIndexSet::default()
     } else {
-      let modules_to_be_refetched = changed_modules
+      let mut modules_to_be_refetched = changed_modules
         .iter()
         .filter_map(|module_idx| {
           let module = &self.module_table().modules[*module_idx];
@@ -320,6 +342,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
           }
         })
         .collect::<Vec<_>>();
+      self.refresh_package_json_of(&mut modules_to_be_refetched)?;
 
       let fetch_mode = ScanMode::Partial(modules_to_be_refetched);
 
@@ -674,7 +697,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
     // 1. Get the originative resolved_id from the cached module
     // The proxy module should already be in the cache from the initial build.
-    let (entry_module_idx, resolved_id) = self
+    let (entry_module_idx, mut resolved_id) = self
       .cache
       .module_id_to_idx
       .get(module_id)
@@ -690,6 +713,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .ok_or_else(|| {
         vec![anyhow::anyhow!("Lazy entry module not found in cache. module_id={module_id}").into()]
       })?;
+
+    self.refresh_package_json_of(std::slice::from_mut(&mut resolved_id))?;
 
     // 2. Trigger a partial scan to fetch the module and its dependencies
     let fetch_mode = ScanMode::Partial(vec![resolved_id]);

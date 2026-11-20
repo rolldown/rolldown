@@ -89,12 +89,17 @@ Rust keeps it (see below).
 
 - `Bundle::scan_modules_impl` passes `None` before `buildStart` of a full scan. All options are
   cleared.
-- `ScanStage::scan` passes the changed files of a partial scan before it resolves them again
-  without an importer, so the `resolveId` hooks of that resolution do not see the options of the
-  last fetch.
+- `ScanStage::reset_changed_modules` passes the changed modules of an incremental rebuild before
+  `buildStart`, so `getModuleInfo` in `buildStart` shows their start options. Without it,
+  `buildStart` sees the options of the last fetch, such as the ones of the HMR stage of the same
+  change.
 - `ModuleLoader::fetch_modules` passes the changed modules of a partial scan. Each one goes back
-  to the options it started with (`resolvedModuleOptionMap`), because its importers do not
-  resolve it again. The HMR stage and lazy compilation reset only here.
+  to the options it started with (`resolvedModuleOptionMap`), because the scan fetches it again
+  from the resolution that created it, and its importers do not resolve it again. In an
+  incremental rebuild, this second reset also drops what `buildStart` set. The HMR stage and lazy
+  compilation reset only here.
+- JS keeps a shallow copy of the start `meta`, as Rollup copies `meta`. A hook that changes a
+  nested object of `meta` in place also changes the start options, so a reset keeps that change.
 
 As in Rollup, only the resolution that creates a module sets its start options. Later
 resolutions of the same id, `this.resolve`, and `this.load` options for a module that exists do
@@ -117,17 +122,34 @@ not change the module.
 - The options of resolutions that created no module (Rust `this.resolve` probes, and imports of a
   module that already exists) stay until the build ends (`PluginContextData.clear`) or a full scan
   starts. A partial scan also drops them: each `resetModuleOptions` call with ids (one per HMR
-  update or lazy compile, two per incremental rebuild) drops `olderResolutionOptionsMap` and moves
+  update or lazy compile, two per incremental rebuild, none when no module changed) drops
+  `olderResolutionOptionsMap` and moves
   `resolutionOptionsMap` there. A module takes its options in the scan that resolved it, so only
   unused options are dropped, and an HMR-only session keeps at most those of the previous HMR
   update. The receipt counter does not restart, so a receipt never finds the options of another
   build.
 
-On the Rust side, the HMR stage fetches a changed module again from its
+On the Rust side, the HMR stage and an incremental rebuild fetch a changed module again from its
 `originative_resolved_id`. That `ResolvedId` keeps the `moduleSideEffects` of the resolution
-that created the module (`ModuleTask::run_inner`). An incremental rebuild fetches the module
-from the importer-less resolution above, so `ModuleLoader::try_spawn_new_task` replaces its
-`moduleSideEffects` with the one of the module's `originative_resolved_id` in the snapshot.
+that created the module (`ModuleTask::run_inner`).
+
+It also keeps the `package.json` that the resolution found, and the module format that its
+`type` field gave. The file can change after the resolution, so the HMR stage and an incremental
+rebuild read it again from the same path before they fetch the module (`refresh_package_json` in
+`module_loader/resolve_utils.rs`), also for the modules in `pending_rescans`. It infers the
+format again from the whole id or from the id without `?query` and `#fragment`, whichever gave
+the old format. When both gave it, it uses the whole id, so an id with a query from Rolldown's
+resolver that started as `Unknown` stays `Unknown`.
+
+A `package.json` that cannot be parsed fails the HMR update or the scan before `fetch_modules`.
+So `ScanStage::scan` and `HmrStage::refresh_package_json_of` queue the changed modules in
+`pending_rescans` themselves, and a later change, such as the fix of the file, fetches them again.
+The `package.json` cache of the resolver is up to date then: the dev engine clears it when a
+watched `package.json` changes (`internal-docs/dev-engine/implementation.md` §9c).
+
+A `package.json` that no longer exists gives no `package.json` data. A `package.json` that a user
+adds nearer to the module is not found: the path is the one that the resolution found. Both need
+the files that the resolution looked for and did not find, which Rolldown does not track yet.
 
 `moduleSideEffects` lives only in Rust. A hook value reaches Rust with the hook result: the
 `resolveId`, `resolveDynamicImport`, `load` and `transform` wrappers send Rust only the
@@ -413,7 +435,10 @@ produces only the changed + newly discovered modules → sparse `Map`.
    In a partial scan, the kind of a module comes from one of two places:
 
    - A module that the scan re-scans or adds gets its kind from this scan.
-     Thus a changed file that was external can become a normal module.
+     A changed external module is not re-scanned: `changed_resolved_ids` in
+     `scan_stage.rs` marks it as invalidated, so the first resolution of its
+     id in this scan sets its kind again. Thus a changed file that was
+     external can become a normal module.
    - An unchanged module keeps its kind from the snapshot.
 
    Known gap: a partial scan also reports this error when an edit only

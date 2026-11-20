@@ -1,7 +1,6 @@
 use std::{sync::Arc, thread};
 
 use arcstr::ArcStr;
-use futures::future::join_all;
 use oxc::span::Span;
 use oxc_index::IndexVec;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
@@ -16,13 +15,17 @@ use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::{FxHashMap, FxHashSet};
+use sugar_path::SugarPath;
 
 use crate::{
   SharedOptions, SharedResolver,
-  module_loader::{ModuleLoader, module_loader::ModuleLoaderOutput},
+  module_loader::{
+    ModuleLoader,
+    module_loader::{ModuleLoaderOutput, VisitState},
+    resolve_utils::refresh_package_json,
+  },
   type_alias::{IndexEcmaAst, IndexStmtInfos},
   types::scan_stage_cache::ScanStageCache,
-  utils::load_entry_module::load_entry_module,
 };
 
 type SourcemapChannel =
@@ -153,31 +156,6 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     Self { options, plugin_driver, fs, resolver }
   }
 
-  /// Each changed module drops the `moduleSideEffects` that plugins wrote, and `getModuleInfo`
-  /// shows its start value again, as for its JS options: the module will be fetched from the
-  /// resolution that created it (`ModuleLoader::try_spawn_new_task`).
-  fn reset_module_info_side_effects(&self, changed_ids: &[ArcStr], cache: &ScanStageCache) {
-    for changed_id in changed_ids {
-      self.plugin_driver.module_side_effects_overrides.remove(changed_id);
-    }
-    let Some(snapshot) = cache.snapshot() else {
-      return;
-    };
-    for changed_id in changed_ids {
-      let Some(Module::Normal(module)) = cache
-        .module_id_to_idx
-        .get(&ModuleId::new(changed_id.as_str()))
-        .and_then(|state| snapshot.module_table.modules.get(state.idx()))
-      else {
-        continue;
-      };
-      self.plugin_driver.set_module_info_side_effects(
-        &module.id,
-        module.originative_resolved_id.side_effects.map(HookSideEffects::declared),
-      );
-    }
-  }
-
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
   pub async fn scan(
     &self,
@@ -187,16 +165,18 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     let fetch_mode = match mode {
       ScanMode::Full => ScanMode::Full,
       ScanMode::Partial(changed_ids) => {
-        // Reset the changed modules before they are resolved again below, so `resolveId` hooks
-        // do not see the options from their last fetch. `fetch_modules` resets them again after
-        // `buildStart`.
-        if let Some(reset_js_module_options) = &self.options.reset_js_module_options {
-          reset_js_module_options
-            .call(Some(changed_ids.iter().map(ToString::to_string).collect()))
-            .await?;
+        let mut resolved_ids = changed_resolved_ids(&changed_ids, cache);
+        if let Err(err) = self.prepare_changed_modules(&mut resolved_ids, cache).await {
+          // `fetch_modules` has not taken the changed modules yet. Queue them for the next scan,
+          // as a failed fetch does (`ModuleLoader::revert_partial_scan`).
+          for resolved_id in resolved_ids {
+            if cache.pending_rescans.iter().all(|queued| queued.id != resolved_id.id) {
+              cache.pending_rescans.push(resolved_id);
+            }
+          }
+          return Err(err);
         }
-        self.reset_module_info_side_effects(&changed_ids, cache);
-        ScanMode::Partial(self.resolve_absolute_path(&changed_ids).await?)
+        ScanMode::Partial(resolved_ids)
       }
     };
     let (tx_clone, handler) = self.create_sourcemap_channel();
@@ -239,6 +219,47 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     Ok(module_loader_output.into())
   }
 
+  /// Prepares the modules that a partial scan fetches again, `changed` and the ones that an
+  /// earlier failed scan queued, before `buildStart` runs.
+  async fn prepare_changed_modules(
+    &self,
+    changed: &mut [ResolvedId],
+    cache: &mut ScanStageCache,
+  ) -> BuildResult<()> {
+    for resolved_id in changed.iter_mut().chain(cache.pending_rescans.iter_mut()) {
+      refresh_package_json(resolved_id, &self.resolver, &self.fs)?;
+    }
+    self.reset_changed_modules(changed, &cache.pending_rescans).await
+  }
+
+  /// Resets the changed modules to the module options of the resolution that created them, before
+  /// `buildStart` runs. `getModuleInfo` in `buildStart` then shows these start values, not the
+  /// ones that the last fetch set, such as in the HMR stage of the same change. `fetch_modules`
+  /// resets them again after `buildStart`.
+  /// See internal-docs/module-meta-and-side-effects/design.md.
+  async fn reset_changed_modules(
+    &self,
+    changed: &[ResolvedId],
+    pending_rescans: &[ResolvedId],
+  ) -> BuildResult<()> {
+    let resolved_ids = || changed.iter().chain(pending_rescans);
+    if resolved_ids().next().is_none() {
+      return Ok(());
+    }
+    if let Some(reset_js_module_options) = &self.options.reset_js_module_options {
+      let module_ids = resolved_ids().map(|resolved_id| resolved_id.id.to_string());
+      reset_js_module_options.call(Some(module_ids.collect())).await?;
+    }
+    for resolved_id in resolved_ids() {
+      self.plugin_driver.module_side_effects_overrides.remove(resolved_id.id.as_str());
+      self.plugin_driver.set_module_info_side_effects(
+        &resolved_id.id,
+        resolved_id.side_effects.map(HookSideEffects::declared),
+      );
+    }
+    Ok(())
+  }
+
   fn create_sourcemap_channel(&self) -> SourcemapChannel {
     // Gated on the target, not the scheduler flavor: the drainer is an OS
     // thread, so it cannot starve the executor that feeds it, even on
@@ -273,39 +294,46 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
       (None, None)
     }
   }
+}
 
-  /// Make sure the passed `ids` is all absolute path
-  async fn resolve_absolute_path(&self, ids: &[ArcStr]) -> BuildResult<Vec<ResolvedId>> {
-    let resolver = &self.resolver;
-    let plugin_driver = &self.plugin_driver;
-    let options = &self.options;
-
-    let resolved_ids = join_all(ids.iter().map(|input_item| async move {
-      // The importer is useless, since all path is absolute path
-
-      load_entry_module(options, resolver, plugin_driver, input_item, None).await
-    }))
-    .await;
-
-    let mut ret = Vec::with_capacity(ids.len());
-
-    let mut errors = vec![];
-
-    for resolve_id in resolved_ids {
-      match resolve_id {
-        Ok(item) => {
-          ret.push(item);
-        }
-        Err(e) => errors.push(e),
+/// The resolutions that created the changed modules. A partial scan fetches each changed module
+/// again from the resolution that created it, as an HMR update does, so no `resolveId` hook runs
+/// again. A `resolveId` hook gets a specifier, not a resolved id, so calling it with the id of the
+/// module can resolve to another module, for example for a virtual module. A changed file that
+/// is not a module, such as a file that a plugin added with `addWatchFile`, is skipped.
+///
+/// A changed external module is not fetched, because it has no hooks to run. It is marked as
+/// invalidated, so the first resolution of its id in this scan sets its kind again: a changed
+/// file that was external can become a normal module.
+fn changed_resolved_ids(changed_ids: &[ArcStr], cache: &mut ScanStageCache) -> Vec<ResolvedId> {
+  let Some(snapshot) = cache.snapshot() else {
+    return Vec::new();
+  };
+  let mut resolved_ids = Vec::with_capacity(changed_ids.len());
+  let mut external_ids = Vec::new();
+  for changed_id in changed_ids {
+    // The dev engine passes file paths for edits, and module ids for lazy compilation.
+    let module_id = ModuleId::new(changed_id.as_str());
+    let idx = match cache.module_id_to_idx.get(&module_id) {
+      Some(state) => state.idx(),
+      None => {
+        let path = std::path::Path::new(changed_id.as_str()).to_slash();
+        let Some(&idx) = cache.module_idx_by_abs_path.get(&*path) else {
+          continue;
+        };
+        idx
       }
+    };
+    match snapshot.module_table.modules.get(idx) {
+      Some(Module::Normal(module)) => resolved_ids.push(module.originative_resolved_id.clone()),
+      Some(Module::External(module)) => external_ids.push((module.id.clone(), idx)),
+      None => {}
     }
-
-    if !errors.is_empty() {
-      Err(errors)?;
-    }
-
-    Ok(ret)
   }
+  for (module_id, idx) in external_ids {
+    cache.module_id_to_idx.insert(module_id, VisitState::Invalidate(idx));
+  }
+  resolved_ids
 }
 
 impl From<ModuleLoaderOutput> for ScanStageOutput {

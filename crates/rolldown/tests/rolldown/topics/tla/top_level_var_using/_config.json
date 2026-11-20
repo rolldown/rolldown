@@ -1,5 +1,15 @@
 {
   "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "referenced",
+        "import": "./referenced.js"
+      }
+    ],
     "topLevelVar": false
   },
   "configVariants": [

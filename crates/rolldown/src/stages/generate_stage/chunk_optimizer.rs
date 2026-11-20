@@ -567,7 +567,6 @@ impl GenerateStage<'_> {
         || importee_chunk.chunk_reason_type.group_index().is_none()
         || &importee_chunk.bits != bits
         || importee.exec_order >= module.exec_order
-        || importee_chunk.modules.iter().any(|m| self.link_output.entries.contains_key(m))
         || owner.is_some_and(|other| other != importee_chunk_idx)
       {
         return None;
@@ -575,6 +574,13 @@ impl GenerateStage<'_> {
       owner = Some(importee_chunk_idx);
     }
     let owner = owner?;
+    if chunk_graph.chunk_table[owner]
+      .modules
+      .iter()
+      .any(|module_idx| self.link_output.entries.contains_key(module_idx))
+    {
+      return None;
+    }
 
     // With a single source import target, removing its rank does not permute
     // the remaining imports. The already imported group has an earlier exec_order.
@@ -586,7 +592,7 @@ impl GenerateStage<'_> {
           return false;
         };
         let importer_chunk = &chunk_graph.chunk_table[importer_chunk_idx];
-        importer_chunk.is_user_defined_entry()
+        importer_chunk.user_defined_entry_module_idx() == Some(importer_idx)
           && importer_chunk.modules.as_slice() == [importer_idx]
           && !pending_entry_merge_targets.contains(&importer_chunk_idx)
           && self.link_output.module_table[importer_idx].as_normal().is_some_and(|importer| {

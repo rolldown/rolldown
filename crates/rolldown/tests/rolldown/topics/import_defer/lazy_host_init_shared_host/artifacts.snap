@@ -1,0 +1,93 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.init.js
+
+```js
+import { n as init_a } from "./a.js";
+init_a();
+
+```
+
+## a.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// a.js
+var a_exports = /* @__PURE__ */ __exportAll({ a: () => "a" });
+var a;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		globalThis.__initLog.push("a");
+		a = "a";
+	})))();
+}
+export { a, init_a as n, a_exports as t };
+
+```
+
+## main.js
+
+```js
+// main.js
+const access = async () => {
+	const p = await import("./p.js");
+	const q = await import("./q.js");
+	const r = await import("./r.js");
+	const a = await import("./a.js").then((n) => (n.n(), n.t));
+	return [
+		p.v,
+		q.v,
+		r.read(),
+		a.a
+	].join(",");
+};
+export { access };
+
+```
+
+## p.js
+
+```js
+import "./a.js";
+import "./a.init.js";
+import "./y.js";
+// p.js
+globalThis.__initLog.push("p");
+const v = "p";
+export { v };
+
+```
+
+## q.js
+
+```js
+import "./a.js";
+import "./a.init.js";
+import "./y.js";
+// q.js
+globalThis.__initLog.push("q");
+const v = "q";
+export { v };
+
+```
+
+## r.js
+
+```js
+import { n as init_a } from "./a.js";
+// r.js
+const read = () => (init_a(), "a");
+export { read };
+
+```
+
+## y.js
+
+```js
+// y.js
+globalThis.__initLog.push("y");
+
+```

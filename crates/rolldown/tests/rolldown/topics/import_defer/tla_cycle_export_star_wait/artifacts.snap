@@ -1,0 +1,121 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+function init_m2() {
+	return (init_m2 = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_m3(init_m2), init_m3, init_m2) || await init_m3(init_m2);
+			log.push("2");
+		} catch (e) {
+			throw __esmFail(init_m2, e);
+		}
+		__esmEnd(init_m2);
+	}), () => [init_m3], 1))(arguments[0]);
+}
+// m1.js
+function init_m1() {
+	return (init_m1 = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_m0(init_m1), init_m0, init_m1) || await init_m0(init_m1);
+			__esmDepDone(init_m2(init_m1), init_m2, init_m1) || await init_m2(init_m1);
+			__esmGather(init_m5, init_m1) || await __esmGather();
+			log.push("1");
+		} catch (e) {
+			throw __esmFail(init_m1, e);
+		}
+		__esmEnd(init_m1);
+	}), () => [
+		init_m0,
+		init_m2,
+		init_m5
+	], 1))(arguments[0]);
+}
+// m6.js
+function init_m6() {
+	return (init_m6 = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_m1(init_m6), init_m1, init_m6) || await init_m1(init_m6);
+			log.push("6");
+		} catch (e) {
+			throw __esmFail(init_m6, e);
+		}
+		__esmEnd(init_m6);
+	}), () => [init_m1], 1))(arguments[0]);
+}
+// m5.js
+function init_m5() {
+	return (init_m5 = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_m6(init_m5), init_m6, init_m5) || await init_m6(init_m5);
+			log.push("5");
+		} catch (e) {
+			throw __esmFail(init_m5, e);
+		}
+		__esmEnd(init_m5);
+	}), () => [init_m6], 1))(arguments[0]);
+}
+// m4.js
+function init_m4() {
+	return (init_m4 = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_m5(init_m4), init_m5, init_m4) || await init_m5(init_m4);
+			log.push("4");
+		} catch (e) {
+			throw __esmFail(init_m4, e);
+		}
+		__esmEnd(init_m4);
+	}), () => [init_m5], 1))(arguments[0]);
+}
+// m3.js
+function init_m3() {
+	return (init_m3 = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_m0(init_m3), init_m0, init_m3) || await init_m0(init_m3);
+			__esmDepDone(init_m4(init_m3), init_m4, init_m3) || await init_m4(init_m3);
+			await 0;
+			log.push("3");
+		} catch (e) {
+			throw __esmFail(init_m3, e);
+		}
+		__esmEnd(init_m3);
+	}), () => [init_m0, init_m4], 3))(arguments[0]);
+}
+function init_m0() {
+	return (init_m0 = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_m3(init_m0), init_m3, init_m0) || await init_m3(init_m0);
+			log.push("0");
+		} catch (e) {
+			throw __esmFail(init_m0, e);
+		}
+		__esmEnd(init_m0);
+	}), () => [init_m3], 1))(arguments[0]);
+}
+// main.js
+init_log();
+__esmGather(init_m0) || await __esmGather();
+__esmGather(init_m2) || await __esmGather();
+const read = () => [(__esmDefer(init_m0), 0), (__esmDefer(init_m2), 2)];
+export { log, read };
+
+```

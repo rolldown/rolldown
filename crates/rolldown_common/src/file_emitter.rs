@@ -282,6 +282,17 @@ impl FileEmitter {
     Err(anyhow::anyhow!("Unable to get file name for unknown file: {reference_id}"))
   }
 
+  /// The file names of the emitted assets and prebuilt chunks so far. A chunk that the bundler
+  /// adds by itself gets a name that is not in this list.
+  pub fn emitted_file_names(&self) -> Vec<ArcStr> {
+    self
+      .files
+      .iter()
+      .map(|file| file.filename.clone())
+      .chain(self.prebuilt_chunks.iter().map(|chunk| chunk.file_name.clone()))
+      .collect()
+  }
+
   pub fn assign_reference_id(&self, seed: &str) -> ArcStr {
     // Reference ids must be pure functions of their seed so identical builds
     // emit identical ids regardless of module processing order.

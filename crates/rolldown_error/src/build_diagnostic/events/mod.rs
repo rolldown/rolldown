@@ -21,6 +21,7 @@ pub mod circular_reexport;
 pub mod commonjs_variable_in_esm;
 pub mod configuration_field_conflict;
 pub mod could_not_clean_directory;
+pub mod deferred_external_evaluated_eagerly;
 pub mod deprecated_import_assertion;
 pub mod dropped_import_attribute;
 pub mod duplicate_shebang;

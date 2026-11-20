@@ -5,7 +5,7 @@ use oxc::ast::ast::{self, BindingPattern, Declaration, Statement};
 use oxc::ast::builder::{AstBuilder, GetAstBuilder};
 use oxc::ast_visit::{VisitJsMut, walk_js_mut};
 use oxc::span::{SPAN, Span};
-use rolldown_ecmascript_utils::StatementExt;
+use rolldown_ecmascript_utils::{ExpressionExt, StatementExt};
 use rustc_hash::FxHashSet;
 
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.
@@ -19,10 +19,24 @@ pub struct PreProcessor<'ast, 'a> {
   /// so dynamic imports nested inside the dropped block never enter the
   /// module graph.
   drop_labels: Option<&'a FxHashSet<String>>,
+  /// `experimental.importDefer`. When it is off, the `defer` phase of each
+  /// import is removed. When it is on, the phase stays, except for an
+  /// `import.defer()` whose specifier is not a static string.
+  import_defer: bool,
   /// Spans of `import defer ...` statements / expressions whose `defer` phase
   /// was lowered to a regular import. Read after `visit_program` to emit the
   /// `UNSUPPORTED_FEATURE` warning.
-  defer_spans: Vec<Span>,
+  defer_spans: Vec<DeferPhaseRemoval>,
+}
+
+/// An import whose `defer` phase the pre-processor removed.
+#[derive(Debug, Clone, Copy)]
+pub enum DeferPhaseRemoval {
+  /// `experimental.importDefer` is off.
+  OptionOff(Span),
+  /// `import.defer(expr)` where `expr` is not a static string. Rolldown cannot
+  /// know the module at build time, so it keeps `import(expr)`.
+  NonStaticSpecifier(Span),
 }
 
 impl<'ast, 'a> PreProcessor<'ast, 'a> {
@@ -30,17 +44,19 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
     alloc: &'ast Allocator,
     keep_names: bool,
     drop_labels: Option<&'a FxHashSet<String>>,
+    import_defer: bool,
   ) -> Self {
     Self {
       ast_builder: AstBuilder::new(alloc),
       top_level_stmt_temp_storage: vec![],
       keep_names,
       drop_labels: drop_labels.filter(|set| !set.is_empty()),
+      import_defer,
       defer_spans: vec![],
     }
   }
 
-  pub fn take_defer_spans(&mut self) -> Vec<Span> {
+  pub fn take_defer_spans(&mut self) -> Vec<DeferPhaseRemoval> {
     std::mem::take(&mut self.defer_spans)
   }
 
@@ -149,8 +165,8 @@ impl<'ast, 'a> PreProcessor<'ast, 'a> {
 
 impl<'ast> VisitJsMut<'ast> for PreProcessor<'ast, '_> {
   fn visit_import_declaration(&mut self, it: &mut ast::ImportDeclaration<'ast>) {
-    if matches!(it.phase, Some(ast::ImportPhase::Defer)) {
-      self.defer_spans.push(it.span);
+    if !self.import_defer && matches!(it.phase, Some(ast::ImportPhase::Defer)) {
+      self.defer_spans.push(DeferPhaseRemoval::OptionOff(it.span));
       it.phase = None;
     }
     walk_js_mut::walk_import_declaration(self, it);
@@ -220,8 +236,13 @@ impl<'ast> VisitJsMut<'ast> for PreProcessor<'ast, '_> {
 
   fn visit_import_expression(&mut self, it: &mut ast::ImportExpression<'ast>) {
     if matches!(it.phase, Some(ast::ImportPhase::Defer)) {
-      self.defer_spans.push(it.span);
-      it.phase = None;
+      if !self.import_defer {
+        self.defer_spans.push(DeferPhaseRemoval::OptionOff(it.span));
+        it.phase = None;
+      } else if it.source.as_static_module_request().is_none() {
+        self.defer_spans.push(DeferPhaseRemoval::NonStaticSpecifier(it.span));
+        it.phase = None;
+      }
     }
     walk_js_mut::walk_import_expression(self, it);
   }

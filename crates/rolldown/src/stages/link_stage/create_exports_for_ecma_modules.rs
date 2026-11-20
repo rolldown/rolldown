@@ -1,8 +1,8 @@
 use rolldown_common::{
   DeclaredSymbols, EntryPoint, ExportsKind, ImportKind, ImportRecordMeta, Module, ModuleIdx,
   OutputFormat, PreserveEntrySignatures, SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta,
-  SymbolRefFlags, TaggedSymbolRef, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
-  side_effects::DeterminedSideEffects,
+  SymbolRef, SymbolRefFlags, TaggedSymbolRef, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::smallvec;
@@ -16,6 +16,7 @@ use super::{LinkStage, bind_imports_and_exports::record_star_reexport_path};
 fn init_entry_point_stmt_info(
   meta: &mut LinkingMetadata,
   entry: &EntryPoint,
+  namespace_object_ref: SymbolRef,
   dynamic_import_exports_usage_map: &FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   options: &SharedNormalizedBundlerOptions,
   overrode_preserve_entry_signature_map: &FxHashMap<ModuleIdx, PreserveEntrySignatures>,
@@ -28,6 +29,22 @@ fn init_entry_point_stmt_info(
     // If a commonjs module becomes an entry point while targeting esm, we need to at least add a `export default require_foo();`
     // statement as some kind of syntax sugar. So users won't need to manually create a proxy file with `export default require('./foo.cjs')` in it.
     referenced_symbols.push((meta.wrapper_ref.unwrap(), false));
+  }
+
+  // A module of a deferred closure does not evaluate when its own chunk loads
+  // (`ChunkGraph::lazy_dynamic_defer_host`). So `import('./x')` reads `init_x` and `x_exports`
+  // from that chunk, and `import.defer('./x')` reads `x_deferred`. No statement of the importer
+  // references these symbols, because that reference would import the chunk statically.
+  if meta.wrapped_by_import_defer
+    && matches!(meta.wrap_kind(), WrapKind::Esm)
+    && is_dynamic_imported
+  {
+    referenced_symbols.push((namespace_object_ref, false));
+  }
+  if meta.dynamic_defer_target
+    && let Some(deferred_ref) = meta.deferred_namespace_ref
+  {
+    referenced_symbols.push((deferred_ref, false));
   }
 
   let normalized_entry_signature =
@@ -113,6 +130,7 @@ impl LinkStage<'_> {
         init_entry_point_stmt_info(
           linking_info,
           entry,
+          ecma_module.namespace_object_ref,
           &self.dynamic_import_exports_usage_map,
           self.options,
           &self.overrode_preserve_entry_signature_map,

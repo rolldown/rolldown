@@ -1,0 +1,8 @@
+{
+  "_comment": "`is-object.js` has only a function declaration, so its init is a no-op. The init call of the plain import in `route.js` gets `/* @__PURE__ */`, so that the minifier can remove the call and the unused wrapper.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

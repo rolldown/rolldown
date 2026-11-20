@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// x.cjs
+var require_x = /* @__PURE__ */ __commonJSMin(((exports) => {
+	function snapshot() {
+		return "x";
+	}
+	globalThis.__events.push(snapshot());
+}));
+
+// y.cjs
+var require_y = /* @__PURE__ */ __commonJSMin(((exports) => {
+	function snapshot() {
+		return "y";
+	}
+	globalThis.__events.push(snapshot());
+}));
+
+// main.js
+var import_x;
+var import_y;
+const name = "main";
+
+export { name };
+```

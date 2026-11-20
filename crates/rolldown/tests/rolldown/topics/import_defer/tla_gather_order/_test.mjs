@@ -1,0 +1,5 @@
+import assert from 'node:assert';
+import { log, value } from './dist/main.js';
+
+assert.strictEqual(value, 'd');
+assert.deepStrictEqual(log, ['a', 'b', 'main', 'd']);

@@ -17,7 +17,10 @@ mod utils;
 pub mod bundler_options {
   pub use crate::generated::{
     checks_options::ChecksOptions,
-    runtime_helper::{DependedRuntimeHelperMap, RUNTIME_HELPER_NAMES, RuntimeHelper},
+    runtime_helper::{
+      DependedRuntimeHelperMap, RUNTIME_HELPER_NAMES, RUNTIME_IMPORT_DEFER_HELPER_NAMES,
+      RuntimeHelper,
+    },
   };
 
   #[cfg(feature = "deserialize_bundler_options")]
@@ -116,6 +119,7 @@ pub use crate::{
       chunk_debug_info::{ChunkDebugInfo, FacadeChunkEliminationReason},
       chunk_reason_type::ChunkReasonType,
       cross_chunk_import_item::CrossChunkImportItem,
+      module_group::ModuleGroup,
       preliminary_filename::PreliminaryFilename,
       static_import::StaticImport,
     },
@@ -159,6 +163,9 @@ pub use crate::{
   types::bundle_mode::BundleMode,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
+  types::concatenate_wrapped_module::{
+    ConcatenateWrappedModuleKind, ConcatenatedGroupEvent, RenderedConcatenatedModuleParts,
+  },
   types::constant_value::{ConstExportMeta, ConstantValue, DeferredWriteConstant},
   types::defer_sync_scan_data::DeferSyncScanData,
   types::entry_point::{EntryPoint, EntryPointKind},

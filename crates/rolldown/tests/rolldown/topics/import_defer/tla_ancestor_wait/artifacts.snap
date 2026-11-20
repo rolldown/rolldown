@@ -1,0 +1,79 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+// a.js
+function init_a() {
+	return (init_a = __esmState((async () => {
+		try {
+			init_log();
+			log.push("a start");
+			await 0;
+			log.push("a end");
+		} catch (e) {
+			throw __esmFail(init_a, e);
+		}
+		__esmEnd(init_a);
+	}), () => [], 3))(arguments[0]);
+}
+function init_d() {
+	return (init_d = __esmState((async () => {
+		try {
+			__esmDepDone(init_main(init_d), init_main, init_d) || await init_main(init_d);
+		} catch (e) {
+			throw __esmFail(init_d, e);
+		}
+		__esmEnd(init_d);
+	}), () => [init_main], 1))(arguments[0]);
+}
+// i.js
+var result;
+function init_i() {
+	return (init_i = __esmState((async () => {
+		try {
+			init_log();
+			__esmGather(init_d, init_i) || await __esmGather();
+			log.push("i");
+			try {
+				__esmDefer(init_d);
+				result = "ok";
+			} catch (e) {
+				result = e.constructor.name;
+			}
+			log.push("i reads d: " + result);
+		} catch (e) {
+			throw __esmFail(init_i, e);
+		}
+		__esmEnd(init_i);
+	}), () => [init_d], 1))(arguments[0]);
+}
+// main.js
+function init_main() {
+	return (init_main = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_a(init_main), init_a, init_main) || await init_a(init_main);
+			__esmDepDone(init_i(init_main), init_i, init_main) || await init_i(init_main);
+			log.push("main");
+		} catch (e) {
+			throw __esmFail(init_main, e);
+		}
+		__esmEnd(init_main);
+	}), () => [init_a, init_i], 1))(arguments[0]);
+}
+await init_main();
+export { log };
+
+```

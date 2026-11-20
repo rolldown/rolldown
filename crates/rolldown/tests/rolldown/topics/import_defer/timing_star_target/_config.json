@@ -1,0 +1,12 @@
+{
+  "_comment": "The star barrel of `first.js` re-exports `b.js`, which reads mutable state. The deferred root `second.js` imports `b.js` directly. Native V8 evaluates the whole closure of `first.js` at its first access, so `b` is 1 before `run()` sets 2. The barrel must keep the init call of `b.js` also when tree shaking excludes its `export *` statement.",
+  "config": {
+    "codeSplitting": false,
+    "treeshake": {
+      "moduleSideEffects": false
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

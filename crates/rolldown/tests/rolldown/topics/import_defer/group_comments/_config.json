@@ -1,0 +1,8 @@
+{
+  "_comment": "Each comment of a root or a member goes to the part (declarations or body) where a print of the whole module puts it, so each legal comment prints one time. A legal comment before a removed import and a legal comment before a hoisted function go to the declarations. The legal comment after the last hoisted function and the pure annotation of the call of `make()` go to the body.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

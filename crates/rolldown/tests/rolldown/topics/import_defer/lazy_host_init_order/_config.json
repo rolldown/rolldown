@@ -1,0 +1,14 @@
+{
+  "_comment": "`b.js` imports the lazy host `a.js`, then `y.js`. Native ESM runs `a` before `y`. The chunk of `b.js` initializes `a.js` right after its import of the host, before `y.js` runs. The `cjs` variant calls `require_a.init_a()` after the `require()` of the host.",
+  "config": {
+    "preserveModules": true,
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

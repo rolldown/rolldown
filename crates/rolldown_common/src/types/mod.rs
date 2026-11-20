@@ -4,6 +4,7 @@ pub mod ast_scopes;
 pub mod bundle_mode;
 pub mod chunk_idx;
 pub mod chunk_kind;
+pub mod concatenate_wrapped_module;
 pub mod constant_value;
 pub mod defer_sync_scan_data;
 pub mod entry_point;

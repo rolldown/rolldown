@@ -1,0 +1,9 @@
+{
+  "_comment": "`b.js` defers `wait.js`, then imports the lazy host `a.js`, then `y.js`. `wait.js` has a top-level `await`, so native ESM runs it before `a`, even with the deferred import. `b.js` prepares `wait.js` in its body (`__esmGather`), so `b.js` keeps the call of `init_a()` in its body, after the preparation. `y.js` only gives the chunk of `b.js` a reason to initialize `a.js` at its import. It does not write to the log, and the test only checks that it runs.",
+  "config": {
+    "preserveModules": true,
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

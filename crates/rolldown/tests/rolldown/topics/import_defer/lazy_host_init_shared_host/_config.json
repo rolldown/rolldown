@@ -1,0 +1,8 @@
+{
+  "_comment": "Without `preserveModules`. `p.js` and `q.js` are dynamic entries. Each imports the lazy host `a.js`, then `y.js` in a common chunk. The two chunks import the same init chunk of `a.js`, so `a` runs once, before `y`.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

@@ -1,0 +1,58 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Import `y` will always be undefined because there is no matching export in 'a.js'
+   ╭─[ b.js:6:28 ]
+   │
+ 6 │ export const readA = () => a.y;
+   │                            ─┬─  
+   │                             ╰─── 
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+function read(access) {
+	try {
+		access();
+		return "ok";
+	} catch (error) {
+		return error instanceof TypeError ? "TypeError" : `${error.constructor.name}: ${error.message}`;
+	}
+}
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+function init_b() {
+	return (init_b = __esmState((() => {
+		init_log();
+		log.push("b runs");
+	}), () => [init_a]))(arguments[0]);
+}
+// a.js
+function init_a() {
+	return (init_a = __esmState((() => {
+		init_log();
+		log.push("a reads b: " + read(() => (__esmDefer(init_b), 1)));
+	}), () => [init_b]))(arguments[0]);
+}
+// main.js
+init_log();
+init_a();
+export { log };
+
+```

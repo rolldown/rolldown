@@ -1,0 +1,195 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.init.js
+
+```js
+import { n as init_a } from "./a2.js";
+init_a();
+
+```
+
+## a2.init.js
+
+```js
+import { t as init_a2 } from "./a2.js";
+init_a2();
+
+```
+
+## a2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+function init_a() {
+	return (init_a = __esmMin((() => {
+		globalThis.__initLog.push("a");
+	})))();
+}
+function init_a2() {
+	return (init_a2 = __esmMin((() => {
+		globalThis.__initLog.push("a2");
+	})))();
+}
+export { init_a as n, init_a2 as t };
+
+```
+
+## b.js
+
+```js
+import "./a2.js";
+import "./a.init.js";
+import { t as wLog } from "./w.js";
+import "./a2.init.js";
+import { yLog } from "./y.js";
+// b.js
+const value = [wLog, yLog];
+export { value };
+
+```
+
+## main.js
+
+```js
+// main.js
+const access = async () => {
+	const b = await import("./b.js");
+	const r = await import("./r.js");
+	await import("./y.js");
+	return [b.value, r.read()];
+};
+export { access };
+
+```
+
+## r.js
+
+```js
+import "./w.js";
+import { n as init_a, t as init_a2 } from "./a2.js";
+// r.js
+const read = () => (init_a(), "a") + (init_a2(), "a2");
+export { read };
+
+```
+
+## w.js
+
+```js
+// w.js
+globalThis.__initLog.push("w");
+const wLog = globalThis.__initLog.join(",");
+export { wLog as t };
+
+```
+
+## y.js
+
+```js
+// y.js
+globalThis.__initLog.push("y");
+const yLog = globalThis.__initLog.join(",");
+export { yLog };
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### a2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+function init_a() {
+	return (init_a = __esmMin((() => {
+		globalThis.__initLog.push("a");
+	})))();
+}
+function init_a2() {
+	return (init_a2 = __esmMin((() => {
+		globalThis.__initLog.push("a2");
+	})))();
+}
+Object.defineProperty(exports, "init_a", {
+	enumerable: true,
+	get: function() {
+		return init_a;
+	}
+});
+Object.defineProperty(exports, "init_a2", {
+	enumerable: true,
+	get: function() {
+		return init_a2;
+	}
+});
+
+```
+
+### b.js
+
+```js
+const require_a2 = require("./a2.js");
+require_a2.init_a();
+const require_w = require("./w.js");
+require_a2.init_a2();
+const require_y = require("./y.js");
+// b.js
+const value = [require_w.wLog, require_y.yLog];
+exports.value = value;
+
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// main.js
+const access = async () => {
+	const b = await Promise.resolve().then(() => require("./b.js"));
+	const r = await Promise.resolve().then(() => require("./r.js"));
+	await Promise.resolve().then(() => require("./y.js"));
+	return [b.value, r.read()];
+};
+exports.access = access;
+
+```
+
+### r.js
+
+```js
+require("./w.js");
+const require_a2 = require("./a2.js");
+// r.js
+const read = () => (require_a2.init_a(), "a") + (require_a2.init_a2(), "a2");
+exports.read = read;
+
+```
+
+### w.js
+
+```js
+// w.js
+globalThis.__initLog.push("w");
+const wLog = globalThis.__initLog.join(",");
+Object.defineProperty(exports, "wLog", {
+	enumerable: true,
+	get: function() {
+		return wLog;
+	}
+});
+
+```
+
+### y.js
+
+```js
+// y.js
+globalThis.__initLog.push("y");
+const yLog = globalThis.__initLog.join(",");
+exports.yLog = yLog;
+
+```

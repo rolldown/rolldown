@@ -1,6 +1,6 @@
 use rolldown_common::{
   ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, OutputFormat, RuntimeHelper,
-  StmtInfoMeta, SymbolRefDb, TaggedSymbolRef, WrapKind,
+  StmtInfoMeta, SymbolOrMemberExprRef, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -10,6 +10,7 @@ use rolldown_utils::{
 };
 
 use super::LinkStage;
+use crate::types::linking_metadata::DeferredAccess;
 use crate::utils::external_import_interop::import_record_needs_interop;
 
 struct DeferUpdateInfo {
@@ -26,6 +27,19 @@ impl LinkStage<'_> {
     let mut symbols_inner = old_symbol_db.into_inner();
     let keep_names = self.options.keep_names;
     let commonjs_treeshake = self.options.treeshake.commonjs();
+    // The build has one chunk: code splitting is off, and at most one module is a user-defined or
+    // emitted entry. `self.entries` cannot be counted directly: at this point it also holds each
+    // `import()` target, which only `include_statements` removes when code splitting is off.
+    // Only the modules that `import defer` wraps use it, so a build without `importDefer` does
+    // not count the entries.
+    let single_chunk_build = self.options.experimental.is_import_defer_enabled()
+      && self.options.code_splitting.is_disabled()
+      && self
+        .entries
+        .values()
+        .filter(|entry_points| entry_points.iter().any(|entry| entry.kind.is_user_defined()))
+        .count()
+        <= 1;
 
     let defer_update_info_list = self
       .module_table
@@ -43,7 +57,52 @@ impl LinkStage<'_> {
         let mut record_meta_pairs: Vec<(ImportRecordIdx, ImportRecordMeta)> = vec![];
         let importer_idx = importer.idx;
         let mut symbols_to_be_declared = vec![];
+        let mut references_esm_dep_done = false;
+        let deferred_access_targets = &self.metas[importer_idx].deferred_access_targets;
         stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
+          // A deferred access (`ns.foo`) calls the wrapper of the deferred module, through
+          // `__esmDefer` when the module is tracked. The first access to a bundled CommonJS
+          // module assigns `import_x = __toESM(require_x())`, so the statement of the access
+          // keeps `__toESM`. The record is an `import defer * as ns`, and a namespace import
+          // always needs interop, so no search of the named imports is necessary. The import
+          // statement does not keep `__toESM`, so a namespace that nothing reads adds no
+          // helper. See internal-docs/import-defer/implementation.md.
+          if !deferred_access_targets.is_empty() {
+            let mut needs_deferred_to_esm = false;
+            let mut targets = stmt_info
+              .referenced_symbols
+              .iter()
+              .filter_map(|symbol| match symbol {
+                SymbolOrMemberExprRef::MemberExpr(member) => {
+                  deferred_access_targets.get(&member.node_id)
+                }
+                SymbolOrMemberExprRef::Symbol(_) => None,
+              })
+              .filter_map(|access| match *access {
+                DeferredAccess::Esm(target) => Some(target),
+                DeferredAccess::Cjs(rec_idx) => {
+                  let target = importer.import_records[rec_idx].resolved_module?;
+                  needs_deferred_to_esm |= matches!(self.module_table[target], Module::Normal(_));
+                  Some(target)
+                }
+              })
+              .collect::<Vec<_>>();
+            if needs_deferred_to_esm {
+              depended_runtime_helper_map.push(RuntimeHelper::ToEsm, stmt_info_idx);
+            }
+            targets.sort_unstable();
+            targets.dedup();
+            if targets.iter().any(|&target| self.metas[target].import_defer_tracked_deps.is_some())
+            {
+              stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__esmDefer").into());
+            }
+            stmt_info.referenced_symbols.extend(
+              targets
+                .into_iter()
+                .filter_map(|target| self.metas[target].wrapper_ref)
+                .map(Into::into),
+            );
+          }
           if stmt_info.meta.contains(StmtInfoMeta::HasDummyRecord) {
             depended_runtime_helper_map.push(RuntimeHelper::Require, stmt_info_idx);
           }
@@ -65,6 +124,44 @@ impl LinkStage<'_> {
                     let is_reexport_all = rec.meta.contains(ImportRecordMeta::IsExportStar);
                     if is_reexport_all {
                       // export * from 'external' would be just removed. So it references nothing.
+                      symbol_db.ast_scopes.set_symbol_name(
+                        rec.namespace_ref.symbol,
+                        &concat_string!("import_", &importee.identifier_name),
+                      );
+                      // A module of a deferred closure in CommonJS output calls
+                      // `__reExport(x_exports, require("ext"))` at this statement, in its init.
+                      if matches!(self.options.format, OutputFormat::Cjs)
+                        && self.metas[importer_idx].wrapped_by_import_defer
+                      {
+                        stmt_info.eval_flags = true.into();
+                        depended_runtime_helper_map.push(RuntimeHelper::ReExport, stmt_info_idx);
+                        stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
+                      }
+                    } else if rec.is_defer_phase()
+                      && matches!(self.options.format, OutputFormat::Cjs)
+                    {
+                      // `import defer * as ns from 'ext'` in CommonJS output becomes
+                      // `var import_ext;`, and the first deferred access assigns
+                      // `__toESMCached("ext", require("ext"))` to it. The statement
+                      // evaluates nothing.
+                      depended_runtime_helper_map.push(RuntimeHelper::ToEsmCached, stmt_info_idx);
+                      symbols_to_be_declared.push((rec.namespace_ref, stmt_info_idx));
+                      symbol_db.ast_scopes.set_symbol_name(
+                        rec.namespace_ref.symbol,
+                        &concat_string!("import_", &importee.identifier_name),
+                      );
+                    } else if matches!(self.options.format, OutputFormat::Cjs)
+                      && self.metas[importer_idx].wrapped_by_import_defer
+                    {
+                      // A module of a deferred closure in CommonJS output loads the external at
+                      // the position of the import, in its init: `var import_ext = require("ext")`
+                      // (`lazy_external_import_stmt`). Tree shaking keeps the statement when the
+                      // external has side effects, or when a read of `import_ext` stays.
+                      stmt_info.eval_flags = importee.side_effects.has_side_effects().into();
+                      if import_record_needs_interop(importer, *rec_id) {
+                        depended_runtime_helper_map.push(RuntimeHelper::ToEsmCached, stmt_info_idx);
+                      }
+                      symbols_to_be_declared.push((rec.namespace_ref, stmt_info_idx));
                       symbol_db.ast_scopes.set_symbol_name(
                         rec.namespace_ref.symbol,
                         &concat_string!("import_", &importee.identifier_name),
@@ -91,6 +188,13 @@ impl LinkStage<'_> {
                       .referenced_symbols
                       .push(self.runtime.resolve_symbol("__require").into());
                     record_meta_pairs.push((*rec_id, ImportRecordMeta::CallRuntimeRequire));
+                  }
+                  ImportKind::DynamicImport
+                    if rec.is_defer_phase() && matches!(self.options.format, OutputFormat::Cjs) =>
+                  {
+                    // `(async () => __deferNsCached("ext", () => __toESMCached("ext", require("ext"))))()`
+                    depended_runtime_helper_map.push(RuntimeHelper::ToEsmCached, stmt_info_idx);
+                    depended_runtime_helper_map.push(RuntimeHelper::DeferNsCached, stmt_info_idx);
                   }
                   ImportKind::DynamicImport
                     if matches!(self.options.format, OutputFormat::Cjs)
@@ -149,6 +253,10 @@ impl LinkStage<'_> {
                             stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                           }
                         } else {
+                          // A static `import defer` keeps this flag too, though the statement
+                          // runs nothing: when nothing reads the namespace, it is the only
+                          // reference to `require_x`, and the body of the module must stay in
+                          // that wrapper. See internal-docs/import-defer/implementation.md.
                           stmt_info.eval_flags = importee.side_effects.has_side_effects().into();
 
                           // Turn `import * as bar from 'bar_cjs'` into `var import_bar_cjs = __toESM(require_bar_cjs())`
@@ -158,15 +266,21 @@ impl LinkStage<'_> {
                           stmt_info
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
-                          // Only reference __toESM if this import needs interop (namespace or default import)
-                          let needs_toesm =
-                            if let Some(info) = self.safely_merge_cjs_ns_map.get(&importee.idx) {
-                              info.needs_interop
-                            } else {
-                              import_record_needs_interop(importer, *rec_id)
-                            };
-                          if needs_toesm {
-                            depended_runtime_helper_map.push(RuntimeHelper::ToEsm, stmt_info_idx);
+                          // A deferred import renders `var import_x;` with no call. Its accesses
+                          // and its namespace object keep `__toESM` instead (see above and
+                          // `create_deferred_cjs_namespaces`), so it skips this lookup. The
+                          // merge info describes only the eager imports.
+                          if !rec.is_defer_phase() {
+                            // Only reference __toESM if this import needs interop (namespace or default import)
+                            let needs_toesm =
+                              if let Some(info) = self.safely_merge_cjs_ns_map.get(&importee.idx) {
+                                info.needs_interop
+                              } else {
+                                import_record_needs_interop(importer, *rec_id)
+                              };
+                            if needs_toesm {
+                              depended_runtime_helper_map.push(RuntimeHelper::ToEsm, stmt_info_idx);
+                            }
                           }
                           symbols_to_be_declared.push((rec.namespace_ref, stmt_info_idx));
                           symbol_db.ast_scopes.set_symbol_name(
@@ -177,12 +291,44 @@ impl LinkStage<'_> {
                       }
                       WrapKind::Esm => {
                         // Turn `import ... from 'bar_esm'` into `init_bar_esm()`
-                        stmt_info.eval_flags =
-                          (is_reexport_all || importee.side_effects.has_side_effects()).into();
+                        //
+                        // An `export *` of a wrapped importee always runs, so that the init of the
+                        // importer calls the init of the importee. In a deferred closure of a build
+                        // with one chunk, the eager rule applies instead: the statement stays only
+                        // when it has side effects or a used binding. The excluded-statement
+                        // metadata still emits the init call of each included target, because each
+                        // target is in the one chunk. With more chunks, a target in another chunk
+                        // would lose that call.
+                        // See internal-docs/linking/reference-needed-symbols/implementation.md.
+                        let reexport_all_always_runs = is_reexport_all
+                          && !(single_chunk_build
+                            && self.metas[importer_idx].wrapped_by_import_defer
+                            && !importee_linking_info.has_dynamic_exports);
+                        stmt_info.eval_flags = (reexport_all_always_runs
+                          || importee.side_effects.has_side_effects())
+                        .into();
                         // Reference to `init_foo`
                         stmt_info
                           .referenced_symbols
                           .push(importee_linking_info.wrapper_ref.unwrap().into());
+                        if importee_linking_info.import_defer_tracked_deps.is_some()
+                          && importee_linking_info.is_tla_or_contains_tla_dependency
+                        {
+                          if rec.is_defer_phase() {
+                            // The preparation, `__esmGather(init_foo, init_bar) || await
+                            // __esmGather()`, must stay also when `foo` has no side effects.
+                            stmt_info.eval_flags = true.into();
+                            stmt_info
+                              .referenced_symbols
+                              .push(self.runtime.resolve_symbol("__esmGather").into());
+                          } else if self.metas[importer_idx].import_defer_tracked_deps.is_some() {
+                            // `__esmDepDone(init_foo(init_bar), init_foo, init_bar) || await ...`.
+                            // The wrapper of `bar` references the helper, not this statement:
+                            // when tree shaking removes the statement, the finalizer can still
+                            // restore the call (`remove_unused_top_level_stmt`).
+                            references_esm_dep_done = true;
+                          }
+                        }
 
                         if is_reexport_all && importee_linking_info.has_dynamic_exports {
                           // Turn `export * from 'bar_esm'` into `init_bar_esm();__reExport(foo_exports, bar_esm_exports);`
@@ -218,6 +364,18 @@ impl LinkStage<'_> {
                     }
                   },
                   ImportKind::DynamicImport => {
+                    let is_dynamic_defer =
+                      rec.is_defer_phase() && importee_linking_info.dynamic_defer_target;
+                    if is_dynamic_defer
+                      && importee_linking_info.import_defer_tracked_deps.is_some()
+                      && importee_linking_info.is_tla_or_contains_tla_dependency
+                    {
+                      // `import.defer()` first waits for the top-level await that a deferred
+                      // access to `foo` can evaluate: `__esmGather(init_foo) || await __esmGather()`.
+                      stmt_info
+                        .referenced_symbols
+                        .push(self.runtime.resolve_symbol("__esmGather").into());
+                    }
                     if self.options.code_splitting.is_disabled() {
                       match importee_linking_info.wrap_kind() {
                         WrapKind::None => {}
@@ -234,6 +392,12 @@ impl LinkStage<'_> {
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
+                          // `import.defer()` gives `foo_deferred`.
+                          if is_dynamic_defer
+                            && let Some(deferred_ref) = importee_linking_info.deferred_namespace_ref
+                          {
+                            stmt_info.referenced_symbols.push(deferred_ref.into());
+                          }
                         }
                       }
                     } else {
@@ -266,6 +430,14 @@ impl LinkStage<'_> {
         symbols_to_be_declared.into_iter().for_each(|(symbol_ref, idx)| {
           stmt_infos.declare_symbol_for_stmt(idx, TaggedSymbolRef::normal(symbol_ref));
         });
+        // Tree shaking keeps the wrapper statement of a module together with the module.
+        if references_esm_dep_done
+          && let Some(wrapper_stmt_idx) = self.metas[importer_idx].wrapper_stmt_info
+        {
+          stmt_infos[wrapper_stmt_idx]
+            .referenced_symbols
+            .push(self.runtime.resolve_symbol("__esmDepDone").into());
+        }
         (importer_idx, DeferUpdateInfo { record_meta_pairs })
       })
       .collect::<Vec<_>>();

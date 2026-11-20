@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// m.js
+var observed;
+// c.cjs
+var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = 1;
+}));
+// p.js
+var import_c, c_deferred;
+// d.js
+function read() {
+	return observed;
+}
+function init_d() {
+	return (init_d = __esmMin((() => {
+		c_deferred = /* @__PURE__ */ __deferNs(() => import_c || (import_c = /* @__PURE__ */ __toESM(require_c())));
+		// m.js
+		observed = typeof c_deferred;
+	})))();
+}
+// main.js
+function run() {
+	return (init_d(), read)();
+}
+export { run };
+
+```

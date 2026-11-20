@@ -1,0 +1,18 @@
+{
+  "_comment": "`b.js` imports `x.js`, then the lazy host `a.js`, then `y.js`. Native ESM runs `x`, `a`, `y`, `b`. Without `preserveModules`, `x.js` is in the chunk of `b.js` and runs in its body. An init at the import of the host would run `a` before `x`, so `x.js` moves to a new common chunk before the import of the host. The chunk of `b.js` then initializes `a.js` right after that import. With `preserveModules`, the file of `x.js` runs `x` at load, before the import of the host.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "preserve-modules",
+      "preserveModules": true
+    },
+    {
+      "_configName": "cjs",
+      "format": "cjs"
+    }
+  ]
+}

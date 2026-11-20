@@ -81,6 +81,7 @@ pub struct ExperimentalOptions {
   pub chunk_optimization: Option<ChunkOptimizationOption>,
   pub lazy_barrel: Option<bool>,
   pub import_attributes: Option<bool>,
+  pub import_defer: Option<bool>,
 }
 
 impl ExperimentalOptions {
@@ -125,5 +126,9 @@ impl ExperimentalOptions {
 
   pub fn is_import_attributes_enabled(&self) -> bool {
     self.import_attributes.unwrap_or(false)
+  }
+
+  pub fn is_import_defer_enabled(&self) -> bool {
+    self.import_defer.unwrap_or(false)
   }
 }

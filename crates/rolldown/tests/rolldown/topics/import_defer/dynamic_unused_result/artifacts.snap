@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## empty.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// empty.js
+var empty_exports = /* @__PURE__ */ __exportAll({});
+var empty_deferred = /* @__PURE__ */ __deferNs(() => (init_empty(), empty_exports), empty_exports);
+function init_empty() {
+	return (init_empty = __esmMin((() => {})))();
+}
+export { empty_exports as n, init_empty as r, empty_deferred as t };
+
+```
+
+## main.js
+
+```js
+// main.js
+let x = 0;
+while (!x) {
+	x++;
+	(async (n) => (n = await import("./empty.js"), n.t))();
+}
+export { x };
+
+```

@@ -124,6 +124,8 @@ mod chunk_optimizer;
 mod code_splitting;
 mod compute_cross_chunk_links;
 mod compute_wrapped_esm_init_metadata;
+mod deferred_groups;
+mod detect_deferred_externals_evaluated_eagerly;
 mod detect_ineffective_dynamic_imports;
 mod dynamic_already_loaded;
 mod dynamic_entry_namespace;
@@ -131,11 +133,13 @@ mod entry_facades;
 mod finalize_chunk_plan;
 mod finalize_modules;
 mod inline_common_chunks;
+mod lazy_host_inits;
 mod manual_code_splitting;
 pub mod minify_chunks;
 mod order_analysis;
 pub mod order_wrap_state;
 mod order_wrapping;
+mod place_dynamic_defer_declarations;
 mod post_banner_footer;
 mod reduced_chunk_graph;
 mod render_chunk_to_assets;
@@ -227,8 +231,7 @@ impl<'a> GenerateStage<'a> {
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);
 
     self.merge_cjs_namespace(&mut chunk_graph, &order_state);
-
-    self.trace_action_chunks_infos(&chunk_graph);
+    self.merge_deferred_cjs_namespaces(&mut chunk_graph);
 
     let mut warnings = vec![];
     self.compute_chunk_output_exports(
@@ -240,6 +243,17 @@ impl<'a> GenerateStage<'a> {
     if !warnings.is_empty() {
       self.link_output.diagnostics.extend(warnings);
     }
+    // After the export modes: in `cjs` output, a `Named` CommonJS entry runs its module in a
+    // getter. Before the names: the plan adds the init chunks.
+    self.plan_lazy_host_inits(
+      &mut chunk_graph,
+      &order_state,
+      &used_symbol_refs,
+      &final_esm_init_metadata,
+    );
+
+    self.trace_action_chunks_infos(&chunk_graph);
+
     let (index_chunk_id_to_name, inline_record_ids) =
       self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
     for (chunk_idx, id) in inline_record_ids {
@@ -292,15 +306,18 @@ impl<'a> GenerateStage<'a> {
     }
 
     let resolved_file_urls = self.resolve_file_urls(&chunk_graph).await?;
+    self.group_deferred_modules(&mut chunk_graph, &final_esm_init_metadata);
     self.finalize_modules(
-      &chunk_graph,
+      &mut chunk_graph,
       &mut ast_table,
       &resolved_file_urls,
       &used_symbol_refs,
       &order_state,
       &final_esm_init_metadata,
     )?;
+    self.place_dynamic_defer_declarations(&mut chunk_graph, &order_state);
     self.detect_ineffective_dynamic_imports(&chunk_graph);
+    self.detect_deferred_externals_evaluated_eagerly(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs, &order_state).await
   }
 
@@ -316,6 +333,7 @@ impl<'a> GenerateStage<'a> {
     let mut index_chunk_id_to_representative_name = FxHashMap::default();
 
     let chunk_table = &chunk_graph.chunk_table;
+    let host_by_init_chunk = &chunk_graph.lazy_host_inits.host_by_init_chunk;
     let index_pre_generated_names_futures = chunk_table.iter_enumerated().map(|(idx, chunk)| {
       let is_record = self.inline_state.is_record(idx);
       let loaded_record = self.inline_state.loaded_record(idx);
@@ -415,9 +433,12 @@ impl<'a> GenerateStage<'a> {
             // The file an `import()` loads for an inline common chunk record has no modules of its
             // own and is named like the record.
             let named_after = loaded_record.map_or(chunk, |record| &chunk_table[record]);
-            if let Some(module_id) =
+            // An init chunk has no modules. It takes the name of its deferred module, and
+            // `name_lazy_host_init_chunks` adds `.init`.
+            let init_module = host_by_init_chunk.get(&idx).map(|(_, module_idx)| module_idx);
+            if let Some(module_id) = init_module.or_else(|| {
               named_after.modules.iter().rev().find(|each| **each != self.link_output.runtime.id())
-            {
+            }) {
               let module = &modules[*module_id];
               let name = module.id().representative_name();
               // A record is no file, so the `sanitizeFileName` hook does not run for it.
@@ -444,6 +465,8 @@ impl<'a> GenerateStage<'a> {
 
     let mut index_pre_generated_names: IndexVec<ChunkIdx, PreGeneratedChunkName> =
       try_join_all(index_pre_generated_names_futures).await?.into();
+    Self::name_lazy_host_init_chunks(chunk_graph, &mut index_pre_generated_names);
+    let lazy_host_init_reserved_names = self.lazy_host_init_reserved_names(chunk_graph);
     let index_record_module_ids: FxHashMap<ChunkIdx, Vec<rolldown_common::ModuleId>> = self
       .inline_state
       .record_indices()
@@ -498,7 +521,7 @@ impl<'a> GenerateStage<'a> {
           .module_ids
           .extend(index_record_module_ids.get(record_idx).into_iter().flatten().cloned());
       }
-      let preliminary_filename = chunk
+      let mut preliminary_filename = chunk
         .generate_preliminary_filename(
           self.options,
           &pre_rendered_chunk,
@@ -507,6 +530,13 @@ impl<'a> GenerateStage<'a> {
           &used_name_counts,
         )
         .await?;
+      if chunk_graph.lazy_host_inits.host_by_init_chunk.contains_key(chunk_id) {
+        preliminary_filename = lazy_host_inits::avoid_reserved_names(
+          preliminary_filename,
+          &lazy_host_init_reserved_names,
+          &used_name_counts,
+        );
+      }
       // Defer chunk name assignment to make sure at this point only entry chunk have a name
       // if user provided one.
       chunk.name = Some(pre_generated_chunk_name.chunk_name.clone());
@@ -566,6 +596,7 @@ impl<'a> GenerateStage<'a> {
           chunk_graph,
           plugin_driver: self.plugin_driver,
           module_id_to_codegen_ret: Vec::new(),
+          group_body_codegen_rets: FxHashMap::default(),
           render_export_items_index_vec: &IndexVec::default(),
           chunk_idx,
           resolved_paths: self.resolved_paths.as_ref(),

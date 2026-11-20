@@ -1,0 +1,14 @@
+{
+  "_comment": "`r.js` defers `a.js` and `a2.js` and imports `w.js`. `b.js` imports all three, so they share a common chunk. `b.js` imports `a.js`, `w.js`, `a2.js`, then `y.js`, so native ESM runs them in that order. The common chunk runs `w` at load, so `w.js` moves to a new common chunk. `b.js` then initializes `a.js` right after its import of the old chunk, and `a2.js` right after its import of `w.js`.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "cjs",
+      "format": "cjs"
+    }
+  ]
+}

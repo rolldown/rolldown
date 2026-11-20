@@ -25,6 +25,7 @@ pub mod hash_placeholder;
 pub mod index_vec_ext;
 pub mod js_regex;
 pub mod make_unique_name;
+pub mod node_builtin;
 pub mod node_path;
 pub use node_path::node_style_absolute;
 pub mod pattern_filter;

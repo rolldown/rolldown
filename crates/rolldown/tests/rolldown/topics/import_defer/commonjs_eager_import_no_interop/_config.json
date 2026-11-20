@@ -1,0 +1,14 @@
+{
+  "_comment": "Each CommonJS module has an eager import with no interop (a side-effect import in `c.js`, a named import in `d.js`) and a deferred import. The eager merge of these imports needs no `__toESM`, but each deferred namespace does. No other import needs `__toESM`: `main.js` reads the log with a named import. The `cjs` variant runs the `cjs` lookup of the helper.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "cjs",
+      "format": "cjs"
+    }
+  ]
+}

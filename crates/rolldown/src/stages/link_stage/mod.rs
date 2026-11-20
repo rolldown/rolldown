@@ -280,10 +280,14 @@ impl<'a> LinkStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn link(mut self) -> (LinkStageOutput, IndexEcmaAst, UsedSymbolRefsBuilder) {
     self.sort_modules();
+    if self.options.experimental.is_import_defer_enabled() {
+      self.mark_tla_before_tree_shaking();
+    }
     self.determine_module_exports_kind();
     self.determine_safely_merge_cjs_ns();
-    self.wrap_modules();
+    let deferred_esm_targets = self.wrap_modules();
     self.generate_lazy_export();
+    self.create_deferred_namespaces(&deferred_esm_targets);
     self.determine_side_effects();
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();
@@ -301,6 +305,7 @@ impl<'a> LinkStage<'a> {
     self.compute_tla();
     self.assert_promoted_writers_excluded();
     self.check_lazy_barrel_uncertain_bindings();
+    self.mark_lazy_namespace_externals();
     self.patch_module_dependencies();
 
     tracing::trace!(

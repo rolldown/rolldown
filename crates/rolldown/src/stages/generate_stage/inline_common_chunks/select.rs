@@ -480,6 +480,11 @@ impl GenerateStage<'_> {
     if meta.is_tla_or_contains_tla_dependency {
       return Some("member uses top-level await");
     }
+    if meta.dynamic_defer_target {
+      // `import.defer()` reads `init_x`, `x_exports` and `x_deferred` from the chunk of its
+      // target. A record has no exports.
+      return Some("member is an `import.defer()` target");
+    }
     if module.meta.has_eval() {
       return Some("member uses direct eval");
     }

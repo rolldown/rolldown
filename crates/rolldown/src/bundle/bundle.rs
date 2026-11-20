@@ -30,6 +30,14 @@ use std::{
 };
 use sugar_path::SugarPath;
 
+#[cfg(not(target_family = "wasm"))]
+static OUTPUT_WRITE_POOL: std::sync::LazyLock<rayon::ThreadPool> = std::sync::LazyLock::new(|| {
+  rayon::ThreadPoolBuilder::new()
+    .num_threads(2)
+    .build()
+    .expect("could not start the output write pool")
+});
+
 #[expect(
   clippy::struct_field_names,
   reason = "`bundle_span` emphasizes this's a span for this bundle, not a session level span"
@@ -261,8 +269,12 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       // Large builds emit tens of thousands of files; writing them one at a time leaves the
       // output stage bound by per-file syscall latency. Distinct paths are independent, so write
       // them in parallel and report the first failure in output order to keep errors stable.
-      let results =
-        destinations.par_iter().map(|(chunk, dest)| write(chunk, dest)).collect::<Vec<_>>();
+      let write_destinations =
+        || destinations.par_iter().map(|(chunk, dest)| write(chunk, dest)).collect::<Vec<_>>();
+      #[cfg(not(target_family = "wasm"))]
+      let results = OUTPUT_WRITE_POOL.install(write_destinations);
+      #[cfg(target_family = "wasm")]
+      let results = write_destinations();
       results.into_iter().collect::<anyhow::Result<()>>()?;
     } else {
       // Several outputs target the same path: keep sequential last-writer-wins semantics.

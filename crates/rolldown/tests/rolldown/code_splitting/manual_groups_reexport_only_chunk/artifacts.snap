@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## bundle-a.js
+
+```js
+// c.js
+const C = "ccccc";
+// a.js
+const A = "aaaaa";
+console.log(C);
+export { C as n, A as t };
+
+```
+
+## bundle-b.js
+
+```js
+// b.js
+const B = "bbbbb";
+export { B as t };
+
+```
+
+## index-1.js
+
+```js
+import { n as C, t as A } from "./bundle-a.js";
+import { t as B } from "./bundle-b.js";
+// index-1.ts
+console.log(B);
+console.log(A);
+console.log(C);
+
+```
+
+## index.js
+
+```js
+import { n as C, t as A } from "./bundle-a.js";
+// index.ts
+console.log(A);
+console.log(C, 111);
+
+```

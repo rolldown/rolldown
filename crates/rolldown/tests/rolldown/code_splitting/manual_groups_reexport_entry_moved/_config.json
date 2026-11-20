@@ -1,0 +1,39 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "one",
+        "import": "one.js"
+      },
+      {
+        "name": "two",
+        "import": "two.js"
+      }
+    ],
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "g-a",
+          "test": "a.js",
+          "includeDependenciesRecursively": false
+        },
+        {
+          "name": "g-c",
+          "test": "c.js",
+          "includeDependenciesRecursively": false
+        },
+        {
+          "name": "g-one",
+          "test": "one.js",
+          "includeDependenciesRecursively": false
+        },
+        {
+          "name": "g-init",
+          "test": "init.js",
+          "includeDependenciesRecursively": false
+        }
+      ]
+    }
+  },
+  "snapshot": false
+}

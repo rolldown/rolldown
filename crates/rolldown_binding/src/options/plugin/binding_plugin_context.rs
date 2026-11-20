@@ -16,6 +16,7 @@ use super::types::{
   binding_import_attributes::{
     BindingImportAttributes, from_binding_import_attributes, to_binding_import_attributes,
   },
+  binding_plugin_context_load_options::BindingPluginContextLoadOptions,
   binding_plugin_context_resolve_options::BindingPluginContextResolveOptions,
   binding_resolved_external::BindingResolvedExternal,
 };
@@ -36,7 +37,7 @@ pub struct BindingPluginContext {
 #[napi]
 impl BindingPluginContext {
   #[napi(
-    ts_args_type = "rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string, moduleOptionsReceipt?: number",
+    ts_args_type = "rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, resolveDependencies: boolean, options?: BindingPluginContextLoadOptions",
     ts_return_type = "Promise<void>"
   )]
   pub fn load<'env>(
@@ -45,9 +46,11 @@ impl BindingPluginContext {
     raw_id: String,
     attributes: BindingImportAttributes,
     side_effects: Option<BindingHookSideEffects>,
-    package_json_path: Option<String>,
-    module_options_receipt: Option<u32>,
+    resolve_dependencies: bool,
+    options: Option<BindingPluginContextLoadOptions>,
   ) -> napi::Result<PromiseRaw<'env, ()>> {
+    let BindingPluginContextLoadOptions { package_json_path, module_options_receipt } =
+      options.unwrap_or_default();
     let inner = Arc::clone(&self.inner);
     spawn_boxed_future(env, async move {
       let package_json = package_json_path
@@ -61,6 +64,7 @@ impl BindingPluginContext {
           from_binding_import_attributes(attributes),
           side_effects.map(TryInto::try_into).transpose()?,
           module_def_format,
+          resolve_dependencies,
           module_options_receipt,
         )
         .await

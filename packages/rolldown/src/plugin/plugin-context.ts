@@ -347,29 +347,31 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     if (id === this.currentLoadingModule) {
       this.onLog(LOG_LEVEL_WARN, logCycleLoading(this.pluginName, this.currentLoadingModule));
     }
-    // resolveDependencies always true at rolldown
+    const resolveDependencies = options.resolveDependencies === true;
     const moduleInfo = this.data.getModuleInfo(id, this.context, this.warnWriteAfterBuildEnd);
-    if (moduleInfo && moduleInfo.code !== null /* module already parsed */) {
+    // The code is set once the module is parsed, which can be before its imports are resolved.
+    if (moduleInfo !== null && moduleInfo.code !== null && !resolveDependencies) {
       return moduleInfo;
     }
-    let loadPromise = this.data.loadModulePromiseMap.get(id);
+
+    const loadPromiseMap = resolveDependencies
+      ? this.data.loadModuleWithDependenciesPromiseMap
+      : this.data.loadModulePromiseMap;
+    let loadPromise = loadPromiseMap.get(id);
     if (!loadPromise) {
       // The options apply only when this call creates the module.
       const moduleOptionsReceipt = this.data.saveResolutionOptions({ meta: options.meta || {} });
       loadPromise = this.context
-        .load(
-          rawId,
-          attributes,
-          options.moduleSideEffects ?? undefined,
-          options.packageJsonPath ?? undefined,
+        .load(rawId, attributes, options.moduleSideEffects ?? undefined, resolveDependencies, {
+          packageJsonPath: options.packageJsonPath ?? undefined,
           moduleOptionsReceipt,
-        )
+        })
         .catch(() => {
           // avoid reusing the promise if it's an error
           // because the error may happen only in non-supported hooks (e.g. `buildStart` hook)
-          this.data.loadModulePromiseMap.delete(id);
+          loadPromiseMap.delete(id);
         });
-      this.data.loadModulePromiseMap.set(id, loadPromise);
+      loadPromiseMap.set(id, loadPromise);
     }
 
     await loadPromise;

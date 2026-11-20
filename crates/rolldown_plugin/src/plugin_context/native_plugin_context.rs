@@ -61,6 +61,7 @@ impl NativePluginContextImpl {
     attributes: ImportAttributes,
     side_effects: Option<HookSideEffects>,
     module_def_format: ModuleDefFormat,
+    resolve_dependencies: bool,
     module_options_receipt: Option<u32>,
   ) -> anyhow::Result<()> {
     // Clone out the sender under the lock, then drop the lock before awaiting.
@@ -85,7 +86,7 @@ impl NativePluginContextImpl {
       .plugin_driver
       .upgrade()
       .ok_or_else(|| anyhow::anyhow!("Plugin driver is already dropped."))?;
-    plugin_driver.wait_for_module_load_completion(&id).await;
+    plugin_driver.wait_for_module_load_completion(&id, resolve_dependencies).await;
     Ok(())
   }
 

@@ -5,12 +5,13 @@ use std::{
 
 use arcstr::ArcStr;
 use itertools::Itertools;
+use oxc::ast::{Comment, ast::Statement};
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkDebugInfo, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType,
   FacadeChunkEliminationReason, ImportKind, Module, ModuleIdx, ModuleTable, NormalModule,
   PostChunkOptimizationOperation, PreserveEntrySignatures, RuntimeHelper, Specifier, SymbolRef,
-  UsedSymbolRefsBuilder, WrapKind,
+  UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind, side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::{BitSet, IndexBitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -377,7 +378,8 @@ impl GenerateStage<'_> {
   /// This optimization reduces the total number of chunks by merging shared modules into an appropriate
   /// entry chunk when possible. The function iterates through pending common chunks and either:
   /// 1. Merges modules into an existing entry chunk if safe to do so
-  /// 2. Creates a new common chunk if no suitable merge target is found
+  /// 2. Skips a re-export whose required chunk already loads before it
+  /// 3. Creates a new common chunk for the remaining modules
   pub(super) fn try_insert_common_module_to_exist_chunk(
     &self,
     chunk_graph: &mut ChunkGraph,
@@ -385,6 +387,7 @@ impl GenerateStage<'_> {
     input_base: &ArcStr,
     temp_chunk_graph: &mut ChunkOptimizationGraph,
     dynamic_entry_merge_targets: &mut FxHashSet<ChunkIdx>,
+    used_symbol_refs: UsedSymbolRefsView<'_>,
   ) {
     let static_entry_chunk_reference: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> =
       self.construct_static_entry_to_reached_dynamic_entries_map(chunk_graph);
@@ -442,6 +445,15 @@ impl GenerateStage<'_> {
       .collect();
 
     // Second pass: apply chunk assignments
+    let can_skip_reexport_chunks = self.options.input.len() > 1
+      && self.options.has_manual_code_splitting_groups()
+      && self.options.inline_common_chunks.is_none()
+      && !self.options.is_strict_execution_order_enabled();
+    let pending_entry_merge_targets = if can_skip_reexport_chunks {
+      assignments.iter().filter_map(|(_, _, _, target)| *target).collect()
+    } else {
+      FxHashSet::default()
+    };
     for (bits, temp_chunk_idx, chunk_idxs, merge_target) in assignments {
       // Check if merging would create a circular dependency
       let merge_target = match merge_target {
@@ -456,6 +468,21 @@ impl GenerateStage<'_> {
       };
 
       let temp_modules = &temp_chunk_graph.chunks[temp_chunk_idx].modules;
+      if merge_target.is_none()
+        && can_skip_reexport_chunks
+        && let [forwarder_idx] = *temp_modules.as_slice()
+        && let Some(owner) = self.find_redundant_reexport_target(
+          forwarder_idx,
+          &bits,
+          chunk_graph,
+          &pending_entry_merge_targets,
+          used_symbol_refs,
+        )
+        && let Some(owner_temp_idx) = temp_chunk_graph.to_temp_idx(owner)
+        && !temp_chunk_graph.is_reachable(owner_temp_idx, temp_chunk_idx)
+      {
+        continue;
+      }
       match self.assign_modules_to_chunk(
         merge_target,
         &chunk_idxs,
@@ -479,6 +506,108 @@ impl GenerateStage<'_> {
         }
       }
     }
+  }
+
+  /// A bare re-export needs no chunk if all its importers already load its
+  /// only effectful chunk before they would load the re-export.
+  /// See internal-docs/code-splitting/implementation.md#common-module-merging-try_insert_common_module_to_exist_chunk.
+  fn find_redundant_reexport_target(
+    &self,
+    module_idx: ModuleIdx,
+    bits: &BitSet,
+    chunk_graph: &ChunkGraph,
+    pending_entry_merge_targets: &FxHashSet<ChunkIdx>,
+    used_symbol_refs: UsedSymbolRefsView<'_>,
+  ) -> Option<ChunkIdx> {
+    let module = self.link_output.module_table[module_idx].as_normal()?;
+    let meta = &self.link_output.metas[module_idx];
+    let program = self.ast_table[module_idx].as_ref()?.program();
+    if self.link_output.entries.contains_key(&module_idx)
+      || !module.exports_kind.is_esm()
+      || matches!(module.side_effects, DeterminedSideEffects::NoTreeshake)
+      || !meta.wrap_kind().is_none()
+      || meta.has_dynamic_exports
+      || !meta.module_namespace_included_reason.is_empty()
+      || !meta.execution_dependencies.is_empty()
+      || !meta.shimmed_missing_exports.is_empty()
+      || !meta.depended_runtime_helper.is_empty()
+      || meta.has_side_effectful_runtime_dep
+      || module.importers_idx.is_empty()
+      || meta.canonical_exports(false).any(|(_, export)| {
+        self.link_output.symbol_db.canonical_ref_for(export.symbol_ref).owner == module_idx
+      })
+      || !program.directives.is_empty()
+      || program.comments.iter().any(Comment::is_legal)
+      || program.body.is_empty()
+      || !program.body.iter().all(|stmt| {
+        matches!(stmt, Statement::ExportAllDeclaration(_) | Statement::ExportFromDeclaration(_))
+      })
+    {
+      return None;
+    }
+
+    let mut owner = None;
+    for rec in &module.import_records {
+      let importee_idx = rec.resolved_module?;
+      let importee = self.link_output.module_table[importee_idx].as_normal()?;
+      let importee_meta = &self.link_output.metas[importee_idx];
+      if !importee.exports_kind.is_esm()
+        || !importee_meta.wrap_kind().is_none()
+        || importee_meta.has_dynamic_exports
+      {
+        return None;
+      }
+      if !importee.side_effects.has_side_effects() {
+        continue;
+      }
+
+      let importee_chunk_idx = chunk_graph.module_to_chunk[importee_idx]?;
+      let importee_chunk = &chunk_graph.chunk_table[importee_chunk_idx];
+      if !matches!(importee_chunk.kind, ChunkKind::Common)
+        || importee_chunk.chunk_reason_type.group_index().is_none()
+        || &importee_chunk.bits != bits
+        || importee.exec_order >= module.exec_order
+        || owner.is_some_and(|other| other != importee_chunk_idx)
+      {
+        return None;
+      }
+      owner = Some(importee_chunk_idx);
+    }
+    let owner = owner?;
+    if chunk_graph.chunk_table[owner]
+      .modules
+      .iter()
+      .any(|module_idx| self.link_output.entries.contains_key(module_idx))
+    {
+      return None;
+    }
+
+    // With a single source import target, removing its rank does not permute
+    // the remaining imports. The already imported group has an earlier exec_order.
+    module
+      .importers_idx
+      .iter()
+      .all(|&importer_idx| {
+        let Some(importer_chunk_idx) = chunk_graph.module_to_chunk[importer_idx] else {
+          return false;
+        };
+        let importer_chunk = &chunk_graph.chunk_table[importer_chunk_idx];
+        importer_chunk.user_defined_entry_module_idx() == Some(importer_idx)
+          && importer_chunk.modules.as_slice() == [importer_idx]
+          && !pending_entry_merge_targets.contains(&importer_chunk_idx)
+          && self.link_output.module_table[importer_idx].as_normal().is_some_and(|importer| {
+            importer.import_records.iter().all(|record| {
+              record.kind == ImportKind::Import && record.resolved_module == Some(module_idx)
+            })
+          })
+          && self.imports_chunk_via_included_reference(
+            importer_idx,
+            owner,
+            chunk_graph,
+            used_symbol_refs,
+          )
+      })
+      .then_some(owner)
   }
 
   /// Assigns modules to either an existing entry chunk or a new common chunk.
@@ -622,12 +751,20 @@ impl GenerateStage<'_> {
     }
     let user_defined_entry_modules = Self::collect_entry_modules(&user_defined_entry, chunk_graph)?;
 
-    let merged_user_defined_chunk =
-      Self::find_merge_target(&user_defined_entry, &user_defined_entry_modules, module_table);
+    let merged_user_defined_chunk = Self::find_merge_target(
+      &user_defined_entry,
+      &user_defined_entry_modules,
+      module_table,
+      linking_infos,
+    );
     if user_defined_entry.is_empty() {
       let dynamic_chunk_entry_modules = Self::collect_entry_modules(&dynamic_entry, chunk_graph)?;
-      let target_chunk_idx =
-        Self::find_merge_target(&dynamic_entry, &dynamic_chunk_entry_modules, module_table)?;
+      let target_chunk_idx = Self::find_merge_target(
+        &dynamic_entry,
+        &dynamic_chunk_entry_modules,
+        module_table,
+        linking_infos,
+      )?;
       // Cyclic-merge export-pollution guard for `find_merge_target`.
       //
       // `find_merge_target` accepts any candidate whose entry module is
@@ -788,17 +925,21 @@ impl GenerateStage<'_> {
   }
 
   /// Finds a chunk that can serve as the merge target for all entries.
-  /// A chunk can be the merge target if its entry module is imported by or equal to all other entry modules.
+  /// A chunk can be the merge target if its entry module is equal to, or imported and loaded by,
+  /// all other entry modules. An importer that only reads bindings re-exported by a
+  /// side-effect-free entry does not load it, so that entry's chunk is not one it already fetches.
   fn find_merge_target(
     chunk_indices: &[ChunkIdx],
     entry_modules: &[ModuleIdx],
     module_table: &ModuleTable,
+    linking_infos: &LinkingMetadataVec,
   ) -> Option<ChunkIdx> {
     chunk_indices.iter().zip(entry_modules.iter()).find_map(|(chunk_idx, entry_module_idx)| {
       let module = module_table[*entry_module_idx].as_normal().expect("Should be normal module");
       let can_merge = entry_modules.iter().all(|other_entry_module_idx| {
         *entry_module_idx == *other_entry_module_idx
-          || module.importers_idx.contains(other_entry_module_idx)
+          || (module.importers_idx.contains(other_entry_module_idx)
+            && linking_infos[*other_entry_module_idx].load_dependencies.contains(entry_module_idx))
       });
       can_merge.then_some(*chunk_idx)
     })

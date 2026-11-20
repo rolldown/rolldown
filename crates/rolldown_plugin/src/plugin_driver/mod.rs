@@ -21,7 +21,7 @@ use rolldown_common::{
 };
 use rolldown_devtools::trace_action_enabled;
 use rolldown_utils::dashmap::FxDashSet;
-use tokio::sync::broadcast;
+use tokio::sync::watch;
 
 use crate::{
   __inner::SharedPluginable,
@@ -152,24 +152,24 @@ impl PluginDriver {
     Ok(())
   }
 
-  pub fn mark_context_load_modules_loaded(&self, module_id: ModuleId) {
-    self.context_load_completion_manager.mark_completion(module_id);
-  }
-
-  /// This function ends the `this.load` wait for a module that does not send a load signal.
-  /// An example is an id that is already an external module. You can call this function more
-  /// than one time for the same module. Call `mark_context_load_modules_loaded` only one time
-  /// for a module.
-  pub fn ensure_context_load_module_completion(&self, module_id: ModuleId) {
-    self.context_load_completion_manager.ensure_completion(module_id);
+  pub fn mark_context_load_progress(&self, module_id: ModuleId, progress: ContextLoadProgress) {
+    self.context_load_completion_manager.advance(module_id, progress);
   }
 
   pub fn invalidate_context_load_module(&self, module_id: &ModuleId) {
     self.context_load_completion_manager.invalidate(module_id);
   }
 
-  pub async fn wait_for_module_load_completion(&self, specifier: &str) {
-    self.context_load_completion_manager.wait_for_completion(specifier.into()).await;
+  /// Without `resolve_dependencies`, this returns once the module is parsed, as in Rollup.
+  /// Waiting for the imports too would deadlock a `resolveId` hook that awaits `this.load`
+  /// in an import cycle.
+  pub async fn wait_for_module_load_completion(&self, specifier: &str, resolve_dependencies: bool) {
+    let progress = if resolve_dependencies {
+      ContextLoadProgress::Completed
+    } else {
+      ContextLoadProgress::Parsed
+    };
+    self.context_load_completion_manager.wait_for(specifier.into(), progress).await;
   }
 
   pub fn iter_plugin_with_context_by_order<'me>(
@@ -204,35 +204,48 @@ impl Deref for PluginDriver {
   }
 }
 
-#[derive(Default)]
-struct ContextLoadCompletionManager {
-  notifiers: DashMap<ModuleId, ContextLoadCompletionState>,
-}
-
-enum ContextLoadCompletionState {
-  Pending(broadcast::Sender<()>),
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ContextLoadProgress {
+  /// The module is loaded, transformed and parsed, and its module info has the code,
+  /// but its imports are not resolved yet.
+  Parsed,
+  /// The imports are resolved and `moduleParsed` has run. A failed module task, or an id
+  /// that no module task loads (e.g. an external module), is completed too.
   Completed,
 }
 
+enum ContextLoadState {
+  Reached(ContextLoadProgress),
+  Waited(watch::Sender<Option<ContextLoadProgress>>),
+}
+
+#[derive(Default)]
+struct ContextLoadCompletionManager {
+  states: DashMap<ModuleId, ContextLoadState>,
+}
+
 impl ContextLoadCompletionManager {
-  pub async fn wait_for_completion(&self, module_id: ModuleId) {
-    let mut rx = match self.notifiers.entry(module_id) {
+  pub async fn wait_for(&self, module_id: ModuleId, progress: ContextLoadProgress) {
+    let mut rx = match self.states.entry(module_id) {
       dashmap::Entry::Vacant(guard) => {
-        let (tx, rx) = broadcast::channel(1);
-        guard.insert(ContextLoadCompletionState::Pending(tx));
+        let (tx, rx) = watch::channel(None);
+        guard.insert(ContextLoadState::Waited(tx));
         rx
       }
-      dashmap::Entry::Occupied(mut guard) => match guard.get_mut() {
-        ContextLoadCompletionState::Pending(sender) => sender.subscribe(),
-        ContextLoadCompletionState::Completed => {
-          /* no need to wait */
-          return;
+      dashmap::Entry::Occupied(mut guard) => match *guard.get() {
+        ContextLoadState::Reached(reached) if reached >= progress => return,
+        ContextLoadState::Reached(reached) => {
+          let (tx, rx) = watch::channel(Some(reached));
+          guard.insert(ContextLoadState::Waited(tx));
+          rx
         }
+        ContextLoadState::Waited(ref tx) => tx.subscribe(),
       },
     };
-
-    if let Err(err) = rx.recv().await {
-      // This happens when `.invalidate` is called before `.mark_completion` is called, which is not expected
+    if let Err(err) =
+      rx.wait_for(|current| current.is_some_and(|current| current >= progress)).await
+    {
+      // This happens when `.invalidate` is called before the module completes, which is not expected
       debug_assert!(
         false,
         "The sender was dropped while waiting for module load completion: {err}"
@@ -241,50 +254,31 @@ impl ContextLoadCompletionManager {
     }
   }
 
-  pub fn mark_completion(&self, module_id: ModuleId) {
-    match self.notifiers.entry(module_id) {
+  pub fn advance(&self, module_id: ModuleId, progress: ContextLoadProgress) {
+    match self.states.entry(module_id) {
       dashmap::Entry::Vacant(guard) => {
-        guard.insert(ContextLoadCompletionState::Completed);
+        guard.insert(ContextLoadState::Reached(progress));
       }
       dashmap::Entry::Occupied(mut guard) => match guard.get_mut() {
-        ContextLoadCompletionState::Pending(sender) => {
-          sender.send(()).expect(
-            "PluginDriver: failed to send completion notification - receiver was dropped before wait_for_completion was called, indicating a race condition in module loading"
-          );
-          *guard.get_mut() = ContextLoadCompletionState::Completed;
-        }
-        ContextLoadCompletionState::Completed => {
-          // This happens if `.mark_completion` is called multiple times, which is not expected
-          debug_assert!(false, "mark_completion was called even though it was already completed");
-          tracing::warn!("mark_completion was called even though it was already completed");
+        ContextLoadState::Reached(reached) => *reached = (*reached).max(progress),
+        ContextLoadState::Waited(tx) => {
+          tx.send_if_modified(|current| {
+            if current.is_some_and(|current| current >= progress) {
+              return false;
+            }
+            *current = Some(progress);
+            true
+          });
         }
       },
     }
   }
 
   pub fn invalidate(&self, module_id: &ModuleId) {
-    self.notifiers.remove(module_id);
-  }
-
-  /// This function is the same as `mark_completion`, but it does nothing if the module is
-  /// already completed.
-  pub fn ensure_completion(&self, module_id: ModuleId) {
-    match self.notifiers.entry(module_id) {
-      dashmap::Entry::Vacant(guard) => {
-        guard.insert(ContextLoadCompletionState::Completed);
-      }
-      dashmap::Entry::Occupied(mut guard) => {
-        if let ContextLoadCompletionState::Pending(sender) = guard.get_mut() {
-          // The send fails only when the hook that waits is gone. Then nothing waits for the
-          // signal, so ignore the error.
-          let _ = sender.send(());
-          *guard.get_mut() = ContextLoadCompletionState::Completed;
-        }
-      }
-    }
+    self.states.remove(module_id);
   }
 
   pub fn clear(&self) {
-    self.notifiers.clear();
+    self.states.clear();
   }
 }

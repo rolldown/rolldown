@@ -1843,7 +1843,7 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
-  load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string, moduleOptionsReceipt?: number): Promise<void>
+  load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, resolveDependencies: boolean, options?: BindingPluginContextLoadOptions): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
@@ -2775,6 +2775,16 @@ export interface BindingOverwriteOptions {
   contentOnly?: boolean
   /** Stores the replaced content in the generated sourcemap's `names` field. */
   storeName?: boolean
+}
+
+/** The options of `BindingPluginContext.load` that a call can leave out. */
+export interface BindingPluginContextLoadOptions {
+  packageJsonPath?: string
+  /**
+   * The receipt of the module options that `this.load` saved on the JS side. They apply only
+   * when this call creates the module.
+   */
+  moduleOptionsReceipt?: number
 }
 
 export interface BindingPluginContextResolvedId {

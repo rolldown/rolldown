@@ -3,26 +3,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## b.js
-
-```js
-import { t as B } from "./plugin.js";
-// indicator.js
-function indicator() {
-	return "i";
-}
-export { B, indicator as t };
-
-```
-
-## lib.js
+## indicator.js
 
 ```js
 // lib.js
 function helper(x) {
 	return x;
 }
-export { helper as t };
+// indicator.js
+function indicator() {
+	return "i";
+}
+export { helper as n, indicator as t };
 
 ```
 
@@ -31,7 +23,7 @@ export { helper as t };
 ```js
 // main.js
 const loadA = () => import("./plugin.js").then((n) => n.n);
-const loadB = () => import("./b.js");
+const loadB = () => import("./plugin.js").then((n) => n.t);
 export { loadA, loadB };
 
 ```
@@ -39,8 +31,7 @@ export { loadA, loadB };
 ## plugin.js
 
 ```js
-import { t as helper } from "./lib.js";
-import { t as indicator } from "./b.js";
+import { n as helper, t as indicator } from "./indicator.js";
 // HIDDEN [\0rolldown/runtime.js]
 // a.js
 var a_exports = /* @__PURE__ */ __exportAll({ A: () => A });
@@ -52,9 +43,10 @@ function Menu() {
 	return indicator();
 }
 // b.js
+var b_exports = /* @__PURE__ */ __exportAll({ B: () => B });
 function B() {
 	return helper("b") + Menu();
 }
-export { a_exports as n, B as t };
+export { a_exports as n, b_exports as t };
 
 ```

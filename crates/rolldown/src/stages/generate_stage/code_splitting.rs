@@ -967,12 +967,13 @@ impl GenerateStage<'_> {
         EntryPointKind::UserDefined | EntryPointKind::EmittedUserDefined
       );
       self.determine_reachable_modules_for_entry(
-        module_idx,
+        std::slice::from_ref(&module_idx),
         entry_index.try_into().expect("Too many entries, u32 overflowed."),
         index_splitting_info,
         is_user_defined_entry,
         init_dependencies.as_ref(),
         pre_chunk_order_state,
+        None,
       );
     }
     self.place_unselected_consumer_local_reexport_targets(
@@ -1027,6 +1028,14 @@ impl GenerateStage<'_> {
         &tag_registry,
       )
       .await?;
+
+    self.include_manual_chunk_roots(
+      index_splitting_info,
+      chunk_graph,
+      bits_to_chunk,
+      init_dependencies.as_ref(),
+      pre_chunk_order_state,
+    );
 
     // If it is allow to allow that entry chunks have the different exports as the underlying entry module.
     // This is used to generate less chunks when possible.
@@ -1309,20 +1318,120 @@ impl GenerateStage<'_> {
     dependencies
   }
 
+  fn include_manual_chunk_roots(
+    &self,
+    index_splitting_info: &mut IndexSplittingInfo,
+    chunk_graph: &mut ChunkGraph,
+    bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
+    init_dependencies: Option<&IndexVec<ModuleIdx, Vec<ModuleIdx>>>,
+    pre_chunk_order_state: &super::order_wrap_state::OrderWrapState,
+  ) {
+    let Some(options) = &self.options.manual_code_splitting else { return };
+    let Some(groups) = &options.groups else { return };
+    let manual_roots = chunk_graph
+      .chunk_table
+      .iter_enumerated()
+      .filter_map(|(idx, chunk)| {
+        let group = &groups[chunk.chunk_reason_type.group_index()? as usize];
+        (!group
+          .include_dependencies_recursively
+          .or(options.include_dependencies_recursively)
+          .unwrap_or(true))
+        .then_some(idx)
+      })
+      .collect::<Vec<_>>();
+    if manual_roots.is_empty() {
+      return;
+    }
+
+    // Use the root's chunk index as its bit so common-chunk merging sees manual consumers.
+    let root_count =
+      u32::try_from(chunk_graph.chunk_table.len()).expect("Too many chunk roots, u32 overflowed.");
+    let previous_entry_chunks = index_splitting_info
+      .iter()
+      .map(|info| bits_to_chunk.get(&info.bits).copied())
+      .collect::<IndexVec<ModuleIdx, _>>();
+    for info in index_splitting_info.iter_mut() {
+      info.bits = BitSet::new(root_count);
+      info.share_count = 0;
+    }
+    let entry_roots = chunk_graph.chunk_table.iter_enumerated().filter_map(|(idx, chunk)| {
+      let ChunkKind::EntryPoint { module, .. } = &chunk.kind else { return None };
+      Some((idx, std::slice::from_ref(module)))
+    });
+    for (idx, modules) in entry_roots.chain(
+      manual_roots.into_iter().map(|idx| (idx, chunk_graph.chunk_table[idx].modules.as_slice())),
+    ) {
+      self.determine_reachable_modules_for_entry(
+        modules,
+        idx.raw(),
+        index_splitting_info,
+        false,
+        init_dependencies,
+        pre_chunk_order_state,
+        Some(chunk_graph),
+      );
+    }
+    self.place_unselected_consumer_local_reexport_targets(
+      index_splitting_info,
+      pre_chunk_order_state,
+    );
+
+    // An entry can still host its original modules when they share its full root set.
+    let mut entry_chunk_by_root_set = FxHashMap::default();
+    for (module, info) in index_splitting_info.iter_enumerated() {
+      if chunk_graph.module_to_chunk[module].is_none() && self.link_output.metas[module].is_included
+      {
+        let previous_chunk = previous_entry_chunks[module];
+        entry_chunk_by_root_set
+          .entry(&info.bits)
+          .and_modify(|chunk| {
+            if *chunk != previous_chunk {
+              *chunk = None;
+            }
+          })
+          .or_insert(previous_chunk);
+      }
+    }
+
+    bits_to_chunk.clear();
+    for (idx, chunk) in chunk_graph.chunk_table.iter_mut_enumerated() {
+      let mut bits = BitSet::new(root_count);
+      if let Some(module) = chunk.entry_module_idx() {
+        let entry_bits = &index_splitting_info[module].bits;
+        if entry_chunk_by_root_set.get(entry_bits) == Some(&Some(idx)) {
+          bits = entry_bits.clone();
+        } else {
+          bits.set_bit(idx.raw());
+        }
+        bits_to_chunk.insert(bits.clone(), idx);
+      } else {
+        for &module in &chunk.modules {
+          bits.union(&index_splitting_info[module].bits);
+        }
+      }
+      chunk.bits = bits;
+    }
+  }
+
+  #[expect(clippy::too_many_arguments)]
   fn determine_reachable_modules_for_entry(
     &self,
-    entry_module_idx: ModuleIdx,
+    root_modules: &[ModuleIdx],
     entry_index: u32,
     index_splitting_info: &mut IndexSplittingInfo,
     is_user_defined_entry: bool,
     init_dependencies: Option<&IndexVec<ModuleIdx, Vec<ModuleIdx>>>,
     pre_chunk_order_state: &super::order_wrap_state::OrderWrapState,
+    manual_chunks: Option<&ChunkGraph>,
   ) {
     debug_assert!(
-      self.link_output.module_table[entry_module_idx].is_normal(),
-      "Entry module {entry_module_idx:?} should be a normal module. External dynamic imports should be filtered out in module_loader.rs."
+      root_modules.iter().all(|&idx| self.link_output.module_table[idx].is_normal()),
+      "External entries must be filtered out by the module loader"
     );
-    let mut q = VecDeque::from([entry_module_idx]);
+    let mut q = VecDeque::from_iter(root_modules.iter().copied());
+    let mut visited_manual_chunks =
+      IndexBitSet::new(manual_chunks.map_or(0, |graph| graph.chunk_table.len()));
     while let Some(module_idx) = q.pop_front() {
       if !self.link_output.module_table[module_idx].is_normal() {
         continue;
@@ -1340,6 +1449,13 @@ impl GenerateStage<'_> {
 
       index_splitting_info[module_idx].bits.set_bit(entry_index);
       index_splitting_info[module_idx].share_count += 1;
+      if let Some(graph) = manual_chunks
+        && let Some(chunk_idx) = graph.module_to_chunk[module_idx]
+        && graph.chunk_table[chunk_idx].chunk_reason_type.group_index().is_some()
+        && visited_manual_chunks.set_bit(chunk_idx)
+      {
+        q.extend(graph.chunk_table[chunk_idx].modules.iter().copied());
+      }
       // Tag as initial if reachable from a user-defined entry via static imports.
       // See internal-docs/module-tags/implementation.md
       if is_user_defined_entry {
@@ -1370,7 +1486,7 @@ impl GenerateStage<'_> {
       // ordinary full traversal. Otherwise preserve only consumer-local waypoint chains and
       // effectful carriers unconditionally. Selected leaves come from the consuming modules'
       // precomputed initialization dependencies.
-      if is_consumer_local_barrel && module_idx != entry_module_idx {
+      if is_consumer_local_barrel && !root_modules.contains(&module_idx) {
         if module_namespace_is_referenced(module, meta, pre_chunk_order_state, |idx| {
           self.link_output.metas[idx].is_included
         }) {

@@ -23,7 +23,7 @@ init_admin();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as PaletteIcon, r as init_palette_icon } from "./personal2.js";
+import { n as init_palette_icon, t as PaletteIcon } from "./palette-icon.js";
 // app-personal.js
 function init_app_personal() {
 	return (init_app_personal = __esmMin((() => {
@@ -47,20 +47,10 @@ export { init_app_admin as n, init_app_personal as r, init_app_theming as t };
 
 ```
 
-## personal.js
-
-```js
-import { t as init_personal } from "./personal2.js";
-import "./apps~personal~admin~theming.js";
-init_personal();
-
-```
-
-## personal2.js
+## palette-icon.js
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { r as init_app_personal } from "./apps~personal~admin~theming.js";
 // palette-icon.js
 var PaletteIcon;
 function init_palette_icon() {
@@ -69,6 +59,15 @@ function init_palette_icon() {
 		PaletteIcon = "PaletteIcon";
 	})))();
 }
+export { init_palette_icon as n, PaletteIcon as t };
+
+```
+
+## personal.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as init_app_personal } from "./apps~personal~admin~theming.js";
 // personal.js
 function init_personal() {
 	return (init_personal = __esmMin((() => {
@@ -76,7 +75,7 @@ function init_personal() {
 		(globalThis.sideEffectLog ??= []).push("personal");
 	})))();
 }
-export { PaletteIcon as n, init_palette_icon as r, init_personal as t };
+init_personal();
 
 ```
 
@@ -128,7 +127,7 @@ init_admin();
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { n as PaletteIcon, r as init_palette_icon } from "./personal2.js";
+import { n as init_palette_icon, t as PaletteIcon } from "./palette-icon.js";
 // app-personal.js
 function init_app_personal() {
 	return (init_app_personal = __esmMin((() => {
@@ -152,20 +151,10 @@ export { init_app_admin as n, init_app_personal as r, init_app_theming as t };
 
 ```
 
-### personal.js
-
-```js
-import { t as init_personal } from "./personal2.js";
-import "./apps~personal~admin~theming.js";
-init_personal();
-
-```
-
-### personal2.js
+### palette-icon.js
 
 ```js
 import { t as __esmMin } from "./rolldown-runtime.js";
-import { r as init_app_personal } from "./apps~personal~admin~theming.js";
 // palette-icon.js
 var PaletteIcon;
 function init_palette_icon() {
@@ -174,6 +163,15 @@ function init_palette_icon() {
 		PaletteIcon = "PaletteIcon";
 	})))();
 }
+export { init_palette_icon as n, PaletteIcon as t };
+
+```
+
+### personal.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { r as init_app_personal } from "./apps~personal~admin~theming.js";
 // personal.js
 function init_personal() {
 	return (init_personal = __esmMin((() => {
@@ -181,7 +179,7 @@ function init_personal() {
 		(globalThis.sideEffectLog ??= []).push("personal");
 	})))();
 }
-export { PaletteIcon as n, init_palette_icon as r, init_personal as t };
+init_personal();
 
 ```
 

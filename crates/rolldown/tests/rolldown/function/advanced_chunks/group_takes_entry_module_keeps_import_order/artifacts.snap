@@ -6,16 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## e.js
 
 ```js
-import "./g.js";
-// p.js
-(globalThis.log ??= []).push("p");
-
-```
-
-## g.js
-
-```js
-import "./e.js";
+import "./p.js";
 // s.js
 (globalThis.log ??= []).push("s");
 // e.js
@@ -27,7 +18,6 @@ import "./e.js";
 
 ```js
 import assert from "node:assert";
-import "./g.js";
 import "./e.js";
 // main.js
 assert.deepStrictEqual(globalThis.log, [
@@ -35,5 +25,13 @@ assert.deepStrictEqual(globalThis.log, [
 	"s",
 	"e"
 ]);
+
+```
+
+## p.js
+
+```js
+// p.js
+(globalThis.log ??= []).push("p");
 
 ```

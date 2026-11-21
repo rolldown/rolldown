@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+import { t as manual1_default } from "./manual1.js";
+import { t as manual2_default } from "./manual2.js";
+// main.js
+assert.deepEqual(manual1_default, ["manual1", "shared"]);
+assert.deepEqual(manual2_default, ["manual2", "shared"]);
+
+```
+
+## manual1.js
+
+```js
+import { t as shared_default } from "./shared.js";
+// manual1.js
+var manual1_default = ["manual1", shared_default];
+export { manual1_default as t };
+
+```
+
+## manual2.js
+
+```js
+import { t as shared_default } from "./shared.js";
+// manual2.js
+var manual2_default = ["manual2", shared_default];
+export { manual2_default as t };
+
+```
+
+## shared.js
+
+```js
+// shared.js
+var shared_default = "shared";
+export { shared_default as t };
+
+```

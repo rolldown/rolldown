@@ -67,6 +67,7 @@ pub async fn create_ecma_view(
 
   let ScanResult {
     commonjs_exports,
+    mut cjs_literal_export_names,
     named_imports,
     mut named_exports,
     stmt_infos,
@@ -115,12 +116,15 @@ pub async fn create_ecma_view(
   let side_effects =
     normalize_side_effects(ctx.options, ctx.resolved_id, Some(&stmt_infos), hook_side_effects)
       .await?;
+  cjs_literal_export_names.sort_unstable();
+  cjs_literal_export_names.dedup();
 
   // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
   let ecma_view = EcmaView {
     source: ast.source().clone(),
     named_imports,
     named_exports,
+    cjs_literal_export_names,
     imports,
     default_export_ref,
     exports_kind,

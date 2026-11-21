@@ -166,6 +166,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
 
       ecma_view: EcmaView {
         source,
+        cjs_literal_export_names: Vec::new(),
 
         import_records: IndexVec::default(),
         sourcemap_chain: Arc::new(sourcemap_chain),

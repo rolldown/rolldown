@@ -57,6 +57,9 @@ impl LinkStage<'_> {
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
             let Some(module_idx) = rec.state.resolved_module else { return };
+            if rec.meta.contains(ImportRecordMeta::CjsStarNamedExports) {
+              depended_runtime_helper_map.push(RuntimeHelper::HasOwnProp, stmt_info_idx);
+            }
             match &self.module_table[module_idx] {
               Module::External(importee) => {
                 // Make sure symbols from external modules are included and de_conflicted

@@ -14,11 +14,7 @@ import { bindingifySourcemap, type ExistingRawSourceMap } from '../types/sourcem
 import { aggregateBindingErrorsIntoJsError } from '../utils/error';
 import { discardResult, isPromiseLike } from '../utils/misc';
 import { transformModuleInfo } from '../utils/transform-module-info';
-import {
-  copySourcemapObject,
-  isEmptySourcemapFiled,
-  prepareTransformHookSourcemap,
-} from '../utils/transform-sourcemap';
+import { copySourcemapObject, prepareTransformHookSourcemap } from '../utils/transform-sourcemap';
 import {
   bindingifyLoadFilter,
   bindingifyResolveIdFilter,
@@ -414,13 +410,13 @@ function preProcessSourceMap(
     typeof ret.map === 'object'
       ? copySourcemapObject(ret.map)
       : (JSON.parse(ret.map) as ExistingRawSourceMap);
-  if (!isEmptySourcemapFiled(map.sources) || map.sources?.[0] === null) {
+  if (map.sources?.length && map.sources[0] !== '') {
     // normalize original sourcemap sources
     // Port form https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts#L180-L188.
     const directory = path.dirname(id) || '.';
     const sourceRoot = map.sourceRoot || '.';
-    map.sources = map.sources!.map((source) =>
-      source === null ? null : path.resolve(directory, sourceRoot, source),
+    map.sources = map.sources.map((source) =>
+      source == null ? null : path.resolve(directory, sourceRoot, source),
     );
   }
   return map;

@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+export { n as wrap } from "./z.js";
+
+```
+
+## main.js
+
+```js
+// main.js
+const value = (await import("./z2.js")).value;
+export { value };
+
+```
+
+## y.js
+
+```js
+// y.js
+const later = () => import("./a.js");
+export { later };
+
+```
+
+## z.js
+
+```js
+// store.js
+var wrap = () => value || "ok";
+// z.js
+var value = wrap();
+export { wrap as n, value as t };
+
+```
+
+## z2.js
+
+```js
+export { t as value } from "./z.js";
+
+```

@@ -16,7 +16,7 @@ enum Status {
 impl LinkStage<'_> {
   /// Some notes about the module execution order:
   /// - We assume user-defined entries are always executed orderly.
-  /// - Non-user-defined entries (dynamic-import and emitted entries) are canonicalized in `LinkStage::new` by sorting on `(entry.kind, module.id().as_str())` to ensure deterministic output.
+  /// - Non-user-defined entries (dynamic-import and emitted entries) are ordered by `LinkStage::sort_entry_points`.
   /// - `require(...)` is treated as implicit static `import`, which required modules are executed before the module that requires them.
   /// - Since import statements are hoisted, `require(...)` is always placed after static `import` statements.
   /// - Order of `require(...)` is determined by who shows up first while scanning ast. For such code

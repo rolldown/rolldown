@@ -1,0 +1,6 @@
+{
+  "_comment": "`routes.js` and `server.js` are both dynamic entries, and `routes.js` sorts first by path, but it can only be reached by first evaluating `server.js`, which is what dynamically imports it. `server.js` and `router.js` form an import cycle in which `server.js` calls `router.js`'s `toNamespace` while its own module body runs, so the cycle only works when `router.js` is executed first. Starting the walk at `routes.js` reverses that and leaves `toNamespace` hoisted-but-unassigned at the call site.",
+  "config": {
+    "format": "esm"
+  }
+}

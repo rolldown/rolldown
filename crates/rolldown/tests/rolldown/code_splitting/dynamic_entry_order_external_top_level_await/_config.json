@@ -1,0 +1,12 @@
+{
+  "_comment": "`a.js` can only be reached through `z.js` and imports it, but `m1.js` imports an external module, which may use top-level await, so `m2.js` can run before `m1.js` at runtime. `z.js` keeps its place by module id.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "external": ["ext-tla"]
+  }
+}

@@ -2454,6 +2454,7 @@ dependencies = [
  "itoa",
  "json-escape-simd",
  "memchr",
+ "nodejs-built-in-modules",
  "oxc",
  "oxc_allocator",
  "oxc_ecmascript",

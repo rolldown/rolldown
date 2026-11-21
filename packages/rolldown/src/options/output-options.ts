@@ -1057,11 +1057,10 @@ export type ExperimentalInlineCommonChunksOptions = {
    */
   maxSize?: number;
   /**
-   * The most source bytes a candidate may duplicate, in bytes: its size times the number of files
-   * beyond the first that would print a copy. A candidate at or above it stays a file, which every
-   * one of those files imports instead. When a candidate's copies come from another candidate that
-   * also stays a file, that file prints the one copy and the count is taken again. Candidates that
-   * import each other in a cycle are judged together on their summed sizes, and stay files together.
+   * Keep a common chunk as a file when its size times the number of files beyond the first that
+   * would print a copy reaches this value. Size is measured as for `maxSize`.
+   *
+   * Must be a non-negative safe integer or `Infinity`. `Infinity` removes the limit.
    *
    * @default Infinity
    */

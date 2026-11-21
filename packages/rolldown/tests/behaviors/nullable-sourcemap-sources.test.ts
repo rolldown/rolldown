@@ -3,13 +3,22 @@ import { build } from 'rolldown';
 import type { ExistingRawSourceMap } from 'rolldown';
 import { expect, test } from 'vitest';
 
-test.each(['load', 'transform'] as const)('%s maps preserve null source slots', async (hook) => {
+test.each([
+  ['load', null, 'original.js'],
+  ['load', undefined, 'original.js'],
+  ['load', 'original.js', undefined],
+  ['transform', null, 'original.js'],
+  ['transform', undefined, 'original.js'],
+  ['transform', 'original.js', undefined],
+] as const)('%s maps preserve source slots [%o, %o]', async (hook, first, second) => {
   const entry = path.join(import.meta.dirname, 'entry.js');
   const code = 'export const first = 1;\nexport const answer = 42;';
+  const sources = [first, second];
+  const sourcesContent = sources.map((source) => (source == null ? null : code));
   const map: ExistingRawSourceMap = {
     version: 3,
-    sources: [null, 'original.js'],
-    sourcesContent: [null, code],
+    sources,
+    sourcesContent,
     sourceRoot: 'src',
     names: [],
     mappings: 'AAAA;ACAA',
@@ -34,8 +43,7 @@ test.each(['load', 'transform'] as const)('%s maps preserve null source slots', 
     write: false,
   });
   const chunk = result.output.find((item) => item.type === 'chunk')!;
-  expect(chunk.map!.sources[0]).toBeNull();
-  expect(chunk.map!.sources[1]).toMatch(/original\.js$/);
-  expect(chunk.map!.sourcesContent).toEqual([null, code]);
-  if (hook === 'load') expect(chunk.map!.sources[1]).toBe('src/original.js');
+  const original = hook === 'load' ? 'src/original.js' : expect.stringMatching(/original\.js$/);
+  expect(chunk.map!.sources).toEqual(sources.map((source) => (source == null ? null : original)));
+  expect(chunk.map!.sourcesContent).toEqual(sourcesContent);
 });

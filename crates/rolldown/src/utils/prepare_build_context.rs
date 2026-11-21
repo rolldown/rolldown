@@ -544,7 +544,6 @@ pub fn prepare_build_context(
     drop_labels: FxHashSet::from_iter(raw_options.drop_labels.unwrap_or_default()),
     keep_names: raw_options.keep_names.unwrap_or_default(),
     polyfill_require: raw_options.polyfill_require.unwrap_or(true),
-    defer_sync_scan_data: raw_options.defer_sync_scan_data,
     plugin_timings: raw_options.plugin_timings,
     transform_options,
     make_absolute_externals_relative: raw_options
@@ -552,6 +551,7 @@ pub fn prepare_build_context(
       .unwrap_or_default(),
     invalidate_js_side_cache: raw_options.invalidate_js_side_cache,
     reset_js_module_options: raw_options.reset_js_module_options,
+    create_js_module_options: raw_options.create_js_module_options,
     log_level: raw_options.log_level,
     on_log: raw_options.on_log,
     preserve_modules: raw_options.preserve_modules.unwrap_or_default(),

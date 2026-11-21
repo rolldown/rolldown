@@ -1,31 +1,28 @@
-import type { ModuleOptions } from '..';
-import type { BindingModuleInfo } from '../binding.cjs';
+import type { BindingModuleInfo, BindingPluginContext } from '../binding.cjs';
+import type { JsModuleOptions } from '../plugin/plugin-context-data';
 import type { ModuleInfo } from '../types/module-info';
 import { unsupported } from './misc';
 
-type ReportedModuleSideEffects = Exclude<ModuleOptions['moduleSideEffects'], undefined>;
-type AssignedModuleSideEffects = ReportedModuleSideEffects | undefined;
-
 /**
- * A hook or a direct write stores `moduleSideEffects` on `option`. `undefined` means
- * nothing was stored, so the native effective value (hook, `treeshake.moduleSideEffects`,
- * `package.json` `sideEffects`, then `true`, including externals and `treeshake: false`)
- * is used. An explicit `null` write stays `null`.
+ * The binding calls behind `ModuleInfo.moduleSideEffects`. Only Rust keeps the value.
+ * `setModuleSideEffects` returns `true` for the first write after `buildEnd` in a build.
  */
-export function effectiveModuleSideEffects(
-  assigned: AssignedModuleSideEffects,
-  fallback: ReportedModuleSideEffects | null | undefined,
-): ReportedModuleSideEffects {
-  return assigned === undefined ? (fallback ?? null) : assigned;
-}
+export type ModuleSideEffectsAccess = Pick<
+  BindingPluginContext,
+  'getModuleSideEffects' | 'setModuleSideEffects'
+>;
+
+/** `treeshake.moduleSideEffects` when it is a function. */
+export type ModuleSideEffectsOptionFn = (id: string, external: boolean) => boolean | undefined;
 
 export function transformModuleInfo(
   info: BindingModuleInfo,
-  option: Omit<ModuleOptions, 'moduleSideEffects'> & {
-    moduleSideEffects: AssignedModuleSideEffects;
-  },
+  option: JsModuleOptions,
+  access: ModuleSideEffectsAccess,
+  callOption: ModuleSideEffectsOptionFn | undefined,
+  warnWriteAfterBuildEnd: (moduleId: string) => void,
 ): ModuleInfo {
-  const { moduleSideEffects, ...rest } = option;
+  const id = info.id;
   return {
     get ast() {
       return unsupported('ModuleInfo#ast');
@@ -33,7 +30,7 @@ export function transformModuleInfo(
     get code() {
       return info.code;
     },
-    id: info.id,
+    id,
     importers: info.importers,
     dynamicImporters: info.dynamicImporters,
     importedIds: info.importedIds,
@@ -41,7 +38,16 @@ export function transformModuleInfo(
     exports: info.exports,
     isEntry: info.isEntry,
     inputFormat: info.inputFormat,
-    ...rest,
-    moduleSideEffects: effectiveModuleSideEffects(moduleSideEffects, info.moduleSideEffects),
+    meta: option.meta,
+    // Each read asks Rust, so an info object that a plugin keeps stays current.
+    get moduleSideEffects() {
+      return access.getModuleSideEffects(id, callOption);
+    },
+    set moduleSideEffects(value: ModuleInfo['moduleSideEffects']) {
+      // Tree shaking takes the writes after `buildEnd`, so a later write changes nothing.
+      if (access.setModuleSideEffects(id, value, callOption)) {
+        warnWriteAfterBuildEnd(id);
+      }
+    },
   };
 }

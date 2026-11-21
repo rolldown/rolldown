@@ -10,7 +10,9 @@ use derive_more::Debug;
 use rolldown_common::{
   FilenameTemplate, ImportAttributes, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleLoaderMsg,
   PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
-  SharedNormalizedBundlerOptions, WatchPath, side_effects::HookSideEffects,
+  SharedModuleSideEffectsOverrides, SharedNormalizedBundlerOptions, WatchPath,
+  log_module_side_effects_write_after_build_end,
+  side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::FxDashSet;
@@ -40,6 +42,7 @@ pub struct NativePluginContextImpl {
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) watch_files: Arc<FxDashSet<ArcStr>>,
   pub(crate) module_infos: SharedModuleInfoDashMap,
+  pub(crate) module_side_effects_overrides: SharedModuleSideEffectsOverrides,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   pub(crate) session: rolldown_devtools::Session,
   /// Shared handle to the owning `PluginDriver`'s `onLog` task collector
@@ -59,6 +62,7 @@ impl NativePluginContextImpl {
     side_effects: Option<HookSideEffects>,
     module_def_format: ModuleDefFormat,
     resolve_dependencies: bool,
+    module_options_receipt: Option<u32>,
   ) -> anyhow::Result<()> {
     // Clone out the sender under the lock, then drop the lock before awaiting.
     let sender = {
@@ -70,6 +74,7 @@ impl NativePluginContextImpl {
       side_effects,
       module_def_format,
       attributes,
+      module_options_receipt,
       ..Default::default()
     }
     .finalize_attributes(self.options.experimental.is_import_attributes_enabled());
@@ -216,7 +221,56 @@ impl NativePluginContextImpl {
   }
 
   pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {
-    self.module_infos.get(module_id).map(|v| Arc::<rolldown_common::ModuleInfo>::clone(v.value()))
+    let info = self
+      .module_infos
+      .get(module_id)
+      .map(|v| Arc::<rolldown_common::ModuleInfo>::clone(v.value()))?;
+    Some(self.module_side_effects_overrides.apply_to_info(info))
+  }
+
+  /// `getModuleInfo(module_id)?.moduleSideEffects`. It runs a `treeshake.moduleSideEffects`
+  /// function when the value needs it (`SideEffectsWithoutHook::OptionFn`).
+  pub async fn get_module_side_effects(
+    &self,
+    module_id: &str,
+  ) -> anyhow::Result<Option<DeterminedSideEffects>> {
+    let Some(info) = self.module_infos.get(module_id).map(|v| Arc::clone(v.value())) else {
+      return Ok(None);
+    };
+    self.module_side_effects_overrides.shown_or_call_async(&info, &self.options).await
+  }
+
+  /// Like `get_module_side_effects`, but runs `call_option(raw_id, external)` instead of the
+  /// option function that Rust keeps. The binding passes the JS function, which it can call at
+  /// once on the JS thread.
+  pub fn get_module_side_effects_or_call(
+    &self,
+    module_id: &str,
+    call_option: impl FnOnce(&str, bool) -> anyhow::Result<Option<bool>>,
+  ) -> anyhow::Result<Option<DeterminedSideEffects>> {
+    let Some(info) = self.module_infos.get(module_id).map(|v| Arc::clone(v.value())) else {
+      return Ok(None);
+    };
+    self.module_side_effects_overrides.shown_or_call(&info, call_option)
+  }
+
+  /// A write to `getModuleInfo(module_id).moduleSideEffects`. `None` is a write of `null`.
+  pub fn set_module_side_effects(&self, module_id: &str, side_effects: Option<HookSideEffects>) {
+    if self.set_module_side_effects_without_warning(module_id, side_effects) {
+      self.warn(log_module_side_effects_write_after_build_end(module_id));
+    }
+  }
+
+  /// Like `set_module_side_effects`, but returns `true` for the first write after `buildEnd`
+  /// instead of warning. The binding uses it: it runs on the JS thread, and `warn` needs the
+  /// Tokio runtime.
+  pub fn set_module_side_effects_without_warning(
+    &self,
+    module_id: &str,
+    side_effects: Option<HookSideEffects>,
+  ) -> bool {
+    self.module_side_effects_overrides.set(module_id, side_effects);
+    self.module_side_effects_overrides.should_warn_late_write()
   }
 
   pub fn get_module_ids(&self) -> Vec<ArcStr> {

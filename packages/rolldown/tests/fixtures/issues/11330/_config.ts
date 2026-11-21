@@ -5,6 +5,8 @@ import { expect } from 'vitest';
 // https://github.com/rolldown/rolldown/issues/11330
 // `getModuleInfo` and `this.resolve` report the moduleSideEffects value Rolldown applies:
 // hook, then treeshake.moduleSideEffects, then package.json `sideEffects`, then `true`.
+// `this.resolve` reports only its own resolution. Here it skips the `resolveId` hook of this
+// plugin, so `hooked.js` has no hook value there.
 const expected: Record<string, boolean | 'no-treeshake'> = {
   'index.js': true,
   'local.js': false,
@@ -54,7 +56,9 @@ export default defineTest({
             const info = this.getModuleInfo(id);
             const resolved = await this.resolve(id);
             expect(info?.moduleSideEffects, `getModuleInfo ${name}`).toBe(expected[name]);
-            expect(resolved?.moduleSideEffects, `this.resolve ${name}`).toBe(expected[name]);
+            expect(resolved?.moduleSideEffects, `this.resolve ${name}`).toBe(
+              name === 'hooked.js' ? true : expected[name],
+            );
           }
           expect([...seen].sort()).toEqual(Object.keys(expected).sort());
         },

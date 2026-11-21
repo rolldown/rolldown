@@ -1,0 +1,10 @@
+import './getter.cjs';
+export { foreign } from './dep.js';
+export { x } from './lib.cjs';
+export * as barrel from './barrel.js';
+export { segNamespace } from './reader.js';
+export const loadDynamic = () => import('./seg_dynamic.js');
+export const loadBarrel = () => import('./seg_barrel.js');
+export const loadExternal = () => import('./seg_external.js');
+export const loadGetter = () => import('./seg_getter.js');
+export const loadNamespace = () => import('./seg_namespace.js');

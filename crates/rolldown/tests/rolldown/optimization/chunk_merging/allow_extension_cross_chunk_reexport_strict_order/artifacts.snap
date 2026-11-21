@@ -1,0 +1,102 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+# Assets
+
+## group.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { t as init_task } from "./task.js";
+function init_seg_dynamic() {
+	return (init_seg_dynamic = __esmMin((() => {
+		init_task();
+		globalThis.log.push("seg_dynamic");
+	})))();
+}
+// seg_sib.js
+var sib;
+function init_seg_sib() {
+	return (init_seg_sib = __esmMin((() => {
+		globalThis.log.push("seg_sib");
+		sib = 1;
+	})))();
+}
+export { init_seg_dynamic as n, sib, init_seg_sib as t };
+
+```
+
+## index.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as task, t as init_task } from "./task.js";
+// index.js
+var load;
+function init_allow_extension_cross_chunk_reexport_strict_order() {
+	return (init_allow_extension_cross_chunk_reexport_strict_order = __esmMin((() => {
+		init_task();
+		load = () => import("./seg_dynamic.js");
+	})))();
+}
+init_allow_extension_cross_chunk_reexport_strict_order();
+export { load, task };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __esmMin as t };
+
+```
+
+## seg_dynamic.js
+
+```js
+export { n as s_task } from "./task.js";
+import { n as init_seg_dynamic } from "./group.js";
+init_seg_dynamic();
+
+```
+
+## seg_sib.js
+
+```js
+import { sib, t as init_seg_sib } from "./group.js";
+init_seg_sib();
+export { sib };
+
+```
+
+## task.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// task.js
+var task;
+function init_task() {
+	return (init_task = __esmMin((() => {
+		globalThis.log.push("task");
+		task = () => "task";
+	})))();
+}
+export { task as n, init_task as t };
+
+```

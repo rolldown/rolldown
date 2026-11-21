@@ -543,16 +543,19 @@ impl GenerateStage<'_> {
   }
 
   /// Common chunks that dynamic entry modules' chunks were merged into, with those modules: every
-  /// module that names the chunk in `entry_module_to_entry_chunk` is a dynamic entry (and no other
-  /// kind of entry) placed in the chunk, whose namespace the chunk exports for the `import()` call
-  /// sites.
+  /// module whose `import()` loads the chunk (`ChunkGraph::dynamic_import_chunk`) is a dynamic
+  /// entry (and no other kind of entry) placed in the chunk, whose namespace the chunk exports for
+  /// the `import()` call sites.
   fn dynamic_entry_hosts(
     &self,
     chunk_graph: &ChunkGraph,
   ) -> FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>> {
     let mut hosts: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>> = FxHashMap::default();
     let mut rejected = FxHashSet::default();
-    for (&module_idx, &chunk_idx) in &chunk_graph.entry_module_to_entry_chunk {
+    for &module_idx in chunk_graph.entry_module_to_entry_chunk.keys() {
+      let Some(chunk_idx) = chunk_graph.dynamic_import_chunk(module_idx) else {
+        continue;
+      };
       if !matches!(chunk_graph.chunk_table[chunk_idx].kind, ChunkKind::Common) {
         continue;
       }

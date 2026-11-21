@@ -1101,10 +1101,63 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ))
   }
 
+  /// The value that the getter of the export `symbol_ref` returns in the namespace object of the
+  /// module. If the getter shares the read of a CommonJS property, it calls the function of the
+  /// read with the namespace: `first: () => read_counter_n(import_counter)`. The call runs when
+  /// code reads the export, so the CommonJS getter runs at most one time for all shared reads of
+  /// the property. See internal-docs/code-splitting/implementation.md ("Shared CommonJS property
+  /// reads").
+  fn namespace_getter_returned_expr(&self, symbol_ref: SymbolRef) -> ast::Expression<'ast> {
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+    if let Some(binding) =
+      self.ctx.shared_commonjs_reads.namespace_binding(self.ctx.chunk_idx, canonical_ref)
+    {
+      // The getter returns the public export of an entry chunk that reads the property, in place
+      // of the property read (`SharedCommonJsReads::namespace_binding`).
+      return self.finalized_expr_for_binding(binding);
+    }
+    if let Some(callee) =
+      self.ctx.shared_commonjs_reads.namespace_call(self.ctx.chunk_idx, canonical_ref)
+      && let Some(ns_alias) = self.ctx.symbol_db.get(canonical_ref).namespace_alias.as_ref()
+      && self.try_inline_constant_from_namespace_alias(symbol_ref, ns_alias).is_none()
+    {
+      // The namespace, without the property read.
+      let (namespace, _) = self.finalized_expr_for_symbol_ref(symbol_ref, false, true);
+      let (callee, _) = self.finalized_expr_for_symbol_ref(callee, false, false);
+      return Expression::new_call_with_arg(callee, namespace, false, self);
+    }
+    self.finalized_expr_for_symbol_ref(symbol_ref, false, false).0
+  }
+
+  /// The binding `binding_ref` that the chunk imports for a shared read
+  /// (`SharedCommonJsReads::binding_imports`). The expression reads the binding itself, not the
+  /// property of its namespace alias.
+  fn finalized_expr_for_binding(&self, binding_ref: SymbolRef) -> ast::Expression<'ast> {
+    let chunk_idx = self
+      .ctx
+      .symbol_db
+      .get(binding_ref)
+      .chunk_idx
+      .expect("the link pass gives the binding of a shared read to a chunk");
+    if matches!(self.ctx.options.format, rolldown_common::OutputFormat::Cjs)
+      && chunk_idx != self.ctx.chunk_idx
+    {
+      return self
+        .finalized_expr_for_cross_chunk_symbol(self.ctx.chunk_idx, chunk_idx, binding_ref)
+        .0;
+    }
+    Expression::new_id_ref_expr(SPAN, self.canonical_name_for(binding_ref), self)
+  }
+
   fn generate_declaration_of_module_namespace_object(&self) -> Vec<ast::Statement<'ast>> {
     if !self.module_namespace_included {
       return vec![];
     }
+    // The finalizer writes the namespace object before it visits a statement. Thus a getter of a
+    // CommonJS property (a namespace alias) returns an inlined constant only in the `All` mode of
+    // `inlineConst` (`try_inline_constant_from_namespace_alias`). The shared reads of CommonJS
+    // properties use this rule (`GenerateStage::collect_commonjs_property_reads`).
+    debug_assert!(!self.state.contains(TraverseState::SmartInlineConst));
 
     let binding_name_for_namespace_object_ref =
       self.canonical_name_for(self.ctx.module.namespace_object_ref);
@@ -1136,8 +1189,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         // prop_name: () => returned
         let prop_name = export;
-        let (returned, _) =
-          self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
+        let returned = self.namespace_getter_returned_expr(resolved_export.symbol_ref);
         // `__proto__` has special semantics in object literals - it sets the prototype
         // instead of creating a property. Use computed property syntax for it.
         let key = if is_validate_identifier_name(prop_name) && prop_name != "__proto__" {
@@ -3329,8 +3381,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     match &self.ctx.modules[importee_idx] {
       Module::Normal(importee) => {
-        let Some(&importee_chunk_idx) =
-          self.ctx.chunk_graph.entry_module_to_entry_chunk.get(&importee_idx)
+        let Some(importee_chunk_idx) = self.ctx.chunk_graph.dynamic_import_chunk(importee_idx)
         else {
           // TODO: probably we should add the reason why it is replaced with `void 0`(just like webpack) when upstream support codegen with specific operation
           *node = ast::Expression::new_void_0(SPAN, self);
@@ -3643,7 +3694,9 @@ impl oxc::ast_visit::VisitJsMut<'_> for SpanRewriter {
 /// The names of the exports that get a getter in the namespace object of a module, if the object
 /// keeps only the exports that code reads. These are the exports of a removed dynamic entry facade
 /// (`OrderWrapState::simulated_facade_export_names`), or the exports that the `import()`
-/// expressions of the entry read. `None` means that the object keeps each retained export.
+/// expressions of the entry read. `None` means that the object keeps each retained export. The
+/// shared reads of CommonJS properties use the same rule
+/// (`GenerateStage::collect_commonjs_property_reads`).
 pub fn narrowed_namespace_export_names<'a>(
   linking_info: &'a LinkingMetadata,
   namespace_object_ref: SymbolRef,
@@ -3694,7 +3747,8 @@ pub fn namespace_object_has_getter(
 
 /// The constant value of the export that a read of `namespace_alias` in `module` resolves to.
 /// `inlineConst` can put this value in place of the read. The caller checks the option and the
-/// mode (`ScopeHoistingFinalizer::try_inline_constant_from_namespace_alias`).
+/// mode (`ScopeHoistingFinalizer::try_inline_constant_from_namespace_alias`). The shared reads of
+/// CommonJS properties use the same rule (`GenerateStage::collect_commonjs_property_reads`).
 pub fn namespace_alias_constant<'a>(
   module: &NormalModule,
   original_ref: SymbolRef,

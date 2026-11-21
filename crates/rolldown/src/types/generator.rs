@@ -13,7 +13,7 @@ use crate::{
   chunk_graph::ChunkGraph,
   stages::{
     generate_stage::{
-      CarriedRender, InlineCommonChunksState, InlineReader,
+      CarriedRender, InlineCommonChunksState, InlineReader, SharedCommonJsReads,
       order_wrap_state::{EsmInitTarget, OrderWrapState},
     },
     link_stage::LinkStageOutput,
@@ -45,6 +45,9 @@ pub struct GenerateContext<'a> {
   /// `experimentalInlineCommonChunks` decisions: which chunks are records, who carries and reads
   /// them, and the bridge names.
   pub inline_state: &'a InlineCommonChunksState,
+  /// The shared reads of CommonJS properties: the functions that each chunk declares, and the
+  /// function that each export calls in place of the property read.
+  pub shared_commonjs_reads: &'a SharedCommonJsReads,
   /// The records this file carries, each finalized and printed for this file, dependencies first.
   pub carried_renders: Vec<CarriedRender>,
 }
@@ -110,6 +113,31 @@ impl GenerateContext<'_> {
     }
   }
 
+  /// The binding `binding_ref` that the chunk `cur_chunk_idx` imports from another chunk for a
+  /// shared read (`SharedCommonJsReads::binding`). The pattern reads the binding itself, not the
+  /// property of its namespace alias: CJS output reads the export through the `require()` binding
+  /// of the chunk, and ESM output uses the name of the import.
+  pub fn finalized_binding_pattern(
+    &self,
+    binding_ref: SymbolRef,
+    cur_chunk_idx: ChunkIdx,
+    canonical_names: &FxHashMap<SymbolRef, CompactStr>,
+  ) -> String {
+    let chunk_idx = self
+      .link_output
+      .symbol_db
+      .get(binding_ref)
+      .chunk_idx
+      .expect("the link pass gives the binding of a shared read to a chunk");
+    if matches!(self.options.format, rolldown_common::OutputFormat::Cjs)
+      && chunk_idx != cur_chunk_idx
+    {
+      self.cross_chunk_pattern(binding_ref, chunk_idx, cur_chunk_idx)
+    } else {
+      self.canonical_name_for(canonical_names, binding_ref).to_string()
+    }
+  }
+
   /// The namespace that `ns_alias` reads its property from, as the chunk `cur_chunk_idx` renders it.
   pub fn finalized_namespace_pattern(
     &self,
@@ -117,17 +145,26 @@ impl GenerateContext<'_> {
     cur_chunk_idx: ChunkIdx,
     canonical_names: &FxHashMap<SymbolRef, CompactStr>,
   ) -> String {
-    // The namespace itself may be declared in another chunk. This is normally hidden by the
-    // facade and namespace living together, but generated per-record interop carriers place the
-    // namespace beside the CJS importee while its re-export facade stays owned by the barrel.
-    // Resolve the namespace through the same cross-chunk path as an ordinary symbol before
-    // appending the property; otherwise CJS output renders a bare, undeclared local identifier.
-    // The same applies to a namespace owned by an inline common chunk record.
+    // The namespace itself may be declared in another chunk. Resolve the namespace through the
+    // same cross-chunk path as an ordinary symbol before appending the property; otherwise CJS
+    // output renders a bare, undeclared local identifier. These are examples:
+    // - An entry facade chunk has no modules. Thus the namespace of a re-export from a CommonJS
+    //   module stays in the chunk of the entry module (issue #11767).
+    // - Generated per-record interop carriers place the namespace beside the CJS importee, while
+    //   its re-export facade stays owned by the barrel.
+    // - An inline common chunk record owns the namespace.
     let namespace_ref = ns_alias.namespace_ref;
     if self.order_wrap_state.is_order_cjs_carrier_namespace(namespace_ref)
       || self.inline_bridge_pattern(namespace_ref, cur_chunk_idx).is_some()
     {
       self.finalized_string_pattern_for_symbol_ref(namespace_ref, cur_chunk_idx, canonical_names)
+    } else if let Some(exporter_chunk_idx) =
+      self.chunk_that_exports_to(namespace_ref, cur_chunk_idx)
+    {
+      // The link pass registers this ref, not its canonical ref: `merge_cjs_namespace` runs after
+      // the link pass and can link it to the namespace of another import record of the same
+      // module. The module finalizer reads the namespace in the same way.
+      self.cross_chunk_pattern(namespace_ref, exporter_chunk_idx, cur_chunk_idx)
     } else {
       self
         .link_output
@@ -170,6 +207,24 @@ impl GenerateContext<'_> {
     } else {
       property_access_str(require_binding, exported_name)
     }
+  }
+
+  /// The other chunk that declares `symbol_ref`, if the chunk `cur_chunk_idx` imports
+  /// `symbol_ref` from it. Then [`Self::cross_chunk_pattern`] has the `require()` binding and the
+  /// export name of the symbol. If the link pass did not register such an import, the caller
+  /// keeps the local name.
+  fn chunk_that_exports_to(
+    &self,
+    symbol_ref: SymbolRef,
+    cur_chunk_idx: ChunkIdx,
+  ) -> Option<ChunkIdx> {
+    let chunk_idx = self.link_output.symbol_db.get(symbol_ref).chunk_idx?;
+    (chunk_idx != cur_chunk_idx
+      && self.chunk_graph.chunk_table[cur_chunk_idx]
+        .require_binding_names_for_other_chunks
+        .contains_key(&chunk_idx)
+      && self.chunk_graph.chunk_table[chunk_idx].exports_to_other_chunks.contains_key(&symbol_ref))
+    .then_some(chunk_idx)
   }
 
   /// `bridge.name` when `canonical_ref` is owned by an inline common chunk record that

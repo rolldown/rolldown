@@ -1,0 +1,326 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+# Assets
+
+## barrel.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+// barrel_lib.cjs
+var require_barrel_lib = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports) => {
+	exports.y = "y";
+}));
+// barrel.js
+var barrel_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({}, 2);
+require_rolldown_runtime.__reExport(barrel_exports, /* @__PURE__ */ require_rolldown_runtime.__toESM(require_barrel_lib()));
+var barrel_lib_y, has_barrel_lib_y;
+function read_barrel_lib_y(ns) {
+	if (!has_barrel_lib_y) {
+		try {
+			barrel_lib_y = ns.y;
+		} catch (e) {
+			if (ns == null) throw e;
+		}
+		has_barrel_lib_y = true;
+	}
+	return barrel_lib_y;
+}
+Object.defineProperty(exports, "barrel_exports", {
+	enumerable: true,
+	get: function() {
+		return barrel_exports;
+	}
+});
+Object.defineProperty(exports, "read_barrel_lib_y", {
+	enumerable: true,
+	get: function() {
+		return read_barrel_lib_y;
+	}
+});
+
+```
+
+## dep.js
+
+```js
+// dep.js
+const foreign = () => "foreign";
+Object.defineProperty(exports, "foreign", {
+	enumerable: true,
+	get: function() {
+		return foreign;
+	}
+});
+
+```
+
+## group.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+const require_lib$1 = require("./lib.js");
+require("./barrel.js");
+const require_star_lib$1 = require("./star_lib.js");
+const require_merged_lib$1 = require("./merged_lib.js");
+const require_dep = require("./dep.js");
+// seg_merged.js
+var import_merged_lib = require_merged_lib$1.require_merged_lib();
+const s_keep = import_merged_lib.keep;
+// seg_named.js
+var seg_named_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
+	foreign: () => require_dep.foreign,
+	x: () => require_lib$1.read_lib_x(import_lib)
+});
+var import_lib = require_lib$1.require_lib();
+// seg_star.js
+var seg_star_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ s_foreign: () => require_dep.foreign }, 2);
+require_rolldown_runtime.__reExport(seg_star_exports, /* @__PURE__ */ require_rolldown_runtime.__toESM(require_star_lib$1.require_star_lib()));
+function read_lib_x(ns) {
+	return require_lib$1.read_lib_x(ns);
+}
+Object.defineProperty(exports, "import_lib", {
+	enumerable: true,
+	get: function() {
+		return import_lib;
+	}
+});
+Object.defineProperty(exports, "import_merged_lib", {
+	enumerable: true,
+	get: function() {
+		return import_merged_lib;
+	}
+});
+Object.defineProperty(exports, "read_lib_x", {
+	enumerable: true,
+	get: function() {
+		return read_lib_x;
+	}
+});
+Object.defineProperty(exports, "s_keep", {
+	enumerable: true,
+	get: function() {
+		return s_keep;
+	}
+});
+Object.defineProperty(exports, "seg_named_exports", {
+	enumerable: true,
+	get: function() {
+		return seg_named_exports;
+	}
+});
+Object.defineProperty(exports, "seg_star_exports", {
+	enumerable: true,
+	get: function() {
+		return seg_star_exports;
+	}
+});
+
+```
+
+## index.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_lib$1 = require("./lib.js");
+const require_barrel = require("./barrel.js");
+const require_star_lib$1 = require("./star_lib.js");
+const require_merged_lib$1 = require("./merged_lib.js");
+const require_dep = require("./dep.js");
+// index.js
+var import_lib = require_lib$1.require_lib();
+var import_star_lib = require_star_lib$1.require_star_lib();
+var import_merged_lib = require_merged_lib$1.require_merged_lib();
+const load = () => Promise.resolve().then(() => require("./group.js")).then((n) => n.seg_named_exports);
+const loadStar = () => Promise.resolve().then(() => require("./group.js")).then((n) => n.seg_star_exports);
+exports.foreign = require_dep.foreign;
+Object.defineProperty(exports, "keep", {
+	enumerable: true,
+	get: function() {
+		return import_merged_lib.keep;
+	}
+});
+exports.load = load;
+exports.loadStar = loadStar;
+Object.defineProperty(exports, "x", {
+	enumerable: true,
+	get: function() {
+		return require_lib$1.read_lib_x(import_lib);
+	}
+});
+Object.defineProperty(exports, "y", {
+	enumerable: true,
+	get: function() {
+		return require_barrel.read_barrel_lib_y(require_barrel.barrel_exports);
+	}
+});
+Object.defineProperty(exports, "z", {
+	enumerable: true,
+	get: function() {
+		return import_star_lib.z;
+	}
+});
+
+```
+
+## lib.js
+
+```js
+// lib.cjs
+var require_lib = /* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports) => {
+	exports.x = 37;
+}));
+var lib_x, has_lib_x;
+function read_lib_x(ns) {
+	if (!has_lib_x) {
+		try {
+			lib_x = ns.x;
+		} catch (e) {
+			if (ns == null) throw e;
+		}
+		has_lib_x = true;
+	}
+	return lib_x;
+}
+Object.defineProperty(exports, "read_lib_x", {
+	enumerable: true,
+	get: function() {
+		return read_lib_x;
+	}
+});
+Object.defineProperty(exports, "require_lib", {
+	enumerable: true,
+	get: function() {
+		return require_lib;
+	}
+});
+
+```
+
+## merged_lib.js
+
+```js
+// merged_lib.cjs
+var require_merged_lib = /* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports) => {
+	exports.keep = 1;
+	exports.w = 37;
+}));
+Object.defineProperty(exports, "require_merged_lib", {
+	enumerable: true,
+	get: function() {
+		return require_merged_lib;
+	}
+});
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+Object.defineProperty(exports, "__reExport", {
+	enumerable: true,
+	get: function() {
+		return __reExport;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+
+```
+
+## seg_barrel.js
+
+```js
+const require_barrel = require("./barrel.js");
+const require_dep = require("./dep.js");
+require("./group.js");
+var s_y = require_barrel.read_barrel_lib_y(require_barrel.barrel_exports);
+exports.s_foreign = require_dep.foreign;
+exports.s_y = s_y;
+
+```
+
+## seg_merged.js
+
+```js
+const require_dep = require("./dep.js");
+const require_group = require("./group.js");
+var w = require_group.import_merged_lib;
+try {
+	w = w.w;
+} catch (e) {
+	w = void 0;
+}
+exports.s_foreign = require_dep.foreign;
+exports.s_keep = require_group.s_keep;
+exports.w = w;
+
+```
+
+## seg_named.js
+
+```js
+const require_dep = require("./dep.js");
+const require_group = require("./group.js");
+var x = require_group.read_lib_x(require_group.import_lib);
+exports.foreign = require_dep.foreign;
+exports.x = x;
+
+```
+
+## seg_star.js
+
+```js
+const require_dep = require("./dep.js");
+require("./group.js");
+exports.s_foreign = require_dep.foreign;
+
+```
+
+## star_lib.js
+
+```js
+// star_lib.cjs
+var require_star_lib = /* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports) => {
+	exports.z = 41;
+}));
+Object.defineProperty(exports, "require_star_lib", {
+	enumerable: true,
+	get: function() {
+		return require_star_lib;
+	}
+});
+
+```

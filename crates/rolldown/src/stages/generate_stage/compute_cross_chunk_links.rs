@@ -6,15 +6,16 @@ use crate::esm_init_obligations::{
   for_each_init_obligation_record,
 };
 use crate::utils::chunk::conflict_resolver::{ConflictResolver, deconflict_order_key};
+use crate::utils::chunk::namespace_alias_origin::{NamespaceAliasOrigin, namespace_alias_origin};
 use crate::utils::chunk::normalize_preserve_entry_signature;
 use crate::utils::external_import_interop::external_import_needs_interop;
 use itertools::{Itertools, multizip};
 use oxc_index::{IndexVec, index_vec};
 use oxc_str::CompactStr;
 use rolldown_common::{
-  ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
-  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, NamedImport, NormalModule, OutputFormat,
-  PostChunkOptimizationOperation, PreserveEntrySignatures, RUNTIME_HELPER_NAMES,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind,
+  ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, NamedImport, NormalModule,
+  OutputFormat, PostChunkOptimizationOperation, PreserveEntrySignatures, RUNTIME_HELPER_NAMES,
   ResolvedImportRecord, RuntimeHelper, StaticImport, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
   TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
 };
@@ -100,6 +101,22 @@ impl CrossChunkLinkState {
           .collect()
       })
       .collect()
+  }
+
+  /// The static importees of `importer` that the module-level prediction covers: the edges that
+  /// this derivation found, except an edge that imports only runtime helpers. The already-loaded
+  /// analysis saw these edges (`debug_assert_module_level_static_import_prediction`). Thus a new
+  /// import on one of them does not change the result of that analysis. The prediction does not
+  /// cover an edge for runtime helpers only, or an edge that chunk merging wrote before.
+  pub(super) fn predicted_importees(
+    &self,
+    importer: ChunkIdx,
+    runtime_idx: ModuleIdx,
+  ) -> impl Iterator<Item = ChunkIdx> + '_ {
+    self.index_imports_from_other_chunks[importer].iter().filter_map(move |(&importee, items)| {
+      (items.is_empty() || items.iter().any(|item| item.import_ref.owner != runtime_idx))
+        .then_some(importee)
+    })
   }
 }
 
@@ -264,7 +281,8 @@ impl GenerateStage<'_> {
     ) = index_chunk_direct_imports_from_external_modules
       .into_iter_enumerated()
       .map(|(chunk_idx, mut imports_from_external_modules)| {
-        let entry_level = &chunk_graph.chunk_table[chunk_idx].entry_level_external_module_idx;
+        let chunk = &chunk_graph.chunk_table[chunk_idx];
+        let entry_level = &chunk.entry_level_external_module_idx;
         let mut static_imports = imports_from_external_modules
           .keys()
           .copied()
@@ -272,7 +290,9 @@ impl GenerateStage<'_> {
             entry_level
               .iter()
               .copied()
-              .filter(|module_idx| !imports_from_external_modules.contains_key(module_idx)),
+              .chain(self.facade_external_reexport_modules(chunk))
+              .filter(|module_idx| !imports_from_external_modules.contains_key(module_idx))
+              .unique(),
           )
           .collect_vec();
         sort_chunk_importees_by(
@@ -1083,14 +1103,13 @@ impl GenerateStage<'_> {
     {
       return;
     }
-    // The finalizer rewrites `import()` specifiers through `entry_module_to_entry_chunk`, which
-    // diverges from the hosting chunk whenever the dynamic entry's facade chunk survives while
-    // another chunk hosts its body (order-wrap facade splits, or kept facades when common-chunk
-    // merging is off); record the chunk the emitted specifier actually names.
+    // The finalizer rewrites `import()` specifiers through `ChunkGraph::dynamic_import_chunk`,
+    // which diverges from the hosting chunk whenever the dynamic entry's facade chunk survives
+    // while another chunk hosts its body (order-wrap facade splits, or kept facades when
+    // common-chunk merging is off), and from the entry chunk when an emitted entry keeps its facade
+    // only for code outside the bundle; record the chunk the emitted specifier actually names.
     let importee_chunk = chunk_graph
-      .entry_module_to_entry_chunk
-      .get(&importee_module_idx)
-      .copied()
+      .dynamic_import_chunk(importee_module_idx)
       .or(chunk_graph.module_to_chunk[importee_module_idx])
       .expect("importee chunk should exist");
     if chunk_graph.module_to_chunk[importer_idx]
@@ -1252,6 +1271,7 @@ impl GenerateStage<'_> {
               depended_symbols,
               entry.idx,
               entry_meta,
+              chunk_id,
             );
           }
 
@@ -1306,6 +1326,16 @@ impl GenerateStage<'_> {
               .insert(self.link_output.runtime.resolve_symbol(RUNTIME_HELPER_NAMES[index]));
           }
         }
+        // A chunk that reads a CommonJS property through the public export of an entry chunk
+        // imports the binding of that export, not the namespace of the binding.
+        for &binding in self.shared_commonjs_reads.binding_imports(chunk_id) {
+          self.add_depended_symbol_with_wrapped_esm_init(
+            chunk_graph,
+            order_state,
+            depended_symbols,
+            binding,
+          );
+        }
 
         // Depending runtime helpers
         for helper in chunk.depended_runtime_helper {
@@ -1351,6 +1381,45 @@ impl GenerateStage<'_> {
     }
   }
 
+  /// The external module that the facade `chunk` re-exports the binding `export_ref` from. Only a
+  /// facade that `Chunk::is_cross_chunk_export_facade` marks does so, in ESM output, for a
+  /// property that a bundled barrel gets through `export *` from one external module
+  /// (`NamespaceAliasOrigin::External`). The re-export keeps the binding live.
+  pub(super) fn facade_external_reexport_module(
+    &self,
+    chunk: &Chunk,
+    export_ref: SymbolRef,
+  ) -> Option<ModuleIdx> {
+    if !chunk.is_cross_chunk_export_facade || !matches!(self.options.format, OutputFormat::Esm) {
+      return None;
+    }
+    let symbols = &self.link_output.symbol_db;
+    let ns_alias = symbols.get(symbols.canonical_ref_for(export_ref)).namespace_alias.as_ref()?;
+    match namespace_alias_origin(self.link_output, ns_alias) {
+      NamespaceAliasOrigin::External(external_idx) => Some(external_idx),
+      NamespaceAliasOrigin::CommonJs(_) | NamespaceAliasOrigin::Unknown => None,
+    }
+  }
+
+  /// The external modules of `facade_external_reexport_module` for the exports of the entry of
+  /// `chunk`, in execution order. The chunk lists them in `static_imports`.
+  fn facade_external_reexport_modules(&self, chunk: &Chunk) -> Vec<ModuleIdx> {
+    let Some(entry_idx) = chunk.entry_module_idx() else {
+      return vec![];
+    };
+    if !chunk.is_cross_chunk_export_facade {
+      return vec![];
+    }
+    self.link_output.metas[entry_idx]
+      .resolved_exports
+      .values()
+      .filter(|export| !export.came_from_commonjs)
+      .filter_map(|export| self.facade_external_reexport_module(chunk, export.symbol_ref))
+      .unique()
+      .sorted_unstable_by_key(|module_idx| self.link_output.module_table[*module_idx].exec_order())
+      .collect()
+  }
+
   /// Register what a non-CJS entry's export signature makes the chunk depend on: the canonical
   /// symbol of every re-exported binding, plus — off-strict, for unwrapped entries — the `init_*`
   /// wrapper of every ESM-wrapped module backing one. The wrappers come from the same walk emission
@@ -1366,8 +1435,10 @@ impl GenerateStage<'_> {
     depended_symbols: &mut FxIndexSet<SymbolRef>,
     entry_idx: ModuleIdx,
     entry_meta: &crate::types::linking_metadata::LinkingMetadata,
+    chunk_idx: ChunkIdx,
   ) {
     let symbols = &self.link_output.symbol_db;
+    let chunk = &chunk_graph.chunk_table[chunk_idx];
     let mut verdicts = FxHashMap::default();
     let sorted_export_refs = entry_meta
       .resolved_exports
@@ -1383,6 +1454,19 @@ impl GenerateStage<'_> {
           symbols.canonical_ref_resolving_namespace(export.symbol_ref).owner,
           &mut verdicts,
         )
+      })
+      // A marked facade re-exports such a binding from the external module, so it does not read
+      // the namespace (`facade_external_reexport_modules`).
+      .filter(|resolved_export| {
+        self.facade_external_reexport_module(chunk, resolved_export.symbol_ref).is_none()
+      })
+      // Such an export reads the public export of an entry chunk in place of the namespace, and
+      // the chunk imports that binding (`SharedCommonJsReads::binding_imports`).
+      .filter(|resolved_export| {
+        self
+          .shared_commonjs_reads
+          .binding(chunk_idx, symbols.canonical_ref_for(resolved_export.symbol_ref))
+          .is_none()
       });
     if self.options.is_strict_execution_order_enabled() {
       for export_ref in sorted_export_refs {

@@ -1,0 +1,198 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+# Assets
+
+## barrel.js
+
+```js
+import { i as __toESM, n as __exportAll, r as __reExport } from "./rolldown-runtime.js";
+import { t as require_lib } from "./lib.js";
+// barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({ own: () => 1 }, 2);
+__reExport(barrel_exports, /* @__PURE__ */ __toESM(require_lib()));
+const own = 1;
+export { own as n, barrel_exports as t };
+
+```
+
+## dep.js
+
+```js
+// dep.js
+const foreign = () => "foreign";
+export { foreign as t };
+
+```
+
+## getter.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+// getter.cjs
+var require_getter = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.boom = 0;
+	Object.defineProperty(exports, "boom", {
+		enumerable: true,
+		get() {
+			throw new Error("read of boom");
+		}
+	});
+}));
+var getter_boom, has_getter_boom;
+function read_getter_boom(ns) {
+	if (!has_getter_boom) {
+		try {
+			getter_boom = ns.boom;
+		} catch (e) {
+			if (ns == null) throw e;
+		}
+		has_getter_boom = true;
+	}
+	return getter_boom;
+}
+export { require_getter as n, read_getter_boom as t };
+
+```
+
+## group.js
+
+```js
+import { i as __toESM, n as __exportAll, r as __reExport } from "./rolldown-runtime.js";
+import { n as require_getter, t as read_getter_boom$1 } from "./getter.js";
+import { t as foreign } from "./dep.js";
+import { t as require_lib } from "./lib.js";
+import { t as barrel_exports } from "./barrel.js";
+// seg_namespace.js
+var seg_namespace_exports = /* @__PURE__ */ __exportAll({ s_foreign: () => foreign });
+// seg_barrel.js
+var seg_barrel_exports = /* @__PURE__ */ __exportAll({
+	own: () => 1,
+	s_foreign: () => foreign
+}, 2);
+__reExport(seg_barrel_exports, barrel_exports);
+// seg_dynamic.js
+var seg_dynamic_exports = /* @__PURE__ */ __exportAll({ s_foreign: () => foreign }, 2);
+__reExport(seg_dynamic_exports, /* @__PURE__ */ __toESM(require_lib()));
+// seg_external.js
+var seg_external_exports = /* @__PURE__ */ __exportAll({ s_foreign: () => foreign }, 2);
+// seg_getter.js
+var seg_getter_exports = /* @__PURE__ */ __exportAll({
+	boom: () => read_getter_boom$1(import_getter),
+	s_foreign: () => foreign
+});
+var import_getter = require_getter();
+function read_getter_boom(ns) {
+	return read_getter_boom$1(ns);
+}
+export { seg_barrel_exports as a, seg_dynamic_exports as i, seg_getter_exports as n, seg_namespace_exports as o, seg_external_exports as r, read_getter_boom as s, import_getter as t };
+
+```
+
+## index.js
+
+```js
+import { n as require_getter } from "./getter.js";
+import { t as foreign } from "./dep.js";
+import { t as require_lib } from "./lib.js";
+import { t as barrel_exports } from "./barrel.js";
+import { o as seg_namespace_exports } from "./group.js";
+require_getter();
+var import_lib = require_lib();
+const loadDynamic = () => import("./group.js").then((n) => n.i);
+const loadBarrel = () => import("./group.js").then((n) => n.a);
+const loadExternal = () => import("./group.js").then((n) => n.r);
+const loadGetter = () => import("./group.js").then((n) => n.n);
+const loadNamespace = () => import("./group.js").then((n) => n.o);
+var x = import_lib.x;
+export { barrel_exports as barrel, foreign, loadBarrel, loadDynamic, loadExternal, loadGetter, loadNamespace, seg_namespace_exports as segNamespace, x };
+
+```
+
+## lib.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+// lib.cjs
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.x = 37;
+}));
+export { require_lib as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __toESM as i, __exportAll as n, __reExport as r, __commonJSMin as t };
+
+```
+
+## seg_barrel.js
+
+```js
+import { t as foreign } from "./dep.js";
+import { n as own } from "./barrel.js";
+import "./group.js";
+export { own, foreign as s_foreign };
+
+```
+
+## seg_dynamic.js
+
+```js
+export { t as s_foreign } from "./dep.js";
+import "./group.js";
+
+```
+
+## seg_external.js
+
+```js
+export { t as s_foreign } from "./dep.js";
+import "./group.js";
+export * from "node:path";
+
+```
+
+## seg_getter.js
+
+```js
+import { t as foreign } from "./dep.js";
+import { s as read_getter_boom, t as import_getter } from "./group.js";
+var boom = read_getter_boom(import_getter);
+export { boom, foreign as s_foreign };
+
+```
+
+## seg_namespace.js
+
+```js
+export { t as s_foreign } from "./dep.js";
+import "./group.js";
+
+```
+
+## seg_static.js
+
+```js
+export { t as s_foreign } from "./dep.js";
+import "./group.js";
+
+```

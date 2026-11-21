@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "./index.js"
+      }
+    ],
+    "preserveModules": true,
+    "strictExecutionOrder": true
+  },
+  "snapshot": false
+}

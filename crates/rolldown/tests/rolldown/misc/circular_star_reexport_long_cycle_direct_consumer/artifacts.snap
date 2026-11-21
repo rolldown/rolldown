@@ -14,7 +14,6 @@ export { foo } from "./d.js";
 ## b.js
 
 ```js
-import "./d.js";
 import "./c.js";
 
 ```
@@ -22,8 +21,8 @@ import "./c.js";
 ## c.js
 
 ```js
-export { foo } from "./d.js";
 import "./a.js";
+export { foo } from "./d.js";
 
 ```
 

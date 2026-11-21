@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## index.js
 
 ```js
-import { StateCode } from "./state-codes.js";
 import { initialState } from "./wrapper.js";
+import { StateCode } from "./state-codes.js";
 export { StateCode, initialState };
 
 ```

@@ -15,7 +15,6 @@ import "./d.js";
 ## b.js
 
 ```js
-import "./e.js";
 import "./a.js";
 
 ```

@@ -2,6 +2,7 @@ use crate::stages::link_stage::{ModuleInclusionVec, ModuleNamespaceReasonVec, St
 use oxc::semantic::NodeId;
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
+use rolldown_common::EcmaView;
 use rolldown_common::{
   EntryPointKind, ImportRecordIdx, ImportRecordMeta, IndexModules, MemberExprRefResolutionMap,
   ModuleIdx, ModuleNamespaceIncludedReason, ModuleType, NormalModule, OutputFormat, ResolvedExport,
@@ -139,6 +140,12 @@ impl LinkingMetadata {
 
   pub fn is_canonical_exports_empty(&self) -> bool {
     self.sorted_and_non_ambiguous_resolved_exports.is_empty()
+  }
+
+  pub(crate) fn reexport_record_idx(&self, view: &EcmaView, name: &str) -> Option<ImportRecordIdx> {
+    let symbol = view.named_exports.get(name).map(|export| &export.referenced);
+    let named = symbol.and_then(|key| view.named_imports.get(key).map(|import| import.record_idx));
+    named.or_else(|| self.star_export_record_by_name.get(name).copied())
   }
 
   /// Whether the finalizer may fold the keys of `module`, the JSON module this metadata belongs

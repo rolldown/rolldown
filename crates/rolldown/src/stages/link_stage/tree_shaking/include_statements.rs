@@ -1158,7 +1158,7 @@ fn scan_import_records_for_cjs_bailout(
 /// Enum inlining is unconditional (not gated by inlineConst mode) because it implements
 /// TypeScript's const enum semantics, which mandate replacement. Only simple member accesses
 /// (e.g. `E.member`) are inlined — not deep chains like `E.member.something`, and not writes.
-fn is_inlined_enum_member_access(
+pub fn is_inlined_enum_member_access(
   modules: &IndexModules,
   symbols: &SymbolRefDb,
   member_expr_ref: &MemberExprRef,

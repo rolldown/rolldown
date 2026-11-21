@@ -10,14 +10,16 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkDebugInfo, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType,
   FacadeChunkEliminationReason, ImportKind, Module, ModuleIdx, ModuleTable, NormalModule,
-  PostChunkOptimizationOperation, PreserveEntrySignatures, RuntimeHelper, Specifier, SymbolRef,
-  UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind, side_effects::DeterminedSideEffects,
+  PostChunkOptimizationOperation, PreserveEntrySignatures, RuntimeHelper, Specifier,
+  SymbolOrMemberExprRef, SymbolRef, UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
+  side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::{BitSet, IndexBitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   chunk_graph::ChunkGraph,
+  stages::link_stage::is_inlined_enum_member_access,
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
@@ -961,17 +963,17 @@ impl GenerateStage<'_> {
         || linking_infos[module_idx].canonical_exports(false).next().is_some())
   }
 
-  /// The bindings that modules in other chunks import from each chunk, predicted from the imports
-  /// of the modules instead of the cross-chunk link pass: the canonical symbols of named imports
-  /// and re-exports, the exports of modules read through a namespace import, the wrappers
-  /// (`require_*`, `init_*`) of imported or required wrapped modules, and the exports of entry
-  /// modules, which their entry chunks re-export.
+  /// The bindings read from each chunk by other chunks, before cross-chunk linking.
+  /// Emitted facades use retained references. Dynamic facades in manual groups use import records.
   fn bindings_imported_from_other_chunks(
     &self,
     chunk_graph: &ChunkGraph,
+    only_included: bool,
   ) -> IndexVec<ChunkIdx, FxHashSet<SymbolRef>> {
     let symbol_db = &self.link_output.symbol_db;
     let metas = &self.link_output.metas;
+    let modules = &self.link_output.module_table.modules;
+    let inline_const_smart = self.options.optimization.is_inline_const_smart_mode();
     let mut imported_bindings = index_vec![FxHashSet::default(); chunk_graph.chunk_table.len()];
     let mut add = |symbol_ref: SymbolRef, reading_chunk_idx: Option<ChunkIdx>| {
       let symbol_ref = symbol_db.canonical_ref_for(symbol_ref);
@@ -981,9 +983,49 @@ impl GenerateStage<'_> {
         imported_bindings[owner_chunk_idx].insert(symbol_ref);
       }
     };
-    for module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal) {
+    for module in modules.iter().filter_map(Module::as_normal) {
       let chunk_idx = chunk_graph.module_to_chunk[module.idx];
       if chunk_idx.is_none() {
+        continue;
+      }
+      if self.link_output.entries.contains_key(&module.idx) {
+        for (_, export) in metas[module.idx].canonical_exports(true) {
+          add(export.symbol_ref, chunk_idx);
+        }
+      }
+      if only_included {
+        let meta = &metas[module.idx];
+        for (stmt_idx, stmt) in self.link_output.stmt_infos[module.idx].iter_enumerated() {
+          if !meta.stmt_info_included.has_bit(stmt_idx) {
+            continue;
+          }
+          for reference in &stmt.referenced_symbols {
+            let symbol_ref = match reference {
+              SymbolOrMemberExprRef::Symbol(symbol_ref) => Some(*symbol_ref),
+              SymbolOrMemberExprRef::MemberExpr(member) => {
+                match member.resolution(&meta.resolved_member_expr_refs) {
+                  Some(resolution) => resolution.resolved,
+                  None if is_inlined_enum_member_access(modules, symbol_db, member) => None,
+                  None => Some(member.object_ref),
+                }
+              }
+            };
+            let Some(symbol_ref) = symbol_ref else { continue };
+            let symbol_ref = symbol_db.canonical_ref_resolving_namespace(symbol_ref);
+            if self.link_output.global_constant_symbol_map.get(&symbol_ref).is_some_and(|value| {
+              (!inline_const_smart || value.safe_to_inline) && !value.commonjs_export
+            }) {
+              continue;
+            }
+            add(symbol_ref, chunk_idx);
+            let owner_meta = &metas[symbol_ref.owner];
+            if matches!(owner_meta.wrap_kind(), WrapKind::Esm)
+              && let Some(wrapper_ref) = owner_meta.wrapper_ref
+            {
+              add(wrapper_ref, chunk_idx);
+            }
+          }
+        }
         continue;
       }
       for (&local_ref, named_import) in &module.named_imports {
@@ -1007,19 +1049,12 @@ impl GenerateStage<'_> {
           add(wrapper_ref, chunk_idx);
         }
       }
-      if self.link_output.entries.contains_key(&module.idx) {
-        for (_, export) in metas[module.idx].canonical_exports(true) {
-          add(export.symbol_ref, chunk_idx);
-        }
-      }
     }
     imported_bindings
   }
 
-  /// Whether `module` can be the facade of the chunk `chunk_idx`, as in Rollup's
-  /// `canModuleBeFacade`: other chunks import from the chunk only bindings that `module` exports.
-  /// The runtime is placed later, and the folded chunk keeps the reason of the group
-  /// (`CommonChunkMerge::inherit_group`), so the runtime does not move into it for other consumers.
+  /// Whether `module` exports every binding predicted to be imported from `chunk_idx`.
+  /// This follows Rollup's `canModuleBeFacade` rule.
   /// See internal-docs/code-splitting/implementation.md.
   fn can_module_be_facade(
     &self,
@@ -1048,6 +1083,7 @@ impl GenerateStage<'_> {
     let temp_runtime_chunk_idx = chunk_graph.module_to_chunk[self.link_output.runtime.id()]
       .and_then(|idx| temp_chunk_opt_graph.to_temp_idx(idx));
     let mut imported_bindings = None;
+    let mut emitted_imported_bindings = None;
     for (from_chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
       let ChunkKind::EntryPoint { meta, module } = chunk.kind else {
         continue;
@@ -1088,10 +1124,10 @@ impl GenerateStage<'_> {
           // group, possibly via `entriesAware` subgroup merging) lumps several
           // entries' modules into one shared chunk.
           //
-          // Keep the thin facade in that case, so each entry imports the (wrapped)
-          // shared chunk and runs only its own `init_*`. A shared chunk that holds
-          // just this entry's module (plus non-entry deps a sibling genuinely
-          // depends on) is still folded in, preserving the #5726 facade-elimination.
+          // Keep the thin facade in that case, so each entry imports the wrapped shared
+          // chunk and runs only its own `init_*`. A user-defined entry can still absorb
+          // a common chunk holding non-entry dependencies used by a sibling (#5726).
+          // An emitted entry also needs the cross-chunk binding check below.
           let holds_other_entry = target_chunk.modules.iter().any(|&module_idx| {
             module_idx != module
               && if is_emitted_entry_chunk {
@@ -1107,7 +1143,16 @@ impl GenerateStage<'_> {
               }
               _ => true,
             };
-          if can_merge {
+          if can_merge
+            && (!is_emitted_entry_chunk
+              || self.can_module_be_facade(
+                module,
+                target_chunk_idx,
+                emitted_imported_bindings.get_or_insert_with(|| {
+                  self.bindings_imported_from_other_chunks(chunk_graph, true)
+                }),
+              ))
+          {
             // merge all common chunk modules into entry chunk
             // swap original from_chunk_idx and target_chunk_idx
             common_chunk_merges.push(CommonChunkMerge {
@@ -1151,7 +1196,7 @@ impl GenerateStage<'_> {
           module,
           target_chunk_idx,
           imported_bindings
-            .get_or_insert_with(|| self.bindings_imported_from_other_chunks(chunk_graph)),
+            .get_or_insert_with(|| self.bindings_imported_from_other_chunks(chunk_graph, false)),
         )
       {
         common_chunk_merges.push(CommonChunkMerge {

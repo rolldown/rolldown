@@ -2,6 +2,10 @@
 mod _10183;
 #[path = "./10991/mod.rs"]
 mod _10991;
+#[path = "./10991_dynamic_namespace/mod.rs"]
+mod _10991_dynamic_namespace;
+#[path = "./10991_lazy_require/mod.rs"]
+mod _10991_lazy_require;
 #[path = "./11176/mod.rs"]
 mod _11176;
 #[path = "./11253/mod.rs"]

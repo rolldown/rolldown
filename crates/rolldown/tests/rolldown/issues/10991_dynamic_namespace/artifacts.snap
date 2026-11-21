@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## base.js
+
+```js
+import "./base2.js";
+
+```
+
+## base2.js
+
+```js
+// helper.js
+function helper() {}
+// base.js
+globalThis.base = helper;
+export { helper as t };
+
+```
+
+## main.js
+
+```js
+// main.js
+const load = () => import("./base.js");
+export { load };
+
+```
+
+## middle.js
+
+```js
+import { t as helper } from "./base2.js";
+// middle.js
+globalThis.middle = helper;
+
+```
+
+## top.js
+
+```js
+import "./middle.js";
+
+```

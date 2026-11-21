@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use napi::{Either, bindgen_prelude::Null};
+use napi::{
+  Either, Env,
+  bindgen_prelude::{Null, ObjectFinalize},
+};
 use napi_derive::napi;
 use rolldown_sourcemap::SourceMap;
 
@@ -9,15 +12,17 @@ use super::{
   external_memory_status::ExternalMemoryStatus,
 };
 
-#[napi]
+#[napi(custom_finalize)]
 pub struct BindingOutputChunk {
   inner: Option<Arc<rolldown_common::OutputChunk>>,
+  /// What V8 was told this object keeps alive.
+  external_bytes: i64,
 }
 
 #[napi]
 impl BindingOutputChunk {
   pub fn new(inner: Arc<rolldown_common::OutputChunk>) -> Self {
-    Self { inner: Some(inner) }
+    Self { inner: Some(inner), external_bytes: 0 }
   }
 
   fn try_get_inner(&self) -> napi::Result<&Arc<rolldown_common::OutputChunk>> {
@@ -28,8 +33,37 @@ impl BindingOutputChunk {
     })
   }
 
+  /// V8 cannot see this memory, so without this it feels no pressure to collect this object.
+  /// See internal-docs/memory-reclaim/implementation.md
   #[napi(enumerable = false)]
-  pub fn drop_inner(&mut self) -> ExternalMemoryStatus {
+  pub fn track_external_memory(&mut self, env: &Env) -> napi::Result<()> {
+    if self.external_bytes == 0
+      && let Some(inner) = &self.inner
+    {
+      let bytes = i64::try_from(inner.code.len() + inner.map.as_ref().map_or(0, sourcemap_bytes))
+        .unwrap_or(i64::MAX);
+      env.adjust_external_memory(bytes)?;
+      self.external_bytes = bytes;
+    }
+    Ok(())
+  }
+
+  fn untrack_external_memory(&mut self, env: &Env) -> napi::Result<()> {
+    if self.external_bytes != 0 {
+      env.adjust_external_memory(-self.external_bytes)?;
+      self.external_bytes = 0;
+    }
+    Ok(())
+  }
+
+  #[napi(enumerable = false)]
+  pub fn drop_inner(&mut self, env: &Env) -> napi::Result<ExternalMemoryStatus> {
+    self.untrack_external_memory(env)?;
+    crate::memory_reclaim::notify();
+    Ok(self.release_inner())
+  }
+
+  fn release_inner(&mut self) -> ExternalMemoryStatus {
     match self.inner.take() {
       None => ExternalMemoryStatus {
         freed: false,
@@ -205,4 +239,17 @@ pub fn update_output_chunk(
     });
   }
   Ok(())
+}
+
+impl ObjectFinalize for BindingOutputChunk {
+  fn finalize(mut self, env: Env) -> napi::Result<()> {
+    self.untrack_external_memory(&env)?;
+    crate::memory_reclaim::notify();
+    Ok(())
+  }
+}
+
+fn sourcemap_bytes(map: &SourceMap) -> usize {
+  let contents: usize = map.get_source_contents().flatten().map(str::len).sum();
+  contents + map.get_tokens().len() * size_of::<oxc_sourcemap::Token>()
 }

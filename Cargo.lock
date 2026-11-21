@@ -2599,6 +2599,7 @@ dependencies = [
  "oxc_resolver_napi",
  "oxc_sourcemap",
  "oxc_transform_napi",
+ "rayon",
  "regex",
  "rolldown",
  "rolldown-notify-napi",

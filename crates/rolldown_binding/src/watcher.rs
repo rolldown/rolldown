@@ -75,9 +75,11 @@ impl BindingWatcher {
     ts_args_type = "options: BindingBundlerOptions[], listener: (data: BindingWatcherEvent) => void"
   )]
   pub fn new(
+    env: Env,
     options: Vec<BindingBundlerOptions>,
     listener: MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>>,
   ) -> napi::Result<Self> {
+    crate::memory_reclaim::register_js_thread(&env);
     let (configs, option_callbacks): (Vec<_>, Vec<_>) = options
       .into_iter()
       .map(create_bundler_config_from_binding_options)

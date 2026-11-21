@@ -185,6 +185,7 @@ impl BundleFactory {
       warnings: std::mem::take(&mut self.warnings),
       bundle_span,
       cache,
+      _activity: crate::utils::build_activity::BuildActivity::enter(),
     };
     self.last_bundle_handle = Some(bundle.context());
     bundle

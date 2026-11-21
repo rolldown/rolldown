@@ -1805,6 +1805,11 @@ export declare class BindingNormalizedOptions {
 }
 
 export declare class BindingOutputAsset {
+  /**
+   * V8 cannot see this memory, so without this it feels no pressure to collect this object.
+   * See internal-docs/memory-reclaim/implementation.md
+   */
+  trackExternalMemory(): void
   dropInner(): ExternalMemoryStatus
   getFileName(): string
   getOriginalFileName(): string | null
@@ -1815,6 +1820,11 @@ export declare class BindingOutputAsset {
 }
 
 export declare class BindingOutputChunk {
+  /**
+   * V8 cannot see this memory, so without this it feels no pressure to collect this object.
+   * See internal-docs/memory-reclaim/implementation.md
+   */
+  trackExternalMemory(): void
   dropInner(): ExternalMemoryStatus
   getIsEntry(): boolean
   getIsDynamicEntry(): boolean

@@ -46,6 +46,8 @@ pub struct ParseToEcmaAstResult {
   /// Enum member constant values, keyed by enum name → member name → value.
   /// Used by the finalizer to inline cross-module enum member accesses (e.g., `Direction.Up` → `0`).
   pub enum_member_value_map: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>>,
+  /// See `EcmaModuleAstUsage::SourceTopLevelAwait`.
+  pub source_has_top_level_await: bool,
 }
 
 pub async fn parse_to_ecma_ast(

@@ -1,0 +1,7 @@
+{
+  "_comment": "`call_before_init_after_await`, but the top-level `await` is in pause.mjs, which a.js reaches through bridge.js. a.js waits for pause.mjs, and Node runs b.js meanwhile.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "minify": false
+  }
+}

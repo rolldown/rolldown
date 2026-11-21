@@ -68,6 +68,11 @@ bitflags::bitflags! {
     /// function instead of its declaration. The linker checks initialization, the result, and
     /// the rest of the statement before removing these calls. See `cross_module_optimization.rs`.
     const ExportedSeparately = 1 << 9;
+    /// A side-effect-free function with a top-level call that runs before its binding is
+    /// initialized, for example from a module earlier in the same import cycle. The linker keeps
+    /// such calls. The finalizer removes the `@__NO_SIDE_EFFECTS__` annotation of
+    /// the function when the chunk minifier runs. See `cross_module_optimization.rs`.
+    const MaybeCalledBeforeInit = 1 << 10;
   }
 }
 

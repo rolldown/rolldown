@@ -14,9 +14,10 @@ use oxc::{
 };
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ChunkKind, ExportsKind, ImportAttributes, ImportRecordIdx,
-  ImportRecordMeta, InlineConstMode, MemberExprProp, MemberExprRefResolution, Module, ModuleIdx,
-  ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule, OutputExports,
-  OutputFormat, Platform, Specifier, SymbolRef, SymbolRefFlags, WrapKind, is_lazy_proxy,
+  ImportRecordMeta, InlineConstMode, MemberExprProp, MemberExprRefResolution, MinifyOptions,
+  Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule,
+  OutputExports, OutputFormat, Platform, Specifier, SymbolRef, SymbolRefFlags, WrapKind,
+  is_lazy_proxy,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::{
@@ -695,6 +696,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// side-effect-free function is marked pure, and any other callee that resolves to a bridge
   /// member gets the same `this` guard.
   fn rewrite_call_callee(&self, call_expr: &mut ast::CallExpression<'ast>) {
+    let call_node_id = call_expr.node_id();
     if let Some(ident_ref) = call_expr.callee.as_identifier_mut() {
       let is_pure_function = ident_ref
         .reference_id
@@ -703,12 +705,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         .map(|id| {
           let symbol_ref = self.ctx.symbol_db.canonical_ref_for((self.ctx.idx, id).into());
           // The linker checks argument reads and uses of the result for separate exports.
-          // The minifier can discard those effects if we mark the call pure here.
+          // The minifier can discard those effects if we mark the call pure here. It can also
+          // discard a call that runs before the function is initialized.
           symbol_ref.is_side_effect_free_function(self.ctx.symbol_db, self.ctx.modules)
             && symbol_ref.is_not_reassigned(self.ctx.symbol_db)
             && !symbol_ref
               .flags(self.ctx.symbol_db)
               .is_some_and(|flags| flags.contains(SymbolRefFlags::ExportedSeparately))
+            && !self.ctx.linking_info.calls_before_init.contains(&call_node_id)
         })
         .unwrap_or(false);
       if is_pure_function {
@@ -719,6 +723,33 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
     } else if let Some(new_callee) = self.try_rewrite_bridge_callee(&call_expr.callee) {
       call_expr.callee = new_callee;
+    }
+  }
+
+  /// The minifier treats every call of a `@__NO_SIDE_EFFECTS__` binding in the chunk as pure. Drop
+  /// the annotation of a function with a protected call that can reach it before its binding is
+  /// initialized. Without the minifier, or with `preserveModules`, which puts the call in another
+  /// chunk, the annotation stays for other bundlers.
+  fn clear_no_side_effects_if_called_before_init(
+    &self,
+    symbol_ref: SymbolRef,
+    init: &mut ast::Expression<'ast>,
+  ) {
+    if matches!(self.ctx.options.minify, MinifyOptions::Disabled)
+      || self.ctx.options.preserve_modules
+    {
+      return;
+    }
+    let pure = match init.without_parentheses_mut() {
+      ast::Expression::ArrowFunctionExpression(func) if func.pure => &mut func.pure,
+      ast::Expression::FunctionExpression(func) if func.pure => &mut func.pure,
+      _ => return,
+    };
+    if symbol_ref
+      .flags(self.ctx.symbol_db)
+      .is_some_and(|flags| flags.contains(SymbolRefFlags::MaybeCalledBeforeInit))
+    {
+      *pure = false;
     }
   }
 

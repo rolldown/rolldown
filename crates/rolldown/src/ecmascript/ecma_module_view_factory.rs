@@ -39,6 +39,7 @@ pub async fn create_ecma_view(
     warnings,
     preserve_jsx,
     enum_member_value_map,
+    source_has_top_level_await,
   } = parse_to_ecma_ast(ctx, source).await?;
   ctx.flat_options.set(FlatOptions::JsxPreserve, preserve_jsx);
   ctx.warnings.extend(warnings);
@@ -77,7 +78,7 @@ pub async fn create_ecma_view(
     exports_kind,
     warnings: scan_warnings,
     errors,
-    ast_usage,
+    mut ast_usage,
     tla_keyword_span,
     symbol_ref_db: symbols,
     self_referenced_class_decl_symbol_ids,
@@ -111,6 +112,7 @@ pub async fn create_ecma_view(
   }
 
   ctx.warnings.extend(scan_warnings);
+  ast_usage.set(EcmaModuleAstUsage::SourceTopLevelAwait, source_has_top_level_await);
 
   let side_effects =
     normalize_side_effects(ctx.options, ctx.resolved_id, Some(&stmt_infos), hook_side_effects)

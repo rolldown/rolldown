@@ -1,0 +1,6 @@
+{
+  "_comment": "a.js and main.js are one import cycle, and a.js calls `f` after a top-level `await`. While a.js waits, Node runs b.js, so `f` is initialized when a.js calls it. The output runs b.js after a.js, so the call must not be kept as an early call.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }]
+  }
+}

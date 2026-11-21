@@ -1,0 +1,9 @@
+{
+  "_comment": "e1.js starts the cycle at x.js, and e2.js starts it at y.js, so the two entries run the cycle in different orders. The output runs the cycle in one shared chunk, in one order for both entries. If the call `f('y')` stayed, the output would throw when only e2.js loads, but the source does not throw. So the call must be removed. Node throws when only e1.js loads, and the output does not show that error. The body of `f` has a side effect, because oxc can remove a call of a side-effect-free function before its declaration.",
+  "config": {
+    "input": [
+      { "name": "e1", "import": "./e1.js" },
+      { "name": "e2", "import": "./e2.js" }
+    ]
+  }
+}

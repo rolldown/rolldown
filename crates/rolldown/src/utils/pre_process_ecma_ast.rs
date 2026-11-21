@@ -1,16 +1,19 @@
+use std::cell::Cell;
 use std::path::Path;
 
 use arcstr::ArcStr;
 use oxc::ast::ast::CommentContent;
 use oxc::ast::ast::Program;
 use oxc::ast::ast::{
-  BindingPattern, Declaration, ExportDefaultDeclarationKind, Expression, Function, Statement,
-  VariableDeclarator,
+  ArrowFunctionExpression, AwaitExpression, BindingIdentifier, BindingPattern,
+  ConditionalExpression, Declaration, ExportDefaultDeclarationKind, ExportSpecifier, Expression,
+  ForOfStatement, Function, IdentifierReference, IfStatement, LogicalExpression, LogicalOperator,
+  Statement, StaticBlock, VariableDeclaration, VariableDeclarationKind, VariableDeclarator,
 };
 use oxc::ast_visit::{VisitJs, VisitJsMut, walk_js, walk_js_mut};
 use oxc::diagnostics::{LabeledSpan, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
-use oxc::semantic::{ScopeFlags, Scoping, Stats, SymbolId};
+use oxc::semantic::{ScopeFlags, ScopeId, Scoping, Stats, SymbolId};
 use oxc::syntax::symbol::SymbolFlags;
 use oxc::transformer::Transformer;
 use oxc::transformer_plugins::{
@@ -106,7 +109,6 @@ impl PreProcessEcmaAst {
 
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
-    self.clear_no_side_effects_replaceable_by_eval(&mut ast, &mut scoping);
 
     // Extract enum member values before the transformer converts enums.
     // This runs before Step 3 (transformer) because `optimize_const_enums` / `optimize_enums`
@@ -166,6 +168,10 @@ impl PreProcessEcmaAst {
         }
       });
     }
+
+    // `define` can insert a read of a binding or an annotated function, so this check runs after
+    // Step 2. It runs before Step 3, which can add code.
+    self.clear_unsafe_no_side_effects(&mut ast, &mut scoping);
 
     // Step 3: Transform TypeScript and jsx.
     // Note: Currently, the newest syntax oxc_transform can lower is ES2026
@@ -234,9 +240,18 @@ impl PreProcessEcmaAst {
       });
     }
 
+    // Node treats a module with a top-level `await` as async, also when the `await` never runs.
+    // Step 5 and `dropLabels` in Step 6 can remove such an `await` before the scan, so look for
+    // one here. The walk reads the AST, not the source text, because `define` and the
+    // `transform_ast` hook can insert an `await` that the text does not have.
+    // See internal-docs/linking/module-execution-order/implementation.md.
+    let runs_dce = bundle_options.treeshake.is_some() && !has_lazy_export;
+    let source_has_top_level_await = (runs_dce || !bundle_options.drop_labels.is_empty())
+      && TopLevelAwaitFinder::find(ast.program());
+
     // Step 5: Run DCE.
     // Avoid DCE for lazy export.
-    if bundle_options.treeshake.is_some() && !has_lazy_export {
+    if runs_dce {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
         let scoping = self.recreate_scoping(&mut scoping, program);
         let mut treeshake = TreeShakeOptions::from(&bundle_options.treeshake);
@@ -285,30 +300,42 @@ impl PreProcessEcmaAst {
       warnings,
       preserve_jsx,
       enum_member_value_map,
+      source_has_top_level_await,
     })
   }
 
-  /// oxc treats every call of a `@__NO_SIDE_EFFECTS__` binding as pure. Direct `eval` can replace
-  /// a `let`, a `var` or a function declaration without a write reference, so drop the
-  /// annotation of each such binding before the dead code elimination runs.
-  fn clear_no_side_effects_replaceable_by_eval(
-    &mut self,
-    ast: &mut EcmaAst,
-    scoping: &mut Option<Scoping>,
-  ) {
-    let scoping_ref = scoping.as_ref().unwrap();
-    if !scoping_ref.root_scope_flags().contains_direct_eval() {
+  /// oxc treats every call of a `@__NO_SIDE_EFFECTS__` binding as pure. Drop the annotation of a
+  /// binding whose call can still run code or throw, before the dead code elimination runs:
+  /// - Direct `eval` can replace a `let`, a `var` or a function declaration without a write
+  ///   reference.
+  /// - Code that reads a `let`, `const` or `var` binding before its declaration, outside a nested
+  ///   function, sees the binding before it is initialized. See
+  ///   `internal-docs/linking/module-execution-order/implementation.md`.
+  fn clear_unsafe_no_side_effects(&mut self, ast: &mut EcmaAst, scoping: &mut Option<Scoping>) {
+    // `define` drops the scoping when it changes the AST, and it can add an annotation. The next
+    // pass uses the rebuilt scoping.
+    let rebuilt = self.recreate_scoping(scoping, ast.program());
+    let scoping_ref = &*scoping.insert(rebuilt);
+    let no_side_effects = scoping_ref.no_side_effects();
+    if no_side_effects.is_empty() {
       return;
     }
-    let symbols = scoping_ref
-      .no_side_effects()
+    let candidates = no_side_effects
       .iter()
       .copied()
-      .filter(|&symbol_id| {
+      .filter(|&symbol_id| !scoping_ref.symbol_flags(symbol_id).is_function())
+      .collect::<FxHashSet<_>>();
+    let mut symbols = if candidates.is_empty() {
+      FxHashSet::default()
+    } else {
+      ReadBeforeDeclarationFinder::find(scoping_ref, candidates, ast.program())
+    };
+    if scoping_ref.root_scope_flags().contains_direct_eval() {
+      symbols.extend(no_side_effects.iter().copied().filter(|&symbol_id| {
         !scoping_ref.symbol_flags(symbol_id).is_const_variable()
           && scoping_ref.scope_flags(scoping_ref.symbol_scope_id(symbol_id)).contains_direct_eval()
-      })
-      .collect::<FxHashSet<_>>();
+      }));
+    }
     if symbols.is_empty() {
       return;
     }
@@ -387,6 +414,218 @@ impl<'ast> VisitJs<'ast> for FunctionDeclarationStartMatcher {
     }
     if self.remaining_target_count > 0 {
       walk_js::walk_statement(self, stmt);
+    }
+  }
+}
+
+/// Finds a top-level `await`: an `await` expression, `for await` or `await using` outside a
+/// function and a class static block. This is the scanner's rule for `TopLevelAwait`.
+#[derive(Default)]
+struct TopLevelAwaitFinder {
+  found: bool,
+}
+
+impl TopLevelAwaitFinder {
+  fn find(program: &Program<'_>) -> bool {
+    let mut finder = Self::default();
+    finder.visit_program(program);
+    finder.found
+  }
+}
+
+impl<'ast> VisitJs<'ast> for TopLevelAwaitFinder {
+  fn visit_program(&mut self, program: &Program<'ast>) {
+    for stmt in &program.body {
+      self.visit_statement(stmt);
+      if self.found {
+        return;
+      }
+    }
+  }
+
+  fn visit_function(&mut self, _func: &Function<'ast>, _flags: ScopeFlags) {}
+
+  fn visit_arrow_function_expression(&mut self, _func: &ArrowFunctionExpression<'ast>) {}
+
+  fn visit_static_block(&mut self, _block: &StaticBlock<'ast>) {}
+
+  fn visit_await_expression(&mut self, _it: &AwaitExpression<'ast>) {
+    self.found = true;
+  }
+
+  fn visit_for_of_statement(&mut self, it: &ForOfStatement<'ast>) {
+    if it.r#await {
+      self.found = true;
+    } else {
+      walk_js::walk_for_of_statement(self, it);
+    }
+  }
+
+  fn visit_variable_declaration(&mut self, it: &VariableDeclaration<'ast>) {
+    if it.kind == VariableDeclarationKind::AwaitUsing {
+      self.found = true;
+    } else {
+      walk_js::walk_variable_declaration(self, it);
+    }
+  }
+}
+
+/// Finds the `@__NO_SIDE_EFFECTS__` bindings that code reads before their declaration, outside a
+/// function nested in the declaring scope. Such a read sees the binding before it is initialized.
+///
+/// "Before" is AST order, not span order, because `define` gives the reads that it inserts an
+/// empty span at 0. The walk skips a branch that a literal condition never runs, such as
+/// `if (false) f();`, because that read never runs.
+struct ReadBeforeDeclarationFinder<'a> {
+  scoping: &'a Scoping,
+  /// The `let`, `const` and `var` bindings to check whose declaration the walk has not reached,
+  /// and that are not in `found`.
+  pending: FxHashSet<SymbolId>,
+  /// Whether a binding to check is declared below the root scope. If not, a read inside a
+  /// function never counts, so the walk skips functions.
+  visit_functions: bool,
+  /// Each scope around the visited node, innermost last, and whether it is a function scope.
+  scopes: Vec<(Option<ScopeId>, bool)>,
+  found: FxHashSet<SymbolId>,
+}
+
+impl ReadBeforeDeclarationFinder<'_> {
+  fn find(
+    scoping: &Scoping,
+    candidates: FxHashSet<SymbolId>,
+    program: &Program<'_>,
+  ) -> FxHashSet<SymbolId> {
+    let root_scope_id = scoping.root_scope_id();
+    let visit_functions =
+      candidates.iter().any(|&symbol_id| scoping.symbol_scope_id(symbol_id) != root_scope_id);
+    let mut finder = ReadBeforeDeclarationFinder {
+      scoping,
+      pending: candidates,
+      visit_functions,
+      scopes: vec![],
+      found: FxHashSet::default(),
+    };
+    finder.visit_program(program);
+    finder.found
+  }
+}
+
+/// The truthiness of a literal condition, such as `false` or `0`. `None` for other expressions.
+fn literal_truthiness(expr: &Expression<'_>) -> Option<bool> {
+  match expr.without_parentheses() {
+    Expression::BooleanLiteral(lit) => Some(lit.value),
+    Expression::NullLiteral(_) => Some(false),
+    // A numeric literal is never negative or `NaN`.
+    Expression::NumericLiteral(lit) => Some(lit.value > 0.0),
+    Expression::StringLiteral(lit) => Some(!lit.value.is_empty()),
+    _ => None,
+  }
+}
+
+/// Whether a literal is `null`, for the left operand of `??`. `None` for other expressions.
+fn literal_is_nullish(expr: &Expression<'_>) -> Option<bool> {
+  match expr.without_parentheses() {
+    Expression::NullLiteral(_) => Some(true),
+    Expression::BooleanLiteral(_)
+    | Expression::NumericLiteral(_)
+    | Expression::StringLiteral(_) => Some(false),
+    _ => None,
+  }
+}
+
+impl<'ast> VisitJs<'ast> for ReadBeforeDeclarationFinder<'_> {
+  fn visit_program(&mut self, program: &Program<'ast>) {
+    self.scopes.push((program.scope_id.get(), false));
+    for stmt in &program.body {
+      if self.pending.is_empty() {
+        break;
+      }
+      self.visit_statement(stmt);
+    }
+  }
+
+  fn visit_binding_identifier(&mut self, ident: &BindingIdentifier<'ast>) {
+    if let Some(symbol_id) = ident.symbol_id.get() {
+      self.pending.remove(&symbol_id);
+    }
+  }
+
+  fn visit_if_statement(&mut self, it: &IfStatement<'ast>) {
+    let Some(value) = literal_truthiness(&it.test) else {
+      walk_js::walk_if_statement(self, it);
+      return;
+    };
+    self.visit_expression(&it.test);
+    if value {
+      self.visit_statement(&it.consequent);
+    } else if let Some(alternate) = &it.alternate {
+      self.visit_statement(alternate);
+    }
+  }
+
+  fn visit_conditional_expression(&mut self, it: &ConditionalExpression<'ast>) {
+    let Some(value) = literal_truthiness(&it.test) else {
+      walk_js::walk_conditional_expression(self, it);
+      return;
+    };
+    self.visit_expression(&it.test);
+    self.visit_expression(if value { &it.consequent } else { &it.alternate });
+  }
+
+  fn visit_logical_expression(&mut self, it: &LogicalExpression<'ast>) {
+    self.visit_expression(&it.left);
+    let right_runs = match it.operator {
+      LogicalOperator::And => literal_truthiness(&it.left),
+      LogicalOperator::Or => literal_truthiness(&it.left).map(|value| !value),
+      LogicalOperator::Coalesce => literal_is_nullish(&it.left),
+    };
+    if right_runs != Some(false) {
+      self.visit_expression(&it.right);
+    }
+  }
+
+  fn enter_scope(&mut self, flags: ScopeFlags, scope_id: &Cell<Option<ScopeId>>) {
+    self.scopes.push((scope_id.get(), flags.is_function()));
+  }
+
+  fn leave_scope(&mut self) {
+    self.scopes.pop();
+  }
+
+  fn visit_function(&mut self, func: &Function<'ast>, flags: ScopeFlags) {
+    if self.visit_functions {
+      walk_js::walk_function(self, func, flags);
+    }
+  }
+
+  fn visit_arrow_function_expression(&mut self, func: &ArrowFunctionExpression<'ast>) {
+    if self.visit_functions {
+      walk_js::walk_arrow_function_expression(self, func);
+    }
+  }
+
+  // `export { fn }` does not read the binding.
+  fn visit_export_specifier(&mut self, _it: &ExportSpecifier<'ast>) {}
+
+  fn visit_identifier_reference(&mut self, ident: &IdentifierReference<'ast>) {
+    let Some(symbol_id) =
+      ident.reference_id.get().and_then(|id| self.scoping.get_reference(id).symbol_id())
+    else {
+      return;
+    };
+    if !self.pending.contains(&symbol_id) {
+      return;
+    }
+    let declaring_scope = Some(self.scoping.symbol_scope_id(symbol_id));
+    let in_nested_function = self
+      .scopes
+      .iter()
+      .rev()
+      .take_while(|(scope_id, _)| *scope_id != declaring_scope)
+      .any(|&(_, is_function)| is_function);
+    if !in_nested_function {
+      self.pending.remove(&symbol_id);
+      self.found.insert(symbol_id);
     }
   }
 }
@@ -475,7 +714,24 @@ mod tests {
   use rolldown_ecmascript::EcmaCompiler;
   use rolldown_error::Severity;
 
-  use super::invalid_annotation_warnings;
+  use super::{TopLevelAwaitFinder, invalid_annotation_warnings};
+
+  #[test]
+  fn top_level_await_finder_skips_functions() {
+    for (source, expected) in [
+      ("if (false) await 0;", true),
+      ("for await (const x of []) {}", true),
+      ("{ await using r = null; }", true),
+      ("class A { [await 0]() {} }", true),
+      ("async function f() { await 0; } const g = async () => { await 0; };", false),
+      ("class A { async m() { await 0; } static { } }", false),
+      ("for (const x of []) {} using r = null;", false),
+    ] {
+      let ast = EcmaCompiler::parse("main.js", source, SourceType::mjs()).unwrap();
+      let found = ast.program.with_dependent(|_owner, dep| TopLevelAwaitFinder::find(&dep.program));
+      assert_eq!(found, expected, "{source}");
+    }
+  }
 
   #[test]
   fn invalid_annotations_have_warning_severity_and_matching_guidance() {

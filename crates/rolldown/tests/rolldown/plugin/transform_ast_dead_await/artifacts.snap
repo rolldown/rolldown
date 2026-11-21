@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// a.js
+(globalThis.calls ??= []).push("a done");
+// b.js
+const f = /* @__NO_SIDE_EFFECTS__ */ () => Object.keys({});
+export { f };
+
+```
+
+# Variant: minify: false
+
+## Assets
+
+### main.js
+
+```js
+// a.js
+(globalThis.calls ??= []).push("a done");
+
+// b.js
+const f = /* @__NO_SIDE_EFFECTS__ */ () => Object.keys({});
+
+export { f };
+```

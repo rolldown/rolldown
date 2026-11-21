@@ -1,0 +1,7 @@
+{
+  "_comment": "a.js and b.js are one import cycle, and a.js runs first. a.js calls `declared` and `clause` before b.js initializes them. b.js exports `declared` with its declaration and `clause` with an export clause. These calls must stay and throw, also when the result is an argument of `noop`, which the minifier removes. main.js has an `import()` of lazy.js, which adds a second entry that does not import the cycle. The calls in main.js run after b.js and should be removed. The body of each function has a side effect, because oxc can remove a call of a side-effect-free function before its declaration.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }]
+  },
+  "configVariants": [{ "minify": true, "_snapshot": false }]
+}

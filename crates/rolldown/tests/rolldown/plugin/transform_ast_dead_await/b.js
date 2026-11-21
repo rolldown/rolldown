@@ -1,0 +1,1 @@
+export const f = /* @__NO_SIDE_EFFECTS__ */ () => Object.keys({});

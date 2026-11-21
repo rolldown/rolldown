@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// a.js
+if (await Promise.resolve(true));
+(globalThis.calls ??= []).push("a done");
+// b.js
+const f = /* @__NO_SIDE_EFFECTS__ */ () => Object.keys({});
+export { f };
+
+```

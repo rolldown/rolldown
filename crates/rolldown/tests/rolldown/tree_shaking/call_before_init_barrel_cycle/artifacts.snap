@@ -1,0 +1,63 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## app.js
+
+```js
+// register.js
+function register(name) {
+	(globalThis.icons ??= []).push(name);
+	return name;
+}
+// factory.js
+const createIcon = /* @__NO_SIDE_EFFECTS__ */ (name) => register(name);
+// a.js
+const IconA = /* @__PURE__ */ createIcon("a");
+export { IconA };
+
+```
+
+# Variant: preserve-modules: [preserve_modules: true]
+
+## Assets
+
+### a.js
+
+```js
+import { createIcon } from "./factory.js";
+// a.js
+const IconA = /* @__PURE__ */ createIcon("a");
+export { IconA };
+
+```
+
+### app.js
+
+```js
+export { IconA } from "./a.js";
+
+```
+
+### factory.js
+
+```js
+import { register } from "./register.js";
+// factory.js
+const createIcon = /* @__NO_SIDE_EFFECTS__ */ (name) => register(name);
+export { createIcon };
+
+```
+
+### register.js
+
+```js
+// register.js
+function register(name) {
+	(globalThis.icons ??= []).push(name);
+	return name;
+}
+export { register };
+
+```

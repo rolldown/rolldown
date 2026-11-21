@@ -1,0 +1,7 @@
+{
+  "_comment": "`call_before_init_await_in_dependency`, but the `await` in pause.js never runs. Node still treats pause.js as async, so a.js waits for it and b.js runs meanwhile. The dead code elimination removes the `await` before the scan.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "minify": false
+  }
+}

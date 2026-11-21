@@ -1,0 +1,8 @@
+{
+  "_comment": "`call_before_init_dead_await_in_dependency`, but `define` inserts the `await` that never runs, so the source text of pause.js has no `await`.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "minify": false,
+    "define": { "PAUSE": "(await 0)" }
+  }
+}

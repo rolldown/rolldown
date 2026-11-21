@@ -203,6 +203,23 @@ export interface SourceDescription
    */
   map?: SourceMapInput;
   moduleType?: ModuleType;
+  /**
+   * The module's size in bytes. Size-based code splitting uses it instead of the size of the
+   * module's code.
+   *
+   * This is useful when the module's output is not in its code, e.g. a CSS module whose
+   * stylesheet is emitted separately.
+   *
+   * @example
+   * ```js
+   * transform(code, id) {
+   *   if (isCss(id)) {
+   *     return { code, declaredModuleSize: Buffer.byteLength(code) + Buffer.byteLength(css) }
+   *   }
+   * }
+   * ```
+   */
+  declaredModuleSize?: number;
 }
 
 /**

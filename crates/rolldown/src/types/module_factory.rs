@@ -24,4 +24,5 @@ pub struct CreateModuleViewArgs {
   pub source: StrOrBytes,
   pub sourcemap_chain: Vec<SourcemapChainElement>,
   pub hook_side_effects: Option<HookSideEffects>,
+  pub declared_module_size: Option<usize>,
 }

@@ -22,6 +22,6 @@ init_lib_impl();
 // trigger-error.js
 nodeAssert(foo() === 1, "foo() should return 1");
 // trigger-wrapping.js
-console.log((init_lib_impl(), __toCommonJS(lib_impl_exports)));
+console.log((init_lib_impl(), __requireESM(lib_impl_exports)));
 
 ```

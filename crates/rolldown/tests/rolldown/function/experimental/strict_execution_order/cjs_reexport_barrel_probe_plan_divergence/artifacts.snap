@@ -37,7 +37,7 @@ var forwarder_a_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
 // entry-a.cjs
 const { a } = (require_rolldown_runtime.__esmMin((() => {
 	init_barrel_cjs_0();
-}))(), require_rolldown_runtime.__toCommonJS(forwarder_a_exports));
+}))(), require_rolldown_runtime.__requireESM(forwarder_a_exports));
 module.exports = { a };
 
 ```
@@ -62,7 +62,7 @@ var forwarder_b_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
 // entry-b.cjs
 const { b } = (require_rolldown_runtime.__esmMin((() => {
 	init_barrel_cjs_1();
-}))(), require_rolldown_runtime.__toCommonJS(forwarder_b_exports));
+}))(), require_rolldown_runtime.__requireESM(forwarder_b_exports));
 module.exports = { b };
 
 ```
@@ -89,10 +89,10 @@ Object.defineProperty(exports, "__exportAll", {
 		return __exportAll;
 	}
 });
-Object.defineProperty(exports, "__toCommonJS", {
+Object.defineProperty(exports, "__requireESM", {
 	enumerable: true,
 	get: function() {
-		return __toCommonJS;
+		return __requireESM;
 	}
 });
 
@@ -136,7 +136,7 @@ var forwarder_a_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
 // entry-a.cjs
 const { a } = (require_rolldown_runtime.__esmMin((() => {
 	init_barrel_cjs_0();
-}))(), require_rolldown_runtime.__toCommonJS(forwarder_a_exports));
+}))(), require_rolldown_runtime.__requireESM(forwarder_a_exports));
 module.exports = { a };
 
 ```
@@ -161,7 +161,7 @@ var forwarder_b_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
 // entry-b.cjs
 const { b } = (require_rolldown_runtime.__esmMin((() => {
 	init_barrel_cjs_1();
-}))(), require_rolldown_runtime.__toCommonJS(forwarder_b_exports));
+}))(), require_rolldown_runtime.__requireESM(forwarder_b_exports));
 module.exports = { b };
 
 ```
@@ -188,10 +188,10 @@ Object.defineProperty(exports, "__exportAll", {
 		return __exportAll;
 	}
 });
-Object.defineProperty(exports, "__toCommonJS", {
+Object.defineProperty(exports, "__requireESM", {
 	enumerable: true,
 	get: function() {
-		return __toCommonJS;
+		return __requireESM;
 	}
 });
 

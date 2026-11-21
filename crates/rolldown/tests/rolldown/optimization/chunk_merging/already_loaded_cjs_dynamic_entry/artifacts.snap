@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## app.js
 
 ```js
-import { i as __toCommonJS, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
+import { i as __requireESM, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 // shared.js
 var shared_exports = /* @__PURE__ */ __exportAll({ compute: () => compute });
 function compute(x) {
@@ -15,7 +15,7 @@ function compute(x) {
 var init_shared = __esmMin((() => {}));
 // app.cjs
 var require_app = /* @__PURE__ */ __commonJSMin(((exports) => {
-	const { compute } = __toCommonJS(shared_exports);
+	const { compute } = __requireESM(shared_exports);
 	exports.own = compute(21) + 1;
 	exports.done = import("./lazy.js").then((m) => m.lazyValue);
 }));
@@ -52,6 +52,6 @@ export { app };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __toESM as a, __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
+export { __toESM as a, __requireESM as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
 
 ```

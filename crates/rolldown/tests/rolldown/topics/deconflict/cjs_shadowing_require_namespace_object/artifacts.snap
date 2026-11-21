@@ -21,7 +21,7 @@ var init_lib = __esmMin((() => {
 }));
 // main.js
 var require_main = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	var lib_exports = (init_lib(), __toCommonJS(lib_exports$1));
+	var lib_exports = (init_lib(), __requireESM(lib_exports$1));
 	module.exports = lib_exports.default() + ":" + lib_exports.named;
 }));
 export default require_main();

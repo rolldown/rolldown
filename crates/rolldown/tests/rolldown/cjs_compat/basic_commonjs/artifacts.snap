@@ -22,7 +22,7 @@ var init_esm = __esmMin((() => {
 }));
 // main.js
 var import_commonjs = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_esm(), __toCommonJS(esm_exports));
+	module.exports = (init_esm(), __requireESM(esm_exports));
 })))());
 init_esm();
 console.log(import_commonjs.default, esm_default_fn$1, 1, esm_named_fn, esm_named_class);

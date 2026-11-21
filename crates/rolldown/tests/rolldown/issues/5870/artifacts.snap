@@ -16,7 +16,7 @@ init_lib();
 // log.js
 assert.strictEqual(1, 1);
 (/* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_lib(), __toCommonJS(lib_exports));
+	module.exports = (init_lib(), __requireESM(lib_exports));
 })))();
 
 ```
@@ -48,7 +48,7 @@ function init_log() {
 }
 // commonjs.cjs
 var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_lib(), __toCommonJS(lib_exports));
+	module.exports = (init_lib(), __requireESM(lib_exports));
 }));
 function init_main() {
 	return (init_main = __esmMin((() => {

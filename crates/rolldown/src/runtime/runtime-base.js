@@ -133,3 +133,15 @@ export var __toBinary = /* @__PURE__ */ (() => {
     return bytes;
   };
 })();
+// See internal-docs/runtime-helpers/implementation.md.
+export var __requireESM = /* @__PURE__ */ (() => {
+  if (typeof WeakMap === 'undefined') return __toCommonJS;
+  var cache = new WeakMap();
+  return (mod) => {
+    var value = cache.get(mod);
+    if (value) return value;
+    value = __toCommonJS(mod);
+    cache.set(mod, value);
+    return value;
+  };
+})();

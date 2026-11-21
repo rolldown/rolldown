@@ -16,7 +16,7 @@ var foo, main_default;
 var init_main = __esmMin((() => {
 	foo = "foo";
 	main_default = "main";
-	console.log((init_main(), __toCommonJS(main_exports)));
+	console.log((init_main(), __requireESM(main_exports)));
 }));
 init_main();
 export { main_default as default, foo };

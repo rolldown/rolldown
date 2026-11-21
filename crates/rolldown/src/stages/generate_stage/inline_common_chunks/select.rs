@@ -107,9 +107,9 @@ fn add_loader_chunks(chunk_graph: &mut ChunkGraph, loaders: &FxIndexMap<ChunkIdx
 fn records_over_duplication_limit<'a>(
   records: &FxIndexSet<ChunkIdx>,
   record_cycles: &[Vec<ChunkIdx>],
-  duplicated_size: impl Fn(ChunkIdx) -> usize,
+  duplicated_size: impl Fn(ChunkIdx) -> u64,
   reads: impl Fn(ChunkIdx) -> Option<&'a Vec<ChunkIdx>>,
-  max_duplicated_size: usize,
+  max_duplicated_size: u64,
 ) -> Vec<ChunkIdx> {
   let mut candidate_of = FxHashMap::<ChunkIdx, usize>::default();
   let mut candidates = Vec::<Vec<ChunkIdx>>::new();
@@ -133,7 +133,7 @@ fn records_over_duplication_limit<'a>(
     .iter()
     .enumerate()
     .filter(|(_, members)| {
-      members.iter().map(|member| duplicated_size(*member)).fold(0, usize::saturating_add)
+      members.iter().map(|member| duplicated_size(*member)).fold(0, u64::saturating_add)
         >= max_duplicated_size
     })
     .map(|(candidate, _)| candidate)
@@ -335,7 +335,7 @@ impl GenerateStage<'_> {
           eval_carrier.then_some((record, "a file that prints it holds a module with direct eval"))
         })
         .collect_vec();
-      if rejected.is_empty() && max_duplicated_size != usize::MAX {
+      if rejected.is_empty() && max_duplicated_size != u64::MAX {
         rejected = self.over_duplicated_records(
           chunk_graph,
           &records,
@@ -445,7 +445,7 @@ impl GenerateStage<'_> {
     records: &FxIndexSet<ChunkIdx>,
     record_cycles: &[Vec<ChunkIdx>],
     placement: &InlinePlacement,
-    max_duplicated_size: usize,
+    max_duplicated_size: u64,
   ) -> Vec<(ChunkIdx, &'static str)> {
     let mut copies = FxHashMap::<ChunkIdx, usize>::default();
     for record in placement.carried.values().flatten() {
@@ -455,10 +455,9 @@ impl GenerateStage<'_> {
       records,
       record_cycles,
       |record| {
-        copies
-          .get(&record)
-          .map_or(0, |count| count.saturating_sub(1))
-          .saturating_mul(self.chunk_size(&chunk_graph.chunk_table[record]))
+        let extra_copies = copies.get(&record).map_or(0, |count| count.saturating_sub(1));
+        (extra_copies as u64)
+          .saturating_mul(self.chunk_size(&chunk_graph.chunk_table[record]) as u64)
       },
       |record| placement.readers.get(&record),
       max_duplicated_size,
@@ -797,7 +796,7 @@ mod tests {
   }
 
   /// `records` are `(chunk, duplicated size, records it reads)`.
-  fn over(records: &[(u32, usize, &[u32])], cycles: &[&[u32]], limit: usize) -> Vec<ChunkIdx> {
+  fn over(records: &[(u32, u64, &[u32])], cycles: &[&[u32]], limit: u64) -> Vec<ChunkIdx> {
     let record_set = records.iter().map(|(record, ..)| idx(*record)).collect::<FxIndexSet<_>>();
     let sizes =
       records.iter().map(|(record, size, _)| (idx(*record), *size)).collect::<FxHashMap<_, _>>();

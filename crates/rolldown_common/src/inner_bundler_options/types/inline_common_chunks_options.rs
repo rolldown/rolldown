@@ -34,7 +34,8 @@ pub struct InlineCommonChunksOptions {
 pub struct NormalizedInlineCommonChunksOptions {
   /// Source bytes; always above zero. `usize::MAX` removes the size limit.
   pub max_size: usize,
-  /// Source bytes; `usize::MAX` means no limit.
-  pub max_duplicated_size: usize,
+  /// Source bytes; `u64::MAX` means no limit. A `u64`, so that a limit above 4 GiB still applies
+  /// on 32-bit targets such as WASI.
+  pub max_duplicated_size: u64,
   pub exclude: Vec<MatchGroupTest>,
 }

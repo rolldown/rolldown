@@ -26,7 +26,7 @@ pub fn set_ast_chunk_allocator(chunk_alloc: &'static (dyn GlobalAlloc + Sync)) {
 /// If `capacity` is 0, no memory is allocated until the first allocation into the arena.
 pub fn ast_allocator(capacity: usize) -> Allocator {
   match AST_CHUNK_ALLOC.get() {
-    Some(&chunk_alloc) => Allocator::with_capacity_in(capacity, chunk_alloc),
+    Some(&chunk_alloc) => Allocator::with_capacity_in_parent(capacity, chunk_alloc),
     None => Allocator::with_capacity(capacity),
   }
 }

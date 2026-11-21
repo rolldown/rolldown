@@ -4,6 +4,7 @@ import type { InputOptions } from '../src/options/input-options';
 import type { CodeSplittingGroup, OutputOptions } from '../src/options/output-options';
 import { createBundlerOptions } from '../src/utils/create-bundler-option';
 import { pluginTimingsRecorderFor, summarizePluginTimings } from '../src/utils/plugin-timings';
+import { shouldEagerlyFreeOutputs } from '../src/utils/threadless-free';
 
 vi.mock('../src/binding.cjs', async () => {
   const { loadBinding } = await import('./src/load-binding');
@@ -21,7 +22,7 @@ function fakeClock() {
 }
 
 function getBindingGroups(
-  bundlerOptions: Awaited<ReturnType<typeof createBundlerOptions>>,
+  bundlerOptions: Awaited<ReturnType<typeof createBundlerOptions>>['bundlerOptions'],
 ): BindingMatchGroup[] {
   const groups = bundlerOptions.outputOptions.manualCodeSplitting?.groups;
   if (groups === undefined) {
@@ -37,11 +38,28 @@ function runTest(group: BindingMatchGroup): void {
   group.test(['entry.js']);
 }
 
-function runName(group: BindingMatchGroup): void {
+// One fake per `runName` call, like the native box per batch. On threadless WASI
+// the build-scoped registry releases each box through `dropInner()`.
+function fakeChunkingContext(): BindingChunkingContext & { drops: number } {
+  const box = {
+    drops: 0,
+    dropInner: () => {
+      box.drops++;
+      return { freed: true };
+    },
+    getModuleInfo: () => null,
+  };
+  return box;
+}
+
+function runName(
+  group: BindingMatchGroup,
+  box: BindingChunkingContext = fakeChunkingContext(),
+): void {
   if (typeof group.name !== 'function') {
     throw new Error('Expected a code-splitting name callback');
   }
-  group.name(['entry.js'], { getModuleInfo: () => null } as BindingChunkingContext);
+  group.name(['entry.js'], box);
 }
 
 afterEach(() => {
@@ -71,7 +89,12 @@ describe('code-splitting group timings', () => {
     };
 
     for (let index = 0; index < 2; index++) {
-      const bundlerOptions = await createBundlerOptions(inputOptions, outputOptions, false, true);
+      const { bundlerOptions } = await createBundlerOptions(
+        inputOptions,
+        outputOptions,
+        false,
+        true,
+      );
       const groups = getBindingGroups(bundlerOptions);
       runTest(groups[0]);
       runTest(groups[1]);
@@ -108,7 +131,7 @@ describe('code-splitting group timings', () => {
         return 'shared';
       },
     };
-    const bundlerOptions = await createBundlerOptions(
+    const { bundlerOptions } = await createBundlerOptions(
       inputOptions,
       { codeSplitting: { groups: [slow, fast] } },
       false,
@@ -139,7 +162,7 @@ describe('code-splitting group timings', () => {
         return true;
       },
     };
-    const bundlerOptions = await createBundlerOptions(
+    const { bundlerOptions } = await createBundlerOptions(
       inputOptions,
       { codeSplitting: { groups: [group] } },
       false,
@@ -167,7 +190,7 @@ describe('code-splitting group timings', () => {
       name: 'chunk name',
       test: () => true,
     };
-    const bundlerOptions = await createBundlerOptions(
+    const { bundlerOptions } = await createBundlerOptions(
       inputOptions,
       { codeSplitting: { groups: [group] } },
       false,
@@ -200,7 +223,12 @@ describe('code-splitting group timings', () => {
     };
 
     for (let index = 0; index < 2; index++) {
-      const bundlerOptions = await createBundlerOptions(inputOptions, outputOptions, false, true);
+      const { bundlerOptions } = await createBundlerOptions(
+        inputOptions,
+        outputOptions,
+        false,
+        true,
+      );
       runName(getBindingGroups(bundlerOptions)[0]);
     }
 
@@ -226,7 +254,7 @@ describe('code-splitting group timings', () => {
     const group: CodeSplittingGroup = {
       name: () => 'shared',
     };
-    const bundlerOptions = await createBundlerOptions(
+    const { bundlerOptions } = await createBundlerOptions(
       inputOptions,
       { advancedChunks: { groups: [group] } },
       false,
@@ -263,6 +291,25 @@ describe('code-splitting group timings', () => {
     expect(warnings).toEqual([]);
   });
 
+  it('releases each batch chunking-context box once', async () => {
+    const { bundlerOptions, releaseOptionBoxes } = await createBundlerOptions(
+      {},
+      { codeSplitting: { groups: [{ name: () => 'shared' }] } },
+      false,
+      true,
+    );
+    const [group] = getBindingGroups(bundlerOptions);
+    const first = fakeChunkingContext();
+    const second = fakeChunkingContext();
+    runName(group, first);
+    runName(group, second);
+    releaseOptionBoxes();
+
+    const expected = shouldEagerlyFreeOutputs() ? 1 : 0;
+    expect(first.drops).toBe(expected);
+    expect(second.drops).toBe(expected);
+  });
+
   it('keeps one manualChunks row across repeated outputs', async () => {
     const clock = fakeClock();
     const warnings: Array<{ code?: string; message: string }> = [];
@@ -279,7 +326,12 @@ describe('code-splitting group timings', () => {
     const outputOptions: OutputOptions = { manualChunks };
 
     for (let index = 0; index < 2; index++) {
-      const bundlerOptions = await createBundlerOptions(inputOptions, outputOptions, false, true);
+      const { bundlerOptions } = await createBundlerOptions(
+        inputOptions,
+        outputOptions,
+        false,
+        true,
+      );
       const [bindingGroup] = getBindingGroups(bundlerOptions);
       runName(bindingGroup);
     }

@@ -45,3 +45,38 @@ export function transformModuleInfo(
     moduleSideEffects: effectiveModuleSideEffects(moduleSideEffects, info.moduleSideEffects),
   };
 }
+
+/**
+ * Like {@linkcode transformModuleInfo}, but copies `code` — the only
+ * box-backed field, and by far the largest retention — to plain JS data and
+ * releases the native box immediately, for the threadless-WASI flavor. A
+ * callback that retains the returned info past its hook keeps working.
+ */
+export function snapshotModuleInfo(
+  info: BindingModuleInfo,
+  option: Omit<ModuleOptions, 'moduleSideEffects'> & {
+    moduleSideEffects: AssignedModuleSideEffects;
+  },
+): ModuleInfo {
+  const { moduleSideEffects, ...rest } = option;
+  const code = info.code;
+  const nativeModuleSideEffects = info.moduleSideEffects;
+  const snapshot: ModuleInfo = {
+    get ast() {
+      return unsupported('ModuleInfo#ast');
+    },
+    code,
+    id: info.id,
+    importers: info.importers,
+    dynamicImporters: info.dynamicImporters,
+    importedIds: info.importedIds,
+    dynamicallyImportedIds: info.dynamicallyImportedIds,
+    exports: info.exports,
+    isEntry: info.isEntry,
+    inputFormat: info.inputFormat,
+    ...rest,
+    moduleSideEffects: effectiveModuleSideEffects(moduleSideEffects, nativeModuleSideEffects),
+  };
+  info.dropInner();
+  return snapshot;
+}

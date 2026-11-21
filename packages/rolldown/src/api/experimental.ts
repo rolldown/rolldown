@@ -1,4 +1,4 @@
-import { BindingBundler, shutdownAsyncRuntime, startAsyncRuntime } from '../binding.cjs';
+import { BindingBundler } from '../binding.cjs';
 import type { InputOptions } from '../options/input-options';
 import { PluginDriver } from '../plugin/plugin-driver';
 import { createBundlerOptions } from '../utils/create-bundler-option';
@@ -31,11 +31,9 @@ export const scan = async (
 
   const inputOptions = await PluginDriver.callOptionsHook(rawInputOptions);
 
-  const bundlerOptions = await createBundlerOptions(inputOptions, rawOutputOptions, false);
+  const option = await createBundlerOptions(inputOptions, rawOutputOptions, false);
 
   const bundler = new BindingBundler();
-
-  startAsyncRuntime();
 
   // On the error path `cleanup` runs from both `catch` and `finally`, so it must be idempotent.
   let cleanedUp = false;
@@ -45,14 +43,16 @@ export const scan = async (
     try {
       await bundler.close();
     } finally {
-      shutdownAsyncRuntime();
+      // scan() never generates, so the invalidate callback never fires;
+      // release the boxes its hooks retained here.
+      option.releaseOptionBoxes();
     }
   }
 
   let cleanupPromise = Promise.resolve();
 
   try {
-    const result = await bundler.scan(bundlerOptions);
+    const result = await bundler.scan(option.bundlerOptions);
     unwrapBindingResult(result);
   } catch (err) {
     await cleanup();

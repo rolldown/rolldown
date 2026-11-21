@@ -6,6 +6,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import type { InputOptions, OutputOptions } from 'rolldown';
 import type { DevEngine, DevOptions } from 'rolldown/experimental';
 import { dev as _dev } from 'rolldown/experimental';
+import { isSingleThread } from '@tests/runtime-flavor';
 import { expect, test } from 'vitest';
 
 const TEST_TIMEOUT = 60_000;
@@ -35,7 +36,7 @@ function dev(
 // resolves on close rather than rejecting. Embedders float this promise
 // without a rejection handler (Vite does, in `triggerBundleRegenerationIfStale`),
 // so rejecting here surfaces as an unhandled rejection that fails the host.
-test(
+test.skipIf(isSingleThread)(
   'in-flight ensureLatestBuildOutput resolves when the engine is closed',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

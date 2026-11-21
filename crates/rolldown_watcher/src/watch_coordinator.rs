@@ -5,6 +5,9 @@ use crate::watch_task::{BuildOutcome, WatchTask, WatchTaskIdx};
 use crate::watcher::WatcherConfig;
 use crate::watcher_msg::WatcherMsg;
 use crate::watcher_state::WatcherState;
+use event_listener::Event;
+use futures::channel::mpsc;
+use futures::{FutureExt, StreamExt, pin_mut, select_biased};
 use oxc_index::IndexVec;
 use rolldown_common::WatcherChangeKind;
 use rolldown_utils::indexmap::FxIndexMap;
@@ -13,7 +16,6 @@ use std::mem;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
-use tokio::sync::{Notify, mpsc};
 
 enum DebounceWaitResult {
   Message(Option<WatcherMsg>),
@@ -24,12 +26,13 @@ async fn wait_for_debounce_input(
   rx: &mut mpsc::UnboundedReceiver<WatcherMsg>,
   timeout: impl Future<Output = ()>,
 ) -> DebounceWaitResult {
-  // A message already queued wins over a due deadline, so every part of an OS
-  // notification that is already in the channel joins this build.
+  let timeout = timeout.fuse();
+  pin_mut!(timeout);
+  // Biased: a message already queued wins over a due deadline, so every part of
+  // an OS notification that is already in the channel joins this build.
   // See "Rolldown's Approach" in internal-docs/watch-mode/implementation.md.
-  tokio::select! {
-    biased;
-    message = rx.recv() => DebounceWaitResult::Message(message),
+  select_biased! {
+    message = rx.next() => DebounceWaitResult::Message(message),
     () = timeout => DebounceWaitResult::Timeout,
   }
 }
@@ -42,7 +45,7 @@ pub struct WatchCoordinator<H: WatcherEventHandler> {
   debounce_duration: Duration,
   tasks: IndexVec<WatchTaskIdx, WatchTask>,
   closed: Arc<AtomicBool>,
-  close_notify: Arc<Notify>,
+  close_notify: Arc<Event>,
 }
 
 impl<H: WatcherEventHandler> WatchCoordinator<H> {
@@ -52,7 +55,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     tasks: IndexVec<WatchTaskIdx, WatchTask>,
     config: &WatcherConfig,
     closed: Arc<AtomicBool>,
-    close_notify: Arc<Notify>,
+    close_notify: Arc<Event>,
   ) -> Self {
     Self {
       rx,
@@ -76,7 +79,7 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
     loop {
       match &self.state {
         WatcherState::Idle => {
-          let msg = self.rx.recv().await;
+          let msg = self.rx.next().await;
           match msg {
             Some(WatcherMsg::FileChanges { task_index, changes }) => {
               self.process_file_changes(task_index, changes).await;
@@ -89,19 +92,9 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
           }
         }
         WatcherState::Debouncing { deadline, .. } => {
-          let timeout = tokio::time::sleep_until((*deadline).into());
+          let timeout = rolldown_utils::time::sleep_until(*deadline);
 
           match wait_for_debounce_input(&mut self.rx, timeout).await {
-            DebounceWaitResult::Message(message) => match message {
-              Some(WatcherMsg::FileChanges { task_index, changes }) => {
-                self.process_file_changes(task_index, changes).await;
-              }
-              Some(WatcherMsg::Close) => {
-                self.handle_close().await;
-                break;
-              }
-              None => break,
-            },
             DebounceWaitResult::Timeout => {
               let (new_state, changes) = mem::take(&mut self.state).on_debounce_timeout();
               self.state = new_state;
@@ -113,6 +106,16 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
                 }
               }
             }
+            DebounceWaitResult::Message(message) => match message {
+              Some(WatcherMsg::FileChanges { task_index, changes }) => {
+                self.process_file_changes(task_index, changes).await;
+              }
+              Some(WatcherMsg::Close) => {
+                self.handle_close().await;
+                break;
+              }
+              None => break,
+            },
           }
         }
         WatcherState::Closing | WatcherState::Closed => {
@@ -256,14 +259,20 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   where
     F: Future<Output = ()>,
   {
+    // Listen before checking `closed`: `event_listener::Event` stores no permit,
+    // so a listener created after the notify would wait forever.
     let wait_for_close = async {
+      let listener = self.close_notify.listen();
       if !self.closed.load(Ordering::Relaxed) {
-        self.close_notify.notified().await;
+        listener.await;
       }
-    };
+    }
+    .fuse();
+    let handler = handler.fuse();
+    pin_mut!(wait_for_close, handler);
 
-    tokio::select! {
-      biased;
+    // Biased: close wins over the handler.
+    select_biased! {
       () = wait_for_close => false,
       () = handler => !self.closed.load(Ordering::Relaxed),
     }
@@ -299,6 +308,8 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
   /// Uses try_recv to process all pending messages without blocking.
   async fn drain_buffered_events(&mut self) {
     loop {
+      // Buffered messages are still handed out after close, so drain until
+      // `Err(_)` — which covers both "empty but open" and "closed and drained".
       match self.rx.try_recv() {
         Ok(WatcherMsg::FileChanges { task_index, changes }) => {
           self.process_file_changes(task_index, changes).await;
@@ -341,21 +352,25 @@ impl<H: WatcherEventHandler> WatchCoordinator<H> {
 mod tests {
   use super::*;
   use crate::task_fs_event_handler::TaskFsEventHandler;
+  use crate::watcher::WatcherConfig;
   use rolldown::{BundlerConfig, BundlerOptions};
   use rolldown_common::{OnInvalidate, WatchOption};
   use rolldown_fs_watcher::FsWatcherConfig;
+  use rolldown_workspace::TestDir;
   use std::sync::Mutex;
   use std::sync::atomic::AtomicUsize;
 
-  #[tokio::test]
-  async fn queued_message_wins_over_due_deadline() {
-    let (tx, mut rx) = mpsc::unbounded_channel();
-    // An unbiased select would pick either ready branch at random; repeat so such a pick shows.
-    for _ in 0..64 {
-      tx.send(WatcherMsg::Close).unwrap();
-      let result = wait_for_debounce_input(&mut rx, std::future::ready(())).await;
-      assert!(matches!(result, DebounceWaitResult::Message(Some(WatcherMsg::Close))));
-    }
+  #[test]
+  fn queued_message_wins_over_due_deadline() {
+    futures::executor::block_on(async {
+      let (tx, mut rx) = mpsc::unbounded();
+      // An unbiased select would pick either ready branch at random; repeat so such a pick shows.
+      for _ in 0..64 {
+        tx.unbounded_send(WatcherMsg::Close).unwrap();
+        let result = wait_for_debounce_input(&mut rx, std::future::ready(())).await;
+        assert!(matches!(result, DebounceWaitResult::Message(Some(WatcherMsg::Close))));
+      }
+    });
   }
 
   /// After the initial build, queues three `FileChanges` messages for the entry back to back,
@@ -386,11 +401,11 @@ mod tests {
           for _ in 0..3 {
             let changes = vec![FileChangeEvent::new(entry.clone(), WatcherChangeKind::Update)];
             let task_index = WatchTaskIdx::from_usize(0);
-            self.tx.send(WatcherMsg::FileChanges { task_index, changes }).unwrap();
+            self.tx.unbounded_send(WatcherMsg::FileChanges { task_index, changes }).unwrap();
           }
         }
         WatchEvent::End if self.rebuilt() => {
-          self.tx.send(WatcherMsg::Close).unwrap();
+          self.tx.unbounded_send(WatcherMsg::Close).unwrap();
         }
         WatchEvent::Error(data) => panic!("build failed: {data:?}"),
         _ => {}
@@ -406,13 +421,10 @@ mod tests {
     async fn on_close(&self) {}
   }
 
-  #[tokio::test]
-  async fn zero_build_delay_builds_queued_changes_together() {
-    let dir =
-      std::env::temp_dir().join(format!("rolldown-watcher-zero-delay-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-    let entry = dir.join("main.js");
+  #[test]
+  fn zero_build_delay_builds_queued_changes_together() {
+    let dir = TestDir::new("rolldown-watcher-zero-delay");
+    let entry = dir.path().join("main.js");
     std::fs::write(&entry, "export const value = 1;\n").unwrap();
 
     // Each message the coordinator takes calls `onInvalidate` once.
@@ -423,7 +435,7 @@ mod tests {
     }));
     let bundler_config = BundlerConfig::new(
       BundlerOptions {
-        cwd: Some(dir.clone()),
+        cwd: Some(dir.path().to_path_buf()),
         input: Some(vec![entry.to_string_lossy().into_owned().into()]),
         watch: Some(WatchOption { on_invalidate: Some(on_invalidate), ..Default::default() }),
         ..Default::default()
@@ -431,7 +443,7 @@ mod tests {
       vec![],
     );
 
-    let (tx, rx) = mpsc::unbounded_channel();
+    let (tx, rx) = mpsc::unbounded();
     let closed = Arc::new(AtomicBool::new(false));
     // Fs watching is off: only the messages the recorder queues reach the coordinator.
     let task = WatchTask::new(
@@ -452,11 +464,10 @@ mod tests {
       tasks,
       &WatcherConfig { debounce: Some(Duration::ZERO) },
       closed,
-      Arc::new(Notify::new()),
+      Arc::new(Event::new()),
     );
-    coordinator.run().await;
+    rolldown_utils::futures::block_on(coordinator.run());
 
-    std::fs::remove_dir_all(&dir).unwrap();
     // One rebuild, started only after all three messages were taken.
     assert_eq!(*taken_at_restart.lock().unwrap(), vec![3]);
   }

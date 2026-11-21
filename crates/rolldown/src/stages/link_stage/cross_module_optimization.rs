@@ -631,6 +631,9 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
       return;
     }
     walk_js::walk_export_default_declaration(self, it);
+    if !self.immutable_ctx.config.inline_const_optimization {
+      return;
+    }
     let Some(expr) = it.declaration.as_expression() else {
       return;
     };

@@ -2,6 +2,7 @@ mod cjs_export_analyzer;
 pub mod const_eval;
 pub mod dynamic_import;
 mod early_var_reads;
+mod facade_reserve;
 mod hmr;
 pub mod impl_visit;
 mod import_analyzer;
@@ -9,6 +10,8 @@ mod independent_init;
 mod new_url;
 pub mod stmt_eval_analyzer;
 mod top_level_import_read;
+
+pub use facade_reserve::facade_symbol_reserve;
 
 use arcstr::ArcStr;
 use const_eval::{ConstEvalCtx, eval_can_assign, try_extract_const_literal};
@@ -209,6 +212,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   pub fn new(
     idx: ModuleIdx,
     scoping: Scoping,
+    facade_symbol_reserve: u32,
     repr_name: &'me str,
     module_type: ModuleDefFormat,
     source: &'me ArcStr,
@@ -219,7 +223,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     flat_options: FlatOptions,
   ) -> Self {
     let root_scope_id = scoping.root_scope_id();
-    let mut symbol_ref_db = SymbolRefDbForModule::new(scoping, idx, root_scope_id);
+    let mut symbol_ref_db =
+      SymbolRefDbForModule::new(scoping, idx, root_scope_id, facade_symbol_reserve);
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
     let legitimized_repr_name = legitimize_identifier_name(repr_name);
     let default_export_ref = symbol_ref_db

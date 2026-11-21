@@ -107,14 +107,21 @@ impl Default for SymbolRefDbForModule {
 }
 
 impl SymbolRefDbForModule {
-  pub fn new(scoping: Scoping, owner_idx: ModuleIdx, top_level_scope_id: ScopeId) -> Self {
+  /// `facade_symbol_reserve` is the room for facade symbols that `scoping` was built with.
+  /// `classic_data` gets the same room, so that facade symbols do not grow it.
+  pub fn new(
+    scoping: Scoping,
+    owner_idx: ModuleIdx,
+    top_level_scope_id: ScopeId,
+    facade_symbol_reserve: u32,
+  ) -> Self {
+    let len = scoping.symbols_len();
+    let mut classic_data = Vec::with_capacity(len + facade_symbol_reserve as usize);
+    classic_data.resize(len, SymbolRefDataClassic::default());
     Self {
       owner_idx,
       root_scope_id: top_level_scope_id,
-      classic_data: IndexVec::from_vec(vec![
-        SymbolRefDataClassic::default();
-        scoping.symbols_len()
-      ]),
+      classic_data: IndexVec::from_vec(classic_data),
       ast_scopes: AstScopes::new(scoping),
       flags: FxHashMap::default(),
       reusable_link_facades: FxHashMap::default(),
@@ -487,7 +494,7 @@ mod tests {
     let mut db = SymbolRefDb::new();
     db.store_local_db(
       module(),
-      SymbolRefDbForModule::new(Scoping::default(), module(), ScopeId::new(0)),
+      SymbolRefDbForModule::new(Scoping::default(), module(), ScopeId::new(0), 0),
     );
     db
   }

@@ -107,8 +107,9 @@ impl Default for SymbolRefDbForModule {
 }
 
 impl SymbolRefDbForModule {
-  /// `facade_symbol_reserve` is the room for facade symbols that `scoping` was built with.
-  /// `classic_data` gets the same room, so that facade symbols do not grow it.
+  /// `facade_symbol_reserve` is the extra symbol capacity that the semantic build of `scoping`
+  /// requested for facade symbols. `classic_data` gets the same extra capacity, so that facade
+  /// symbols do not grow it.
   pub fn new(
     scoping: Scoping,
     owner_idx: ModuleIdx,

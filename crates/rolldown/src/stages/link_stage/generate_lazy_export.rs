@@ -251,7 +251,8 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   }
   let original_symbol_ref_db = std::mem::take(link_staged.symbols.local_db_mut(module_idx));
   // recreate semantic data
-  let facade_symbol_reserve = facade_symbol_reserve(ecma_ast.program());
+  let facade_symbol_reserve =
+    facade_symbol_reserve(ecma_ast.program(), module.hmr_hot_ref.is_some());
   #[expect(clippy::cast_possible_truncation)]
   let scoping = ecma_ast.make_symbol_table_and_scope_tree_with_semantic_builder(
     SemanticBuilder::new().with_stats(Stats {

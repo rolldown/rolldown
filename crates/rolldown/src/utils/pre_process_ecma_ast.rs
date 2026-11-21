@@ -262,7 +262,8 @@ impl PreProcessEcmaAst {
         pre_processor.visit_program(program);
         let defer_spans = pre_processor.take_defer_spans();
         // The scanner uses this scoping and adds facade symbols to it.
-        let facade_symbol_reserve = facade_symbol_reserve(program);
+        let facade_symbol_reserve =
+          facade_symbol_reserve(program, bundle_options.is_dev_mode_enabled());
         (self.build_scoping(program, facade_symbol_reserve), defer_spans, facade_symbol_reserve)
       });
 

@@ -1,8 +1,8 @@
 use oxc::ast::ast::{Program, Statement};
 
 /// Facade symbols that a module can get and that its top-level statements do not show: those of
-/// `import()`, `require()`, `new URL()`, `exports.x =`, and the HMR `<name>_hot`, and those that
-/// the link stage adds (for example `require_<name>` and `init_<name>`).
+/// `import()`, `require()`, `new URL()`, `exports.x =`, and `import.meta.hot.accept()`, and those
+/// that the link stage adds (for example `require_<name>` and `init_<name>`).
 const UNCOUNTED_FACADE_SYMBOLS: u32 = 1;
 
 /// The number of facade symbols to reserve room for when you build the `Scoping` that the
@@ -16,15 +16,16 @@ const UNCOUNTED_FACADE_SYMBOLS: u32 = 1;
 ///
 /// This function counts the facade symbols of the top-level statements, in the same way as the
 /// scanner creates them:
-/// - two for every module, `<name>_default` and `<name>_exports` (`AstScanner::new`);
+/// - two for every module, `<name>_default` and `<name>_exports`, and one more in dev mode,
+///   `<name>_hot` (`AstScanner::new`);
 /// - one for each `import`, `export ... from`, and `export *` statement (`add_import_record`);
 /// - one for each specifier of `export { ... } from` (`add_re_export`) and for
 ///   `export * as ns from` (`add_star_re_export`).
 ///
 /// It adds [`UNCOUNTED_FACADE_SYMBOLS`] for the others. It does not visit nested code, so it
 /// costs one pass over the top-level statements.
-pub fn facade_symbol_reserve(program: &Program<'_>) -> u32 {
-  let mut count = 2 + UNCOUNTED_FACADE_SYMBOLS;
+pub fn facade_symbol_reserve(program: &Program<'_>, is_dev_mode: bool) -> u32 {
+  let mut count = 2 + u32::from(is_dev_mode) + UNCOUNTED_FACADE_SYMBOLS;
   for stmt in &program.body {
     count += match stmt {
       Statement::ImportDeclaration(_) => 1,

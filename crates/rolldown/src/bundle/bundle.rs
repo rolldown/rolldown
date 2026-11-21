@@ -358,7 +358,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       })?;
     }
 
-    let write = |chunk: &Output, dest: &Path| {
+    let write = |(chunk, dest): &(&Output, PathBuf)| {
       self
         .fs
         .write(dest, chunk.content_as_bytes())
@@ -367,37 +367,25 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     let mut seen = FxHashSet::with_capacity(destinations.len());
     // `foo.js` and `Foo.js` are one file on case-insensitive file systems, and `a/../foo.js` is
     // `foo.js` on any file system.
-    if destinations.iter().all(|(_, dest)| {
-      seen.insert(PathBuf::from(dest.normalize().to_string_lossy().to_lowercase()))
-    }) {
+    if cfg!(not(target_family = "wasm"))
+      && destinations
+        .iter()
+        .all(|(_, dest)| seen.insert(dest.normalize().to_string_lossy().to_lowercase()))
+    {
       // Large builds emit tens of thousands of files; writing them one at a time leaves the
       // output stage bound by per-file syscall latency. Distinct paths are independent, so write
       // them in parallel and report the first failure in output order to keep errors stable.
-      #[cfg(not(target_family = "wasm"))]
-      let results = {
-        let write_destinations = |first| {
-          destinations
-            .iter()
-            .skip(first)
-            .step_by(2)
-            .map(|(chunk, dest)| write(chunk, dest))
-            .collect::<Vec<_>>()
-        };
-        std::thread::scope(|scope| {
-          let odd = scope.spawn(|| write_destinations(1));
-          let even = write_destinations(0);
-          itertools::interleave(even, odd.join().expect("output writer thread panicked"))
-        })
-      };
-      #[cfg(target_family = "wasm")]
-      let results =
-        destinations.iter().map(|(chunk, dest)| write(chunk, dest)).collect::<Vec<_>>().into_iter();
-      results.collect::<anyhow::Result<()>>()?;
+      std::thread::scope(|scope| {
+        let odd =
+          scope.spawn(|| destinations.iter().skip(1).step_by(2).map(write).collect::<Vec<_>>());
+        let even = destinations.iter().step_by(2).map(write).collect::<Vec<_>>();
+        itertools::interleave(even, odd.join().expect("output writer thread panicked"))
+          .collect::<anyhow::Result<()>>()
+      })?;
     } else {
-      // Several outputs target the same path: keep sequential last-writer-wins semantics.
-      for (chunk, dest) in &destinations {
-        write(chunk, dest)?;
-      }
+      // Write in order, so the last output that names a file wins.
+      // WebAssembly always takes this path.
+      destinations.iter().try_for_each(write)?;
     }
 
     self

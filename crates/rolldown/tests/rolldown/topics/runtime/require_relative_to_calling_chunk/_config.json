@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      { "name": "first", "import": "./first.cjs" },
+      { "name": "second", "import": "./second.cjs" }
+    ],
+    "format": "esm",
+    "platform": "node",
+    "chunkFilenames": "chunks/[name].js",
+    "external": ["./external.cjs"]
+  },
+  "snapshot": false
+}

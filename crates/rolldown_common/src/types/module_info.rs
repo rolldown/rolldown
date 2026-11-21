@@ -4,7 +4,7 @@ use rolldown_utils::indexmap::FxIndexSet;
 
 use crate::{ExportsKind, ModuleId, side_effects::HookSideEffects};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ModuleInfo {
   pub code: Option<ArcStr>,
   pub id: ModuleId,

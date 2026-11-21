@@ -226,6 +226,28 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     expr
   }
 
+  fn finalized_require_expr(&self) -> ast::Expression<'ast> {
+    let require = self.finalized_expr_for_runtime_symbol("__require");
+    let Some((_, module)) = &self.ctx.chunk.node_require_factory else {
+      return require;
+    };
+    let module = module.get_or_init(|| {
+      self.ctx.modules[self.ctx.runtime.id()]
+        .as_normal()
+        .expect("runtime must be a normal module")
+        .import_records
+        .iter()
+        .filter(|record| record.module_request.as_str() == "node:module")
+        .map(|record| record.state.into_resolved_module())
+        .find(|&module| self.ctx.modules[module].is_external())
+    });
+    if module.is_some() {
+      ast::Expression::new_call_expression_with_pure(SPAN, require, None, [], false, true, self)
+    } else {
+      require
+    }
+  }
+
   /// Build the `init_x()` call expression for a wrapped (`WrapKind::Esm`) importee.
   ///
   /// - `mark_pure_if_noop`: annotate the call `/* @__PURE__ */` when the importee's init is a
@@ -1761,8 +1783,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let module_idx = rec.resolved_module?;
         // use `__require` instead of `require`
         if rec.meta.contains(ImportRecordMeta::CallRuntimeRequire) {
-          *call_expr.callee.get_inner_expression_mut() =
-            self.finalized_expr_for_runtime_symbol("__require");
+          *call_expr.callee.get_inner_expression_mut() = self.finalized_require_expr();
         }
         let rewrite_ast = match &self.ctx.modules[module_idx] {
           Module::Normal(importee) => {
@@ -2984,10 +3005,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // (init_xxx(), namespace_exports) — the `esm_init_target` view covers both interop
         // `WrapKind::Esm` wrappers and execution-order wrappers, so a merged dynamic entry
         // carries its trigger inline instead of resurrecting the facade chunk.
-        //
-        // This shape never awaits the init. A TLA-tainted entry cannot reach it today
-        // because facade elimination is globally disabled when any module is TLA-tainted
-        // (`allow_merge_common_chunks` in code_splitting.rs); pin that coupling here.
         debug_assert!(!target.tla_tainted);
         let wrapper_call_expr = self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, false);
 

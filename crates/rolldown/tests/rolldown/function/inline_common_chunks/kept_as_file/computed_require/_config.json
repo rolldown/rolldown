@@ -1,0 +1,25 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "first/entry",
+        "import": "./first.mjs"
+      },
+      {
+        "name": "second/entry",
+        "import": "./second.mjs"
+      }
+    ],
+    "platform": "node",
+    "format": "esm",
+    "entryFilenames": "[name].mjs",
+    "chunkFilenames": "chunks/[name].mjs",
+    "preserveEntrySignatures": "false",
+    "codeSplitting": {
+      "experimentalInlineCommonChunks": {
+        "maxSize": 4096
+      }
+    }
+  },
+  "snapshot": false
+}

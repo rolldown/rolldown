@@ -1,0 +1,6 @@
+{
+  "_comment": "`lib/index.js` is a side-effect-free barrel with code of its own (`all`) and a dynamic entry. `r1.js` and `r2.js` are dynamic entries that each read one re-exported binding through it, so neither loads the barrel. Its chunk must not absorb the module each shares with it, or `r1.js` statically loads `lib/b.js` and `r2.js` loads `lib/a.js`.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }]
+  }
+}

@@ -319,25 +319,30 @@ impl PluginDriver {
         plugin_id: plugin_idx.raw(),
         call_id: call_id.clone().unwrap_or_default(),
       });
-      let result = plugin
-        .call_transform(
-          Arc::new(TransformPluginContext::new(
-            ctx.clone(),
-            plugin_sourcemap_chain.weak_ref(),
-            code_arc_ref.clone(),
-            id.into(),
-            module_idx,
-            plugin_idx,
-            magic_string_tx.clone(),
-          )),
-          &args,
-        )
-        .await;
+      let transform_ctx = Arc::new(TransformPluginContext::new(
+        ctx.clone(),
+        plugin_sourcemap_chain.weak_ref(),
+        code_arc_ref.clone(),
+        id.into(),
+        module_idx,
+        magic_string_tx.is_some(),
+      ));
+      let result = plugin.call_transform(Arc::clone(&transform_ctx), &args).await;
+      // Close the slot right after the hook and before `?`, so that a result, `null` and
+      // an error all release the map. From here, the context keeps no reference to it, and
+      // a later `sendMagicString` through a context that a plugin keeps fails.
+      let pending_sourcemap = transform_ctx.take_pending_sourcemap();
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
         let map_was_omitted = matches!(r.map, crate::HookTransformOutputMap::Omitted);
         let map_was_null = matches!(r.map, crate::HookTransformOutputMap::Null);
-        if let Some(map) =
+        // The hook returned a native MagicString and no `map` (`bindingifyTransformResult`
+        // sends the MagicString only then). Push its map here, in plugin order, so a later
+        // hook's `getCombinedSourcemap` sees it. If a plugin calls `sendMagicString` itself,
+        // the sent map takes precedence over `r.map`.
+        if let Some(pending) = pending_sourcemap.filter(|_| r.code.is_some()) {
+          original_sourcemap_chain.push(SourcemapChainElement::MagicString((plugin_idx, pending)));
+        } else if let Some(map) =
           r.map.into_sourcemap().map(|map| normalize_transform_sourcemap(map, id, &code))
         {
           original_sourcemap_chain.push(SourcemapChainElement::Transform((plugin_idx, map)));
@@ -382,6 +387,19 @@ impl PluginDriver {
       });
     }
     *sourcemap_chain = plugin_sourcemap_chain.into_inner();
+    if let Some(tx) = &magic_string_tx {
+      // Only now can no hook generate these maps on the JS thread anymore, so
+      // the worker can take them without either thread waiting for the other.
+      // See `PendingSourcemap`.
+      for element in sourcemap_chain.iter() {
+        if let SourcemapChainElement::MagicString((_, pending)) = element {
+          if !pending.is_generated() {
+            // Sending only fails if the worker panicked, which joining it reports.
+            let _ = tx.send(rolldown_common::SourceMapGenMsg::MagicString(Arc::clone(pending)));
+          }
+        }
+      }
+    }
     Ok(code)
   }
 

@@ -2,6 +2,7 @@ use core::cmp::PartialEq;
 use std::{
   borrow::Cow,
   path::{Path, PathBuf},
+  sync::OnceLock,
 };
 
 use crate::{
@@ -81,6 +82,7 @@ pub struct Chunk {
   /// For mixed-mode externals: maps external `namespace_ref` to the node-mode binding name.
   /// Only populated when an external has both ESM and non-ESM importers needing interop.
   pub node_mode_external_ns_names: FxHashMap<SymbolRef, CompactStr>,
+  pub node_require_factory: Option<(CompactStr, OnceLock<Option<ModuleIdx>>)>,
   // Sorted by Chunk#exec_order of the imported chunks
   pub cross_chunk_imports: Vec<ChunkIdx>,
   pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,
@@ -106,9 +108,10 @@ pub struct Chunk {
   /// related to [`crate::types::import_record::ImportRecordMeta::EntryLevelExternal`]
   pub entry_level_external_module_idx: Vec<ModuleIdx>,
   /// The chunks of `cross_chunk_imports` and the external modules of
-  /// `direct_imports_from_external_modules` and `entry_level_external_module_idx`, in the order
-  /// in which the chunk imports them, which is also the order of `chunk.imports`. The renderer
-  /// writes an entry-level `export *` from an external module after the imports.
+  /// `direct_imports_from_external_modules`, `entry_level_external_module_idx`, and the local
+  /// require factory, in the order in which the chunk imports them, which is also the order of
+  /// `chunk.imports`. The renderer writes an entry-level `export *` from an external module after
+  /// the imports.
   pub static_imports: Vec<StaticImport>,
   pub insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>>,
   pub remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>,
@@ -117,6 +120,11 @@ pub struct Chunk {
 }
 
 impl Chunk {
+  pub fn node_require_import(&self) -> Option<(ModuleIdx, &str)> {
+    let (name, module) = self.node_require_factory.as_ref()?;
+    Some((module.get().copied().flatten()?, name.as_str()))
+  }
+
   pub fn new(
     name: Option<ArcStr>,
     file_name: Option<ArcStr>,

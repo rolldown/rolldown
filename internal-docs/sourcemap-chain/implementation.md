@@ -9,7 +9,8 @@ Each module keeps a `sourcemap_chain` of the maps that the `load` and `transform
 `SourcemapChainElement` (`crates/rolldown_common/src/types/sourcemap_chain_element.rs`):
 
 - `Load(map)`: the `load` hook map (`crates/rolldown/src/utils/load_source.rs`). It is always first.
-- `Transform((plugin_idx, map))`: a `transform` hook map (`PluginDriver::transform` in `crates/rolldown_plugin/src/plugin_driver/build_hooks.rs`), or a native MagicString map (`create_sourcemap_channel` in `crates/rolldown/src/stages/scan_stage.rs`).
+- `Transform((plugin_idx, map))`: a `transform` hook map (`PluginDriver::transform` in `crates/rolldown_plugin/src/plugin_driver/build_hooks.rs`).
+- `MagicString((plugin_idx, pending))`: the map of a native MagicString that a `transform` hook returned without a `map`, when `experimental.nativeMagicString` and source maps are on. `PluginDriver::transform` takes it from the transform context right after the hook and adds it in plugin order. Thus a context that a plugin keeps does not keep the map alive. `PendingSourcemap` generates the map on first use: in `this.getCombinedSourcemap()` of a later hook, or else on the sourcemap worker thread (`create_sourcemap_channel` in `crates/rolldown/src/stages/scan_stage.rs`) after the module's last `transform` hook. The scan stage joins the worker, so every map exists before render.
 - `Omitted`: the hook returned code without a map, even if the code did not change. It collapses as an empty map, so the module map has no mappings, and the build warns `SOURCEMAP_BROKEN`.
 - `Null`: the hook changed the code and returned `map: null`. Positions pass through unchanged. If no real map is in the chain, its pre-transform code becomes the content.
 
@@ -18,6 +19,8 @@ Each module keeps a `sourcemap_chain` of the maps that the `load` and `transform
 `collapse_sourcemaps_traced` (`crates/rolldown_sourcemap/src/lib.rs`) takes `sources` and `sourcesContent` from the first map only. It traces each token back through the earlier maps by line and column, and it ignores the source id of each later map. So only the first map's `sources` and `sourcesContent` ship. Names can come from a later map too: each token takes its name from the earliest map that has a name for it, so a later map's name stays when the earlier maps have none. As Rollup's `traceMappings()` does, it keeps only the sources and names that a traced token references.
 
 Before the collapse, `resolve_sources_against_module` (`crates/rolldown_sourcemap/src/resolve_sources.rs`) resolves the relative `sources` of the first map against the module directory and `sourceRoot`. The chain itself does not change, because `this.getCombinedSourcemap()` reads it.
+
+A saved transform context reads the chain through a weak reference. The driver takes the chain when a transform hook returns a result other than `null`, and after the module's last transform hook. Calls to `getCombinedSourcemap()` through a context whose reference has expired throw an error.
 
 ## Normalization at the hook boundary
 

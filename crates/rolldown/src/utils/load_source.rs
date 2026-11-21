@@ -5,7 +5,7 @@ use rolldown_common::{
   StrOrBytes, side_effects::HookSideEffects,
 };
 use rolldown_fs::FileSystem;
-use rolldown_plugin::{HookLoadArgs, PluginDriver};
+use rolldown_plugin::{HookLoadArgs, PluginDriver, SharedModuleCacheRecorder};
 use rolldown_utils::url::clean_url;
 use rustc_hash::FxHashMap;
 
@@ -20,19 +20,26 @@ pub async fn load_source<Fs: FileSystem + Clone + 'static>(
   asserted_module_type: Option<&ModuleType>,
   is_read_from_disk: &mut bool,
   module_idx: ModuleIdx,
+  cache_recorder: Option<&SharedModuleCacheRecorder>,
+  // The contents of the module file, when the persistent cache already read them for key 1.
+  // Using them makes key 1 match what is loaded, also if the file changes during the build.
+  preloaded: Option<Vec<u8>>,
 ) -> anyhow::Result<(StrOrBytes, ModuleType)> {
   let raw_id = resolved_id.id.raw_id();
   let (maybe_source, mut maybe_module_type) = if resolved_id.id.is_empty_module() {
     (Some(String::new()), Some(ModuleType::Empty))
   } else {
     plugin_driver
-      .load(&HookLoadArgs {
-        id: &resolved_id.id,
-        raw_id,
-        attributes: &resolved_id.attributes,
-        module_idx,
-        asserted_module_type,
-      })
+      .load(
+        &HookLoadArgs {
+          id: &resolved_id.id,
+          raw_id,
+          attributes: &resolved_id.attributes,
+          module_idx,
+          asserted_module_type,
+        },
+        cache_recorder,
+      )
       .await?
       .map(|load_hook_output| {
         sourcemap_chain.extend(load_hook_output.map.map(SourcemapChainElement::Load));
@@ -45,15 +52,14 @@ pub async fn load_source<Fs: FileSystem + Clone + 'static>(
       .unwrap_or_default()
   };
 
-  // A plugin can load a `new URL()` target as code; the URL still needs its file.
-  // See internal-docs/plugin-asset-module/implementation.md
-  if matches!(asserted_module_type, Some(ModuleType::Asset))
-    && resolved_id.id.is_path()
-    && fs.exists(Path::new(clean_url(resolved_id.id.raw_id())))
-    && plugin_driver.file_emitter.file_ref_for_module(&resolved_id.id).is_none()
-  {
-    emit_new_url_asset(plugin_driver, options, &resolved_id.id, fs.clone()).await?;
-  }
+  emit_new_url_asset_if_missing(
+    plugin_driver,
+    options,
+    resolved_id,
+    asserted_module_type,
+    fs.clone(),
+  )
+  .await?;
   // A `type` attribute with a built-in meaning beats the file extension, but not the plugin.
   let attributes_module_type = resolved_id.attributes.module_type();
   if maybe_module_type.is_none() {
@@ -72,39 +78,13 @@ pub async fn load_source<Fs: FileSystem + Clone + 'static>(
           // - Unknown module type,
           // - No loader to load corresponding module
           // - User don't specify moduleTypeMapping, we treated it as JS
-          Ok((
-            StrOrBytes::Str({
-              #[cfg(not(target_family = "wasm"))]
-              {
-                let raw_id = raw_id.to_owned();
-                tokio::runtime::Handle::current()
-                  .spawn_blocking(move || fs.read_to_string(Path::new(&raw_id)))
-                  .await??
-              }
-              #[cfg(target_family = "wasm")]
-              {
-                fs.read_to_string(Path::new(raw_id))?
-              }
-            }),
-            ModuleType::Js,
-          ))
+          Ok((StrOrBytes::Str(read_string(raw_id, fs, preloaded).await?), ModuleType::Js))
         }
         (source, Some(guessed)) => match &guessed {
           ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => Ok((
-            StrOrBytes::Bytes({
-              match source {
-                Some(s) => s.into_bytes(),
-                None => {
-                  if cfg!(target_family = "wasm") {
-                    fs.read(Path::new(raw_id))?
-                  } else {
-                    let raw_id = raw_id.to_owned();
-                    tokio::runtime::Handle::current()
-                      .spawn_blocking(move || fs.read(Path::new(&raw_id)))
-                      .await??
-                  }
-                }
-              }
+            StrOrBytes::Bytes(match source {
+              Some(s) => s.into_bytes(),
+              None => read_bytes(raw_id, fs, preloaded).await?,
             }),
             guessed,
           )),
@@ -127,22 +107,9 @@ pub async fn load_source<Fs: FileSystem + Clone + 'static>(
           | ModuleType::Empty
           | ModuleType::Css
           | ModuleType::Custom(_) => Ok((
-            StrOrBytes::Str({
-              if let Some(s) = source {
-                s
-              } else {
-                #[cfg(not(target_family = "wasm"))]
-                {
-                  let raw_id = raw_id.to_owned();
-                  tokio::runtime::Handle::current()
-                    .spawn_blocking(move || fs.read_to_string(Path::new(&raw_id)))
-                    .await??
-                }
-                #[cfg(target_family = "wasm")]
-                {
-                  fs.read_to_string(Path::new(raw_id))?
-                }
-              }
+            StrOrBytes::Str(match source {
+              Some(s) => s,
+              None => read_string(raw_id, fs, preloaded).await?,
             }),
             guessed,
           )),
@@ -152,9 +119,28 @@ pub async fn load_source<Fs: FileSystem + Clone + 'static>(
     }
     (None, Some(ty)) => {
       assert!(asserted_module_type.is_some() || attributes_module_type.is_some(), "Invalid state");
-      Ok((read_file_by_module_type(Path::new(raw_id), &ty, fs).await?, ty))
+      Ok((read_file_by_module_type(Path::new(raw_id), &ty, fs, preloaded).await?, ty))
     }
   }
+}
+
+/// A plugin can load a `new URL()` target as code; the URL still needs its file.
+/// See internal-docs/plugin-asset-module/implementation.md
+pub async fn emit_new_url_asset_if_missing<Fs: FileSystem + 'static>(
+  plugin_driver: &PluginDriver,
+  options: &NormalizedBundlerOptions,
+  resolved_id: &ResolvedId,
+  asserted_module_type: Option<&ModuleType>,
+  fs: Fs,
+) -> anyhow::Result<()> {
+  if matches!(asserted_module_type, Some(ModuleType::Asset))
+    && resolved_id.id.is_path()
+    && fs.exists(Path::new(clean_url(resolved_id.id.raw_id())))
+    && plugin_driver.file_emitter.file_ref_for_module(&resolved_id.id).is_none()
+  {
+    emit_new_url_asset(plugin_driver, options, &resolved_id.id, fs).await?;
+  }
+  Ok(())
 }
 
 /// Emit `id` as an asset and associate it with the module, as the builtin asset-module plugin
@@ -172,7 +158,7 @@ async fn emit_new_url_asset<Fs: FileSystem + 'static>(
   let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("asset").to_string();
   let original_file_name =
     path.strip_prefix(&options.cwd).unwrap_or(&path).to_string_lossy().into_owned();
-  let source = read_file_by_module_type(&path, &ModuleType::Binary, fs).await?;
+  let source = read_file_by_module_type(&path, &ModuleType::Binary, fs, None).await?;
   let file = EmittedAsset {
     name: Some(file_name),
     original_file_name: Some(original_file_name),
@@ -201,11 +187,64 @@ fn get_module_loader_from_file_extension<S: AsRef<str>>(
   None
 }
 
+async fn read_string<Fs: FileSystem + 'static>(
+  raw_id: &str,
+  fs: Fs,
+  preloaded: Option<Vec<u8>>,
+) -> anyhow::Result<String> {
+  if let Some(bytes) = preloaded {
+    return String::from_utf8(bytes).map_err(|_| {
+      std::io::Error::new(std::io::ErrorKind::InvalidData, "stream did not contain valid UTF-8")
+        .into()
+    });
+  }
+  #[cfg(not(target_family = "wasm"))]
+  {
+    let raw_id = raw_id.to_owned();
+    Ok(
+      tokio::runtime::Handle::current()
+        .spawn_blocking(move || fs.read_to_string(Path::new(&raw_id)))
+        .await??,
+    )
+  }
+  #[cfg(target_family = "wasm")]
+  {
+    Ok(fs.read_to_string(Path::new(raw_id))?)
+  }
+}
+
+async fn read_bytes<Fs: FileSystem + 'static>(
+  raw_id: &str,
+  fs: Fs,
+  preloaded: Option<Vec<u8>>,
+) -> anyhow::Result<Vec<u8>> {
+  if let Some(bytes) = preloaded {
+    return Ok(bytes);
+  }
+  if cfg!(target_family = "wasm") {
+    Ok(fs.read(Path::new(raw_id))?)
+  } else {
+    let raw_id = raw_id.to_owned();
+    Ok(
+      tokio::runtime::Handle::current()
+        .spawn_blocking(move || fs.read(Path::new(&raw_id)))
+        .await??,
+    )
+  }
+}
+
 async fn read_file_by_module_type<Fs: FileSystem + 'static>(
   path: impl AsRef<Path>,
   ty: &ModuleType,
   fs: Fs,
+  preloaded: Option<Vec<u8>>,
 ) -> anyhow::Result<StrOrBytes> {
+  if let Some(bytes) = preloaded.filter(|_| !matches!(ty, ModuleType::Asset)) {
+    return match ty {
+      ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl => Ok(StrOrBytes::Bytes(bytes)),
+      _ => Ok(StrOrBytes::Str(read_string("", fs, Some(bytes)).await?)),
+    };
+  }
   let path = path.as_ref().to_path_buf();
   match ty {
     ModuleType::Js

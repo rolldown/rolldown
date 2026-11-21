@@ -128,7 +128,10 @@ impl Plugin for ChunkImportMapPlugin {
   }
 
   fn render_chunk_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
-    Some(rolldown_plugin::PluginHookMeta { order: Some(rolldown_plugin::PluginOrder::PinPost) })
+    Some(rolldown_plugin::PluginHookMeta {
+      order: Some(rolldown_plugin::PluginOrder::PinPost),
+      cache: None,
+    })
   }
 
   async fn generate_bundle(
@@ -167,6 +170,9 @@ impl Plugin for ChunkImportMapPlugin {
   }
 
   fn generate_bundle_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
-    Some(rolldown_plugin::PluginHookMeta { order: Some(rolldown_plugin::PluginOrder::Pre) })
+    Some(rolldown_plugin::PluginHookMeta {
+      order: Some(rolldown_plugin::PluginOrder::Pre),
+      cache: None,
+    })
   }
 }

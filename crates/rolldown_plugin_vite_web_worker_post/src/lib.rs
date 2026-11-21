@@ -34,6 +34,6 @@ impl Plugin for ViteWebWorkerPostPlugin {
   }
 
   fn transform_ast_meta(&self) -> Option<PluginHookMeta> {
-    Some(PluginHookMeta { order: Some(PluginOrder::Post) })
+    Some(PluginHookMeta { order: Some(PluginOrder::Post), cache: None })
   }
 }

@@ -79,7 +79,10 @@ impl Plugin for OxcRuntimePlugin {
   }
 
   fn resolve_id_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
-    Some(rolldown_plugin::PluginHookMeta { order: Some(rolldown_plugin::PluginOrder::Pre) })
+    Some(rolldown_plugin::PluginHookMeta {
+      order: Some(rolldown_plugin::PluginOrder::Pre),
+      cache: Some(true),
+    })
   }
 
   async fn load(
@@ -94,6 +97,9 @@ impl Plugin for OxcRuntimePlugin {
   }
 
   fn load_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
-    Some(rolldown_plugin::PluginHookMeta { order: Some(rolldown_plugin::PluginOrder::Pre) })
+    Some(rolldown_plugin::PluginHookMeta {
+      order: Some(rolldown_plugin::PluginOrder::Pre),
+      cache: Some(true),
+    })
   }
 }

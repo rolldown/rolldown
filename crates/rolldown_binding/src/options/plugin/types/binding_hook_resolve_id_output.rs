@@ -1,6 +1,11 @@
+use std::sync::Arc;
+
+use rolldown_common::JsModuleMeta;
+
 use super::{
   binding_hook_side_effects::BindingHookSideEffects,
   binding_import_attributes::{BindingImportAttributes, from_binding_import_attributes},
+  binding_module_meta_entry::BindingModuleMetaEntry,
   binding_resolved_external::BindingResolvedExternal,
 };
 
@@ -25,6 +30,8 @@ pub struct BindingHookResolveIdOutput {
   pub attributes: Option<BindingImportAttributes>,
   /// @internal See `ResolvedId::module_options_receipt`.
   pub module_options_receipt: Option<u32>,
+  /// @internal The `meta` of this result, when the persistent cache records the hook call.
+  pub meta_entries: Option<Vec<BindingModuleMetaEntry>>,
 }
 
 impl TryFrom<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutput {
@@ -39,6 +46,9 @@ impl TryFrom<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutpu
       package_json_path: value.package_json_path,
       attributes: value.attributes.map(from_binding_import_attributes),
       module_options_receipt: value.module_options_receipt,
+      js_meta: value
+        .meta_entries
+        .map(|entries| Arc::new(JsModuleMeta::new(entries.into_iter().map(Into::into).collect()))),
     })
   }
 }

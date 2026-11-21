@@ -17,6 +17,7 @@ pub mod binding_hook_transform_output;
 pub mod binding_hot_update_args;
 pub mod binding_import_attributes;
 pub mod binding_limited_boolean;
+pub mod binding_module_meta_entry;
 pub mod binding_plugin_context_load_options;
 pub mod binding_plugin_context_resolve_options;
 pub mod binding_plugin_transform_extra_args;

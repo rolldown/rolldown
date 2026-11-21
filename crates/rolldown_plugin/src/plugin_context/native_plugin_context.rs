@@ -8,10 +8,10 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  FilenameTemplate, ImportAttributes, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleLoaderMsg,
-  PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
-  SharedModuleSideEffectsOverrides, SharedNormalizedBundlerOptions, WatchPath,
-  log_module_side_effects_write_after_build_end,
+  FilenameTemplate, ImportAttributes, JsModuleMetaEntry, LogLevel, LogWithoutPlugin,
+  ModuleDefFormat, ModuleLoaderMsg, PackageJson, PluginIdx, ResolvedId, SharedFileEmitter,
+  SharedModuleInfoDashMap, SharedModuleSideEffectsOverrides, SharedNormalizedBundlerOptions,
+  WatchPath, log_module_side_effects_write_after_build_end,
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_resolver::{ResolveError, Resolver};
@@ -23,6 +23,8 @@ use crate::{
   plugin_context::PluginContextMeta,
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped,
+    module_cache_recorder::{RecordedAction, SharedModuleCacheRecorder},
+    module_meta_store::SharedModuleMetaStore,
     plugin_context_resolve_options::PluginContextResolveOptions,
   },
   utils::resolve_id_check_external::resolve_id_check_external,
@@ -52,6 +54,12 @@ pub struct NativePluginContextImpl {
   // by manual calls of `PluginContext.resolve()`. We use a dedicated span here to distinguish whether the call is
   // - automatic (by rolldown) or manual (by `PluginContext.resolve()`)
   pub(crate) manual_resolve_span: tracing::Span,
+  /// Set on the contexts that the plugin driver forks for the hook calls of a module task
+  /// while the persistent cache records that task.
+  pub(crate) cache_recorder: Option<SharedModuleCacheRecorder>,
+  pub(crate) module_meta: SharedModuleMetaStore,
+  /// The number of this build in `module_meta`.
+  pub(crate) module_meta_build: u64,
 }
 
 impl NativePluginContextImpl {
@@ -64,6 +72,8 @@ impl NativePluginContextImpl {
     resolve_dependencies: bool,
     module_options_receipt: Option<u32>,
   ) -> anyhow::Result<()> {
+    // The loaded module is an input that the persistent cache does not track.
+    self.mark_not_cacheable(|| format!("plugin `{}` called `this.load`", self.plugin_name));
     // Clone out the sender under the lock, then drop the lock before awaiting.
     let sender = {
       let guard = self.tx.lock().ok().context("Failed to acquire PluginDriver tx lock")?.clone();
@@ -160,6 +170,7 @@ impl NativePluginContextImpl {
         &normalized_extra_options.attributes,
         importer_raw_id,
         &importer_attributes,
+        self.cache_recorder.as_ref(),
       )
       .await
     }
@@ -175,15 +186,107 @@ impl NativePluginContextImpl {
     rolldown_common::reported_module_side_effects(&self.options.treeshake, resolved_id).await
   }
 
+  pub fn mark_not_cacheable(&self, reason: impl FnOnce() -> String) {
+    if let Some(recorder) = &self.cache_recorder {
+      recorder.mark_not_cacheable(reason);
+    }
+  }
+
+  /// Records a log that a JavaScript plugin sent to `onLog` during this hook call.
+  pub fn record_js_log(&self, level: LogLevel, json: String) {
+    self.record(|| RecordedAction::JsLog { level, json });
+  }
+
+  /// Whether the persistent cache records this hook call, and the module task can still get a
+  /// saved result.
+  pub fn is_cache_recording(&self) -> bool {
+    self.cache_recorder.as_ref().is_some_and(|recorder| recorder.is_cacheable())
+  }
+
+  /// The module of the task that this hook call belongs to, when the persistent cache records
+  /// the call. In a nested `this.resolve` call, it is not the importer of the call.
+  pub fn cache_module_id(&self) -> Option<&ArcStr> {
+    self.cache_recorder.as_ref().map(|recorder| recorder.module_id())
+  }
+
+  /// Records the `meta` that a JavaScript `load` or `transform` hook returned for the module of
+  /// its task.
+  pub fn record_js_module_meta(&self, entries: Vec<JsModuleMetaEntry>) {
+    if let Some(recorder) = &self.cache_recorder {
+      recorder.record_js_meta(entries);
+    }
+  }
+
+  pub fn set_module_meta(&self, module_id: &str, key: &str, value: Arc<[u8]>) {
+    self.record(|| RecordedAction::RustModuleMeta {
+      module_id: module_id.into(),
+      key: key.into(),
+      value: Arc::clone(&value),
+    });
+    self.module_meta.set(module_id, key, value, self.module_meta_build);
+  }
+
+  pub fn get_module_meta(&self, module_id: &str, key: &str) -> Option<Arc<[u8]>> {
+    self.module_meta.get(module_id, key)
+  }
+
+  pub fn has_module_meta_in_this_build(&self, module_id: &str, key: &str) -> bool {
+    self.module_meta.has_key_in_build(module_id, key, self.module_meta_build)
+  }
+
+  pub fn module_ids_with_meta(&self, key: &str) -> Vec<ArcStr> {
+    self.module_meta.module_ids_with_key(key, self.module_meta_build)
+  }
+
+  pub fn count_modules_with_meta(&self, key: &str) -> usize {
+    self.module_meta.count_modules_with_key(key, self.module_meta_build)
+  }
+
+  fn record(&self, action: impl FnOnce() -> RecordedAction) {
+    if let Some(recorder) = &self.cache_recorder {
+      recorder.record(action());
+    }
+  }
+
+  /// A copy of `value` when this call is recorded. Emits are recorded only after they succeed:
+  /// a failed emit that the plugin catches must not fail the build when it is replayed.
+  fn copy_for_record<T: Clone>(&self, value: &T) -> Option<T> {
+    self.cache_recorder.as_ref().map(|_| value.clone())
+  }
+
   pub fn emit_chunk(&self, chunk: rolldown_common::EmittedChunk) -> anyhow::Result<ArcStr> {
-    self.file_emitter.emit_chunk(Arc::new(chunk))
+    let copy = self.copy_for_record(&chunk);
+    let reference_id = self.file_emitter.emit_chunk(Arc::new(chunk))?;
+    if let Some(chunk) = copy {
+      self.record(|| RecordedAction::EmitChunk(chunk));
+    }
+    Ok(reference_id)
   }
 
   pub fn emit_prebuilt_chunk(&self, chunk: rolldown_common::EmittedPrebuiltChunk) -> ArcStr {
+    self.record(|| RecordedAction::EmitPrebuiltChunk(chunk.clone()));
     self.file_emitter.emit_prebuilt_chunk(chunk)
   }
 
   pub fn emit_file(
+    &self,
+    file: rolldown_common::EmittedAsset,
+    fn_asset_filename: Option<String>,
+    fn_sanitized_file_name: Option<String>,
+  ) -> anyhow::Result<ArcStr> {
+    let copy = self.copy_for_record(&(
+      file.clone(),
+      fn_asset_filename.clone(),
+      fn_sanitized_file_name.clone(),
+    ));
+    let reference_id = self.emit_file_inner(file, fn_asset_filename, fn_sanitized_file_name)?;
+    if let Some((file, fn_asset_filename, fn_sanitized_file_name)) = copy {
+      self.record(|| RecordedAction::EmitFile { file, fn_asset_filename, fn_sanitized_file_name });
+    }
+    Ok(reference_id)
+  }
+
+  fn emit_file_inner(
     &self,
     file: rolldown_common::EmittedAsset,
     fn_asset_filename: Option<String>,
@@ -207,9 +310,14 @@ impl NativePluginContextImpl {
     &self,
     file: rolldown_common::EmittedAsset,
   ) -> anyhow::Result<ArcStr> {
+    let copy = self.copy_for_record(&file);
     let asset_filename = self.options.asset_filename_with_file(&file).await?;
     let sanitized_file_name = self.options.sanitize_file_name_with_file(&file).await?;
-    self.file_emitter.emit_file(file, asset_filename, sanitized_file_name)
+    let reference_id = self.file_emitter.emit_file(file, asset_filename, sanitized_file_name)?;
+    if let Some(file) = copy {
+      self.record(|| RecordedAction::EmitFileAsync(file));
+    }
+    Ok(reference_id)
   }
 
   pub fn get_file_name(&self, reference_id: &str) -> anyhow::Result<ArcStr> {
@@ -217,6 +325,10 @@ impl NativePluginContextImpl {
   }
 
   pub fn associate_module_with_file_ref(&self, module_id: &str, reference_id: &str) {
+    self.record(|| RecordedAction::AssociateModuleWithFileRef {
+      module_id: module_id.into(),
+      reference_id: reference_id.into(),
+    });
     self.file_emitter.associate_module_with_file_ref(module_id, reference_id);
   }
 
@@ -234,6 +346,7 @@ impl NativePluginContextImpl {
     &self,
     module_id: &str,
   ) -> anyhow::Result<Option<DeterminedSideEffects>> {
+    self.mark_module_side_effects_read(module_id);
     let Some(info) = self.module_infos.get(module_id).map(|v| Arc::clone(v.value())) else {
       return Ok(None);
     };
@@ -248,10 +361,16 @@ impl NativePluginContextImpl {
     module_id: &str,
     call_option: impl FnOnce(&str, bool) -> anyhow::Result<Option<bool>>,
   ) -> anyhow::Result<Option<DeterminedSideEffects>> {
+    self.mark_module_side_effects_read(module_id);
     let Some(info) = self.module_infos.get(module_id).map(|v| Arc::clone(v.value())) else {
       return Ok(None);
     };
     self.module_side_effects_overrides.shown_or_call(&info, call_option)
+  }
+
+  /// Other hooks and writes can change the value, and the persistent cache does not track them.
+  fn mark_module_side_effects_read(&self, module_id: &str) {
+    self.mark_not_cacheable(|| format!("`moduleSideEffects` of `{module_id}` was read"));
   }
 
   /// A write to `getModuleInfo(module_id).moduleSideEffects`. `None` is a write of `null`.
@@ -269,6 +388,10 @@ impl NativePluginContextImpl {
     module_id: &str,
     side_effects: Option<HookSideEffects>,
   ) -> bool {
+    // A skipped hook cannot repeat this write.
+    self.mark_not_cacheable(|| {
+      format!("`moduleSideEffects` of `{module_id}` was set on the result of `this.getModuleInfo`")
+    });
     self.module_side_effects_overrides.set(module_id, side_effects);
     self.module_side_effects_overrides.should_warn_late_write()
   }
@@ -283,12 +406,15 @@ impl NativePluginContextImpl {
 
   /// The path is resolved against `cwd`, so the watch files are absolute and normalized.
   pub fn add_watch_file(&self, file: &str) {
-    self.watch_files.insert(WatchPath::new(file, &self.options.cwd).to_string().into());
+    let path: ArcStr = WatchPath::new(file, &self.options.cwd).to_string().into();
+    self.record(|| RecordedAction::WatchFile(path.clone()));
+    self.watch_files.insert(path);
   }
 
   fn log(&self, level: LogLevel, log: LogWithoutPlugin) {
     if let Some(on_log) = &self.options.on_log {
       let log = log.into_log(Some(self.plugin_name.to_string()));
+      self.record(|| RecordedAction::Log { level, log: log.clone() });
       // Call now so the log is enqueued before any later work; only its result is awaited.
       let result = on_log.call(level, log);
       // Keep the handle so the build can await it at a barrier and fail if the callback errored.

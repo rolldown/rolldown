@@ -1,4 +1,4 @@
-use crate::bundle::bundle_handle::BundleHandle;
+use crate::{bundle::bundle_handle::BundleHandle, persistent_cache::SharedPersistentScanCache};
 
 use super::super::{
   SharedOptions, SharedResolver,
@@ -39,6 +39,7 @@ pub struct Bundle<Fs: FileSystem + Clone + 'static = OsFileSystem> {
   pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) cache: ScanStageCache,
   pub(crate) bundle_span: tracing::Span,
+  pub(crate) persistent_cache: Option<SharedPersistentScanCache>,
 }
 
 impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
@@ -52,6 +53,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       let scan_stage_output = self.scan_modules(ScanMode::Full).await?;
 
       let ret = self.bundle_write(scan_stage_output).await;
+      self.wait_for_persistent_cache_flush().await;
       trace_action!(action::BuildEnd { action: "BuildEnd" });
       ret
     }
@@ -73,6 +75,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
         output.warnings.append(&mut self.warnings);
         output
       });
+      self.wait_for_persistent_cache_flush().await;
       trace_action!(action::BuildEnd { action: "BuildEnd" });
       ret
     }
@@ -84,8 +87,9 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
   #[tracing::instrument(level = "debug", skip_all, parent = &self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn scan(mut self) -> BuildResult<()> {
-    self.scan_modules(ScanMode::Full).await?;
-
+    let result = self.scan_modules(ScanMode::Full).await;
+    self.wait_for_persistent_cache_flush().await;
+    result?;
     Ok(())
   }
 
@@ -105,6 +109,14 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
         batched.extend(diagnostics);
         Err(batched)
       }
+    }
+  }
+
+  /// The cache data of a build is written in the background while the build links and
+  /// generates. A one-time build waits for it, so that the process does not exit first.
+  pub async fn wait_for_persistent_cache_flush(&self) {
+    if let Some(persistent_cache) = &self.persistent_cache {
+      persistent_cache.wait_for_flush(&self.options).await;
     }
   }
 
@@ -151,6 +163,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       Arc::clone(&self.plugin_driver),
       self.fs.clone(),
       Arc::clone(&self.resolver),
+      self.persistent_cache.clone(),
     )
     .scan(scan_mode, &mut self.cache)
     .await

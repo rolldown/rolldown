@@ -3,9 +3,9 @@ use std::borrow::Cow;
 use arcstr::ArcStr;
 use rolldown_common::ModuleType;
 use rolldown_plugin::{
-  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookUsage, Plugin, PluginContext, PluginHookMeta, PluginOrder,
-  SharedLoadPluginContext,
+  HookFilterArgs, HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs,
+  HookResolveIdOutput, HookResolveIdReturn, HookUsage, Plugin, PluginContext, PluginHookMeta,
+  PluginOrder, SharedLoadPluginContext,
 };
 use rolldown_utils::{
   dashmap::FxDashMap,
@@ -35,7 +35,17 @@ impl Plugin for DataUrlPlugin {
 
   fn resolve_id_meta(&self) -> Option<PluginHookMeta> {
     // Users might have other plugins to handle data URLs, we should give them a chance to do so by resolving data URLs as late as possible.
-    Some(PluginHookMeta { order: Some(PluginOrder::PinPost) })
+    // Not cacheable: `load` reads what this hook stores in `resolved_data_url`. `Some(false)`, so
+    // that `assumeCacheableHooks` cannot turn it on. The filter below keeps the other imports
+    // from counting as calls.
+    Some(PluginHookMeta { order: Some(PluginOrder::PinPost), cache: Some(false) })
+  }
+
+  fn hook_filter_matches(&self, _ctx: &PluginContext, args: HookFilterArgs<'_>) -> bool {
+    match args {
+      HookFilterArgs::ResolveId(args) => is_data_url(args.specifier),
+      _ => true,
+    }
   }
 
   async fn resolve_id(
@@ -78,7 +88,7 @@ impl Plugin for DataUrlPlugin {
 
   fn load_meta(&self) -> Option<PluginHookMeta> {
     // If a `data URL` is resolved by this plugin, we want to provide the content directly without letting other plugins or rolldown to handle it.
-    Some(PluginHookMeta { order: Some(PluginOrder::Pre) })
+    Some(PluginHookMeta { order: Some(PluginOrder::Pre), cache: Some(true) })
   }
 
   async fn load(&self, _ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {

@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use json_escape_simd::escape;
 use rolldown_common::{ModuleType, parse_json_to_ecma_ast};
-use rolldown_plugin::{HookTransformOutput, HookUsage, Plugin};
+use rolldown_plugin::{HookTransformOutput, HookUsage, Plugin, PluginHookMeta};
 use rolldown_plugin_utils::{constants, is_special_query, json_to_esm};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::concat_string;
@@ -79,6 +79,10 @@ impl Plugin for ViteJsonPlugin {
       module_type: Some(ModuleType::Js),
       ..Default::default()
     }))
+  }
+
+  fn transform_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
   }
 
   fn register_hook_usage(&self) -> rolldown_plugin::HookUsage {

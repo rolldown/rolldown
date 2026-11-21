@@ -19,6 +19,7 @@ pub mod importer_record;
 pub mod ins_chunk_idx;
 pub mod instantiated_chunk;
 pub mod interop;
+pub mod js_module_meta;
 pub mod lazy_barrel;
 pub mod member_expr_ref;
 pub mod member_expr_ref_resolution;

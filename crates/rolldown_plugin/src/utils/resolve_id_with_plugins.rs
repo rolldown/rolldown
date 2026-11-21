@@ -1,3 +1,4 @@
+use crate::types::module_cache_recorder::SharedModuleCacheRecorder;
 use crate::{
   HookResolveIdArgs, HookResolveIdOutput, PluginDriver,
   types::{custom_field::CustomField, hook_resolve_id_skipped::HookResolveIdSkipped},
@@ -69,6 +70,7 @@ fn resolved_id_from_hook_output<Fs: FileSystem>(
     package_json,
     attributes: r.attributes.unwrap_or_else(|| attributes.clone()),
     module_options_receipt: r.module_options_receipt,
+    js_meta: r.js_meta,
     ..Default::default()
   })
 }
@@ -89,6 +91,7 @@ pub async fn resolve_id_with_plugins<Fs: FileSystem>(
   attributes: &ImportAttributes,
   importer_raw_id: Option<&str>,
   importer_attributes: &ImportAttributes,
+  cache_recorder: Option<&SharedModuleCacheRecorder>,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
   let args = HookResolveIdArgs {
     specifier,
@@ -101,14 +104,17 @@ pub async fn resolve_id_with_plugins<Fs: FileSystem>(
     importer_attributes,
   };
   if matches!(import_kind, ImportKind::DynamicImport) {
-    if let Some(r) =
-      plugin_driver.resolve_dynamic_import(&args, skipped_resolve_calls.as_ref()).await?
+    if let Some(r) = plugin_driver
+      .resolve_dynamic_import(&args, skipped_resolve_calls.as_ref(), cache_recorder)
+      .await?
     {
       return Ok(Ok(resolved_id_from_hook_output(resolver, r, attributes)?));
     }
   }
   // Run plugin resolve_id first, if it is None use internal resolver as fallback
-  if let Some(r) = plugin_driver.resolve_id(&args, skipped_resolve_calls.as_ref()).await? {
+  if let Some(r) =
+    plugin_driver.resolve_id(&args, skipped_resolve_calls.as_ref(), cache_recorder).await?
+  {
     return Ok(Ok(resolved_id_from_hook_output(resolver, r, attributes)?));
   }
 

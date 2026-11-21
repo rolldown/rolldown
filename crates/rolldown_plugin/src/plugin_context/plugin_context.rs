@@ -11,8 +11,12 @@ use rolldown_common::{
 };
 
 use crate::{
-  PluginContextResolveOptions, plugin_context::PluginContextMeta,
-  types::hook_resolve_id_skipped::HookResolveIdSkipped,
+  PluginContextResolveOptions,
+  plugin_context::PluginContextMeta,
+  types::{
+    hook_resolve_id_skipped::HookResolveIdSkipped,
+    module_cache_recorder::{RecordedAction, SharedModuleCacheRecorder},
+  },
 };
 
 use super::NativePluginContextImpl;
@@ -43,16 +47,22 @@ impl PluginContext {
     Self::Napi(Arc::new(NapiPluginContextImpl))
   }
 
+  /// A context for one hook call. Returns a clone of `self` when there is nothing to fork.
   #[must_use]
-  pub fn fork_with_skipped_resolve_calls(
+  pub fn fork_for_call(
     &self,
-    skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
+    skipped_resolve_calls: Option<&Vec<Arc<HookResolveIdSkipped>>>,
+    cache_recorder: Option<&SharedModuleCacheRecorder>,
   ) -> Self {
     match self {
       PluginContext::Napi(_) => self.clone(),
+      PluginContext::Native(_) if skipped_resolve_calls.is_none() && cache_recorder.is_none() => {
+        self.clone()
+      }
       PluginContext::Native(ctx) => Self::Native(Arc::new(NativePluginContextImpl {
         plugin_name: ctx.plugin_name.clone(),
-        skipped_resolve_calls,
+        skipped_resolve_calls: skipped_resolve_calls
+          .map_or_else(|| ctx.skipped_resolve_calls.clone(), Clone::clone),
         plugin_idx: ctx.plugin_idx,
         plugin_driver: Weak::clone(&ctx.plugin_driver),
         meta: Arc::clone(&ctx.meta),
@@ -67,7 +77,33 @@ impl PluginContext {
         log_hook_tasks: Arc::clone(&ctx.log_hook_tasks),
         bundle_span: ctx.bundle_span.clone(),
         manual_resolve_span: ctx.manual_resolve_span.clone(),
+        cache_recorder: cache_recorder.cloned().or_else(|| ctx.cache_recorder.clone()),
+        module_meta: Arc::clone(&ctx.module_meta),
+        module_meta_build: ctx.module_meta_build,
       })),
+    }
+  }
+
+  /// The recorder of the module task that this hook call belongs to, if the persistent cache
+  /// records this call.
+  pub fn cache_recorder(&self) -> Option<&SharedModuleCacheRecorder> {
+    match self {
+      PluginContext::Napi(_) => None,
+      PluginContext::Native(ctx) => ctx.cache_recorder.as_ref(),
+    }
+  }
+
+  /// The module task that this hook call belongs to gets no saved result.
+  pub fn mark_not_cacheable(&self, reason: impl FnOnce() -> String) {
+    if let Some(recorder) = self.cache_recorder() {
+      recorder.mark_not_cacheable(reason);
+    }
+  }
+
+  /// Records a log that a JavaScript plugin sent to `onLog` during this hook call.
+  pub fn record_js_log(&self, level: rolldown_common::LogLevel, json: String) {
+    if let Some(recorder) = self.cache_recorder() {
+      recorder.record(RecordedAction::JsLog { level, json });
     }
   }
 
@@ -147,6 +183,61 @@ impl PluginContext {
     side_effects: Option<HookSideEffects>,
   ) -> bool {
     call_native_only!(self, "set_module_side_effects_without_warning", ctx => ctx.set_module_side_effects_without_warning(module_id, side_effects))
+  }
+
+  /// Sets the value under `key` in the meta that Rust plugins keep for the module `module_id`.
+  /// The module can be the module of this hook call or another one. By convention, `key` is
+  /// the name of the plugin. A new value replaces the value under the same key of that module.
+  ///
+  /// With the persistent cache, a call in a `resolve_id`, `resolve_dynamic_import`, `load` or
+  /// `transform` hook is saved with the module whose task ran the hook, and is done again when
+  /// that module reuses its saved result. A call in another hook is not saved.
+  ///
+  /// A context without a bundler has no module meta: the call does nothing.
+  pub fn set_module_meta(&self, module_id: &str, key: &str, value: impl Into<Arc<[u8]>>) {
+    match self {
+      PluginContext::Napi(_) => {}
+      PluginContext::Native(ctx) => ctx.set_module_meta(module_id, key, value.into()),
+    }
+  }
+
+  /// The value that a Rust plugin set under `key` for the module `module_id`.
+  ///
+  /// The meta is not cleared between the builds of one bundler, so the value can come from an
+  /// earlier build.
+  pub fn get_module_meta(&self, module_id: &str, key: &str) -> Option<Arc<[u8]>> {
+    match self {
+      PluginContext::Napi(_) => None,
+      PluginContext::Native(ctx) => ctx.get_module_meta(module_id, key),
+    }
+  }
+
+  /// Whether the value under `key` for the module `module_id` was set in this build. A hook
+  /// set it, or Rolldown set it again from a saved result. A value of an earlier build gives
+  /// `false`.
+  pub fn has_module_meta_in_this_build(&self, module_id: &str, key: &str) -> bool {
+    match self {
+      PluginContext::Napi(_) => false,
+      PluginContext::Native(ctx) => ctx.has_module_meta_in_this_build(module_id, key),
+    }
+  }
+
+  /// The modules whose value under `key` was set in this build, in no fixed order. A hook set
+  /// it, or Rolldown set it again from a saved result. A module of an earlier build that this
+  /// build did not set again is left out.
+  pub fn module_ids_with_meta(&self, key: &str) -> Vec<ArcStr> {
+    match self {
+      PluginContext::Napi(_) => Vec::new(),
+      PluginContext::Native(ctx) => ctx.module_ids_with_meta(key),
+    }
+  }
+
+  /// The length of `module_ids_with_meta`, without a copy of the ids.
+  pub fn count_modules_with_meta(&self, key: &str) -> usize {
+    match self {
+      PluginContext::Napi(_) => 0,
+      PluginContext::Native(ctx) => ctx.count_modules_with_meta(key),
+    }
   }
 
   pub fn cwd(&self) -> &PathBuf {

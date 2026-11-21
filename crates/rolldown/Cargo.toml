@@ -39,6 +39,7 @@ oxc_traverse = { workspace = true }
 percent-encoding = { workspace = true }
 petgraph = { workspace = true }
 rayon = { workspace = true }
+rolldown_cache_store = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_dev_common = { workspace = true }
 rolldown_devtools = { workspace = true }

@@ -186,6 +186,10 @@ Rebuild the bundle when source files change on disk.
 While in watch mode, the `ROLLDOWN_WATCH` and `ROLLUP_WATCH` environment variable will be set to `true` by Rolldown's command line interface and can be checked by other processes. Plugins should instead check [`this.meta.watchMode`](/reference/Interface.PluginContextMeta#watchmode), which is independent of the command line interface.
 :::
 
+### `--silent`
+
+Suppress the final report output when bundling is finished. This is useful in large monorepos to avoid bloating local or CI logs with the bundle summary. If you also want to suppress all other logs from the build process, use `--logLevel silent` in combination with this flag.
+
 ### `--environment <values>`
 
 Pass additional settings to the config file via `process.env`.

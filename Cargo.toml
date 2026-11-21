@@ -339,3 +339,6 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+[patch.crates-io]
+parking_lot_core = { git = "https://github.com/napi-rs/parking_lot", rev = "eb33ab62f79d27d1c7880b60e06187be1cbd21f4" }

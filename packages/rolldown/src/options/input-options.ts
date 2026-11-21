@@ -750,6 +750,18 @@ export interface InputOptions {
      * @default false
      */
     importAttributes?: boolean;
+    /**
+     * Emit the chunk graph (module membership, static/dynamic imports, entry
+     * flags) without rendering module code or minifying.
+     *
+     * `generateBundle` / the returned chunks still expose `modules`, `imports`,
+     * `dynamicImports` and `moduleIds`. `code` is an empty string. Use this for
+     * a probe build whose only job is to observe default chunking before a
+     * second build applies `codeSplitting.groups`.
+     *
+     * @default false
+     */
+    chunkGraphOnly?: boolean;
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.

@@ -81,6 +81,11 @@ pub struct ExperimentalOptions {
   pub chunk_optimization: Option<ChunkOptimizationOption>,
   pub lazy_barrel: Option<bool>,
   pub import_attributes: Option<bool>,
+  /// Skip module codegen, finalization, and minify. `generateBundle` still
+  /// receives chunks with `modules`, `imports`, and `moduleIds` filled in and
+  /// with empty `code`. For a build whose only job is to read the chunk graph
+  /// (then apply `codeSplitting.groups` on a later build).
+  pub chunk_graph_only: Option<bool>,
 }
 
 impl ExperimentalOptions {
@@ -125,5 +130,9 @@ impl ExperimentalOptions {
 
   pub fn is_import_attributes_enabled(&self) -> bool {
     self.import_attributes.unwrap_or(false)
+  }
+
+  pub fn is_chunk_graph_only_enabled(&self) -> bool {
+    self.chunk_graph_only.unwrap_or(false)
   }
 }

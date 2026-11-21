@@ -729,6 +729,7 @@ const InputOptionsSchema = v.strictObject({
       ),
       lazyBarrel: v.optional(v.boolean()),
       importAttributes: v.optional(v.boolean()),
+      chunkGraphOnly: v.optional(v.boolean()),
     }),
   ),
   transform: v.optional(TransformOptionsSchema),

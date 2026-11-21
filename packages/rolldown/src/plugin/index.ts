@@ -204,14 +204,20 @@ export interface SourceDescription
   map?: SourceMapInput;
   moduleType?: ModuleType;
   /**
-   * The module's size in bytes, used instead of the size of its transformed code.
+   * The module's size in bytes. Size-based code splitting uses it instead of the size of the
+   * module's code.
    *
-   * Declare it when the module brings output that is not in its code, such as the CSS a plugin
-   * emits for it. Every size option of `output.codeSplitting` uses a module's size, including
-   * `experimentalInlineCommonChunks.maxSize`.
+   * This is useful when the module's output is not in its code, e.g. a CSS module whose
+   * stylesheet is emitted separately.
    *
-   * A value returned by a later `load` or `transform` hook replaces an earlier one.
-   * Must be a non-negative safe integer.
+   * @example
+   * ```js
+   * transform(code, id) {
+   *   if (isCss(id)) {
+   *     return { code, declaredModuleSize: Buffer.byteLength(code) + Buffer.byteLength(css) }
+   *   }
+   * }
+   * ```
    */
   declaredModuleSize?: number;
 }

@@ -1,8 +1,10 @@
+mod ast_arena;
 mod constants;
 mod ecma_ast;
 mod ecma_compiler;
 
 pub use crate::{
+  ast_arena::{ast_allocator, set_ast_chunk_allocator},
   constants::{
     CJS_EXPORTS_REF, CJS_EXPORTS_REF_STR, CJS_MODULE_REF, CJS_MODULE_REF_STR, CJS_REQUIRE_REF,
     CJS_REQUIRE_REF_STR, CJS_ROLLDOWN_EXPORTS_REF, CJS_ROLLDOWN_EXPORTS_REF_IDENT,

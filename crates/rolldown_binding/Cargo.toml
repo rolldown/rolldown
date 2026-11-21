@@ -38,6 +38,7 @@ rolldown = { workspace = true, features = ["experimental"] }
 rolldown_common = { workspace = true }
 rolldown_dev = { workspace = true }
 rolldown_devtools = { workspace = true }
+rolldown_ecmascript = { workspace = true }
 rolldown_error = { workspace = true, features = ["napi"] }
 rolldown-notify-napi = { workspace = true }
 rolldown_plugin = { workspace = true }
@@ -77,10 +78,12 @@ url = { workspace = true }
 [target.'cfg(all(not(target_os = "linux"), not(target_os = "freebsd"), not(target_family = "wasm")))'.dependencies]
 mimalloc-safe = { workspace = true, features = ["skip_collect_on_exit", "v3"] }
 rolldown_tracking_allocator = { workspace = true, optional = true }
+libmimalloc-sys2 = { workspace = true }
 
 [target.'cfg(all(any(target_os = "linux", target_os = "freebsd"), not(target_arch = "aarch64"), not(target_env = "ohos")))'.dependencies]
 mimalloc-safe = { workspace = true, features = ["skip_collect_on_exit", "local_dynamic_tls", "v3"] }
 rolldown_tracking_allocator = { workspace = true, optional = true }
+libmimalloc-sys2 = { workspace = true }
 
 [target.'cfg(all(target_arch = "aarch64", any(target_os = "linux", target_os = "android", target_os = "freebsd")))'.dependencies]
 mimalloc-safe = { workspace = true, features = [
@@ -90,6 +93,7 @@ mimalloc-safe = { workspace = true, features = [
   "v3",
 ] }
 rolldown_tracking_allocator = { workspace = true, optional = true }
+libmimalloc-sys2 = { workspace = true }
 
 [build-dependencies]
 napi-build = { workspace = true }

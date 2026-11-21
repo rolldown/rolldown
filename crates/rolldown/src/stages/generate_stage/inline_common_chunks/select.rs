@@ -101,9 +101,9 @@ fn add_loader_chunks(chunk_graph: &mut ChunkGraph, loaders: &FxIndexMap<ChunkIdx
 /// first (a loader's copy counts like a carrier's), and `reads` the records a record reads.
 ///
 /// A record-only static cycle is one candidate: its members' duplicated sizes are summed and all
-/// of them stay files together, so no cycle mixes records and files. A candidate read by another
-/// over-limit candidate waits for a later round: once its reader is a file, that file prints the
-/// one copy the reader's importers used to repeat.
+/// of them stay files together, so no cycle mixes records and files. A candidate that an
+/// over-limit candidate reads, directly or through other candidates, waits for a later round: once
+/// that reader is a file, it prints the one copy its importers used to repeat.
 fn records_over_duplication_limit<'a>(
   records: &FxIndexSet<ChunkIdx>,
   record_cycles: &[Vec<ChunkIdx>],
@@ -139,12 +139,14 @@ fn records_over_duplication_limit<'a>(
     .map(|(candidate, _)| candidate)
     .collect::<FxHashSet<_>>();
   let mut waiting = FxHashSet::default();
-  for candidate in &over {
-    for read in candidates[*candidate].iter().filter_map(|member| reads(*member)).flatten() {
-      if let Some(read_candidate) = candidate_of.get(read)
+  let mut pending = over.iter().copied().collect_vec();
+  while let Some(candidate) = pending.pop() {
+    for read in candidates[candidate].iter().filter_map(|member| reads(*member)).flatten() {
+      if let Some(&read_candidate) = candidate_of.get(read)
         && read_candidate != candidate
+        && waiting.insert(read_candidate)
       {
-        waiting.insert(*read_candidate);
+        pending.push(read_candidate);
       }
     }
   }
@@ -821,6 +823,11 @@ mod tests {
   #[test]
   fn a_record_read_by_an_over_limit_record_waits() {
     assert_eq!(over(&[(1, 100, &[2]), (2, 100, &[])], &[], 100), list(&[1]));
+  }
+
+  #[test]
+  fn a_record_read_through_an_under_limit_record_waits() {
+    assert_eq!(over(&[(1, 100, &[2]), (2, 10, &[3]), (3, 100, &[])], &[], 100), list(&[1]));
   }
 
   #[test]

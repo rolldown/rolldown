@@ -708,3 +708,44 @@ describe('x_google_ignoreList', () => {
     assert.deepStrictEqual(s.generateDecodedMap().x_google_ignoreList, [0]);
   });
 });
+
+describe('dropInner', () => {
+  it('releases MagicString native payload and rejects subsequent operations', () => {
+    const s = new MagicString('var answer = 42;');
+    assert.strictEqual(Object.keys(s).includes('dropInner'), false);
+
+    assert.deepStrictEqual(s.dropInner(), { freed: true });
+    assert.deepStrictEqual(s.dropInner(), {
+      freed: false,
+      reason: 'Memory has already been freed',
+    });
+    assert.throws(() => s.toString(), /no longer usable/);
+    assert.throws(() => s.append(';'), /no longer usable/);
+  });
+
+  it('releases BindingSourceMap and BindingDecodedMap payloads and rejects subsequent reads', () => {
+    const s = new MagicString('var answer = 42;');
+    const map = s.generateMap();
+    const decoded = s.generateDecodedMap();
+
+    assert.strictEqual(Object.keys(map).includes('dropInner'), false);
+    assert.strictEqual(Object.keys(decoded).includes('dropInner'), false);
+
+    assert.deepStrictEqual(map.dropInner(), { freed: true });
+    assert.deepStrictEqual(map.dropInner(), {
+      freed: false,
+      reason: 'Memory has already been freed',
+    });
+    assert.strictEqual(map.version, 3);
+    assert.throws(() => map.mappings, /Memory has been freed/);
+    assert.throws(() => map.toString(), /Memory has been freed/);
+
+    assert.deepStrictEqual(decoded.dropInner(), { freed: true });
+    assert.deepStrictEqual(decoded.dropInner(), {
+      freed: false,
+      reason: 'Memory has already been freed',
+    });
+    assert.strictEqual(decoded.version, 3);
+    assert.throws(() => decoded.mappings, /Memory has been freed/);
+  });
+});

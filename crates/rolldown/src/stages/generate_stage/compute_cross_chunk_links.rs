@@ -1245,7 +1245,7 @@ impl GenerateStage<'_> {
           let entry = &self.link_output.module_table[*entry_id].as_normal().unwrap();
           let entry_meta = &self.link_output.metas[entry.idx];
 
-          if self.entry_can_export_bindings(entry_meta.wrap_kind()) {
+          if self.entry_can_export_bindings(entry.idx) {
             self.register_entry_export_depended_symbols(
               chunk_graph,
               order_state,
@@ -1351,8 +1351,10 @@ impl GenerateStage<'_> {
     }
   }
 
-  pub(super) fn entry_can_export_bindings(&self, wrap_kind: WrapKind) -> bool {
-    !matches!(wrap_kind, WrapKind::Cjs) || matches!(self.options.format, OutputFormat::Esm)
+  pub(super) fn entry_can_export_bindings(&self, entry: ModuleIdx) -> bool {
+    // With a dropped signature, a CommonJS entry runs its dependencies through its wrapper.
+    !matches!(self.link_output.metas[entry].wrap_kind(), WrapKind::Cjs)
+      || (matches!(self.options.format, OutputFormat::Esm) && self.entry_preserves_signature(entry))
   }
 
   pub(super) fn entry_exports_requiring_bindings(

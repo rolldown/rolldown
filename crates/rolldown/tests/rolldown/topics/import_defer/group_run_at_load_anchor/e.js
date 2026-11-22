@@ -1,5 +1,5 @@
-import defer * as nr from './r.js';
-import defer * as nd from './d.js';
+import defer * as r from './r.js';
+import defer * as d from './d.js';
 
-export const readR = () => nr.r;
-export const readD = () => nd.d;
+export const readR = () => r.r;
+export const readD = () => d.d;

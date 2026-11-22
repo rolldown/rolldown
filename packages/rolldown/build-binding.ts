@@ -31,7 +31,7 @@ const napiArgs = {
   // flags, cargo config, dependency graph) but never the Rust source, so the
   // cache can retain declarations after the Rust binding metadata changes.
   // WASI builds must regenerate their exact declaration surface.
-  dtsCache: argsOptions.target !== WASI_THREADS_TARGET,
+  dtsCache: argsOptions.target === WASI_THREADS_TARGET ? false : argsOptions.dtsCache,
   constEnum: false,
 };
 

@@ -1,0 +1,12 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// node_modules/pkg/src/polyfill.js
+console.log("root-src");
+
+```

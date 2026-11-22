@@ -1,7 +1,11 @@
 {
-  "_comment": "`define` inserts `early()` before the declaration of `early`, and `late()` after the declaration of `late`. The inserted reads have an empty span at 0, so only the AST order tells them apart. `last`, an annotated declaration after `LATE`, makes the check visit `LATE`. The calls of `early` and `coalesced` must stay and throw, because `null` makes the right operand of `??` run. The call of `late` should be removed.",
+  "_comment": "`define` inserts `early()` before the declaration of `early`, and `late()` after the declaration of `late`. The inserted reads have an empty span at 0, so only the AST order tells them apart. `last`, an annotated declaration after `LATE`, makes the check visit `LATE`. The calls of `early` and `coalesced` must stay and throw, because `null` makes the right operand of `??` run. In define-annotation.js, `define` gives `fromDefine` its `@__NO_SIDE_EFFECTS__` annotation, so the source of that module has no annotated binding before Step 2. The call of `fromDefine` before its declaration must stay and throw. The call of `late` should be removed.",
   "config": {
     "input": [{ "name": "main", "import": "./main.js" }],
-    "define": { "EARLY": "early()", "LATE": "late()" }
+    "define": {
+      "EARLY": "early()",
+      "LATE": "late()",
+      "ANNOTATED": "/* @__NO_SIDE_EFFECTS__ */ () => globalThis.calls.push('fromDefine')"
+    }
   }
 }

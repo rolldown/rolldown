@@ -1,3 +1,5 @@
+import './define-annotation.js';
+
 try {
   EARLY;
 } catch (error) {

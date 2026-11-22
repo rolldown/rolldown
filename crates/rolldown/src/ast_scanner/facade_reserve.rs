@@ -1,29 +1,24 @@
 use oxc::ast::ast::{Program, Statement};
 
-/// Facade symbols that a module can get and that its top-level statements do not show: those of
-/// `import()`, `require()`, `new URL()`, `exports.x =`, and `import.meta.hot.accept()`, and those
-/// that the link stage adds (for example `require_<name>` and `init_<name>`).
+/// The room to reserve for the facade symbols that the top-level statements do not show: those of
+/// `import()`, `require()`, `new URL()`, `exports.x =`, `import.meta.hot.accept()`, and a
+/// top-level `this` in CommonJS, and those that the link stage adds (for example `require_<name>`
+/// and `init_<name>`). Most modules get at most one of these.
 const UNCOUNTED_FACADE_SYMBOLS: u32 = 1;
 
-/// The number of facade symbols to reserve room for when you build the `Scoping` that the
-/// scanner uses.
+/// The number of facade symbols to reserve room for in the `Scoping` and the `classic_data` of a
+/// module.
 ///
-/// The scanner and the link stage add facade symbols to the `Scoping` after the semantic build,
-/// and the build sizes the symbol storage of the `Scoping` for the symbols that it creates. So the
-/// first facade symbol grows every symbol array of the module. A grown array in the `Scoping`'s
-/// arena keeps its old buffer until the arena is dropped, and a large growth makes the arena
-/// allocate a new chunk.
+/// The scanner and the link stage add facade symbols after the semantic build, which reserves no
+/// room for them. Without a reserve, the first facade symbol grows the symbol arrays of the
+/// module. A grown array in the arena keeps its old buffer and can make the arena allocate a new
+/// chunk.
 ///
-/// This function counts the facade symbols of the top-level statements, in the same way as the
-/// scanner creates them:
-/// - two for every module, `<name>_default` and `<name>_exports`, and one more in dev mode,
-///   `<name>_hot` (`AstScanner::new`);
+/// The count follows where the scanner creates facade symbols:
+/// - `<name>_default` and `<name>_exports`, and `<name>_hot` in dev mode (`AstScanner::new`);
 /// - one for each `import`, `export ... from`, and `export *` statement (`add_import_record`);
 /// - one for each specifier of `export { ... } from` (`add_re_export`) and for
 ///   `export * as ns from` (`add_star_re_export`).
-///
-/// It adds [`UNCOUNTED_FACADE_SYMBOLS`] for the others. It does not visit nested code, so it
-/// costs one pass over the top-level statements.
 pub fn facade_symbol_reserve(program: &Program<'_>, is_dev_mode: bool) -> u32 {
   let mut count = 2 + u32::from(is_dev_mode) + UNCOUNTED_FACADE_SYMBOLS;
   for stmt in &program.body {

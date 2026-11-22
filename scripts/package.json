@@ -25,6 +25,7 @@
     "zx": "catalog:"
   },
   "devDependencies": {
+    "@napi-rs/cli": "catalog:",
     "@oxc-node/cli": "catalog:",
     "acorn": "catalog:",
     "astring": "catalog:",

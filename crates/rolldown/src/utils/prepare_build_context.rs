@@ -182,6 +182,15 @@ fn verify_inline_common_chunks_options(
   options: &InlineCommonChunksOptions,
   errors: &mut Vec<BuildDiagnostic>,
 ) {
+  if let Some(max_duplicated_size) = options.max_duplicated_size
+    && !inline_common_chunks_max_size_is_valid(max_duplicated_size)
+  {
+    errors.push(BuildDiagnostic::invalid_option(
+      InvalidOptionType::InlineCommonChunksInvalidMaxDuplicatedSize(
+        max_duplicated_size.to_string(),
+      ),
+    ));
+  }
   let max_size = match options.max_size {
     None => return,
     Some(max_size) => {
@@ -254,8 +263,8 @@ pub fn prepare_build_context(
   };
 
   // `verify_raw_options` already rejected an invalid `maxSize` and every unmet precondition, so
-  // cast below only sees a non-negative safe integer or positive infinity, which saturates to
-  // `usize::MAX` (unlimited). `maxSize: 0` normalizes to `None`.
+  // casts below only see a non-negative safe integer or positive infinity, which saturates to
+  // `usize::MAX` or `u64::MAX` (unlimited). `maxSize: 0` normalizes to `None`.
   #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
   let inline_common_chunks = manual_code_splitting
     .as_ref()
@@ -263,6 +272,7 @@ pub fn prepare_build_context(
     .filter(|options| options.max_size.unwrap_or(0.0) > 0.0)
     .map(|options| NormalizedInlineCommonChunksOptions {
       max_size: options.max_size.unwrap_or(0.0) as usize,
+      max_duplicated_size: options.max_duplicated_size.map_or(u64::MAX, |size| size as u64),
       exclude: options.exclude.clone().unwrap_or_default(),
     });
   // `experimentalInlineCommonChunks` needs wrap-all strict execution order, so it turns the option

@@ -1424,6 +1424,14 @@
             "null"
           ],
           "format": "double"
+        },
+        "maxDuplicatedSize": {
+          "description": "A candidate is kept as a file when its pre-render size times the number of files beyond the\nfirst that would print a copy reaches this. Absent or positive infinity means no limit.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
         }
       },
       "additionalProperties": false

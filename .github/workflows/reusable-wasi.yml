@@ -57,6 +57,12 @@ jobs:
       - name: Tokio Runtime Lifecycle Test
         run: vp run --filter rolldown-tests test:wasi-runtime
 
+      - name: Build `@rolldown/browser` artifacts
+        run: vp run --filter '@rolldown/browser' build-node
+
+      - name: Stage self-contained WASI packages
+        run: node scripts/wasi/stage-wasi-packages.mjs
+
       # `@example/native-magic-string` is excluded because it depends on a native-only addon.
       - name: Build Examples
         run: vp run --filter '@example/*' --filter '!@example/native-magic-string' build

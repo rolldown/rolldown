@@ -943,6 +943,21 @@ test('replay compresses a navigation using the recorded document encoding', asyn
           });
           assert.equal(identity.headers['content-encoding'], undefined);
           assert.deepEqual(identity.body, html);
+          // `q=0` refuses the coding when another parameter comes before it.
+          const refused = await h2request(client, {
+            ...headers,
+            'accept-encoding': 'br;foo=1;q=0, *',
+          });
+          assert.equal(refused.headers['content-encoding'], undefined);
+          assert.deepEqual(refused.body, html);
+          // HEAD keeps the encoding header and sends no body.
+          const headOnly = await h2request(client, {
+            ...headers,
+            ':method': 'HEAD',
+            'accept-encoding': 'br',
+          });
+          assert.equal(headOnly.headers['content-encoding'], 'br');
+          assert.equal(headOnly.body.length, 0);
         }
       },
     );

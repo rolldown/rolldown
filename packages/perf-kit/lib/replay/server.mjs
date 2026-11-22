@@ -103,7 +103,7 @@ function recordedCompression(header, compression) {
   return compression?.encoding === encoding ? compression : { encoding };
 }
 
-function encodeParts(parts, how) {
+async function encodeParts(parts, how) {
   const [early, late] = parts;
   if (!early.data.length || !late?.data.length) {
     return parts.map((part) =>
@@ -125,10 +125,11 @@ function encodeParts(parts, how) {
     chunks = lateChunks;
     stream.end(late.data);
   });
-  return complete.then(() => [
+  await complete;
+  return [
     { ...early, data: Buffer.concat(earlyChunks) },
     { ...late, data: Buffer.concat(lateChunks) },
-  ]);
+  ];
 }
 
 const LEVELS = { br: [1, 3, 4, 5, 6, 9, 11], gzip: [1, 4, 6, 9], zstd: [1, 3, 6, 9, 12, 19] };
@@ -235,8 +236,9 @@ function accepts(req, encoding) {
   const choices = (req.headers['accept-encoding'] ?? '').toLowerCase().split(',');
   let wildcard = false;
   for (const choice of choices) {
-    const [name, quality] = choice.trim().split(/\s*;\s*q\s*=\s*/);
-    const allowed = quality == null || Number(quality) > 0;
+    const [name, ...params] = choice.split(';').map((part) => part.trim());
+    const quality = params.find((param) => /^q\s*=/.test(param));
+    const allowed = quality == null || Number(quality.slice(quality.indexOf('=') + 1)) > 0;
     if (name === encoding) return allowed;
     if (name === '*') wildcard = allowed;
   }
@@ -273,7 +275,7 @@ export async function startReplayServer({
     if (!key) return encodeParts(parts, how);
     if (!encodedCache.has(key)) {
       const value = encodeParts(parts, how);
-      if (value instanceof Promise) value.catch(() => encodedCache.delete(key));
+      value.catch(() => encodedCache.delete(key));
       encodedCache.set(key, value);
     }
     return encodedCache.get(key);
@@ -310,15 +312,19 @@ export async function startReplayServer({
     delete out['content-length'];
     delete out['content-encoding'];
     let parts = segments ?? [{ atMs: 0, data: body ?? Buffer.alloc(0) }];
+    const noBody = req.method === 'HEAD' || NO_BODY.has(status);
     if (
       supportsEncoding(encodeAs?.encoding) &&
       parts.some((p) => p.data.length) &&
       accepts(req, encodeAs.encoding)
     ) {
-      const key =
-        cacheKey &&
-        `${segments ? 'document' : 'body'}|${cacheKey}|${encodeAs.encoding}|${encodeAs.level}`;
-      parts = await encodedOnce(key, parts, encodeAs);
+      // A response with no body keeps the header and skips the compression.
+      if (!noBody) {
+        const key =
+          cacheKey &&
+          `${segments ? 'document' : 'body'}|${cacheKey}|${encodeAs.encoding}|${encodeAs.level}`;
+        parts = await encodedOnce(key, parts, encodeAs);
+      }
       out['content-encoding'] = encodeAs.encoding;
     }
     // Prepare the compressed bytes during the modeled server wait.
@@ -339,7 +345,6 @@ export async function startReplayServer({
       held = { atMs: delayMs + holdMs, data: data.subarray(data.length - 1) };
     }
     const total = parts.reduce((s, p) => s + p.data.length, 0) + (held?.data.length ?? 0);
-    const noBody = req.method === 'HEAD' || NO_BODY.has(status);
     if (!noBody) out['content-length'] = String(total);
     out['cache-control'] = 'no-store';
     const writeHead = () => {

@@ -88,7 +88,7 @@ const CODECS = {
   },
 };
 
-const supportsEncoding = (encoding) =>
+export const supportsEncoding = (encoding) =>
   Object.hasOwn(CODECS, encoding) && typeof CODECS[encoding].create === 'function';
 
 export function encode(data, { encoding, level }) {

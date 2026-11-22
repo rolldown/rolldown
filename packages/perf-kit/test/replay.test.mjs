@@ -727,12 +727,12 @@ function h2request(client, headers, body = null) {
     req.on('response', (h) => {
       head = { status: h[':status'], headers: h, headersMs: performance.now() - t0 };
     });
-    req.on('data', (c) => chunks.push(c));
+    req.on('data', (data) => chunks.push({ atMs: performance.now() - t0, data }));
     req.on('end', () =>
       resolve({
         ...head,
-        body: Buffer.concat(chunks),
-        firstChunk: chunks[0],
+        body: Buffer.concat(chunks.map(({ data }) => data)),
+        chunks,
         endMs: performance.now() - t0,
       }),
     );
@@ -851,7 +851,10 @@ test('the replay server routes document, dist, recorded, preflight and unrecorde
 test('replay compresses a navigation using the recorded document encoding', async (t) => {
   const site = syntheticSite();
   t.after(() => fs.rmSync(site.dir, { recursive: true, force: true }));
-  const head = '<!doctype html><head><script src="/early.js"></script></head>';
+  // Put enough data in the early flush for it to span HTTP/2 frames.
+  const random = seededRandom(1);
+  const payload = Buffer.from(Array.from({ length: 24_000 }, () => Math.floor(random() * 256)));
+  const head = `<!doctype html><head><script src="/early.js"></script><!--${payload.toString('base64')}--></head>`;
   const html = Buffer.from(`${head}<body>${'<p>Late content</p>'.repeat(20_000)}</body>`);
   fs.writeFileSync(path.join(site.dist, 'index.html'), html);
   const tls = replayCertificate(path.join(site.dir, 'cert'));
@@ -859,16 +862,38 @@ test('replay compresses a navigation using the recorded document encoding', asyn
     ':authority': 'app.example.test',
     ':path': '/',
     'sec-fetch-mode': 'navigate',
-    'accept-encoding': 'br, gzip',
   };
+  const cases = [
+    { name: 'single Brotli body', encoding: 'br', decompress: zlib.brotliDecompressSync },
+    {
+      name: 'Brotli early flush',
+      encoding: 'br',
+      decompress: zlib.brotliDecompressSync,
+      flush: zlib.constants.BROTLI_OPERATION_FLUSH,
+    },
+    {
+      name: 'gzip early flush',
+      encoding: 'gzip',
+      decompress: zlib.gunzipSync,
+      flush: zlib.constants.Z_SYNC_FLUSH,
+    },
+    {
+      name: 'Zstandard early flush',
+      encoding: 'zstd',
+      decompress: zlib.zstdDecompressSync,
+      flush: zlib.constants.ZSTD_e_flush,
+    },
+  ];
 
-  for (const split of [false, true]) {
+  for (const { name, encoding, decompress, flush } of cases) {
     await t.test(
-      split ? 'the compressed head decodes before the rest arrives' : 'single body',
+      name,
+      { skip: encoding === 'zstd' && typeof zlib.createZstdCompress !== 'function' },
       async (t) => {
+        const split = flush != null;
         const document = {
           ...site.archive.document,
-          headers: { ...site.archive.document.headers, 'content-encoding': 'br' },
+          headers: { ...site.archive.document.headers, 'content-encoding': encoding },
           earlyFraction: split ? (head.length - 2) / html.length : 1,
           ttfbMs: 20,
           downloadMs: 250,
@@ -890,21 +915,24 @@ test('replay compresses a navigation using the recorded document encoding', asyn
         });
         server.beginRun(site.dist);
 
-        const doc = await h2request(client, headers);
+        const doc = await h2request(client, { ...headers, 'accept-encoding': encoding });
         assert.equal(doc.status, 200);
-        assert.equal(doc.headers['content-encoding'], 'br');
+        assert.equal(doc.headers['content-encoding'], encoding);
         assert.equal(Number(doc.headers['content-length']), doc.body.length);
         assert.equal(server.takeLog()[0].bytes, doc.body.length);
         assert.ok(doc.body.length < html.length / 10);
-        assert.deepEqual(zlib.brotliDecompressSync(doc.body), html);
+        assert.deepEqual(decompress(doc.body), html);
 
         if (split) {
-          const earlyHtml = zlib.brotliDecompressSync(doc.firstChunk, {
-            finishFlush: zlib.constants.BROTLI_OPERATION_FLUSH,
+          const earlyChunks = doc.chunks.filter(
+            ({ atMs }) => atMs - doc.headersMs < document.downloadMs / 2,
+          );
+          const earlyHtml = decompress(Buffer.concat(earlyChunks.map(({ data }) => data)), {
+            finishFlush: flush,
           });
           assert.equal(earlyHtml.toString(), head);
           assert.ok(
-            doc.endMs - doc.headersMs >= 200,
+            doc.chunks.at(-1).atMs - doc.headersMs >= document.downloadMs - 50,
             'the late part waits for the recorded download',
           );
         } else {
@@ -1183,9 +1211,17 @@ test('replay: headless Chrome loads the real origin from the local server and ca
   const manifest = path.join(site.dist, '.vite', 'manifest.json');
   fs.mkdirSync(path.dirname(manifest));
   fs.writeFileSync(manifest, JSON.stringify({ app: { file: 'assets/app.js', src: 'src/app.ts' } }));
+  // Small assets use the first supported encoding when none are fitted.
+  site.archive.assets.unshift({
+    path: '/assets/recorded-only.js',
+    encodedBytes: 400,
+    encoding: 'zstd',
+  });
+  fs.writeFileSync(path.join(site.archiveDir, 'archive.json'), JSON.stringify(site.archive));
   const out = path.join(site.dir, 'report');
+  const replayLog = [];
   const logLine = console.log;
-  console.log = () => {};
+  console.log = (line) => replayLog.push(line);
   let result;
   try {
     result = await cmdReplay([
@@ -1206,6 +1242,8 @@ test('replay: headless Chrome loads the real origin from the local server and ca
   } finally {
     console.log = logLine;
   }
+  const fallback = typeof zlib.createZstdCompress === 'function' ? 'zstd' : 'br';
+  assert.ok(replayLog.includes(`  compression: ${fallback}`));
   const report = JSON.parse(fs.readFileSync(path.join(out, 'replay-report.json'), 'utf8'));
   assert.equal(report.mode, 'replay');
   assert.equal(report.calibration.rows.find((r) => r.key === 'ttfbMs').pass, true);

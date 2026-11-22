@@ -518,6 +518,8 @@ fn literal_truthiness(expr: &Expression<'_>) -> Option<bool> {
     // A numeric literal is never negative or `NaN`.
     Expression::NumericLiteral(lit) => Some(lit.value > 0.0),
     Expression::StringLiteral(lit) => Some(!lit.value.is_empty()),
+    // `value` is in base 10, so `0x0n` is zero too.
+    Expression::BigIntLiteral(lit) => Some(!lit.is_zero()),
     _ => None,
   }
 }
@@ -528,7 +530,8 @@ fn literal_is_nullish(expr: &Expression<'_>) -> Option<bool> {
     Expression::NullLiteral(_) => Some(true),
     Expression::BooleanLiteral(_)
     | Expression::NumericLiteral(_)
-    | Expression::StringLiteral(_) => Some(false),
+    | Expression::StringLiteral(_)
+    | Expression::BigIntLiteral(_) => Some(false),
     _ => None,
   }
 }

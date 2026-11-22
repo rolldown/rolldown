@@ -1,4 +1,4 @@
-import { isWasiTest } from 'rolldown-tests/utils';
+import { isWasiTest } from '@tests/runtime-flavor';
 import { rolldown } from 'rolldown';
 import { expect, test } from 'vitest';
 

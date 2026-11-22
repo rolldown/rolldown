@@ -421,8 +421,8 @@ mod tests {
     async fn on_close(&self) {}
   }
 
-  #[tokio::test]
-  async fn zero_build_delay_builds_queued_changes_together() {
+  #[test]
+  fn zero_build_delay_builds_queued_changes_together() {
     let dir = TestDir::new("rolldown-watcher-zero-delay");
     let entry = dir.path().join("main.js");
     std::fs::write(&entry, "export const value = 1;\n").unwrap();
@@ -466,7 +466,7 @@ mod tests {
       closed,
       Arc::new(Event::new()),
     );
-    coordinator.run().await;
+    rolldown_utils::futures::block_on(coordinator.run());
 
     // One rebuild, started only after all three messages were taken.
     assert_eq!(*taken_at_restart.lock().unwrap(), vec![3]);

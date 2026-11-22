@@ -12,11 +12,18 @@ import type { LogHandler } from '../log/log-handler';
 import { NormalizedInputOptionsImpl } from '../options/normalized-input-options';
 import { NormalizedOutputOptionsImpl } from '../options/normalized-output-options';
 import type { ModuleInfo } from '../types/module-info';
+import { parseModuleId, stringifyModuleId } from '../utils/module-id';
 import {
+  type DroppableBox,
+  releaseOrDefer,
+  shouldEagerlyFreeOutputs,
+} from '../utils/threadless-free';
+import {
+  type ModuleSideEffectsAccess,
   type ModuleSideEffectsOptionFn,
+  snapshotModuleInfo,
   transformModuleInfo,
 } from '../utils/transform-module-info';
-import { parseModuleId, stringifyModuleId } from '../utils/module-id';
 import type { RenderedChunkMeta } from '.';
 import type { PluginContextResolveOptions } from './plugin-context';
 
@@ -66,6 +73,32 @@ function freeReceipt(next: number, ...maps: Map<number, unknown>[]): number {
  */
 export type JsModuleOptions = Pick<ModuleOptions, 'meta'>;
 
+// A JavaScript context built on a retained box: `PluginContextImpl` or
+// `ChunkingContextImpl`.
+interface BindingContextOwner {
+  releaseBinding(): void;
+}
+
+type ReleaseFailure = { error: unknown } | undefined;
+
+// Releases every item even when one throws, so one failure cannot leave the
+// rest attached; keeps the first error for the caller to rethrow once the
+// whole release is done.
+function releaseEach<T>(
+  items: Iterable<T>,
+  release: (item: T) => void,
+  failure: ReleaseFailure,
+): ReleaseFailure {
+  for (const item of items) {
+    try {
+      release(item);
+    } catch (error) {
+      failure ??= { error };
+    }
+  }
+  return failure;
+}
+
 export class PluginContextData {
   moduleOptionMap: Map<string, JsModuleOptions> = new Map();
   /** The module options that each module started with. See `createModuleOptions`. */
@@ -88,8 +121,8 @@ export class PluginContextData {
   loadModulePromiseMap: Map<string, Promise<void>> = new Map();
   loadModuleWithDependenciesPromiseMap: Map<string, Promise<void>> = new Map();
   renderedChunkMeta: RenderedChunkMeta | null = null;
-  normalizedInputOptions: NormalizedInputOptions | null = null;
-  normalizedOutputOptions: NormalizedOutputOptions | null = null;
+  normalizedInputOptions: NormalizedInputOptionsImpl | null = null;
+  normalizedOutputOptions: NormalizedOutputOptionsImpl | null = null;
   /** `experimental.importAttributes` */
   importAttributes = false;
   /**
@@ -97,6 +130,41 @@ export class PluginContextData {
    * pass it to Rust, which calls it only when the value needs it.
    */
   moduleSideEffectsOption: ModuleSideEffectsOptionFn | undefined = undefined;
+
+  // Native option boxes the cached wrappers above read from. A threadless WASI
+  // host may never run GC finalizers, so these are released explicitly.
+  #retainedOptionBoxes: Set<BindingNormalizedOptions> = new Set();
+
+  // Context boxes kept past their own hook: Rollup lets a plugin keep using a
+  // build-scoped context after the hook settles (Vite's
+  // `vite:watch-package-data` calls a `buildStart`-bound `this.addWatchFile`
+  // from `resolveId`). Drained only by `releaseRetainedOptionBoxes`, never by
+  // `clear()`, which runs before `writeBundle`.
+  #retainedContextBoxes: Set<DroppableBox> = new Set();
+  // The JavaScript contexts built on those boxes, detached at the same point.
+  #retainedContexts: Set<BindingContextOwner> = new Set();
+  // One build-scoped context box for live `ModuleInfo.moduleSideEffects`
+  // reads/writes across hooks on threadless WASI, so a `ModuleInfo` retained
+  // from an earlier hook (e.g. `load`) stays live through `buildEnd` without
+  // retaining per-module boxes or pinning a disposed Wasm instance past the build.
+  #sideEffectsBox: (ModuleSideEffectsAccess & DroppableBox) | undefined = undefined;
+  #released = false;
+  readonly #sideEffectsAccess: ModuleSideEffectsAccess = {
+    getModuleSideEffects: (id, callOption) => {
+      const box = this.#sideEffectsBox;
+      if (box === undefined) {
+        throw new Error('This module info has already released its binding object');
+      }
+      return box.getModuleSideEffects(id, callOption);
+    },
+    setModuleSideEffects: (id, value, callOption) => {
+      const box = this.#sideEffectsBox;
+      if (box === undefined) {
+        throw new Error('This module info has already released its binding object');
+      }
+      return box.setModuleSideEffects(id, value, callOption);
+    },
+  };
 
   constructor(
     private onLog: LogHandler,
@@ -190,19 +258,66 @@ export class PluginContextData {
   getModuleInfo(
     id: string,
     context: BindingPluginContext,
+    moduleSideEffectsAccess: ModuleSideEffectsAccess,
     warnWriteAfterBuildEnd: (moduleId: string) => void,
   ): ModuleInfo | null {
     const bindingInfo = context.getModuleInfo(id);
     if (bindingInfo) {
-      return transformModuleInfo(
-        bindingInfo,
-        this.getModuleOption(id),
-        context,
-        this.moduleSideEffectsOption,
-        warnWriteAfterBuildEnd,
-      );
+      // Each call mints a fresh module-info box retaining the module's full
+      // source, and a threadless WASI host may never run GC finalizers, so
+      // hand out a plain-data snapshot and release the box immediately.
+      return shouldEagerlyFreeOutputs()
+        ? snapshotModuleInfo(
+            bindingInfo,
+            this.getModuleOption(id),
+            this.getModuleSideEffectsAccess(context, moduleSideEffectsAccess),
+            this.moduleSideEffectsOption,
+            warnWriteAfterBuildEnd,
+          )
+        : transformModuleInfo(
+            bindingInfo,
+            this.getModuleOption(id),
+            moduleSideEffectsAccess,
+            this.moduleSideEffectsOption,
+            warnWriteAfterBuildEnd,
+          );
     }
     return null;
+  }
+
+  /**
+   * Returns a build-scoped `ModuleSideEffectsAccess` on threadless WASI,
+   * pinning at most one context box until `releaseRetainedOptionBoxes()`.
+   * Falls back to `fallback` on lazy flavors or after terminal release
+   * (e.g. `closeBundle`).
+   */
+  getModuleSideEffectsAccess(
+    box: ModuleSideEffectsAccess & DroppableBox,
+    fallback: ModuleSideEffectsAccess,
+  ): ModuleSideEffectsAccess {
+    if (!shouldEagerlyFreeOutputs() || this.#released) {
+      return fallback;
+    }
+    if (this.#sideEffectsBox === undefined) {
+      this.#sideEffectsBox = box;
+      this.retainContextBox(box, {
+        releaseBinding: () => {
+          this.#sideEffectsBox = undefined;
+        },
+      });
+    }
+    return this.#sideEffectsAccess;
+  }
+
+  /**
+   * Releases a per-hook context box unless it was promoted into
+   * `#retainedContextBoxes` (e.g. as `#sideEffectsBox`), in which case
+   * `releaseRetainedOptionBoxes()` releases it when the build settles.
+   */
+  releaseHookContextBox(box: DroppableBox): void {
+    if (!this.#retainedContextBoxes.has(box)) {
+      releaseOrDefer(box);
+    }
   }
 
   getModuleIds(context: BindingPluginContext): ArrayIterator<string> {
@@ -241,20 +356,30 @@ export class PluginContextData {
   }
 
   getInputOptions(opts: BindingNormalizedOptions): NormalizedInputOptions {
-    this.normalizedInputOptions ??= new NormalizedInputOptionsImpl(
-      opts,
-      this.onLog,
-      this.normalizedInputPlugins,
-    );
+    if (this.normalizedInputOptions == null) {
+      this.normalizedInputOptions = new NormalizedInputOptionsImpl(
+        opts,
+        this.onLog,
+        this.normalizedInputPlugins,
+      );
+      this.#trackOptionBox(opts);
+    } else {
+      this.#dropDuplicateOptionBox(opts);
+    }
     return this.normalizedInputOptions;
   }
 
   getOutputOptions(opts: BindingNormalizedOptions): NormalizedOutputOptions {
-    this.normalizedOutputOptions ??= new NormalizedOutputOptionsImpl(
-      opts,
-      this.outputOptions,
-      this.normalizedOutputPlugins,
-    );
+    if (this.normalizedOutputOptions == null) {
+      this.normalizedOutputOptions = new NormalizedOutputOptionsImpl(
+        opts,
+        this.outputOptions,
+        this.normalizedOutputPlugins,
+      );
+      this.#trackOptionBox(opts);
+    } else {
+      this.#dropDuplicateOptionBox(opts);
+    }
     return this.normalizedOutputOptions;
   }
 
@@ -289,6 +414,36 @@ export class PluginContextData {
     }
   }
 
+  // Each hook call marshals a fresh options box, but only the one behind the
+  // cached wrapper is read: keep it and drop the duplicates. renderStart
+  // passes the SAME box to both getters, hence the membership check below.
+  #trackOptionBox(opts: BindingNormalizedOptions): void {
+    if (shouldEagerlyFreeOutputs()) {
+      this.#retainedOptionBoxes.add(opts);
+    }
+  }
+
+  #dropDuplicateOptionBox(opts: BindingNormalizedOptions): void {
+    if (shouldEagerlyFreeOutputs() && !this.#retainedOptionBoxes.has(opts)) {
+      opts.dropInner();
+    }
+  }
+
+  // ONLY for boxes minted during the build: the registry drains when the
+  // `generate()`/`write()` call settles, so an output- or close-side box parked
+  // here would never be released. Pass the JavaScript context built on the box
+  // so the drain detaches it too. No-op outside threadless WASI.
+  retainContextBox(box: DroppableBox, context: BindingContextOwner): void {
+    if (shouldEagerlyFreeOutputs()) {
+      this.#retainedContextBoxes.add(box);
+      this.#retainedContexts.add(context);
+    }
+  }
+
+  // The native `invalidateJsSideCache` callback, fired at the end of
+  // `bundle_up`, i.e. before `writeBundle`: leave the context boxes alone (a
+  // `buildStart`-bound `this.addWatchFile` may run in `writeBundle`). Option
+  // boxes are safe to release because their cached wrappers keep serving reads.
   clear(): void {
     this.renderedChunkMeta = null;
     this.loadModulePromiseMap.clear();
@@ -301,5 +456,70 @@ export class PluginContextData {
     this.olderResolutionOptionsMap.clear();
     // `resolveOptionsMap` and its receipt counter stay as they are: a `this.resolve` call of the
     // previous build may still be in flight, and its receipt must not be given out again.
+    this.#releaseOptionBoxes();
+  }
+
+  // Terminal release once a build, `scan()` or watcher close settles. The only
+  // drain for context boxes; also covers option boxes when the invalidate
+  // callback never fired (failed builds, `scan()`). Idempotent; no-op off
+  // threadless WASI. Both parts run to the end before the first error, if
+  // any, is rethrown.
+  releaseRetainedOptionBoxes(): void {
+    this.#released = true;
+    let failure: ReleaseFailure;
+    try {
+      this.#releaseContextBoxes();
+    } catch (error) {
+      failure = { error };
+    }
+    try {
+      this.#releaseOptionBoxes();
+    } catch (error) {
+      failure ??= { error };
+    }
+    if (failure) {
+      throw failure.error;
+    }
+  }
+
+  // `releaseOrDefer`, not `dropInner()`: a fire-and-forget `this.load()` /
+  // `this.resolve()` may still hold a shared borrow on its context, and an
+  // exclusive drop would throw (see `utils/threadless-free.ts`).
+  //
+  // A context a plugin or a `codeSplitting` classifier keeps would otherwise
+  // keep its binding wrapper, whose methods keep the binding instance alive (on
+  // workerd, a disposed instance's whole memory), so the contexts are detached
+  // as well. A call still in flight holds the box itself, so detaching cannot
+  // cut a deferred drop short. See
+  // internal-docs/workerd-managed-instance/implementation.md.
+  #releaseContextBoxes(): void {
+    if (!shouldEagerlyFreeOutputs()) {
+      return;
+    }
+    let failure = releaseEach(
+      this.#retainedContexts,
+      (context) => context.releaseBinding(),
+      undefined,
+    );
+    this.#retainedContexts.clear();
+    failure = releaseEach(this.#retainedContextBoxes, releaseOrDefer, failure);
+    this.#retainedContextBoxes.clear();
+    if (failure) {
+      throw failure.error;
+    }
+  }
+
+  // The cached wrappers read every value in their constructor and keep no binding object
+  // (see internal-docs/bundler-data-lifecycle/implementation.md, "Normalized options objects"),
+  // so the boxes have no reader left.
+  #releaseOptionBoxes(): void {
+    if (!shouldEagerlyFreeOutputs() || this.#retainedOptionBoxes.size === 0) {
+      return;
+    }
+    const failure = releaseEach(this.#retainedOptionBoxes, (box) => box.dropInner(), undefined);
+    this.#retainedOptionBoxes.clear();
+    if (failure) {
+      throw failure.error;
+    }
   }
 }

@@ -116,8 +116,13 @@ impl BindingWatcher {
   #[tracing::instrument(level = "debug", skip_all)]
   #[napi(ts_return_type = "Promise<void>")]
   pub fn run<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, ()>> {
-    let inner = Arc::clone(&self.inner);
-    spawn_boxed_future(env, async move { inner.run().map_err(watcher_start_error_to_napi) })
+    // Submit before entering an N-API future: a stopped runtime still returns a rejected
+    // Promise (`WatcherStartError`) and preserves the coordinator so a later `run()` or `close()`
+    // can retry once a runtime is available.
+    match self.inner.run().map_err(watcher_start_error_to_napi) {
+      Ok(()) => PromiseRaw::resolve(env, ()),
+      Err(error) => PromiseRaw::reject(env, error),
+    }
   }
 
   /// Gives consumers a reliable way to await the watcher's completion.

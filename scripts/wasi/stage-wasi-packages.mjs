@@ -22,8 +22,13 @@ import { NapiCli } from '@napi-rs/cli';
 import { findBareRuntimeImports } from './bare-runtime-imports.mjs';
 
 const defaultRepoRoot = fileURLToPath(new URL('../../', import.meta.url));
-const coreRuntimePackages = ['@emnapi/core', '@emnapi/runtime', '@napi-rs/wasm-runtime'];
-const runtimePackages = [...coreRuntimePackages];
+const coreRuntimePackages = [
+  '@emnapi/core',
+  '@emnapi/runtime',
+  '@napi-rs/async-runtime',
+  '@napi-rs/wasm-runtime',
+];
+const runtimePackages = [...coreRuntimePackages, 'buffer'];
 const notices = ['LICENSE', 'THIRD-PARTY-LICENSE'];
 const stagingDirectoryPrefix = '.stage-wasi-packages-';
 const packageRootDirectoryMode = 0o775;
@@ -164,6 +169,34 @@ export async function stageWasiPackages({ repoRoot = defaultRepoRoot } = {}) {
         ...notices,
       ],
     },
+    {
+      label: 'threadless',
+      generatedRuntimePackages: runtimePackages,
+      declaration: path.join(repoRoot, 'packages/rolldown/src/rolldown-binding.wasip1.d.cts'),
+      wasm: path.join(repoRoot, 'packages/rolldown/src/rolldown-binding.wasm32-wasip1.wasm'),
+      sourceDir: path.join(repoRoot, 'packages/browser/dist'),
+      packageName: 'wasm32-wasip1',
+      exactSourceSet: false,
+      loaders: [
+        { name: 'rolldown-binding.wasip1.cjs', sourceType: 'script' },
+        { name: 'rolldown-binding.wasip1-browser.js', sourceType: 'module' },
+        {
+          name: 'rolldown-binding.wasip1-deferred.js',
+          sourceName: 'workerd.browser.mjs',
+          sourceType: 'module',
+        },
+      ],
+      packFiles: [
+        'rolldown-binding.wasm32-wasip1.wasm',
+        'rolldown-binding.wasip1.cjs',
+        'rolldown-binding.wasip1.d.cts',
+        'rolldown-binding.wasip1-browser.js',
+        'rolldown-binding.wasip1-deferred.js',
+        'rolldown-binding.wasip1-deferred.d.ts',
+        'rolldown-binding.wasm32-wasip1.wasm.d.ts',
+        ...notices,
+      ],
+    },
   ];
 
   await assertEmbeddedRuntimeNotices(repoRoot, runtimeFsBundle);
@@ -229,6 +262,50 @@ export async function stageWasiPackages({ repoRoot = defaultRepoRoot } = {}) {
           [],
           `${name} must vendor its Buffer/emnapi/wasm runtime`,
         );
+      }
+
+      if (label === 'threadless') {
+        await copyFile(
+          path.join(sourceDir, 'workerd.d.mts'),
+          path.join(stagedPackageDir, 'rolldown-binding.wasip1-deferred.d.ts'),
+        );
+        const managedWorkerd = await readFile(
+          path.join(stagedPackageDir, 'rolldown-binding.wasip1-deferred.js'),
+          'utf8',
+        );
+        // Both the cli-installed CurrentThread hosts and the managed instance
+        // must be in the staged bundle; asserted through property names, quoted or
+        // accessed, which survive bundling verbatim (local identifiers may be renamed).
+        for (const exportName of [
+          'getCurrentThreadTaskHostContractVersion',
+          'isCurrentThreadHostRegistrationActive',
+          'reserveCurrentThreadHostRegistration',
+          'registerCurrentThreadTaskHost',
+          'unregisterCurrentThreadTaskHost',
+          'registerTimerHost',
+          'unregisterTimerHost',
+        ]) {
+          assert.match(
+            managedWorkerd,
+            new RegExp('([\'"`])' + exportName + '\\1|\\.' + exportName + '\\b'),
+          );
+        }
+        assert.match(
+          managedWorkerd,
+          /The managed workerd binding does not support CurrentThread task hosting/,
+        );
+        assert.match(
+          managedWorkerd,
+          /The managed workerd binding does not support exact timer-host disposal/,
+        );
+        assert.match(managedWorkerd, /CurrentThread task-host contract version/);
+        assert.match(managedWorkerd, /CURRENT_THREAD_TASK_HOST_CONTRACT_VERSION\w* = 4\b/);
+        assert.match(managedWorkerd, /Cannot dispose this workerd Rolldown instance with/);
+        assert.doesNotMatch(
+          managedWorkerd,
+          /driveCurrentThreadRuntimeTasks|cancelCurrentThreadRuntimeTaskDispatch|dispatchHigh|dispatchLow/,
+        );
+        assert.doesNotMatch(managedWorkerd, /from\s+['"]node:/);
       }
 
       if (label === 'threaded') {

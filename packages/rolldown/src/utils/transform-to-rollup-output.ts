@@ -15,7 +15,8 @@ import { OutputChunkImpl } from '../types/output-chunk-impl';
 import type { OutputAsset, OutputChunk, RolldownOutput, SourceMap } from '../types/rolldown-output';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { type AssetSource, bindingAssetSource, transformAssetSource } from './asset-source';
-import { transformChunkModules } from './transform-rendered-chunk';
+import { type BindingCell, shouldEagerlyFreeOutputs } from './threadless-free';
+import { snapshotChunkModules, transformChunkModules } from './transform-rendered-chunk';
 
 export function transformToRollupSourceMap(map: string): SourceMap {
   const parsed: Omit<SourceMap, 'toString' | 'toUrl'> = JSON.parse(map);
@@ -51,9 +52,13 @@ export function transformToRollupSourceMap(map: string): SourceMap {
   return obj;
 }
 
-function transformToRollupOutputChunk(bindingChunk: BindingOutputChunk): OutputChunk {
+function transformToRollupOutputChunk(bindingChunk: BindingOutputChunk): OutputChunkImpl {
   return new OutputChunkImpl(bindingChunk);
 }
+
+// The binding cell of each mutable bundle item, on threadless WASI only (see
+// `releaseOutputBundleItems`).
+const mutableItemCells: WeakMap<OutputChunk | OutputAsset, BindingCell<unknown>> = new WeakMap();
 
 function transformToMutableRollupOutputChunk(
   bindingChunk: BindingOutputChunk,
@@ -61,15 +66,25 @@ function transformToMutableRollupOutputChunk(
   codeCache?: Map<string, OutputCodeCacheEntry>,
 ): OutputChunk {
   const fileName = bindingChunk.getFileName();
+  // The getters reach the wrapper only through this cell, so clearing it
+  // leaves a kept item holding plain data.
+  const cell: BindingCell<BindingOutputChunk> = { value: bindingChunk };
+  const binding = (): BindingOutputChunk => {
+    if (cell.value === undefined) {
+      throw new Error('This output chunk has already released its binding object');
+    }
+    return cell.value;
+  };
   const chunk = {
     type: 'chunk',
     get code() {
-      if (!codeCache) return bindingChunk.getCode();
-      const identity = bindingChunk.getCodeIdentity();
+      const current = binding();
+      if (!codeCache) return current.getCode();
+      const identity = current.getCodeIdentity();
       const hit = codeCache.get(fileName);
       if (hit && hit.identity === identity) return hit.code;
-      const code = bindingChunk.getCode();
-      codeCache.set(fileName, { identity, holder: bindingChunk, code });
+      const code = current.getCode();
+      codeCache.set(fileName, { identity, holder: current, code });
       return code;
     },
     fileName,
@@ -77,46 +92,52 @@ function transformToMutableRollupOutputChunk(
     // hook, and most hooks read only a few fields of a few outputs. Each read crosses NAPI, and
     // the Proxy below caches the first read, so a field is still fetched at most once per hook.
     get name() {
-      return bindingChunk.getName();
+      return binding().getName();
     },
     get modules() {
-      return transformChunkModules(bindingChunk.getModules());
+      // Each getModules() call mints per-module boxes only finalizers reclaim,
+      // so snapshot and release them on threadless WASI. Safe because the proxy
+      // caches this map and output-hook changes never send `modules` to Rust.
+      const bindingModules = binding().getModules();
+      return shouldEagerlyFreeOutputs()
+        ? snapshotChunkModules(bindingModules)
+        : transformChunkModules(bindingModules);
     },
     get imports() {
-      return bindingChunk.getImports();
+      return binding().getImports();
     },
     get dynamicImports() {
-      return bindingChunk.getDynamicImports();
+      return binding().getDynamicImports();
     },
     get exports() {
-      return bindingChunk.getExports();
+      return binding().getExports();
     },
     get isEntry() {
-      return bindingChunk.getIsEntry();
+      return binding().getIsEntry();
     },
     get facadeModuleId() {
-      return bindingChunk.getFacadeModuleId() || null;
+      return binding().getFacadeModuleId() || null;
     },
     get isDynamicEntry() {
-      return bindingChunk.getIsDynamicEntry();
+      return binding().getIsDynamicEntry();
     },
     get moduleIds() {
-      return bindingChunk.getModuleIds();
+      return binding().getModuleIds();
     },
     get map() {
-      const map = bindingChunk.getMap();
+      const map = binding().getMap();
       return map ? transformToRollupSourceMap(map) : null;
     },
     get sourcemapFileName() {
-      return bindingChunk.getSourcemapFileName() || null;
+      return binding().getSourcemapFileName() || null;
     },
     get preliminaryFileName() {
-      return bindingChunk.getPreliminaryFileName();
+      return binding().getPreliminaryFileName();
     },
   } as OutputChunk;
   const cache: Record<string | symbol, any> = {};
   let assigned: Set<string | symbol> | undefined;
-  return new Proxy(chunk, {
+  const proxy = new Proxy(chunk, {
     get(target, p) {
       if (p in cache) {
         return cache[p];
@@ -130,7 +151,9 @@ function transformToMutableRollupOutputChunk(
       if (!assigned) {
         const names = new Set<string | symbol>();
         assigned = names;
-        changed.updated.set(fileName, () => collectChunkChange(bindingChunk, chunk, cache, names));
+        // The proxy's set trap must not capture the raw wrapper: a kept
+        // chunk would retain its instance even after the cell is cleared.
+        changed.updated.set(fileName, () => collectChunkChange(binding(), chunk, cache, names));
       }
       assigned.add(p);
       return true;
@@ -140,6 +163,8 @@ function transformToMutableRollupOutputChunk(
       return p in target;
     },
   });
+  if (shouldEagerlyFreeOutputs()) mutableItemCells.set(proxy, cell);
+  return proxy;
 }
 
 /**
@@ -229,7 +254,7 @@ function isSameStrings(value: unknown, original: string[]): boolean {
   return true;
 }
 
-function transformToRollupOutputAsset(bindingAsset: BindingOutputAsset): OutputAsset {
+function transformToRollupOutputAsset(bindingAsset: BindingOutputAsset): OutputAssetImpl {
   return new OutputAssetImpl(bindingAsset);
 }
 
@@ -237,28 +262,38 @@ function transformToMutableRollupOutputAsset(
   bindingAsset: BindingOutputAsset,
   changed: ChangedOutputs,
 ): OutputAsset {
+  const fileName = bindingAsset.getFileName();
+  // The getters reach the wrapper only through this cell, so clearing it
+  // leaves a kept item holding plain data.
+  const cell: BindingCell<BindingOutputAsset> = { value: bindingAsset };
+  const binding = (): BindingOutputAsset => {
+    if (cell.value === undefined) {
+      throw new Error('This output asset has already released its binding object');
+    }
+    return cell.value;
+  };
   const asset = {
     type: 'asset',
-    fileName: bindingAsset.getFileName(),
+    fileName,
     // Lazy for the same reason as chunk metadata above.
     get originalFileName() {
-      return bindingAsset.getOriginalFileName() || null;
+      return binding().getOriginalFileName() || null;
     },
     get originalFileNames() {
-      return bindingAsset.getOriginalFileNames();
+      return binding().getOriginalFileNames();
     },
     get source(): AssetSource {
-      return transformAssetSource(bindingAsset.getSource());
+      return transformAssetSource(binding().getSource());
     },
     get name() {
-      return bindingAsset.getName() ?? undefined;
+      return binding().getName() ?? undefined;
     },
     get names() {
-      return bindingAsset.getNames();
+      return binding().getNames();
     },
   } as OutputAsset;
   const cache: Record<string | symbol, any> = {};
-  return new Proxy(asset, {
+  const proxy = new Proxy(asset, {
     get(target, p) {
       if (p in cache) {
         return cache[p];
@@ -273,18 +308,28 @@ function transformToMutableRollupOutputAsset(
       return true;
     },
   });
+  if (shouldEagerlyFreeOutputs()) mutableItemCells.set(proxy, cell);
+  return proxy;
 }
 
 export function transformToRollupOutput(output: BindingOutputs): RolldownOutput {
   const { chunks, assets } = output;
+  const chunkItems = chunks.map((chunk) => transformToRollupOutputChunk(chunk));
+  const assetItems = assets.map((asset) => transformToRollupOutputAsset(asset));
+  const outputItems: (OutputChunk | OutputAsset)[] = [...chunkItems, ...assetItems];
   const transformed = {
-    output: [
-      ...chunks.map((chunk) => transformToRollupOutputChunk(chunk)),
-      ...assets.map((asset) => transformToRollupOutputAsset(asset)),
-    ],
+    output: outputItems,
   } as RolldownOutput;
   if (output.mangleCache !== undefined) {
     transformed.mangleCache = output.mangleCache;
+  }
+  if (shouldEagerlyFreeOutputs()) {
+    for (const item of [...chunkItems, ...assetItems]) {
+      // keepDataAlive: cache every lazy field, then release the native
+      // payload. Runs after `output.mangleCache` is copied, so the release is
+      // the final native read.
+      item.__rolldown_external_memory_handle__(true);
+    }
   }
   return transformed;
 }
@@ -338,6 +383,58 @@ export function transformToOutputBundle(
       return true;
     },
   });
+}
+
+// The getter-backed fields of `transformToMutableRollupOutputChunk` /
+// `transformToMutableRollupOutputAsset`; every other field is copied up front.
+const LAZY_MUTABLE_CHUNK_FIELDS = [
+  'code',
+  'name',
+  'modules',
+  'imports',
+  'dynamicImports',
+  'exports',
+  'isEntry',
+  'facadeModuleId',
+  'isDynamicEntry',
+  'moduleIds',
+  'map',
+  'sourcemapFileName',
+  'preliminaryFileName',
+] as const satisfies readonly (keyof OutputChunk)[];
+
+const LAZY_MUTABLE_ASSET_FIELDS = [
+  'originalFileName',
+  'originalFileNames',
+  'source',
+  'name',
+  'names',
+] as const satisfies readonly (keyof OutputAsset)[];
+
+/**
+ * Read every getter-backed field of the hook's bundle items through their
+ * proxies, which cache what they read, then detach each item's binding
+ * wrapper. On threadless WASI the items' boxes are dropped when
+ * `generateBundle` / `writeBundle` settles, and Rollup lets a plugin keep the
+ * bundle past the hook, so a kept item must neither read them afterwards nor
+ * hold the wrapper, whose methods pin the instance's Memory. Pass the items as
+ * created: one the plugin deleted from the bundle can still be kept.
+ * See internal-docs/workerd-managed-instance/implementation.md.
+ */
+export function releaseOutputBundleItems(items: readonly (OutputChunk | OutputAsset)[]): void {
+  for (const item of items) {
+    const fields = item.type === 'asset' ? LAZY_MUTABLE_ASSET_FIELDS : LAZY_MUTABLE_CHUNK_FIELDS;
+    for (const field of fields) {
+      try {
+        void (item as unknown as Record<string, unknown>)[field];
+      } catch {
+        // A later read of this field throws the released-binding error
+        // instead; cleanup must not replace the hook's own outcome.
+      }
+    }
+    const cell = mutableItemCells.get(item);
+    if (cell !== undefined) cell.value = undefined;
+  }
 }
 
 export interface ChangedOutputs {

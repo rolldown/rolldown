@@ -18,7 +18,8 @@ const browserTarball = join(fixtures, 'browser/rolldown-browser.tgz');
 const BROWSER_TARBALL_CHECKS = [
   {
     artifact: browserTarball,
-    source: join(repoRoot, 'packages/browser/dist/rolldown-binding.wasm32-wasi.wasm'),
+    // @rolldown/browser is built from the threadless wasm32-wasip1 flavor
+    source: join(repoRoot, 'packages/browser/dist/rolldown-binding.wasm32-wasip1.wasm'),
   },
   {
     artifact: browserTarball,

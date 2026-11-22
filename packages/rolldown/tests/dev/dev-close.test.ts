@@ -1,4 +1,5 @@
 import { getDevWatchOptionsForCi } from '@rolldown/test-dev-server';
+import { isSingleThread } from '@tests/runtime-flavor';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -38,7 +39,9 @@ function dev(
 //
 // Fix: after `close()`, `ensureCurrentBuildFinish()` is a no-op rather than
 // an error — there is no ongoing bundle to wait for.
-test(
+//
+// Dev needs MultiThread (`devSupported`).
+test.skipIf(isSingleThread)(
   'ensureCurrentBuildFinish after close resolves instead of rejecting',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -126,7 +129,7 @@ const resolveExternal = (context: {
     (error: Error) => (error.cause as Error | undefined)?.message ?? error.message,
   );
 
-test(
+test.skipIf(isSingleThread)(
   'a closeBundle hook that awaits engine.close() does not hang',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -160,7 +163,7 @@ test(
   },
 );
 
-test(
+test.skipIf(isSingleThread)(
   'a second close does not release the option functions while closeBundle runs',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -205,7 +208,7 @@ test(
 // The dev engine keeps its plugin driver after its close, so a kept plugin context can still reach
 // an option function. After `bundle.close()`, the same call fails earlier, because that close drops
 // the plugin driver.
-test(
+test.skipIf(isSingleThread)(
   'a kept plugin context gets a clear error when an option function runs after close',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
@@ -245,7 +248,7 @@ test(
   },
 );
 
-test(
+test.skipIf(isSingleThread)(
   'a kept plugin context can settle a load after close',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {

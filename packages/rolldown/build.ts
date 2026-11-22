@@ -11,6 +11,7 @@ import { build } from './src/index';
 import { styleText } from './src/utils/style-text';
 
 const __dirname = nodePath.join(fileURLToPath(import.meta.url), '..');
+const bufferPolyfillPath = fileURLToPath(import.meta.resolve('buffer/'));
 
 const buildMeta = (function makeBuildMeta() {
   // Refer to `@rolldown/browser` package.
@@ -22,23 +23,32 @@ const buildMeta = (function makeBuildMeta() {
   // Refer to `rolldown` package
   type TargetRolldownPkg = 'rolldown-pkg';
 
+  // Threaded (wasm32-wasip1-threads) and single-thread (wasm32-wasip1) WASI
+  // dists: the artifact sets have distinct per-flavor names, so each target
+  // wires its dist to its own flavor's loaders.
   type TargetRolldownPkgWasi = 'rolldown-pkg-wasi';
+  type TargetRolldownPkgWasiSingle = 'rolldown-pkg-wasi-single';
 
-  const target: TargetBrowserPkg | TargetRolldownPkg | TargetRolldownPkgWasi =
-    (function determineTarget() {
-      switch (process.env.TARGET) {
-        case undefined:
-        case 'rolldown':
-          return 'rolldown-pkg';
-        case 'browser':
-          return 'browser-pkg';
-        case 'rolldown-wasi':
-          return 'rolldown-pkg-wasi';
-        default:
-          console.warn(`Unknown target: ${process.env.TARGET}, defaulting to 'rolldown-pkg'`);
-          return 'rolldown-pkg';
-      }
-    })();
+  const target:
+    | TargetBrowserPkg
+    | TargetRolldownPkg
+    | TargetRolldownPkgWasi
+    | TargetRolldownPkgWasiSingle = (function determineTarget() {
+    switch (process.env.TARGET) {
+      case undefined:
+      case 'rolldown':
+        return 'rolldown-pkg';
+      case 'browser':
+        return 'browser-pkg';
+      case 'rolldown-wasi':
+        return 'rolldown-pkg-wasi';
+      case 'rolldown-wasi-single':
+        return 'rolldown-pkg-wasi-single';
+      default:
+        console.warn(`Unknown target: ${process.env.TARGET}, defaulting to 'rolldown-pkg'`);
+        return 'rolldown-pkg';
+    }
+  })();
 
   const pkgRoot = target === 'browser-pkg' ? nodePath.resolve(__dirname, '../browser') : __dirname;
 
@@ -49,13 +59,26 @@ const buildMeta = (function makeBuildMeta() {
     pkgRoot,
     buildOutputDir: nodePath.resolve(pkgRoot, 'dist'),
     pkgJson: JSON.parse(fs.readFileSync(nodePath.resolve(pkgRoot, 'package.json'), 'utf-8')),
-    desireWasmFiles: target === 'browser-pkg' || target === 'rolldown-pkg-wasi',
+    desireWasmFiles:
+      target === 'browser-pkg' ||
+      target === 'rolldown-pkg-wasi' ||
+      target === 'rolldown-pkg-wasi-single',
+    // `@rolldown/browser` and the wasi-single dist ship the single-thread
+    // (wasm32-wasip1) artifact set; only the threaded wasi dist ships the
+    // threaded (wasm32-wasi) set.
+    wasmSingleThread: target === 'browser-pkg' || target === 'rolldown-pkg-wasi-single',
   };
 })();
 
 const bindingFile = nodePath.resolve('src/binding.cjs');
-const bindingFileWasi = nodePath.resolve('src/rolldown-binding.wasi.cjs');
-const bindingFileWasiBrowser = nodePath.resolve('src/rolldown-binding.wasi-browser.js');
+const bindingFileWasi = nodePath.resolve(
+  buildMeta.wasmSingleThread ? 'src/rolldown-binding.wasip1.cjs' : 'src/rolldown-binding.wasi.cjs',
+);
+const bindingFileWasiBrowser = nodePath.resolve(
+  buildMeta.wasmSingleThread
+    ? 'src/rolldown-binding.wasip1-browser.js'
+    : 'src/rolldown-binding.wasi-browser.js',
+);
 const threadedWasiLoaderArtifactDir = nodePath.resolve('artifacts/threaded-wasi-loaders');
 const threadedWasiFiles = {
   binding: nodePath.resolve('src/rolldown-binding.wasi.cjs'),
@@ -116,6 +139,7 @@ if (buildMeta.target === 'browser-pkg') {
     await build(config);
   }
   if (buildMeta.target === 'browser-pkg') {
+    await bundleManagedWorkerdLoaders();
     await bundleBrowserWasiLoaders();
     await bundleThreadedWasiLoaders();
   }
@@ -149,7 +173,7 @@ function withShared({
     },
     external: [
       /@rolldown\/binding-.*/,
-      /rolldown-binding\.wasi\.cjs/,
+      /rolldown-binding\.(wasi|wasip1)\.cjs/,
       ...Object.keys(buildMeta.pkgJson.dependencies ?? {}),
     ],
     // Do not move this line up or down, it's here for a reason
@@ -160,6 +184,8 @@ function withShared({
         isCI: buildMeta.isCI,
         isReleasingPkgInCI: buildMeta.isReleasingPkgInCI,
         desireWasmFiles: buildMeta.desireWasmFiles,
+        wasmSingleThread: buildMeta.wasmSingleThread,
+        workerdPackageApi: buildMeta.target === 'browser-pkg',
       }),
       isBrowserBuild && removeBuiltModules(),
       options.plugins,
@@ -171,10 +197,82 @@ function withShared({
       target: 'node22',
       define: {
         'import.meta.browserBuild': String(isBrowserBuild),
+        'import.meta.workerdPackageApi': String(buildMeta.target === 'browser-pkg'),
         __RUNTIME_STRING__: JSON.stringify(readDefaultDevRuntimeSource()),
       },
     },
   };
+}
+
+// Keep the managed workerd entries self-contained so release staging can reuse
+// the same public factory across every package that ships them.
+// See internal-docs/workerd-managed-instance/implementation.md.
+async function bundleManagedWorkerdLoaders() {
+  // The workerd entries drive the browser pipeline against per-instance managed
+  // bindings, so from the pipeline's point of view they are browser builds.
+  const workerdDefine = {
+    'import.meta.browserBuild': 'true',
+    'import.meta.workerdPackageApi': 'true',
+    // Same polyfill as the browser package build: workerd has no ambient
+    // `process`, and the logger init reads this flag.
+    'process.env.ROLLDOWN_TEST': 'false',
+    // Same as the browser package build: the default dev runtime source must be
+    // embedded, because workerd has no filesystem fallback to read it from.
+    __RUNTIME_STRING__: JSON.stringify(readDefaultDevRuntimeSource()),
+  };
+
+  await build({
+    input: nodePath.resolve('src/workerd.ts'),
+    platform: 'node',
+    resolve: {
+      alias: {
+        buffer: bufferPolyfillPath,
+      },
+    },
+    output: {
+      file: nodePath.join(buildMeta.buildOutputDir, 'workerd.mjs'),
+      format: 'esm',
+      codeSplitting: false,
+    },
+    plugins: [aliasWorkerdPipelineModules()],
+    transform: {
+      target: 'node22',
+      define: workerdDefine,
+    },
+  });
+
+  await build({
+    input: nodePath.resolve('src/workerd.ts'),
+    platform: 'browser',
+    resolve: {
+      alias: {
+        buffer: bufferPolyfillPath,
+      },
+    },
+    output: {
+      file: nodePath.join(buildMeta.buildOutputDir, 'workerd.browser.mjs'),
+      format: 'esm',
+      codeSplitting: false,
+    },
+    plugins: [aliasWorkerdPipelineModules(), removeBuiltModules()],
+    transform: {
+      target: 'node22',
+      define: workerdDefine,
+    },
+  });
+
+  await build({
+    input: {
+      workerd: nodePath.resolve('src/workerd.ts'),
+    },
+    output: {
+      dir: buildMeta.buildOutputDir,
+      format: 'esm',
+      entryFileNames: '[name].mjs',
+      codeSplitting: false,
+    },
+    plugins: [dts({ emitDtsOnly: true }), removeIncludeTagsFromDts()],
+  });
 }
 
 // Published consumers do not inherit the workspace `overrides` pin, so bundle
@@ -197,7 +295,7 @@ async function bundleBrowserWasiLoaders() {
   await build({
     input: bindingFileWasi,
     platform: 'node',
-    external: [/^node:/, /^@rolldown\/binding-wasm32-wasi(?:\/|$)/],
+    external: [/^node:/, /^@rolldown\/binding-wasm32-wasip1(?:\/|$)/],
     output: {
       file: nodePath.join(buildMeta.buildOutputDir, nodePath.basename(bindingFileWasi)),
       format: 'cjs',
@@ -294,6 +392,85 @@ function bundleThreadedNodeWorkerRuntime(): Plugin {
           .map((name) => `${name} = __wasmRuntime_${name}`)
           .join(', ')};`;
         return runtimeImport + code.replace(runtimeRequire, runtimeBindings);
+      },
+    },
+  };
+}
+
+// Binding exports the workerd proxy must not forward: the seven private
+// CurrentThread host exports (the deferred loader registers them; a pipeline
+// import of one must fail the bundle), and `getRuntimeCapabilities`,
+// which the proxy defines itself.
+const WORKERD_PROXY_SKIPPED_EXPORTS: ReadonlySet<string> = new Set([
+  'getCurrentThreadTaskHostContractVersion',
+  'isCurrentThreadHostRegistrationActive',
+  'registerCurrentThreadTaskHost',
+  'registerTimerHost',
+  'reserveCurrentThreadHostRegistration',
+  'unregisterCurrentThreadTaskHost',
+  'unregisterTimerHost',
+  'getRuntimeCapabilities',
+]);
+
+// The names the cli wrote into the `napi-rs-artifact-metadata` header on the
+// first line of the threadless loader.
+function readWasip1ArtifactExports(): string[] {
+  const loaderPath = nodePath.resolve('src/rolldown-binding.wasip1.cjs');
+  const firstLine = fs.readFileSync(loaderPath, 'utf8').split('\n', 1)[0];
+  const marker = 'napi-rs-artifact-metadata:';
+  const markerIndex = firstLine.indexOf(marker);
+  if (markerIndex === -1) {
+    throw new Error(`${loaderPath} has no ${marker} header on its first line`);
+  }
+  const { exports } = JSON.parse(firstLine.slice(markerIndex + marker.length)) as {
+    exports?: unknown;
+  };
+  if (!Array.isArray(exports) || exports.some((name) => typeof name !== 'string')) {
+    throw new Error(`The ${marker} header of ${loaderPath} has no string \`exports\` list`);
+  }
+  return exports;
+}
+
+// The bundled workerd entries must never evaluate ambient-binding side
+// effects; the binding is entered per managed instance instead.
+// - `src/binding.cjs` -> forwarding proxy (`binding-workerd-proxy`); the
+//   `transform` hook appends one `lazyExport` per artifact export, marked pure
+//   so the unused ones tree-shake away
+// - `src/binding-magic-string.ts` -> throwing stub (prototype mutation at
+//   module evaluation needs a live binding)
+// The dts-only workerd build omits this plugin so declarations keep coming
+// from the real modules.
+function aliasWorkerdPipelineModules(): Plugin {
+  const proxyFile = nodePath.resolve('src/binding-workerd-proxy.ts');
+  const aliases = new Map([
+    [bindingFile, proxyFile],
+    [
+      nodePath.resolve('src/binding-magic-string.ts'),
+      nodePath.resolve('src/workerd-stubs/binding-magic-string.ts'),
+    ],
+  ]);
+  return {
+    name: 'alias-workerd-pipeline-modules',
+    resolveId: {
+      filter: { id: /binding/ },
+      async handler(id, importer, options) {
+        const resolution = await this.resolve(id, importer, options);
+        if (!resolution) return resolution;
+        const target = aliases.get(resolution.id);
+        if (target) return { id: target };
+        return resolution;
+      },
+    },
+    transform: {
+      filter: { id: /binding-workerd-proxy\.ts$/ },
+      handler(code, id) {
+        if (id !== proxyFile) return;
+        const lazyExports = readWasip1ArtifactExports()
+          .filter((name) => !WORKERD_PROXY_SKIPPED_EXPORTS.has(name))
+          .map(
+            (name) => `export const ${name} = /* @__PURE__ */ lazyExport(${JSON.stringify(name)});`,
+          );
+        return `${code}\n${lazyExports.join('\n')}\n`;
       },
     },
   };

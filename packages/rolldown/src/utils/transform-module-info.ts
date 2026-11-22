@@ -52,3 +52,47 @@ export function transformModuleInfo(
     },
   };
 }
+
+/**
+ * Like {@linkcode transformModuleInfo}, but copies `code` — the only
+ * box-backed field, and by far the largest retention — to plain JS data and
+ * releases the native box immediately, for the threadless-WASI flavor. A
+ * callback that retains the returned info past its hook keeps working.
+ */
+export function snapshotModuleInfo(
+  info: BindingModuleInfo,
+  option: JsModuleOptions,
+  access: ModuleSideEffectsAccess,
+  callOption: ModuleSideEffectsOptionFn | undefined,
+  warnWriteAfterBuildEnd: (moduleId: string) => void,
+): ModuleInfo {
+  const id = info.id;
+  const code = info.code;
+  const snapshot: ModuleInfo = {
+    get ast() {
+      return unsupported('ModuleInfo#ast');
+    },
+    code,
+    id,
+    importers: info.importers,
+    dynamicImporters: info.dynamicImporters,
+    importedIds: info.importedIds,
+    dynamicallyImportedIds: info.dynamicallyImportedIds,
+    exports: info.exports,
+    isEntry: info.isEntry,
+    inputFormat: info.inputFormat,
+    meta: option.meta,
+    // Each read asks Rust, so an info object that a plugin keeps stays current.
+    get moduleSideEffects() {
+      return access.getModuleSideEffects(id, callOption);
+    },
+    set moduleSideEffects(value: ModuleInfo['moduleSideEffects']) {
+      // Tree shaking has used the values after `buildEnd`, so Rust ignores a later write.
+      if (access.setModuleSideEffects(id, value, callOption)) {
+        warnWriteAfterBuildEnd(id);
+      }
+    },
+  };
+  info.dropInner();
+  return snapshot;
+}

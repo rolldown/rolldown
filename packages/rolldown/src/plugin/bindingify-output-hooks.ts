@@ -1,20 +1,29 @@
 import type {
   BindingHookFilter,
   BindingHookRenderChunkOutput,
+  BindingMagicString,
   BindingOutputs,
   BindingPluginContext,
   BindingPluginOptions,
-  BindingResult,
+  BindingSourceMap,
 } from '../binding.cjs';
 import { RolldownMagicString } from '../binding-magic-string';
 import type { NormalizedOutputOptions } from '../options/normalized-output-options';
+import type { OutputAsset, OutputChunk } from '../types/rolldown-output';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { aggregateBindingErrorsIntoJsError, unwrapBindingResult } from '../utils/error';
 import { discardResult, isPromiseLike } from '../utils/misc';
-import { transformRenderedChunk } from '../utils/transform-rendered-chunk';
+import {
+  dropBindingOutputs,
+  releaseOrDefer,
+  runWithRelease,
+  shouldEagerlyFreeOutputs,
+} from '../utils/threadless-free';
+import { snapshotRenderedChunk, transformRenderedChunk } from '../utils/transform-rendered-chunk';
 import {
   type ChangedOutputs,
   collectChangedBundle,
+  releaseOutputBundleItems,
   transformToOutputBundle,
 } from '../utils/transform-to-rollup-output';
 import { bindingifyRenderChunkFilter } from './bindingify-hook-filter';
@@ -22,20 +31,25 @@ import type { BindingifyPluginArgs } from './bindingify-plugin';
 import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plugin-hook-meta';
 import type { FunctionPluginHooks, RenderedChunkMeta } from './index';
 import { createPluginContext } from './plugin-context';
+import type { PluginContextData } from './plugin-context-data';
 
+// Boxes are released on threadless WASI as described in `bindingify-build-hooks.ts`.
 export function bindingifyRenderStart(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['renderStart']> {
   return bindingifyHook(args.plugin.renderStart, ({ handler }) => ({
-    plugin: (ctx, opts) => {
-      return discardResult(
-        handler.call(
-          createPluginContext(args, ctx),
-          args.pluginContextData.getOutputOptions(opts),
-          args.pluginContextData.getInputOptions(opts),
-        ),
-      );
-    },
+    plugin: (ctx, opts) =>
+      runWithRelease(
+        () =>
+          discardResult(
+            handler.call(
+              createPluginContext(args, ctx),
+              args.pluginContextData.getOutputOptions(opts),
+              args.pluginContextData.getInputOptions(opts),
+            ),
+          ),
+        () => args.pluginContextData.releaseHookContextBox(ctx),
+      ),
   }));
 }
 
@@ -51,13 +65,18 @@ function generateSourcemap(
     return undefined;
   }
   const generatedMap = magicString.generateMap({ hires: magicString.hires ?? 'boundary' });
-  return bindingifySourcemap({
+  const map = bindingifySourcemap({
     file: generatedMap.file,
     mappings: generatedMap.mappings,
     names: generatedMap.names,
     sources: generatedMap.sources,
     sourcesContent: generatedMap.sourcesContent.map((s) => s ?? null),
   });
+  // Every field is copied out, so the map box has no reader left.
+  if (shouldEagerlyFreeOutputs()) {
+    (generatedMap as unknown as BindingSourceMap).dropInner();
+  }
+  return map;
 }
 
 export function bindingifyRenderChunk(
@@ -65,51 +84,84 @@ export function bindingifyRenderChunk(
 ): PluginHookWithBindingExt<BindingPluginOptions['renderChunk'], BindingHookFilter | undefined> {
   return bindingifyHook(args.plugin.renderChunk, ({ handler, options }) => ({
     plugin: (ctx, code, chunk, opts, meta) => {
-      // cache the chunks binding to deduplicated avoid clone chunks
-      if (args.pluginContextData.getRenderChunkMeta() == null) {
-        args.pluginContextData.setRenderChunkMeta({
-          chunks: Object.fromEntries(
-            Object.entries(meta.chunks).map(([key, value]) => [key, transformRenderedChunk(value)]),
-          ),
-        });
-      }
-      // Per-chunk calls of this hook run concurrently, so only the chunks map
-      // is shared through the cache; each call gets its own meta object. A
-      // getter defined on one shared object would be replaced by whichever
-      // call started last, and a hook reading `meta.magicString` after an
-      // `await` would get another chunk's code.
-      const renderChunkMeta: RenderedChunkMeta = {
-        chunks: args.pluginContextData.getRenderChunkMeta()!.chunks,
-      };
+      let magicStringInstance: RolldownMagicString | undefined;
+      // Set by the release: a first `meta.magicString` mint after the hook
+      // settles could never be released on threadless WASI, so it throws.
+      let settled = false;
+      return runWithRelease(
+        () => {
+          // cache the chunks binding to deduplicated avoid clone chunks
+          if (args.pluginContextData.getRenderChunkMeta() == null) {
+            args.pluginContextData.setRenderChunkMeta({
+              chunks: Object.fromEntries(
+                Object.entries(meta.chunks).map(([key, value]) => [
+                  key,
+                  // On the threadless flavor the cached meta must be plain data:
+                  // it outlives this invocation, and the per-chunk boxes minted
+                  // by `meta.chunks` would otherwise wait for finalizers.
+                  shouldEagerlyFreeOutputs()
+                    ? snapshotRenderedChunk(value)
+                    : transformRenderedChunk(value),
+                ]),
+              ),
+            });
+          }
+          // Per-chunk calls of this hook run concurrently, so only the chunks map
+          // is shared through the cache; each call gets its own meta object. A
+          // getter defined on one shared object would be replaced by whichever
+          // call started last, and a hook reading `meta.magicString` after an
+          // `await` would get another chunk's code.
+          const renderChunkMeta: RenderedChunkMeta = {
+            chunks: args.pluginContextData.getRenderChunkMeta()!.chunks,
+          };
 
-      // Add lazy-loaded magicString if nativeMagicString is enabled
-      let magicStringInstance: RolldownMagicString;
-      if (args.options.experimental?.nativeMagicString) {
-        Object.defineProperty(renderChunkMeta, 'magicString', {
-          get() {
-            if (magicStringInstance) {
-              return magicStringInstance;
-            }
-            magicStringInstance = new RolldownMagicString(code);
-            return magicStringInstance;
-          },
-          configurable: true,
-        });
-      }
+          // Add lazy-loaded magicString if nativeMagicString is enabled
+          if (args.options.experimental?.nativeMagicString) {
+            Object.defineProperty(renderChunkMeta, 'magicString', {
+              get() {
+                if (magicStringInstance) {
+                  return magicStringInstance;
+                }
+                if (settled) {
+                  throw new Error(
+                    'meta.magicString is no longer usable: its renderChunk hook has already settled, and a MagicString minted now could never be released on this flavor. Read it while the hook runs.',
+                  );
+                }
+                magicStringInstance = new RolldownMagicString(code);
+                return magicStringInstance;
+              },
+              configurable: true,
+            });
+          }
 
-      const outputOptions = args.pluginContextData.getOutputOptions(opts);
-      const ret = handler.call(
-        createPluginContext(args, ctx),
-        code,
-        transformRenderedChunk(chunk),
-        outputOptions,
-        renderChunkMeta,
+          const outputOptions = args.pluginContextData.getOutputOptions(opts);
+          const ret = handler.call(
+            createPluginContext(args, ctx),
+            code,
+            shouldEagerlyFreeOutputs()
+              ? snapshotRenderedChunk(chunk)
+              : transformRenderedChunk(chunk),
+            outputOptions,
+            renderChunkMeta,
+          );
+
+          if (isPromiseLike(ret)) {
+            return Promise.resolve(ret).then((ret) =>
+              bindingifyRenderChunkResult(ret, outputOptions),
+            );
+          }
+          return bindingifyRenderChunkResult(ret, outputOptions);
+        },
+        () => {
+          settled = true;
+          // The chunk box was released by `snapshotRenderedChunk`; the meta
+          // box is read on the first invocation only (the snapshot above is
+          // cached), so every invocation's copy can go, as can the context.
+          meta.dropInner();
+          args.pluginContextData.releaseHookContextBox(ctx);
+          (magicStringInstance as unknown as BindingMagicString | undefined)?.dropInner();
+        },
       );
-
-      if (isPromiseLike(ret)) {
-        return Promise.resolve(ret).then((ret) => bindingifyRenderChunkResult(ret, outputOptions));
-      }
-      return bindingifyRenderChunkResult(ret, outputOptions);
     },
     filter: bindingifyRenderChunkFilter(options.filter),
   }));
@@ -164,9 +216,17 @@ export function bindingifyAugmentChunkHash(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['augmentChunkHash']> {
   return bindingifyHook(args.plugin.augmentChunkHash, ({ handler }) => ({
-    plugin: (ctx, chunk) => {
-      return handler.call(createPluginContext(args, ctx), transformRenderedChunk(chunk));
-    },
+    plugin: (ctx, chunk) =>
+      runWithRelease(
+        () =>
+          handler.call(
+            createPluginContext(args, ctx),
+            shouldEagerlyFreeOutputs()
+              ? snapshotRenderedChunk(chunk)
+              : transformRenderedChunk(chunk),
+          ),
+        () => args.pluginContextData.releaseHookContextBox(ctx),
+      ),
   }));
 }
 
@@ -174,9 +234,11 @@ export function bindingifyResolveFileUrl(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['resolveFileUrl']> {
   return bindingifyHook(args.plugin.resolveFileUrl, ({ handler }) => ({
-    plugin: (ctx, resolveFileUrlArgs) => {
-      return handler.call(createPluginContext(args, ctx), resolveFileUrlArgs);
-    },
+    plugin: (ctx, resolveFileUrlArgs) =>
+      runWithRelease(
+        () => handler.call(createPluginContext(args, ctx), resolveFileUrlArgs),
+        () => args.pluginContextData.releaseHookContextBox(ctx),
+      ),
   }));
 }
 
@@ -184,31 +246,52 @@ export function bindingifyRenderError(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['renderError']> {
   return bindingifyHook(args.plugin.renderError, ({ handler }) => ({
-    plugin: (ctx, err) => {
-      return discardResult(
-        handler.call(createPluginContext(args, ctx), aggregateBindingErrorsIntoJsError(err)),
-      );
-    },
+    plugin: (ctx, err) =>
+      runWithRelease(
+        () =>
+          discardResult(
+            handler.call(createPluginContext(args, ctx), aggregateBindingErrorsIntoJsError(err)),
+          ),
+        () => args.pluginContextData.releaseHookContextBox(ctx),
+      ),
   }));
 }
 
 function createOutputBundle(
   args: BindingifyPluginArgs,
   ctx: BindingPluginContext,
-  bundle: BindingResult<BindingOutputs>,
+  outputs: BindingOutputs,
 ) {
   const changed: ChangedOutputs = {
     updated: new Map(),
     deleted: new Set(),
   };
   const context = createPluginContext(args, ctx);
-  const output = transformToOutputBundle(
-    context,
-    unwrapBindingResult(bundle),
-    changed,
-    args.pluginContextData.outputCodeCache,
-  );
-  return { changed, context, output };
+  // The cache retains a native chunk to stabilize its identity. Threadless
+  // hooks must instead drop every output box when they settle.
+  const codeCache = shouldEagerlyFreeOutputs()
+    ? undefined
+    : (args.pluginContextData.outputCodeCache ?? undefined);
+  const output = transformToOutputBundle(context, outputs, changed, codeCache);
+  // Captured before the hook runs, so items it deletes are still materialized.
+  const items = Object.values(output);
+  return { changed, context, output, items };
+}
+
+// Each generateBundle/writeBundle call gets fresh boxes sharing the build's
+// native `Arc`s. On threadless WASI they are released after
+// `collectChangedBundle` and before Rust applies the changes, so Rust can
+// `Arc::get_mut` in place. The items are materialized and detached first, so a
+// bundle a plugin keeps stays readable and holds no binding wrapper.
+function releaseOutputBundle(
+  pluginContextData: PluginContextData,
+  ctx: BindingPluginContext,
+  outputs: BindingOutputs,
+  items: readonly (OutputChunk | OutputAsset)[],
+): void {
+  releaseOutputBundleItems(items);
+  dropBindingOutputs(outputs);
+  pluginContextData.releaseHookContextBox(ctx);
 }
 
 export function bindingifyGenerateBundle(
@@ -216,17 +299,26 @@ export function bindingifyGenerateBundle(
 ): PluginHookWithBindingExt<BindingPluginOptions['generateBundle']> {
   return bindingifyHook(args.plugin.generateBundle, ({ handler }) => ({
     plugin: (ctx, bundle, isWrite, opts) => {
-      const { changed, context, output } = createOutputBundle(args, ctx, bundle);
-      const result = handler.call(
-        context,
-        args.pluginContextData.getOutputOptions(opts),
-        output,
-        isWrite,
+      const outputs = unwrapBindingResult(bundle);
+      let items: (OutputChunk | OutputAsset)[] = [];
+      return runWithRelease(
+        () => {
+          const created = createOutputBundle(args, ctx, outputs);
+          items = created.items;
+          const { changed, context, output } = created;
+          const result = handler.call(
+            context,
+            args.pluginContextData.getOutputOptions(opts),
+            output,
+            isWrite,
+          );
+          if (isPromiseLike(result)) {
+            return Promise.resolve(result).then(() => collectChangedBundle(changed, output));
+          }
+          return collectChangedBundle(changed, output);
+        },
+        () => releaseOutputBundle(args.pluginContextData, ctx, outputs, items),
       );
-      if (isPromiseLike(result)) {
-        return Promise.resolve(result).then(() => collectChangedBundle(changed, output));
-      }
-      return collectChangedBundle(changed, output);
     },
   }));
 }
@@ -236,12 +328,25 @@ export function bindingifyWriteBundle(
 ): PluginHookWithBindingExt<BindingPluginOptions['writeBundle']> {
   return bindingifyHook(args.plugin.writeBundle, ({ handler }) => ({
     plugin: (ctx, bundle, opts) => {
-      const { changed, context, output } = createOutputBundle(args, ctx, bundle);
-      const result = handler.call(context, args.pluginContextData.getOutputOptions(opts), output);
-      if (isPromiseLike(result)) {
-        return Promise.resolve(result).then(() => collectChangedBundle(changed, output));
-      }
-      return collectChangedBundle(changed, output);
+      const outputs = unwrapBindingResult(bundle);
+      let items: (OutputChunk | OutputAsset)[] = [];
+      return runWithRelease(
+        () => {
+          const created = createOutputBundle(args, ctx, outputs);
+          items = created.items;
+          const { changed, context, output } = created;
+          const result = handler.call(
+            context,
+            args.pluginContextData.getOutputOptions(opts),
+            output,
+          );
+          if (isPromiseLike(result)) {
+            return Promise.resolve(result).then(() => collectChangedBundle(changed, output));
+          }
+          return collectChangedBundle(changed, output);
+        },
+        () => releaseOutputBundle(args.pluginContextData, ctx, outputs, items),
+      );
     },
   }));
 }
@@ -250,14 +355,17 @@ export function bindingifyCloseBundle(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['closeBundle']> {
   return bindingifyHook(args.plugin.closeBundle, ({ handler }) => ({
-    plugin: (ctx, err) => {
-      return discardResult(
-        handler.call(
-          createPluginContext(args, ctx),
-          err ? aggregateBindingErrorsIntoJsError(err) : undefined,
-        ),
-      );
-    },
+    plugin: (ctx, err) =>
+      runWithRelease(
+        () =>
+          discardResult(
+            handler.call(
+              createPluginContext(args, ctx),
+              err ? aggregateBindingErrorsIntoJsError(err) : undefined,
+            ),
+          ),
+        () => releaseOrDefer(ctx),
+      ),
   }));
 }
 
@@ -268,10 +376,24 @@ export function bindingifyAddonHook<K extends 'banner' | 'footer' | 'intro' | 'o
   return bindingifyHook(args.plugin[name], ({ handler }) => ({
     plugin: (ctx, chunk) => {
       if (typeof handler === 'string') {
+        if (shouldEagerlyFreeOutputs()) {
+          // A string addon never reads its boxes; release them right away.
+          chunk.dropInner();
+          args.pluginContextData.releaseHookContextBox(ctx);
+        }
         return handler;
       }
 
-      return handler.call(createPluginContext(args, ctx), transformRenderedChunk(chunk));
+      return runWithRelease(
+        () =>
+          handler.call(
+            createPluginContext(args, ctx),
+            shouldEagerlyFreeOutputs()
+              ? snapshotRenderedChunk(chunk)
+              : transformRenderedChunk(chunk),
+          ),
+        () => args.pluginContextData.releaseHookContextBox(ctx),
+      );
     },
   }));
 }

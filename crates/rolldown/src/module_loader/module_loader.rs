@@ -1516,7 +1516,7 @@ mod tests {
       "a module task dropped before its first poll must unblock `this.load()` waiters"
     );
 
-    let message = futures::executor::block_on(async { rx.next().await })
+    let message = rolldown_utils::futures::block_on(async { rx.next().await })
       .expect("a module task dropped before its first poll must retire loader accounting");
     match message {
       ModuleLoaderMsg::BuildErrors(errors) => assert_eq!(errors.len(), 1),
@@ -1529,7 +1529,7 @@ mod tests {
   fn started_module_task_leaves_reporting_to_its_own_guard() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded();
     let plugin_driver = test_plugin_driver();
-    futures::executor::block_on(supervised_module_task(
+    rolldown_utils::futures::block_on(supervised_module_task(
       async {
         panic!("module task probe");
       },

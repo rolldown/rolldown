@@ -2512,6 +2512,11 @@ export interface BindingHookTransformOutput {
   moduleType?: string
 }
 
+export interface BindingHostRegistration {
+  high: number
+  low: number
+}
+
 export interface BindingHotUpdateArgs {
   kind: 'create' | 'update' | 'delete'
   /** Normalized absolute path of the changed file. */
@@ -2982,6 +2987,42 @@ export interface BindingResolveOptions {
   yarnPnp?: boolean
 }
 
+/**
+ * What this binding is -- flavor, target -- and the capabilities that follow
+ * from it. Frozen at binding load; never re-read from the environment.
+ */
+export interface BindingRuntimeCapabilities {
+  /** The executor flavor in effect. */
+  flavor: BindingRuntimeFlavor
+  /**
+   * The compile target: 'native', 'wasi' (threadless `wasm32-wasip1`) or
+   * 'wasi-threads' (`wasm32-wasip1-threads`).
+   */
+  target: 'native' | 'wasi' | 'wasi-threads'
+  /** The binding is a WebAssembly/WASI artifact (`target !== 'native'`). */
+  wasi: boolean
+  /**
+   * The scheduler spreads its work over several executor threads (`flavor
+   * === 'MultiThread'`). Native is always MultiThread; its data-parallel
+   * work runs on the executor's own Rayon pool, where spawned futures are
+   * polled. `false` only on threadless WASI and on threaded WASI under
+   * `ROLLDOWN_RUNTIME=single`.
+   */
+  threads: boolean
+  /**
+   * Dev mode is supported by this runtime: true on MultiThread, false on
+   * CurrentThread.
+   */
+  devSupported: boolean
+  /**
+   * Watch mode is supported by this artifact: true on native, false on every
+   * wasm artifact.
+   */
+  watchSupported: boolean
+}
+
+export type BindingRuntimeFlavor = 'CurrentThread' | 'MultiThread'
+
 export type BindingSourcemap = string | BindingJsonSourcemap
 
 export interface BindingSourceMapOptions {
@@ -3243,13 +3284,28 @@ export interface ExternalMemoryStatus {
 export type FilterTokenKind = 'Id' | 'ImporterId' | 'Code' | 'ModuleType' | 'And' | 'Or' | 'Not' | 'Include' | 'Exclude' | 'CleanUrl' | 'QueryKey' | 'QueryValue'
 
 /**
+ * Return the CurrentThread task-host ABI version this binding implements.
+ * Check it before calling either async-runtime host registration.
+ */
+export declare function getCurrentThreadTaskHostContractVersion(): number
+
+/**
  * Returns the Rust-side allocator counters, or `None` when this binding was
  * built without the `tracking_allocator` cargo feature (the default —
  * tracking costs a few atomic operations per allocation).
  */
 export declare function getNativeMemoryStats(): BindingNativeMemoryStats | null
 
+/** Report the loaded binding's runtime capabilities. */
+export declare function getRuntimeCapabilities(): BindingRuntimeCapabilities
+
 export declare function initTraceSubscriber(): TraceSubscriberGuard | null
+
+/**
+ * Return whether the given CurrentThread task- or timer-host registration is
+ * still live. A registration already evicted natively reads false.
+ */
+export declare function isCurrentThreadHostRegistrationActive(registrationHigh: number, registrationLow: number): boolean
 
 export interface JsChangedOutputs {
   deleted: Set<string>
@@ -3317,6 +3373,24 @@ export interface PreRenderedChunk {
 }
 
 /**
+ * Install the native host turn that polls CurrentThread runnables. Call it
+ * once per importing environment; passing a JavaScript callback throws.
+ */
+export declare function registerCurrentThreadTaskHost(registrationHigh: number, registrationLow: number, dispatch?: never): void
+
+/**
+ * Accept the host timer callbacks of the CurrentThread host contract. They are
+ * never called: CurrentThread runs no timers.
+ */
+export declare function registerTimerHost(registrationHigh: number, registrationLow: number, schedule: (id: number, ms: number) => Promise<void>, cancel: (id: number) => void): void
+
+/**
+ * Reserve a CurrentThread host registration capability. The returned words
+ * must be passed back to exactly one host registration call.
+ */
+export declare function reserveCurrentThreadHostRegistration(): BindingHostRegistration
+
+/**
  * Starts a new measuring window: the peak restarts from the current live
  * bytes and the counts restart from zero. No-op when the binding was built
  * without the `tracking_allocator` cargo feature.
@@ -3326,15 +3400,22 @@ export declare function resetNativeMemoryStats(): void
 export declare function resolveTsconfig(filename: string, cache: TsconfigCache | undefined | null, yarnPnp: boolean): BindingTsconfigResult | null
 
 /**
- * Release one holder of the tokio runtime, shutting it down once none are left.
- *
- * This is required for the wasm target with `tokio_unstable` cfg.
- * In the wasm runtime, the `park` threads will hang there until the tokio::Runtime is shutdown.
+ * A no-op kept for compatibility; the async runtime follows the N-API
+ * environment lifecycle.
  */
 export declare function shutdownAsyncRuntime(): void
 
-/** Acquire one holder of the tokio runtime, starting it if it is not running. */
+/**
+ * A no-op kept for compatibility; the async runtime follows the N-API
+ * environment lifecycle.
+ */
 export declare function startAsyncRuntime(): void
+
+/** Evict one host installed by `registerCurrentThreadTaskHost`. */
+export declare function unregisterCurrentThreadTaskHost(registrationHigh: number, registrationLow: number): void
+
+/** Evict one registration made by `registerTimerHost`. */
+export declare function unregisterTimerHost(registrationHigh: number, registrationLow: number): void
 
 export interface ViteImportGlobMeta {
   isSubImportsPattern?: boolean

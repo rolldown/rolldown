@@ -17,11 +17,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { setTimeout } from 'node:timers/promises';
 import { rolldown, watch } from 'rolldown';
-import { dev } from 'rolldown/experimental';
+import { dev, getRuntimeSupport } from 'rolldown/experimental';
 
 assert(globalThis.gc, 'Run with --expose-gc');
 
 const input = path.join(import.meta.dirname, 'main.js');
+const support = getRuntimeSupport();
 
 async function collect() {
   for (let i = 0; i < 12; i++) {
@@ -172,6 +173,7 @@ const cases = {
     await pending;
   },
   async 'watch mode'(marker) {
+    if (!support.watch) return;
     const watcher = watch({
       input,
       logLevel: 'silent',
@@ -192,6 +194,7 @@ const cases = {
     await watcher.close();
   },
   async 'watch mode, watcher closes while an event result close runs'(marker) {
+    if (!support.watch) return;
     let hookStarted;
     const started = new Promise((resolve) => (hookStarted = resolve));
     let releaseHook;
@@ -222,6 +225,7 @@ const cases = {
     await resultClosed;
   },
   async 'dev engine'(marker) {
+    if (!support.dev) return;
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-close-gc-'));
     try {
       const engine = await dev(
@@ -242,6 +246,7 @@ const cases = {
     }
   },
   async 'dev engine, closeBundle awaits engine.close()'(marker) {
+    if (!support.dev) return;
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-close-gc-'));
     try {
       const plugin = keepContext('buildStart', marker);

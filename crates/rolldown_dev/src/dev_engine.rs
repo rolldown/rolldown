@@ -624,62 +624,65 @@ mod tests {
   /// `ModuleChanged` begins with an empty list, and no later build loads those cached
   /// modules again, so the coordinator must still end up watching them.
   #[cfg(feature = "testing")]
-  #[tokio::test]
-  async fn lazy_compile_files_stay_watched_when_a_build_starts_first() {
-    use rolldown::{DevModeOptions, ExperimentalOptions};
-    use rolldown_common::ScanMode;
+  #[test]
+  fn lazy_compile_files_stay_watched_when_a_build_starts_first() {
+    rolldown_utils::futures::block_on(async {
+      use rolldown::{DevModeOptions, ExperimentalOptions};
+      use rolldown_common::ScanMode;
 
-    let dir = std::env::temp_dir().join(format!("rolldown-dev-lazy-watch-{}", std::process::id()));
-    std::fs::create_dir_all(&dir).unwrap();
-    // The resolver returns real paths, and the temp dir can sit behind a symlink.
-    let dir = dunce::canonicalize(&dir).unwrap();
-    std::fs::write(dir.join("main.js"), "import('./lazy.js');\n").unwrap();
-    std::fs::write(dir.join("lazy.js"), "export { dep } from './dep.js';\n").unwrap();
-    std::fs::write(dir.join("dep.js"), "export const dep = 1;\n").unwrap();
-    let lazy = dir.join("lazy.js").to_string_lossy().into_owned();
-    let dep = dir.join("dep.js").to_string_lossy().into_owned();
+      let dir =
+        std::env::temp_dir().join(format!("rolldown-dev-lazy-watch-{}", std::process::id()));
+      std::fs::create_dir_all(&dir).unwrap();
+      // The resolver returns real paths, and the temp dir can sit behind a symlink.
+      let dir = dunce::canonicalize(&dir).unwrap();
+      std::fs::write(dir.join("main.js"), "import('./lazy.js');\n").unwrap();
+      std::fs::write(dir.join("lazy.js"), "export { dep } from './dep.js';\n").unwrap();
+      std::fs::write(dir.join("dep.js"), "export const dep = 1;\n").unwrap();
+      let lazy = dir.join("lazy.js").to_string_lossy().into_owned();
+      let dep = dir.join("dep.js").to_string_lossy().into_owned();
 
-    let engine = super::DevEngine::new(
-      BundlerConfig::new(
-        BundlerOptions {
-          input: Some(vec!["./main.js".to_string().into()]),
-          cwd: Some(dir.clone()),
-          experimental: Some(ExperimentalOptions {
-            dev_mode: Some(DevModeOptions { lazy: Some(true), ..Default::default() }),
+      let engine = super::DevEngine::new(
+        BundlerConfig::new(
+          BundlerOptions {
+            input: Some(vec!["./main.js".to_string().into()]),
+            cwd: Some(dir.clone()),
+            experimental: Some(ExperimentalOptions {
+              dev_mode: Some(DevModeOptions { lazy: Some(true), ..Default::default() }),
+              ..Default::default()
+            }),
+            ..Default::default()
+          },
+          vec![],
+        ),
+        crate::DevOptions {
+          watch: Some(crate::DevWatchOptions {
+            enabled: Some(false),
+            skip_write: true,
             ..Default::default()
           }),
           ..Default::default()
         },
-        vec![],
-      ),
-      crate::DevOptions {
-        watch: Some(crate::DevWatchOptions {
-          enabled: Some(false),
-          skip_write: true,
-          ..Default::default()
-        }),
-        ..Default::default()
-      },
-    )
-    .unwrap();
-    engine.run().await.unwrap();
-    let watched = engine.get_watched_files().await.unwrap();
-    assert!(!watched.contains(&lazy) && !watched.contains(&dep), "not loaded before the compile");
-
-    engine
-      .compile_lazy_entry(format!("{lazy}?rolldown-lazy=1"), "client".to_string())
-      .await
+      )
       .unwrap();
-    // The compile has sent `ModuleChanged`. The coordinator runs on a runtime worker, so it
-    // can read the message before or after this build replaces the list; the message carries
-    // the compile's list, so the files must end up watched in both orders.
-    engine.bundler.lock().await.incremental_generate(ScanMode::Partial(vec![])).await.unwrap();
-    engine.ensure_latest_bundle_output().await.unwrap();
+      engine.run().await.unwrap();
+      let watched = engine.get_watched_files().await.unwrap();
+      assert!(!watched.contains(&lazy) && !watched.contains(&dep), "not loaded before the compile");
 
-    let watched = engine.get_watched_files().await.unwrap();
-    engine.close().await.unwrap();
-    std::fs::remove_dir_all(&dir).unwrap();
-    assert!(watched.contains(&lazy) && watched.contains(&dep), "{watched:#?}");
+      engine
+        .compile_lazy_entry(format!("{lazy}?rolldown-lazy=1"), "client".to_string())
+        .await
+        .unwrap();
+      // The compile has sent `ModuleChanged`. The coordinator runs on a runtime worker, so it
+      // can read the message before or after this build replaces the list; the message carries
+      // the compile's list, so the files must end up watched in both orders.
+      engine.bundler.lock().await.incremental_generate(ScanMode::Partial(vec![])).await.unwrap();
+      engine.ensure_latest_bundle_output().await.unwrap();
+
+      let watched = engine.get_watched_files().await.unwrap();
+      engine.close().await.unwrap();
+      std::fs::remove_dir_all(&dir).unwrap();
+      assert!(watched.contains(&lazy) && watched.contains(&dep), "{watched:#?}");
+    });
   }
 
   /// With `RebuildStrategy::Always` one task runs the HMR stage and then a rebuild. The HMR
@@ -687,66 +690,68 @@ mod tests {
   /// new, empty list and does not load those cached modules again, so the coordinator must
   /// still end up watching them.
   #[cfg(feature = "testing")]
-  #[tokio::test]
-  async fn hmr_stage_files_stay_watched_when_the_same_task_rebuilds() {
-    use rolldown::{DevModeOptions, ExperimentalOptions};
-    use rolldown_common::WatcherChangeKind;
-    use rolldown_utils::indexmap::FxIndexMap;
+  #[test]
+  fn hmr_stage_files_stay_watched_when_the_same_task_rebuilds() {
+    rolldown_utils::futures::block_on(async {
+      use rolldown::{DevModeOptions, ExperimentalOptions};
+      use rolldown_common::WatcherChangeKind;
+      use rolldown_utils::indexmap::FxIndexMap;
 
-    let dir =
-      std::env::temp_dir().join(format!("rolldown-dev-hmr-rebuild-watch-{}", std::process::id()));
-    std::fs::create_dir_all(&dir).unwrap();
-    // The resolver returns real paths, and the temp dir can sit behind a symlink.
-    let dir = dunce::canonicalize(&dir).unwrap();
-    std::fs::write(dir.join("main.js"), "export const main = 1;\n").unwrap();
-    std::fs::write(dir.join("dep.js"), "export const dep = 1;\n").unwrap();
-    let main = dir.join("main.js").to_string_lossy().into_owned();
-    let dep = dir.join("dep.js").to_string_lossy().into_owned();
+      let dir =
+        std::env::temp_dir().join(format!("rolldown-dev-hmr-rebuild-watch-{}", std::process::id()));
+      std::fs::create_dir_all(&dir).unwrap();
+      // The resolver returns real paths, and the temp dir can sit behind a symlink.
+      let dir = dunce::canonicalize(&dir).unwrap();
+      std::fs::write(dir.join("main.js"), "export const main = 1;\n").unwrap();
+      std::fs::write(dir.join("dep.js"), "export const dep = 1;\n").unwrap();
+      let main = dir.join("main.js").to_string_lossy().into_owned();
+      let dep = dir.join("dep.js").to_string_lossy().into_owned();
 
-    let engine = super::DevEngine::new(
-      BundlerConfig::new(
-        BundlerOptions {
-          input: Some(vec!["./main.js".to_string().into()]),
-          cwd: Some(dir.clone()),
-          experimental: Some(ExperimentalOptions {
-            dev_mode: Some(DevModeOptions::default()),
+      let engine = super::DevEngine::new(
+        BundlerConfig::new(
+          BundlerOptions {
+            input: Some(vec!["./main.js".to_string().into()]),
+            cwd: Some(dir.clone()),
+            experimental: Some(ExperimentalOptions {
+              dev_mode: Some(DevModeOptions::default()),
+              ..Default::default()
+            }),
+            ..Default::default()
+          },
+          vec![],
+        ),
+        crate::DevOptions {
+          rebuild_strategy: Some(crate::RebuildStrategy::Always),
+          watch: Some(crate::DevWatchOptions {
+            enabled: Some(false),
+            skip_write: true,
             ..Default::default()
           }),
           ..Default::default()
         },
-        vec![],
-      ),
-      crate::DevOptions {
-        rebuild_strategy: Some(crate::RebuildStrategy::Always),
-        watch: Some(crate::DevWatchOptions {
-          enabled: Some(false),
-          skip_write: true,
-          ..Default::default()
-        }),
-        ..Default::default()
-      },
-    )
-    .unwrap();
-    engine.run().await.unwrap();
-    let watched = engine.get_watched_files().await.unwrap();
-    assert!(watched.contains(&main) && !watched.contains(&dep), "{watched:#?}");
+      )
+      .unwrap();
+      engine.run().await.unwrap();
+      let watched = engine.get_watched_files().await.unwrap();
+      assert!(watched.contains(&main) && !watched.contains(&dep), "{watched:#?}");
 
-    std::fs::write(
-      dir.join("main.js"),
-      "import { dep } from './dep.js';\nexport const main = dep;\n",
-    )
-    .unwrap();
-    engine
-      .ensure_task_with_changed_files(FxIndexMap::from_iter([(
+      std::fs::write(
         dir.join("main.js"),
-        WatcherChangeKind::Update,
-      )]))
-      .await;
+        "import { dep } from './dep.js';\nexport const main = dep;\n",
+      )
+      .unwrap();
+      engine
+        .ensure_task_with_changed_files(FxIndexMap::from_iter([(
+          dir.join("main.js"),
+          WatcherChangeKind::Update,
+        )]))
+        .await;
 
-    let watched = engine.get_watched_files().await.unwrap();
-    engine.close().await.unwrap();
-    std::fs::remove_dir_all(&dir).unwrap();
-    assert!(watched.contains(&dep), "{watched:#?}");
+      let watched = engine.get_watched_files().await.unwrap();
+      engine.close().await.unwrap();
+      std::fs::remove_dir_all(&dir).unwrap();
+      assert!(watched.contains(&dep), "{watched:#?}");
+    });
   }
 
   /// A temp dir with `files` and a dev engine with lazy compilation on. `files` must include

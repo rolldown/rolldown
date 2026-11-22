@@ -3,42 +3,102 @@ import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN } from '../log/logging';
 import { logModuleSideEffectsWriteAfterBuildEnd } from '../log/logs';
 import type { PluginContextData } from '../plugin/plugin-context-data';
-import { transformModuleInfo } from '../utils/transform-module-info';
+import { shouldEagerlyFreeOutputs } from '../utils/threadless-free';
+import {
+  type ModuleSideEffectsAccess,
+  snapshotModuleInfo,
+  transformModuleInfo,
+} from '../utils/transform-module-info';
 import type { ModuleInfo } from './module-info';
 
 export class ChunkingContextImpl {
-  private moduleInfoCache: Map<string, ModuleInfo> | undefined = new Map();
+  // Everything this context writes after construction, in one cell: a
+  // classifier may `Object.freeze` the context it receives, and freezing is
+  // shallow. `binding` is empty after `releaseBinding()`; `moduleInfoCache`
+  // after `clearModuleInfoCache()`.
+  private readonly state: {
+    binding: BindingChunkingContext | undefined;
+    moduleInfoCache: Map<string, ModuleInfo> | undefined;
+  };
+
+  private readonly moduleSideEffectsAccess: ModuleSideEffectsAccess = {
+    getModuleSideEffects: (id, callOption) => this.binding().getModuleSideEffects(id, callOption),
+    setModuleSideEffects: (id, value, callOption) =>
+      this.binding().setModuleSideEffects(id, value, callOption),
+  };
 
   constructor(
-    private context: BindingChunkingContext,
+    context: BindingChunkingContext,
     private pluginContextData: PluginContextData,
     private onLog: LogHandler,
-  ) {}
+  ) {
+    this.state = { binding: context, moduleInfoCache: new Map() };
+  }
+
+  // A TS-private method, not `#private`, as in `PluginContextImpl`: a context
+  // reached through a Proxy or a derived object must keep working.
+  private binding(): BindingChunkingContext {
+    const context = this.state.binding;
+    if (context === undefined) {
+      throw new Error('This chunking context has already released its binding object');
+    }
+    return context;
+  }
+
+  /**
+   * Adopts the fresh box of a new `name` batch (see `getChunkingContext` in
+   * `bindingify-output-options.ts`). The cache holds plain values, so it
+   * survives the swap.
+   */
+  useBindingContext(context: BindingChunkingContext): void {
+    this.state.binding = context;
+  }
 
   private warnWriteAfterBuildEnd = (moduleId: string): void => {
     this.onLog(LOG_LEVEL_WARN, logModuleSideEffectsWriteAfterBuildEnd(moduleId));
   };
 
   clearModuleInfoCache(): void {
-    this.moduleInfoCache = undefined;
+    this.state.moduleInfoCache = undefined;
+  }
+
+  /**
+   * Drop the binding wrapper at the build's terminal release (see
+   * `PluginContextData.retainContextBox`): its methods keep the binding
+   * instance that made it alive, so a context a classifier keeps would keep
+   * that instance's memory too. Module infos already handed out stay readable.
+   */
+  releaseBinding(): void {
+    this.state.binding = undefined;
   }
 
   getModuleInfo(moduleId: string): ModuleInfo | null {
-    const cached = this.moduleInfoCache?.get(moduleId);
+    const cached = this.state.moduleInfoCache?.get(moduleId);
     if (cached) {
       return cached;
     }
-    const bindingInfo = this.context.getModuleInfo(moduleId);
+    const bindingInfo = this.binding().getModuleInfo(moduleId);
     if (bindingInfo) {
       const option = this.pluginContextData.getModuleOption(moduleId);
-      const info = transformModuleInfo(
-        bindingInfo,
-        option,
-        this.context,
-        this.pluginContextData.moduleSideEffectsOption,
-        this.warnWriteAfterBuildEnd,
-      );
-      this.moduleInfoCache?.set(moduleId, info);
+      // Each call mints a box holding the module's full source; a threadless
+      // WASI host may never run GC finalizers, so hand out a snapshot and
+      // release the box.
+      const info = shouldEagerlyFreeOutputs()
+        ? snapshotModuleInfo(
+            bindingInfo,
+            option,
+            this.moduleSideEffectsAccess,
+            this.pluginContextData.moduleSideEffectsOption,
+            this.warnWriteAfterBuildEnd,
+          )
+        : transformModuleInfo(
+            bindingInfo,
+            option,
+            this.moduleSideEffectsAccess,
+            this.pluginContextData.moduleSideEffectsOption,
+            this.warnWriteAfterBuildEnd,
+          );
+      this.state.moduleInfoCache?.set(moduleId, info);
       return info;
     }
     return null;

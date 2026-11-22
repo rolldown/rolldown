@@ -1,4 +1,4 @@
-import { BindingBundler, shutdownAsyncRuntime, startAsyncRuntime } from '../../binding.cjs';
+import { BindingBundler } from '../../binding.cjs';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import type { HasProperty, TypeAssert } from '../../types/assert';
@@ -7,6 +7,7 @@ import { RolldownOutputImpl } from '../../types/rolldown-output-impl';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { unwrapBindingResult } from '../../utils/error';
 import { noop } from '../../utils/misc';
+import { shouldEagerlyFreeOutputs } from '../../utils/threadless-free';
 import { validateOption } from '../../utils/validator';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { rolldown } from './index';
@@ -30,7 +31,6 @@ export class RolldownBuild {
   constructor(inputOptions: InputOptions) {
     this.#inputOptions = inputOptions;
     this.#bundler = new BindingBundler();
-    startAsyncRuntime();
   }
 
   /**
@@ -90,9 +90,9 @@ export class RolldownBuild {
    * ```
    */
   async close(): Promise<void> {
-    // Every cleanup step (`BindingBundler.close`, release the async runtime) runs exactly once,
-    // even when the native close fails, and a repeated `close` never re-runs any of them. The first
-    // caller gets any error; a repeat only waits.
+    // `BindingBundler.close` runs exactly once, and a repeated `close` never re-runs it: the
+    // native close takes the last bundle handle, so a second native close would resolve before
+    // the first one's `closeBundle` ends. The first caller gets any error; a repeat only waits.
     // See internal-docs/rust-classic-bundler/implementation.md ("Close Mechanism").
     if (this.#closing) {
       await this.#closing.catch(noop);
@@ -103,12 +103,7 @@ export class RolldownBuild {
   }
 
   async #close(): Promise<void> {
-    try {
-      // `BindingBundler.close` spawns onto the runtime, so release only after it settles.
-      await this.#bundler.close();
-    } finally {
-      shutdownAsyncRuntime();
-    }
+    await this.#bundler.close();
   }
 
   /** @hidden documented in close method */
@@ -129,16 +124,41 @@ export class RolldownBuild {
 
   async #build(isWrite: boolean, outputOptions: OutputOptions): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
-    const bundlerOptions = await createBundlerOptions(
+    const option = await createBundlerOptions(
       this.#inputOptions,
       outputOptions,
       /* watchMode */ false,
       /* measureTimings */ true,
     );
-    const output = isWrite
-      ? await this.#bundler.write(bundlerOptions)
-      : await this.#bundler.generate(bundlerOptions);
-    return new RolldownOutputImpl(unwrapBindingResult(output));
+
+    let result: RolldownOutput;
+    // The native invalidate callback fires only on success (before
+    // `writeBundle`), so every settlement path below releases the boxes.
+    try {
+      let output: Awaited<ReturnType<BindingBundler['generate']>>;
+      if (isWrite) {
+        output = await this.#bundler.write(option.bundlerOptions);
+      } else {
+        output = await this.#bundler.generate(option.bundlerOptions);
+      }
+      result = new RolldownOutputImpl(unwrapBindingResult(output));
+      // A threadless WASI host may never run GC finalizers: reading `output`
+      // fires the getter's eager box release even when the caller ignores the
+      // result.
+      if (shouldEagerlyFreeOutputs()) {
+        void result.output;
+      }
+    } catch (e) {
+      // The build error stays primary; a failed release rides along as `cause`.
+      try {
+        option.releaseOptionBoxes();
+      } catch (releaseError) {
+        if (e instanceof Error && Object.isExtensible(e)) e.cause ??= releaseError;
+      }
+      throw e;
+    }
+    option.releaseOptionBoxes();
+    return result;
   }
 }
 

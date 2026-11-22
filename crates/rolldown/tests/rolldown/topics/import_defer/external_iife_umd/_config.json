@@ -1,0 +1,15 @@
+{
+  "_comment": "IIFE and UMD output get an external module as a global or as a wrapper argument, so a deferred import cannot delay it. Rolldown lowers the deferred imports of the build: `import defer` of an external module becomes a normal import, and `import.defer()` becomes `import()`, with a warning.",
+  "config": {
+    "format": "iife",
+    "name": "lib",
+    "external": ["ext", "ext2"],
+    "globals": { "ext": "Ext" },
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [{ "format": "umd" }],
+  "expectExecuted": false,
+  "expectWarning": true
+}

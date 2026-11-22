@@ -1,0 +1,21 @@
+{
+  "_comment": "CommonJS output: all deferred imports of the external `ext-shared` give one deferred namespace object for each interop mode. This is also true for two imports in one file, for an importer with a wrapper, for `import.defer()` and for another chunk. With `dynamicImportInCjs: false`, `import.defer()` loads the external with `require()`.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "other",
+        "import": "./other.js"
+      }
+    ],
+    "format": "cjs",
+    "dynamicImportInCjs": false,
+    "external": ["ext-shared"],
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

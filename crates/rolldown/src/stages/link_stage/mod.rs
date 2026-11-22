@@ -305,6 +305,7 @@ impl<'a> LinkStage<'a> {
     self.compute_tla();
     self.assert_promoted_writers_excluded();
     self.check_lazy_barrel_uncertain_bindings();
+    self.mark_lazy_namespace_externals();
     self.patch_module_dependencies();
 
     tracing::trace!(

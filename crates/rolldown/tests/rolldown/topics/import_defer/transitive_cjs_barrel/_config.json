@@ -1,0 +1,13 @@
+{
+  "_comment": "CommonJS output: `barrel.js` is in a deferred closure and only re-exports externals (`export { x } from` and `export *`), and no module has side effects (`moduleSideEffects: false`). The eager consumer reads the bindings of `barrel.js`, so it calls `init_barrel()` first, and the loads stay in that init. The chunk has no `require()` at the top.",
+  "config": {
+    "format": "cjs",
+    "external": ["ext-barrel", "ext-barrel-star"],
+    "treeshake": {
+      "moduleSideEffects": false
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

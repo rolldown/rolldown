@@ -1,8 +1,8 @@
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
   ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
-  RuntimeHelper, RuntimeModuleBrief, Specifier, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRefDb,
-  TaggedSymbolRef, WrapKind,
+  OutputFormat, RuntimeHelper, RuntimeModuleBrief, Specifier, StmtInfo, StmtInfoMeta, StmtInfos,
+  SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::IndexBitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -195,8 +195,10 @@ impl LinkStage<'_> {
   /// needs a lazy wrapper. The loop in `wrap_modules` then wraps the rest of their graph as for
   /// any wrapped module. Returns the ESM targets, sorted, which get a deferred namespace.
   ///
-  /// `apply_import_defer_support` keeps the deferral only when no module of a closure is an
-  /// external module. See internal-docs/import-defer/implementation.md.
+  /// An external module is not part of a closure. `apply_import_defer_support` keeps the
+  /// deferral only when the output format does not evaluate an external module of a closure
+  /// before the first access (`deferred_closures`). See
+  /// internal-docs/import-defer/implementation.md.
   fn wrap_import_defer_closures(&mut self) -> Vec<ModuleIdx> {
     let runtime_idx = self.runtime.id();
     let mut stack = vec![];
@@ -209,7 +211,16 @@ impl LinkStage<'_> {
           continue;
         }
         let Some(target) = rec.resolved_module else { continue };
-        let Module::Normal(target_module) = &self.module_table.modules[target] else { continue };
+        let Module::Normal(target_module) = &self.module_table.modules[target] else {
+          // CommonJS output loads a deferred external module lazily with `require()`, with the
+          // same deferred namespace as a CommonJS module. ESM output keeps `import defer`.
+          if matches!(self.options.format, OutputFormat::Cjs) {
+            self.metas[module.idx]
+              .deferred_cjs_namespace_imports
+              .insert(*local_ref, named_import.record_idx);
+          }
+          continue;
+        };
         if target == runtime_idx {
           continue;
         }
@@ -374,9 +385,12 @@ impl LinkStage<'_> {
   /// the facade statement:
   /// `var import_x, x_deferred = __deferNs(() => import_x || (import_x = __toESM(require_x())))`.
   /// Only an escape (`f(ns)`, `export { ns }`) reads the object. An access through the local
-  /// binding reads `import_x` directly.
+  /// binding reads `import_x` directly. An external module in CommonJS output gets its object
+  /// from `__deferNsCached`, with `require("ext")` in place of `require_x()`: one object for each
+  /// external module and interop mode, in all chunks.
   fn create_deferred_cjs_namespaces(&mut self) {
     let defer_ns_ref = self.runtime.resolve_symbol("__deferNs");
+    let defer_ns_cached_ref = self.runtime.resolve_symbol("__deferNsCached");
     for importer_idx in self.metas.indices() {
       if self.metas[importer_idx].deferred_cjs_namespace_imports.is_empty() {
         continue;
@@ -391,19 +405,24 @@ impl LinkStage<'_> {
       for rec_idx in records {
         let rec = &importer.import_records[rec_idx];
         let Some(target) = rec.resolved_module else { continue };
-        let Module::Normal(target_module) = &self.module_table.modules[target] else { continue };
-        let Some(wrapper_ref) = self.metas[target].wrapper_ref else { continue };
-        let symbol_ref = self.symbols.create_facade_root_symbol_ref(
-          importer_idx,
-          &format!("{}_deferred", target_module.repr_name),
-        );
+        let mut referenced_symbols = vec![rec.namespace_ref.into()];
+        let name = match &self.module_table.modules[target] {
+          Module::Normal(target_module) => {
+            let Some(wrapper_ref) = self.metas[target].wrapper_ref else { continue };
+            referenced_symbols.extend([defer_ns_ref.into(), wrapper_ref.into()]);
+            target_module.repr_name.as_str()
+          }
+          // The import statement declares `import_ext` and references `__toESMCached`.
+          Module::External(external) => {
+            referenced_symbols.push(defer_ns_cached_ref.into());
+            external.identifier_name.as_str()
+          }
+        };
+        let symbol_ref =
+          self.symbols.create_facade_root_symbol_ref(importer_idx, &format!("{name}_deferred"));
         let stmt_info = StmtInfo {
           declared_symbols: smallvec![TaggedSymbolRef::normal(symbol_ref)],
-          referenced_symbols: vec![
-            rec.namespace_ref.into(),
-            defer_ns_ref.into(),
-            wrapper_ref.into(),
-          ],
+          referenced_symbols,
           eval_flags: false.into(),
           import_records: Vec::new(),
           #[cfg(debug_assertions)]
@@ -417,7 +436,9 @@ impl LinkStage<'_> {
         // `wrap_import_defer_closures`), and a namespace import always needs interop. The import
         // statement does not keep `__toESM` for a deferred record.
         // See internal-docs/import-defer/implementation.md.
-        self.depended_runtime_helper[importer_idx].push(RuntimeHelper::ToEsm, stmt_info_idx);
+        if matches!(self.module_table.modules[target], Module::Normal(_)) {
+          self.depended_runtime_helper[importer_idx].push(RuntimeHelper::ToEsm, stmt_info_idx);
+        }
         self.metas[importer_idx]
           .deferred_cjs_namespaces
           .insert(rec_idx, DeferredCjsNamespace { symbol_ref, stmt_info_idx });

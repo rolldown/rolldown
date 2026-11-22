@@ -1,0 +1,90 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+// a.js
+var import_ext_shared$5, ext_shared_deferred$5 = /* @__PURE__ */ require_rolldown_runtime.__deferNsCached("ext-shared", () => import_ext_shared$5 || (import_ext_shared$5 = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-shared", require("ext-shared"))));
+const getA = () => ext_shared_deferred$5;
+const fooA = () => (import_ext_shared$5 || (import_ext_shared$5 = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-shared", require("ext-shared")))).foo;
+// b.js
+var import_ext_shared$4, ext_shared_deferred$4 = /* @__PURE__ */ require_rolldown_runtime.__deferNsCached("ext-shared", () => import_ext_shared$4 || (import_ext_shared$4 = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-shared", require("ext-shared"))));
+const getB = () => ext_shared_deferred$4;
+// c.js
+var import_ext_shared$2, ext_shared_deferred$2 = /* @__PURE__ */ require_rolldown_runtime.__deferNsCached("ext-shared", () => import_ext_shared$2 || (import_ext_shared$2 = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-shared", require("ext-shared"))));
+var import_ext_shared$3, ext_shared_deferred$3 = /* @__PURE__ */ require_rolldown_runtime.__deferNsCached("ext-shared", () => import_ext_shared$3 || (import_ext_shared$3 = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-shared", require("ext-shared"))));
+const getC = () => [ext_shared_deferred$2, ext_shared_deferred$3];
+// m.mjs
+var import_ext_shared$1, ext_shared_deferred$1 = /* @__PURE__ */ require_rolldown_runtime.__deferNsCached("ext-shared", () => import_ext_shared$1 || (import_ext_shared$1 = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-shared", require("ext-shared"), 1)), 1);
+const getM = () => ext_shared_deferred$1;
+// wrapped.js
+var import_ext_shared, ext_shared_deferred, getW;
+function init_wrapped() {
+	return (init_wrapped = require_rolldown_runtime.__esmMin((() => {
+		ext_shared_deferred = /* @__PURE__ */ require_rolldown_runtime.__deferNsCached("ext-shared", () => import_ext_shared || (import_ext_shared = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-shared", require("ext-shared"))));
+		getW = () => ext_shared_deferred;
+	})))();
+}
+// main.js
+const log = globalThis.__extSharedLog ??= [];
+const before = [...log];
+const results = async () => {
+	const [one, two] = getC();
+	const dynamic = await (async () => /* @__PURE__ */ require_rolldown_runtime.__deferNsCached("ext-shared", () => /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-shared", require("ext-shared"))))();
+	return {
+		twoFiles: getA() === getB(),
+		oneFile: one === two && one === getA(),
+		wrapper: (init_wrapped(), getW)() === getA(),
+		dynamic: dynamic === getA(),
+		foo: fooA(),
+		defaultTypes: [typeof getA().default, typeof getM().default],
+		log: [...log]
+	};
+};
+exports.before = before;
+exports.getA = getA;
+exports.results = results;
+
+```
+
+## other.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+// other.js
+var import_ext_shared, ext_shared_deferred = /* @__PURE__ */ require_rolldown_runtime.__deferNsCached("ext-shared", () => import_ext_shared || (import_ext_shared = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-shared", require("ext-shared"))));
+const getO = () => ext_shared_deferred;
+exports.getO = getO;
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__deferNsCached", {
+	enumerable: true,
+	get: function() {
+		return __deferNsCached;
+	}
+});
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__toESMCached", {
+	enumerable: true,
+	get: function() {
+		return __toESMCached;
+	}
+});
+
+```

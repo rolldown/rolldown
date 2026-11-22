@@ -1073,9 +1073,25 @@ impl GenerateStage<'_> {
     // Ensure the external module is imported in case it has side effects.
     if matches!(import_record.kind, ImportKind::Import)
       && !import_record.meta.contains(ImportRecordMeta::IsExportStar)
+      && !self.is_lazy_external_import(importer_idx, import_record)
     {
       imports_from_external_modules.entry(external_module_idx).or_default();
     }
+  }
+
+  /// Whether the importer loads the external itself, in its own code, so that the chunk does not
+  /// load it at the top. Only in CommonJS output:
+  /// - `import defer * as ns from 'ext'` (`deferred_cjs_import_decl`).
+  /// - An import of an external in a module of a deferred closure. The module loads it at the
+  ///   position of the import, in its init (`lazy_external_import_stmt`).
+  fn is_lazy_external_import(
+    &self,
+    importer_idx: ModuleIdx,
+    import_record: &ResolvedImportRecord,
+  ) -> bool {
+    matches!(self.options.format, OutputFormat::Cjs)
+      && (import_record.is_defer_phase()
+        || self.link_output.metas[importer_idx].wrapped_by_import_defer)
   }
 
   fn collect_dynamic_chunk_import(
@@ -1182,7 +1198,10 @@ impl GenerateStage<'_> {
                 .map(|module_idx| (import, module_idx))
             })
             .for_each(|(import, module_idx)| {
-              if let Module::External(importee) = &self.link_output.module_table[module_idx] {
+              if let Module::External(importee) = &self.link_output.module_table[module_idx]
+                && !self
+                  .is_lazy_external_import(module.idx, &module.import_records[import.record_idx])
+              {
                 imports_from_external_modules
                   .entry(importee.idx)
                   .or_default()

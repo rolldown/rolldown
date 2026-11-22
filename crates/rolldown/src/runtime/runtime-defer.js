@@ -164,13 +164,13 @@ export var __esmDefer = (init) => {
 };
 // `__deferNs` creates the deferred namespace object of a module (`import defer * as ns`).
 // `init` evaluates the module and returns its namespace object. `ns` is that object when its keys
-// are known before the evaluation. Without `ns` (a CommonJS module, or a module with `export *`
-// from CommonJS), the first trap that calls `load` copies the keys from the result of `init`. A
-// static access such as `ns.foo` does not use the `Proxy`, so the module can evaluate before that.
-// The `Proxy` evaluates the module for each operation with a string key other than `then`, and for
-// `ownKeys`. A symbol key and `then` evaluate nothing, and `then` is always absent. The target has
-// the same keys as the namespace, so that the `Proxy` invariants hold for `ownKeys` and
-// `getOwnPropertyDescriptor`.
+// are known before the evaluation. Without `ns` (a CommonJS module, an external module in
+// CommonJS output, or a module with `export *` from CommonJS), the first trap that calls `load`
+// copies the keys from the result of `init`. A static access such as `ns.foo` does not use the
+// `Proxy`, so the module can evaluate before that. The `Proxy` evaluates the module for each
+// operation with a string key other than `then`, and for `ownKeys`. A symbol key and `then`
+// evaluate nothing, and `then` is always absent. The target has the same keys as the namespace,
+// so that the `Proxy` invariants hold for `ownKeys` and `getOwnPropertyDescriptor`.
 // Without `ns`, the target stays extensible until that first `load`. Thus `defineProperty`
 // changes only a key that the target has, and `setPrototypeOf` accepts only `null`, as on a
 // namespace that is not extensible. Two limits remain until then, because a `Proxy` can report a
@@ -216,4 +216,25 @@ export var __deferNs = (init, ns) => {
     set: () => false,
     setPrototypeOf: (t, proto) => proto === null,
   });
+};
+// `__toESM` with one result for each external module and interop mode. In CommonJS output, a
+// module of a deferred closure (`import defer`) loads an external lazily, and each chunk can also
+// load it eagerly. All these loads must give one namespace object. `key` names the external module
+// with the same text in all chunks.
+// See internal-docs/runtime-helpers/implementation.md.
+var __toESMCache = [];
+export var __toESMCached = (key, mod, isNodeMode, cache, ns) => {
+  cache = __toESMCache[isNodeMode ? 1 : 0] || (__toESMCache[isNodeMode ? 1 : 0] = new Map());
+  if (!(ns = cache.get(key))) cache.set(key, (ns = __toESM(mod, isNodeMode)));
+  return ns;
+};
+// `__deferNs` with one result for each external module and interop mode, as `__toESMCached`.
+// In CommonJS output, each deferred import of an external (`import defer * as ns from 'ext'`
+// and `import.defer('ext')`) gets its deferred namespace here, also in another chunk or in a
+// wrapper. `init` returns the result of `__toESMCached` with the same key and mode.
+var __deferNsCache = [];
+export var __deferNsCached = (key, init, isNodeMode, cache, ns) => {
+  cache = __deferNsCache[isNodeMode ? 1 : 0] || (__deferNsCache[isNodeMode ? 1 : 0] = new Map());
+  if (!(ns = cache.get(key))) cache.set(key, (ns = __deferNs(init)));
+  return ns;
 };

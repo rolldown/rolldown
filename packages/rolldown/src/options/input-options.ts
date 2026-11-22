@@ -757,11 +757,21 @@ export interface InputOptions {
      * not when its importer evaluates. When this option is off, Rolldown lowers each deferred
      * import to a normal import and emits a warning.
      *
-     * For now, Rolldown keeps the deferred evaluation only in `esm` or `cjs` format, and not with
+     * For an external module, `esm` format keeps `import defer` and `import.defer()`, so the
+     * target runtime must support them. `cjs` format loads the module with `require()` at the
+     * first access. In `cjs` format, `import.defer()` of an external module keeps `import()`, with
+     * a warning, unless `output.dynamicImportInCjs` is `false`.
+     *
+     * For now, Rolldown does not keep the deferred evaluation with
      * `output.codeSplitting.experimentalInlineCommonChunks` or with a code splitting group that
-     * sets `includeDependenciesRecursively: false`. A deferred import must not evaluate an
-     * external module. With `preserveModules` and `esm` format, a deferred import must not evaluate
-     * a CommonJS module. In `cjs` format, it must not evaluate a CommonJS module that is an entry.
+     * sets `includeDependenciesRecursively: false`. In `esm` format, a module that a deferred
+     * import evaluates must not import an external module eagerly. In `iife` and `umd` format, a
+     * deferred import must not evaluate an external module. In `cjs` format, a module that a
+     * deferred import evaluates must not re-export an external module with `export *` when the
+     * module can be the entry of an output file: with `preserveModules`, or as an entry or the
+     * target of an `import()` or `import.defer()` call. These rules about external modules do not apply to a builtin
+     * module or to an external module with no side effects. With `preserveModules` and `esm`
+     * format, a deferred import must not evaluate a CommonJS module. In `cjs` format, it must not evaluate a CommonJS module that is an entry.
      * An `import.defer()` call must not load a CommonJS module. With `codeSplitting: false`, the
      * target of an `import.defer()` call is also a CommonJS module when it has no `import` or
      * `export` statement, unless its file extension or its `package.json` marks it as ESM.

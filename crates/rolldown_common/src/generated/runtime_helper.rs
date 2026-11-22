@@ -42,6 +42,10 @@ bitflags! {
     const EsmGather = 1 << 32;
     const EsmDefer = 1 << 33;
     const DeferNs = 1 << 34;
+    const ToEsmCache = 1 << 35;
+    const ToEsmCached = 1 << 36;
+    const DeferNsCache = 1 << 37;
+    const DeferNsCached = 1 << 38;
   }
 }
 
@@ -96,7 +100,7 @@ impl DependedRuntimeHelperMap {
   }
 }
 
-pub const RUNTIME_HELPER_NAMES: [&str; 35] = [
+pub const RUNTIME_HELPER_NAMES: [&str; 39] = [
   "__create",
   "__defProp",
   "__name",
@@ -132,10 +136,14 @@ pub const RUNTIME_HELPER_NAMES: [&str; 35] = [
   "__esmGather",
   "__esmDefer",
   "__deferNs",
+  "__toESMCache",
+  "__toESMCached",
+  "__deferNsCache",
+  "__deferNsCached",
 ];
 
 /// The helpers that the runtime module has only when `experimental.importDefer` is on.
-pub const RUNTIME_IMPORT_DEFER_HELPER_NAMES: [&str; 11] = [
+pub const RUNTIME_IMPORT_DEFER_HELPER_NAMES: [&str; 15] = [
   "__esmStack",
   "__esmState",
   "__esmEnd",
@@ -147,4 +155,8 @@ pub const RUNTIME_IMPORT_DEFER_HELPER_NAMES: [&str; 11] = [
   "__esmGather",
   "__esmDefer",
   "__deferNs",
+  "__toESMCache",
+  "__toESMCached",
+  "__deferNsCache",
+  "__deferNsCached",
 ];

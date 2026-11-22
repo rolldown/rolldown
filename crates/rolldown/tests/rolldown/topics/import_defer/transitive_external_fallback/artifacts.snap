@@ -1,0 +1,109 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import defer` is currently lowered to a normal import, because a deferred import evaluates the external module `ext-lazy`, and `esm` output imports that module at the start of the chunk. This changes execution timing because side effects run immediately instead of when the deferred import is first used. `experimental.importDefer` does not keep the deferred evaluation in this build yet.
+   ╭─[ main.js:1:1 ]
+   │
+ 1 │ import defer * as d from './d.js';
+   │ ─────────────────┬────────────────  
+   │                  ╰────────────────── The deferred phase is removed here.
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import "ext-inner";
+import { value } from "ext-lazy";
+import { join } from "node:path";
+import "ext-eager";
+// d.js
+const x = [value, join];
+// main.js
+const read = () => x;
+export { read };
+
+```
+
+# Variant: [format: Iife] [name: "lib"]
+
+## warnings
+
+### UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import defer` is currently lowered to a normal import, because a deferred import evaluates the external module `ext-lazy`, and `iife` output gets that module as a global or as a wrapper argument. This changes execution timing because side effects run immediately instead of when the deferred import is first used. `experimental.importDefer` does not keep the deferred evaluation in this build yet.
+   ╭─[ main.js:1:1 ]
+   │
+ 1 │ import defer * as d from './d.js';
+   │ ─────────────────┬────────────────  
+   │                  ╰────────────────── The deferred phase is removed here.
+───╯
+
+```
+
+## Assets
+
+### main.js
+
+```js
+var lib = (function(exports, ext_lazy, node_path) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// d.js
+	const x = [ext_lazy.value, node_path.join];
+	// main.js
+	const read = () => x;
+	exports.read = read;
+	return exports;
+})({}, ExtLazy, NodePath);
+
+```
+
+# Variant: [format: Umd] [name: "lib"]
+
+## warnings
+
+### UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import defer` is currently lowered to a normal import, because a deferred import evaluates the external module `ext-lazy`, and `umd` output gets that module as a global or as a wrapper argument. This changes execution timing because side effects run immediately instead of when the deferred import is first used. `experimental.importDefer` does not keep the deferred evaluation in this build yet.
+   ╭─[ main.js:1:1 ]
+   │
+ 1 │ import defer * as d from './d.js';
+   │ ─────────────────┬────────────────  
+   │                  ╰────────────────── The deferred phase is removed here.
+───╯
+
+```
+
+## Assets
+
+### main.js
+
+```js
+(function(global, factory) {
+	typeof exports === "object" && typeof module !== "undefined" ? factory(exports, require("ext-inner"), require("ext-lazy"), require("node:path"), require("ext-eager")) : typeof define === "function" && define.amd ? define([
+		"exports",
+		"ext-inner",
+		"ext-lazy",
+		"node:path",
+		"ext-eager"
+	], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.lib = {}, global.ExtInner, global.ExtLazy, global.NodePath, global.ExtEager));
+})(this, function(exports, ext_inner, ext_lazy, node_path, ext_eager) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// d.js
+	const x = [ext_lazy.value, node_path.join];
+	// main.js
+	const read = () => x;
+	exports.read = read;
+});
+
+```

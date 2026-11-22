@@ -1,0 +1,20 @@
+{
+  "_comment": "CommonJS output: `d.js` is in a deferred closure in the chunk of `main.js`, and loads the external lazily. The entry `other.js` imports the external eagerly, in a chunk with no lazy load. Both get one namespace object: the binding of each chunk uses `__toESMCached` with the same key.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "other",
+        "import": "./other.js"
+      }
+    ],
+    "format": "cjs",
+    "external": ["ext-ns"],
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

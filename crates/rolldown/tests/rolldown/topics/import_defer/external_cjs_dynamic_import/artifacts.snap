@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import.defer()` of an external module is lowered to `import()` in CommonJS output, because `output.dynamicImportInCjs` is `true`. The module evaluates when it loads, not at the first access to its namespace. With `output.dynamicImportInCjs: false`, the output loads the module with `require()` at the first access. `require()` fails for an ES module with top-level `await`.
+   ╭─[ main.js:3:30 ]
+   │
+ 3 │ export const loadCjs = () => import.defer('ext-cjs');
+   │                              ───────────┬───────────  
+   │                                         ╰───────────── The deferred phase is removed here.
+───╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import.defer()` of an external module is lowered to `import()` in CommonJS output, because `output.dynamicImportInCjs` is `true`. The module evaluates when it loads, not at the first access to its namespace. With `output.dynamicImportInCjs: false`, the output loads the module with `require()` at the first access. `require()` fails for an ES module with top-level `await`.
+   ╭─[ main.js:4:30 ]
+   │
+ 4 │ export const loadTla = () => import.defer('ext-tla');
+   │                              ───────────┬───────────  
+   │                                         ╰───────────── The deferred phase is removed here.
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// main.js
+(globalThis.__extDynLog ??= []).push("main");
+const loadCjs = () => import("ext-cjs");
+const loadTla = () => import("ext-tla");
+exports.loadCjs = loadCjs;
+exports.loadTla = loadTla;
+
+```

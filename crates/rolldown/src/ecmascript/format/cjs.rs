@@ -185,8 +185,9 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
           .as_external()
           .expect("Should be external module here");
 
+        let file_name = importee.get_file_name(ctx.resolved_paths);
         let import_path = to_ecma_string_literal(
-          &importee.get_import_path(ctx.chunk, ctx.resolved_paths),
+          &importee.import_path_from_file_name(ctx.chunk, file_name.clone()),
           ascii_only,
         );
         let require_path_str = concat_string!("require(", import_path, ")");
@@ -209,11 +210,27 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
             named_imports.map(Vec::as_slice),
           );
           if let Some(interop_modes) = interop_modes {
+            // A module of a deferred closure loads the external lazily with `__toESMCached`, in
+            // this chunk or in another chunk (`has_lazy_namespace_load`). The binding of each chunk
+            // uses the same helper and key, so all loads give one namespace object. The key is the
+            // file name of the external, which is the same in all chunks.
+            let cache_key = ctx.link_output.metas[importee_idx]
+              .has_lazy_namespace_load
+              .then(|| to_ecma_string_literal(&file_name, ascii_only));
             let to_esm_fn = ctx.finalized_string_pattern_for_symbol_ref(
-              ctx.link_output.runtime.resolve_symbol("__toESM"),
+              ctx.link_output.runtime.resolve_symbol(if cache_key.is_some() {
+                "__toESMCached"
+              } else {
+                "__toESM"
+              }),
               ctx.chunk_idx,
               &ctx.chunk.canonical_names,
             );
+            // `__toESMCached("ext", ` or `__toESM(`.
+            let to_esm_call_start = match &cache_key {
+              Some(cache_key) => concat_string!(to_esm_fn, "(", cache_key, ", "),
+              None => concat_string!(to_esm_fn, "("),
+            };
             let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(importee.namespace_ref);
             if let Some(node_mode_name) = ctx.chunk.node_mode_external_ns_names.get(&canonical_ref)
             {
@@ -229,14 +246,12 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
                 "let ",
                 escape_non_ascii(node_mode_name, ascii_only),
                 " = ",
-                to_esm_fn,
-                "(",
+                to_esm_call_start,
                 external_module_symbol_name.as_ref(),
                 ", 1);\n",
                 external_module_symbol_name.as_ref(),
                 " = ",
-                to_esm_fn,
-                "(",
+                to_esm_call_start,
                 external_module_symbol_name.as_ref(),
                 ");\n"
               ));
@@ -256,8 +271,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
               conversions.push_str(&concat_string!(
                 external_module_symbol_name.as_ref(),
                 " = ",
-                to_esm_fn,
-                "(",
+                to_esm_call_start,
                 external_module_symbol_name.as_ref(),
                 node_mode_arg,
                 ");\n"

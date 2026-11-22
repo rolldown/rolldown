@@ -1,0 +1,10 @@
+{
+  "_comment": "ESM output: the deferred module `d.js` imports the builtin module `node:path`, and the chunk imports it at its start. The early evaluation of a builtin module is not observable, so the build keeps the deferral, with no warning.",
+  "config": {
+    "external": ["node:path"],
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "expectWarning": false
+}

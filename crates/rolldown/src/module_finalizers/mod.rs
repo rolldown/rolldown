@@ -173,6 +173,10 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   /// Import records of externals whose attributes the output drops, with the span of the `with`
   /// clause.
   pub dropped_import_attributes: Vec<(ImportRecordIdx, Span)>,
+  /// Spans of the `import.defer()` calls of an external module that CommonJS output lowers to
+  /// `import()`. The flag is `true` when the call has a second argument, and `false` when
+  /// `output.dynamicImportInCjs` keeps the native `import()`.
+  pub lowered_external_dynamic_defer_imports: Vec<(Span, bool)>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -1073,7 +1077,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   /// `import_x || (import_x = __toESM(require_x()))`: the namespace of the CommonJS module that
   /// `import defer * as ns` targets. The first evaluation assigns `import_x`, so that all
-  /// accesses of the record read one namespace object.
+  /// accesses of the record read one namespace object. For an external module in CommonJS
+  /// output: `import_ext || (import_ext = __toESMCached("ext", require("ext")))`.
   pub(crate) fn cjs_deferred_namespace_expr(
     &self,
     rec_idx: ImportRecordIdx,
@@ -1084,7 +1089,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // The record is an `import defer * as ns`, and a namespace import always needs interop. The
     // linker keeps `__toESM` by the same rule. `cjs_import_init_expr` keeps the interop mode of
     // the importer. See internal-docs/import-defer/implementation.md.
-    let init_expr = self.cjs_import_init_expr(target, true);
+    let init_expr = match &self.ctx.modules[target] {
+      Module::Normal(_) => self.cjs_import_init_expr(target, true),
+      Module::External(external) => self.external_require_expr(external, true),
+    };
     let assignment = Expression::new_assignment_expression(
       SPAN,
       ast::AssignmentOperator::Assign,
@@ -1105,11 +1113,168 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ))
   }
 
+  /// `require("ext")`, or `__toESMCached("ext", require("ext"))` when `needs_interop`: the lazy
+  /// load of an external module in CommonJS output, for `import defer` and for a module of a
+  /// deferred closure. `__toESMCached` gives one namespace object for all loads of the external.
+  fn external_require_expr(
+    &self,
+    external: &rolldown_common::ExternalModule,
+    needs_interop: bool,
+  ) -> Expression<'ast> {
+    let file_name = external.get_file_name(self.ctx.resolved_paths);
+    let import_path = external.import_path_from_file_name(self.ctx.chunk, file_name.clone());
+    let require_call = Expression::new_call_with_arg(
+      ast::Expression::new_identifier(SPAN, "require", self),
+      Expression::new_string_literal(
+        SPAN,
+        oxc::ast::ast::Str::from_str_in(&import_path, self),
+        None,
+        self,
+      ),
+      false,
+      self,
+    );
+    if !needs_interop {
+      return require_call;
+    }
+    self.to_esm_cached_call(
+      &file_name,
+      require_call,
+      self.ctx.module.should_consider_node_esm_spec_for_static_import(),
+    )
+  }
+
+  /// `__toESMCached("ext", <exports>)`, or `__toESMCached("ext", <exports>, 1)` in Node mode. The
+  /// helper keeps one namespace object for each key and interop mode. The key is the file name of
+  /// the external module (`ExternalModule::get_file_name`), which is the same in all chunks. The
+  /// `require()` path is not: it is relative to the folder of the chunk. The exports object is not
+  /// a correct key either: a primitive cannot be a key, and two externals can export one object.
+  fn to_esm_cached_call(
+    &self,
+    file_name: &str,
+    exports_expr: Expression<'ast>,
+    node_mode: bool,
+  ) -> Expression<'ast> {
+    let mut args = oxc::allocator::Vec::with_capacity_in(3, self);
+    args.push(ast::Argument::new_string_literal(
+      SPAN,
+      oxc::ast::ast::Str::from_str_in(file_name, self),
+      None,
+      self,
+    ));
+    args.push(ast::Argument::from(exports_expr));
+    if node_mode {
+      args.push(ast::Argument::new_numeric_literal(SPAN, 1.0, None, self));
+    }
+    ast::Expression::new_call_expression_with_pure(
+      SPAN,
+      self.finalized_expr_for_runtime_symbol("__toESMCached"),
+      None,
+      args,
+      false,
+      true,
+      self,
+    )
+  }
+
+  /// `__deferNsCached("ext", () => <namespace>)`, or with `1` in Node mode: the deferred namespace
+  /// of an external module in CommonJS output. The helper keeps one object for each key and
+  /// interop mode, with the key of `to_esm_cached_call`. Thus each deferred import of the
+  /// external gets the same object, also in another chunk, in a wrapper or from `import.defer()`.
+  fn deferred_ns_cached_call(
+    &self,
+    file_name: &str,
+    namespace: Expression<'ast>,
+    node_mode: bool,
+  ) -> Expression<'ast> {
+    let mut args = oxc::allocator::Vec::with_capacity_in(3, self);
+    args.push(ast::Argument::new_string_literal(
+      SPAN,
+      oxc::ast::ast::Str::from_str_in(file_name, self),
+      None,
+      self,
+    ));
+    args.push(Expression::new_arrow_returning(namespace, self).into());
+    if node_mode {
+      args.push(ast::Argument::new_numeric_literal(SPAN, 1.0, None, self));
+    }
+    ast::Expression::new_call_expression_with_pure(
+      SPAN,
+      self.finalized_expr_for_runtime_symbol("__deferNsCached"),
+      None,
+      args,
+      false,
+      true,
+      self,
+    )
+  }
+
+  /// The import of an external module in a module of a deferred closure, CommonJS output. The
+  /// statement stays at its position, so the external loads when the module evaluates, not when
+  /// the chunk loads:
+  /// - `import 'ext'`: `require("ext");`.
+  /// - Other imports and re-exports: `var import_ext = require("ext");`, or
+  ///   `var import_ext = __toESMCached("ext", require("ext"));` for a default or namespace import.
+  ///   The imports of the module read `import_ext` (`bind_imports_and_exports`).
+  fn lazy_external_import_stmt(
+    &self,
+    stmt: &Statement<'ast>,
+    rec_idx: ImportRecordIdx,
+    external: &rolldown_common::ExternalModule,
+  ) -> Statement<'ast> {
+    let is_bare_import = stmt
+      .as_import_declaration()
+      .is_some_and(|decl| decl.specifiers.as_ref().is_none_or(|specifiers| specifiers.is_empty()));
+    if is_bare_import {
+      return ast::Statement::new_expression_statement(
+        SPAN,
+        self.external_require_expr(external, false),
+        self,
+      );
+    }
+    let rec = &self.ctx.module.import_records[rec_idx];
+    Statement::new_var_decl(
+      self.canonical_name_for(rec.namespace_ref),
+      self.external_require_expr(external, import_record_needs_interop(self.ctx.module, rec_idx)),
+      self,
+    )
+  }
+
+  /// `__reExport(x_exports, require("ext"))` for `export * from 'ext'` in CommonJS, IIFE and UMD
+  /// output.
+  fn cjs_external_re_export_stmt(
+    &self,
+    importee: &rolldown_common::ExternalModule,
+  ) -> Statement<'ast> {
+    let (importer_namespace_ref_expr, _) =
+      self.finalized_expr_for_symbol_ref(self.ctx.module.namespace_object_ref, false, false);
+    let re_export_call_expr = CallExpression::new_re_export_call(
+      // Insert `__reExport(importer_exports, require('ext'))`
+      self.finalized_expr_for_runtime_symbol("__reExport"),
+      importer_namespace_ref_expr,
+      self.external_require_expr(importee, false),
+      self,
+    );
+    ast::Statement::new_expression_statement(
+      SPAN,
+      Expression::CallExpression(re_export_call_expr.into_in(self.allocator())),
+      self,
+    )
+  }
+
+  /// Whether this module loads its external modules lazily: CommonJS output, and the module is in
+  /// a deferred closure (`import defer`).
+  fn loads_externals_lazily(&self) -> bool {
+    matches!(self.ctx.options.format, OutputFormat::Cjs)
+      && self.ctx.linking_info.wrapped_by_import_defer
+  }
+
   /// The declaration of `import_x` for `import defer * as ns from './x'`, where `./x` is a
   /// CommonJS module: `var import_x;`. The first deferred access assigns it
   /// (`wrap_deferred_access`). When tree shaking keeps the deferred namespace object of the
   /// record (an escape of `ns` reads it), the declaration also has the object:
   /// `var import_x, x_deferred = __deferNs(() => import_x || (import_x = __toESM(require_x())));`.
+  /// An external module in CommonJS output gets its object from `deferred_ns_cached_call`.
   /// A symbol in `merged_deferred_cjs_namespace_refs` is not declared here: the first record of
   /// its group declares the binding, under the name of the canonical symbol.
   /// Returns `None` when the record declares neither symbol.
@@ -1130,17 +1295,27 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return decl;
     }
     let Some(init_body) = self.cjs_deferred_namespace_expr(rec_idx) else { return decl };
-    let mut call = CallExpression::new(
-      SPAN,
-      self.finalized_expr_for_runtime_symbol("__deferNs"),
-      None,
-      [],
-      false,
-      self,
-    );
-    call.pure = true;
-    call.arguments.push(Expression::new_arrow_returning(init_body, self).into());
-    let deferred_ns = Expression::CallExpression(call.into_in(self.allocator()));
+    let deferred_ns = if let Some(Module::External(external)) =
+      rec.resolved_module.map(|target| &self.ctx.modules[target])
+    {
+      self.deferred_ns_cached_call(
+        &external.get_file_name(self.ctx.resolved_paths),
+        init_body,
+        self.ctx.module.should_consider_node_esm_spec_for_static_import(),
+      )
+    } else {
+      let mut call = CallExpression::new(
+        SPAN,
+        self.finalized_expr_for_runtime_symbol("__deferNs"),
+        None,
+        [],
+        false,
+        self,
+      );
+      call.pure = true;
+      call.arguments.push(Expression::new_arrow_returning(init_body, self).into());
+      Expression::CallExpression(call.into_in(self.allocator()))
+    };
     let deferred_decl =
       Statement::new_var_decl(self.canonical_name_for(deferred.symbol_ref), deferred_ns, self);
     match (&mut decl, deferred_decl) {
@@ -1166,8 +1341,26 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
     let rec = &self.ctx.module.import_records[rec_idx];
     let Some(resolved_module_idx) = rec.resolved_module else { return true };
-    let Module::Normal(importee) = &self.ctx.modules[resolved_module_idx] else {
-      return true;
+    let importee = match &self.ctx.modules[resolved_module_idx] {
+      Module::Normal(importee) => importee,
+      Module::External(external) => {
+        // `import defer * as ns from 'ext'` in CommonJS output loads `ext` lazily: `var import_ext,
+        // ext_deferred = __deferNsCached("ext", () => import_ext || (import_ext = ...))`.
+        if rec.is_defer_phase() && matches!(self.ctx.options.format, OutputFormat::Cjs) {
+          let Some(decl) =
+            self.deferred_cjs_import_decl(rec_idx, self.canonical_name_for(rec.namespace_ref))
+          else {
+            return true;
+          };
+          *stmt = decl;
+          return false;
+        }
+        if self.loads_externals_lazily() {
+          *stmt = self.lazy_external_import_stmt(stmt, rec_idx, external);
+          return false;
+        }
+        return true;
+      }
     };
     let importee_linking_info = &self.ctx.linking_infos[importee.idx];
     // A consumer-local barrel is a routing waypoint even when linking already gave it an ESM
@@ -1847,40 +2040,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           re_export_external_stmts = Some(stmts.collect::<Vec<_>>());
         }
         OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {
+          // A module that loads its externals lazily calls `__reExport` at the position of the
+          // `export *` statement, in its init.
+          let lazy = self.loads_externals_lazily();
           let stmts = export_all_externals_rec_ids.iter().copied().filter_map(|idx| {
-            // importer_exports
-            let (importer_namespace_ref_expr, _) = self.finalized_expr_for_symbol_ref(
-              self.ctx.module.namespace_object_ref,
-              false,
-              false,
-            );
+            if lazy {
+              return None;
+            }
             let rec = &self.ctx.module.import_records[idx];
             let importee = self.ctx.modules[rec.resolved_module?].as_external()?;
-            let import_path = importee.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
-
-            let re_export_call_expr = CallExpression::new_re_export_call(
-              // Insert `__reExport(importer_exports, require('ext'))`
-              self.finalized_expr_for_runtime_symbol("__reExport"),
-              importer_namespace_ref_expr,
-              Expression::new_call_with_arg(
-                ast::Expression::new_identifier(SPAN, "require", self),
-                ast::Expression::new_string_literal(
-                  SPAN,
-                  oxc::ast::ast::Str::from_str_in(&import_path, self),
-                  None,
-                  self,
-                ),
-                false,
-                self,
-              ),
-              self,
-            );
-
-            Some(ast::Statement::new_expression_statement(
-              SPAN,
-              Expression::CallExpression(re_export_call_expr.into_in(self.allocator())),
-              self,
-            ))
+            Some(self.cjs_external_re_export_stmt(importee))
           });
           re_export_external_stmts = Some(stmts.collect());
         }
@@ -3152,16 +3321,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   ExportsKind::None => {}
                 }
               }
-              Module::External(_importee) => {
-                match self.ctx.options.format {
-                  rolldown_common::OutputFormat::Esm
-                  | rolldown_common::OutputFormat::Iife
-                  | rolldown_common::OutputFormat::Umd
-                  | rolldown_common::OutputFormat::Cjs => {
-                    // Just remove the statement
-                    return;
-                  }
+              Module::External(external) => {
+                // A module of a deferred closure in CommonJS output loads the external here, in
+                // its init: `__reExport(x_exports, require("ext"))`. Other modules get the call
+                // with the namespace declaration, and the statement is removed.
+                if self.loads_externals_lazily() {
+                  self.debug_assert_namespace_object_is_open();
+                  program.body.push(self.cjs_external_re_export_stmt(external));
                 }
+                return;
               }
             }
 
@@ -4165,9 +4333,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         needs_to_esm_helper = importee.exports_kind.is_commonjs();
       }
       Module::External(importee) => {
+        // `import.defer('ext')` keeps its phase in ESM output. `apply_import_defer_support`
+        // lowers the deferred imports of an IIFE or UMD build with a deferred external module.
+        if rec.is_defer_phase() && matches!(self.ctx.options.format, OutputFormat::Esm) {
+          expr.phase = Some(ast::ImportPhase::Defer);
+        }
         self.rewrite_external_import_options(expr, &rec.attributes, &importee.attributes);
         // The path is rendered like the one of a static import, with or without options.
-        let import_path = importee.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
+        let file_name = importee.get_file_name(self.ctx.resolved_paths);
+        let import_path = importee.import_path_from_file_name(self.ctx.chunk, file_name.clone());
         if str != import_path.as_str() {
           expr.source = Expression::new_string_literal(
             expr.source.span(),
@@ -4179,8 +4353,42 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         if expr.options.is_some() {
           // Attributes are load-bearing for an external import: the host resolves the specifier
           // and `with { type: 'json' }` picks the module type. Do not lower the call to
-          // `require()`, which cannot carry attributes.
+          // `require()`, which cannot carry attributes. In CommonJS output, `import.defer()` thus
+          // becomes `import()`, with a warning.
+          if rec.is_defer_phase() && matches!(self.ctx.options.format, OutputFormat::Cjs) {
+            self.lowered_external_dynamic_defer_imports.push((expr.span, true));
+          }
           return false;
+        }
+        // `import.defer('ext')` in CommonJS output with `dynamicImportInCjs: false`:
+        // `(async () => __deferNsCached("ext", () => __toESMCached("ext", require("ext"))))()`.
+        // The first access to a key loads `ext`, as for the static form. Each call gives the
+        // deferred namespace object of the static form with the same interop mode. The form does
+        // not call `.then` (test262 `promise-prototype-then-not-called.js`).
+        //
+        // With `dynamicImportInCjs: true`, the call keeps the native `import()` of the build with
+        // the option off, with a warning. A `require()` throws for an ES module with top-level
+        // await (`ERR_REQUIRE_ASYNC_MODULE`), but `import()` loads it. See
+        // internal-docs/import-defer/design.md.
+        if rec.is_defer_phase() && matches!(self.ctx.options.format, OutputFormat::Cjs) {
+          if self.ctx.options.dynamic_import_in_cjs {
+            self.lowered_external_dynamic_defer_imports.push((expr.span, false));
+            return false;
+          }
+          let node_mode = self.ctx.module.should_consider_node_esm_spec_for_dynamic_import();
+          node.replace_with(|old| {
+            let ast::Expression::ImportExpression(import_expr) = old else { unreachable!() };
+            let require_call = Expression::new_call_with_arg(
+              ast::Expression::new_identifier(SPAN, "require", self),
+              import_expr.unbox().source,
+              false,
+              self,
+            );
+            let namespace = self.to_esm_cached_call(&file_name, require_call, node_mode);
+            let deferred_ns = self.deferred_ns_cached_call(&file_name, namespace, node_mode);
+            self.async_arrow_iife(None, deferred_ns)
+          });
+          return true;
         }
         // Convert `import("external")` to `Promise.resolve().then(() => __toESM(require("external")))`
         // when format is CJS and dynamicImportInCjs is false

@@ -1,0 +1,8 @@
+{
+  "_comment": "`a.js` defers `t.js`, and `t.js` imports `a.js`. This cycle has a defer target, so both modules keep their wrappers and their state records (`__esmState`). `helper.js` is a private module of the deferred root `root.js`. `root.js` imports `a.js` before `helper.js`, so the wrapper of `root.js` calls the init of `a.js` before the body of `helper.js` (a pre-call).",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

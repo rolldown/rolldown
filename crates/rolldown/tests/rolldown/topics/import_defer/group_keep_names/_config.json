@@ -1,0 +1,9 @@
+{
+  "_comment": "The default function of the deferred group is declared at file scope. Restore its name at chunk startup and keep the CommonJS import inside the group initializer.",
+  "config": {
+    "keepNames": true,
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

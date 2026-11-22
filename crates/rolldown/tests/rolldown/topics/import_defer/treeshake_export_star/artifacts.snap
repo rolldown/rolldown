@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// a.js
+var A;
+// route.js
+var route_default;
+function init_route() {
+	return (init_route = __esmMin((() => {
+		// a.js
+		A = { a: 1 };
+		// route.js
+		route_default = () => A;
+	})))();
+}
+// main.js
+const run = () => (init_route(), route_default)();
+export { run };
+
+```

@@ -26,19 +26,14 @@ function init_b() {
 		b = state.value;
 	})))();
 }
-// barrel.js
-function init_barrel() {
-	return (init_barrel = __esmMin((() => {
-		init_b();
-	})))();
-}
 // first.js
 function read$1() {
 	return a();
 }
 function init_first() {
 	return (init_first = __esmMin((() => {
-		init_barrel();
+		// barrel.js
+		init_b();
 	})))();
 }
 // second.js

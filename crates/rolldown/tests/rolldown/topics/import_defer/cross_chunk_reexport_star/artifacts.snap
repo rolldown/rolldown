@@ -34,19 +34,14 @@ import { a as __esmMin, i as state, n as init_b, r as init_state } from "./b.js"
 function a() {
 	return 1;
 }
-// barrel.js
-function init_barrel() {
-	return (init_barrel = __esmMin((() => {
-		init_b();
-	})))();
-}
 // first.js
 function read() {
 	return a();
 }
 function init_first() {
 	return (init_first = __esmMin((() => {
-		init_barrel();
+		// barrel.js
+		init_b();
 	})))();
 }
 // main.js

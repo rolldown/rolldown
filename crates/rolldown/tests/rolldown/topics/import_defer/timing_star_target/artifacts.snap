@@ -16,11 +16,6 @@ function init_state() {
 }
 // a.js
 var a;
-function init_a() {
-	return (init_a = __esmMin((() => {
-		a = { value: 1 };
-	})))();
-}
 // b.js
 var b;
 function init_b() {
@@ -29,20 +24,16 @@ function init_b() {
 		b = state.value;
 	})))();
 }
-// barrel.js
-function init_barrel() {
-	return (init_barrel = __esmMin((() => {
-		init_a();
-		init_b();
-	})))();
-}
 // first.js
 function read$1() {
 	return a.value;
 }
 function init_first() {
 	return (init_first = __esmMin((() => {
-		init_barrel();
+		// a.js
+		a = { value: 1 };
+		// barrel.js
+		init_b();
 	})))();
 }
 // second.js

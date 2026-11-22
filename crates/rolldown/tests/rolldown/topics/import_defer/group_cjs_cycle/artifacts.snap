@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// m.js
+var observed, seen;
+// p.js
+function same() {
+	return seen === import_c;
+}
+var import_c;
+// d.js
+function read() {
+	return [observed, same()];
+}
+function init_d() {
+	return (init_d = __esmMin((() => {
+		import_c = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+			module.exports = { value: 42 };
+		})))());
+		// m.js
+		observed = import_c.default.value;
+		seen = import_c;
+	})))();
+}
+// main.js
+function run() {
+	return (init_d(), read)();
+}
+export { run };
+
+```

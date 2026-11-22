@@ -1,0 +1,8 @@
+{
+  "_comment": "Two cycles in deferred closures. (1) `p.js` and `q.js` import each other. Both are private modules of the root `r1.js`, so their bodies run in the wrapper of `r1.js`. (2) `x.js`, `a.js` and `s.js` form a cycle that `r1.js` and `r2.js` share. `x.js` and `s.js` keep their wrappers, and `a.js` is a private module of `x.js`. The bodies run in the order of native ESM. `r1.js` imports `x.js` before `p.js`, so the wrapper of `r1.js` calls `init_x()` before the bodies of `q.js` and `p.js` (a pre-call).",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

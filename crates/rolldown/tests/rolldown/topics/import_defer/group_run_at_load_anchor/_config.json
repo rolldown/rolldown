@@ -1,0 +1,16 @@
+{
+  "_comment": "`c.js` calls `import.defer('./d.js')`, and `d.js` imports `l.js`. `b.js` in another chunk imports `l.js`, then `w.js`. The chunk of the group `all` cannot move `w.js` out, so it runs `l.js` at load. The declarations of `d.js` and `l.js` move before `c.js`, and the init call of `l.js` stays at its place: at the end of the code of its anchor `r.js`. `r.js` is a deferred module, and only `r.js` imports `m.js`. If `m.js` were a member of a group with the root `r.js`, the call would go into the wrapper of `r.js`, and `w.js` would run before `l.js`. Thus an anchor is not in a group. The output gives the native order.",
+  "config": {
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "all",
+          "test": "[\\\\/](?:c|d|l|m|r|w)\\.js$"
+        }
+      ]
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

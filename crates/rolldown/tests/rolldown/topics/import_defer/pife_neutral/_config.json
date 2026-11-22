@@ -1,0 +1,14 @@
+{
+  "_comment": "`platform: 'neutral'` turns `optimization.pifeForModuleWrappers` off by default. The wrapper of the deferred module `lazy.js` keeps the PIFE hint. The interop wrapper of `required.js`, which `require()` loads, has no hint. The variant sets the option to `false`, which turns off the hint on both wrappers. The other `import_defer` fixtures use the default platform, so they test the value `true`.",
+  "config": {
+    "platform": "neutral",
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    {
+      "pifeForModuleWrappers": false
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "_comment": "`p.js` and `m.js` are private members of the root `d.js`, and they import each other. `m.js` reads two keys of the namespace of `p.js` before the body of `p.js` runs. `export * from './c.cjs'` adds `fromC`, and `export * from './x.js'` adds `fromE` (`x.js` has dynamic exports, because it re-exports `e.cjs`). The two `__reExport` statements of `p.js` move before the body of `m.js`. The values are not constants, so Rolldown cannot inline them.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

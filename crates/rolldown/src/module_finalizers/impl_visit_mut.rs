@@ -11,8 +11,10 @@ use oxc::{
   span::{GetSpan, SPAN, Span},
 };
 use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind,
+  ConcatenateWrappedModuleKind, EcmaModuleAstUsage, ExportsKind, StmtInfoIdx, SymbolRef,
+  ThisExprReplaceKind, WrapKind,
 };
+use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
   BindingPatternExt as _, EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind,
   EsmWrapperState, EsmWrapperStmtOptions, ExpressionFactoryExt as _, JsxExt,
@@ -398,6 +400,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     }
 
     let wrapper_mode = self.ctx.wrapper_mode();
+    let mut group_body_start = None;
     self.needs_hosted_top_level_binding = matches!(
       wrapper_mode,
       ModuleWrapperMode::InteropEsm(_) | ModuleWrapperMode::ExecutionOrder(_)
@@ -474,6 +477,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         ));
       }
       ModuleWrapperMode::InteropEsm(target) | ModuleWrapperMode::ExecutionOrder(target) => {
+        let group_kind = self.ctx.linking_info.concatenated_wrapped_module_kind;
         let old_body = program.body.take_in(self);
 
         let mut fn_stmts = allocator::Vec::new_in(self);
@@ -546,40 +550,38 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           ));
         }
 
-        let (esm_ref_expr, _) =
-          self.finalized_expr_for_symbol_ref(self.esm_wrapper_runtime_ref(), false, false);
-        let wrap_ref_name = self.canonical_name_for(target.wrapper_ref);
-
-        program.body.push(Statement::new_esm_wrapper_stmt(
-          EsmWrapperStmtOptions {
-            binding_name: wrap_ref_name,
-            esm_fn_expr: esm_ref_expr,
-            statements: stmts_inside_closure,
-            profiler_name: self.esm_wrapper_profiler_name(),
-            call_kind: if self.ctx.options.optimization.is_pife_for_module_wrappers_enabled() {
-              EsmWrapperCallKind::Pife
-            } else {
-              EsmWrapperCallKind::Plain
-            },
-            body_kind: if self.ctx.linking_info.is_tla_or_contains_tla_dependency {
-              EsmWrapperBodyKind::Async
-            } else {
-              EsmWrapperBodyKind::Sync
-            },
-            decl_kind: self.esm_wrapper_decl_kind(wrapper_mode),
-            state: self.esm_wrapper_state(),
-          },
-          self,
-        ));
-        // The chunk runs this deferred module at its place, as the build without `import defer`
-        // does (`ChunkGraph::deferred_modules_run_at_load`). The anchor of a moved module runs the
-        // call (`ChunkGraph::run_at_load_anchors`).
-        // See internal-docs/import-defer/implementation.md ("Run at load").
-        if self.ctx.chunk_graph.deferred_modules_run_at_load.contains(&self.ctx.idx)
-          && !self.ctx.chunk_graph.run_at_load_anchors.contains_key(&self.ctx.idx)
-        {
-          let init_call = self.wrapped_esm_init_call_expr(self.ctx.idx, SPAN, false, true);
-          program.body.push(Statement::new_expression_statement(SPAN, init_call, self));
+        // The body of a root or a member of a deferred group stays after the declarations, with
+        // no wrapper. `render_esm` puts the bodies of the group in the wrapper of the root.
+        // See internal-docs/import-defer/implementation.md ("Deferred groups").
+        match group_kind {
+          ConcatenateWrappedModuleKind::None => {
+            self.push_esm_wrapper_stmt(
+              program,
+              target.wrapper_ref,
+              stmts_inside_closure,
+              wrapper_mode,
+            );
+            // The chunk runs this deferred module at its place, as the build without `import
+            // defer` does (`ChunkGraph::deferred_modules_run_at_load`). The anchor of a moved
+            // module runs the call (`ChunkGraph::run_at_load_anchors`). Such a module is not in
+            // a deferred group (`group_deferred_modules`).
+            // See internal-docs/import-defer/implementation.md ("Run at load").
+            if self.ctx.chunk_graph.deferred_modules_run_at_load.contains(&self.ctx.idx)
+              && !self.ctx.chunk_graph.run_at_load_anchors.contains_key(&self.ctx.idx)
+            {
+              let init_call = self.wrapped_esm_init_call_expr(self.ctx.idx, SPAN, false, true);
+              program.body.push(Statement::new_expression_statement(SPAN, init_call, self));
+            }
+          }
+          ConcatenateWrappedModuleKind::Root | ConcatenateWrappedModuleKind::Inner => {
+            if matches!(group_kind, ConcatenateWrappedModuleKind::Root) {
+              let root_wrapper =
+                self.group_root_wrapper_text(program, target.wrapper_ref, wrapper_mode);
+              self.rendered_concatenated_wrapped_module_parts.root_wrapper = Some(root_wrapper);
+            }
+            group_body_start = Some(program.body.len());
+            program.body.extend(stmts_inside_closure);
+          }
         }
       }
       ModuleWrapperMode::None => {
@@ -603,8 +605,16 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     }
 
     if self.json_module_inlined_prop.is_some() {
+      if let Some(body_start) = group_body_start.as_mut() {
+        *body_start = program.body[..*body_start]
+          .iter()
+          .filter(|stmt| !matches!(stmt, ast::Statement::EmptyStatement(_)))
+          .count();
+      }
       program.body.drain_filter(|item| matches!(item, ast::Statement::EmptyStatement(_)));
     }
+    // After the last change to the statements of the program.
+    self.rendered_concatenated_wrapped_module_parts.body_start = group_body_start;
   }
 
   fn visit_binding_identifier(&mut self, ident: &mut ast::BindingIdentifier<'ast>) {
@@ -980,6 +990,68 @@ fn has_optional_member_access(expr: &Expression) -> bool {
 }
 
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
+  /// `function init_foo() { return (init_foo = __esmMin(() => { <statements> }))(); }` or the
+  /// `var` form, at the end of `program`.
+  fn push_esm_wrapper_stmt(
+    &self,
+    program: &mut ast::Program<'ast>,
+    wrapper_ref: SymbolRef,
+    statements: allocator::Vec<'ast, Statement<'ast>>,
+    wrapper_mode: ModuleWrapperMode,
+  ) {
+    let (esm_ref_expr, _) =
+      self.finalized_expr_for_symbol_ref(self.esm_wrapper_runtime_ref(), false, false);
+    let wrap_ref_name = self.canonical_name_for(wrapper_ref);
+    program.body.push(Statement::new_esm_wrapper_stmt(
+      EsmWrapperStmtOptions {
+        binding_name: wrap_ref_name,
+        esm_fn_expr: esm_ref_expr,
+        statements,
+        profiler_name: self.esm_wrapper_profiler_name(),
+        call_kind: if self.ctx.options.optimization.is_pife_for_module_wrappers_enabled()
+          || (self.ctx.linking_info.wrapped_by_import_defer
+            && self.ctx.options.optimization.is_pife_for_deferred_module_wrappers_enabled())
+        {
+          EsmWrapperCallKind::Pife
+        } else {
+          EsmWrapperCallKind::Plain
+        },
+        body_kind: if self.ctx.linking_info.is_tla_or_contains_tla_dependency {
+          EsmWrapperBodyKind::Async
+        } else {
+          EsmWrapperBodyKind::Sync
+        },
+        decl_kind: self.esm_wrapper_decl_kind(wrapper_mode),
+        state: self.esm_wrapper_state(),
+      },
+      self,
+    ));
+  }
+
+  /// The text of the init wrapper of the root of a deferred group, before and after its closure
+  /// body. The renderer writes the code of the group between the two parts. The wrapper is
+  /// printed with an empty closure, so the text has no code of the module, and its only `{}` is
+  /// the closure body.
+  fn group_root_wrapper_text(
+    &self,
+    program: &mut ast::Program<'ast>,
+    wrapper_ref: SymbolRef,
+    wrapper_mode: ModuleWrapperMode,
+  ) -> (String, String) {
+    debug_assert!(
+      !self.ctx.linking_info.is_tla_or_contains_tla_dependency
+        && self.ctx.linking_info.import_defer_tracked_deps.is_none(),
+      "the root of a deferred group has a sync wrapper with no state record"
+    );
+    self.push_esm_wrapper_stmt(program, wrapper_ref, allocator::Vec::new_in(self), wrapper_mode);
+    let wrapper = program.body.pop().expect("`push_esm_wrapper_stmt` pushes one statement");
+    let text = wrapper.to_output_source_string(self.ctx.options.charset.is_ascii());
+    let text = text.trim_end();
+    debug_assert_eq!(text.matches("{}").count(), 1, "one empty body in the wrapper: {text}");
+    let body_start = text.find("{}").expect("the wrapper has an empty closure body") + 1;
+    (text[..body_start].to_string(), text[body_start..].to_string())
+  }
+
   /// Returns the hoisted form `function init_x()` for each module with
   /// `ModuleWrapperMode::ExecutionOrder` and for each module that `import defer` wraps. A call of
   /// `init_x` can run before the declaration of the module, for example from a member of a module

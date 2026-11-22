@@ -1,0 +1,8 @@
+{
+  "_comment": "In `p1.js` and `p2.js`, a member import comes after the import of a CommonJS module, so the statement `import_c = __toESM(require_c())` moves out of the body. But each later member is already visited: `r1.js` visits `m1.js` first, and `q2.js` imports `p2.js` (a cycle). Thus the renderer writes the statement before the body of its module.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

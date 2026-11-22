@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// helper.js
+function helper(name) {
+	return "helper " + name;
+}
+// m.js
+/*! legal before a removed import */
+/*! legal before a hoisted function */
+function describe() {
+	return helper("m");
+}
+function make() {
+	return { made: true };
+}
+var made;
+// r.js
+function read() {
+	return [describe(), made.made];
+}
+function init_r() {
+	return (init_r = __esmMin((() => {
+		// helper.js
+		globalThis.__helper = true;
+		// m.js
+		made = /* @__PURE__ */ make();
+		/*! legal in the body */
+		globalThis.__log = ["m"];
+	})))();
+}
+// main.js
+function run() {
+	return (init_r(), read)();
+}
+export { run };
+
+```

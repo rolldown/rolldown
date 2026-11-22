@@ -1,0 +1,72 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] d.js is dynamically imported by c.js but also statically imported by e.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## all.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// l.js
+function init_l() {
+	return (init_l = __esmMin((() => {
+		globalThis.log.push("l");
+	})))();
+}
+// d.js
+var d_exports = /* @__PURE__ */ __exportAll({ d: () => d });
+var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(), d_exports), d_exports);
+var d;
+function init_d() {
+	return (init_d = __esmMin((() => {
+		init_l();
+		globalThis.log.push("d");
+		d = "dl";
+	})))();
+}
+// c.js
+const p = (async () => d_deferred)();
+// m.js
+function init_m() {
+	return (init_m = __esmMin((() => {
+		globalThis.log.push("m");
+	})))();
+}
+// r.js
+var r;
+function init_r() {
+	return (init_r = __esmMin((() => {
+		init_m();
+		globalThis.log.push("r");
+		r = "rm";
+	})))();
+}
+init_l();
+// w.js
+globalThis.log.push("w");
+export { r as a, init_r as i, init_d as n, p as o, init_l as r, d as t };
+
+```
+
+## main.js
+
+```js
+import { a as r, i as init_r, n as init_d, o as p, r as init_l, t as d } from "./all.js";
+// e.js
+const readR = () => (init_r(), r);
+const readD = () => (init_d(), d);
+// b.js
+init_l();
+globalThis.log.push("b");
+export { p, readD, readR };
+
+```

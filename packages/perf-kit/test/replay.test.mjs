@@ -40,7 +40,12 @@ import {
   summarizeLog,
   validateArchive,
 } from '../lib/replay/run.mjs';
-import { chooseCompression, documentSegments, startReplayServer } from '../lib/replay/server.mjs';
+import {
+  chooseCompression,
+  documentSegments,
+  encode,
+  startReplayServer,
+} from '../lib/replay/server.mjs';
 import { createShaper, urgencyOf } from '../lib/replay/shaper.mjs';
 
 const ORIGIN = 'https://app.example.test';
@@ -724,7 +729,12 @@ function h2request(client, headers, body = null) {
     });
     req.on('data', (c) => chunks.push(c));
     req.on('end', () =>
-      resolve({ ...head, body: Buffer.concat(chunks), endMs: performance.now() - t0 }),
+      resolve({
+        ...head,
+        body: Buffer.concat(chunks),
+        firstChunk: chunks[0],
+        endMs: performance.now() - t0,
+      }),
     );
     req.on('error', reject);
     req.end(body ?? undefined);
@@ -758,7 +768,7 @@ test('the replay server routes document, dist, recorded, preflight and unrecorde
   assert.equal(
     doc.headers['content-encoding'],
     undefined,
-    'the document goes uncompressed, so its parts decode at once',
+    'the recorded document had no content encoding',
   );
   assert.match(
     doc.body.toString(),
@@ -836,6 +846,79 @@ test('the replay server routes document, dist, recorded, preflight and unrecorde
     ],
     'a stream the client cancelled before its headers is never answered',
   );
+});
+
+test('replay compresses a navigation using the recorded document encoding', async (t) => {
+  const site = syntheticSite();
+  t.after(() => fs.rmSync(site.dir, { recursive: true, force: true }));
+  const head = '<!doctype html><head><script src="/early.js"></script></head>';
+  const html = Buffer.from(`${head}<body>${'<p>Late content</p>'.repeat(20_000)}</body>`);
+  fs.writeFileSync(path.join(site.dist, 'index.html'), html);
+  const tls = replayCertificate(path.join(site.dir, 'cert'));
+  const headers = {
+    ':authority': 'app.example.test',
+    ':path': '/',
+    'sec-fetch-mode': 'navigate',
+    'accept-encoding': 'br, gzip',
+  };
+
+  for (const split of [false, true]) {
+    await t.test(
+      split ? 'the compressed head decodes before the rest arrives' : 'single body',
+      async (t) => {
+        const document = {
+          ...site.archive.document,
+          headers: { ...site.archive.document.headers, 'content-encoding': 'br' },
+          earlyFraction: split ? (head.length - 2) / html.length : 1,
+          ttfbMs: 20,
+          downloadMs: 250,
+        };
+        const server = await startReplayServer({
+          archive: { ...site.archive, document },
+          archiveDir: site.archiveDir,
+          tls,
+          network: site.archive.network,
+          compression: split ? { encoding: 'gzip', level: 9 } : { encoding: 'br', level: 1 },
+          documentSource: 'local',
+        });
+        const client = http2.connect(`https://127.0.0.1:${server.port}`, {
+          rejectUnauthorized: false,
+        });
+        t.after(async () => {
+          client.close();
+          await server.close();
+        });
+        server.beginRun(site.dist);
+
+        const doc = await h2request(client, headers);
+        assert.equal(doc.status, 200);
+        assert.equal(doc.headers['content-encoding'], 'br');
+        assert.equal(Number(doc.headers['content-length']), doc.body.length);
+        assert.equal(server.takeLog()[0].bytes, doc.body.length);
+        assert.ok(doc.body.length < html.length / 10);
+        assert.deepEqual(zlib.brotliDecompressSync(doc.body), html);
+
+        if (split) {
+          const earlyHtml = zlib.brotliDecompressSync(doc.firstChunk, {
+            finishFlush: zlib.constants.BROTLI_OPERATION_FLUSH,
+          });
+          assert.equal(earlyHtml.toString(), head);
+          assert.ok(
+            doc.endMs - doc.headersMs >= 200,
+            'the late part waits for the recorded download',
+          );
+        } else {
+          assert.deepEqual(doc.body, encode(html, { encoding: 'br', level: 1 }));
+          const identity = await h2request(client, {
+            ...headers,
+            'accept-encoding': 'br;q=0, gzip',
+          });
+          assert.equal(identity.headers['content-encoding'], undefined);
+          assert.deepEqual(identity.body, html);
+        }
+      },
+    );
+  }
 });
 
 test('record --out refuses a folder that is not an archive', async () => {

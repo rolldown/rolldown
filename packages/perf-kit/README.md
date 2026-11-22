@@ -526,6 +526,10 @@ node replay.mjs replay --archive <dir> --dist base=/builds/stable/dist --dist ca
 
 ### How the replay works
 
+The document uses its recorded content encoding when the replay server and client
+support it. The shared bandwidth model counts the encoded bytes. If the recording
+includes an early flush, the browser can decode that part before the rest arrives.
+
 | Part                      | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Archive                   | Every response of the body run with safelisted headers (type, encoding, CORS, `vary`, `location`, `link`; never cookies or auth), request body hashes (never request bodies), the median server time of each call over the timing runs, volatile query parameters (values that change between loads), the field medians, and the timing runs (`timing.json`).                                                                                                                                                                                                        |

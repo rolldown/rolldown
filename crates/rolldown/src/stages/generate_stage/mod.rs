@@ -122,6 +122,7 @@ use crate::{
 mod chunk_ext;
 mod chunk_optimizer;
 mod code_splitting;
+mod commonjs_facade_guard;
 mod compute_cross_chunk_links;
 mod compute_wrapped_esm_init_metadata;
 mod detect_ineffective_dynamic_imports;
@@ -141,12 +142,14 @@ mod reduced_chunk_graph;
 mod render_chunk_to_assets;
 mod resolve_file_urls;
 mod runtime_module_sweep;
+pub mod shared_commonjs_reads;
 mod simulated_facade_inclusion;
 
 pub use compute_wrapped_esm_init_metadata::{FinalEsmInitMetadata, Sealed};
 pub use inline_common_chunks::{
   CarriedRender, FileInlineNames, InlineCommonChunksState, InlineReader,
 };
+pub use shared_commonjs_reads::{SharedCommonJsReads, SharedRead, SharedReadDeclaration};
 
 pub struct GenerateStage<'a> {
   link_output: &'a mut LinkStageOutput,
@@ -165,6 +168,8 @@ pub struct GenerateStage<'a> {
   /// Carrier -> the records it prints, finalized and rendered for it (`finalize_inline_copies`);
   /// moved out when the files are instantiated.
   inline_renders: FxHashMap<ChunkIdx, Vec<CarriedRender>>,
+  /// The shared reads of CommonJS properties (`share_commonjs_property_reads`).
+  shared_commonjs_reads: SharedCommonJsReads,
 }
 
 impl<'a> GenerateStage<'a> {
@@ -182,6 +187,7 @@ impl<'a> GenerateStage<'a> {
       resolved_paths: None,
       inline_state: InlineCommonChunksState::default(),
       inline_renders: FxHashMap::default(),
+      shared_commonjs_reads: SharedCommonJsReads::default(),
     }
   }
 
@@ -221,7 +227,42 @@ impl<'a> GenerateStage<'a> {
         FinalEsmInitMetadataAvailability::Sealed(&final_esm_init_metadata),
       );
     }
+    // A facade that keeps an export of a CommonJS property shares the read of the property with
+    // the other chunks that export it. The shared read adds names to existing edges only.
+    // See internal-docs/code-splitting/implementation.md ("Shared CommonJS property reads").
+    self.shared_commonjs_reads = self.share_commonjs_property_reads(
+      &chunk_graph,
+      &link_state,
+      used_symbol_refs.view(),
+      &mut order_state,
+      &ast_table,
+    );
+    if !self.shared_commonjs_reads.is_empty() {
+      #[cfg(debug_assertions)]
+      let static_importees = link_state.static_importee_table(&chunk_graph);
+      link_state = self.compute_cross_chunk_link_state(
+        &chunk_graph,
+        used_symbol_refs.view(),
+        &order_state,
+        FinalEsmInitMetadataAvailability::Sealed(&final_esm_init_metadata),
+      );
+      #[cfg(debug_assertions)]
+      {
+        let after = link_state.static_importee_table(&chunk_graph);
+        let changed = static_importees
+          .iter_enumerated()
+          .filter(|(chunk_idx, before)| **before != after[*chunk_idx])
+          .map(|(chunk_idx, before)| format!("{chunk_idx:?}: {before:?} -> {:?}", after[chunk_idx]))
+          .collect::<Vec<_>>();
+        debug_assert!(
+          changed.is_empty(),
+          "a shared CommonJS property read must not change a chunk edge: {changed:?}"
+        );
+      }
+    }
     self.commit_cross_chunk_links(&mut chunk_graph, link_state, &used_symbol_refs);
+    #[cfg(debug_assertions)]
+    self.debug_assert_shared_reads_are_exported(&chunk_graph);
     self.apply_inline_common_chunks_links(&mut chunk_graph);
 
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);
@@ -656,6 +697,7 @@ impl<'a> GenerateStage<'a> {
           chunk_idx,
           resolved_paths: self.resolved_paths.as_ref(),
           inline_state: &self.inline_state,
+          shared_commonjs_reads: &self.shared_commonjs_reads,
           carried_renders: vec![],
         },
         entry_module,

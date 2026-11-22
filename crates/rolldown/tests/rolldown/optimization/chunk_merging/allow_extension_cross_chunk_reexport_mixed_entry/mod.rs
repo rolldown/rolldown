@@ -9,15 +9,16 @@ use rolldown_utils::js_regex::HybridRegex;
 async fn allow_extension_cross_chunk_reexport_mixed_entry() {
   // The `group` chunk holds the modules of eight emitted AllowExtension entries. Each ESM entry
   // re-exports `foreign` from the `dep.js` chunk with a different name. `seg_pure.js` has only
-  // ESM exports, so it keeps its facade (issue #11767). Each other entry has an export that can
-  // come from CommonJS, or an `export *` with names that the linker does not know. Thus the chunk
-  // optimizer removes the facade of each other entry, as it does without the cross-chunk check.
-  // Each other entry tests one condition:
+  // ESM exports, so it keeps its facade (issue #11767). Each other entry has an export from
+  // CommonJS that the cross-chunk check does not accept, or an `export *` with names that the
+  // linker does not know. Thus the chunk optimizer removes the facade of each other entry, as it
+  // does without the cross-chunk check. Each other entry tests one condition:
   // - `seg_star.js`: `export *` from a CommonJS module that has no names that the scanner finds.
   // - `seg_barrel.js`: the same `export *` through an ESM module.
   // - `seg_external.js`: `export *` from an external module.
   // - `seg_namespace.js`: the namespace of a CommonJS module.
-  // - `seg_named.js`: a named re-export from a CommonJS module.
+  // - `seg_named.js`: a named re-export from a CommonJS module. The entry `seg_namespace.js`
+  //   exports the namespace of the same module, so the early check rejects `cjs_lib.cjs`.
   // - `seg_commonjs.cjs`: a CommonJS entry that re-exports `required.js` from another chunk.
   // `seg_external_named.js` re-exports `sep` from `node:path`. In CJS output, `sep` is a property
   // of the namespace of `node:path`, so the chunk optimizer also removes this facade. In ESM

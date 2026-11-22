@@ -1,0 +1,273 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+# Assets
+
+## app.js
+
+```js
+import { t as require_counter } from "./counter.js";
+import { a as require_counter2 } from "./group.js";
+// app.js
+var import_counter = require_counter();
+var import_counter2 = require_counter2();
+var reads = import_counter.reads;
+var reads2 = import_counter2.reads;
+export { reads, reads2 };
+
+```
+
+## counter.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// counter.cjs
+var require_counter = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.n = 0;
+	let reads = 0;
+	Object.defineProperty(exports, "n", {
+		enumerable: true,
+		get() {
+			reads += 1;
+			return reads;
+		}
+	});
+	exports.reads = () => reads;
+}));
+export { __commonJSMin as n, __exportAll as r, require_counter as t };
+
+```
+
+## dep.js
+
+```js
+// dep.js
+const foreign = 5;
+export { foreign };
+
+```
+
+## group.js
+
+```js
+import { n as __commonJSMin, r as __exportAll, t as require_counter } from "./counter.js";
+import "./dep.js";
+// counter2.cjs
+var require_counter2 = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.n = 0;
+	let reads = 0;
+	Object.defineProperty(exports, "n", {
+		enumerable: true,
+		get() {
+			reads += 1;
+			return reads;
+		}
+	});
+	exports.reads = () => reads;
+}));
+// seg.js
+var seg_exports = /* @__PURE__ */ __exportAll({
+	first: () => import_counter.n,
+	foreign: () => 5
+});
+var import_counter = require_counter();
+// seg2.js
+var seg2_exports = /* @__PURE__ */ __exportAll({
+	foreign: () => 5,
+	second: () => import_counter2.n
+});
+var import_counter2 = require_counter2();
+export { require_counter2 as a, seg_exports as i, seg2_exports as n, import_counter as r, import_counter2 as t };
+
+```
+
+## main.js
+
+```js
+// main.js
+const load = () => import("./group.js").then((n) => n.i);
+const load2 = () => import("./group.js").then((n) => n.n);
+export { load, load2 };
+
+```
+
+# Variant: cjs
+
+## warnings
+
+### INVALID_OPTION
+
+```text
+[INVALID_OPTION] `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+## Assets
+
+### app.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_counter$1 = require("./counter.js");
+const require_group = require("./group.js");
+// app.js
+var import_counter = require_counter$1.require_counter();
+var import_counter2 = require_group.require_counter2();
+Object.defineProperty(exports, "reads", {
+	enumerable: true,
+	get: function() {
+		return import_counter.reads;
+	}
+});
+Object.defineProperty(exports, "reads2", {
+	enumerable: true,
+	get: function() {
+		return import_counter2.reads;
+	}
+});
+
+```
+
+### counter.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// counter.cjs
+var require_counter = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.n = 0;
+	let reads = 0;
+	Object.defineProperty(exports, "n", {
+		enumerable: true,
+		get() {
+			reads += 1;
+			return reads;
+		}
+	});
+	exports.reads = () => reads;
+}));
+Object.defineProperty(exports, "__commonJSMin", {
+	enumerable: true,
+	get: function() {
+		return __commonJSMin;
+	}
+});
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+Object.defineProperty(exports, "require_counter", {
+	enumerable: true,
+	get: function() {
+		return require_counter;
+	}
+});
+
+```
+
+### dep.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// dep.js
+const foreign = 5;
+exports.foreign = foreign;
+
+```
+
+### group.js
+
+```js
+const require_counter$1 = require("./counter.js");
+require("./dep.js");
+// counter2.cjs
+var require_counter2 = /* @__PURE__ */ require_counter$1.__commonJSMin(((exports) => {
+	exports.n = 0;
+	let reads = 0;
+	Object.defineProperty(exports, "n", {
+		enumerable: true,
+		get() {
+			reads += 1;
+			return reads;
+		}
+	});
+	exports.reads = () => reads;
+}));
+// seg.js
+var seg_exports = /* @__PURE__ */ require_counter$1.__exportAll({
+	first: () => import_counter.n,
+	foreign: () => 5
+});
+var import_counter = require_counter$1.require_counter();
+// seg2.js
+var seg2_exports = /* @__PURE__ */ require_counter$1.__exportAll({
+	foreign: () => 5,
+	second: () => import_counter2.n
+});
+var import_counter2 = require_counter2();
+Object.defineProperty(exports, "import_counter", {
+	enumerable: true,
+	get: function() {
+		return import_counter;
+	}
+});
+Object.defineProperty(exports, "import_counter2", {
+	enumerable: true,
+	get: function() {
+		return import_counter2;
+	}
+});
+Object.defineProperty(exports, "require_counter2", {
+	enumerable: true,
+	get: function() {
+		return require_counter2;
+	}
+});
+Object.defineProperty(exports, "seg2_exports", {
+	enumerable: true,
+	get: function() {
+		return seg2_exports;
+	}
+});
+Object.defineProperty(exports, "seg_exports", {
+	enumerable: true,
+	get: function() {
+		return seg_exports;
+	}
+});
+
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// main.js
+const load = () => Promise.resolve().then(() => require("./group.js")).then((n) => n.seg_exports);
+const load2 = () => Promise.resolve().then(() => require("./group.js")).then((n) => n.seg2_exports);
+exports.load = load;
+exports.load2 = load2;
+
+```

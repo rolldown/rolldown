@@ -122,55 +122,34 @@ This can be more convenient than adding `@__PURE__` to every call site when you 
 
 ## Marking Entire Modules as Side-Effect-Free
 
-While you can mark individual expressions or functions, you can also mark entire modules as side-effect-free. If you mark a module as side-effect-free, Rolldown will treat every statement in that module as side-effect-free when none of its exports are used.
+Marking a module as side-effect-free lets Rolldown drop a bare import such as `import './setup.js'`. When Rolldown skips evaluating a module, it also skips dependencies reachable only through that evaluation, even if those dependencies have side effects.
 
-::: details What does "none of its exports are used" mean?
+If a module is an entry point or must run to provide a locally defined export or its namespace object, Rolldown preserves its top-level side effects and tree-shakes unused pure statements as usual.
 
-This refers to the exports that are **defined in the module itself**, not re-exports from other modules.
+### Exports and re-exports
+
+Rolldown can follow a named re-export, an `export *`, or an export of a previously imported binding through a side-effect-free module to the module that defines it.
 
 ```js [utils.js]
-// assume that this file is marked as side-effect-free
-window.loaded = true; // side effect
+// utils.js is marked as side-effect-free
+console.log('utils initialized');
 
-// Defined in this file - counts as "its exports"
-export function add(a, b) {
-  return a + b;
-}
-
-// Re-exported from another file - these does NOT count
-export { multiply } from './math.js';
-export * from './math2.js';
-import { divide } from './math3.js';
-export { divide };
-```
-
-In this example:
-
-- If you `import { add } from './utils.js'`, the module is considered "used" because `add` is defined in `utils.js`
-- If you only `import { multiply } from './utils.js'`, the module is considered "unused" because `multiply` is just re-exported, not defined here
-
-:::
-
-For example, consider this case:
-
-```js
-// math.js
-window.myGlobal = 'hello'; // side effect: modifies global
+import { multiply } from './math.js';
+export { multiply };
 
 export function add(a, b) {
   return a + b;
 }
-
-// main.js
-import './math.js';
-console.log('main');
 ```
 
-If `math.js` is marked as side-effect-free, the output will be:
+With `utils.js` marked as side-effect-free:
 
-```js
-console.log('main');
-```
+- A bare `import './utils.js'` is dropped if nothing else needs `utils.js`.
+- If the only binding used from `utils.js` is `multiply`, Rolldown resolves it directly to `math.js` and skips the log in `utils.js`.
+- `import { add } from './utils.js'` followed by a use of `add` keeps `utils.js` and its log.
+- `import * as utils from './utils.js'` followed by `Object.keys(utils)` uses the namespace object and keeps `utils.js` and its log. A statically resolved property access such as `utils.multiply` can follow the re-export directly.
+
+For an imported `multiply`, `export { multiply as default }` forwards the imported binding. The expression `export default multiply` creates a local default export initialized with its value.
 
 ::: details What about `import()`?
 
@@ -199,52 +178,33 @@ Here `lib.js` is left out of the bundle and the `import()` resolves to an empty 
 
 :::
 
-:::: warning This is conditional
+### Re-exports and code splitting
 
-The statements are only treated as side-effect-free when none of the module's exports are used. If any export is used, side effects are preserved.
-
-::: details Example
-
-For example, consider this case:
+When several entries import from the same side-effect-free [barrel module](/glossary/barrel-module), Rolldown can skip the barrel for an entry that only uses a forwarded binding. Another entry can still load the barrel if it uses a binding defined there.
 
 ```js
-// math.js (marked as side-effect-free)
-window.myGlobal = 'hello'; // side effect: modifies global
+// barrel.js (marked as side-effect-free)
+import { HeavyService } from './heavy.js';
 
-export function add(a, b) {
-  return a + b;
-}
+console.log('barrel initialized');
 
-// main.js
-import { add } from './math.js';
-console.log('main', add(2, 3));
+export const createService = () => new HeavyService();
+export { light } from './light.js';
+
+// entry-light.js
+import { light } from './barrel.js';
+console.log(light());
+
+// entry-heavy.js
+import { createService } from './barrel.js';
+console.log(createService().run());
 ```
 
-The output will be:
+With `barrel.js` marked as side-effect-free, the light entry loads `light.js` directly. The heavy entry loads the barrel and `heavy.js` and prints `barrel initialized`. With default side-effect analysis, Rolldown detects the log and both entries load the barrel.
 
-```js
-window.myGlobal = 'hello';
+### How to mark a module as side-effect-free
 
-function add(a, b) {
-  return a + b;
-}
-
-console.log('main', add(2, 3));
-```
-
-On the other hand, if you mark every statement in `math.js` as side-effect-free, the output will be:
-
-```js
-function add(a, b) {
-  return a + b;
-}
-
-console.log('main', add(2, 3));
-```
-
-:::
-
-::::
+Use the `sideEffects` field in `package.json`, [`treeshake.moduleSideEffects`](/reference/InputOptions.treeshake#modulesideeffects), or a plugin hook's `moduleSideEffects` result.
 
 #### `sideEffects` in package.json
 
@@ -268,7 +228,7 @@ You can also specify an array of files that have side effects:
 }
 ```
 
-This tells Rolldown that most files have no side effects and can be removed if unused, except for `polyfill.js` and CSS files which must be preserved.
+This marks `polyfill.js` and matching CSS files as having side effects. All other files in the package are marked as side-effect-free.
 
 The array accepts glob patterns (supports `*`, `**`, `{a,b}`, `[a-z]`). Patterns like `*.css` that do not include a `/` will be treated as `**/*.css`.
 
@@ -307,13 +267,16 @@ export default {
 };
 ```
 
-The priority order for determining a module's side effects is:
+Rolldown checks these sources in order to determine a module's side effects:
 
 1. `transform` hook's returned `moduleSideEffects`
 2. `load` hook's returned `moduleSideEffects`
 3. `resolveId` hook's returned `moduleSideEffects`
-4. [`treeshake.moduleSideEffects`](/reference/InputOptions.treeshake#modulesideeffects) option
-5. `sideEffects` field in `package.json`
+4. [`treeshake.moduleSideEffects`](/reference/InputOptions.treeshake#modulesideeffects), when the option supplies a verdict for the module
+5. `sideEffects` field in `package.json` for bundled modules
+6. Static analysis for bundled modules and Rolldown's default side-effect assumptions for external modules
+
+The default option value `true`, unmatched rules, and callbacks that return `undefined` all fall through to the remaining sources. A hook that returns `moduleSideEffects: true` sends a bundled module directly to static analysis, bypassing both the option and package metadata.
 
 ## Example: Optimizing a Component Library
 

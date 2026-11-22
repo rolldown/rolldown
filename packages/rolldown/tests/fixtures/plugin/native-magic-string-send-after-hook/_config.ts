@@ -1,5 +1,6 @@
 import { RolldownMagicString } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
+import { isWasiTest } from 'rolldown-tests/utils';
 import { expect } from 'vitest';
 
 // `sendMagicString` is public on the context impl but not on the declared interface.
@@ -12,6 +13,9 @@ let kept: SendMagicStringContext | undefined;
 let lateSendError: unknown;
 
 export default defineTest({
+  // WASI generates sourcemaps inline without a sourcemap worker, so `sendMagicString`
+  // returns JSON directly instead of storing into the pending-sourcemap slot.
+  skip: isWasiTest,
   config: {
     input: ['main.js'],
     experimental: {

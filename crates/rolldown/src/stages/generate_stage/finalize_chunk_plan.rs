@@ -53,6 +53,8 @@ impl GenerateStage<'_> {
       self.finalized_module_namespace_ref_usage(chunk_graph, &order_state);
       order_analysis = self.analyze_execution_order(chunk_graph, used_symbol_refs_builder);
     }
+    let order_analysis =
+      order_analysis.or_else(|| self.plan_grouped_dynamic_imports(chunk_graph, &mut order_state));
     if let Some(analysis) = &order_analysis
       && self.apply_order_wraps(chunk_graph, analysis, used_symbol_refs_builder, &mut order_state)
     {

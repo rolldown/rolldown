@@ -40,9 +40,10 @@ pub struct NativePluginContextImpl {
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) watch_files: Arc<FxDashSet<ArcStr>>,
   pub(crate) module_infos: SharedModuleInfoDashMap,
-  pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
+  pub(crate) tx: Arc<Mutex<Option<futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   pub(crate) session: rolldown_devtools::Session,
   /// Shared handle to the owning `PluginDriver`'s `onLog` task collector
+  #[debug(skip)]
   pub(crate) log_hook_tasks: crate::plugin_driver::SharedLogHookTasks,
   pub(crate) bundle_span: tracing::Span,
   // `resolve_id` hook not only will be triggered by the rolldown's resolve process, but also could be triggered
@@ -75,7 +76,7 @@ impl NativePluginContextImpl {
     .finalize_attributes(self.options.experimental.is_import_attributes_enabled());
     let id = resolved_id.id.as_arc_str().clone();
     sender
-      .send(ModuleLoaderMsg::FetchModule(Box::new(resolved_id)))
+      .unbounded_send(ModuleLoaderMsg::FetchModule(Box::new(resolved_id)))
       .map_err(|e| anyhow::Error::new(e).context("PluginContext: failed to send FetchModule message - module loader shut down during plugin execution"))?;
     let plugin_driver = self
       .plugin_driver

@@ -18,6 +18,9 @@ pub struct InlineCommonChunksOptions {
   /// A candidate's pre-render size must be strictly smaller than this. `0` (the default) turns
   /// the feature off; positive infinity removes the size limit.
   pub max_size: Option<f64>,
+  /// A candidate is kept as a file when its pre-render size times the number of files beyond the
+  /// first that would print a copy reaches this. Absent or positive infinity means no limit.
+  pub max_duplicated_size: Option<f64>,
   /// Module id matchers with the same rules as `CodeSplittingGroup.test`. A candidate is kept as
   /// a file when any of its modules matches.
   #[cfg_attr(feature = "deserialize_bundler_options", serde(skip), schemars(skip))]
@@ -31,5 +34,8 @@ pub struct InlineCommonChunksOptions {
 pub struct NormalizedInlineCommonChunksOptions {
   /// Source bytes; always above zero. `usize::MAX` removes the size limit.
   pub max_size: usize,
+  /// Source bytes; `u64::MAX` means no limit. A `u64`, so that a limit above 4 GiB still applies
+  /// on 32-bit targets such as WASI.
+  pub max_duplicated_size: u64,
   pub exclude: Vec<MatchGroupTest>,
 }

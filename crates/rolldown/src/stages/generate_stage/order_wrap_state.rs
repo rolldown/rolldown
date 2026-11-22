@@ -45,6 +45,10 @@ pub struct OrderWrapState {
 }
 
 impl OrderWrapState {
+  pub(crate) fn has_order_wrappers(&self) -> bool {
+    !self.modules.is_empty()
+  }
+
   pub(crate) fn has_import_overlays(&self) -> bool {
     !self.import_overlays.is_empty()
   }
@@ -333,14 +337,10 @@ impl OrderWrapState {
     self.synthetic_statements.push(stmt)
   }
 
-  /// Record the namespace declaration and runtime demand needed when strict-order lowering keeps
-  /// a dynamic entry in its implementation chunk and moves activation to its `import()` call sites.
+  /// Record the retained export names for a dynamic entry whose import sites run its initializer.
   ///
-  /// The module finalizer still owns rendering the namespace declaration. The requirement records
-  /// the exact export names the removed facade exposed, while this synthetic statement makes the
-  /// declaration and its non-inlined backing bindings visible to symbol-to-chunk assignment,
-  /// deconfliction, cross-chunk linking, and the runtime-helper closure. Those bindings were already
-  /// retained by the link-stage entry interface; this does not reopen user-code liveness.
+  /// The synthetic statement registers the namespace declaration, its non-inlined backing bindings,
+  /// and its runtime demand. The module finalizer renders the declaration using link-stage liveness.
   /// See `internal-docs/code-splitting/design.md` ("Trigger placement").
   pub(super) fn insert_simulated_facade_namespace(
     &mut self,

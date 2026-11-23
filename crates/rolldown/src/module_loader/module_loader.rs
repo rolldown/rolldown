@@ -30,7 +30,7 @@ use rolldown_std_utils::discard_panic_payload;
 use rolldown_utils::commondir;
 use rolldown_utils::dashmap::FxDashSet;
 use rolldown_utils::futures::try_spawn_detached;
-use rolldown_utils::indexmap::FxIndexSet;
+use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -124,6 +124,14 @@ struct ResolvedEntries {
   emitted: Vec<Option<SingleBuildResult<(Box<AddEntryModuleMsg>, ModuleIdx)>>>,
 }
 
+/// A module whose index is reserved but whose task has not started, see
+/// `ModuleLoader::deferred_asset_spawns`.
+struct DeferredAssetSpawn {
+  resolved_id: ResolvedId,
+  owner: Option<ModuleTaskOwner>,
+  create_js_module_options: bool,
+}
+
 pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   pub shared_context: Arc<TaskContext<Fs>>,
   rx: futures::channel::mpsc::UnboundedReceiver<ModuleLoaderMsg>,
@@ -151,6 +159,13 @@ pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   /// such as `try_spawn_new_task` add errors to it. `fetch_modules` returns the
   /// list after the scan.
   errors: Vec<BuildDiagnostic>,
+  /// Whether an entry is still resolving.
+  entries_pending: bool,
+  /// Modules that an import record asserted as assets while an entry was still resolving. The
+  /// first spawn of a module fixes whether it is an asset or an entry, and the target may be that
+  /// entry, so the task starts when the entries are resolved, or earlier if something needs the
+  /// module. `remaining` already counts them.
+  deferred_asset_spawns: FxIndexMap<ModuleIdx, DeferredAssetSpawn>,
 }
 
 pub struct ModuleLoaderOutput {
@@ -313,6 +328,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       symbol_ref_db,
       intermediate_normal_modules,
       new_added_modules_from_partial_scan: FxIndexSet::default(),
+      entries_pending: false,
+      deferred_asset_spawns: FxIndexMap::default(),
       new_module_ids: Vec::new(),
       flat_options,
       magic_string_tx,
@@ -458,6 +475,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         if self.flat_options.is_lazy_barrel_enabled() && owner.is_none() {
           self.request_all_exports_for_entry(idx);
         }
+        // An entry starts as a plain module. Anything else that reaches a deferred module, such
+        // as `this.load()` or a plain import, may wait for it, so it starts as the asset.
+        if is_user_defined_entry || assert_module_type != Some(&ModuleType::Asset) {
+          self.start_deferred_asset_spawn(idx, !is_user_defined_entry);
+        }
         return idx;
       }
       Some(VisitState::Invalidate(idx)) => {
@@ -509,27 +531,69 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         plugin_driver,
         module_id,
       );
+    } else if self.entries_pending
+      && !is_user_defined_entry
+      && owner.is_some()
+      && assert_module_type == Some(&ModuleType::Asset)
+    {
+      self
+        .deferred_asset_spawns
+        .insert(idx, DeferredAssetSpawn { resolved_id, owner, create_js_module_options });
     } else {
-      let task = ModuleTask::new(
-        ctx,
+      self.start_normal_module_task(
         idx,
         resolved_id,
         owner,
         is_user_defined_entry,
-        assert_module_type.cloned(),
-        self.flat_options,
-        self.magic_string_tx.clone(),
+        assert_module_type,
         create_js_module_options,
-      );
-      spawn_module_task(
-        task.run().instrument(tracing::info_span!("normal_module_task")),
-        tx,
-        plugin_driver,
-        module_id,
       );
     }
     self.remaining += 1;
     idx
+  }
+
+  fn start_normal_module_task(
+    &self,
+    idx: ModuleIdx,
+    resolved_id: ResolvedId,
+    owner: Option<ModuleTaskOwner>,
+    is_user_defined_entry: bool,
+    assert_module_type: Option<&ModuleType>,
+    create_js_module_options: bool,
+  ) {
+    let module_id = resolved_id.id.clone();
+    let task = ModuleTask::new(
+      Arc::clone(&self.shared_context),
+      idx,
+      resolved_id,
+      owner,
+      is_user_defined_entry,
+      assert_module_type.cloned(),
+      self.flat_options,
+      self.magic_string_tx.clone(),
+      create_js_module_options,
+    );
+    spawn_module_task(
+      task.run().instrument(tracing::info_span!("normal_module_task")),
+      self.shared_context.tx.clone(),
+      Arc::clone(&self.shared_context.plugin_driver),
+      module_id,
+    );
+  }
+
+  /// Starts the task of a deferred module, if `idx` is one. `as_asset` is false when the module
+  /// became an entry.
+  fn start_deferred_asset_spawn(&mut self, idx: ModuleIdx, as_asset: bool) {
+    let Some(deferred) = self.deferred_asset_spawns.shift_remove(&idx) else { return };
+    self.start_normal_module_task(
+      idx,
+      deferred.resolved_id,
+      deferred.owner,
+      !as_asset,
+      as_asset.then_some(&ModuleType::Asset),
+      deferred.create_js_module_options,
+    );
   }
 
   /// For `fetch_modules` we need to support three scenarios:
@@ -658,6 +722,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let mut dynamic_import_exports_usage_pairs = vec![];
 
     while self.remaining > 0 || !pending_entries.is_empty() {
+      self.entries_pending = !pending_entries.is_empty();
       let event = if pending_entries.is_empty() {
         let Some(msg) = self.rx.next().await else { break };
         Either::Left(msg)
@@ -688,6 +753,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             }
             PendingEntry::Emitted { index, msg } => {
               resolved_entries.emitted[index] = Some(result.map(|(_, idx)| (msg, idx)));
+            }
+          }
+          if pending_entries.is_empty() {
+            let idxs = self.deferred_asset_spawns.keys().copied().collect_vec();
+            for idx in idxs {
+              self.start_deferred_asset_spawn(idx, true);
             }
           }
           continue;

@@ -6,7 +6,8 @@ use std::{
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  LogWithoutPlugin, ModuleDefFormat, ResolvedId, side_effects::HookSideEffects,
+  LogWithoutPlugin, ModuleDefFormat, ResolvedId,
+  side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 
 use crate::{
@@ -60,6 +61,7 @@ impl PluginContext {
         options: Arc::clone(&ctx.options),
         watch_files: Arc::clone(&ctx.watch_files),
         module_infos: Arc::clone(&ctx.module_infos),
+        module_side_effects_overrides: Arc::clone(&ctx.module_side_effects_overrides),
         tx: Arc::clone(&ctx.tx),
         session: ctx.session.clone(),
         log_hook_tasks: Arc::clone(&ctx.log_hook_tasks),
@@ -76,8 +78,9 @@ impl PluginContext {
     side_effects: Option<HookSideEffects>,
     module_def_format: ModuleDefFormat,
     resolve_dependencies: bool,
+    module_options_receipt: Option<u32>,
   ) -> anyhow::Result<()> {
-    call_native_only!(self, "load", ctx => ctx.load(raw_id, attributes, side_effects, module_def_format, resolve_dependencies).await)
+    call_native_only!(self, "load", ctx => ctx.load(raw_id, attributes, side_effects, module_def_format, resolve_dependencies, module_options_receipt).await)
   }
 
   pub async fn resolve(
@@ -119,6 +122,31 @@ impl PluginContext {
 
   pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {
     call_native_only!(self, "get_module_info", ctx => ctx.get_module_info(module_id))
+  }
+
+  /// `getModuleInfo(module_id)?.moduleSideEffects`. It runs a `treeshake.moduleSideEffects`
+  /// function when the value needs it.
+  pub async fn get_module_side_effects(
+    &self,
+    module_id: &str,
+  ) -> anyhow::Result<Option<DeterminedSideEffects>> {
+    call_native_only!(self, "get_module_side_effects", ctx => ctx.get_module_side_effects(module_id).await)
+  }
+
+  /// Like a JS write to `getModuleInfo(module_id).moduleSideEffects`. `None` is a write of `null`.
+  /// A write after `buildEnd` is ignored, and the first one in a build logs a warning.
+  pub fn set_module_side_effects(&self, module_id: &str, side_effects: Option<HookSideEffects>) {
+    call_native_only!(self, "set_module_side_effects", ctx => ctx.set_module_side_effects(module_id, side_effects));
+  }
+
+  /// Like `set_module_side_effects`, but returns `true` for the first ignored write after
+  /// `buildEnd` instead of warning, so the caller can warn.
+  pub fn set_module_side_effects_without_warning(
+    &self,
+    module_id: &str,
+    side_effects: Option<HookSideEffects>,
+  ) -> bool {
+    call_native_only!(self, "set_module_side_effects_without_warning", ctx => ctx.set_module_side_effects_without_warning(module_id, side_effects))
   }
 
   pub fn cwd(&self) -> &PathBuf {

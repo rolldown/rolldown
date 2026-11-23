@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      { "name": "e1", "import": "./src/e1.cjs" },
+      { "name": "watch", "import": "./src/watch.mjs" }
+    ],
+    "format": "esm",
+    "platform": "node",
+    "preserveModules": true
+  }
+}

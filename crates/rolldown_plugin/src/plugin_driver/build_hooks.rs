@@ -361,6 +361,7 @@ impl PluginDriver {
         }
         plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
         if let Some(v) = r.side_effects {
+          self.set_hook_side_effects(module_id, *side_effects, v);
           *side_effects = Some(v);
         }
         if let Some(v) = r.code {
@@ -459,7 +460,9 @@ impl PluginDriver {
       ) {
         continue;
       }
-      let result = plugin.call_module_parsed(ctx, Arc::clone(&module_info), normal_module).await;
+      // An earlier `moduleParsed` hook may have written `moduleSideEffects`.
+      let module_info = self.module_side_effects_overrides.apply_to_info(Arc::clone(&module_info));
+      let result = plugin.call_module_parsed(ctx, module_info, normal_module).await;
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())

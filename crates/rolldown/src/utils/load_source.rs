@@ -6,6 +6,7 @@ use rolldown_common::{
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
+use rolldown_utils::futures::spawn_blocking;
 use rolldown_utils::url::clean_url;
 use rustc_hash::FxHashMap;
 
@@ -37,6 +38,7 @@ pub async fn load_source<Fs: FileSystem + Clone + 'static>(
       .map(|load_hook_output| {
         sourcemap_chain.extend(load_hook_output.map.map(SourcemapChainElement::Load));
         if let Some(v) = load_hook_output.side_effects {
+          plugin_driver.set_hook_side_effects(&resolved_id.id, *side_effects, v);
           *side_effects = Some(v);
         }
         (Some(load_hook_output.code.to_string()), load_hook_output.module_type)
@@ -76,9 +78,7 @@ pub async fn load_source<Fs: FileSystem + Clone + 'static>(
               #[cfg(not(target_family = "wasm"))]
               {
                 let raw_id = raw_id.to_owned();
-                tokio::runtime::Handle::current()
-                  .spawn_blocking(move || fs.read_to_string(Path::new(&raw_id)))
-                  .await??
+                spawn_blocking(move || fs.read_to_string(Path::new(&raw_id))).await??
               }
               #[cfg(target_family = "wasm")]
               {
@@ -98,9 +98,7 @@ pub async fn load_source<Fs: FileSystem + Clone + 'static>(
                     fs.read(Path::new(raw_id))?
                   } else {
                     let raw_id = raw_id.to_owned();
-                    tokio::runtime::Handle::current()
-                      .spawn_blocking(move || fs.read(Path::new(&raw_id)))
-                      .await??
+                    spawn_blocking(move || fs.read(Path::new(&raw_id))).await??
                   }
                 }
               }
@@ -133,9 +131,7 @@ pub async fn load_source<Fs: FileSystem + Clone + 'static>(
                 #[cfg(not(target_family = "wasm"))]
                 {
                   let raw_id = raw_id.to_owned();
-                  tokio::runtime::Handle::current()
-                    .spawn_blocking(move || fs.read_to_string(Path::new(&raw_id)))
-                    .await??
+                  spawn_blocking(move || fs.read_to_string(Path::new(&raw_id))).await??
                 }
                 #[cfg(target_family = "wasm")]
                 {
@@ -220,7 +216,7 @@ async fn read_file_by_module_type<Fs: FileSystem + 'static>(
       if cfg!(target_family = "wasm") {
         fs.read_to_string(&path)?
       } else {
-        tokio::runtime::Handle::current().spawn_blocking(move || fs.read_to_string(&path)).await??
+        spawn_blocking(move || fs.read_to_string(&path)).await??
       }
     })),
     ModuleType::Asset => Err(anyhow::format_err!(
@@ -231,7 +227,7 @@ async fn read_file_by_module_type<Fs: FileSystem + 'static>(
       if cfg!(target_family = "wasm") {
         fs.read(&path)?
       } else {
-        tokio::runtime::Handle::current().spawn_blocking(move || fs.read(&path)).await??
+        spawn_blocking(move || fs.read(&path)).await??
       }
     })),
   }

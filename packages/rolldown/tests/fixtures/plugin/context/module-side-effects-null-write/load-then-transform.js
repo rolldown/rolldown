@@ -1,0 +1,1 @@
+console.log('LOAD_THEN_TRANSFORM_EFFECT');

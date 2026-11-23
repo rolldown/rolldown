@@ -2,8 +2,9 @@ use std::{any::Any, sync::Arc};
 
 use dashmap::DashMap;
 use rolldown_common::{
-  BundleMode, BundlerOptions, FileEmitter, ModuleIdx, NormalizedBundlerOptions, SharedFileEmitter,
-  SharedModuleInfoDashMap, WatchPath,
+  BundleMode, BundlerOptions, FileEmitter, ModuleIdx, ModuleSideEffectsOverrides,
+  NormalizedBundlerOptions, SharedFileEmitter, SharedModuleInfoDashMap,
+  SharedModuleSideEffectsOverrides, WatchPath,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, EventKindSwitcher};
 use rolldown_fs::{FileSystem, OsFileSystem};
@@ -46,6 +47,7 @@ pub struct BundleFactory {
 
   // Used to share module info across multiple plugin drivers for incremental builds
   module_infos_for_incremental_build: SharedModuleInfoDashMap,
+  module_side_effects_overrides_for_incremental_build: SharedModuleSideEffectsOverrides,
 
   // Used to preserve transform dependencies (from addWatchFile) across incremental builds for HMR
   transform_dependencies_for_incremental_build: Arc<DashMap<ModuleIdx, Arc<FxDashSet<WatchPath>>>>,
@@ -74,6 +76,9 @@ impl BundleFactory {
     let file_emitter = Arc::new(FileEmitter::new(Arc::clone(&options)));
 
     let plugin_driver_factory = PluginDriverFactory::new(opts.plugins, &resolver);
+    let module_side_effects_overrides = Arc::new(ModuleSideEffectsOverrides::new(
+      options.experimental.is_import_attributes_enabled(),
+    ));
 
     Ok(Self {
       plugin_driver_factory,
@@ -87,6 +92,7 @@ impl BundleFactory {
       bundle_id_seed: 0,
       last_bundle_handle: None,
       module_infos_for_incremental_build: Arc::default(),
+      module_side_effects_overrides_for_incremental_build: module_side_effects_overrides,
       transform_dependencies_for_incremental_build: Arc::default(),
       lazy_compilation_context: inner_plugins_result.lazy_compilation_context,
     })
@@ -128,6 +134,7 @@ impl BundleFactory {
       // instead of replacing it, so long-lived handles (the dev engine's module queries)
       // keep observing the current build.
       self.module_infos_for_incremental_build.clear();
+      self.module_side_effects_overrides_for_incremental_build.clear();
       // Also reset transform dependencies for full builds
       self.transform_dependencies_for_incremental_build = Arc::default();
     }
@@ -143,6 +150,7 @@ impl BundleFactory {
     resolver: SharedResolver<Fs>,
   ) -> Bundle<Fs> {
     self.module_infos_for_incremental_build.clear();
+    self.module_side_effects_overrides_for_incremental_build.clear();
     self.transform_dependencies_for_incremental_build = Arc::default();
     self.build_bundle(fs, resolver, ScanStageCache::default())
   }
@@ -152,6 +160,12 @@ impl BundleFactory {
   /// observes the latest build.
   pub fn module_infos(&self) -> SharedModuleInfoDashMap {
     Arc::clone(&self.module_infos_for_incremental_build)
+  }
+
+  /// Live handle to the `moduleSideEffects` that plugins wrote. Like
+  /// [`Self::module_infos`], its `Arc` identity is stable for the factory's lifetime.
+  pub fn module_side_effects_overrides(&self) -> SharedModuleSideEffectsOverrides {
+    Arc::clone(&self.module_side_effects_overrides_for_incremental_build)
   }
 
   fn build_bundle<Fs: FileSystem + Clone + 'static>(
@@ -166,6 +180,8 @@ impl BundleFactory {
 
     let bundle_span = self.generate_unique_bundle_span();
     let module_infos = Arc::clone(&self.module_infos_for_incremental_build);
+    let module_side_effects_overrides =
+      Arc::clone(&self.module_side_effects_overrides_for_incremental_build);
     let transform_dependencies = Arc::clone(&self.transform_dependencies_for_incremental_build);
 
     let plugin_driver = self.plugin_driver_factory.create_plugin_driver(
@@ -174,6 +190,7 @@ impl BundleFactory {
       &self.session,
       &bundle_span,
       module_infos,
+      module_side_effects_overrides,
       transform_dependencies,
     );
     let bundle = Bundle {

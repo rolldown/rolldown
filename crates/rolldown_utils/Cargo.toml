@@ -49,7 +49,7 @@ rolldown_std_utils = { workspace = true }
 rustc-hash = { workspace = true }
 simdutf8 = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true, features = ["rt"] }
+tokio = { workspace = true, features = ["rt", "time"] }
 uuid = { workspace = true, features = ["v4"] }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 

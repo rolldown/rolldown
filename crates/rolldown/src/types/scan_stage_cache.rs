@@ -5,7 +5,7 @@ use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
   BarrelState, EcmaModuleAstUsage, GetLocalDbMut, ImporterRecord, Module, ModuleId, ModuleIdx,
-  ResolvedId, StableModuleId,
+  ModuleSideEffectsOverrides, ResolvedId, StableModuleId,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::PluginDriver;
@@ -15,7 +15,9 @@ use sugar_path::SugarPath;
 
 use crate::{
   SharedOptions,
-  module_loader::{deferred_scan_data::defer_sync_scan_data, module_loader::VisitState},
+  module_loader::{
+    module_loader::VisitState, module_side_effects_overrides::apply_module_side_effects_overrides,
+  },
   stages::scan_stage::{NormalizedScanStageOutput, ScanStageOutput},
 };
 
@@ -67,14 +69,18 @@ impl ScanStageCache {
     self.snapshot.take()
   }
 
-  pub async fn update_defer_sync_data(&mut self, options: &SharedOptions) -> BuildResult<()> {
+  pub async fn apply_module_side_effects_overrides(
+    &mut self,
+    options: &SharedOptions,
+    overrides: &ModuleSideEffectsOverrides,
+  ) -> BuildResult<()> {
     if let Some(mut snapshot) = self.take_snapshot() {
-      // `defer_sync_scan_data` mutates `snapshot` in place; restore it on every
+      // `apply_module_side_effects_overrides` mutates `snapshot` in place; restore it on every
       // outcome. Bailing with `?` would drop it, leaving `self.snapshot == None`
-      // and panicking the next HMR cycle's `get_snapshot()`. A partially-synced
+      // and panicking the next HMR cycle's `get_snapshot()`. A partially-updated
       // snapshot is recoverable; a missing one is not.
       // See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
-      let result = defer_sync_scan_data(options, &self.module_id_to_idx, &mut snapshot).await;
+      let result = apply_module_side_effects_overrides(options, overrides, &mut snapshot).await;
       self.set_snapshot(snapshot);
       result?;
     }
@@ -338,7 +344,11 @@ impl ScanStageCache {
       };
       plugin_driver.set_module_info(
         &module.id,
-        Arc::new(module.to_module_info(None, cache.user_defined_entry_modules.contains(&idx))),
+        Arc::new(module.to_module_info(
+          None,
+          cache.user_defined_entry_modules.contains(&idx),
+          plugin_driver.module_info_side_effects(&module.id),
+        )),
       );
     }
 

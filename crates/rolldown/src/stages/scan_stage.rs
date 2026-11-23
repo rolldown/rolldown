@@ -7,9 +7,9 @@ use oxc_index::IndexVec;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
-  EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures,
-  ResolvedId, RuntimeModuleBrief, ScanMode, StmtInfos, SymbolRefDb,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleId, ModuleIdx, ModuleTable,
+  PreserveEntrySignatures, ResolvedId, RuntimeModuleBrief, ScanMode, StmtInfos, SymbolRefDb,
+  dynamic_import_usage::DynamicImportExportsUsage, side_effects::HookSideEffects,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -153,6 +153,31 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     Self { options, plugin_driver, fs, resolver }
   }
 
+  /// Each changed module drops the `moduleSideEffects` that plugins wrote, and `getModuleInfo`
+  /// shows its start value again, as for its JS options: the module will be fetched from the
+  /// resolution that created it (`ModuleLoader::try_spawn_new_task`).
+  fn reset_module_info_side_effects(&self, changed_ids: &[ArcStr], cache: &ScanStageCache) {
+    for changed_id in changed_ids {
+      self.plugin_driver.module_side_effects_overrides.remove(changed_id);
+    }
+    let Some(snapshot) = cache.snapshot() else {
+      return;
+    };
+    for changed_id in changed_ids {
+      let Some(Module::Normal(module)) = cache
+        .module_id_to_idx
+        .get(&ModuleId::new(changed_id.as_str()))
+        .and_then(|state| snapshot.module_table.modules.get(state.idx()))
+      else {
+        continue;
+      };
+      self.plugin_driver.set_module_info_side_effects(
+        &module.id,
+        module.originative_resolved_id.side_effects.map(HookSideEffects::declared),
+      );
+    }
+  }
+
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
   pub async fn scan(
     &self,
@@ -162,6 +187,15 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     let fetch_mode = match mode {
       ScanMode::Full => ScanMode::Full,
       ScanMode::Partial(changed_ids) => {
+        // Reset the changed modules before they are resolved again below, so `resolveId` hooks
+        // do not see the options from their last fetch. `fetch_modules` resets them again after
+        // `buildStart`.
+        if let Some(reset_js_module_options) = &self.options.reset_js_module_options {
+          reset_js_module_options
+            .call(Some(changed_ids.iter().map(ToString::to_string).collect()))
+            .await?;
+        }
+        self.reset_module_info_side_effects(&changed_ids, cache);
         ScanMode::Partial(self.resolve_absolute_path(&changed_ids).await?)
       }
     };

@@ -3,8 +3,8 @@ use std::sync::{Arc, Weak};
 use dashmap::DashMap;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ModuleIdx, PluginIdx, SharedFileEmitter, SharedModuleInfoDashMap, SharedNormalizedBundlerOptions,
-  WatchPath,
+  ModuleIdx, PluginIdx, SharedFileEmitter, SharedModuleInfoDashMap,
+  SharedModuleSideEffectsOverrides, SharedNormalizedBundlerOptions, WatchPath,
 };
 use rolldown_resolver::Resolver;
 use rolldown_utils::dashmap::FxDashSet;
@@ -28,6 +28,7 @@ impl PluginDriverFactory {
     Self { plugins, resolver: Arc::clone(resolver) }
   }
 
+  #[expect(clippy::too_many_arguments)]
   pub fn create_plugin_driver(
     &self,
     file_emitter: &SharedFileEmitter,
@@ -35,6 +36,7 @@ impl PluginDriverFactory {
     session: &rolldown_devtools::Session,
     initial_bundle_span: &tracing::Span,
     module_infos: SharedModuleInfoDashMap,
+    module_side_effects_overrides: SharedModuleSideEffectsOverrides,
     transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<WatchPath>>>>,
   ) -> Arc<crate::plugin_driver::PluginDriver> {
     let watch_files = Arc::new(FxDashSet::default());
@@ -78,6 +80,7 @@ impl PluginDriverFactory {
           resolver: Arc::clone(&self.resolver),
           file_emitter: Arc::clone(file_emitter),
           module_infos: Arc::clone(&module_infos),
+          module_side_effects_overrides: Arc::clone(&module_side_effects_overrides),
           options: Arc::clone(options),
           watch_files: Arc::clone(&watch_files),
           tx: Arc::clone(&tx),
@@ -97,6 +100,7 @@ impl PluginDriverFactory {
         file_emitter: Arc::clone(file_emitter),
         watch_files,
         module_infos,
+        module_side_effects_overrides,
         transform_dependencies,
         context_load_completion_manager: ContextLoadCompletionManager::default(),
         tx,

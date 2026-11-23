@@ -64,6 +64,7 @@ pub struct DevEngine {
   /// Full builds clear it in place (the `Arc` identity is stable), so lock-free reads
   /// here always observe the latest build. Powers the engine-level module queries.
   module_infos: rolldown_common::SharedModuleInfoDashMap,
+  module_side_effects_overrides: rolldown_common::SharedModuleSideEffectsOverrides,
 }
 
 impl DevEngine {
@@ -81,6 +82,7 @@ impl DevEngine {
       .build()?;
 
     let module_infos = bundler.module_infos();
+    let module_side_effects_overrides = bundler.module_side_effects_overrides();
     let cwd = bundler.options().cwd.clone();
     let bundler = Arc::new(Mutex::new(bundler));
 
@@ -140,13 +142,15 @@ impl DevEngine {
       is_closed: AtomicBool::new(false),
       next_hmr_patch_id,
       module_infos,
+      module_side_effects_overrides,
     })
   }
 
   /// Same data the plugin-context `getModuleInfo` returns, readable from the engine
   /// handle at any time (no hook context needed).
   pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {
-    self.module_infos.get(module_id).map(|entry| Arc::clone(entry.value()))
+    let info = self.module_infos.get(module_id).map(|entry| Arc::clone(entry.value()))?;
+    Some(self.module_side_effects_overrides.apply_to_info(info))
   }
 
   pub fn get_module_ids(&self) -> Vec<arcstr::ArcStr> {

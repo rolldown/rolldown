@@ -2,7 +2,7 @@ use crate::bundle::bundle_handle::BundleHandle;
 
 use super::super::{
   SharedOptions, SharedResolver,
-  module_loader::deferred_scan_data::defer_sync_scan_data,
+  module_loader::module_side_effects_overrides::apply_module_side_effects_overrides,
   stages::{
     generate_stage::GenerateStage,
     link_stage::LinkStage,
@@ -130,10 +130,11 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     let is_full_scan_mode = scan_mode.is_full();
 
     // Clear the module options of earlier builds before `buildStart` can set new ones.
-    if is_full_scan_mode
-      && let Some(reset_js_module_options) = &self.options.reset_js_module_options
-    {
-      reset_js_module_options.call(None).await?;
+    if is_full_scan_mode {
+      self.plugin_driver.module_side_effects_overrides.clear();
+      if let Some(reset_js_module_options) = &self.options.reset_js_module_options {
+        reset_js_module_options.call(None).await?;
+      }
     }
 
     if !is_full_scan_mode {
@@ -172,7 +173,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
         .collect()
     };
 
-    let scan_stage_output = match self
+    let mut scan_stage_output = match self
       .normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode)
       .await
     {
@@ -188,7 +189,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       std::mem::take(&mut self.cache);
     }
 
-    if let Err(errors) = self.end_build_phase(&scan_stage_output).await {
+    if let Err(errors) = self.end_build_phase(&mut scan_stage_output).await {
       self.repair_cache_after_failed_build(
         is_full_scan_mode,
         fetched_resolved_ids,
@@ -200,8 +201,8 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
   }
 
   async fn end_build_phase(
-    &self,
-    scan_stage_output: &NormalizedScanStageOutput,
+    &mut self,
+    scan_stage_output: &mut NormalizedScanStageOutput,
   ) -> BuildResult<()> {
     Self::trace_action_module_graph_ready(scan_stage_output);
     // Drain before `buildEnd` so the hook receives an error thrown by `onLog` during the scan.
@@ -210,7 +211,14 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     }
 
     self.plugin_driver.build_end(None).await?;
+    self.plugin_driver.module_side_effects_overrides.mark_build_end_done();
     trace_action!(action::BuildEnd { action: "BuildEnd" });
+
+    // `getModuleInfo(id).moduleSideEffects` writes in `buildEnd` reach tree shaking, and the
+    // snapshot that the next partial scan starts from.
+    let overrides = &self.plugin_driver.module_side_effects_overrides;
+    apply_module_side_effects_overrides(&self.options, overrides, scan_stage_output).await?;
+    self.cache.apply_module_side_effects_overrides(&self.options, overrides).await?;
     Ok(())
   }
 
@@ -395,7 +403,12 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       // A full scan started from an empty cache, and the build fails on this error, so commit
       // nothing: the next build is a full one, as after a failed full scan.
       // See internal-docs/bundler-data-lifecycle/implementation.md ("Cache integrity on a failed build").
-      defer_sync_scan_data(&self.options, &self.cache.module_id_to_idx, &mut output).await?;
+      apply_module_side_effects_overrides(
+        &self.options,
+        &self.plugin_driver.module_side_effects_overrides,
+        &mut output,
+      )
+      .await?;
       if is_incremental {
         self.cache.set_snapshot(output.make_copy());
       }
@@ -403,7 +416,13 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     }
 
     self.cache.merge(output, &self.plugin_driver)?;
-    self.cache.update_defer_sync_data(&self.options).await?;
+    self
+      .cache
+      .apply_module_side_effects_overrides(
+        &self.options,
+        &self.plugin_driver.module_side_effects_overrides,
+      )
+      .await?;
     Ok(self.cache.create_output())
   }
 

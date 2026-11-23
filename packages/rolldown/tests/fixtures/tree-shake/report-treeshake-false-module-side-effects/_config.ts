@@ -4,7 +4,8 @@ import { expect } from 'vitest';
 
 // Rollup sets `hasModuleSideEffects` to `() => true` when `treeshake` is false
 // (`ModuleLoader` constructor). With no hook value, every module, including an
-// external, reports `true`. An explicit hook value is left alone.
+// external, reports `true`. An explicit hook value is left alone. `this.resolve` reports only
+// its own resolution: it skips the `resolveId` hook of this plugin, so it reports `true`.
 const expected: Record<string, boolean | 'no-treeshake'> = {
   'main.js': true,
   'effect.js': true,
@@ -55,7 +56,9 @@ export default defineTest({
             const info = this.getModuleInfo(id);
             const resolved = await this.resolve(id);
             expect(info?.moduleSideEffects, `getModuleInfo ${name}`).toBe(expected[name]);
-            expect(resolved?.moduleSideEffects, `this.resolve ${name}`).toBe(expected[name]);
+            expect(resolved?.moduleSideEffects, `this.resolve ${name}`).toBe(
+              name === 'hooked.js' || name === 'pure.js' ? true : expected[name],
+            );
           }
           expect([...seen].sort()).toEqual(Object.keys(expected).sort());
         },

@@ -48,6 +48,9 @@ pub struct ResolvedId {
   pub package_json: Option<Arc<PackageJson>>,
   pub side_effects: Option<HookSideEffects>,
   pub is_external_without_side_effects: bool,
+  /// Set when a JS hook returned this resolution as an object. JS keeps the `meta` of that
+  /// result under this receipt, and a module created from this resolution starts with it.
+  pub module_options_receipt: Option<u32>,
 }
 
 impl ResolvedId {
@@ -76,6 +79,7 @@ impl ResolvedId {
       package_json: None,
       side_effects: None,
       is_external_without_side_effects: false,
+      module_options_receipt: None,
     }
   }
 
@@ -122,6 +126,7 @@ impl ResolvedId {
       package_json: None,
       side_effects: None,
       is_external_without_side_effects: true,
+      module_options_receipt: None,
     }
   }
 }

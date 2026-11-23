@@ -36,8 +36,8 @@ const napiCli = new NapiCli();
 // rebuild it upstream with source maps) and update BOTH this table and the
 // THIRD-PARTY-LICENSE inventory.
 
-// Packages embedded in dist/fs.js of @napi-rs/wasm-runtime 1.2.6.
-const wasmRuntime126FsPackages = [
+// Packages embedded in dist/fs.js of @napi-rs/wasm-runtime 1.2.7.
+const wasmRuntime127FsPackages = [
   '@jsonjoy.com/base64',
   '@jsonjoy.com/buffers',
   '@jsonjoy.com/fs-core',
@@ -66,11 +66,11 @@ const wasmRuntime126FsPackages = [
 
 const auditedRuntimeFsBundles = new Map([
   [
-    // dist/fs.js of @napi-rs/wasm-runtime 1.2.6, audited from its
-    // `//#region ../node_modules/<pkg>/...` markers. `memfs` has no marker of its
+    // dist/fs.js of @napi-rs/wasm-runtime 1.2.7, audited from its
+    // `// ../node_modules/<pkg>/...` markers. `memfs` has no marker of its
     // own but is re-exported through the @jsonjoy.com/fs-* modules, so it stays listed.
-    '7b2d1ef854bf399420693b19db849f000e4d99e9eb896433d0be93fe9dd421aa',
-    { version: '1.2.6', packages: wasmRuntime126FsPackages },
+    '7896ba755483d207eb8d3aea0bac886510d3926f89d7f011e54a3082ddd82f57',
+    { version: '1.2.7', packages: wasmRuntime127FsPackages },
   ],
 ]);
 

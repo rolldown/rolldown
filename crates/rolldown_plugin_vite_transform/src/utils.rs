@@ -120,13 +120,9 @@ impl ViteTransformPlugin {
     if source_type.is_typescript() {
       let path = Path::new(cwd).join(id);
       if let Some(tsconfig) = self.resolver.find_tsconfig(path)? {
-        // Vite already watches the files in the root, so only a tsconfig out of the root must be
-        // added. With the persistent cache, every tsconfig is added: this also makes it a
-        // transform dependency, and a restart that reuses the saved result skips this hook.
-        let tsconfig_path = tsconfig.path.to_string_lossy();
-        if !tsconfig_path.starts_with(cwd) || ctx.options().experimental.cache.is_some() {
-          ctx.add_watch_file(&tsconfig_path);
-        }
+        // Also a tsconfig in the root: it must be a transform dependency for the persistent
+        // cache, and a build without the cache must watch the same files.
+        ctx.add_watch_file(&tsconfig.path.to_string_lossy());
 
         let (merged_options, warnings) = merge_tsconfig(transform_options, &tsconfig, false);
         for warning in warnings {

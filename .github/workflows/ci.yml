@@ -395,6 +395,31 @@ jobs:
 
       - wait: vp-setup
 
+      # TEMP (#11892): check whether directory inode numbers in the workspace survive a cache drop.
+      - name: 'TEMP diagnostic: workspace filesystem'
+        continue-on-error: true
+        run: |
+          set -x
+          uname -r
+          free -m
+          findmnt -T "$GITHUB_WORKSPACE" || true
+          findmnt -n -o OPTIONS -T "$GITHUB_WORKSPACE" || true
+          df -hT "$GITHUB_WORKSPACE" || true
+          grep -E ' / | overlay ' /proc/mounts || true
+          cat /sys/module/overlay/parameters/xino_auto || true
+          d="$GITHUB_WORKSPACE/.diag-ino-test/a/b"
+          f="$GITHUB_WORKSPACE/.diag-ino-test/file"
+          mkdir -p "$d"
+          echo x > "$f"
+          stat -c 'dir before: dev=%d ino=%i' "$d"
+          stat -c 'file before: dev=%d ino=%i' "$f"
+          for i in 1 2 3; do
+            sudo sh -c 'sync; echo 2 > /proc/sys/vm/drop_caches' || echo 'cannot drop caches'
+            stat -c "dir after drop $i: dev=%d ino=%i" "$d"
+            stat -c "file after drop $i: dev=%d ino=%i" "$f"
+          done
+          rm -rf "$GITHUB_WORKSPACE/.diag-ino-test"
+
       - name: Build @rolldown/browser
         run: just build-browser
 

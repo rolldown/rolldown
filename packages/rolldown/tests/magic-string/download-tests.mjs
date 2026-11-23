@@ -6,7 +6,7 @@
  * Usage: node download-tests.mjs
  *
  * This script:
- * 1. Downloads test files from https://github.com/Rich-Harris/magic-string/tree/master/test
+ * 1. Downloads the upstream magic-string test suite at the pinned version below
  * 2. Adapts imports to use rolldown's BindingMagicString
  * 3. Skips tests that use unsupported features
  *
@@ -61,7 +61,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const TEST_FILES = ['MagicString.test.js'];
 
-const BASE_URL = 'https://raw.githubusercontent.com/Rich-Harris/magic-string/master/test';
+const UPSTREAM_VERSION = 'v0.30.21';
+const BASE_URL = `https://raw.githubusercontent.com/Rich-Harris/magic-string/${UPSTREAM_VERSION}/test`;
 
 // Describe blocks to skip entirely (unsupported features)
 const SKIP_DESCRIBE_BLOCKS = [
@@ -149,7 +150,7 @@ async function downloadFile(filename) {
   console.log(`Downloading ${url}...`);
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to download ${url}: ${response.statusText}`);
+    throw new Error(`Failed to download ${url} (HTTP ${response.status} ${response.statusText})`);
   }
   return response.text();
 }
@@ -189,7 +190,7 @@ function transformTestFile(content, filename) {
   // Fix assert import
   transformed = transformed.replace(
     /import assert from ['"]assert['"];?/g,
-    "import assert from 'node:assert';",
+    "import assert from 'node:assert/strict';",
   );
 
   // For Bundle.test.js, skip all tests since Bundle is not supported
@@ -271,22 +272,15 @@ async function main() {
   console.log('Downloading and adapting magic-string tests...\n');
 
   for (const filename of TEST_FILES) {
-    try {
-      const content = await downloadFile(filename);
-      const transformed = transformTestFile(content, filename);
+    const content = await downloadFile(filename);
+    const transformed = transformTestFile(content, filename);
 
-      // Save as .test.ts
-      const outputFilename = filename.replace('.test.js', '.test.ts');
-      const outputPath = join(__dirname, outputFilename);
+    const outputFilename = filename.replace('.test.js', '.test.ts');
+    const outputPath = join(__dirname, outputFilename);
+    const formatted = formatWithVpFmt(transformed, outputFilename);
 
-      // Format with vp fmt before saving
-      const formatted = formatWithVpFmt(transformed, outputFilename);
-
-      writeFileSync(outputPath, formatted, 'utf-8');
-      console.log(`  Saved: ${outputFilename}`);
-    } catch (error) {
-      console.error(`  Error processing ${filename}:`, error.message);
-    }
+    writeFileSync(outputPath, formatted, 'utf-8');
+    console.log(`  Saved: ${outputFilename}`);
   }
 
   console.log('\nDone!');
@@ -294,4 +288,4 @@ async function main() {
   console.log('Skipped test patterns:', SKIP_TESTS.join(', '));
 }
 
-main().catch(console.error);
+await main();

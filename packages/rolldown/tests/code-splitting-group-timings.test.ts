@@ -41,7 +41,13 @@ function runName(group: BindingMatchGroup): void {
   if (typeof group.name !== 'function') {
     throw new Error('Expected a code-splitting name callback');
   }
-  group.name(['entry.js'], { getModuleInfo: () => null } as BindingChunkingContext);
+  const context: BindingChunkingContext = {
+    dropInner: () => ({ freed: true }),
+    getModuleInfo: () => null,
+    getModuleSideEffects: () => null,
+    setModuleSideEffects: () => false,
+  };
+  group.name(['entry.js'], context);
 }
 
 afterEach(() => {

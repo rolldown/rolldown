@@ -111,7 +111,6 @@ pub trait HmrAstBuilder<'any, 'ast> {
             namespace_object_ref_expr,
             true,
             false,
-            false,
             &self.builder(),
           )],
           &self.builder(),
@@ -130,13 +129,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
     );
     // CommonJS passes a third argument `1`; `requestLazy` reads it to apply `__toESM`.
     if self.module().exports_kind.is_commonjs() {
-      arguments.push(ast::Argument::new_numeric_literal(
-        SPAN,
-        1.0,
-        None,
-        ast::NumberBase::Decimal,
-        &self.builder(),
-      ));
+      arguments.push(ast::Argument::new_numeric_literal(SPAN, 1.0, None, &self.builder()));
     }
 
     // __rolldown_runtime__.registerModule(moduleId[, module[, 1]])
@@ -290,13 +283,7 @@ where
     builder,
   );
   if is_node_mode {
-    arguments.push(ast::Argument::new_numeric_literal(
-      SPAN,
-      1.0,
-      None,
-      ast::NumberBase::Decimal,
-      builder,
-    ));
+    arguments.push(ast::Argument::new_numeric_literal(SPAN, 1.0, None, builder));
   }
 
   ast::Expression::new_call_expression(

@@ -180,7 +180,6 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         imported_ids: FxIndexSet::default(),
         dynamically_imported_ids: FxIndexSet::default(),
         side_effects: determined_side_effects,
-        reported_side_effects: determined_side_effects.to_module_side_effects(),
         named_imports,
         named_exports,
         imports,

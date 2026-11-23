@@ -130,8 +130,8 @@ flowchart LR
 - **The server decides.** Only the server knows the failure came after
   the merge. A syntax error looks the same to the client, but nothing
   merged, so it recovers with a hot update.
-- **A full build.** A failure in `update_defer_sync_data` can leave the
-  cache half updated. A full scan builds it again from scratch.
+- **A full build.** A failure in `apply_module_side_effects_overrides` can
+  leave the cache half updated. A full scan builds it again from scratch.
 - **Principles 1 and 3 hold.** The upgrade never repeats by itself: a
   failed full build keeps the flag until the next trigger. No trigger is
   added, but a lazy route opened in one tab now reloads every tab. This

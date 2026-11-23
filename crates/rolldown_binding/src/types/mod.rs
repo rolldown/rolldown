@@ -20,7 +20,6 @@ pub mod binding_sourcemap;
 pub mod binding_string_or_regex;
 pub mod binding_watcher_event;
 pub mod error;
-pub mod external_memory_status;
 pub mod js_callback;
 pub mod js_callback_release;
 pub mod preserve_entry_signatures;

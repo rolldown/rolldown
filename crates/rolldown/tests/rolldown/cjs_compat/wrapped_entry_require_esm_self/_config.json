@@ -1,0 +1,7 @@
+{
+  "config": {
+    "input": [{ "name": "proxy", "import": "./proxy.cjs" }],
+    "format": "cjs"
+  },
+  "snapshot": false
+}

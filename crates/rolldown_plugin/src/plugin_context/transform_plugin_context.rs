@@ -59,8 +59,8 @@ impl TransformPluginContext {
     }
   }
 
-  pub fn get_combined_sourcemap(&self) -> SourceMap {
-    self.sourcemap_chain.with_inner(|sourcemap_chain| {
+  pub fn get_combined_sourcemap(&self) -> anyhow::Result<SourceMap> {
+    let map = self.sourcemap_chain.try_with_inner(|sourcemap_chain| {
       let empty_map = empty_sourcemap();
       let chain: Vec<&SourceMap> = sourcemap_chain
         .iter()
@@ -84,6 +84,11 @@ impl TransformPluginContext {
         // TODO Here could be cache result for pervious sourcemap_chain, only remapping new sourcemap chain
         _ => collapse_sourcemaps_traced(&chain),
       }
+    });
+    map.ok_or_else(|| {
+      anyhow::anyhow!(
+        "TransformPluginContext: `getCombinedSourcemap` cannot be called after the sourcemap chain is released"
+      )
     })
   }
 

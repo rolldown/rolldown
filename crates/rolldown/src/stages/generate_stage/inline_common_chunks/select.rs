@@ -96,6 +96,70 @@ fn add_loader_chunks(chunk_graph: &mut ChunkGraph, loaders: &FxIndexMap<ChunkIdx
   }
 }
 
+/// The records to turn back into files because their copies beyond the first add up to
+/// `max_duplicated_size` or more. `duplicated_size` is a record's size times its copies beyond the
+/// first (a loader's copy counts like a carrier's), and `reads` the records a record reads.
+///
+/// A record-only static cycle is one candidate: its members' duplicated sizes are summed and all
+/// of them stay files together, so no cycle mixes records and files. A candidate that an
+/// over-limit candidate reads, directly or through other candidates, waits for a later round: once
+/// that reader is a file, it prints the one copy its importers used to repeat.
+fn records_over_duplication_limit<'a>(
+  records: &FxIndexSet<ChunkIdx>,
+  record_cycles: &[Vec<ChunkIdx>],
+  duplicated_size: impl Fn(ChunkIdx) -> u64,
+  reads: impl Fn(ChunkIdx) -> Option<&'a Vec<ChunkIdx>>,
+  max_duplicated_size: u64,
+) -> Vec<ChunkIdx> {
+  let mut candidate_of = FxHashMap::<ChunkIdx, usize>::default();
+  let mut candidates = Vec::<Vec<ChunkIdx>>::new();
+  for cycle in record_cycles {
+    let members = cycle.iter().copied().filter(|record| records.contains(record)).collect_vec();
+    if members.is_empty() {
+      continue;
+    }
+    for member in &members {
+      candidate_of.insert(*member, candidates.len());
+    }
+    candidates.push(members);
+  }
+  for record in records {
+    candidate_of.entry(*record).or_insert_with(|| {
+      candidates.push(vec![*record]);
+      candidates.len() - 1
+    });
+  }
+  let over = candidates
+    .iter()
+    .enumerate()
+    .filter(|(_, members)| {
+      members.iter().map(|member| duplicated_size(*member)).fold(0, u64::saturating_add)
+        >= max_duplicated_size
+    })
+    .map(|(candidate, _)| candidate)
+    .collect::<FxHashSet<_>>();
+  let mut waiting = FxHashSet::default();
+  let mut pending = over.iter().copied().collect_vec();
+  while let Some(candidate) = pending.pop() {
+    for read in candidates[candidate].iter().filter_map(|member| reads(*member)).flatten() {
+      if let Some(&read_candidate) = candidate_of.get(read)
+        && read_candidate != candidate
+        && waiting.insert(read_candidate)
+      {
+        pending.push(read_candidate);
+      }
+    }
+  }
+  records
+    .iter()
+    .copied()
+    .filter(|record| {
+      let candidate = candidate_of[record];
+      over.contains(&candidate) && !waiting.contains(&candidate)
+    })
+    .collect()
+}
+
 impl GenerateStage<'_> {
   /// The selection point. `link_state` is the final cross-chunk derivation: order lowering and
   /// the unused-runtime sweep are done, liveness is sealed, and nothing after this moves a module
@@ -107,7 +171,11 @@ impl GenerateStage<'_> {
     link_state: &CrossChunkLinkState,
     order_state: &mut OrderWrapState,
   ) -> bool {
-    let Some(max_size) = self.options.inline_common_chunks.as_ref().map(|options| options.max_size)
+    let Some((max_size, max_duplicated_size)) = self
+      .options
+      .inline_common_chunks
+      .as_ref()
+      .map(|options| (options.max_size, options.max_duplicated_size))
     else {
       return false;
     };
@@ -192,23 +260,8 @@ impl GenerateStage<'_> {
         }
       }
     }
-    for component in petgraph::algo::tarjan_scc(&graph) {
-      let selected =
-        component.iter().copied().filter(|chunk_idx| candidates.contains(chunk_idx)).collect_vec();
-      if selected.is_empty() || selected.len() == component.len() {
-        continue;
-      }
-      for chunk_idx in selected {
-        candidates.shift_remove(&chunk_idx);
-        tracing::debug!(
-          target: LOG_TARGET,
-          chunk = chunk_idx.raw(),
-          modules = ?self.module_ids_of(&chunk_graph.chunk_table[chunk_idx]),
-          reason = "in a static import cycle with a file",
-          "kept as file"
-        );
-      }
-    }
+    let record_cycles =
+      self.keep_mixed_cycle_members_as_files(&graph, &mut candidates, chunk_graph);
 
     // A dynamic entry host that another chunk's `import()` loads gets a loader file, unless every
     // path that runs such an `import()` has registered the record already. The loaders are created
@@ -266,7 +319,7 @@ impl GenerateStage<'_> {
         registered_where_loaded.extend(empty_loaders);
         continue;
       }
-      let rejected = records
+      let mut rejected = records
         .iter()
         .copied()
         .filter_map(|record| {
@@ -282,6 +335,15 @@ impl GenerateStage<'_> {
           eval_carrier.then_some((record, "a file that prints it holds a module with direct eval"))
         })
         .collect_vec();
+      if rejected.is_empty() && max_duplicated_size != u64::MAX {
+        rejected = self.over_duplicated_records(
+          chunk_graph,
+          &records,
+          &record_cycles,
+          &placement,
+          max_duplicated_size,
+        );
+      }
       if rejected.is_empty() {
         break (placement, loaders);
       }
@@ -342,6 +404,69 @@ impl GenerateStage<'_> {
       .collect()
   }
 
+  /// Removes the candidates of every static-import cycle that also holds a file, and returns the
+  /// cycles made only of candidates.
+  fn keep_mixed_cycle_members_as_files(
+    &self,
+    graph: &petgraph::prelude::DiGraphMap<ChunkIdx, ()>,
+    candidates: &mut FxIndexSet<ChunkIdx>,
+    chunk_graph: &ChunkGraph,
+  ) -> Vec<Vec<ChunkIdx>> {
+    let mut record_cycles = vec![];
+    for component in petgraph::algo::tarjan_scc(graph) {
+      let selected =
+        component.iter().copied().filter(|chunk_idx| candidates.contains(chunk_idx)).collect_vec();
+      if selected.is_empty() {
+        continue;
+      }
+      if selected.len() == component.len() {
+        if component.len() > 1 {
+          record_cycles.push(component);
+        }
+        continue;
+      }
+      for chunk_idx in selected {
+        candidates.shift_remove(&chunk_idx);
+        tracing::debug!(
+          target: LOG_TARGET,
+          chunk = chunk_idx.raw(),
+          modules = ?self.module_ids_of(&chunk_graph.chunk_table[chunk_idx]),
+          reason = "in a static import cycle with a file",
+          "kept as file"
+        );
+      }
+    }
+    record_cycles
+  }
+
+  fn over_duplicated_records(
+    &self,
+    chunk_graph: &ChunkGraph,
+    records: &FxIndexSet<ChunkIdx>,
+    record_cycles: &[Vec<ChunkIdx>],
+    placement: &InlinePlacement,
+    max_duplicated_size: u64,
+  ) -> Vec<(ChunkIdx, &'static str)> {
+    let mut copies = FxHashMap::<ChunkIdx, usize>::default();
+    for record in placement.carried.values().flatten() {
+      *copies.entry(*record).or_default() += 1;
+    }
+    records_over_duplication_limit(
+      records,
+      record_cycles,
+      |record| {
+        let extra_copies = copies.get(&record).map_or(0, |count| count.saturating_sub(1));
+        (extra_copies as u64)
+          .saturating_mul(self.chunk_size(&chunk_graph.chunk_table[record]) as u64)
+      },
+      |record| placement.readers.get(&record),
+      max_duplicated_size,
+    )
+    .into_iter()
+    .map(|record| (record, "its copies reach `maxDuplicatedSize`"))
+    .collect()
+  }
+
   fn chunk_size(&self, chunk: &Chunk) -> usize {
     chunk.modules.iter().map(|module_idx| self.link_output.module_table[*module_idx].size()).sum()
   }
@@ -394,6 +519,12 @@ impl GenerateStage<'_> {
         return Some(reason);
       }
       let meta = &self.link_output.metas[module_idx];
+      if self.options.is_esm_format_with_node_platform()
+        && meta.depended_runtime_helper.contains(RuntimeHelper::Require)
+      {
+        // See internal-docs/inline-common-chunks/design.md ("Why each candidate rule exists").
+        return Some("member uses the Node require helper");
+      }
       if order_state.esm_init_target(module_idx, meta).is_none()
         && !matches!(meta.wrap_kind(), WrapKind::Cjs)
       {
@@ -649,5 +780,69 @@ impl GenerateStage<'_> {
       }
     }
     chunks
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn idx(raw: u32) -> ChunkIdx {
+    ChunkIdx::from_raw(raw)
+  }
+
+  fn list(items: &[u32]) -> Vec<ChunkIdx> {
+    items.iter().map(|i| idx(*i)).collect()
+  }
+
+  /// `records` are `(chunk, duplicated size, records it reads)`.
+  fn over(records: &[(u32, u64, &[u32])], cycles: &[&[u32]], limit: u64) -> Vec<ChunkIdx> {
+    let record_set = records.iter().map(|(record, ..)| idx(*record)).collect::<FxIndexSet<_>>();
+    let sizes =
+      records.iter().map(|(record, size, _)| (idx(*record), *size)).collect::<FxHashMap<_, _>>();
+    let reads = records
+      .iter()
+      .map(|(record, _, read)| (idx(*record), list(read)))
+      .collect::<FxHashMap<_, _>>();
+    let cycles = cycles.iter().map(|cycle| list(cycle)).collect_vec();
+    records_over_duplication_limit(
+      &record_set,
+      &cycles,
+      |record| sizes[&record],
+      |record| reads.get(&record),
+      limit,
+    )
+  }
+
+  #[test]
+  fn a_record_at_the_limit_stays_a_file() {
+    assert_eq!(over(&[(1, 100, &[]), (2, 99, &[])], &[], 100), list(&[1]));
+  }
+
+  #[test]
+  fn a_record_read_by_an_over_limit_record_waits() {
+    assert_eq!(over(&[(1, 100, &[2]), (2, 100, &[])], &[], 100), list(&[1]));
+  }
+
+  #[test]
+  fn a_record_read_through_an_under_limit_record_waits() {
+    assert_eq!(over(&[(1, 100, &[2]), (2, 10, &[3]), (3, 100, &[])], &[], 100), list(&[1]));
+  }
+
+  #[test]
+  fn a_cycle_is_judged_on_its_summed_size_and_kept_whole() {
+    // Neither member reaches the limit alone; together they do.
+    assert_eq!(over(&[(1, 60, &[2]), (2, 60, &[1]), (3, 10, &[])], &[&[1, 2]], 100), list(&[1, 2]));
+    assert_eq!(over(&[(1, 40, &[2]), (2, 40, &[1])], &[&[1, 2]], 100), list(&[]));
+  }
+
+  #[test]
+  fn a_cycle_read_by_an_over_limit_record_waits() {
+    assert_eq!(over(&[(1, 100, &[2]), (2, 60, &[3]), (3, 60, &[2])], &[&[2, 3]], 100), list(&[1]));
+  }
+
+  #[test]
+  fn a_cycle_member_that_is_no_longer_a_record_is_left_out() {
+    assert_eq!(over(&[(1, 60, &[])], &[&[1, 2]], 100), list(&[]));
   }
 }

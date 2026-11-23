@@ -174,7 +174,7 @@ catalogs:
       specifier: ^0.3.31
       version: 0.3.31
     '@napi-rs/cli':
-      specifier: ^3.10.0
+      specifier: ^3.10.8
       version: 3.10.12
     '@napi-rs/wasm-runtime':
       specifier: 1.2.6
@@ -251,9 +251,6 @@ catalogs:
     diff:
       specifier: ^9.0.0
       version: 9.0.0
-    emnapi:
-      specifier: 2.0.0-beta.2
-      version: 2.0.0-beta.2
     esbuild:
       specifier: ^0.28.0
       version: 0.28.2
@@ -411,6 +408,9 @@ catalogs:
     terser:
       specifier: ^5.50.0
       version: 5.51.2
+
+overrides:
+  emnapi: 2.0.0-beta.2
 
 importers:
 
@@ -730,7 +730,7 @@ importers:
         specifier: 'catalog:'
         version: 3.4.2
       emnapi:
-        specifier: 'catalog:'
+        specifier: 2.0.0-beta.2
         version: 2.0.0-beta.2(node-addon-api@8.9.2)
       execa:
         specifier: 'catalog:'
@@ -1283,6 +1283,9 @@ importers:
         specifier: 'catalog:'
         version: 8.8.5
     devDependencies:
+      '@napi-rs/cli':
+        specifier: 'catalog:'
+        version: 3.10.12(@emnapi/core@2.0.0-beta.3)(@emnapi/runtime@2.0.0-beta.3)(@types/node@24.10.3)(emnapi@2.0.0-beta.2)(supports-color@10.2.2)
       '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.1.7
@@ -2624,7 +2627,7 @@ packages:
     peerDependencies:
       '@emnapi/core': ^1.7.1 || ^2.0.0-beta.2
       '@emnapi/runtime': ^1.7.1 || ^2.0.0-beta.2
-      emnapi: ^1.7.1 || ^2.0.0-beta.2
+      emnapi: 2.0.0-beta.2
     peerDependenciesMeta:
       '@emnapi/core':
         optional: true
@@ -9774,6 +9777,38 @@ snapshots:
     optionalDependencies:
       '@emnapi/core': 2.0.0-beta.2
       '@emnapi/runtime': 2.0.0-beta.2
+      emnapi: 2.0.0-beta.2(node-addon-api@8.9.2)
+    transitivePeerDependencies:
+      - '@napi-rs/cross-toolchain-arm64-target-aarch64'
+      - '@napi-rs/cross-toolchain-arm64-target-armv7'
+      - '@napi-rs/cross-toolchain-arm64-target-ppc64le'
+      - '@napi-rs/cross-toolchain-arm64-target-s390x'
+      - '@napi-rs/cross-toolchain-arm64-target-x86_64'
+      - '@napi-rs/cross-toolchain-x64-target-aarch64'
+      - '@napi-rs/cross-toolchain-x64-target-armv7'
+      - '@napi-rs/cross-toolchain-x64-target-ppc64le'
+      - '@napi-rs/cross-toolchain-x64-target-s390x'
+      - '@napi-rs/cross-toolchain-x64-target-x86_64'
+      - '@types/node'
+      - supports-color
+
+  '@napi-rs/cli@3.10.12(@emnapi/core@2.0.0-beta.3)(@emnapi/runtime@2.0.0-beta.3)(@types/node@24.10.3)(emnapi@2.0.0-beta.2)(supports-color@10.2.2)':
+    dependencies:
+      '@inquirer/prompts': 8.7.5(@types/node@24.10.3)
+      '@napi-rs/cross-toolchain': 1.0.5(supports-color@10.2.2)
+      '@napi-rs/wasm-tools': 1.1.2
+      '@octokit/rest': 22.0.1
+      clipanion: 4.0.0-rc.4(typanion@3.14.0)
+      colorette: 2.0.20
+      es-toolkit: 1.53.1
+      js-yaml: 5.5.0
+      obug: 3.0.0
+      semver: 7.8.6
+      typanion: 3.14.0
+      typescript: 6.0.3
+    optionalDependencies:
+      '@emnapi/core': 2.0.0-beta.3
+      '@emnapi/runtime': 2.0.0-beta.3
       emnapi: 2.0.0-beta.2(node-addon-api@8.9.2)
     transitivePeerDependencies:
       - '@napi-rs/cross-toolchain-arm64-target-aarch64'

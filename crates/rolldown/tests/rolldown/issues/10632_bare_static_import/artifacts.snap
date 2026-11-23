@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## group.js
+
+```js
+// index.js
+const ns = await import("./target.js");
+console.log("entry", ns.answer);
+// dep.js
+console.log("dep");
+// target.js
+console.log("target");
+const answer = 42;
+export { answer as t };
+
+```
+
+## index.js
+
+```js
+import "./group.js";
+
+```
+
+## target.js
+
+```js
+export { t as answer } from "./group.js";
+
+```

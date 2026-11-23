@@ -398,6 +398,7 @@ function bindingifyCodeSplitting(
           ? undefined
           : {
               maxSize: experimentalInlineCommonChunks.maxSize,
+              maxDuplicatedSize: experimentalInlineCommonChunks.maxDuplicatedSize,
               exclude:
                 experimentalInlineCommonChunks.exclude == null
                   ? undefined

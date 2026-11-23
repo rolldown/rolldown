@@ -5,17 +5,18 @@ use std::sync::{
 
 use anyhow::Context;
 use arcstr::ArcStr;
+use async_lock::Mutex;
+use futures::channel::mpsc::unbounded;
 use futures::{FutureExt, future::Shared};
 #[cfg(feature = "testing")]
 use rolldown_common::WatcherChangeKind;
 use rolldown_common::{HmrLazyChunkOutput, HmrStampTable};
 use rolldown_error::{BuildResult, ResultExt};
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
-use rolldown_utils::dashmap::FxDashSet;
+use rolldown_utils::{dashmap::FxDashSet, futures::try_spawn};
 use rustc_hash::FxHashMap;
 #[cfg(feature = "testing")]
 use rustc_hash::FxHashSet;
-use tokio::sync::{Mutex, mpsc::unbounded_channel};
 
 use rolldown::{Bundler, BundlerBuilder, BundlerConfig, NormalizedBundlerOptions};
 
@@ -37,9 +38,11 @@ use rolldown_utils::indexmap::FxIndexMap;
 #[cfg(feature = "testing")]
 use std::path::PathBuf;
 
+type CoordinatorTaskResult = Result<(), Arc<str>>;
+
 pub struct CoordinatorState {
   coordinator: Option<BundleCoordinator>,
-  handle: Option<Shared<PinBoxSendStaticFuture<()>>>,
+  handle: Option<Shared<PinBoxSendStaticFuture<CoordinatorTaskResult>>>,
 }
 
 pub struct DevEngine {
@@ -85,7 +88,7 @@ impl DevEngine {
 
     let normalized_options = normalize_dev_options(options);
 
-    let (coordinator_tx, coordinator_rx) = unbounded_channel::<CoordinatorMsg>();
+    let (coordinator_tx, coordinator_rx) = unbounded::<CoordinatorMsg>();
 
     let clients = SharedClients::default();
 
@@ -157,19 +160,20 @@ impl DevEngine {
   pub async fn run(&self) -> BuildResult<()> {
     let mut coordinator_state = self.coordinator_state.lock().await;
 
-    if coordinator_state.coordinator.is_none() {
+    // Spawn the coordinator
+    let Some(coordinator) = coordinator_state.coordinator.take() else {
       // The coordinator is already running.
       return Ok(());
-    }
-
-    // Spawn the coordinator
-    if let Some(coordinator) = coordinator_state.coordinator.take() {
-      let join_handle = tokio::spawn(coordinator.run());
-      let coordinator_handle = Box::pin(async move {
-        join_handle.await.unwrap();
-      }) as PinBoxSendStaticFuture;
-      coordinator_state.handle = Some(coordinator_handle.shared());
-    }
+    };
+    let join_handle = try_spawn(coordinator.run()).map_err(|(error, _)| {
+      anyhow::anyhow!("DevEngine coordinator task submission failed: {error}")
+    })?;
+    let coordinator_handle = Box::pin(async move {
+      join_handle
+        .await
+        .map_err(|error| Arc::<str>::from(format!("DevEngine coordinator task failed: {error}")))
+    }) as PinBoxSendStaticFuture<CoordinatorTaskResult>;
+    coordinator_state.handle = Some(coordinator_handle.shared());
     drop(coordinator_state);
 
     // Wait for initial build to complete. It's ok if the initial build fails, we just let it pass.
@@ -185,7 +189,9 @@ impl DevEngine {
 
     let coordinator_state = self.coordinator_state.lock().await;
     if let Some(coordinator_handle) = coordinator_state.handle.clone() {
-      coordinator_handle.await;
+      if let Err(error) = coordinator_handle.await {
+        return Err(anyhow::anyhow!("{error}").into());
+      }
     }
     Ok(())
   }
@@ -198,8 +204,9 @@ impl DevEngine {
       return Ok(());
     }
 
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
-    if let Err(err) = self.coordinator_sender.send(CoordinatorMsg::GetState { reply: reply_sender })
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
+    if let Err(err) =
+      self.coordinator_sender.unbounded_send(CoordinatorMsg::GetState { reply: reply_sender })
     {
       if self.is_closed() {
         return Ok(());
@@ -226,10 +233,10 @@ impl DevEngine {
   pub async fn get_bundle_state(&self) -> BuildResult<BundleState> {
     self.create_error_if_closed()?;
 
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     self
       .coordinator_sender
-      .send(CoordinatorMsg::GetState { reply: reply_sender })
+      .unbounded_send(CoordinatorMsg::GetState { reply: reply_sender })
       .map_err_to_unhandleable()
       .context(
         "DevEngine: failed to send GetState to coordinator within has_latest_bundle_output",
@@ -261,10 +268,10 @@ impl DevEngine {
         );
         break;
       }
-      let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+      let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
       if let Err(err) = self
         .coordinator_sender
-        .send(CoordinatorMsg::EnsureLatestBundleOutput { reply: reply_sender })
+        .unbounded_send(CoordinatorMsg::EnsureLatestBundleOutput { reply: reply_sender })
       {
         if self.is_closed() {
           return Ok(());
@@ -303,7 +310,7 @@ impl DevEngine {
 
     self
       .coordinator_sender
-      .send(CoordinatorMsg::TriggerFullBuild)
+      .unbounded_send(CoordinatorMsg::TriggerFullBuild)
       .map_err_to_unhandleable()
       .context("DevEngine: failed to send TriggerFullBuild to coordinator")?;
 
@@ -456,7 +463,9 @@ impl DevEngine {
   /// Notify the coordinator that a module has changed programmatically.
   /// This triggers a rebuild to update the build output.
   fn notify_module_changed(&self, module_id: String, watch_files: Arc<FxDashSet<ArcStr>>) {
-    let _ = self.coordinator_sender.send(CoordinatorMsg::ModuleChanged { module_id, watch_files });
+    let _ = self
+      .coordinator_sender
+      .unbounded_send(CoordinatorMsg::ModuleChanged { module_id, watch_files });
   }
 
   pub async fn close(&self) -> BuildResult<()> {
@@ -465,7 +474,7 @@ impl DevEngine {
     }
 
     // Send close message to coordinator
-    self.coordinator_sender.send(CoordinatorMsg::Close)
+    self.coordinator_sender.unbounded_send(CoordinatorMsg::Close)
       .map_err_to_unhandleable()
       .context("DevEngine: failed to send Close message to coordinator - coordinator may have already terminated")?;
 
@@ -481,7 +490,9 @@ impl DevEngine {
     // Wait for coordinator to close (coordinator handles watcher cleanup)
     let coordinator_state = self.coordinator_state.lock().await;
     if let Some(coordinator_handle) = coordinator_state.handle.clone() {
-      coordinator_handle.await;
+      if let Err(error) = coordinator_handle.await {
+        return Err(anyhow::anyhow!("{error}").into());
+      }
     }
     Ok(())
   }
@@ -512,13 +523,15 @@ impl DevEngine {
     if !events.is_empty() {
       // Send WatchEvent message to coordinator (simulates real file change)
       // The coordinator will automatically schedule a build via handle_file_changes
-      let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(events));
+      let _ = self.coordinator_sender.unbounded_send(CoordinatorMsg::WatchEvent(events));
     }
 
     // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
     // and get the build future to wait on
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    let _ = self.coordinator_sender.send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
+    let (reply_tx, reply_rx) = futures::channel::oneshot::channel();
+    let _ = self
+      .coordinator_sender
+      .unbounded_send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
 
     // Wait for the build that was triggered by the file change
     if let Ok(Some(ret)) = reply_rx.await {
@@ -535,10 +548,10 @@ impl DevEngine {
   pub async fn get_watched_files(&self) -> BuildResult<FxHashSet<String>> {
     self.create_error_if_closed()?;
 
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    let (reply_sender, reply_receiver) = futures::channel::oneshot::channel();
     self
       .coordinator_sender
-      .send(CoordinatorMsg::GetWatchedFiles { reply: reply_sender })
+      .unbounded_send(CoordinatorMsg::GetWatchedFiles { reply: reply_sender })
       .map_err_to_unhandleable()
       .context(
         "DevEngine: failed to send GetWatchedFiles to coordinator within get_watched_files",
@@ -657,8 +670,9 @@ mod tests {
       .compile_lazy_entry(format!("{lazy}?rolldown-lazy=1"), "client".to_string())
       .await
       .unwrap();
-    // The compile has sent `ModuleChanged`. On this single-threaded runtime the coordinator
-    // has not run since, so it reads the message only after this build replaced the list.
+    // The compile has sent `ModuleChanged`. The coordinator runs on a runtime worker, so it
+    // can read the message before or after this build replaces the list; the message carries
+    // the compile's list, so the files must end up watched in both orders.
     engine.bundler.lock().await.incremental_generate(ScanMode::Partial(vec![])).await.unwrap();
     engine.ensure_latest_bundle_output().await.unwrap();
 

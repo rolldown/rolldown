@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      { "name": "proxy", "import": "./proxy.cjs" },
+      { "name": "entry", "import": "./entry.cjs" }
+    ],
+    "format": "cjs"
+  },
+  "configVariants": [{ "preserveModules": true }],
+  "snapshot": false
+}

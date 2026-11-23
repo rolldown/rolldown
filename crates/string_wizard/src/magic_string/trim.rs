@@ -40,24 +40,23 @@ impl<'text> MagicString<'text> {
     // Trim chunks from start
     let mut chunk_idx = Some(self.first_chunk_idx);
     while let Some(idx) = chunk_idx {
-      let chunk = &self.chunks[idx];
+      let chunk = &mut self.chunks[idx];
       let next_idx = chunk.next;
 
-      // Get the chunk content
-      let content = if let Some(ref edited) = chunk.edited_content {
-        edited.as_ref().to_string()
-      } else {
-        chunk.span.text(&self.source).to_string()
-      };
-
       // Trim intro of chunk
-      let chunk = &mut self.chunks[idx];
       if trim_deque_start(&mut chunk.intro, pattern) {
         return true;
       }
 
+      // Get the chunk content
+      let content = if let Some(ref edited) = chunk.edited_content {
+        edited.as_ref()
+      } else {
+        chunk.span.text(&self.source)
+      };
+
       // Trim the content
-      let trimmed_content = trim_start_pattern(&content, pattern);
+      let trimmed_content = trim_start_pattern(content, pattern);
 
       if content.is_empty() {
         // Content is empty (e.g. from a remove); the outro is next in output order, so trim
@@ -75,8 +74,14 @@ impl<'text> MagicString<'text> {
       }
 
       if !trimmed_content.is_empty() {
-        // Partial trim - update the chunk and return
-        chunk.edited_content = Some(trimmed_content.to_string().into());
+        if chunk.is_edited() {
+          chunk.edited_content = Some(trimmed_content.to_owned().into());
+        } else {
+          // Keep the remaining text in an unedited chunk to preserve its original column positions.
+          let boundary = chunk.end() - trimmed_content.len() as u32;
+          let trimmed = self.by_end_mut(boundary).expect("can split an original chunk");
+          trimmed.expect("chunk ends at the split").edited_content = Some("".into());
+        }
         return true;
       }
 
@@ -106,24 +111,23 @@ impl<'text> MagicString<'text> {
     // Trim chunks from end
     let mut chunk_idx = Some(self.last_chunk_idx);
     while let Some(idx) = chunk_idx {
-      let chunk = &self.chunks[idx];
+      let chunk = &mut self.chunks[idx];
       let prev_idx = chunk.prev;
 
-      // Get the chunk content
-      let content = if let Some(ref edited) = chunk.edited_content {
-        edited.as_ref().to_string()
-      } else {
-        chunk.span.text(&self.source).to_string()
-      };
-
       // Trim outro of chunk
-      let chunk = &mut self.chunks[idx];
       if trim_deque_end(&mut chunk.outro, pattern) {
         return true;
       }
 
+      // Get the chunk content
+      let content = if let Some(ref edited) = chunk.edited_content {
+        edited.as_ref()
+      } else {
+        chunk.span.text(&self.source)
+      };
+
       // Trim the content
-      let trimmed_content = trim_end_pattern(&content, pattern);
+      let trimmed_content = trim_end_pattern(content, pattern);
 
       if content.is_empty() {
         // Content is empty (e.g. from a remove); the intro is next in reverse output order,
@@ -141,8 +145,13 @@ impl<'text> MagicString<'text> {
       }
 
       if !trimmed_content.is_empty() {
-        // Partial trim - update the chunk and return
-        chunk.edited_content = Some(trimmed_content.to_string().into());
+        if chunk.is_edited() {
+          chunk.edited_content = Some(trimmed_content.to_owned().into());
+        } else {
+          let boundary = chunk.start() + trimmed_content.len() as u32;
+          let trimmed = self.by_start_mut(boundary).expect("can split an original chunk");
+          trimmed.expect("chunk starts at the split").edited_content = Some("".into());
+        }
         return true;
       }
 

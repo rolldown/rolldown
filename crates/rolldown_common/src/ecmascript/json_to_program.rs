@@ -266,7 +266,7 @@ mod tests {
     let ast::Expression::NumericLiteral(number) = &properties[0].value else {
       panic!("the last duplicate value must survive");
     };
-    assert_eq!(number.value, 2.0);
+    assert_eq!(number.value.to_bits(), 2.0_f64.to_bits());
     assert!(properties[1].key.is_specific_static_name("kept"));
     assert!(properties[2].key.is_specific_static_name("__proto__"));
     assert!(properties[2].computed);

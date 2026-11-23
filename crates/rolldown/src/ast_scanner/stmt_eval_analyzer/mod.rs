@@ -508,15 +508,11 @@ impl<'a> StmtEvalAnalyzer<'a> {
       // See rolldown/rolldown#9425.
       Expression::ObjectExpression(obj) => self.fold_compound(
         expr,
-        // `p.computed == true` => `p.key` is always an Expression variant
-        // (oxc's parser only emits Static/PrivateIdentifier for `key:` syntax).
         obj
           .properties
           .iter()
           .flat_map(|prop| match prop {
-            ast::ObjectPropertyKind::ObjectProperty(p) => {
-              [p.computed.then(|| p.key.to_expression()), Some(&p.value)]
-            }
+            ast::ObjectPropertyKind::ObjectProperty(p) => [p.key.as_expression(), Some(&p.value)],
             ast::ObjectPropertyKind::SpreadProperty(s) => [Some(&s.argument), None],
           })
           .flatten(),
@@ -988,8 +984,8 @@ impl<'analyzer, 'ctx> EagerEvaluationOrderReasonCollector<'analyzer, 'ctx> {
           for decorator in &method.decorators {
             self.visit_expression(&decorator.expression);
           }
-          if method.computed {
-            self.visit_expression(method.key.to_expression());
+          if let Some(key) = method.key.as_expression() {
+            self.visit_expression(key);
           }
           // Method/getter/setter bodies run when invoked, not at definition time.
         }
@@ -997,8 +993,8 @@ impl<'analyzer, 'ctx> EagerEvaluationOrderReasonCollector<'analyzer, 'ctx> {
           for decorator in &property.decorators {
             self.visit_expression(&decorator.expression);
           }
-          if property.computed {
-            self.visit_expression(property.key.to_expression());
+          if let Some(key) = property.key.as_expression() {
+            self.visit_expression(key);
           }
           // Instance initializers run during construction; static initializers run now.
           if property.r#static
@@ -1011,8 +1007,8 @@ impl<'analyzer, 'ctx> EagerEvaluationOrderReasonCollector<'analyzer, 'ctx> {
           for decorator in &accessor.decorators {
             self.visit_expression(&decorator.expression);
           }
-          if accessor.computed {
-            self.visit_expression(accessor.key.to_expression());
+          if let Some(key) = accessor.key.as_expression() {
+            self.visit_expression(key);
           }
           if accessor.r#static
             && let Some(value) = &accessor.value

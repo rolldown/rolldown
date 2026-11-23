@@ -107,12 +107,14 @@ impl IndependentInit<'_> {
       && class.heritage.is_none()
       && class.decorators.is_empty()
       && class.body.body.iter().all(|element| match element {
-        ClassElement::MethodDefinition(method) => !method.computed && method.decorators.is_empty(),
+        ClassElement::MethodDefinition(method) => {
+          !method.key.is_computed() && method.decorators.is_empty()
+        }
         ClassElement::PropertyDefinition(property) => {
-          !property.computed && !property.r#static && property.decorators.is_empty()
+          !property.key.is_computed() && !property.r#static && property.decorators.is_empty()
         }
         ClassElement::AccessorProperty(property) => {
-          !property.computed && !property.r#static && property.decorators.is_empty()
+          !property.key.is_computed() && !property.r#static && property.decorators.is_empty()
         }
         _ => false,
       })
@@ -137,7 +139,7 @@ impl IndependentInit<'_> {
         .is_some_and(|symbol_id| self.initialized.contains(&symbol_id)),
       Expression::ObjectExpression(object) => object.properties.iter().all(|property| {
         matches!(property, ObjectPropertyKind::ObjectProperty(property)
-          if !property.computed && self.expression(&property.value))
+          if !property.key.is_computed() && self.expression(&property.value))
       }),
       Expression::ArrayExpression(array) => array.elements.iter().all(|element| match element {
         ArrayExpressionElement::SpreadElement(_) => false,

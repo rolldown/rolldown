@@ -1,5 +1,4 @@
 #![expect(clippy::inherent_to_string)]
-use std::borrow::Cow;
 
 use napi::bindgen_prelude::{Either, This, Undefined};
 use napi::{Env, JsString};
@@ -455,6 +454,27 @@ impl<'a> BindingMagicString<'a> {
       Some(Either::B(s)) if s == "boundary" => string_wizard::Hires::Boundary,
       Some(_) => string_wizard::Hires::False,
     }
+  }
+
+  fn build_source_map(
+    &self,
+    options: Option<BindingSourceMapOptions>,
+  ) -> napi::Result<(SourceMap, usize)> {
+    self.ensure_live()?;
+    let opts = options.unwrap_or_default();
+    let hires = self.resolve_hires(opts.hires.as_ref());
+    let (mut source_map, generated_line_count) =
+      self.inner.source_map_with_generated_line_count(SourceMapOptions {
+        source: opts.source.map(Into::into).unwrap_or_else(|| "".into()),
+        include_content: opts.include_content.unwrap_or(false),
+        hires,
+      });
+
+    if let Some(file) = opts.file {
+      source_map.set_file(&file);
+    }
+
+    Ok((source_map, generated_line_count))
   }
 }
 
@@ -1277,35 +1297,15 @@ impl BindingMagicString<'_> {
     &self,
     options: Option<BindingSourceMapOptions>,
   ) -> napi::Result<BindingSourceMap> {
-    self.ensure_live()?;
-    let opts = options.unwrap_or_default();
-    let hires = self.resolve_hires(opts.hires.as_ref());
-    let source_map = self.inner.source_map(SourceMapOptions {
-      source: opts.source.map(Into::into).unwrap_or_else(|| "".into()),
-      include_content: opts.include_content.unwrap_or(false),
-      hires,
-    });
+    let (source_map, generated_line_count) = self.build_source_map(options)?;
 
-    // If file option is provided, reconstruct the source map with the file field
-    let source_map = if let Some(file) = opts.file {
-      let mut m = SourceMap::new(
-        Some(Cow::Owned(file)),
-        source_map.get_names().map(|n| Cow::Owned(n.to_owned())).collect(),
-        None,
-        source_map.get_sources().map(|s| s.map(|s| Cow::Owned(s.to_owned()))).collect(),
-        source_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
-        source_map.get_tokens().collect::<Vec<_>>().into_boxed_slice(),
-        None,
-      );
-      if self.ignore_list {
-        m.set_ignore_list(vec![0]);
-      }
-      m
-    } else {
-      source_map
-    };
-
-    Ok(BindingSourceMap { json: source_map.to_json() })
+    // The encoder stops at the last token. An empty mappings string represents one line.
+    let last_token_index = source_map.get_tokens().len().saturating_sub(1) as u32;
+    let encoded_line_count =
+      source_map.get_token(last_token_index).map_or(1, |token| token.get_dst_line() as usize + 1);
+    let mut json = source_map.to_json();
+    json.mappings.extend(std::iter::repeat_n(';', generated_line_count - encoded_line_count));
+    Ok(BindingSourceMap { json })
   }
 
   /// Generates a decoded source map for the transformations applied to this MagicString.
@@ -1315,35 +1315,7 @@ impl BindingMagicString<'_> {
     &self,
     options: Option<BindingSourceMapOptions>,
   ) -> napi::Result<BindingDecodedMap> {
-    self.ensure_live()?;
-    let opts = options.unwrap_or_default();
-    let hires = self.resolve_hires(opts.hires.as_ref());
-    let (source_map, generated_line_count) =
-      self.inner.source_map_with_generated_line_count(SourceMapOptions {
-        source: opts.source.map(Into::into).unwrap_or_else(|| "".into()),
-        include_content: opts.include_content.unwrap_or(false),
-        hires,
-      });
-
-    // If file option is provided, reconstruct the source map with the file field
-    let source_map = if let Some(file) = opts.file {
-      let mut m = SourceMap::new(
-        Some(Cow::Owned(file)),
-        source_map.get_names().map(|n| Cow::Owned(n.to_owned())).collect(),
-        None,
-        source_map.get_sources().map(|s| s.map(|s| Cow::Owned(s.to_owned()))).collect(),
-        source_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
-        source_map.get_tokens().collect::<Vec<_>>().into_boxed_slice(),
-        None,
-      );
-      if self.ignore_list {
-        m.set_ignore_list(vec![0]);
-      }
-      m
-    } else {
-      source_map
-    };
-
+    let (source_map, generated_line_count) = self.build_source_map(options)?;
     let json = source_map.to_json();
     Ok(BindingDecodedMap { inner: source_map, json, generated_line_count })
   }

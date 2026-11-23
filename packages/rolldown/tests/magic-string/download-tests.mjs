@@ -6,7 +6,7 @@
  * Usage: node download-tests.mjs
  *
  * This script:
- * 1. Downloads the upstream magic-string test suite at the pinned version below
+ * 1. Downloads the `magic-string` tests for the version in `UPSTREAM_VERSION`.
  * 2. Adapts imports to use rolldown's BindingMagicString
  * 3. Skips tests that use unsupported features
  *

@@ -20,14 +20,14 @@ export type TreeshakingOptions = {
   /**
    * **Values:**
    *
-   * - **`true`**: All modules are assumed to have side effects and will be included in the bundle even if none of their exports are used.
-   * - **`false`**: No modules have side effects. This enables aggressive tree-shaking, removing any modules whose exports are not used.
-   * - **`string[]`**: Array of module IDs that have side effects. Only modules in this list will be preserved if unused; all others can be tree-shaken when their exports are unused.
-   * - **`'no-external'`**: Assumes no external modules have side effects while preserving the default behavior for local modules.
-   * - **`ModuleSideEffectsRule[]`**: Array of rules with `test`, `external`, and `sideEffects` properties for fine-grained control. Each rule must set `test` or `external`.
-   * - **`function`**: Function that receives `(id, external)` and returns whether the module has side effects.
+   * - **`true`**: Uses package `sideEffects` metadata for bundled modules when available and static analysis otherwise. Rolldown generally treats external modules as having side effects.
+   * - **`false`**: Marks all modules as [side-effect-free](https://rolldown.rs/in-depth/dead-code-elimination#marking-entire-modules-as-side-effect-free).
+   * - **`string[]`**: Array of module IDs to treat as having side effects. All other modules are marked as side-effect-free.
+   * - **`'no-external'`**: Marks external modules as side-effect-free and bundled modules as having side effects, overriding package `sideEffects` metadata and static analysis. To mark only external modules as side-effect-free and preserve the default behavior for bundled modules, use `[{ external: true, sideEffects: false }]`.
+   * - **`ModuleSideEffectsRule[]`**: Uses the `sideEffects` value of the first matching rule. Each rule must set `test` or `external`. Unmatched modules use the same behavior as `true`.
+   * - **`function`**: Receives `(id, external)` and returns whether the module has side effects. Returning `undefined` uses the same behavior as `true`.
    *
-   * **Important:** Setting this to `false` or using an array/string assumes that your modules and their dependencies have no side effects other than their exports. Only use this if you're certain that removing unused modules won't break your application.
+   * **Important:** Mark a module as side-effect-free only if your application can skip evaluating it and any dependencies reached only through it.
    *
    * > [!NOTE]
    * > **Performance: Prefer `ModuleSideEffectsRule[]` over functions**

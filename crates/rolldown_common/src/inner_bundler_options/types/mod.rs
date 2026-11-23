@@ -3,7 +3,7 @@ pub mod chunk_import_map;
 pub mod chunk_modules_order;
 pub mod code_splitting_mode;
 pub mod comments;
-pub mod defer_sync_scan_data_option;
+pub mod create_js_module_options;
 pub mod dev_mode_options;
 pub mod devtools_options;
 pub mod es_module_flag;

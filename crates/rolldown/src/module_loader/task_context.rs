@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
-use rolldown_common::{ModuleId, ModuleInfo, ModuleLoaderMsg};
+use rolldown_common::{ModuleId, ModuleInfo, ModuleLoaderMsg, ResolvedId};
 use rolldown_error::BuildDiagnostic;
 use rolldown_fs::FileSystem;
 use rolldown_plugin::{ContextLoadProgress, SharedPluginDriver};
@@ -12,7 +12,7 @@ use crate::{SharedOptions, SharedResolver};
 /// Used to store common data shared between all tasks.
 pub struct TaskContext<Fs: FileSystem> {
   pub options: SharedOptions,
-  pub tx: tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>,
+  pub tx: futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>,
   pub resolver: SharedResolver<Fs>,
   pub fs: Fs,
   pub plugin_driver: SharedPluginDriver,
@@ -39,6 +39,18 @@ impl<Fs: FileSystem> TaskContext<Fs> {
     {
       Arc::make_mut(module_info.value_mut()).is_entry = true;
     }
+  }
+}
+
+impl<Fs: FileSystem> TaskContext<Fs> {
+  /// Tells JS that `resolved_id` created a module. Call it before the `load` hook runs.
+  pub async fn create_js_module_options(&self, resolved_id: &ResolvedId) -> anyhow::Result<()> {
+    let Some(create_js_module_options) = &self.options.create_js_module_options else {
+      return Ok(());
+    };
+    create_js_module_options
+      .call(resolved_id.id.to_string(), resolved_id.module_options_receipt)
+      .await
   }
 }
 
@@ -79,6 +91,7 @@ impl<Fs: FileSystem> Drop for TaskMessageGuard<Fs> {
       "the task that loads `{}` panicked before it sent its result",
       self.module_id.stabilize(&self.ctx.options.cwd)
     ));
-    let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(vec![diagnostic].into_boxed_slice()));
+    let _ =
+      self.ctx.tx.unbounded_send(ModuleLoaderMsg::BuildErrors(vec![diagnostic].into_boxed_slice()));
   }
 }

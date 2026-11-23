@@ -30,6 +30,9 @@ pub use crate::{
   types::{bundle_output::BundleOutput, bundler_config::BundlerConfig},
 };
 
+pub use crate::utils::build_activity::{
+  has_active_build, notify_memory_released, set_memory_released_hook,
+};
 pub use rolldown_common::bundler_options::*;
 
 pub use rolldown_resolver::ResolveOptions;

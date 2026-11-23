@@ -42,7 +42,8 @@ pub struct BindingBundler {
 #[napi]
 impl BindingBundler {
   #[napi(constructor)]
-  pub fn new() -> Self {
+  pub fn new(env: Env) -> Self {
+    crate::memory_reclaim::register_js_thread(&env);
     let inner = ClassicBundler::new();
     Self {
       inner,
@@ -305,6 +306,15 @@ impl BindingBundler {
       Some(napi::Either::A(BindingErrors::new(vec![binding_error])))
     } else {
       None
+    }
+  }
+}
+
+impl Drop for BindingBundler {
+  fn drop(&mut self) {
+    // `close()` already notified when it took the handle.
+    if self.last_bundle_handle.is_some() {
+      crate::memory_reclaim::notify();
     }
   }
 }

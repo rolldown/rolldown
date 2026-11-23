@@ -645,7 +645,554 @@ test.concurrent(
         return outputCode();
       })
       .toContain('EFFECT');
-    // Only `meta` from `resolveId` stays. `moduleSideEffects` is the effective value.
+    // Only the options from `resolveId` stay.
     expect(infos.at(-1)).toEqual({ meta: { resolved: true }, moduleSideEffects: true });
+  },
+);
+
+test.concurrent(
+  'an HMR refetch keeps the moduleSideEffects of the resolution that created the module',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput(
+      'dev-refetch-side-effects',
+      retryCount,
+    );
+    const dep = path.join(dir, 'dep.js');
+    fs.writeFileSync(input, `import './dep.js'\nconsole.log('MAIN')`);
+    fs.writeFileSync(dep, `console.log('EFFECT_1')`);
+
+    const outputs: string[] = [];
+    const onHmrUpdates = vi.fn();
+    let depLoads = 0;
+    const engine = await dev(
+      {
+        input,
+        plugins: [
+          {
+            name: 'side-effect-free-dep',
+            resolveId: (source) =>
+              source === './dep.js' ? { id: dep, moduleSideEffects: false } : undefined,
+            load(id) {
+              if (id === dep) depLoads++;
+            },
+          },
+        ],
+      },
+      { dir: outputDir },
+      {
+        // The edit runs only the HMR stage, so `ensureLatestBuildOutput` shows the module that
+        // the HMR stage fetched again.
+        rebuildStrategy: 'never',
+        onHmrUpdates,
+        onOutput: (result) => {
+          if (!(result instanceof Error)) {
+            outputs.push(
+              result.output.map((chunk) => (chunk.type === 'chunk' ? chunk.code : '')).join('\n'),
+            );
+          }
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await expect.poll(() => outputs.length).toBe(1);
+    expect(outputs[0]).toContain('MAIN');
+    expect(outputs[0]).not.toContain('EFFECT_1');
+
+    await editFile(dep, `console.log('EFFECT_2')`);
+    await expect.poll(() => onHmrUpdates).toHaveBeenCalled();
+    expect(depLoads).toBe(2);
+    await engine.ensureLatestBuildOutput();
+    await expect.poll(() => outputs.length).toBe(2);
+    expect(outputs[1]).toContain('MAIN');
+    expect(outputs[1]).not.toContain('EFFECT_2');
+  },
+);
+
+function chunkCode(output: RolldownOutput): string {
+  return output.output.map((chunk) => (chunk.type === 'chunk' ? chunk.code : '')).join('\n');
+}
+
+test.concurrent(
+  'an incremental rebuild keeps the moduleSideEffects of the resolution that created the module',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput(
+      'dev-rebuild-side-effects',
+      retryCount,
+    );
+    const dep = path.join(dir, 'dep.js');
+    fs.writeFileSync(input, `import './dep.js'\nconsole.log('MAIN')`);
+    fs.writeFileSync(dep, `console.log('EFFECT_1')`);
+
+    const outputs: string[] = [];
+    let depLoads = 0;
+    const engine = await dev(
+      {
+        input,
+        plugins: [
+          {
+            name: 'side-effect-free-dep',
+            // The rebuild resolves `dep.js` again by its path, without an importer. This hook
+            // does not handle that resolution.
+            resolveId: (source) =>
+              source === './dep.js' ? { id: dep, moduleSideEffects: false } : undefined,
+            load(id) {
+              if (id === dep) depLoads++;
+            },
+          },
+        ],
+      },
+      { dir: outputDir },
+      {
+        rebuildStrategy: 'always',
+        onOutput: (result) => {
+          if (!(result instanceof Error)) outputs.push(chunkCode(result));
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await expect.poll(() => outputs.length).toBe(1);
+    expect(outputs[0]).toContain('MAIN');
+    expect(outputs[0]).not.toContain('EFFECT_1');
+
+    await editFile(dep, `console.log('EFFECT_2')`);
+    await expect.poll(() => outputs.length).toBe(2);
+    // The first build, the HMR stage and the rebuild.
+    expect(depLoads).toBe(3);
+    expect(outputs[1]).toContain('MAIN');
+    expect(outputs[1]).not.toContain('EFFECT_2');
+  },
+);
+
+test.concurrent(
+  'an incremental rebuild resolves a changed module again with its start options',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput(
+      'dev-rebuild-resolve-options',
+      retryCount,
+    );
+    const dep = path.join(dir, 'dep.js');
+    fs.writeFileSync(input, `import './dep.js'\nconsole.log('MAIN')`);
+    fs.writeFileSync(dep, `console.log('EFFECT_1')`);
+
+    const outputs: string[] = [];
+    const seenByResolve: unknown[] = [];
+    let inHmrStage = false;
+    const engine = await dev(
+      {
+        input,
+        plugins: [
+          {
+            name: 'test-plugin',
+            buildStart() {
+              inHmrStage = false;
+            },
+            resolveId(source, importer) {
+              if (source === './dep.js' && importer) {
+                return { id: dep, meta: { creator: true } };
+              }
+              if (source === dep && !importer) {
+                const { meta, moduleSideEffects } = this.getModuleInfo(dep)!;
+                seenByResolve.push({ meta: { ...meta }, moduleSideEffects });
+                return { id: dep };
+              }
+            },
+            transform(code, id) {
+              if (id === dep && inHmrStage) {
+                return { code, meta: { fromHmrStage: true }, moduleSideEffects: false };
+              }
+            },
+          },
+        ],
+      },
+      { dir: outputDir },
+      {
+        rebuildStrategy: 'always',
+        onOutput: (result) => {
+          if (!(result instanceof Error)) outputs.push(chunkCode(result));
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await expect.poll(() => outputs.length).toBe(1);
+    expect(outputs[0]).toContain('EFFECT_1');
+
+    inHmrStage = true;
+    await editFile(dep, `console.log('EFFECT_2')`);
+    await expect.poll(() => outputs.length).toBe(2);
+    expect.soft(seenByResolve).toEqual([{ meta: { creator: true }, moduleSideEffects: true }]);
+    expect.soft(outputs[1]).toContain('EFFECT_2');
+  },
+);
+
+test.concurrent(
+  'a rescan after a failed build keeps the moduleSideEffects of the creating resolution',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('dev-rescan-side-effects', retryCount, {
+      'main.js': `import './dep.js'\nimport { value } from './value.js'\nconsole.log(value)`,
+      'dep.js': `console.log('EFFECT_1')`,
+      'value.js': `export const value = 'VALUE_1'`,
+    });
+    const input = path.join(dir, 'main.js');
+    const dep = path.join(dir, 'dep.js');
+
+    const results: (string | Error)[] = [];
+    let builds = 0;
+    const engine = await dev(
+      {
+        input,
+        plugins: [
+          {
+            name: 'test-plugin',
+            buildStart() {
+              builds++;
+            },
+            resolveId: (source) =>
+              source === './dep.js' ? { id: dep, moduleSideEffects: false } : undefined,
+            buildEnd() {
+              // The cache keeps `dep.js` and fetches it again in the next build.
+              if (builds === 2) throw new Error('planned failure');
+            },
+          },
+        ],
+      },
+      { dir: path.join(dir, 'dist') },
+      {
+        rebuildStrategy: 'always',
+        onOutput: (result) => {
+          results.push(result instanceof Error ? result : chunkCode(result));
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await expect.poll(() => results.length).toBe(1);
+    expect(results[0]).not.toContain('EFFECT_1');
+
+    await editFile(dep, `console.log('EFFECT_2')`);
+    await expect.poll(() => results.length).toBe(2);
+    expect(results[1]).toBeInstanceOf(Error);
+
+    await editFile(path.join(dir, 'value.js'), `export const value = 'VALUE_2'`);
+    await expect.poll(() => results.length).toBe(3);
+    expect(builds).toBe(3);
+    expect(results[2]).toContain('VALUE_2');
+    expect(results[2]).not.toContain('EFFECT_2');
+  },
+);
+
+test.concurrent(
+  'a partial scan gives a changed module only the options of the resolution that created it',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('dev-creator-options', retryCount, {
+      'main.js': `import './x.js'\nimport './y.js'`,
+      'x.js': `import './shared.js'`,
+      'y.js': `import './shared.js'`,
+      'shared.js': `console.log('EFFECT_1')`,
+    });
+    const input = path.join(dir, 'main.js');
+    const shared = path.join(dir, 'shared.js');
+    let markSharedCreated!: () => void;
+    const sharedCreated = new Promise<void>((resolve) => {
+      markSharedCreated = resolve;
+    });
+
+    const outputs: string[] = [];
+    const seenByLoad: unknown[] = [];
+    const engine = await dev(
+      {
+        input,
+        plugins: [
+          {
+            name: 'test-plugin',
+            async resolveId(source, importer, options) {
+              if (source !== './shared.js') return;
+              if (options.custom?.probe) {
+                return { id: shared, meta: { probe: true }, moduleSideEffects: false };
+              }
+              if (importer === path.join(dir, 'x.js')) {
+                return { id: shared, meta: { fromX: true } };
+              }
+              // Resolve the import in `y.js` only after the import in `x.js` created the module.
+              await sharedCreated;
+              return { id: shared, meta: { fromY: true }, moduleSideEffects: false };
+            },
+            load(id) {
+              if (id !== shared) return;
+              markSharedCreated();
+              const { meta, moduleSideEffects } = this.getModuleInfo(shared)!;
+              seenByLoad.push({ meta: { ...meta }, moduleSideEffects });
+            },
+            transform(code, id) {
+              if (id === shared) return { code, meta: { transformed: true } };
+            },
+          },
+          {
+            name: 'prober',
+            async buildEnd() {
+              await this.resolve('./shared.js', input, { custom: { probe: true } });
+            },
+          },
+        ],
+      },
+      { dir: path.join(dir, 'dist') },
+      {
+        rebuildStrategy: 'always',
+        onOutput: (result) => {
+          if (!(result instanceof Error)) outputs.push(chunkCode(result));
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await expect.poll(() => outputs.length).toBe(1);
+    expect.soft(outputs[0]).toContain('EFFECT_1');
+
+    await editFile(shared, `console.log('EFFECT_2')`);
+    await expect.poll(() => outputs.length).toBe(2);
+    // The first build, the HMR stage and the rebuild.
+    const creatorOptions = { meta: { fromX: true }, moduleSideEffects: true };
+    expect.soft(seenByLoad).toEqual([creatorOptions, creatorOptions, creatorOptions]);
+    expect.soft(outputs[1]).toContain('EFFECT_2');
+  },
+);
+
+test.concurrent(
+  'a module that a partial scan creates does not get the options of an earlier probe',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput('dev-probe-options', retryCount);
+    const later = path.join(dir, 'later.js');
+    fs.writeFileSync(input, `console.log('MAIN_1')`);
+    fs.writeFileSync(later, `console.log('LATER_EFFECT')`);
+
+    const outputs: string[] = [];
+    const seenByLoad: unknown[] = [];
+    const engine = await dev(
+      {
+        input,
+        plugins: [
+          {
+            name: 'test-plugin',
+            resolveId(source, _importer, options) {
+              if (source !== './later.js') return;
+              if (options.custom?.probe) {
+                return { id: later, meta: { probe: true }, moduleSideEffects: false };
+              }
+              return { id: later, meta: { imported: true } };
+            },
+            load(id) {
+              if (id !== later) return;
+              const { meta, moduleSideEffects } = this.getModuleInfo(later)!;
+              seenByLoad.push({ meta: { ...meta }, moduleSideEffects });
+            },
+          },
+          {
+            name: 'prober',
+            async transform(code, id) {
+              if (id === input && code.includes('PROBE')) {
+                await this.resolve('./later.js', input, { custom: { probe: true } });
+              }
+            },
+          },
+        ],
+      },
+      { dir: outputDir },
+      {
+        rebuildStrategy: 'always',
+        onOutput: (result) => {
+          if (!(result instanceof Error)) outputs.push(chunkCode(result));
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await expect.poll(() => outputs.length).toBe(1);
+
+    // `later.js` is only probed, so it is not a module yet.
+    await editFile(input, `// PROBE\nconsole.log('MAIN_2')`);
+    await expect.poll(() => outputs.length).toBe(2);
+    expect(seenByLoad).toEqual([]);
+
+    await editFile(input, `import './later.js'\nconsole.log('MAIN_3')`);
+    await expect.poll(() => outputs.length).toBe(3);
+    expect(seenByLoad.at(-1)).toEqual({ meta: { imported: true }, moduleSideEffects: true });
+    expect(outputs[2]).toContain('MAIN_3');
+    expect(outputs[2]).toContain('LATER_EFFECT');
+  },
+);
+
+/** The number of saved resolution options in `PluginContextData`, which is internal. */
+function savedResolutionOptions(pluginContext: object): number {
+  const data = (pluginContext as { data: Record<string, Map<number, unknown> | undefined> }).data;
+  // A renamed field must fail the test, not count as 0.
+  if (!(data.resolutionOptionsMap instanceof Map)) throw new Error('no resolutionOptionsMap');
+  return data.resolutionOptionsMap.size + (data.olderResolutionOptionsMap?.size ?? 0);
+}
+
+test.concurrent(
+  'an HMR-only session drops the options of resolutions that created no module',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('dev-unused-resolutions', retryCount, {
+      'main.js': `import './mid.js'`,
+      'mid.js': `import './dep.js'\nconsole.log('MID_0')`,
+      'dep.js': `console.log('DEP')`,
+    });
+    const input = path.join(dir, 'main.js');
+    const mid = path.join(dir, 'mid.js');
+    const dep = path.join(dir, 'dep.js');
+    const EDITS = 5;
+
+    const saved: number[] = [];
+    const probeMeta: unknown[] = [];
+    const onHmrUpdates = vi.fn();
+    const engine = await dev(
+      {
+        input,
+        plugins: [
+          {
+            name: 'test-plugin',
+            // After the first build, `dep.js` exists, so each edit of `mid.js` saves options
+            // that create no module.
+            resolveId: (source) =>
+              source === './dep.js' ? { id: dep, meta: { dep: true } } : null,
+            async transform(_code, id) {
+              if (id !== mid) return;
+              saved.push(savedResolutionOptions(this));
+              probeMeta.push((await this.resolve('./dep.js', mid, { skipSelf: false }))?.meta);
+            },
+          },
+        ],
+      },
+      { dir: path.join(dir, 'dist') },
+      { rebuildStrategy: 'never', onHmrUpdates },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await expect.poll(() => saved.length).toBe(1);
+    for (let edit = 1; edit <= EDITS; edit++) {
+      await editFile(mid, `import './dep.js'\nconsole.log('MID_${edit}')`);
+      await expect.poll(() => onHmrUpdates.mock.calls.length).toBe(edit);
+    }
+    expect(saved).toHaveLength(EDITS + 1);
+    // At most the options saved by the previous HMR update.
+    expect(Math.max(...saved)).toBeLessThanOrEqual(1);
+    expect(probeMeta).toEqual(Array(EDITS + 1).fill({ dep: true }));
+  },
+);
+
+test.concurrent(
+  'a moduleSideEffects write after buildEnd does not reach the next partial build',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput('dev-late-write', retryCount);
+    const dep = path.join(dir, 'dep.js');
+    fs.writeFileSync(input, `import './dep.js'\nconsole.log('MAIN_1')`);
+    fs.writeFileSync(dep, `console.log('DEP_EFFECT')`);
+
+    const outputs: string[] = [];
+    let builds = 0;
+    const engine = await dev(
+      {
+        input,
+        logLevel: 'silent',
+        plugins: [
+          {
+            name: 'late-writer',
+            buildStart() {
+              builds++;
+            },
+            renderStart() {
+              if (builds === 1) this.getModuleInfo(dep)!.moduleSideEffects = false;
+            },
+          },
+        ],
+      },
+      { dir: outputDir },
+      {
+        rebuildStrategy: 'always',
+        onOutput: (result) => {
+          if (!(result instanceof Error)) outputs.push(chunkCode(result));
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await expect.poll(() => outputs.length).toBe(1);
+    expect(outputs[0]).toContain('DEP_EFFECT');
+
+    // Only main.js changes. A full build of the same sources keeps `dep.js`.
+    await editFile(input, `import './dep.js'\nconsole.log('MAIN_2')`);
+    await expect
+      .poll(async () => {
+        await engine.ensureLatestBuildOutput();
+        return outputs.at(-1);
+      })
+      .toContain('MAIN_2');
+    expect(outputs.at(-1)).toContain('DEP_EFFECT');
   },
 );

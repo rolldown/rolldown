@@ -154,9 +154,11 @@ The `LazyCompilationPlugin` maintains two sets. Only `fetched_entries` is shared
 
 When `resolve_id` is called for a dynamic import:
 
-1. If the importer is a **fetched proxy** (`?rolldown-lazy=1` + in `fetched_entries`) → return `None` (skip proxy creation, resolve to actual module)
+1. If the importer is a **fetched proxy** (`?rolldown-lazy=1` + in `fetched_entries`), skip proxy creation and resolve the actual module with the call the proxy replaced (`resolve_with_original_call`, see "Creating the actual module" below)
 2. Otherwise → resolve the specifier via `ctx.resolve` (`skip_self: true`, forwarding `args.custom`). If that `ResolvedId` is external (`external.is_external()`: `Bool(true)` or `Absolute`, since `resolve_id_check_external` turns `Relative` into `Bool(true)`), return `None` and do **not** append `?rolldown-lazy=1`. The normal resolution then runs again and builds the full `ResolvedId`, the same as a build without lazy compilation. Passing the `ctx.resolve` result back through `HookResolveIdOutput` would drop fields it cannot carry, such as `is_external_without_side_effects` on Node built-ins. The cost is a second resolution, only for external dynamic imports. An external never gets a factory in the dev runtime, so `requestLazy` cannot run it. That covers every path `ctx.resolve` can mark external: a plugin `resolveId` of `{ id, external: true }`, config `external` matching the resolved id (applied after plugins in `resolve_id_check_external`), Node built-ins, and http(s) URLs (#11273, pinned by `packages/rolldown/tests/dev/dev-lazy-compile.test.ts`). Config `external` matching the raw specifier never reaches this hook: `resolve_id_check_external` applies it before any plugin runs. The rendered dynamic import stays a plain `import("<external>")`.
-3. Otherwise append `?rolldown-lazy=1`. The append is **idempotent** (#9439): `ctx.resolve` can re-enter other plugins' resolve hooks (e.g. an alias plugin), so if the resolved id already ends with the marker it is reused — a doubled suffix would desync the proxy id from the runtime invalidation key in the stub template (regression vitejs/vite#22454, pinned by the aliased-import spec)
+3. Otherwise append `?rolldown-lazy=1`. The append is **idempotent** (#9439): `ctx.resolve` can re-enter other plugins' resolve hooks (e.g. an alias plugin), so if the resolved id already ends with the marker it is reused — a doubled suffix would desync the proxy id from the runtime invalidation key in the stub template (regression vitejs/vite#22454, pinned by the aliased-import spec). The plugin stores the call (specifier, importer, kind, attributes, `custom`) in `original_calls` under the proxy id. Each resolution of the proxy replaces the stored call, so the fetch runs the call of the latest build (for example after an edit gives the import another specifier for the same file). Like `lazy_entries`, nothing is ever removed.
+
+**Creating the actual module.** Without lazy compilation, the `resolveId` call of the `import()` creates the actual module, so the module starts with that call's `meta` and `moduleSideEffects` (see [cache/implementation.md](../cache/implementation.md)). The probe above does not create it, and the proxy result carries no options. So when the fetched template imports the actual module by its resolved id, `resolve_with_original_call` runs `ctx.resolve` again with the stored call (`skip_self: true`) in the current build and returns that result, receipt included (`HookResolveIdOutput::from_resolved_id`). User hooks see the original specifier and importer, never the resolved id with the proxy as importer, so a virtual-module plugin that resolves only its bare id (`virtual:x`, not `\0virtual:x`) works too. It falls back to `None` (the next plugins resolve the resolved id with the proxy as importer, and the module starts with empty options) when no call is stored, the stored importer is an absolute path that is no longer on disk, the call fails (the error is dropped), or the call now gives an external or another id (for example after an edit of the importer). Pinned by `packages/rolldown/tests/dev/dev-lazy-compile.test.ts`.
 
 Re-resolution of a known proxy id (any import kind — e.g. a dev server resolving the stub id as an entry to serve a lazy compilation request) is claimed by the lazy plugin itself: if the specifier ends with `?rolldown-lazy=1` and is present in `lazy_entries`, it resolves to itself. Unknown proxy ids fall through and stay unresolvable (cf. the #9969 gate below). User-land `resolve_id` hooks never see proxy ids at all — the `PluginDriver` skips them for `?rolldown-lazy=1` specifiers — because a virtual-module plugin would not recognize its own id with the query appended and nothing else can resolve a virtual id (regression vitejs/vite#23124, pinned by `packages/rolldown/tests/dev/dev-lazy-compile.test.ts`).
 
@@ -301,7 +303,7 @@ After `/lazy`, the real module and its sync deps are ordinary watched graph modu
 │  - ScanMode::Partial([proxyModuleId])                                   │
 │  - Plugin's load hook sees proxy is fetched → returns FETCHED template  │
 │  - Fetched template: import("/abs/path/lazy-module.js")                 │
-│  - resolve_id sees importer is a fetched proxy → returns None           │
+│  - resolve_id sees importer is a fetched proxy → runs the replaced call │
 │  - Actual module + sync deps carried — minus modules the client         │
 │    already holds (ship map / boot-evaluated map); never the proxy       │
 │  - registerGraph rows first, then registerFactory(stableId, fn) per     │
@@ -374,17 +376,7 @@ Emitters read the stable id from each module's `stable_id` field. The proxy temp
 
 **Problem**: After marking proxy as fetched, the fetched template's `import($MODULE_ID)` was being intercepted by `resolve_id` hook, which created ANOTHER proxy for the same module - causing infinite recursion.
 
-**Solution**: In `resolve_id`, skip proxy creation when the importer is a fetched proxy:
-
-```rust
-if let Some(importer) = args.importer {
-  if importer.contains("?rolldown-lazy=1") && self.fetched_entries.contains(importer) {
-    return Ok(None);  // Let normal resolution happen
-  }
-}
-```
-
-This allows the fetched template's dynamic import to resolve to the actual module.
+**Solution**: In `resolve_id`, skip proxy creation when the importer is a fetched proxy, and resolve the actual module instead (`resolve_with_original_call`, see "Creating the actual module" above). This allows the fetched template's dynamic import to resolve to the actual module.
 
 ### Issue 4: Build Output Must Update After Lazy Compilation
 

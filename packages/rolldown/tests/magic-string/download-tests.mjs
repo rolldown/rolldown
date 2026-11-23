@@ -139,7 +139,6 @@ const SKIP_TESTS = [
   // generateMap-specific skips (features not in string_wizard)
   'should generate a correct sourcemap including correct lines', // uses generateDecodedMap which has different mappings count
   'should generate a sourcemap using specified locations', // addSourcemapLocation not implemented
-  'generates a map with trimmed content', // trim sourcemap behavior differs
   // Note: 'generates x_google_ignoreList' is now supported
 ];
 

@@ -77,7 +77,7 @@ impl<'text> MagicString<'text> {
         if chunk.is_edited() {
           chunk.edited_content = Some(trimmed_content.to_owned().into());
         } else {
-          // Keep the untrimmed text in an original chunk so its columns still map individually.
+          // Keep the remaining text in an unedited chunk to preserve its original column positions.
           let boundary = chunk.end() - trimmed_content.len() as u32;
           let trimmed = self.by_end_mut(boundary).expect("can split an original chunk");
           trimmed.expect("chunk ends at the split").edited_content = Some("".into());

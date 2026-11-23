@@ -1290,7 +1290,8 @@ impl BindingMagicString<'_> {
     env.create_string_utf16(&utf16_buf)
   }
 
-  /// Original-source UTF-16 indices registered with `addSourcemapLocation`, in ascending order.
+  /// Returns the UTF-16 indices in the original source that `addSourcemapLocation()` registers.
+  /// Each index appears once. The indices are in ascending order.
   #[napi(getter, ts_return_type = "Array<number>")]
   pub fn sourcemap_locations<'env>(&mut self, env: &'env Env) -> napi::Result<Array<'env>> {
     self.ensure_live()?;
@@ -1305,7 +1306,10 @@ impl BindingMagicString<'_> {
     Ok(array)
   }
 
-  /// Adds a mapping at an original-source UTF-16 index when the source map uses low resolution.
+  /// Registers a UTF-16 index in the original source for maps with `hires: false`.
+  /// If the index falls within a non-newline character in an unedited piece,
+  /// the map includes a segment for that index.
+  /// The `offset` option does not change this index.
   #[napi]
   pub fn add_sourcemap_location(&mut self, index: u32) -> napi::Result<()> {
     self.ensure_live()?;

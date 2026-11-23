@@ -115,7 +115,7 @@ impl<'a> SourcemapBuilder<'a> {
           loc.bump_line();
           self.bump_line();
           new_line = true;
-          // A newline ends the current word run.
+          // A newline ends the current word.
           char_in_hires_boundary = false;
         }
         _ => {
@@ -157,7 +157,7 @@ impl<'a> SourcemapBuilder<'a> {
           }
           if WITH_LOCATIONS {
             while let Some(index) = locations.next_if(|&i| i < source_index + char_utf16_len) {
-              // The start of a line (or of a chunk) already has a segment.
+              // The start of this line or chunk already has a segment.
               if !new_line || index != source_index {
                 let delta = index - source_index;
                 self.source_map_builder.add_token(

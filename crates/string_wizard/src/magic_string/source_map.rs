@@ -24,7 +24,9 @@ impl Default for SourceMapOptions {
 }
 
 impl MagicString<'_> {
-  /// Adds a low-resolution mapping at a UTF-16 index in the original source.
+  /// Registers a UTF-16 index in the original source for maps with [`Hires::False`].
+  /// If the index falls within a non-newline character in an unedited chunk,
+  /// the map includes a segment for that index.
   pub fn add_sourcemap_location(&mut self, index: u32) {
     if let Some(&last) = self.sourcemap_locations.last() {
       if last == index {
@@ -35,7 +37,8 @@ impl MagicString<'_> {
     self.sourcemap_locations.push(index);
   }
 
-  /// Unique registered original-source UTF-16 indices, sorted in ascending order.
+  /// Returns the registered UTF-16 indices in the original source.
+  /// Each index appears once. The indices are in ascending order.
   pub fn sourcemap_locations(&mut self) -> &[u32] {
     self.sort_sourcemap_locations();
     &self.sourcemap_locations
@@ -49,7 +52,8 @@ impl MagicString<'_> {
     }
   }
 
-  /// Generates the sourcemap, sorting any out-of-order locations in place for low-resolution maps.
+  /// Generates a source map.
+  /// For [`Hires::False`], this method sorts the registered indices in place if necessary.
   pub fn source_map(&mut self, opts: SourceMapOptions) -> oxc_sourcemap::SourceMap<'static> {
     self.build_source_map(opts).0
   }

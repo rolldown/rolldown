@@ -26,6 +26,6 @@
     "vitepress-plugin-llms": "^1.15.0",
     "vitepress-plugin-og": "^0.0.5",
     "void": "~1.11.0",
-    "wrangler": "^4.161.0"
+    "wrangler": "^4.165.0"
   }
 }

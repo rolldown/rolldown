@@ -505,7 +505,7 @@ importers:
         specifier: ~1.11.0
         version: 1.11.0(@types/node@24.10.3)(arktype@2.2.0)(kysely@0.29.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(valibot@1.5.0(typescript@6.0.3))(vite@8.3.8(@types/node@24.10.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(vitest@4.1.11)(vue@3.5.45(typescript@6.0.3))(workerd@1.20261118.1)(zod@4.6.7)
       wrangler:
-        specifier: ^4.161.0
+        specifier: ^4.165.0
         version: 4.165.0(@cloudflare/workers-types@5.20261121.1)(@types/node@24.10.3)(vitest@4.1.11)
 
   examples/basic-typescript:

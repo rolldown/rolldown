@@ -5,12 +5,7 @@
   "workspaces": {
     ".": {
       "project": [],
-      "ignoreDependencies": [
-        "@oxc-project/runtime",
-        "cjs-module-lexer",
-        "playwright-chromium",
-        "remove-unused-vars",
-      ],
+      "ignoreDependencies": ["@oxc-project/runtime", "cjs-module-lexer", "playwright-chromium"],
     },
     "crates/rolldown/tests/rolldown/topics/npm_packages": {
       "entry": ["util_deprecate/main.js"],

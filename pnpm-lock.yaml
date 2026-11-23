@@ -437,9 +437,6 @@ importers:
       publint:
         specifier: ^0.3.21
         version: 0.3.25
-      remove-unused-vars:
-        specifier: ^0.0.16
-        version: 0.0.16
       rolldown:
         specifier: workspace:*
         version: link:packages/rolldown
@@ -7812,10 +7809,6 @@ packages:
     resolution: {integrity: sha512-yhYfowrECXAgq0Izf4ucBIxBMUnHZQmqlV7h0483V2Ej8sjGwI2qivOvJB2Yiaqo16xP/okIhv7X9jjT0Vla2Q==}
     engines: {node: '>=18.0.0'}
 
-  remove-unused-vars@0.0.16:
-    resolution: {integrity: sha512-O6fcjBMeg6XfAc0AuRvMUT/Fi0D3W6pXjLVWil4HbLuAznGLLOpmsWZs+tBj0Auy7w2XJtGliv26E4PUNjtS9w==}
-    hasBin: true
-
   require-directory@2.1.1:
     resolution: {integrity: sha512-fGxEI7+wsG9xrvdjsrlmL22OMTTiHRwAMroiEeMgq8gzoLC/PQr7RsRDSTLUg/bZAZtF+TVIkHc6/4RIKrui+Q==}
     engines: {node: '>=0.10.0'}
@@ -14538,10 +14531,6 @@ snapshots:
       - supports-color
 
   remeda@2.62.2: {}
-
-  remove-unused-vars@0.0.16:
-    dependencies:
-      typescript: 6.0.3
 
   require-directory@2.1.1: {}
 

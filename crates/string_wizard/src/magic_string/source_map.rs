@@ -25,7 +25,7 @@ impl Default for SourceMapOptions {
 
 impl MagicString<'_> {
   pub fn source_map(&self, opts: SourceMapOptions) -> oxc_sourcemap::SourceMap<'static> {
-    self.source_map_with_generated_line_count(opts).0
+    self.build_source_map(opts).0
   }
 
   /// Also returns the output line count, including lines without any mapping segments.
@@ -33,6 +33,13 @@ impl MagicString<'_> {
     &self,
     opts: SourceMapOptions,
   ) -> (oxc_sourcemap::SourceMap<'static>, usize) {
+    let (map, line_count) = self.build_source_map(opts);
+    // The builder stops after the last chunk because the global outro cannot emit segments.
+    let outro_lines = self.outro.iter().map(|frag| frag.matches('\n').count()).sum::<usize>();
+    (map, line_count + outro_lines)
+  }
+
+  fn build_source_map(&self, opts: SourceMapOptions) -> (oxc_sourcemap::SourceMap<'static>, usize) {
     let mut source_builder = SourcemapBuilder::new(opts.hires);
 
     source_builder.set_source_and_content(&opts.source, &self.source);

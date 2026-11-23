@@ -1,0 +1,50 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a-lmCMYtQK.cjs
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// a.js
+var a_exports = /* @__PURE__ */ __exportAll({}, 2);
+__reExport(a_exports, require("local-external"));
+Object.defineProperty(exports, "a_exports", {
+	enumerable: true,
+	get: function() {
+		return a_exports;
+	}
+});
+
+```
+
+## a.cjs
+
+```js
+require("./a-lmCMYtQK.cjs");
+var local_external = require("local-external");
+Object.keys(local_external).forEach(function(k) {
+	if (k !== "default" && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+		enumerable: true,
+		get: function() {
+			return local_external[k];
+		}
+	});
+});
+
+```
+
+## b.cjs
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_a = require("./a-lmCMYtQK.cjs");
+Object.defineProperty(exports, "x", {
+	enumerable: true,
+	get: function() {
+		return require_a.a_exports.x;
+	}
+});
+
+```

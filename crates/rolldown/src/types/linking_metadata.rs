@@ -89,6 +89,8 @@ pub struct LinkingMetadata {
   pub folded_namespace_in_checks: FxHashMap<NodeId, bool>,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
   pub is_tla_or_contains_tla_dependency: bool,
+  /// A standalone pure call whose imported callee is still in its temporal dead zone at startup.
+  pub early_import_call: Option<NodeId>,
   /// Used to to track a facade binding referenced cjs module
   /// included reexport symbol from commonjs module
   pub named_import_to_cjs_module: FxHashMap<SymbolRef, ModuleIdx>,

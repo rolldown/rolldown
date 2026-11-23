@@ -623,6 +623,30 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     }
     _ = self.try_inline_json_module_prop(it);
 
+    if let Some(early_call) = self.ctx.linking_info.early_import_call
+      && let Statement::ExpressionStatement(stmt) = it
+      && let Expression::CallExpression(call) = &mut stmt.expression
+      && call.node_id() == early_call
+    {
+      // An empty pattern reads the binding without accessing any properties. The declaration
+      // maps its first token to the call; an assignment would start with an unmapped `(`.
+      let declarator = ast::VariableDeclarator::new(
+        SPAN,
+        BindingPattern::new_object_pattern(SPAN, [], None, self),
+        None,
+        Some(call.callee.take_in(self)),
+        false,
+        self,
+      );
+      *it = Statement::new_variable_declaration(
+        call.span,
+        ast::VariableDeclarationKind::Const,
+        [declarator],
+        false,
+        self,
+      );
+    }
+
     walk_js_mut::walk_statement(self, it);
 
     // transform top level `var a = 1, b = 1;` to `a = 1, b = 1`

@@ -1,0 +1,7 @@
+{
+  "config": {
+    "minify": false,
+    "sourcemap": "File"
+  },
+  "visualizeSourcemap": true
+}

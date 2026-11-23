@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// caller.js
+const {} = f;
+
+// main.js
+const f = /* @__NO_SIDE_EFFECTS__ */ () => {};
+
+export { f };
+//# sourceMappingURL=main.js.map
+```
+
+# Sourcemap Visualizer
+
+```
+- ../caller.js
+(2:0) "invoke();\n" --> (1:0) "const {} = f;\n"
+- ../main.js
+(2:0) "const " --> (4:0) "const "
+(2:6) "f = /* @__NO_SIDE_EFFECTS__ */ () => " --> (4:6) "f = /* @__NO_SIDE_EFFECTS__ */ () => "
+(2:43) "{" --> (4:43) "{"
+(2:44) "};\n" --> (4:44) "};\n"
+```

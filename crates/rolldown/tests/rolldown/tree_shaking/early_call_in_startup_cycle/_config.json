@@ -1,0 +1,8 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "sourcemap": "File"
+  },
+  "configVariants": [{ "minify": false }, { "minify": true }],
+  "snapshot": false
+}

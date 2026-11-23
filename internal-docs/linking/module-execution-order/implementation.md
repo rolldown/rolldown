@@ -29,6 +29,10 @@ The entry re-export fallback in `esm_init_obligations::collect_entry_reexported_
 
 Cross-module optimization checks binding initialization before it removes a call to a function that `export { fn }` or `export default fn` exports (`SymbolRefFlags::ExportedSeparately`). A function declaration is initialized before the module evaluates. An initializer for a local variable must precede the statement that reads it. For an imported variable, the exporter must precede the caller and the caller must first finish all static imports.
 
+For a single unwrapped ESM entry, the linker follows bare imports while each module has exactly one dependency. If the last module imports `const f` from its immediate parent, the parent still waits for that module to finish. A standalone `f()` immediately after the import reads the binding before initialization.
+
+If the function is pure, the finalizer replaces this zero-argument call with `const {} = f;`. The empty object pattern evaluates the binding without reading any properties. This preserves the native exception through chunk minification. The declaration starts at the original call in the sourcemap. Other uses of the function keep its annotation. This check requires lexical bindings and default chunk placement.
+
 The caller can start before a static import finishes if it is in a cycle. This applies even when it reads a binding from an exporter outside its own component. For example, `main.js` can import `a.js` and re-export `fn` from `b.js`. If `a.js` imports `fn` from `main.js`, loading `main.js` can evaluate `a.js` before `b.js`. An external module can complete a cycle through an emitted module. The initialization check treats all static paths to an external module as unknown.
 
 The linker checks binding reads in the entire statement, including arguments, before it relaxes the statement's side-effect flags. It also checks whether the result can run code, for example through coercion or destructuring. It keeps `while` and `do ... while` statements unless it can prove the test is false. The finalizer does not add a pure annotation for these calls, since the minifier does not have the linker's proof.

@@ -15,9 +15,9 @@ use oxc::{
 };
 use oxc_ecmascript::ToBoolean;
 use rolldown_common::{
-  AstScopes, ConstExportMeta, EcmaViewMeta, ExportsKind, FlatOptions, GetLocalDb, IndexModules,
-  MemberExprRefResolutionMap, ModuleIdx, SharedNormalizedBundlerOptions, Specifier, StmtEvalFlags,
-  StmtInfoIdx, SymbolRef, SymbolRefDb, SymbolRefFlags,
+  AstScopes, ConstExportMeta, EcmaViewMeta, ExportsKind, FlatOptions, GetLocalDb, ImportKind,
+  IndexModules, MemberExprRefResolutionMap, ModuleIdx, SharedNormalizedBundlerOptions, Specifier,
+  StmtEvalFlags, StmtInfoIdx, SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
@@ -86,6 +86,9 @@ impl LinkStage<'_> {
     if config.pass < 1 {
       return FxHashSet::default();
     }
+    if let Some((caller, call)) = self.early_call_in_startup_cycle() {
+      self.metas[caller].early_import_call = Some(call);
+    }
     // Explain `inline_const.pass`:
     // - if `inline_const.pass` is 1, we don't need the extra visit pass, since we already do it in
     // scan phase. This would already cover most of the cases, and the overhead is minimal.
@@ -137,6 +140,64 @@ impl LinkStage<'_> {
     // Return all unreachable import expression node IDs instead of add it as a field of LinkStage,
     // Because this set is only used include statement stage.
     unreachable_node_ids
+  }
+
+  /// Find a standalone call at startup that must read an uninitialized import.
+  /// See internal-docs/linking/module-execution-order/implementation.md.
+  fn early_call_in_startup_cycle(&self) -> Option<(ModuleIdx, NodeId)> {
+    if self.entries.len() != 1
+      || !self.options.format.is_esm()
+      || self.options.preserve_modules
+      || self.options.has_manual_code_splitting_groups()
+      || self.options.top_level_var
+      || self.options.is_strict_execution_order_enabled()
+      || self.options.treeshake.is_none()
+    {
+      return None;
+    }
+    // Follow bare imports from the entry. If the named import leads back to the parent,
+    // the parent is still evaluating this dependency and cannot have run its initializer.
+    let mut idx = *self.entries.keys().next()?;
+    let mut parent = None;
+    let (owner, stmt) = loop {
+      let module = self.module_table[idx].as_normal()?;
+      if !self.metas[idx].wrap_kind().is_none() {
+        return None;
+      }
+      let [record] = module.import_records.as_raw_slice() else { return None };
+      let body = &self.ast_table[idx].as_ref()?.program().body;
+      let [Statement::ImportDeclaration(import), rest @ ..] = &body[..] else { return None };
+      if record.kind != ImportKind::Import {
+        return None;
+      }
+      let dependency = record.resolved_module?;
+      if import.specifiers.is_some() {
+        let [Statement::ExpressionStatement(stmt), ..] = rest else { return None };
+        if Some(dependency) != parent {
+          return None;
+        }
+        break (dependency, stmt);
+      }
+      // A back edge consisting of bare imports has no call to check.
+      if self.module_table[dependency].exec_order() >= module.exec_order {
+        return None;
+      }
+      parent = Some(idx);
+      idx = dependency;
+    };
+    let Expression::CallExpression(call) = &stmt.expression else { return None };
+    let Expression::Identifier(ident) = &call.callee else { return None };
+    let scope = self.symbols.local_db(idx).scoping();
+    let local = scope.get_reference(ident.reference_id.get()?).symbol_id()?;
+    let callee = self.symbols.canonical_ref_for((idx, local).into());
+    (call.arguments.is_empty()
+      && !call.optional
+      && !call.pure
+      && callee.owner == owner
+      && callee.is_side_effect_free_function(&self.symbols, &self.module_table.modules)
+      && callee.is_not_reassigned(&self.symbols)
+      && self.symbols.local_db(owner).scoping().symbol_flags(callee.symbol).is_const_variable())
+    .then_some((idx, call.node_id()))
   }
 
   /// A cyclic importer can read an exported `var` while it is still `undefined`.
@@ -311,6 +372,7 @@ impl LinkStage<'_> {
               ast_scope: &self.symbols.local_db(module_idx).ast_scopes,
               stmt_idx_to_dynamic_import_expr_node_ids,
               resolved_member_expr_refs: &self.metas[module_idx].resolved_member_expr_refs,
+              early_import_call: self.metas[module_idx].early_import_call,
               namespace_object_symbol_ids: &namespace_object_symbol_ids,
               stmt_infos: &self.stmt_infos,
               constant_symbol_map,
@@ -385,6 +447,7 @@ struct CrossModuleOptimizationImmutableCtx<'a, 'ast: 'a> {
   /// Resolution of namespace/named member expressions (`ns.fn`) to their target symbol,
   /// used to recognize `ns.fn()` calls to `@__NO_SIDE_EFFECTS__` functions.
   resolved_member_expr_refs: &'a MemberExprRefResolutionMap,
+  early_import_call: Option<NodeId>,
   /// Local symbols of `import * as ns` bindings, so property reads on them are treated as
   /// side-effect-free when re-detecting side effects of statements.
   namespace_object_symbol_ids: &'a FxHashSet<SymbolId>,
@@ -571,6 +634,7 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
     if let Some(symbol_ref) = self.resolve_callee_canonical_symbol(&it.callee)
       && symbol_ref.is_side_effect_free_function(self.symbols, self.modules)
       && symbol_ref.is_not_reassigned(self.symbols)
+      && self.early_import_call != Some(it.node_id())
     {
       let flags = symbol_ref.flags(self.symbols).copied().unwrap_or_default();
       let exported_separately = flags.contains(SymbolRefFlags::ExportedSeparately);

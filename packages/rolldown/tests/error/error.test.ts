@@ -353,14 +353,63 @@ describe('Error output format', () => {
       expect(error).toBeInstanceOf(Error);
       expect(error.message).not.toContain('Cannot convert undefined or null to object');
       expect(error.message).toContain('Build failed with 1 error');
-      expect(error.message).toContain(
-        isWasiTest ? 'Error: entryFileNames option:' : `Error: ${label}`,
-      );
+      expect(error.message).toContain(`Error: ${label}`);
       expect(error.errors).toHaveLength(1);
       if (!isWasiTest) {
         // Native preserves the exact thrown value; WASI reconstructs it as an Error.
         expect(error.errors[0]).toBe(thrown);
       }
+    } finally {
+      await build.close();
+    }
+  });
+
+  test('preserves structured plugin error metadata', async () => {
+    const cause = Object.assign(new RangeError('nested plugin cause'), {
+      nestedMarker: 17,
+    });
+    const original = Object.assign(new TypeError('plugin metadata failure'), {
+      cause,
+      code: 'USER_PLUGIN_CODE',
+      customMarker: 'retained',
+    });
+    const build = await rolldown({
+      input: 'entry',
+      plugins: [
+        {
+          name: 'error-metadata-probe',
+          resolveId(id) {
+            if (id === 'entry') return '\0entry';
+          },
+          load(id) {
+            if (id === '\0entry') return 'export default 1';
+          },
+          transform(_code, id) {
+            if (id === '\0entry') throw original;
+          },
+        },
+      ],
+    });
+
+    try {
+      const failure = await build.generate().catch((error: unknown) => error);
+      const [pluginError] = (failure as { errors?: unknown[] }).errors ?? [];
+      expect(pluginError).toBe(original);
+      expect(pluginError).toMatchObject({
+        code: 'PLUGIN_ERROR',
+        pluginCode: 'USER_PLUGIN_CODE',
+        plugin: 'error-metadata-probe',
+        hook: 'transform',
+        id: '\0entry',
+        customMarker: 'retained',
+      });
+      expect(original.stack).toContain('plugin metadata failure');
+      expect(original.cause).toBe(cause);
+      expect(original.cause).toMatchObject({
+        name: 'RangeError',
+        message: 'nested plugin cause',
+        nestedMarker: 17,
+      });
     } finally {
       await build.close();
     }

@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// listed.js
+function listed(value) {
+	return value;
+}
+
+// getter.cjs
+var require_getter = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = 0;
+	Object.defineProperty(exports, "value", {
+		enumerable: true,
+		get() {
+			console.log("getter");
+			return 1;
+		}
+	});
+}));
+
+// component.js
+var import_getter = /* @__PURE__ */ __toESM(require_getter());
+const unused = listed(import_getter.value);
+
+// main.js
+console.log("ready");
+
+```

@@ -4,7 +4,7 @@
       "groups": [
         {
           "name": "deferred",
-          "test": "/d\\.js$"
+          "test": "[\\\\/]d\\.js$"
         }
       ]
     },

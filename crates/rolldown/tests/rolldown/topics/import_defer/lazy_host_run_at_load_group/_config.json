@@ -5,7 +5,7 @@
       "groups": [
         {
           "name": "vendor",
-          "test": "/(a|w)\\.js$"
+          "test": "[\\\\/](a|w)\\.js$"
         }
       ]
     },

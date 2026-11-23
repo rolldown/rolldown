@@ -519,7 +519,7 @@ describe('MagicString', () => {
       assert.equal(loc.column, 33);
     });
 
-    it.skip('generates segments per word boundary with hires "boundary" in the next line', () => {
+    it('generates segments per word boundary with hires "boundary" in the next line', () => {
       const s = new MagicString('// foo\nconsole.log("bar")');
 
       // rename bar to hello
@@ -1958,7 +1958,7 @@ describe('MagicString', () => {
       );
     });
 
-    it.skip('rejects with non-global regexp', () => {
+    it('rejects with non-global regexp', () => {
       assert.throws(() => new MagicString('123').replaceAll(/./, ''), {
         name: 'TypeError',
         message: 'MagicString.prototype.replaceAll called with a non-global RegExp argument',

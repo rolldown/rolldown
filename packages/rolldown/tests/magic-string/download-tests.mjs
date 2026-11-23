@@ -130,7 +130,6 @@ const SKIP_TESTS = [
   // replace/replaceAll — regex with string replacement now supported in Rust binding
   // Note: 'works with global regex replace' now works
   // Note: 'works with global regex replace $$' now works
-  'rejects with non-global regexp', // napi-rs can't throw TypeError (only Error), test expects TypeError
   // Note: function replacer tests ('works with global regex replace function',
   // 'replace function offset', 'works with string replace and function replacer',
   // 'should ignore non-changed replacements', 'global regex result the same as
@@ -141,7 +140,6 @@ const SKIP_TESTS = [
   'should generate a sourcemap using specified locations', // addSourcemapLocation not implemented
   'generates a map with trimmed content', // trim sourcemap behavior differs
   // Note: 'generates x_google_ignoreList' is now supported
-  'generates segments per word boundary with hires "boundary" in the next line', // multiline boundary mappings differ
   'generates a correct source map with update using a content containing a new line', // multiline update mappings differ
   'generates a correct source map with update using content ending with a new line', // multiline update mappings differ
 ];

@@ -137,7 +137,6 @@ const SKIP_TESTS = [
   // .replace') now work via the JS wrapper in src/binding-magic-string.ts
   // Note: 'should support length' and 'should support isEmpty' now work correctly
   // generateMap-specific skips (features not in string_wizard)
-  'should generate a correct sourcemap including correct lines', // uses generateDecodedMap which has different mappings count
   'should generate a sourcemap using specified locations', // addSourcemapLocation not implemented
   // Note: 'generates x_google_ignoreList' is now supported
 ];

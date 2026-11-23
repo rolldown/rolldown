@@ -36,6 +36,10 @@ impl<'a> SourcemapBuilder<'a> {
     self.source_map_builder.into_owned_sourcemap().into_inner()
   }
 
+  pub fn generated_line_count(&self) -> usize {
+    self.generated_code_line as usize + 1
+  }
+
   pub fn set_source_and_content(&mut self, id: &'a str, content: &'a str) {
     self.source_id = self.source_map_builder.set_source_and_content(id, content);
   }

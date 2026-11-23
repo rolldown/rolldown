@@ -25,6 +25,14 @@ impl Default for SourceMapOptions {
 
 impl MagicString<'_> {
   pub fn source_map(&self, opts: SourceMapOptions) -> oxc_sourcemap::SourceMap<'static> {
+    self.source_map_with_generated_line_count(opts).0
+  }
+
+  /// Also returns the output line count, including lines without any mapping segments.
+  pub fn source_map_with_generated_line_count(
+    &self,
+    opts: SourceMapOptions,
+  ) -> (oxc_sourcemap::SourceMap<'static>, usize) {
     let mut source_builder = SourcemapBuilder::new(opts.hires);
 
     source_builder.set_source_and_content(&opts.source, &self.source);
@@ -69,6 +77,7 @@ impl MagicString<'_> {
       });
     });
 
+    let generated_line_count = source_builder.generated_line_count();
     let mut source_map = source_builder.into_source_map();
 
     if self.ignore_list {
@@ -76,7 +85,7 @@ impl MagicString<'_> {
       source_map.set_ignore_list(vec![0]);
     }
 
-    source_map
+    (source_map, generated_line_count)
   }
 }
 

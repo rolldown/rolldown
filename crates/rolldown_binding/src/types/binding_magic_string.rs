@@ -267,6 +267,7 @@ pub struct BindingSourceMap {
 pub struct BindingDecodedMap {
   inner: SourceMap,
   json: JSONSourceMap,
+  generated_line_count: usize,
 }
 
 #[napi]
@@ -374,14 +375,9 @@ impl BindingDecodedMap {
   /// Each line is an array of segments, where each segment is [generatedColumn, sourceIndex, originalLine, originalColumn, nameIndex?].
   #[napi(getter)]
   pub fn mappings(&self) -> Vec<Vec<Vec<i64>>> {
-    let mut lines: Vec<Vec<Vec<i64>>> = Vec::new();
+    let mut lines: Vec<Vec<Vec<i64>>> = vec![Vec::new(); self.generated_line_count];
 
     for token in self.inner.get_tokens() {
-      // Fill in empty lines if needed
-      while lines.len() <= token.get_dst_line() as usize {
-        lines.push(Vec::new());
-      }
-
       let current_line = token.get_dst_line();
 
       let mut segment: Vec<i64> = vec![i64::from(token.get_dst_col())];
@@ -1322,11 +1318,12 @@ impl BindingMagicString<'_> {
     self.ensure_live()?;
     let opts = options.unwrap_or_default();
     let hires = self.resolve_hires(opts.hires.as_ref());
-    let source_map = self.inner.source_map(SourceMapOptions {
-      source: opts.source.map(Into::into).unwrap_or_else(|| "".into()),
-      include_content: opts.include_content.unwrap_or(false),
-      hires,
-    });
+    let (source_map, generated_line_count) =
+      self.inner.source_map_with_generated_line_count(SourceMapOptions {
+        source: opts.source.map(Into::into).unwrap_or_else(|| "".into()),
+        include_content: opts.include_content.unwrap_or(false),
+        hires,
+      });
 
     // If file option is provided, reconstruct the source map with the file field
     let source_map = if let Some(file) = opts.file {
@@ -1348,7 +1345,7 @@ impl BindingMagicString<'_> {
     };
 
     let json = source_map.to_json();
-    Ok(BindingDecodedMap { inner: source_map, json })
+    Ok(BindingDecodedMap { inner: source_map, json, generated_line_count })
   }
 }
 

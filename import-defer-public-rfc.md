@@ -11,6 +11,7 @@
 - [Basic example](#basic-example)
 - [Motivation](#motivation)
 - [Guide-level explanation](#guide-level-explanation)
+  - [Terms](#terms)
   - [Configuration](#configuration)
   - [Static `import defer * as ns`](#static-import-defer--as-ns)
   - [Dynamic `import.defer()`](#dynamic-importdefer)
@@ -168,6 +169,14 @@ Real-world gains depend on how much of your dependency graph sits off the initia
 
 ## Guide-level explanation
 
+### Terms
+
+- **Deferred import:** `import defer * as ns from './x'` or `import.defer('./x')`.
+- **Deferred namespace:** the object that a deferred import gives (`ns`).
+- **Deferred graph:** the module that a deferred import names, plus each module that it imports statically, directly or through other modules.
+- **Deferred module:** a module in a deferred graph.
+- **Trigger:** an operation on a deferred namespace that evaluates its module, for example `ns.foo` (see [When does evaluation happen?](#when-does-evaluation-happen)).
+
 ### Configuration
 
 ```ts
@@ -246,7 +255,7 @@ console.log(await showTable());
 | `import('./table.js')`       | `table evaluated`, `before showTable`, `[ 1, 2, 3 ]` |
 | `import.defer('./table.js')` | `before showTable`, `table evaluated`, `[ 1, 2, 3 ]` |
 
-> **Note:** The specifier in `import.defer()` must be a static string literal or a template literal with no expressions (e.g. ``import.defer(`./table.js`)``). For dynamic expressions (`import.defer(expr)`) or calls marked with `/* @vite-ignore */`, Rolldown lowers that call to `import()` (evaluating on load) and emits an `UNSUPPORTED_FEATURE` warning.
+> **Note:** The specifier in `import.defer()` must be a static string literal or a template literal with no expressions (e.g. ``import.defer(`./table.js`)``). Rolldown lowers a call with any other specifier to `import()`, which evaluates on load. A few other cases are lowered too (see [When Rolldown falls back to eager evaluation](#when-rolldown-falls-back-to-eager-evaluation)).
 
 ### When does evaluation happen?
 
@@ -267,7 +276,7 @@ Rolldown follows the TC39 specification rules:
 - **Mixed eager and deferred imports:**
   - If another module imports the same module eagerly, it evaluates at that eager import's position.
 - **Top-level `await`:**
-  - Any module in the deferred dependency graph that uses top-level `await` evaluates eagerly at the `import defer` position (and `import.defer()` waits for those async modules to settle before resolving). Synchronous modules in the graph remain deferred until first access.
+  - Any module in the deferred graph that uses top-level `await` evaluates eagerly at the `import defer` position (and `import.defer()` waits for those async modules to settle before resolving). Synchronous modules in the graph remain deferred until first access.
 - **Circular dependencies:**
   - Triggering a deferred namespace while that module (or one of its dependencies) is currently in the middle of evaluating throws a `TypeError`.
 
@@ -278,12 +287,12 @@ Rolldown follows the TC39 specification rules:
 | **Bundled module**                                      | Deferred                                              | Deferred                                                                                                                                                         | Deferred                                              |
 | **External module** (`import defer * as ns from 'ext'`) | Preserved as `import defer * as ns from "ext"`        | Deferred via lazy `require("ext")`                                                                                                                               | Falls back to eager (`UNSUPPORTED_FEATURE` warning)\* |
 | **External module** (`import.defer('ext')`)             | Preserved as `import.defer("ext")`                    | Keeps `import()` + warning when `dynamicImportInCjs: true` (default) or with a 2nd argument; deferred via lazy `require("ext")` when `dynamicImportInCjs: false` | Falls back to eager (`UNSUPPORTED_FEATURE` warning)\* |
-| **External module imported inside a deferred module**   | Falls back to eager (`UNSUPPORTED_FEATURE` warning)\* | Deferred via lazy `require("ext")` inside the init wrapper (falls back if re-exported via `export *` from an entry / `preserveModules` file)\*                   | Falls back to eager (`UNSUPPORTED_FEATURE` warning)\* |
+| **External module imported inside a deferred module**   | Falls back to eager (`UNSUPPORTED_FEATURE` warning)\* | Deferred via lazy `require("ext")` when the importing module evaluates (falls back if re-exported via `export *` from an entry / `preserveModules` file)\*       | Falls back to eager (`UNSUPPORTED_FEATURE` warning)\* |
 
 \* **Exemptions:** Node.js builtin modules and side-effect-free external modules (for example, via `treeshake.moduleSideEffects: false`) never trigger a fallback, since their early loading has no observable side effects.
 
 <details>
-<summary>Why transitive externals fall back in ESM output</summary>
+<summary>Why an external module inside a deferred graph falls back in ESM output</summary>
 
 Suppose a deferred module imports an external package:
 
@@ -298,13 +307,16 @@ import 'ext'; // external; sets globalThis.counter = 0
 export const seen = globalThis.counter;
 ```
 
-In **ESM output**, `import "ext"` must be emitted at the top of the chunk, so `ext` evaluates before `main.js` runs. If `chart.js` remained deferred while `ext` ran eagerly at chunk load, the execution order would be `ext` → `main` → `chart` (`seen === 1`), which matches **neither** native `import defer` (`main` → `ext` → `chart`, `seen === 0`) **nor** a normal eager build (`ext` → `chart` → `main`, `seen === 0`).
+In **ESM output**, `import "ext"` must be at the top of the chunk. Thus `ext` evaluates before `main.js`. If `chart.js` stayed deferred, the order would be `ext` → `main` → `chart`, and `seen` would be `1`. This order matches neither valid order:
+
+- Native `import defer`: `main` → `ext` → `chart`, `seen === 0`.
+- A normal eager build: `ext` → `chart` → `main`, `seen === 0`.
 
 To avoid introducing subtle ordering bugs, Rolldown falls back to the normal eager build and emits an `UNSUPPORTED_FEATURE` warning naming the external module. To keep deferred evaluation, you can either:
 
 1. Bundle the external dependency,
 2. Mark it side-effect-free if it has no observable side effects, or
-3. Target CommonJS output (where `require("ext")` runs lazily inside the deferred wrapper) if your runtime supports it.
+3. Target CommonJS output if your runtime supports it (there, `require("ext")` runs only when `chart.js` evaluates).
 
 </details>
 
@@ -312,18 +324,24 @@ To avoid introducing subtle ordering bugs, Rolldown falls back to the normal eag
 
 ### When Rolldown falls back to eager evaluation
 
-Rather than silently breaking execution order on edge cases that aren't implemented yet, Rolldown checks the module graph before linking. If the build hits an unsupported shape, it **falls back for the whole build** to the exact output of `importDefer: false` and emits an `UNSUPPORTED_FEATURE` warning explaining the reason.
+Rather than silently breaking execution order on edge cases that aren't implemented yet, Rolldown checks the module graph and the options early in the build. If the build hits an unsupported shape, it **falls back for the whole build** to the exact output of `importDefer: false` and emits an `UNSUPPORTED_FEATURE` warning explaining the reason.
 
 Currently, a build falls back when any of these apply:
 
 1. `output.codeSplitting.experimentalInlineCommonChunks` is enabled.
-2. **A code splitting group sets `includeDependenciesRecursively: false`** (which can create cross-chunk cycles where init wrappers or runtime helpers aren't initialized yet).
+2. **A code splitting group sets `includeDependenciesRecursively: false`** (such a group can make two chunks import each other in a cycle).
 3. **`import.defer()` targets a CommonJS module** (with `codeSplitting: false`, a module with no `import`/`export` syntax and not marked ESM by extension or `package.json` is also treated as CommonJS).
 4. **An observable (non-builtin, side-effectful) external module would evaluate early** for the chosen output format (see [Output formats and externals](#output-formats-and-externals)).
-5. **A CommonJS module inside a deferred closure would run when its output file loads:**
-   - With `preserveModules` and `esm` output (any CommonJS module in a deferred closure), or
-   - With `cjs` output when a user-defined entry is a CommonJS module in a deferred closure.
-6. **Top-level `await` ordering:** A non-deferred importer has a later static import (of another non-deferred module, or of an external module in multi-chunk builds) after a deferred import of a module that has or reaches top-level `await`.
+5. **A CommonJS module inside a deferred graph would run when its output file loads:**
+   - With `preserveModules` and `esm` output (any CommonJS module in a deferred graph), or
+   - With `cjs` output when a user-defined entry is a CommonJS module in a deferred graph.
+6. **An import after a deferred import that reaches top-level `await`:** A module outside the deferred graphs has a deferred import of a module that has or reaches a top-level `await`. Later in the same module, a static import loads another module outside the deferred graphs. In a build that can make more than one chunk, a later import of an external module also counts. For example:
+
+   ```js
+   // main.js
+   import defer * as d from './d.js'; // d.js reaches a top-level await
+   import './later.js'; // the build falls back
+   ```
 
 Why the whole build, and not only the affected import? Most of these conditions are properties of the module graph and the options, not of one import. A fallback for each import would need new rules for modules that deferred and eager imports share, across chunks, cycles and top-level `await`. The whole-build fallback gives exactly the output of `importDefer: false`, which is the output these builds have today. Each later release can remove a condition, and builds that still hit a condition keep their current output.
 
@@ -338,7 +356,7 @@ Separately, individual `import.defer()` calls are lowered to `import()` (with an
 - Static property reads (`chart.render`) keep only the exports that are read.
 - Escaping namespaces (`return chart`) keep all exports, just like an escaping `import * as chart`.
 - Unused deferred modules without side effects are removed.
-- Side-effect-only triggers (`ns.foo;`) are preserved unless the deferred dependency graph has no side effects.
+- Side-effect-only triggers (`ns.foo;`) are preserved unless the deferred graph has no side effects.
 
 **Current caveats:** Tree shaking may currently keep slightly more modules than an eager build in two cases:
 
@@ -356,9 +374,9 @@ The plugin API does not change. The `resolveId` hook gets no phase: an `import d
 
 ### Diagnostics
 
-| Warning code          | When it is emitted                                                                                                                                                                                                                                                                                                                                |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `UNSUPPORTED_FEATURE` | Emitted when `experimental.importDefer` is off, dev mode is active, the build hits a whole-build fallback condition (the message names the exact reason and module), or an individual `import.defer()` call cannot be deferred (non-static specifier, `/* @vite-ignore */`, or external `import.defer()` in CJS with `dynamicImportInCjs: true`). |
+| Warning code          | When it is emitted                                                                                                                                                                                                                                                                                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UNSUPPORTED_FEATURE` | Emitted when `experimental.importDefer` is off, dev mode is active, the build hits a whole-build fallback condition (the message names the exact reason and module), or an individual `import.defer()` call cannot be deferred (see [When Rolldown falls back to eager evaluation](#when-rolldown-falls-back-to-eager-evaluation)). |
 
 ---
 
@@ -399,31 +417,31 @@ export { draw, getChart };
 
 The design centers on three ideas:
 
-1. **Lazy init wrappers and grouping:** Top-level code of deferred modules is placed inside hoisted lazy `init_*()` functions (reusing Rolldown's existing lazy ESM wrapper). In ESM output, dependencies that are only ever reached by a single deferred root are merged into that root's wrapper (notice `scale.js` is folded into `init_chart()` above), dramatically reducing the number of wrapper functions the JS engine has to parse and compile (from 546 down to 33 in the benchmark). Deferred wrappers also keep the PIFE compile hint (even on `platform: 'neutral'`, unless `optimization.pifeForModuleWrappers: false` is set) so the inner body compiles immediately on first call rather than twice, without adding startup cost.
+1. **Lazy init wrappers and grouping:** Rolldown puts the top-level code of deferred modules in lazy `init_*()` functions. Rolldown already uses this wrapper for other features. In ESM output, when only one deferred import reaches a dependency, and no other code does, the dependency goes into the wrapper of the module that this deferred import names. In the example, `init_chart()` also holds `scale.js`. This grouping reduces the wrappers that the JavaScript engine must parse and compile: from 546 to 33 in the benchmark.
 2. **Direct reads vs. `Proxy` namespace:** Static accesses like `chart.render` compile straight to `(init_chart(), render)`. Once evaluated, `init_chart()` is a fast flag check and reads the binding directly from the shared chunk scope without going through a getter or `Proxy`. A `Proxy` (`__deferNs`) is only used when the namespace escapes as a value (`return chart`) or for dynamic operations like `Object.keys(chart)`.
 3. **Cycles, top-level `await`, and code splitting:**
-   - Modules participating in a cycle with a deferred target or depending on top-level `await` automatically receive lightweight runtime state tracking so premature reads throw `TypeError` and async transitive dependencies are awaited up front per spec.
-   - In multi-chunk builds, chunks holding deferred modules stay lazy on load; chunks with eager importers initialize them in the right order (via small `.init` helper chunks in ESM or inline init calls after `require()` in CJS). `import.defer('./x')` creates a split chunk just like `import('./x')`, resolving directly to `x_deferred` without executing the module.
+   - Rolldown tracks the evaluation state at run time only for the modules that need it: modules in a cycle with a module that a deferred import names, and modules that depend on top-level `await`. With this state, an access to a module that is still evaluating throws a `TypeError`, and the async dependencies are awaited up front, as the specification requires.
+   - In multi-chunk builds, a chunk that holds deferred modules does not evaluate them when it loads. A chunk with an eager importer of such a module initializes the module in the right order. `import.defer('./x')` creates a split chunk just like `import('./x')`, and resolves to the deferred namespace without evaluating the module.
 
 ---
 
 ## Drawbacks and known limitations
 
 - **Bundle size overhead:** Wrapper functions and runtime helpers add a small amount of code (+0.26% in the benchmark).
-- **Dev mode discrepancy:** Because bundled dev mode currently falls back to eager evaluation, dev builds execute deferred modules earlier than production builds until HMR support lands.
+- **Dev mode discrepancy:** Dev builds evaluate deferred modules earlier than production builds until HMR support lands (see [Dev mode and Vite](#dev-mode-and-vite)).
 - **Top-level `arguments` and direct `eval`:** Because deferred modules run inside an init wrapper function, top-level `typeof arguments` is `"object"` instead of `"undefined"`, and direct `eval("new.target")` returns `undefined` rather than throwing a `SyntaxError` (same as `output.strictExecutionOrder` and esbuild's `__esm`).
 - **Sequential async sibling modules:** Async sibling modules with top-level `await` execute one after another rather than concurrently. This is a general Rolldown behavior for TLA (see [Top Level Await in Rolldown](https://rolldown.rs/in-depth/tla-in-rolldown)).
 - **CommonJS targets:**
-  - Method calls like `ns.fn()` on a deferred CommonJS namespace pass the eager namespace (`import_x`) as `this`, not the deferred `Proxy` (`this === ns` is `false` if `ns` escapes).
-  - Deferred namespace identity for a CommonJS target is shared across unwrapped importers in the same chunk and interop mode, but may differ across chunks, wrapped importers, or different ESM/CJS interop modes.
+  - Method calls like `ns.fn()` on a deferred CommonJS namespace pass the eager namespace object as `this`, not the deferred namespace (`this === ns` is `false` if `ns` escapes).
+  - Two deferred imports of the same CommonJS module give the same deferred namespace only when both importers are in the same chunk, use the same ESM/CJS interop mode, and are not wrapped in a lazy function (as the modules of a deferred graph are). Otherwise, the namespaces can differ.
   - In CommonJS output, external ESM modules with top-level `await` cannot be lazily loaded via `require()` (`ERR_REQUIRE_ASYNC_MODULE`).
 - **Dynamic exports (`export *` from CJS/external):** Because the export key list isn't statically known, the deferred `Proxy` remains extensible until the first `Proxy` trap triggers evaluation and copies its keys.
 - **`preserveModules` edge cases:**
-  - A user-defined or emitted entry module that is also a deferred target evaluates eagerly when its file loads (no separate facade file is created under `preserveModules`).
+  - A user-defined or emitted entry module that a deferred import also names evaluates eagerly when its file loads, because `preserveModules` creates no separate entry file for it.
   - Directly importing a non-entry deferred file from outside the bundle under `preserveModules` does not execute it on load.
-- **External check in ESM runs before chunking:** An observable external module imported inside a deferred closure still triggers fallback in ESM output even if a non-deferred module elsewhere in the same chunk also imports it eagerly.
+- **External modules that eager code also imports (ESM output):** A side-effectful external module inside a deferred graph causes the fallback, also when an eager module in the same chunk imports it, and the external module would run at chunk load anyway.
 - **Non-import cycles:** The `TypeError` check for accessing a still-evaluating module tracks cycles through `import` edges, not indirect cycles through global variables (same as webpack).
-- **Tree-shaking retention:** Re-export-only modules and (with code splitting) unused `export *` targets inside deferred modules may currently be kept.
+- **Tree-shaking retention:** In two cases, tree shaking can keep more modules than an eager build (see [Tree shaking](#tree-shaking)).
 
 <details>
 <summary>Test262 compliance details (243 / 252 passing)</summary>
@@ -432,7 +450,7 @@ Out of 252 official test262 tests for `import defer`, **243 pass (96.4%)**. The 
 
 - **4 tests** (`nested-with-*`) use `with` statements requiring sloppy mode (Rolldown parses `.js` entries as strict ESM; all 4 pass as `.cjs`).
 - **1 test** (`async-cycle-dependency-of-deferred-module`) relies on concurrent evaluation of async sibling modules (general Rolldown TLA behavior).
-- **1 test** (`flattening-order`) hits the TLA later-import fallback rule (and also expects concurrent async sibling execution).
+- **1 test** (`flattening-order`) hits the fallback for an import after a deferred import that reaches top-level `await` (and also expects concurrent async sibling execution).
 - **1 test** (`import-defer-of-missing-module-fails`) expects an unresolved import to fail at runtime rather than build time.
 - **1 test** (`ignore-private-name-access`) fails because Node.js 24/26 does not yet implement `nonextensible-applies-to-private`.
 - **1 test** (`promise-prototype-then-not-called`) fails because native `import()` in Node.js calls `Promise.prototype.then` (passes in single-chunk builds).
@@ -479,7 +497,7 @@ The registry form, as measured with webpack, does not improve the overall runtim
 
 Rolldown is rolling this out in stages so users can adopt it safely without affecting existing builds:
 
-1. **Opt-in experimental release:** Ship behind `experimental.importDefer: false` (default) across stacked PRs [#11861](https://github.com/rolldown/rolldown/pull/11861)–[#11869](https://github.com/rolldown/rolldown/pull/11869). Existing builds see zero output or performance changes.
+1. **Opt-in experimental release:** Ship behind `experimental.importDefer` (default `false`). Existing builds see zero output or performance changes.
 2. **Dev mode & Vite integration:** Implement HMR for `import defer` in bundled dev mode and integrate `import.defer()` with Vite builds (chunk preloading and dynamic import variables).
 3. **Ecosystem validation & docs:** Measure real-world open-source apps, gather community feedback, lift remaining fallback conditions where practical, and publish Rolldown and Vite user documentation.
 4. **Enable by default:** Once validated across real-world apps and Vite workflows, make `importDefer` enabled by default.
@@ -491,7 +509,7 @@ Rolldown is rolling this out in stages so users can adopt it safely without affe
 ## Unresolved questions
 
 1. **Default-on criteria:** What milestones or ecosystem signals should be met before `importDefer` is enabled by default?
-2. **Fallback conditions to lift first:** Which of the current whole-build fallback conditions (`import.defer()` of CommonJS modules, `includeDependenciesRecursively: false`, `experimentalInlineCommonChunks`, transitive externals in ESM when also imported eagerly, or TLA later-import ordering) matter most for your real-world builds?
+2. **Fallback conditions to lift first:** Which of the current whole-build fallback conditions (`import.defer()` of CommonJS modules, `includeDependenciesRecursively: false`, `experimentalInlineCommonChunks`, external modules inside a deferred graph in ESM output when an eager module in the same chunk also imports them, or an import after a deferred import that reaches top-level `await`) matter most for your real-world builds?
 3. **External `import.defer()` with `@vite-ignore` or dynamic specifiers:** In ESM output, should `import.defer(expr)` / `/* @vite-ignore */` continue lowering to `import()` for compatibility, or eventually preserve `import.defer()` when targeting runtimes that support it?
 
 ---
@@ -500,6 +518,6 @@ Rolldown is rolling this out in stages so users can adopt it safely without affe
 
 - HMR support for `import defer` in Rolldown's bundled dev mode.
 - Vite build integration (preload directives for `import.defer()` and support for dynamic import variables like ``import.defer(`./x/${y}.js`)``).
-- Lifting current fallback conditions (`import.defer()` of CommonJS modules, `experimentalInlineCommonChunks`, `includeDependenciesRecursively: false`, TLA later-import ordering, and `preserveModules` entry facades).
+- Lifting the current fallback conditions (see [When Rolldown falls back to eager evaluation](#when-rolldown-falls-back-to-eager-evaluation)), and lazy evaluation of deferred entry modules under `preserveModules`.
 - Further wrapper elimination and improved tree shaking for re-export-only modules, unused `export *` targets across chunks, and unread deferred imports.
-- Target-aware warnings for external `import defer` in ESM output once Oxc adds target support data, and emitting `import defer` for transitive externals when the target runtime supports it.
+- Target-aware warnings for external `import defer` in ESM output once Oxc adds target support data, and emitting `import defer` for external modules inside a deferred graph when the target runtime supports it.

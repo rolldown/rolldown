@@ -757,7 +757,7 @@ impl<'ast> VisitJs<'ast> for StatementRemovalGuard<'_, '_, 'ast> {
         Expression::ObjectExpression(obj) => obj
           .properties
           .iter()
-          .all(|prop| prop.as_property().is_some_and(|property| !property.computed)),
+          .all(|prop| prop.as_property().is_some_and(|property| !property.key.is_computed())),
         Expression::ArrayExpression(array) => array
           .elements
           .iter()

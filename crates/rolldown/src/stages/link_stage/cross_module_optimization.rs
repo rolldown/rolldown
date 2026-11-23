@@ -33,6 +33,7 @@ use crate::{
   },
   type_alias::IndexStmtInfos,
   types::linking_metadata::LinkingMetadataVec,
+  utils::pre_process_ecma_ast::leading_calls,
 };
 
 use super::{
@@ -523,10 +524,15 @@ impl<'ast> CrossModuleOptimizationRunnerContext<'_, 'ast> {
   /// Whether the current call runs at the top level of the module before the binding of the
   /// callee is initialized. In another module, the owner of the binding must run after the caller,
   /// and every entry must run both modules in `exec_order`. This check does not include a call
-  /// inside a function or a class, a call from a module whose code can wait for an `await`, or a
-  /// call in a build where the order is not sure.
+  /// inside a function or a class, a call that runs only under a condition, a call from a module
+  /// whose code can wait for an `await`, or a call in a build where the order is not sure.
   /// See `internal-docs/linking/module-execution-order/implementation.md`.
-  fn call_runs_before_init(&self, symbol_ref: SymbolRef, flags: SymbolRefFlags) -> bool {
+  fn call_runs_before_init(
+    &self,
+    symbol_ref: SymbolRef,
+    flags: SymbolRefFlags,
+    call: NodeId,
+  ) -> bool {
     // The only side-effect-free facade is the binding of `export default function () {}`, which a
     // function declaration initializes before any code runs.
     if flags.contains(SymbolRefFlags::IsFacade) || symbol_ref.is_declared_by_function(self.symbols)
@@ -535,6 +541,10 @@ impl<'ast> CrossModuleOptimizationRunnerContext<'_, 'ast> {
     }
     if self.visit_path.iter().any(|kind| {
       matches!(kind, AstKind::Function(_) | AstKind::ArrowFunctionExpression(_) | AstKind::Class(_))
+    }) || !runs_unconditionally(&self.visit_path, call, |ident| {
+      self.local_symbol(ident).is_some_and(|local_ref| {
+        self.binding_read_is_safe(self.symbols.canonical_ref_for(local_ref))
+      })
     }) {
       return false;
     }
@@ -670,7 +680,7 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
     {
       let flags = symbol_ref.flags(self.symbols).copied().unwrap_or_default();
       let exported_separately = flags.contains(SymbolRefFlags::ExportedSeparately);
-      let runs_before_init = self.call_runs_before_init(symbol_ref, flags);
+      let runs_before_init = self.call_runs_before_init(symbol_ref, flags, it.node_id());
       let is_removable = if exported_separately {
         self.binding_is_initialized(symbol_ref) && call_result_runs_no_code(&self.visit_path)
       } else {
@@ -846,6 +856,56 @@ impl<'ast> VisitJs<'ast> for StatementRemovalGuard<'_, '_, 'ast> {
       walk_js::walk_call_expression(self, call);
     }
   }
+}
+
+/// Whether the call `call`, whose ancestors are `visit_path`, runs each time its top-level statement
+/// runs. A call in a branch, a loop body, a `catch` clause, an optional chain or a default value can
+/// depend on state that another module sets. So can a call after other code in a `try` block that
+/// has a `catch` clause, because that code can throw. The output can run the modules in another
+/// order than Node, for example a shared chunk before an earlier import of the entry, so such a
+/// call can run in the output and not in Node. The test of an `if` or a loop, the left operand of
+/// `&&`, `||` and `??`, a `finally` block and the calls that run first in a `try` block run each
+/// time. A call in the first argument of another call runs first only when `callee_read_is_safe`
+/// proves that the read of the outer callee does not throw.
+/// See `internal-docs/linking/module-execution-order/implementation.md`.
+fn runs_unconditionally<'ast>(
+  visit_path: &[AstKind<'ast>],
+  call: NodeId,
+  callee_read_is_safe: impl Fn(&IdentifierReference<'ast>) -> bool,
+) -> bool {
+  visit_path.iter().enumerate().all(|(idx, kind)| {
+    let child = visit_path.get(idx + 1).map_or(call, AstKind::node_id);
+    match kind {
+      AstKind::IfStatement(it) => it.test.node_id() == child,
+      AstKind::ConditionalExpression(it) => it.test.node_id() == child,
+      AstKind::LogicalExpression(it) => it.left.node_id() == child,
+      AstKind::AssignmentExpression(it) => !it.operator.is_logical() || it.left.node_id() == child,
+      AstKind::ForStatement(it) => {
+        it.init.as_ref().is_some_and(|init| init.node_id() == child)
+          || it.test.as_ref().is_some_and(|test| test.node_id() == child)
+      }
+      AstKind::ForInStatement(it) => it.right.node_id() == child,
+      AstKind::ForOfStatement(it) => it.right.node_id() == child,
+      AstKind::WhileStatement(it) => it.test.node_id() == child,
+      AstKind::TryStatement(it) => {
+        it.handler.is_none()
+          || it.finalizer.as_ref().is_some_and(|finalizer| finalizer.node_id() == child)
+          || (it.block.node_id() == child
+            && leading_calls(&it.block, &callee_read_is_safe)
+              .iter()
+              .any(|leading| leading.node_id() == call))
+      }
+      AstKind::AssignmentPattern(it) => it.left.node_id() == child,
+      AstKind::AssignmentTargetWithDefault(it) => it.binding.node_id() == child,
+      AstKind::AssignmentTargetPropertyIdentifier(it) => it.binding.node_id() == child,
+      AstKind::DoWhileStatement(_)
+      | AstKind::SwitchCase(_)
+      | AstKind::CatchClause(_)
+      | AstKind::LabeledStatement(_)
+      | AstKind::ChainExpression(_) => false,
+      _ => true,
+    }
+  })
 }
 
 /// Whether the call whose ancestors are `visit_path` runs no code on its result. The result can be

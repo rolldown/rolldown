@@ -1,0 +1,7 @@
+{
+  "_comment": "a.js, b.js and gate.js are one import cycle. In Node, barrel.js imports gate.js first, and the cycle runs a.js before gate.js and b.js. With `preserveModules`, the output imports b.js before gate.js, so gate.js runs before a.js. In Node, the read of `gate` in a.js throws, so the calls in its argument do not run. In the output, the read succeeds, so these calls run, and they must not throw: the call of `f` from b.js and the call of `later` before its declaration in a.js.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "preserveModules": true
+  }
+}

@@ -1,0 +1,59 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## b.js
+
+```js
+// a.js
+var Skip = class {};
+try {
+	if (typeof ready !== "undefined") throw new Skip();
+} catch (error) {
+	if (!(error instanceof Skip)) throw error;
+}
+Object.defineProperty(globalThis, "gate", {
+	configurable: true,
+	get() {
+		if (typeof ready !== "undefined") throw new Skip();
+		return () => {};
+	}
+});
+try {
+	gate(0);
+} catch (error) {
+	if (!(error instanceof Skip)) throw error;
+}
+try {
+	later();
+} catch (error) {
+	globalThis.calls.push(`same module: ${error.name}`);
+}
+const later = () => globalThis.calls.push("later");
+globalThis.calls.push("a done");
+// b.js
+const f = () => {};
+export { f as t };
+
+```
+
+## main.js
+
+```js
+import { t as f } from "./b.js";
+// ready.js
+globalThis.ready = true;
+// main.js
+globalThis.calls.push(`main done: ${typeof f}`);
+
+```
+
+## other.js
+
+```js
+import "./b.js";
+// other.js
+globalThis.calls.push("other done");
+
+```

@@ -5,15 +5,19 @@ use arcstr::ArcStr;
 use oxc::ast::ast::CommentContent;
 use oxc::ast::ast::Program;
 use oxc::ast::ast::{
-  ArrowFunctionExpression, AwaitExpression, BindingIdentifier, BindingPattern,
-  ConditionalExpression, Declaration, ExportDefaultDeclarationKind, ExportSpecifier, Expression,
-  ForOfStatement, Function, IdentifierReference, IfStatement, LogicalExpression, LogicalOperator,
-  Statement, StaticBlock, VariableDeclaration, VariableDeclarationKind, VariableDeclarator,
+  Argument, ArrowFunctionExpression, AssignmentExpression, AssignmentPattern,
+  AssignmentTargetPropertyIdentifier, AssignmentTargetWithDefault, AwaitExpression,
+  BindingIdentifier, BindingPattern, BlockStatement, CallExpression, CatchClause, ChainExpression,
+  ConditionalExpression, Declaration, DoWhileStatement, ExportDefaultDeclarationKind,
+  ExportSpecifier, Expression, ForInStatement, ForOfStatement, ForStatement, Function,
+  IdentifierReference, IfStatement, LabeledStatement, LogicalExpression, LogicalOperator,
+  NewExpression, ReturnStatement, Statement, StaticBlock, SwitchCase, TryStatement,
+  VariableDeclaration, VariableDeclarationKind, VariableDeclarator, WhileStatement,
 };
 use oxc::ast_visit::{VisitJs, VisitJsMut, walk_js, walk_js_mut};
 use oxc::diagnostics::{LabeledSpan, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
-use oxc::semantic::{ScopeFlags, ScopeId, Scoping, Stats, SymbolId};
+use oxc::semantic::{ReferenceId, ScopeFlags, ScopeId, Scoping, Stats, SymbolId};
 use oxc::syntax::symbol::SymbolFlags;
 use oxc::transformer::Transformer;
 use oxc::transformer_plugins::{
@@ -309,7 +313,8 @@ impl PreProcessEcmaAst {
   /// - Direct `eval` can replace a `let`, a `var` or a function declaration without a write
   ///   reference.
   /// - Code that reads a `let`, `const` or `var` binding before its declaration, outside a nested
-  ///   function, sees the binding before it is initialized. See
+  ///   function, sees the binding before it is initialized. A call of that binding that runs only
+  ///   under a condition gets a pure annotation, so that oxc can still remove it. See
   ///   `internal-docs/linking/module-execution-order/implementation.md`.
   fn clear_unsafe_no_side_effects(&mut self, ast: &mut EcmaAst, scoping: &mut Option<Scoping>) {
     // `define` drops the scoping when it changes the AST, and it can add an annotation. The next
@@ -325,22 +330,36 @@ impl PreProcessEcmaAst {
       .copied()
       .filter(|&symbol_id| !scoping_ref.symbol_flags(symbol_id).is_function())
       .collect::<FxHashSet<_>>();
-    let mut symbols = if candidates.is_empty() {
-      FxHashSet::default()
+    let (mut symbols, guarded_calls) = if candidates.is_empty() {
+      (FxHashSet::default(), vec![])
     } else {
       ReadBeforeDeclarationFinder::find(scoping_ref, candidates, ast.program())
     };
-    if scoping_ref.root_scope_flags().contains_direct_eval() {
-      symbols.extend(no_side_effects.iter().copied().filter(|&symbol_id| {
-        !scoping_ref.symbol_flags(symbol_id).is_const_variable()
-          && scoping_ref.scope_flags(scoping_ref.symbol_scope_id(symbol_id)).contains_direct_eval()
-      }));
-    }
+    let replaceable = if scoping_ref.root_scope_flags().contains_direct_eval() {
+      no_side_effects
+        .iter()
+        .copied()
+        .filter(|&symbol_id| {
+          !scoping_ref.symbol_flags(symbol_id).is_const_variable()
+            && scoping_ref
+              .scope_flags(scoping_ref.symbol_scope_id(symbol_id))
+              .contains_direct_eval()
+        })
+        .collect::<FxHashSet<_>>()
+    } else {
+      FxHashSet::default()
+    };
+    let pure_calls = guarded_calls
+      .into_iter()
+      .filter(|(_, symbol_id)| !replaceable.contains(symbol_id))
+      .map(|(reference_id, _)| reference_id)
+      .collect::<FxHashSet<_>>();
+    symbols.extend(replaceable);
     if symbols.is_empty() {
       return;
     }
     ast.program.with_mut(|WithMutFields { program, .. }| {
-      ClearNoSideEffects { symbols: &symbols }.visit_program(program);
+      ClearNoSideEffects { symbols: &symbols, pure_calls: &pure_calls }.visit_program(program);
       *scoping = Some(self.recreate_scoping(&mut None, program));
     });
   }
@@ -476,25 +495,46 @@ impl<'ast> VisitJs<'ast> for TopLevelAwaitFinder {
 /// "Before" is AST order, not span order, because `define` gives the reads that it inserts an
 /// empty span at 0. The walk skips a branch that a literal condition never runs, such as
 /// `if (false) f();`, because that read never runs.
+///
+/// A read that runs only under another condition, such as in an `if` branch, a loop body, a
+/// `catch` clause, after the calls that run first in a `try` block or after a top-level `return`,
+/// does not count. The output can run the modules in another order than Node, so the condition can
+/// be true in the output and false in Node. A declaration under a condition still counts as
+/// reached.
 struct ReadBeforeDeclarationFinder<'a> {
   scoping: &'a Scoping,
-  /// The `let`, `const` and `var` bindings to check whose declaration the walk has not reached,
-  /// and that are not in `found`.
+  /// The `let`, `const` and `var` bindings to check whose declaration the walk has not reached.
   pending: FxHashSet<SymbolId>,
   /// Whether a binding to check is declared below the root scope. If not, a read inside a
   /// function never counts, so the walk skips functions.
   visit_functions: bool,
   /// Each scope around the visited node, innermost last, and whether it is a function scope.
   scopes: Vec<(Option<ScopeId>, bool)>,
+  /// Whether the visited node runs only under a condition.
+  conditional: bool,
+  /// Whether the walk passed a `return` at the top level of a CommonJS module. The code after it
+  /// runs only when the `return` does not run.
+  returned: bool,
+  /// The callees of the calls that run first in a `try` block. They count in a conditional walk.
+  /// A call in the first argument of another call counts only when the outer callee is a function
+  /// declaration, because the read of another callee can throw before the argument runs.
+  leading_reads: FxHashSet<ReferenceId>,
   found: FxHashSet<SymbolId>,
+  /// The callee and the binding of each call or `new` that runs only under a condition before the
+  /// declaration of the binding.
+  guarded_calls: Vec<(ReferenceId, SymbolId)>,
 }
 
 impl ReadBeforeDeclarationFinder<'_> {
+  /// Returns the bindings that code reads before their declaration, and the callee and the binding
+  /// of each call of those bindings that runs only under a condition before the declaration.
+  /// Clearing the annotation of a binding affects all of its calls, so oxc removes such a call only
+  /// when it gets its own pure annotation.
   fn find(
     scoping: &Scoping,
     candidates: FxHashSet<SymbolId>,
     program: &Program<'_>,
-  ) -> FxHashSet<SymbolId> {
+  ) -> (FxHashSet<SymbolId>, Vec<(ReferenceId, SymbolId)>) {
     let root_scope_id = scoping.root_scope_id();
     let visit_functions =
       candidates.iter().any(|&symbol_id| scoping.symbol_scope_id(symbol_id) != root_scope_id);
@@ -503,10 +543,58 @@ impl ReadBeforeDeclarationFinder<'_> {
       pending: candidates,
       visit_functions,
       scopes: vec![],
+      conditional: false,
+      returned: false,
+      leading_reads: FxHashSet::default(),
       found: FxHashSet::default(),
+      guarded_calls: vec![],
     };
     finder.visit_program(program);
-    finder.found
+    let mut guarded_calls = finder.guarded_calls;
+    guarded_calls.retain(|(_, symbol_id)| finder.found.contains(symbol_id));
+    (finder.found, guarded_calls)
+  }
+
+  fn conditionally(&mut self, visit: impl FnOnce(&mut Self)) {
+    let conditional = std::mem::replace(&mut self.conditional, true);
+    visit(self);
+    self.conditional = conditional;
+  }
+
+  fn record_guarded_call(&mut self, callee: &Expression<'_>) {
+    if self.is_conditional()
+      && let Expression::Identifier(ident) = callee.without_parentheses()
+      && let Some(reference_id) = ident.reference_id.get()
+      && !self.leading_reads.contains(&reference_id)
+      && let Some(symbol_id) = self.early_read(ident)
+    {
+      self.guarded_calls.push((reference_id, symbol_id));
+    }
+  }
+
+  fn is_conditional(&self) -> bool {
+    self.conditional || self.returned
+  }
+
+  fn in_function(&self) -> bool {
+    self.scopes.iter().any(|&(_, is_function)| is_function)
+  }
+
+  /// The binding to check that `ident` reads before its declaration, outside a function nested in
+  /// the declaring scope.
+  fn early_read(&self, ident: &IdentifierReference<'_>) -> Option<SymbolId> {
+    let symbol_id = self.scoping.get_reference(ident.reference_id.get()?).symbol_id()?;
+    if !self.pending.contains(&symbol_id) {
+      return None;
+    }
+    let declaring_scope = Some(self.scoping.symbol_scope_id(symbol_id));
+    let in_nested_function = self
+      .scopes
+      .iter()
+      .rev()
+      .take_while(|(scope_id, _)| *scope_id != declaring_scope)
+      .any(|&(_, is_function)| is_function);
+    (!in_nested_function).then_some(symbol_id)
   }
 }
 
@@ -536,6 +624,82 @@ fn literal_is_nullish(expr: &Expression<'_>) -> Option<bool> {
   }
 }
 
+/// Whether the right operand of `it` runs, when its left operand is a literal. `None` for other
+/// left operands.
+fn logical_right_runs(it: &LogicalExpression<'_>) -> Option<bool> {
+  match it.operator {
+    LogicalOperator::And => literal_truthiness(&it.left),
+    LogicalOperator::Or => literal_truthiness(&it.left).map(|value| !value),
+    LogicalOperator::Coalesce => literal_is_nullish(&it.left),
+  }
+}
+
+/// The calls that run in `block` before any other code of the block that can throw. In
+/// `try { noop(f()); g(); }`, the code reads `noop`, runs `f()` and then runs `noop(f())`. `g()`
+/// runs only when they do not throw, and a `catch` clause can recover from that error. A call
+/// with a plain-name callee reads the name before it runs the first argument. That read can throw:
+/// a binding can be uninitialized, and a global can be a getter. The output can run the modules in
+/// another order than Node, so the read can throw in Node and not in the output. The walk goes into
+/// the first argument only when `callee_read_is_safe` proves that the read does not throw. The
+/// first statement can also be a declaration, whose first initializer runs first, or an `if`,
+/// whose test runs first.
+pub fn leading_calls<'b, 'a>(
+  block: &'b BlockStatement<'a>,
+  callee_read_is_safe: impl Fn(&IdentifierReference<'a>) -> bool,
+) -> Vec<&'b CallExpression<'a>> {
+  let mut calls = vec![];
+  let mut stmt = block.body.first();
+  let expr = loop {
+    match stmt {
+      Some(Statement::ExpressionStatement(it)) => break &it.expression,
+      Some(Statement::IfStatement(it)) => break &it.test,
+      Some(Statement::VariableDeclaration(it)) => {
+        match it.declarations.first().and_then(|declarator| declarator.init.as_ref()) {
+          Some(init) => break init,
+          None => return calls,
+        }
+      }
+      Some(Statement::BlockStatement(it)) => stmt = it.body.first(),
+      Some(Statement::TryStatement(it)) => stmt = it.block.body.first(),
+      _ => return calls,
+    }
+  };
+  let mut expr = expr;
+  loop {
+    expr = match expr.without_parentheses() {
+      Expression::SequenceExpression(it) => {
+        let Some(first) = it.expressions.first() else { break };
+        first
+      }
+      Expression::ConditionalExpression(it) => match literal_truthiness(&it.test) {
+        Some(true) => &it.consequent,
+        Some(false) => &it.alternate,
+        None => &it.test,
+      },
+      Expression::LogicalExpression(it) => match logical_right_runs(it) {
+        Some(true) => &it.right,
+        Some(false) => break,
+        None => &it.left,
+      },
+      Expression::CallExpression(call) => {
+        calls.push(&**call);
+        if !matches!(
+          call.callee.without_parentheses(),
+          Expression::Identifier(ident) if callee_read_is_safe(ident)
+        ) {
+          break;
+        }
+        let Some(argument) = call.arguments.first().and_then(Argument::as_expression) else {
+          break;
+        };
+        argument
+      }
+      _ => break,
+    };
+  }
+  calls
+}
+
 impl<'ast> VisitJs<'ast> for ReadBeforeDeclarationFinder<'_> {
   fn visit_program(&mut self, program: &Program<'ast>) {
     self.scopes.push((program.scope_id.get(), false));
@@ -554,11 +718,16 @@ impl<'ast> VisitJs<'ast> for ReadBeforeDeclarationFinder<'_> {
   }
 
   fn visit_if_statement(&mut self, it: &IfStatement<'ast>) {
+    self.visit_expression(&it.test);
     let Some(value) = literal_truthiness(&it.test) else {
-      walk_js::walk_if_statement(self, it);
+      self.conditionally(|this| {
+        this.visit_statement(&it.consequent);
+        if let Some(alternate) = &it.alternate {
+          this.visit_statement(alternate);
+        }
+      });
       return;
     };
-    self.visit_expression(&it.test);
     if value {
       self.visit_statement(&it.consequent);
     } else if let Some(alternate) = &it.alternate {
@@ -567,23 +736,147 @@ impl<'ast> VisitJs<'ast> for ReadBeforeDeclarationFinder<'_> {
   }
 
   fn visit_conditional_expression(&mut self, it: &ConditionalExpression<'ast>) {
+    self.visit_expression(&it.test);
     let Some(value) = literal_truthiness(&it.test) else {
-      walk_js::walk_conditional_expression(self, it);
+      self.conditionally(|this| {
+        this.visit_expression(&it.consequent);
+        this.visit_expression(&it.alternate);
+      });
       return;
     };
-    self.visit_expression(&it.test);
     self.visit_expression(if value { &it.consequent } else { &it.alternate });
   }
 
   fn visit_logical_expression(&mut self, it: &LogicalExpression<'ast>) {
     self.visit_expression(&it.left);
-    let right_runs = match it.operator {
-      LogicalOperator::And => literal_truthiness(&it.left),
-      LogicalOperator::Or => literal_truthiness(&it.left).map(|value| !value),
-      LogicalOperator::Coalesce => literal_is_nullish(&it.left),
+    match logical_right_runs(it) {
+      Some(true) => self.visit_expression(&it.right),
+      Some(false) => {}
+      None => self.conditionally(|this| this.visit_expression(&it.right)),
+    }
+  }
+
+  fn visit_assignment_expression(&mut self, it: &AssignmentExpression<'ast>) {
+    if it.operator.is_logical() {
+      self.visit_assignment_target(&it.left);
+      self.conditionally(|this| this.visit_expression(&it.right));
+    } else {
+      walk_js::walk_assignment_expression(self, it);
+    }
+  }
+
+  fn visit_for_statement(&mut self, it: &ForStatement<'ast>) {
+    self.enter_scope(ScopeFlags::empty(), &it.scope_id);
+    if let Some(init) = &it.init {
+      self.visit_for_statement_init(init);
+    }
+    if let Some(test) = &it.test {
+      self.visit_expression(test);
+    }
+    self.conditionally(|this| {
+      if let Some(update) = &it.update {
+        this.visit_expression(update);
+      }
+      this.visit_statement(&it.body);
+    });
+    self.leave_scope();
+  }
+
+  fn visit_for_in_statement(&mut self, it: &ForInStatement<'ast>) {
+    self.enter_scope(ScopeFlags::empty(), &it.scope_id);
+    self.conditionally(|this| this.visit_for_statement_left(&it.left));
+    self.visit_expression(&it.right);
+    self.conditionally(|this| this.visit_statement(&it.body));
+    self.leave_scope();
+  }
+
+  fn visit_for_of_statement(&mut self, it: &ForOfStatement<'ast>) {
+    self.enter_scope(ScopeFlags::empty(), &it.scope_id);
+    self.conditionally(|this| this.visit_for_statement_left(&it.left));
+    self.visit_expression(&it.right);
+    self.conditionally(|this| this.visit_statement(&it.body));
+    self.leave_scope();
+  }
+
+  fn visit_while_statement(&mut self, it: &WhileStatement<'ast>) {
+    self.visit_expression(&it.test);
+    self.conditionally(|this| this.visit_statement(&it.body));
+  }
+
+  // `break` or `continue` can skip the rest of the body and the test.
+  fn visit_do_while_statement(&mut self, it: &DoWhileStatement<'ast>) {
+    self.conditionally(|this| walk_js::walk_do_while_statement(this, it));
+  }
+
+  fn visit_switch_case(&mut self, it: &SwitchCase<'ast>) {
+    self.conditionally(|this| walk_js::walk_switch_case(this, it));
+  }
+
+  fn visit_catch_clause(&mut self, it: &CatchClause<'ast>) {
+    self.conditionally(|this| walk_js::walk_catch_clause(this, it));
+  }
+
+  // A `catch` clause can recover from an error that skips the rest of the `try` block.
+  fn visit_try_statement(&mut self, it: &TryStatement<'ast>) {
+    let Some(handler) = &it.handler else {
+      walk_js::walk_try_statement(self, it);
+      return;
     };
-    if right_runs != Some(false) {
-      self.visit_expression(&it.right);
+    if !self.is_conditional() {
+      // A function declaration is initialized before any code runs. This pass cannot prove that
+      // an import or a global is safe to read.
+      let scoping = self.scoping;
+      let callee_read_is_safe = |ident: &IdentifierReference<'ast>| {
+        ident
+          .reference_id
+          .get()
+          .and_then(|reference_id| scoping.get_reference(reference_id).symbol_id())
+          .is_some_and(|symbol_id| scoping.symbol_flags(symbol_id).is_function())
+      };
+      self.leading_reads.extend(
+        leading_calls(&it.block, callee_read_is_safe).into_iter().filter_map(|call| {
+          match call.callee.without_parentheses() {
+            Expression::Identifier(ident) => ident.reference_id.get(),
+            _ => None,
+          }
+        }),
+      );
+    }
+    self.conditionally(|this| {
+      this.visit_block_statement(&it.block);
+      this.visit_catch_clause(handler);
+    });
+    if let Some(finalizer) = &it.finalizer {
+      self.visit_block_statement(finalizer);
+    }
+  }
+
+  // `break` can skip the rest of a labeled statement.
+  fn visit_labeled_statement(&mut self, it: &LabeledStatement<'ast>) {
+    self.conditionally(|this| walk_js::walk_labeled_statement(this, it));
+  }
+
+  fn visit_chain_expression(&mut self, it: &ChainExpression<'ast>) {
+    self.conditionally(|this| walk_js::walk_chain_expression(this, it));
+  }
+
+  fn visit_assignment_pattern(&mut self, it: &AssignmentPattern<'ast>) {
+    self.visit_binding_pattern(&it.left);
+    self.conditionally(|this| this.visit_expression(&it.right));
+  }
+
+  fn visit_assignment_target_with_default(&mut self, it: &AssignmentTargetWithDefault<'ast>) {
+    self.visit_assignment_target(&it.binding);
+    self.conditionally(|this| this.visit_expression(&it.init));
+  }
+
+  fn visit_assignment_target_property_identifier(
+    &mut self,
+    it: &AssignmentTargetPropertyIdentifier<'ast>,
+  ) {
+    self.visit_identifier_reference(&it.binding);
+    if let Some(init) = &it.init {
+      self.conditionally(|this| this.visit_expression(init));
     }
   }
 
@@ -610,35 +903,62 @@ impl<'ast> VisitJs<'ast> for ReadBeforeDeclarationFinder<'_> {
   // `export { fn }` does not read the binding.
   fn visit_export_specifier(&mut self, _it: &ExportSpecifier<'ast>) {}
 
+  fn visit_return_statement(&mut self, it: &ReturnStatement<'ast>) {
+    walk_js::walk_return_statement(self, it);
+    if !self.in_function() {
+      self.returned = true;
+    }
+  }
+
+  fn visit_call_expression(&mut self, it: &CallExpression<'ast>) {
+    self.record_guarded_call(&it.callee);
+    walk_js::walk_call_expression(self, it);
+  }
+
+  // oxc applies the annotation to `new` too.
+  fn visit_new_expression(&mut self, it: &NewExpression<'ast>) {
+    self.record_guarded_call(&it.callee);
+    walk_js::walk_new_expression(self, it);
+  }
+
   fn visit_identifier_reference(&mut self, ident: &IdentifierReference<'ast>) {
-    let Some(symbol_id) =
-      ident.reference_id.get().and_then(|id| self.scoping.get_reference(id).symbol_id())
-    else {
-      return;
-    };
-    if !self.pending.contains(&symbol_id) {
+    if self.is_conditional()
+      && !ident.reference_id.get().is_some_and(|id| self.leading_reads.contains(&id))
+    {
       return;
     }
-    let declaring_scope = Some(self.scoping.symbol_scope_id(symbol_id));
-    let in_nested_function = self
-      .scopes
-      .iter()
-      .rev()
-      .take_while(|(scope_id, _)| *scope_id != declaring_scope)
-      .any(|&(_, is_function)| is_function);
-    if !in_nested_function {
-      self.pending.remove(&symbol_id);
+    if let Some(symbol_id) = self.early_read(ident) {
       self.found.insert(symbol_id);
     }
   }
 }
 
-/// Drops `@__NO_SIDE_EFFECTS__` from the functions that initialize `symbols`.
+/// Drops `@__NO_SIDE_EFFECTS__` from the functions that initialize `symbols`, and marks the calls
+/// and `new` expressions whose callee is in `pure_calls` as pure.
 struct ClearNoSideEffects<'a> {
   symbols: &'a FxHashSet<SymbolId>,
+  pure_calls: &'a FxHashSet<ReferenceId>,
 }
 
 impl<'ast> VisitJsMut<'ast> for ClearNoSideEffects<'_> {
+  fn visit_call_expression(&mut self, call: &mut CallExpression<'ast>) {
+    if let Expression::Identifier(ident) = call.callee.without_parentheses()
+      && ident.reference_id.get().is_some_and(|id| self.pure_calls.contains(&id))
+    {
+      call.pure = true;
+    }
+    walk_js_mut::walk_call_expression(self, call);
+  }
+
+  fn visit_new_expression(&mut self, new_expr: &mut NewExpression<'ast>) {
+    if let Expression::Identifier(ident) = new_expr.callee.without_parentheses()
+      && ident.reference_id.get().is_some_and(|id| self.pure_calls.contains(&id))
+    {
+      new_expr.pure = true;
+    }
+    walk_js_mut::walk_new_expression(self, new_expr);
+  }
+
   fn visit_function(&mut self, func: &mut Function<'ast>, flags: ScopeFlags) {
     if func.id.as_ref().is_some_and(|id| self.symbols.contains(&id.symbol_id())) {
       func.pure = false;

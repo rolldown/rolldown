@@ -704,6 +704,39 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
+  /// `clear_no_side_effects_if_called_before_init` also hides the annotation from `new` of the
+  /// function in its chunk, so the minifier keeps such a `new` even when no code uses the result.
+  /// Mark it pure, as the minifier does with the annotation. The early-call check covers calls only.
+  fn mark_new_pure_if_annotation_cleared(&self, new_expr: &mut ast::NewExpression<'ast>) {
+    if new_expr.pure
+      || matches!(self.ctx.options.minify, MinifyOptions::Disabled)
+      || self.ctx.options.preserve_modules
+    {
+      return;
+    }
+    let Some(symbol_id) = new_expr
+      .callee
+      .get_identifier_reference()
+      .and_then(|ident_ref| ident_ref.reference_id.get())
+      .and_then(|ref_id| self.scope.scoping().get_reference(ref_id).symbol_id())
+    else {
+      return;
+    };
+    let symbol_ref = self.ctx.symbol_db.canonical_ref_for((self.ctx.idx, symbol_id).into());
+    // Only a function whose annotation makes it side-effect-free. `new` of an empty arrow throws.
+    let annotation_cleared = symbol_ref.flags(self.ctx.symbol_db).is_some_and(|flags| {
+      flags.contains(SymbolRefFlags::MaybeCalledBeforeInit | SymbolRefFlags::PureAnnotationOnly)
+        && !flags.contains(SymbolRefFlags::ExportedSeparately)
+    });
+    if annotation_cleared
+      && symbol_ref.is_side_effect_free_function(self.ctx.symbol_db, self.ctx.modules)
+      && symbol_ref.is_not_reassigned(self.ctx.symbol_db)
+      && self.ctx.symbol_db.get(symbol_ref).chunk_idx == Some(self.ctx.chunk_idx)
+    {
+      new_expr.pure = true;
+    }
+  }
+
   /// The minifier treats every call of a `@__NO_SIDE_EFFECTS__` binding in the chunk as pure. Drop
   /// the annotation of a function with a protected call that can reach it before its binding is
   /// initialized. Without the minifier, or with `preserveModules`, which puts the call in another

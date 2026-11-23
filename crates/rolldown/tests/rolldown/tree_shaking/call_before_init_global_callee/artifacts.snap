@@ -1,0 +1,52 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## b.js
+
+```js
+// a.js
+var Skip = class {};
+Object.defineProperty(globalThis, "gate", {
+	configurable: true,
+	get() {
+		if (typeof ready !== "undefined") throw new Skip();
+		return () => {};
+	}
+});
+try {
+	gate(0);
+} catch (error) {
+	if (!(error instanceof Skip)) throw error;
+}
+try {
+	gate(0);
+} catch (error) {
+	if (!(error instanceof Skip)) throw error;
+}
+globalThis.calls.push("a done");
+// b.js
+const f = () => {};
+export { f as t };
+
+```
+
+## b2.js
+
+```js
+import "./b.js";
+
+```
+
+## main.js
+
+```js
+import "./b.js";
+// ready.js
+globalThis.ready = true;
+// main.js
+await import("./b2.js");
+globalThis.calls.push("main done");
+
+```

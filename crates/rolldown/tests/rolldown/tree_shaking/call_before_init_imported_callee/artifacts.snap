@@ -1,0 +1,69 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { gate } from "./gate.js";
+import "./b.js";
+// a.js
+try {
+	gate(0);
+} catch (error) {
+	if (gateIsReady()) throw error;
+}
+try {
+	gate(0);
+} catch (error) {
+	if (gateIsReady()) throw error;
+}
+globalThis.calls.push("a done");
+function gateIsReady() {
+	try {
+		return typeof gate === "function";
+	} catch {
+		return false;
+	}
+}
+
+```
+
+## b.js
+
+```js
+import "./a.js";
+// b.js
+const f = () => {};
+export { f };
+
+```
+
+## barrel.js
+
+```js
+import "./gate.js";
+export { f } from "./b.js";
+
+```
+
+## gate.js
+
+```js
+import "./b.js";
+// gate.js
+const gate = () => {};
+export { gate };
+
+```
+
+## main.js
+
+```js
+import { f } from "./b.js";
+import "./barrel.js";
+// main.js
+globalThis.calls.push(`main done: ${typeof f}`);
+
+```

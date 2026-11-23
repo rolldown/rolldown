@@ -1,0 +1,6 @@
+{
+  "_comment": "a.js and b.js are one import cycle, and a.js runs first. The `import()` puts both modules in a shared chunk, which main.js imports before the code of ready.js. So the output runs a.js before ready.js, and Node runs it after. In Node, the getter of `gate` throws, so the calls in its argument do not run. In the output, the read succeeds, so these calls run, and they must not throw: the call of `f` from b.js and the call of `later` before its declaration in a.js.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }]
+  }
+}

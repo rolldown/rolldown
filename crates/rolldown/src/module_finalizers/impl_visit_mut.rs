@@ -745,6 +745,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
       ast::Expression::NewExpression(new_expr) => {
+        self.mark_new_pure_if_annotation_cleared(new_expr);
         self.handle_new_url_with_string_literal_and_import_meta_url(new_expr);
       }
       ast::Expression::BinaryExpression(binary_expr) => {

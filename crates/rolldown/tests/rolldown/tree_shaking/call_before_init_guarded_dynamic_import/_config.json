@@ -1,0 +1,6 @@
+{
+  "_comment": "a.js and b.js are one import cycle, and a.js runs first. The `import()` puts both modules in a shared chunk, which main.js imports before the code of ready.js. So the output runs a.js before ready.js, and Node runs it after. The early calls in a.js run only when `ready` is not set, so they do not run in Node. They must not throw in the output: the calls of `f` from b.js and the guarded call of `later` before its declaration in a.js. In Node, the call of `f` in the first `try` block does not run, because the code before it throws. The call of `later` in the argument of `gate` does not run in Node either, because the getter of `gate` throws first. The other call of `later` throws in Node too, but it must not make the guarded call throw.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }]
+  }
+}

@@ -113,7 +113,7 @@ jobs:
             if: ${{ contains(matrix.target, 'ohos') }}
             uses: Boshen/setup-ohos-sdk@edb865a89a712f1f15dbad932dfa9cfce849d95c # v1.0.0
 
-          - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+          - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
             if: ${{ contains(matrix.target, 'musl') }}
             env:
               GITHUB_TOKEN: ${{ github.token }}
@@ -207,7 +207,7 @@ jobs:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
       - name: Build
         id: build
-        uses: cross-platform-actions/action@82668f1fbd89d9c99487604f822cbf6716f124d3 # v1.7.0
+        uses: cross-platform-actions/action@30cde56b87a128507bebea9531205087890ee360 # v1.8.0
         env:
           DEBUG: napi:*
           RUSTUP_IO_THREADS: 1

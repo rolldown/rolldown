@@ -17,6 +17,7 @@
 import fs from 'node:fs';
 import http2 from 'node:http2';
 import path from 'node:path';
+import { finished } from 'node:stream/promises';
 import zlib from 'node:zlib';
 
 import { createResponseIndex, mergeDocument, sampleQuantiles, seededRandom } from './model.mjs';
@@ -57,25 +58,78 @@ const COMPRESSIBLE = new Set([
   '.ico',
   '.ttf',
 ]);
-const DEFAULT_LEVEL = { br: 5, gzip: 6, zstd: 3 };
 const NO_BODY = new Set([204, 205, 304]);
 
-export function encode(data, { encoding, level }) {
-  const lvl = level ?? DEFAULT_LEVEL[encoding];
-  if (encoding === 'br') {
-    return zlib.brotliCompressSync(data, {
+const CODECS = {
+  br: {
+    compress: zlib.brotliCompressSync,
+    create: zlib.createBrotliCompress,
+    flush: zlib.constants.BROTLI_OPERATION_FLUSH,
+    options: (level, size) => ({
       params: {
-        [zlib.constants.BROTLI_PARAM_QUALITY]: lvl,
-        [zlib.constants.BROTLI_PARAM_SIZE_HINT]: data.length,
+        [zlib.constants.BROTLI_PARAM_QUALITY]: level ?? 5,
+        [zlib.constants.BROTLI_PARAM_SIZE_HINT]: size,
       },
-    });
+    }),
+  },
+  gzip: {
+    compress: zlib.gzipSync,
+    create: zlib.createGzip,
+    flush: zlib.constants.Z_SYNC_FLUSH,
+    options: (level) => ({ level: level ?? 6 }),
+  },
+  zstd: {
+    compress: zlib.zstdCompressSync,
+    create: zlib.createZstdCompress,
+    flush: zlib.constants.ZSTD_e_flush,
+    options: (level) => ({
+      params: { [zlib.constants.ZSTD_c_compressionLevel]: level ?? 3 },
+    }),
+  },
+};
+
+export const supportsEncoding = (encoding) =>
+  Object.hasOwn(CODECS, encoding) && typeof CODECS[encoding].create === 'function';
+
+export function encode(data, { encoding, level }) {
+  if (!supportsEncoding(encoding)) return data;
+  const codec = CODECS[encoding];
+  return codec.compress(data, codec.options(level, data.length));
+}
+
+function recordedCompression(header, compression) {
+  const encoding = header?.trim().toLowerCase();
+  if (!supportsEncoding(encoding)) return null;
+  return compression?.encoding === encoding ? compression : { encoding };
+}
+
+async function encodeParts(parts, how) {
+  const [early, late] = parts;
+  if (!early.data.length || !late?.data.length) {
+    return parts.map((part) =>
+      part.data.length ? { ...part, data: encode(part.data, how) } : part,
+    );
   }
-  if (encoding === 'gzip') return zlib.gzipSync(data, { level: lvl });
-  if (encoding === 'zstd')
-    return zlib.zstdCompressSync(data, {
-      params: { [zlib.constants.ZSTD_c_compressionLevel]: lvl },
-    });
-  return data;
+
+  // The archive's split is measured in decoded bytes. Flush at that boundary
+  // so the browser can parse the early HTML before the rest of the stream arrives.
+  const codec = CODECS[how.encoding];
+  const stream = codec.create(codec.options(how.level, early.data.length + late.data.length));
+  const complete = finished(stream, { cleanup: true });
+  const earlyChunks = [];
+  const lateChunks = [];
+  let chunks = earlyChunks;
+  stream.on('data', (chunk) => chunks.push(chunk));
+  stream.write(early.data);
+  stream.flush(codec.flush, () => {
+    chunks = lateChunks;
+    stream.end(late.data);
+  });
+  await complete;
+  return [
+    { ...early, data: Buffer.concat(earlyChunks) },
+    { ...late, data: Buffer.concat(lateChunks) },
+  ];
 }
 
 const LEVELS = { br: [1, 3, 4, 5, 6, 9, 11], gzip: [1, 4, 6, 9], zstd: [1, 3, 6, 9, 12, 19] };
@@ -109,7 +163,7 @@ export function chooseCompression(assets, dist, { sample = 8 } = {}) {
       (a) =>
         a.encoding &&
         a.encodedBytes >= 20_000 &&
-        LEVELS[a.encoding] &&
+        supportsEncoding(a.encoding) &&
         COMPRESSIBLE.has(path.extname(a.path)),
     )
     .map((a) => ({ ...a, file: distFile(dist, a.path) }))
@@ -148,8 +202,8 @@ export function chooseCompression(assets, dist, { sample = 8 } = {}) {
 /**
  * HTML split like the recorded document arrived: the early share right after
  * the headers (cut at the end of a tag), the rest when the recorded download
- * ended. Sent uncompressed so that both parts decode at once; on the order of
- * 10 kB of HTML, compression changes nothing measurable.
+ * ended. The split is in decoded HTML, so any compression must flush at the
+ * same boundary.
  */
 export function documentSegments(html, doc) {
   const ttfb = doc.ttfbMs ?? 0;
@@ -178,9 +232,18 @@ const readBody = (req) =>
 const gone = (res) =>
   res.stream ? res.stream.destroyed || res.stream.closed : Boolean(res.destroyed || res.closed);
 
-const accepts = (req, encoding) =>
-  encoding != null &&
-  new RegExp(`(^|[,\\s])${encoding}(;|,|\\s|$)`).test(req.headers['accept-encoding'] ?? '');
+function accepts(req, encoding) {
+  const choices = (req.headers['accept-encoding'] ?? '').toLowerCase().split(',');
+  let wildcard = false;
+  for (const choice of choices) {
+    const [name, ...params] = choice.split(';').map((part) => part.trim());
+    const quality = params.find((param) => /^q\s*=/.test(param));
+    const allowed = quality == null || Number(quality.slice(quality.indexOf('=') + 1)) > 0;
+    if (name === encoding) return allowed;
+    if (name === '*') wildcard = allowed;
+  }
+  return wildcard;
+}
 
 export async function startReplayServer({
   archive,
@@ -208,9 +271,14 @@ export async function startReplayServer({
       bodyCache.set(ref, fs.readFileSync(path.join(archiveDir, 'bodies', ref)));
     return bodyCache.get(ref);
   };
-  const encodedOnce = (cacheKey, data, how) => {
-    if (!encodedCache.has(cacheKey)) encodedCache.set(cacheKey, encode(data, how));
-    return encodedCache.get(cacheKey);
+  const encodedOnce = (key, parts, how) => {
+    if (!key) return encodeParts(parts, how);
+    if (!encodedCache.has(key)) {
+      const value = encodeParts(parts, how);
+      value.catch(() => encodedCache.delete(key));
+      encodedCache.set(key, value);
+    }
+    return encodedCache.get(key);
   };
 
   /**
@@ -240,32 +308,31 @@ export async function startReplayServer({
     };
     // First: a stream the client cancels while it waits leaves the link at once.
     res.on('close', () => shaper.cancel(write));
+    const out = { ...headers };
+    delete out['content-length'];
+    delete out['content-encoding'];
+    let parts = segments ?? [{ atMs: 0, data: body ?? Buffer.alloc(0) }];
+    const noBody = req.method === 'HEAD' || NO_BODY.has(status);
+    if (
+      supportsEncoding(encodeAs?.encoding) &&
+      parts.some((p) => p.data.length) &&
+      accepts(req, encodeAs.encoding)
+    ) {
+      // A response with no body keeps the header and skips the compression.
+      if (!noBody) {
+        const key =
+          cacheKey &&
+          `${segments ? 'document' : 'body'}|${cacheKey}|${encodeAs.encoding}|${encodeAs.level}`;
+        parts = await encodedOnce(key, parts, encodeAs);
+      }
+      out['content-encoding'] = encodeAs.encoding;
+    }
+    // Prepare the compressed bytes during the modeled server wait.
     const wait = entry.t + delayMs - performance.now();
     if (wait > 0) await new Promise((r) => setTimeout(r, wait));
     if (gone(res)) {
       entry.cancelled = true;
       return;
-    }
-    const out = { ...headers };
-    delete out['content-length'];
-    delete out['content-encoding'];
-    let parts = segments ?? [{ atMs: 0, data: body ?? Buffer.alloc(0) }];
-    if (
-      !segments &&
-      encodeAs?.encoding &&
-      parts[0].data.length &&
-      accepts(req, encodeAs.encoding)
-    ) {
-      const data = parts[0].data;
-      parts = [
-        {
-          atMs: 0,
-          data: cacheKey
-            ? encodedOnce(`${cacheKey}|${encodeAs.encoding}|${encodeAs.level}`, data, encodeAs)
-            : encode(data, encodeAs),
-        },
-      ];
-      out['content-encoding'] = encodeAs.encoding;
     }
     // A late body: everything but the last byte now, the last byte `holdMs` after
     // the headers. A script or JSON response is usable only when complete. The
@@ -278,7 +345,6 @@ export async function startReplayServer({
       held = { atMs: delayMs + holdMs, data: data.subarray(data.length - 1) };
     }
     const total = parts.reduce((s, p) => s + p.data.length, 0) + (held?.data.length ?? 0);
-    const noBody = req.method === 'HEAD' || NO_BODY.has(status);
     if (!noBody) out['content-length'] = String(total);
     out['cache-control'] = 'no-store';
     const writeHead = () => {
@@ -379,6 +445,8 @@ export async function startReplayServer({
         headers: { 'content-type': MIME['.html'], ...headers },
         segments: documentSegments(html, doc),
         delayMs: doc.ttfbMs ?? 0,
+        encodeAs: recordedCompression(headers['content-encoding'], compression),
+        cacheKey: local ? `${local}|${fs.statSync(local).mtimeMs}` : doc.bodyRef,
       });
     }
 
@@ -441,19 +509,13 @@ export async function startReplayServer({
         delayMs: rttMs,
       });
     }
-    const enc = m.call.headers['content-encoding'];
     return respond(req, res, entry, {
       status: m.call.status,
       headers: m.call.headers,
       body: recordedBody(m.call.bodyRef),
       delayMs: m.call.ttfbMs ?? rttMs,
       holdMs: m.call.downloadMs ?? 0,
-      encodeAs:
-        enc && DEFAULT_LEVEL[enc]
-          ? compression?.encoding === enc
-            ? compression
-            : { encoding: enc }
-          : null,
+      encodeAs: recordedCompression(m.call.headers['content-encoding'], compression),
       cacheKey: m.call.bodyRef,
     });
   }

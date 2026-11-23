@@ -113,9 +113,6 @@ export interface ModuleOptions {
    * ```
    */
   description?: string;
-  // flag used to check if user directly modified the `ModuleInfo`
-  // this is used to sync state between Rust and JavaScript
-  invalidate?: boolean;
   packageJsonPath?: string;
 }
 
@@ -149,7 +146,10 @@ interface SpecifiedModuleOptions {
    * 2. {@linkcode Plugin.load | load} hook's returned `moduleSideEffects` option
    * 3. {@linkcode Plugin.resolveId | resolveId} hook's returned `moduleSideEffects` option
    * 4. {@linkcode TreeshakingOptions.moduleSideEffects | treeshake.moduleSideEffects}, when the option supplies a verdict for the module
-   * 5. `sideEffects` field in `package.json` for bundled modules
+   * 5. `sideEffects` field in `package.json` for bundled modules. Rolldown uses this field only when
+   *    its own resolver resolved the module. This is also the case when a `resolveId` hook returned
+   *    a `this.resolve` result that Rolldown's resolver gave. When a hook returned its own id, such
+   *    as a virtual module, Rolldown does not use the field.
    * 6. Static analysis for bundled modules and Rolldown's default side-effect assumptions for external modules
    *
    * `this.getModuleInfo(id).moduleSideEffects` and `this.resolve(id).moduleSideEffects` report

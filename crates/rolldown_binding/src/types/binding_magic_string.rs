@@ -1295,9 +1295,12 @@ impl BindingMagicString<'_> {
   pub fn sourcemap_locations<'env>(&mut self, env: &'env Env) -> napi::Result<Array<'env>> {
     self.ensure_live()?;
     let locations = self.inner.sourcemap_locations();
-    let mut array = env.create_array(locations.len() as u32)?;
-    for (index, &location) in locations.iter().enumerate() {
-      array.set(index as u32, location)?;
+    let length = u32::try_from(locations.len()).map_err(|_| {
+      napi::Error::from_reason("Too many sourcemap locations for a JavaScript array")
+    })?;
+    let mut array = env.create_array(length)?;
+    for (index, &location) in (0..length).zip(locations) {
+      array.set(index, location)?;
     }
     Ok(array)
   }

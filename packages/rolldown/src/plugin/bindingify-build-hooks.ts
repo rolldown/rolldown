@@ -5,6 +5,7 @@ import type {
   BindingHookLoadOutput,
   BindingHookResolveIdOutput,
   BindingHookTransformOutput,
+  BindingMagicString,
   BindingPluginOptions,
   BindingTransformPluginContext,
 } from '../binding.cjs';
@@ -100,11 +101,9 @@ export function bindingifyResolveId(
         importerAttributes: extraOptions.importerAttributes ?? {},
       });
       if (isPromiseLike(ret)) {
-        return Promise.resolve(ret).then((ret) =>
-          bindingifyResolveIdResult(args, ret, specifier, extraOptions.attributes),
-        );
+        return Promise.resolve(ret).then((ret) => bindingifyResolveIdResult(args, ret, specifier));
       }
-      return bindingifyResolveIdResult(args, ret, specifier, extraOptions.attributes);
+      return bindingifyResolveIdResult(args, ret, specifier);
     },
     filter: bindingifyResolveIdFilter(options.filter),
   }));
@@ -114,7 +113,6 @@ function bindingifyResolveIdResult(
   args: BindingifyPluginArgs,
   ret: ResolveIdResult,
   specifier: string,
-  attributes: Record<string, string> | undefined,
 ): BindingHookResolveIdOutput | undefined {
   if (ret == null) {
     return;
@@ -130,24 +128,14 @@ function bindingifyResolveIdResult(
     return { id: ret, normalizeExternalId: false };
   }
 
-  // Make sure the `moduleSideEffects` is update to date
-  let exist = args.pluginContextData.updateModuleOption(
-    args.pluginContextData.toModuleId(ret.id, ret.attributes ?? attributes),
-    {
-      meta: ret.meta || {},
-      moduleSideEffects: ret.moduleSideEffects ?? null,
-      invalidate: false,
-    },
-    true,
-  );
-
   return {
     id: ret.id,
     external: ret.external,
     normalizeExternalId: false,
-    moduleSideEffects: exist.moduleSideEffects ?? undefined,
+    moduleSideEffects: ret.moduleSideEffects ?? undefined,
     packageJsonPath: ret.packageJsonPath,
     attributes: ret.attributes,
+    moduleOptionsReceipt: args.pluginContextData.saveResolutionOptions({ meta: ret.meta || {} }),
   };
 }
 
@@ -164,10 +152,10 @@ export function bindingifyResolveDynamicImport(
       });
       if (isPromiseLike(ret)) {
         return Promise.resolve(ret).then((ret) =>
-          bindingifyResolveDynamicImportResult(args, ret, specifier, attributes),
+          bindingifyResolveDynamicImportResult(args, ret, specifier),
         );
       }
-      return bindingifyResolveDynamicImportResult(args, ret, specifier, attributes);
+      return bindingifyResolveDynamicImportResult(args, ret, specifier);
     },
   }));
 }
@@ -176,7 +164,6 @@ function bindingifyResolveDynamicImportResult(
   args: BindingifyPluginArgs,
   ret: ResolveIdResult,
   specifier: string,
-  attributes: Record<string, string>,
 ): BindingHookResolveIdOutput | undefined {
   if (ret == null) {
     return;
@@ -198,21 +185,12 @@ function bindingifyResolveDynamicImportResult(
     external: ret.external,
     packageJsonPath: ret.packageJsonPath,
     attributes: ret.attributes,
+    moduleOptionsReceipt: args.pluginContextData.saveResolutionOptions({ meta: ret.meta || {} }),
   };
 
   if (ret.moduleSideEffects !== null) {
     result.moduleSideEffects = ret.moduleSideEffects;
   }
-
-  args.pluginContextData.updateModuleOption(
-    args.pluginContextData.toModuleId(ret.id, ret.attributes ?? attributes),
-    {
-      meta: ret.meta || {},
-      moduleSideEffects: ret.moduleSideEffects || null,
-      invalidate: false,
-    },
-    true,
-  );
 
   return result;
 }
@@ -299,11 +277,7 @@ function bindingifyTransformResult(
     return { code: ret };
   }
 
-  let moduleOption = args.pluginContextData.updateModuleOption(id, {
-    meta: ret.meta ?? {},
-    moduleSideEffects: ret.moduleSideEffects ?? null,
-    invalidate: false,
-  });
+  args.pluginContextData.updateModuleMeta(id, ret.meta ?? {});
 
   let normalizedCode: string | undefined = undefined;
   let map = ret.map;
@@ -320,7 +294,7 @@ function bindingifyTransformResult(
       // Rust returns it here unless `experimental.nativeMagicString` and
       // sourcemaps are both enabled. Then it is generated natively and the
       // Rust side already knows about it.
-      map = ctx.sendMagicString(magicString) ?? undefined;
+      map = ctx.sendMagicString(magicString as unknown as BindingMagicString) ?? undefined;
     }
   }
 
@@ -330,7 +304,7 @@ function bindingifyTransformResult(
     map:
       bindingifySourcemap(prepareTransformHookSourcemap(map)) ??
       (ret.map === null ? null : undefined),
-    moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
+    moduleSideEffects: ret.moduleSideEffects ?? undefined,
     moduleType: ret.moduleType,
   };
 }
@@ -382,11 +356,7 @@ function bindingifyLoadResult(
     return { code: ret };
   }
 
-  let moduleOption = args.pluginContextData.updateModuleOption(id, {
-    meta: ret.meta || {},
-    moduleSideEffects: ret.moduleSideEffects ?? null,
-    invalidate: false,
-  });
+  args.pluginContextData.updateModuleMeta(id, ret.meta || {});
 
   let map = preProcessSourceMap(ret, rawId);
 
@@ -394,7 +364,7 @@ function bindingifyLoadResult(
     code: ret.code,
     map: bindingifySourcemap(map),
     moduleType: ret.moduleType,
-    moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
+    moduleSideEffects: ret.moduleSideEffects ?? undefined,
   };
 }
 
@@ -427,10 +397,17 @@ export function bindingifyModuleParsed(
 ): PluginHookWithBindingExt<BindingPluginOptions['moduleParsed']> {
   return bindingifyHook(args.plugin.moduleParsed, ({ handler }) => ({
     plugin: (ctx, moduleInfo) => {
+      const pluginContext = createPluginContext(args, ctx);
       return discardResult(
         handler.call(
-          createPluginContext(args, ctx),
-          transformModuleInfo(moduleInfo, args.pluginContextData.getModuleOption(moduleInfo.id)),
+          pluginContext,
+          transformModuleInfo(
+            moduleInfo,
+            args.pluginContextData.getModuleOption(moduleInfo.id),
+            ctx,
+            args.pluginContextData.moduleSideEffectsOption,
+            pluginContext.warnWriteAfterBuildEnd,
+          ),
         ),
       );
     },

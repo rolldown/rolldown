@@ -1,6 +1,3 @@
-#![expect(clippy::inherent_to_string)]
-use std::borrow::Cow;
-
 use napi::bindgen_prelude::{Either, This, Undefined};
 use napi::{Env, JsString};
 use napi_derive::napi;
@@ -10,6 +7,8 @@ use rolldown_utils::base64::to_standard_base64;
 use rolldown_utils::js_regex::{HybridMatch, HybridRegex};
 use serde::Serialize;
 use string_wizard::{MagicString, MagicStringOptions, SourceMapOptions, UpdateOptions};
+
+use super::external_memory_status::ExternalMemoryStatus;
 
 /// Internal representation preserving the original JS format (flat `[start, end]` vs nested
 /// `[[start, end], ...]`) so the getter returns the same shape the user passed in.
@@ -103,7 +102,9 @@ impl Utf16Mapping {
   }
 }
 
-#[derive(Clone)]
+/// `Default` builds the empty mapper `drop_inner` swaps in; every live mapper
+/// holds at least the end sentinel, so an empty one marks a released instance.
+#[derive(Clone, Default)]
 struct Utf16ToByteMapper {
   /// One entry per UTF-16 code unit, plus a sentinel at the end.
   /// Length = utf16_len + 1. Indexed directly by JS string index.
@@ -259,18 +260,46 @@ pub struct BindingSourceMapOptions {
 /// A source map object with properties matching the SourceMap V3 specification.
 #[napi]
 pub struct BindingSourceMap {
+  json: Option<JSONSourceMap>,
+}
+
+/// The payload `BindingDecodedMap` releases in one move.
+struct DecodedMapData {
+  inner: SourceMap,
   json: JSONSourceMap,
+  generated_line_count: usize,
 }
 
 /// A decoded source map with mappings as an array of arrays instead of VLQ-encoded string.
 #[napi]
 pub struct BindingDecodedMap {
-  inner: SourceMap,
-  json: JSONSourceMap,
+  data: Option<DecodedMapData>,
+}
+
+impl BindingSourceMap {
+  fn try_get_json(&self) -> napi::Result<&JSONSourceMap> {
+    self.json.as_ref().ok_or_else(|| {
+      napi::Error::from_reason(
+        "Memory has been freed: this source map's native data was eagerly released after its hook invocation settled. Copy the fields you need during the hook.",
+      )
+    })
+  }
 }
 
 #[napi]
 impl BindingSourceMap {
+  #[napi(enumerable = false)]
+  pub fn drop_inner(&mut self) -> ExternalMemoryStatus {
+    // Owned outright: there is no `Arc` strong count to report.
+    match self.json.take() {
+      None => ExternalMemoryStatus {
+        freed: false,
+        reason: Some("Memory has already been freed".to_string()),
+      },
+      Some(_json) => ExternalMemoryStatus { freed: true, reason: None },
+    }
+  }
+
   /// The source map version (always 3).
   #[napi(getter)]
   pub fn version(&self) -> u32 {
@@ -279,67 +308,97 @@ impl BindingSourceMap {
 
   /// The generated file name.
   #[napi(getter)]
-  pub fn file(&self) -> Option<String> {
-    self.json.file.clone()
+  pub fn file(&self) -> napi::Result<Option<String>> {
+    Ok(self.try_get_json()?.file.clone())
   }
 
   /// The list of original source files.
   #[napi(getter)]
-  pub fn sources(&self) -> Vec<String> {
-    self.json.sources.iter().map(|source| source.clone().unwrap_or_default()).collect()
+  pub fn sources(&self) -> napi::Result<Vec<String>> {
+    Ok(
+      self
+        .try_get_json()?
+        .sources
+        .iter()
+        .map(|source| source.clone().unwrap_or_default())
+        .collect(),
+    )
   }
 
   /// The original source contents (if `includeContent` was true).
   #[napi(getter)]
-  pub fn sources_content(&self) -> Vec<Option<String>> {
-    self.json.sources_content.clone().unwrap_or_default()
+  pub fn sources_content(&self) -> napi::Result<Vec<Option<String>>> {
+    Ok(self.try_get_json()?.sources_content.clone().unwrap_or_default())
   }
 
   /// The list of symbol names used in mappings.
   #[napi(getter)]
-  pub fn names(&self) -> Vec<String> {
-    self.json.names.clone()
+  pub fn names(&self) -> napi::Result<Vec<String>> {
+    Ok(self.try_get_json()?.names.clone())
   }
 
   /// The VLQ-encoded mappings string.
   #[napi(getter)]
-  pub fn mappings(&self) -> String {
-    self.json.mappings.clone()
+  pub fn mappings(&self) -> napi::Result<String> {
+    Ok(self.try_get_json()?.mappings.clone())
   }
 
   /// The list of source indices that should be excluded from debugging, or `undefined` when
   /// the map has none. `magic-string` leaves the field out in that case.
   #[napi(getter, js_name = "x_google_ignoreList")]
-  pub fn x_google_ignore_list(&self) -> Either<Vec<u32>, Undefined> {
-    self.json.ignore_list.clone().map_or(Either::B(()), Either::A)
+  pub fn x_google_ignore_list(&self) -> napi::Result<Either<Vec<u32>, Undefined>> {
+    Ok(self.try_get_json()?.ignore_list.clone().map_or(Either::B(()), Either::A))
   }
 
   /// Returns the source map as a JSON string.
   #[napi]
-  pub fn to_string(&self) -> String {
+  pub fn to_string(&self) -> napi::Result<String> {
+    let json = self.try_get_json()?;
     let serializable = SerializableSourceMap {
       version: 3,
-      file: self.json.file.as_ref(),
-      sources: &self.json.sources,
-      sources_content: self.json.sources_content.as_ref(),
-      names: &self.json.names,
-      mappings: &self.json.mappings,
-      x_google_ignore_list: self.json.ignore_list.as_ref(),
+      file: json.file.as_ref(),
+      sources: &json.sources,
+      sources_content: json.sources_content.as_ref(),
+      names: &json.names,
+      mappings: &json.mappings,
+      x_google_ignore_list: json.ignore_list.as_ref(),
     };
-    serde_json::to_string(&serializable).expect("should be able to serialize source map")
+    Ok(serde_json::to_string(&serializable).expect("should be able to serialize source map"))
   }
 
   /// Returns the source map as a base64-encoded data URL.
   #[napi]
-  pub fn to_url(&self) -> String {
-    let json = self.to_string();
+  pub fn to_url(&self) -> napi::Result<String> {
+    let json = self.to_string()?;
     let base64 = to_standard_base64(&json);
-    format!("data:application/json;charset=utf-8;base64,{base64}")
+    Ok(format!("data:application/json;charset=utf-8;base64,{base64}"))
+  }
+}
+
+impl BindingDecodedMap {
+  fn try_get_data(&self) -> napi::Result<&DecodedMapData> {
+    self.data.as_ref().ok_or_else(|| {
+      napi::Error::from_reason(
+        "Memory has been freed: this decoded source map's native data was eagerly released after its hook invocation settled. Copy the fields you need during the hook.",
+      )
+    })
   }
 }
 
 #[napi]
 impl BindingDecodedMap {
+  #[napi(enumerable = false)]
+  pub fn drop_inner(&mut self) -> ExternalMemoryStatus {
+    // Owned outright: there is no `Arc` strong count to report.
+    match self.data.take() {
+      None => ExternalMemoryStatus {
+        freed: false,
+        reason: Some("Memory has already been freed".to_string()),
+      },
+      Some(_data) => ExternalMemoryStatus { freed: true, reason: None },
+    }
+  }
+
   /// The source map version (always 3).
   #[napi(getter)]
   pub fn version(&self) -> u32 {
@@ -348,40 +407,44 @@ impl BindingDecodedMap {
 
   /// The generated file name.
   #[napi(getter)]
-  pub fn file(&self) -> Option<String> {
-    self.json.file.clone()
+  pub fn file(&self) -> napi::Result<Option<String>> {
+    Ok(self.try_get_data()?.json.file.clone())
   }
 
   /// The list of original source files.
   #[napi(getter)]
-  pub fn sources(&self) -> Vec<String> {
-    self.json.sources.iter().map(|source| source.clone().unwrap_or_default()).collect()
+  pub fn sources(&self) -> napi::Result<Vec<String>> {
+    Ok(
+      self
+        .try_get_data()?
+        .json
+        .sources
+        .iter()
+        .map(|source| source.clone().unwrap_or_default())
+        .collect(),
+    )
   }
 
   /// The original source contents (if `includeContent` was true).
   #[napi(getter)]
-  pub fn sources_content(&self) -> Vec<Option<String>> {
-    self.json.sources_content.clone().unwrap_or_default()
+  pub fn sources_content(&self) -> napi::Result<Vec<Option<String>>> {
+    Ok(self.try_get_data()?.json.sources_content.clone().unwrap_or_default())
   }
 
   /// The list of symbol names used in mappings.
   #[napi(getter)]
-  pub fn names(&self) -> Vec<String> {
-    self.json.names.clone()
+  pub fn names(&self) -> napi::Result<Vec<String>> {
+    Ok(self.try_get_data()?.json.names.clone())
   }
 
   /// The decoded mappings as an array of line arrays.
   /// Each line is an array of segments, where each segment is [generatedColumn, sourceIndex, originalLine, originalColumn, nameIndex?].
   #[napi(getter)]
-  pub fn mappings(&self) -> Vec<Vec<Vec<i64>>> {
-    let mut lines: Vec<Vec<Vec<i64>>> = Vec::new();
+  pub fn mappings(&self) -> napi::Result<Vec<Vec<Vec<i64>>>> {
+    let data = self.try_get_data()?;
+    let mut lines: Vec<Vec<Vec<i64>>> = vec![Vec::new(); data.generated_line_count];
 
-    for token in self.inner.get_tokens() {
-      // Fill in empty lines if needed
-      while lines.len() <= token.get_dst_line() as usize {
-        lines.push(Vec::new());
-      }
-
+    for token in data.inner.get_tokens() {
       let current_line = token.get_dst_line();
 
       let mut segment: Vec<i64> = vec![i64::from(token.get_dst_col())];
@@ -399,14 +462,14 @@ impl BindingDecodedMap {
       lines[current_line as usize].push(segment);
     }
 
-    lines
+    Ok(lines)
   }
 
   /// The list of source indices that should be excluded from debugging, or `undefined` when
   /// the map has none. `magic-string` leaves the field out in that case.
   #[napi(getter, js_name = "x_google_ignoreList")]
-  pub fn x_google_ignore_list(&self) -> Either<Vec<u32>, Undefined> {
-    self.json.ignore_list.clone().map_or(Either::B(()), Either::A)
+  pub fn x_google_ignore_list(&self) -> napi::Result<Either<Vec<u32>, Undefined>> {
+    Ok(self.try_get_data()?.json.ignore_list.clone().map_or(Either::B(()), Either::A))
   }
 }
 
@@ -417,9 +480,9 @@ pub struct BindingMagicString<'a> {
   pub(crate) offset: i64,
   indent_exclusion_ranges: Option<IndentExclusionRanges>,
   ignore_list: bool,
-  /// Set once `sendMagicString` has moved `inner` out to the native sourcemap channel.
-  /// The JS object outlives that move, so every method that touches `inner` has to refuse
-  /// rather than silently operate on the empty `MagicString` left behind.
+  /// Set once `sendMagicString` moved `inner` out or `dropInner` released it. The JS object
+  /// outlives both, so methods that touch `inner` must refuse instead of using the empty
+  /// `MagicString` left behind.
   consumed: bool,
 }
 
@@ -438,13 +501,15 @@ impl<'a> BindingMagicString<'a> {
     Ok(std::mem::take(&mut self.inner))
   }
 
-  /// Errors if this instance was already consumed by `sendMagicString`.
+  /// Errors if this instance was already consumed by `sendMagicString` or released by
+  /// `dropInner`.
   fn ensure_live(&self) -> napi::Result<()> {
     if self.consumed {
       return Err(napi::Error::from_reason(
-        "This MagicString was already passed to `sendMagicString()`, which moves its contents \
-         into the native sourcemap channel. Finish reading and editing it before returning it \
-         from the `transform` hook.",
+        "This MagicString is no longer usable: it was either already passed to \
+         `sendMagicString()`, which moves its contents into the native sourcemap channel, or \
+         eagerly released once the hook that created it settled. Finish reading and editing it \
+         while that hook runs.",
       ));
     }
     Ok(())
@@ -459,6 +524,27 @@ impl<'a> BindingMagicString<'a> {
       Some(Either::B(s)) if s == "boundary" => string_wizard::Hires::Boundary,
       Some(_) => string_wizard::Hires::False,
     }
+  }
+
+  fn build_source_map(
+    &self,
+    options: Option<BindingSourceMapOptions>,
+  ) -> napi::Result<(SourceMap, usize)> {
+    self.ensure_live()?;
+    let opts = options.unwrap_or_default();
+    let hires = self.resolve_hires(opts.hires.as_ref());
+    let (mut source_map, generated_line_count) =
+      self.inner.source_map_with_generated_line_count(SourceMapOptions {
+        source: opts.source.map(Into::into).unwrap_or_else(|| "".into()),
+        include_content: opts.include_content.unwrap_or(false),
+        hires,
+      });
+
+    if let Some(file) = opts.file {
+      source_map.set_file(&file);
+    }
+
+    Ok((source_map, generated_line_count))
   }
 }
 
@@ -494,6 +580,25 @@ impl BindingMagicString<'_> {
       ignore_list,
       consumed: false,
     })
+  }
+
+  /// Releases the source text and its UTF-16 mapping table — together about nine
+  /// times the source bytes — without waiting for a finalizer.
+  #[napi(enumerable = false)]
+  pub fn drop_inner(&mut self) -> ExternalMemoryStatus {
+    // An empty mapper marks an earlier `dropInner` or `sendMagicString`: both free the
+    // mapping table (8 bytes per source byte).
+    if self.utf16_to_byte_mapper.entries.is_empty() {
+      return ExternalMemoryStatus {
+        freed: false,
+        reason: Some("Memory has already been freed".to_string()),
+      };
+    }
+    self.consumed = true;
+    self.inner = MagicString::default();
+    self.utf16_to_byte_mapper = Utf16ToByteMapper::default();
+    self.indent_exclusion_ranges = None;
+    ExternalMemoryStatus { freed: true, reason: None }
   }
 
   #[napi(getter)]
@@ -1281,35 +1386,16 @@ impl BindingMagicString<'_> {
     &self,
     options: Option<BindingSourceMapOptions>,
   ) -> napi::Result<BindingSourceMap> {
-    self.ensure_live()?;
-    let opts = options.unwrap_or_default();
-    let hires = self.resolve_hires(opts.hires.as_ref());
-    let source_map = self.inner.source_map(SourceMapOptions {
-      source: opts.source.map(Into::into).unwrap_or_else(|| "".into()),
-      include_content: opts.include_content.unwrap_or(false),
-      hires,
-    });
+    let (source_map, generated_line_count) = self.build_source_map(options)?;
 
-    // If file option is provided, reconstruct the source map with the file field
-    let source_map = if let Some(file) = opts.file {
-      let mut m = SourceMap::new(
-        Some(Cow::Owned(file)),
-        source_map.get_names().map(|n| Cow::Owned(n.to_owned())).collect(),
-        None,
-        source_map.get_sources().map(|s| s.map(|s| Cow::Owned(s.to_owned()))).collect(),
-        source_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
-        source_map.get_tokens().collect::<Vec<_>>().into_boxed_slice(),
-        None,
-      );
-      if self.ignore_list {
-        m.set_ignore_list(vec![0]);
-      }
-      m
-    } else {
-      source_map
-    };
-
-    Ok(BindingSourceMap { json: source_map.to_json() })
+    // The encoder stops at the last token. An empty `mappings` string represents one line.
+    let mut tokens = source_map.get_tokens();
+    let encoded_line_count = tokens
+      .nth(tokens.len().saturating_sub(1))
+      .map_or(1, |token| token.get_dst_line() as usize + 1);
+    let mut json = source_map.to_json();
+    json.mappings.extend(std::iter::repeat_n(';', generated_line_count - encoded_line_count));
+    Ok(BindingSourceMap { json: Some(json) })
   }
 
   /// Generates a decoded source map for the transformations applied to this MagicString.
@@ -1319,36 +1405,11 @@ impl BindingMagicString<'_> {
     &self,
     options: Option<BindingSourceMapOptions>,
   ) -> napi::Result<BindingDecodedMap> {
-    self.ensure_live()?;
-    let opts = options.unwrap_or_default();
-    let hires = self.resolve_hires(opts.hires.as_ref());
-    let source_map = self.inner.source_map(SourceMapOptions {
-      source: opts.source.map(Into::into).unwrap_or_else(|| "".into()),
-      include_content: opts.include_content.unwrap_or(false),
-      hires,
-    });
-
-    // If file option is provided, reconstruct the source map with the file field
-    let source_map = if let Some(file) = opts.file {
-      let mut m = SourceMap::new(
-        Some(Cow::Owned(file)),
-        source_map.get_names().map(|n| Cow::Owned(n.to_owned())).collect(),
-        None,
-        source_map.get_sources().map(|s| s.map(|s| Cow::Owned(s.to_owned()))).collect(),
-        source_map.get_source_contents().map(|x| x.map(|s| Cow::Owned(s.to_owned()))).collect(),
-        source_map.get_tokens().collect::<Vec<_>>().into_boxed_slice(),
-        None,
-      );
-      if self.ignore_list {
-        m.set_ignore_list(vec![0]);
-      }
-      m
-    } else {
-      source_map
-    };
-
+    let (source_map, generated_line_count) = self.build_source_map(options)?;
     let json = source_map.to_json();
-    Ok(BindingDecodedMap { inner: source_map, json })
+    Ok(BindingDecodedMap {
+      data: Some(DecodedMapData { inner: source_map, json, generated_line_count }),
+    })
   }
 }
 

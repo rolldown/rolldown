@@ -24,8 +24,8 @@ use oxc::{
       ExportDefaultDeclarationKind, ExportSpecifier, Expression, FormalParameter,
       FormalParameterKind, FormalParameters, FunctionBody, FunctionType, IdentifierName,
       ImportDeclarationSpecifier, ImportOrExportKind, MemberExpression, ModuleExportName,
-      NumberBase, ObjectExpression, ObjectPropertyKind, PropertyDefinitionType, PropertyKey,
-      PropertyKind, Statement, StringLiteral, VariableDeclarationKind, VariableDeclarator,
+      ObjectExpression, ObjectPropertyKind, PropertyDefinitionType, PropertyKey, PropertyKind,
+      Statement, StringLiteral, VariableDeclarationKind, VariableDeclarator,
     },
     builder::GetAstBuilder,
   },
@@ -166,10 +166,7 @@ pub trait ExpressionFactoryExt<'ast> {
         oxc::allocator::Vec::from_value_in(Argument::from(call_expr), builder)
       }
       Some(Interop::Node) => oxc::allocator::Vec::from_iter_in(
-        [
-          Argument::from(call_expr),
-          Argument::new_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal, builder),
-        ],
+        [Argument::from(call_expr), Argument::new_numeric_literal(SPAN, 1.0, None, builder)],
         builder,
       ),
     };
@@ -303,10 +300,7 @@ pub trait ExpressionFactoryExt<'ast> {
   ) -> Expression<'ast> {
     let args = if node_mode {
       oxc::allocator::Vec::from_iter_in(
-        [
-          Argument::from(expr),
-          Argument::new_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal, builder),
-        ],
+        [Argument::from(expr), Argument::new_numeric_literal(SPAN, 1.0, None, builder)],
         builder,
       )
     } else {
@@ -425,7 +419,6 @@ pub trait ObjectPropertyKindFactoryExt<'ast> {
       Expression::new_arrow_returning(expr, builder),
       true,
       false,
-      computed,
       builder,
     )
   }
@@ -496,7 +489,6 @@ pub trait ClassElementFactoryExt<'ast> {
         false,
         builder,
       )),
-      false,
       true, // static
       false,
       false,
@@ -843,7 +835,7 @@ pub trait StatementFactoryExt<'ast> {
         [ObjectPropertyKind::new_object_property(
           SPAN,
           PropertyKind::Init,
-          PropertyKey::new_string_literal(
+          PropertyKey::new_static_string_literal(
             SPAN,
             oxc::ast::ast::Str::from_str_in(stable_id, builder),
             None,
@@ -851,7 +843,6 @@ pub trait StatementFactoryExt<'ast> {
           ),
           Expression::ArrowFunctionExpression(arrow_expr),
           true,
-          false,
           false,
           builder,
         )],
@@ -903,14 +894,13 @@ pub trait StatementFactoryExt<'ast> {
         [ObjectPropertyKind::new_object_property(
           SPAN,
           PropertyKind::Init,
-          PropertyKey::new_string_literal(
+          PropertyKey::new_static_string_literal(
             SPAN,
             oxc::ast::ast::Str::from_str_in(stable_id, builder),
             None,
             builder,
           ),
           Expression::ArrowFunctionExpression(arrow_expr),
-          false,
           false,
           false,
           builder,

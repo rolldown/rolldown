@@ -22,10 +22,11 @@ and will drift; treat them as starting points.
 A build mutates `ScanStageCache` through several non-atomic "tear → repair"
 steps; an early `?` return between a tear and its repair can leave the cache
 broken for the next build. The invariant, the three torn windows
-(ownership / scoping / defer-sync), and the unconditional-repair rule are
+(ownership / scoping / side-effect writes), and the unconditional-repair rule are
 documented in [bundler-data-lifecycle.md](../bundler-data-lifecycle/implementation.md) ("Cache integrity on a
 failed build"). The three fix sites — `with_cached_bundle`, `bundle_up`'s
-ordering of `merge_immutable_fields_for_cache`, and `update_defer_sync_data` —
+ordering of `merge_immutable_fields_for_cache`, and
+`apply_module_side_effects_overrides` —
 reference that section.
 
 ## Unresolved Questions

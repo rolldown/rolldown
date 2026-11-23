@@ -1,15 +1,16 @@
 use std::sync::Arc;
 
+use napi::Either;
 use napi_derive::napi;
-use rolldown_common::ExportsKind;
+use rolldown_common::{ExportsKind, side_effects::DeterminedSideEffects};
 
-use crate::options::plugin::types::{
-  binding_hook_side_effects::BindingHookSideEffects, binding_shared_string::BindingSharedString,
-};
+use crate::options::plugin::types::binding_shared_string::BindingSharedString;
+
+use super::external_memory_status::{ExternalMemoryStatus, release_arc};
 
 #[napi]
 pub struct BindingModuleInfo {
-  inner: Arc<rolldown_common::ModuleInfo>,
+  inner: Option<Arc<rolldown_common::ModuleInfo>>,
   #[napi(ts_type = "string")]
   pub id: BindingSharedString,
   #[napi(ts_type = "Array<string>")]
@@ -59,18 +60,61 @@ impl BindingModuleInfo {
       is_entry: inner.is_entry,
       exports: inner.exports.iter().map(ToString::to_string).collect(),
       input_format: input_format.to_string(),
-      inner,
+      inner: Some(inner),
     }
   }
 
-  #[napi(getter)]
-  pub fn code(&self) -> Option<&str> {
-    self.inner.code.as_deref()
+  fn try_get_inner(&self) -> napi::Result<&Arc<rolldown_common::ModuleInfo>> {
+    self.inner.as_ref().ok_or_else(|| {
+      napi::Error::from_reason(
+        "Memory has been freed: this module info's native data was eagerly released after its hook invocation settled. Copy the fields you need during the hook.",
+      )
+    })
   }
 
-  /// Effective `moduleSideEffects` (`boolean | 'no-treeshake'`). `null` until the module has been parsed.
-  #[napi(getter, ts_return_type = "boolean | 'no-treeshake' | null")]
-  pub fn module_side_effects(&self) -> Option<BindingHookSideEffects> {
-    self.inner.module_side_effects.map(Into::into)
+  #[napi(enumerable = false)]
+  pub fn drop_inner(&mut self) -> ExternalMemoryStatus {
+    // These per-field clones pin their strings until a finalizer runs. The JS side
+    // snapshots every field first, so later reads just see the emptied values.
+    self.id = BindingSharedString::from(arcstr::ArcStr::new());
+    self.importers = Vec::new();
+    self.dynamic_importers = Vec::new();
+    self.imported_ids = Vec::new();
+    self.dynamically_imported_ids = Vec::new();
+    self.exports = Vec::new();
+    release_arc(&mut self.inner)
+  }
+
+  #[napi(getter)]
+  pub fn code(&self) -> napi::Result<Option<&str>> {
+    Ok(self.try_get_inner()?.code.as_deref())
+  }
+}
+
+pub fn to_binding_module_side_effects(
+  side_effects: DeterminedSideEffects,
+) -> Either<bool, &'static str> {
+  match side_effects {
+    DeterminedSideEffects::UserDefined(value) | DeterminedSideEffects::Analyzed(value) => {
+      Either::A(value)
+    }
+    DeterminedSideEffects::NoTreeshake => Either::B("no-treeshake"),
+  }
+}
+
+/// The JS `treeshake.moduleSideEffects` function, which the getter and setter of
+/// `ModuleInfo.moduleSideEffects` pass when the option is a function.
+pub type BindingModuleSideEffectsOptionFn<'a> =
+  napi::bindgen_prelude::Function<'a, napi::bindgen_prelude::FnArgs<(String, bool)>, Option<bool>>;
+
+/// Calls `call_option`, or gives no result when the option is not a function.
+pub fn call_module_side_effects_option(
+  call_option: Option<&BindingModuleSideEffectsOptionFn<'_>>,
+  raw_id: &str,
+  external: bool,
+) -> anyhow::Result<Option<bool>> {
+  match call_option {
+    Some(call_option) => Ok(call_option.call((raw_id.to_string(), external).into())?),
+    None => Ok(None),
   }
 }

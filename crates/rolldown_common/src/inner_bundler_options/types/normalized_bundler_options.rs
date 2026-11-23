@@ -33,7 +33,7 @@ use super::{
 };
 use crate::inner_bundler_options::types::optimization::NormalizedOptimizationConfig;
 use crate::{
-  DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
+  CreateJsModuleOptions, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
   HashCharacters, InjectImport, InputItem, InvalidateJsSideCache, LogLevel,
   MakeAbsoluteExternalsRelative, ModuleType, OnLog, PluginTimingsOption, ResetJsModuleOptions,
   RollupPreRenderedAsset, StrictMode, TransformOptions,
@@ -105,13 +105,13 @@ pub struct NormalizedBundlerOptions {
   pub comments: CommentsOptions,
   pub drop_labels: FxHashSet<String>,
   pub polyfill_require: bool,
-  pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
   /// Pulled at close so the measurement includes `closeBundle`.
   pub plugin_timings: Option<PluginTimingsOption>,
   pub transform_options: Box<TransformOptions>,
   pub make_absolute_externals_relative: MakeAbsoluteExternalsRelative,
   pub invalidate_js_side_cache: Option<InvalidateJsSideCache>,
   pub reset_js_module_options: Option<ResetJsModuleOptions>,
+  pub create_js_module_options: Option<CreateJsModuleOptions>,
   pub log_level: Option<LogLevel>,
   pub on_log: Option<OnLog>,
   pub preserve_modules: bool,
@@ -189,12 +189,12 @@ impl Default for NormalizedBundlerOptions {
       comments: CommentsOptions::default(),
       drop_labels: Default::default(),
       polyfill_require: Default::default(),
-      defer_sync_scan_data: Default::default(),
       plugin_timings: Default::default(),
       transform_options: Default::default(),
       make_absolute_externals_relative: Default::default(),
       invalidate_js_side_cache: Default::default(),
       reset_js_module_options: Default::default(),
+      create_js_module_options: Default::default(),
       log_level: Default::default(),
       on_log: Default::default(),
       preserve_modules: false,

@@ -535,8 +535,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let args = if self.re_export_all_dependencies.is_empty() {
       oxc::allocator::Vec::from_iter_in([obj_arg], self)
     } else {
-      let open_flag =
-        ast::Argument::new_numeric_literal(SPAN, 2.0, None, ast::NumberBase::Decimal, self);
+      let open_flag = ast::Argument::new_numeric_literal(SPAN, 2.0, None, self);
       oxc::allocator::Vec::from_iter_in([obj_arg, open_flag], self)
     };
     let export_call_expr = ast::Expression::new_call_expression(

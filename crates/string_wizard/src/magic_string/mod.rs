@@ -53,6 +53,9 @@ pub struct MagicString<'s> {
   /// chunks, so a range that spans a split boundary still stores its full original text.
   stored_names: FxHashMap<String, u32>,
 
+  #[cfg(feature = "sourcemap")]
+  sourcemap_locations: Vec<u32>,
+
   // This is used to speed up the search for the chunk that contains a given index.
   last_searched_chunk_idx: ChunkIdx,
 }
@@ -93,6 +96,8 @@ impl<'text> MagicString<'text> {
       hires: options.hires,
       guessed_indentor: OnceLock::default(),
       stored_names: FxHashMap::default(),
+      #[cfg(feature = "sourcemap")]
+      sourcemap_locations: Vec::new(),
       last_searched_chunk_idx: initial_chunk_idx,
     };
 

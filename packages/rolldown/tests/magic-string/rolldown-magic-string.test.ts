@@ -16,6 +16,33 @@ import { describe, it } from 'vitest';
  * tests stay in Rust.
  */
 
+describe('sourcemap locations', () => {
+  it('keeps original UTF-16 positions, including inside a surrogate pair', () => {
+    const s = new MagicString('a😀b\ncd', { offset: 3 });
+    s.addSourcemapLocation(6);
+    s.addSourcemapLocation(4);
+    s.addSourcemapLocation(2);
+    s.addSourcemapLocation(2);
+
+    assert.deepStrictEqual(s.sourcemapLocations, [2, 4, 6]);
+    assert.deepStrictEqual(s.generateDecodedMap().mappings, [
+      [
+        [0, 0, 0, 0],
+        [2, 0, 0, 2],
+      ],
+      [
+        [0, 0, 1, 0],
+        [1, 0, 1, 1],
+      ],
+    ]);
+
+    const clone = s.clone();
+    clone.addSourcemapLocation(3);
+    assert.deepStrictEqual(clone.sourcemapLocations, [2, 3, 4, 6]);
+    assert.deepStrictEqual(s.sourcemapLocations, [2, 4, 6]);
+  });
+});
+
 describe('length', () => {
   // `MagicString::len()` sums UTF-8 byte lengths, but JS measures string length in UTF-16
   // code units. The binding used to return the byte count, so every non-ASCII source

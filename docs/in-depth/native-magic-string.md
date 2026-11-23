@@ -99,6 +99,7 @@ The following MagicString methods are currently available in the native implemen
 
 **Source Map Generation:**
 
+- `addSourcemapLocation(index)` - Adds an explicit low-resolution mapping at a UTF-16 index in the original source. The `offset` option does not affect this index. The `sourcemapLocations` property returns the registered indices in ascending order.
 - `generateMap(options?)` - Generates a source map object. Its `toString()` returns the map as a JSON string, and its `toUrl()` returns the map as a data URL
   - `options.source` - Source file name
   - `options.includeContent` - Include original source in the map

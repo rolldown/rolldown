@@ -1741,6 +1741,10 @@ export declare class BindingMagicString {
    * This is done by returning a UTF-16 encoded JS string via `napi_create_string_utf16`.
    */
   slice(start?: number | undefined | null, end?: number | undefined | null): string
+  /** Original-source UTF-16 indices registered with `addSourcemapLocation`, in ascending order. */
+  get sourcemapLocations(): Array<number>
+  /** Adds a mapping at an original-source UTF-16 index when the source map uses low resolution. */
+  addSourcemapLocation(index: number): void
   /**
    * Generates a source map for the transformations applied to this MagicString.
    * Returns a BindingSourceMap object with version, file, sources, sourcesContent, names, mappings.

@@ -91,7 +91,6 @@ const SKIP_TESTS = [
   // options-specific skips
   // Note: 'stores ignore-list hint' is now supported (ignoreList option)
   // Note: 'indentExclusionRanges' is now supported (constructor option + getter + clone)
-  'sourcemapLocations', // not supported
   'should return cloned content', // clone-related
   'should noop', // edge cases that may differ
   // Note: 'negative indices' now works in remove (normalize_index handles them correctly)
@@ -125,7 +124,6 @@ const SKIP_TESTS = [
   // clone-specific skips (tests that use unsupported constructor options)
   // Note: 'should clone filename info' now works since filename is supported
   // Note: 'should clone indentExclusionRanges' now works since indentExclusionRanges is supported
-  'should clone sourcemapLocations', // uses sourcemapLocations
   // Note: 'should works' (hasChanged) now works — clone preserves hasChanged state
   // Note: 'should not report change if content is identical' no longer in upstream tests
   // replace/replaceAll — regex with string replacement now supported in Rust binding
@@ -136,9 +134,6 @@ const SKIP_TESTS = [
   // 'should ignore non-changed replacements', 'global regex result the same as
   // .replace') now work via the JS wrapper in src/binding-magic-string.ts
   // Note: 'should support length' and 'should support isEmpty' now work correctly
-  // generateMap-specific skips (features not in string_wizard)
-  'should generate a sourcemap using specified locations', // addSourcemapLocation not implemented
-  // Note: 'generates x_google_ignoreList' is now supported
 ];
 
 async function downloadFile(filename) {

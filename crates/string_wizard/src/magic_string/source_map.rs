@@ -24,6 +24,18 @@ impl Default for SourceMapOptions {
 }
 
 impl MagicString<'_> {
+  /// Adds a low-resolution mapping at a UTF-16 index in the original source.
+  pub fn add_sourcemap_location(&mut self, index: u32) {
+    if let Err(position) = self.sourcemap_locations.binary_search(&index) {
+      self.sourcemap_locations.insert(position, index);
+    }
+  }
+
+  /// Registered original-source UTF-16 indices, sorted in ascending order.
+  pub fn sourcemap_locations(&self) -> &[u32] {
+    &self.sourcemap_locations
+  }
+
   pub fn source_map(&self, opts: SourceMapOptions) -> oxc_sourcemap::SourceMap<'static> {
     self.build_source_map(opts).0
   }
@@ -42,7 +54,7 @@ impl MagicString<'_> {
   }
 
   fn build_source_map(&self, opts: SourceMapOptions) -> (oxc_sourcemap::SourceMap<'static>, usize) {
-    let mut source_builder = SourcemapBuilder::new(opts.hires);
+    let mut source_builder = SourcemapBuilder::new(opts.hires, &self.sourcemap_locations);
 
     source_builder.set_source_and_content(&opts.source, &self.source);
 

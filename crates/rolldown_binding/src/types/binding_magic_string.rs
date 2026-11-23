@@ -1290,6 +1290,21 @@ impl BindingMagicString<'_> {
     env.create_string_utf16(&utf16_buf)
   }
 
+  /// Original-source UTF-16 indices registered with `addSourcemapLocation`, in ascending order.
+  #[napi(getter)]
+  pub fn sourcemap_locations(&self) -> napi::Result<Vec<u32>> {
+    self.ensure_live()?;
+    Ok(self.inner.sourcemap_locations().to_vec())
+  }
+
+  /// Adds a mapping at an original-source UTF-16 index when the source map uses low resolution.
+  #[napi]
+  pub fn add_sourcemap_location(&mut self, index: u32) -> napi::Result<()> {
+    self.ensure_live()?;
+    self.inner.add_sourcemap_location(index);
+    Ok(())
+  }
+
   /// Generates a source map for the transformations applied to this MagicString.
   /// Returns a BindingSourceMap object with version, file, sources, sourcesContent, names, mappings.
   #[napi]

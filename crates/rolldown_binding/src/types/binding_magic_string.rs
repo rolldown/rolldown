@@ -1294,7 +1294,7 @@ impl BindingMagicString<'_> {
   #[napi(getter)]
   pub fn sourcemap_locations(&self) -> napi::Result<Vec<u32>> {
     self.ensure_live()?;
-    Ok(self.inner.sourcemap_locations().to_vec())
+    Ok(self.inner.sourcemap_locations())
   }
 
   /// Adds a mapping at an original-source UTF-16 index when the source map uses low resolution.

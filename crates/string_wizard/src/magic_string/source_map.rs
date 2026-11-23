@@ -26,14 +26,16 @@ impl Default for SourceMapOptions {
 impl MagicString<'_> {
   /// Adds a low-resolution mapping at a UTF-16 index in the original source.
   pub fn add_sourcemap_location(&mut self, index: u32) {
-    if let Err(position) = self.sourcemap_locations.binary_search(&index) {
-      self.sourcemap_locations.insert(position, index);
-    }
+    self.sourcemap_locations.push(index);
   }
 
-  /// Registered original-source UTF-16 indices, sorted in ascending order.
-  pub fn sourcemap_locations(&self) -> &[u32] {
-    &self.sourcemap_locations
+  /// Unique registered original-source UTF-16 indices, sorted in ascending order.
+  pub fn sourcemap_locations(&self) -> Vec<u32> {
+    // Sort on read so registering locations in arbitrary order never shifts earlier entries.
+    let mut locations = self.sourcemap_locations.clone();
+    locations.sort_unstable();
+    locations.dedup();
+    locations
   }
 
   pub fn source_map(&self, opts: SourceMapOptions) -> oxc_sourcemap::SourceMap<'static> {
@@ -54,7 +56,9 @@ impl MagicString<'_> {
   }
 
   fn build_source_map(&self, opts: SourceMapOptions) -> (oxc_sourcemap::SourceMap<'static>, usize) {
-    let mut source_builder = SourcemapBuilder::new(opts.hires, &self.sourcemap_locations);
+    let sourcemap_locations =
+      if matches!(opts.hires, Hires::False) { self.sourcemap_locations() } else { Vec::new() };
+    let mut source_builder = SourcemapBuilder::new(opts.hires, &sourcemap_locations);
 
     source_builder.set_source_and_content(&opts.source, &self.source);
 

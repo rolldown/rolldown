@@ -1,0 +1,12 @@
+{
+  "_comment": "`a.js` runs before `external.js` in `main.js`. A merge of the chunk of `a.js` into `main.js` would run it in the entry's body, after the external import, so `a.js` stays a file.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "external": ["./external.js"],
+    "experimental": {
+      "chunkOptimization": {
+        "avoidRedundantChunkLoads": false
+      }
+    }
+  }
+}

@@ -1,0 +1,66 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## barrel.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+// barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({ service: () => service });
+const service = "service";
+export { service as n, barrel_exports as t };
+
+```
+
+## main.js
+
+```js
+import "./setup.js";
+import "./external.js";
+// main.js
+const loadRoute = () => import("./route.js");
+const loadSplash = () => import("./splash.js").then((m) => m.v);
+const loadBarrel = () => import("./barrel.js").then((n) => n.t).then((m) => m.service);
+export { loadBarrel, loadRoute, loadSplash };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
+
+```
+
+## route.js
+
+```js
+// route.js
+const loadSetup = () => import("./setup.js").then((n) => n.t);
+export { loadSetup };
+
+```
+
+## setup.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+// setup.js
+var setup_exports = /* @__PURE__ */ __exportAll({});
+globalThis.ready = true;
+export { setup_exports as t };
+
+```
+
+## splash.js
+
+```js
+import { n as service } from "./barrel.js";
+// splash.js
+const v = service + "slug";
+export { v };
+
+```

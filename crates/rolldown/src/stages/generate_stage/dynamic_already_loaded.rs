@@ -3,9 +3,10 @@ use std::collections::VecDeque;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
-  NormalModule, PreserveEntrySignatures, RuntimeHelper, StmtEvalFlags, StmtInfo, StmtInfoIdx,
-  StmtInfoMeta, SymbolOrMemberExprRef, SymbolRef, UsedSymbolRefsBuilder, UsedSymbolRefsView,
-  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
+  ModuleTable, NormalModule, PreserveEntrySignatures, RuntimeHelper, StmtEvalFlags, StmtInfo,
+  StmtInfoIdx, StmtInfoMeta, SymbolOrMemberExprRef, SymbolRef, UsedSymbolRefsBuilder,
+  UsedSymbolRefsView, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
+  side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::{BitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -33,6 +34,28 @@ pub(super) fn side_effect_exec_order_range(
     .iter()
     .map(|&module_idx| own_side_effect_exec_orders[module_idx].map(|order| (order, order)))
     .fold(None, widen_exec_order_range)
+}
+
+/// The execution orders of the externals with a side effect of their own that `modules` import
+/// statically. An external import is emitted at the top of the importing chunk, so it runs before
+/// the chunk's body.
+pub(super) fn imported_external_side_effects(
+  modules: &[ModuleIdx],
+  module_table: &ModuleTable,
+  own_side_effect_exec_orders: &IndexVec<ModuleIdx, Option<u32>>,
+) -> Vec<u32> {
+  let mut orders: Vec<u32> = modules
+    .iter()
+    .filter_map(|&module_idx| module_table[module_idx].as_normal())
+    .flat_map(|module| module.import_records.iter())
+    .filter(|record| record.kind == ImportKind::Import)
+    .filter_map(|record| record.resolved_module)
+    .filter(|&dep_idx| module_table[dep_idx].is_external())
+    .filter_map(|dep_idx| own_side_effect_exec_orders[dep_idx])
+    .collect();
+  orders.sort_unstable();
+  orders.dedup();
+  orders
 }
 
 struct ChunkAtom {
@@ -169,6 +192,16 @@ impl GenerateStage<'_> {
       .iter()
       .map(|atom| side_effect_exec_order_range(&atom.modules, own_side_effect_exec_orders))
       .collect();
+    let atom_external_side_effects: Vec<Vec<u32>> = atoms
+      .iter()
+      .map(|atom| {
+        imported_external_side_effects(
+          &atom.modules,
+          &self.link_output.module_table,
+          own_side_effect_exec_orders,
+        )
+      })
+      .collect();
     let mut reduced_chunk_graph = ReducedChunkGraph::new(
       atoms.iter().map(|atom| &atom.dependent_entries),
       &atom_dependencies.cycle,
@@ -176,8 +209,11 @@ impl GenerateStage<'_> {
     );
     // Strict execution order keeps the order through its wrappers.
     if !self.options.is_strict_execution_order_enabled() {
-      reduced_chunk_graph
-        .check_execution_order(&atom_dependencies.reachability, &atom_side_effect_exec_orders);
+      reduced_chunk_graph.check_execution_order(
+        &atom_dependencies.reachability,
+        &atom_side_effect_exec_orders,
+        &atom_external_side_effects,
+      );
     }
     let mut changed = false;
     let mut rejected_moves = vec![];
@@ -362,14 +398,22 @@ impl GenerateStage<'_> {
 
   /// The execution order of every module with a side effect of its own, `None` for the others. A
   /// side effect a module only reaches through an `import` runs at the imported module's position,
-  /// so moving the importer cannot reorder it.
+  /// so moving the importer cannot reorder it. A wrapped module runs when an importer calls its
+  /// wrapper, not when its chunk loads, so moving a chunk cannot reorder it either. The runtime
+  /// module only sets up rolldown's helpers.
   fn own_side_effect_exec_orders(&self) -> IndexVec<ModuleIdx, Option<u32>> {
     self
       .link_output
       .module_table
       .modules
       .iter()
-      .map(|module| self.module_has_own_side_effects(module.idx()).then(|| module.exec_order()))
+      .map(|module| {
+        let module_idx = module.idx();
+        (module_idx != self.link_output.runtime.id()
+          && self.link_output.metas[module_idx].wrap_kind() == WrapKind::None
+          && self.module_has_own_side_effects(module_idx))
+        .then(|| module.exec_order())
+      })
       .collect()
   }
 

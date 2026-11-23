@@ -30,7 +30,7 @@ use super::{
   code_splitting::IndexSplittingInfo,
   compute_cross_chunk_links::chunk_evaluation_order,
   compute_cross_chunk_links::sort_chunk_importees_by,
-  dynamic_already_loaded::side_effect_exec_order_range,
+  dynamic_already_loaded::{imported_external_side_effects, side_effect_exec_order_range},
   dynamic_entry_namespace::is_pure_dynamic_entry_chunk,
   reduced_chunk_graph::{ExecOrderRange, widen_exec_order_range},
   simulated_facade_inclusion::include_simulated_facade_namespace,
@@ -78,8 +78,21 @@ struct ChunkCandidate {
   /// Whether any module in this chunk has side effects.
   has_side_effects: bool,
   side_effect_exec_orders: ExecOrderRange,
+  /// The execution orders, sorted, of the externals with a side effect of their own that the
+  /// chunk imports. They run before its body.
+  external_side_effects: Vec<u32>,
   /// The chunk this one's modules were merged into, when they were.
   merged_into: Option<ChunkIdx>,
+}
+
+impl ChunkCandidate {
+  /// The latest side effect that runs when the chunk loads, its imported externals included.
+  fn latest_side_effect(&self) -> Option<u32> {
+    self
+      .side_effect_exec_orders
+      .map(|(_, latest)| latest)
+      .max(self.external_side_effects.last().copied())
+  }
 }
 
 type TempIndexChunks = IndexVec<ChunkIdx, ChunkCandidate>;
@@ -140,6 +153,7 @@ impl ChunkOptimizationGraph {
             &item.modules,
             own_side_effect_exec_orders,
           ),
+          external_side_effects: vec![],
           merged_into: None,
         }
       })
@@ -188,6 +202,7 @@ impl ChunkOptimizationGraph {
         certain_dependencies: FxHashSet::default(),
         has_side_effects: module_has_side_effects,
         side_effect_exec_orders,
+        external_side_effects: vec![],
         merged_into: None,
       };
       let chunk_idx = self.chunks.push(temp_chunk);
@@ -243,9 +258,15 @@ impl ChunkOptimizationGraph {
     &mut self,
     metas: &IndexVec<ModuleIdx, LinkingMetadata>,
     certain_import_targets: &IndexVec<ModuleIdx, Vec<ModuleIdx>>,
+    module_table: &ModuleTable,
+    own_side_effect_exec_orders: &IndexVec<ModuleIdx, Option<u32>>,
   ) {
     for chunk_idx in self.chunks.indices() {
       let modules = std::mem::take(&mut self.chunks[chunk_idx].modules);
+      if !own_side_effect_exec_orders.is_empty() {
+        self.chunks[chunk_idx].external_side_effects =
+          imported_external_side_effects(&modules, module_table, own_side_effect_exec_orders);
+      }
       for module_idx in &modules {
         let module_dependencies = &metas[*module_idx].dependencies;
         for &dep_module_idx in module_dependencies {
@@ -269,7 +290,7 @@ impl ChunkOptimizationGraph {
     self.latest_side_effects = self
       .chunks
       .iter_enumerated()
-      .filter_map(|(chunk_idx, chunk)| Some((chunk.side_effect_exec_orders?.1, chunk_idx)))
+      .filter_map(|(chunk_idx, chunk)| Some((chunk.latest_side_effect()?, chunk_idx)))
       .collect();
   }
 
@@ -380,17 +401,24 @@ impl ChunkOptimizationGraph {
     // Remove self-reference if it exists (source might have depended on target)
     self.chunks[target_chunk_idx].dependencies.remove(&target_chunk_idx);
     self.chunks[target_chunk_idx].certain_dependencies.remove(&target_chunk_idx);
-    if let Some((_, latest)) = source_side_effect_exec_orders {
+    if let Some(latest) = self.chunks[source_chunk_idx].latest_side_effect() {
       self.latest_side_effects.remove(&(latest, source_chunk_idx));
     }
+    let source_external_side_effects =
+      std::mem::take(&mut self.chunks[source_chunk_idx].external_side_effects);
     let target = &mut self.chunks[target_chunk_idx];
     target.has_side_effects |= source_has_side_effects;
-    if let Some((_, latest)) = target.side_effect_exec_orders {
+    if let Some(latest) = target.latest_side_effect() {
       self.latest_side_effects.remove(&(latest, target_chunk_idx));
     }
     target.side_effect_exec_orders =
       widen_exec_order_range(target.side_effect_exec_orders, source_side_effect_exec_orders);
-    if let Some((_, latest)) = target.side_effect_exec_orders {
+    if !source_external_side_effects.is_empty() {
+      target.external_side_effects.extend(source_external_side_effects);
+      target.external_side_effects.sort_unstable();
+      target.external_side_effects.dedup();
+    }
+    if let Some(latest) = target.latest_side_effect() {
       self.latest_side_effects.insert((latest, target_chunk_idx));
     }
   }
@@ -408,16 +436,34 @@ impl ChunkOptimizationGraph {
       return false;
     };
     // Only a chunk with a later side effect can be in the way, so the walk is skipped when there
-    // is none besides the two chunks themselves.
+    // is none besides the two chunks themselves and the target imports no later external.
     let in_the_way = (earliest_side_effect.saturating_add(1), ChunkIdx::from_raw(0))..;
-    if !self
-      .latest_side_effects
-      .range(in_the_way)
-      .any(|&(_, chunk_idx)| chunk_idx != source_chunk_idx && chunk_idx != target_chunk_idx)
+    if self.chunks[target_chunk_idx]
+      .external_side_effects
+      .last()
+      .is_none_or(|&latest_external| latest_external <= earliest_side_effect)
+      && !self
+        .latest_side_effects
+        .range(in_the_way)
+        .any(|&(_, chunk_idx)| chunk_idx != source_chunk_idx && chunk_idx != target_chunk_idx)
     {
       return false;
     }
     let already_before = self.certainly_loaded_before(source_chunk_idx);
+    let externals_before: FxHashSet<u32> = std::iter::once(source_chunk_idx)
+      .chain(already_before.iter().copied())
+      .flat_map(|chunk_idx| self.chunks[chunk_idx].external_side_effects.iter().copied())
+      .collect();
+    let imports_late_external = |chunk_idx: ChunkIdx| {
+      self.chunks[chunk_idx]
+        .external_side_effects
+        .iter()
+        .any(|&order| order > earliest_side_effect && !externals_before.contains(&order))
+    };
+    // The externals the target imports run before its body too.
+    if imports_late_external(target_chunk_idx) {
+      return true;
+    }
     let mut visited = FxHashSet::default();
     let mut stack: Vec<ChunkIdx> =
       self.chunks[target_chunk_idx].dependencies.iter().copied().collect();
@@ -434,6 +480,9 @@ impl ChunkOptimizationGraph {
           .side_effect_exec_orders
           .is_some_and(|(_, latest_side_effect)| latest_side_effect > earliest_side_effect)
       {
+        return true;
+      }
+      if imports_late_external(chunk_idx) {
         return true;
       }
       stack.extend(self.chunks[chunk_idx].dependencies.iter().copied());
@@ -608,8 +657,9 @@ impl GenerateStage<'_> {
     };
     // Second pass: apply chunk assignments. A merge that would run a side effect late is held
     // back, since the chunk in its way may merge into the same target later. Held-back merges are
-    // retried latest side effect first, so a chunk in the way goes before the ones it blocks. Once
-    // a round merges nothing, the held-back chunks are created in their original order.
+    // retried in descending order of their earliest side effect, so a chunk in the way, whose side
+    // effects run later, usually goes before the ones it blocks. Once a round merges nothing, the
+    // held-back chunks are created in their original order.
     let mut pending: Vec<_> = assignments.into_iter().enumerate().collect();
     let mut hold_back_late_merges = true;
     loop {

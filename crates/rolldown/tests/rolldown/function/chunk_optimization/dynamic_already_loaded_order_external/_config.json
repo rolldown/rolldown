@@ -1,0 +1,7 @@
+{
+  "_comment": "`setup.js` runs before `external.js` in `main.js`. A fold of `setup.js` into `main.js` would run it in the entry's body, after the external import, so `setup.js` stays a file.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "external": ["./external.js"]
+  }
+}

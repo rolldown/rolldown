@@ -1,0 +1,51 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] b0.js is dynamically imported by e0.js but also statically imported by e0.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## e0.js
+
+```js
+import { n as __commonJSMin, r as __exportAll, t as require_x } from "./x.js";
+(/* @__PURE__ */ __commonJSMin(((exports) => {
+	globalThis.wrappedCjsLog.push("t");
+})))();
+globalThis.wrappedCjsLog.push("b2");
+// b0.js
+var b0_exports = /* @__PURE__ */ __exportAll({ v: () => "b0" });
+require_x();
+globalThis.wrappedCjsLog.push("e0");
+const loadB0 = () => Promise.resolve().then(() => b0_exports).then((m) => m.v);
+export { loadB0 };
+
+```
+
+## e2.js
+
+```js
+import { t as require_x } from "./x.js";
+require_x();
+globalThis.wrappedCjsLog.push("e2");
+
+```
+
+## x.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// x.cjs
+var require_x = /* @__PURE__ */ __commonJSMin(((exports) => {
+	globalThis.wrappedCjsLog.push("x");
+}));
+export { __commonJSMin as n, __exportAll as r, require_x as t };
+
+```

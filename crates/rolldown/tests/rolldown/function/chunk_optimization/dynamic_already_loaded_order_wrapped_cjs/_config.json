@@ -1,0 +1,9 @@
+{
+  "_comment": "`t.cjs` and `x.cjs` run where `e0.js` calls their wrappers, not when their chunks load, so they do not keep `b0.js` from folding into `e0.js`, and `b2.js` still runs between them.",
+  "config": {
+    "input": [
+      { "name": "e0", "import": "./e0.js" },
+      { "name": "e2", "import": "./e2.js" }
+    ]
+  }
+}

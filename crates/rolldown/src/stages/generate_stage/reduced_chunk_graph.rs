@@ -21,6 +21,8 @@ pub(super) struct ReducedChunkGraph<'a> {
   certain_atom_dependencies: &'a [Vec<usize>],
   /// Per atom, the execution-order range of its modules with a side effect of their own.
   atom_side_effect_exec_orders: &'a [ExecOrderRange],
+  /// Per atom, the execution orders of the externals with a side effect of their own it imports.
+  atom_external_side_effects: &'a [Vec<u32>],
   host_atom_by_entry_bit: &'a [Option<usize>],
   hosted_entry_bits_by_atom: Vec<SmallVec<[usize; 1]>>,
   node_by_bits: FxHashMap<BitSet, usize>,
@@ -49,6 +51,7 @@ impl<'a> ReducedChunkGraph<'a> {
       atom_dependents: vec![vec![]; atom_count],
       certain_atom_dependencies: &[],
       atom_side_effect_exec_orders: &[],
+      atom_external_side_effects: &[],
       host_atom_by_entry_bit,
       hosted_entry_bits_by_atom: vec![SmallVec::new(); atom_count],
       node_by_bits: FxHashMap::default(),
@@ -91,9 +94,11 @@ impl<'a> ReducedChunkGraph<'a> {
     &mut self,
     certain_atom_dependencies: &'a [Vec<usize>],
     atom_side_effect_exec_orders: &'a [ExecOrderRange],
+    atom_external_side_effects: &'a [Vec<u32>],
   ) {
     self.certain_atom_dependencies = certain_atom_dependencies;
     self.atom_side_effect_exec_orders = atom_side_effect_exec_orders;
+    self.atom_external_side_effects = atom_external_side_effects;
   }
 
   /// Moves the atom to the node of `bits`, or keeps it where it was and says why not.
@@ -274,6 +279,10 @@ impl<'a> ReducedChunkGraph<'a> {
       return false;
     };
     let mut loaded_before = None;
+    // The externals `node` imports run before its body too.
+    if self.imports_late_external(node, atom_idx, earliest_side_effect, &mut loaded_before) {
+      return true;
+    }
     self.next_mark();
     let mut stack: Vec<usize> = self.edges.dependencies[node].keys().copied().collect();
     while let Some(next) = stack.pop() {
@@ -284,8 +293,12 @@ impl<'a> ReducedChunkGraph<'a> {
       if self.latest_side_effect(next).is_some_and(|latest| latest > earliest_side_effect)
         && !loaded_before
           .get_or_insert_with(|| self.certainly_loaded_before(atom_idx, node))
+          .nodes
           .contains(&next)
       {
+        return true;
+      }
+      if self.imports_late_external(next, atom_idx, earliest_side_effect, &mut loaded_before) {
         return true;
       }
       stack.extend(self.edges.dependencies[next].keys().copied());
@@ -293,15 +306,39 @@ impl<'a> ReducedChunkGraph<'a> {
     false
   }
 
-  /// The nodes, `node` excluded, that the atom's certain imports load before it.
-  fn certainly_loaded_before(&self, atom_idx: usize, node: usize) -> FxHashSet<usize> {
+  /// Whether `node` imports an external with a side effect later than `earliest_side_effect` that
+  /// did not run before the atom already.
+  fn imports_late_external(
+    &self,
+    node: usize,
+    atom_idx: usize,
+    earliest_side_effect: u32,
+    loaded_before: &mut Option<LoadedBefore>,
+  ) -> bool {
+    let mut late_externals = self.atoms_by_node[node]
+      .iter()
+      .flat_map(|&atom| &self.atom_external_side_effects[atom])
+      .filter(|&&order| order > earliest_side_effect)
+      .peekable();
+    if late_externals.peek().is_none() {
+      return false;
+    }
+    let loaded = loaded_before.get_or_insert_with(|| self.certainly_loaded_before(atom_idx, node));
+    late_externals.any(|order| !loaded.externals.contains(order))
+  }
+
+  /// The nodes, `node` excluded, that the atom's certain imports load before it, and the externals
+  /// that the atom and those nodes import.
+  fn certainly_loaded_before(&self, atom_idx: usize, node: usize) -> LoadedBefore {
     let certain_dependency_nodes =
       |atom: usize| self.certain_atom_dependencies[atom].iter().map(|&dep| self.node_by_atom[dep]);
-    let mut loaded = FxHashSet::default();
+    let mut loaded = LoadedBefore::default();
+    loaded.externals.extend(&self.atom_external_side_effects[atom_idx]);
     let mut stack: Vec<usize> = certain_dependency_nodes(atom_idx).collect();
     while let Some(next) = stack.pop() {
-      if next != node && loaded.insert(next) {
+      if next != node && loaded.nodes.insert(next) {
         for &member in &self.atoms_by_node[next] {
+          loaded.externals.extend(&self.atom_external_side_effects[member]);
           stack.extend(certain_dependency_nodes(member));
         }
       }
@@ -323,6 +360,12 @@ impl<'a> ReducedChunkGraph<'a> {
     }
     self.mark += 1;
   }
+}
+
+#[derive(Default)]
+struct LoadedBefore {
+  nodes: FxHashSet<usize>,
+  externals: FxHashSet<u32>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -617,13 +660,34 @@ mod tests {
     let atom_bits = [bits(3, &[0]), bits(3, &[0, 1]), bits(3, &[0, 2])];
     let side_effect_exec_orders = [None, Some((5, 5)), Some((3, 3))];
     let hosts = [None; 3];
+    let no_externals = [vec![], vec![], vec![]];
     for (atom_2_dependencies, expected) in
       [(vec![], Err(MoveVeto::SideEffectOrder)), (vec![1], Ok(()))]
     {
       let dependencies = vec![vec![1, 2], vec![], atom_2_dependencies];
       let mut graph = ReducedChunkGraph::new(&atom_bits, &dependencies, &hosts);
-      graph.check_execution_order(&dependencies, &side_effect_exec_orders);
+      graph.check_execution_order(&dependencies, &side_effect_exec_orders, &no_externals);
       assert_eq!(graph.try_move(2, &bits(3, &[0])), expected);
+      graph.assert_consistent();
+    }
+  }
+
+  #[test]
+  fn a_fold_below_a_later_external_import_is_rejected() {
+    // Entry 0 (atom 0) imports an external whose side effect runs at 5. A fold of atom 1, with its
+    // side effect at 3, into entry 0 runs it after the external, unless atom 1 imports the
+    // external itself.
+    let atom_bits = [bits(2, &[0]), bits(2, &[0, 1])];
+    let side_effect_exec_orders = [None, Some((3, 3))];
+    let dependencies = vec![vec![1], vec![]];
+    let hosts = [None; 2];
+    for (atom_1_externals, expected) in
+      [(vec![], Err(MoveVeto::SideEffectOrder)), (vec![5], Ok(()))]
+    {
+      let externals = [vec![5], atom_1_externals];
+      let mut graph = ReducedChunkGraph::new(&atom_bits, &dependencies, &hosts);
+      graph.check_execution_order(&dependencies, &side_effect_exec_orders, &externals);
+      assert_eq!(graph.try_move(1, &bits(2, &[0])), expected);
       graph.assert_consistent();
     }
   }

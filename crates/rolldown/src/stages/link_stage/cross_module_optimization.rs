@@ -4,14 +4,14 @@ use oxc::{
   ast::{
     AstKind,
     ast::{
-      Argument, BindingIdentifier, BindingPattern, CallExpression, Declaration, ExportDeclaration,
-      ExportDefaultDeclaration, ExportDefaultDeclarationKind, Expression, IdentifierReference,
-      MemberExpression, Statement,
+      Argument, ArrowFunctionExpression, BindingIdentifier, BindingPattern, CallExpression,
+      Declaration, ExportDeclaration, ExportDefaultDeclaration, ExportDefaultDeclarationKind,
+      Expression, Function, IdentifierReference, MemberExpression, Statement,
     },
     builder::AstBuilder,
   },
   ast_visit::{VisitJs, walk_js},
-  semantic::{NodeId, SymbolId},
+  semantic::{NodeId, ScopeFlags, SymbolId},
 };
 use oxc_ecmascript::ToBoolean;
 use rolldown_common::{
@@ -463,6 +463,16 @@ impl<'ast> CrossModuleOptimizationRunnerContext<'_, 'ast> {
       })
   }
 
+  /// Whether an argument reads a global variable when the call runs. Reading a global can run a
+  /// getter on `globalThis` or throw a `ReferenceError`. Function bodies do not run at the call.
+  fn arguments_read_global(&self, call: &CallExpression<'ast>) -> bool {
+    let mut finder = GlobalReadFinder { ctx: self, found: false };
+    for argument in &call.arguments {
+      finder.visit_argument(argument);
+    }
+    finder.found
+  }
+
   /// Whether a canonical binding has its initialized value when the current statement runs.
   /// See `internal-docs/linking/module-execution-order/implementation.md`.
   fn binding_is_initialized(&self, symbol_ref: SymbolRef) -> bool {
@@ -608,6 +618,7 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
         && (!returns_parameter
           || (it.callee.as_identifier().is_some()
             && !it.arguments.iter().any(Argument::is_spread)
+            && !self.arguments_read_global(it)
             && !self.call_is_already_pure(it)
             && !has_function_or_class_ancestor(&self.visit_path)))
       {
@@ -825,6 +836,21 @@ impl<'ast> VisitJs<'ast> for StatementRemovalGuard<'_, '_, 'ast> {
       walk_js::walk_call_expression(self, call);
     }
   }
+}
+
+struct GlobalReadFinder<'ctx, 'a, 'ast> {
+  ctx: &'ctx CrossModuleOptimizationRunnerContext<'a, 'ast>,
+  found: bool,
+}
+
+impl<'ast> VisitJs<'ast> for GlobalReadFinder<'_, '_, 'ast> {
+  fn visit_identifier_reference(&mut self, it: &IdentifierReference<'ast>) {
+    self.found |= self.ctx.local_symbol(it).is_none();
+  }
+
+  fn visit_function(&mut self, _it: &Function<'ast>, _flags: ScopeFlags) {}
+
+  fn visit_arrow_function_expression(&mut self, _it: &ArrowFunctionExpression<'ast>) {}
 }
 
 /// Whether `visit_path` contains a function, arrow function or class. The parameter-return proof

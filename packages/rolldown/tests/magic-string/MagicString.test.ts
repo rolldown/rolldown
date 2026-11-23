@@ -546,7 +546,7 @@ describe('MagicString', () => {
       assert.equal(loc.column, 12);
     });
 
-    it.skip('generates a correct source map with update using a content containing a new line', () => {
+    it('generates a correct source map with update using a content containing a new line', () => {
       const s = new MagicString('foobar');
       s.update(3, 4, '\nbb');
       assert.equal(s.toString(), 'foo\nbbar');
@@ -568,7 +568,7 @@ describe('MagicString', () => {
       assert.equal(loc4.column, 4);
     });
 
-    it.skip('generates a correct source map with update using content ending with a new line', () => {
+    it('generates a correct source map with update using content ending with a new line', () => {
       const s = new MagicString('foobar');
       s.update(2, 3, 'od\n');
       s.update(4, 5, 'a\nnd\n');

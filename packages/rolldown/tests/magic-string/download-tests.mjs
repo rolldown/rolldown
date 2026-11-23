@@ -141,8 +141,6 @@ const SKIP_TESTS = [
   'should generate a sourcemap using specified locations', // addSourcemapLocation not implemented
   'generates a map with trimmed content', // trim sourcemap behavior differs
   // Note: 'generates x_google_ignoreList' is now supported
-  'generates a correct source map with update using a content containing a new line', // multiline update mappings differ
-  'generates a correct source map with update using content ending with a new line', // multiline update mappings differ
 ];
 
 async function downloadFile(filename) {

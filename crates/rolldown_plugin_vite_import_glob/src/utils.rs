@@ -696,7 +696,9 @@ impl GlobImportVisit<'_> {
       };
 
       let key: &str = match &p.key {
-        PropertyKey::StringLiteral(str) => &to_usv_str(str.value),
+        PropertyKey::StaticStringLiteral(str) | PropertyKey::StringLiteral(str) => {
+          &to_usv_str(str.value)
+        }
         PropertyKey::StaticIdentifier(id) => id.name.as_str(),
         _ => continue,
       };
@@ -748,7 +750,9 @@ impl GlobImportVisit<'_> {
               let ObjectPropertyKind::ObjectProperty(p) = prop else { continue };
 
               let key: &str = match &p.key {
-                PropertyKey::StringLiteral(key) => &to_usv_str(key.value),
+                PropertyKey::StaticStringLiteral(key) | PropertyKey::StringLiteral(key) => {
+                  &to_usv_str(key.value)
+                }
                 PropertyKey::StaticIdentifier(ident) => ident.name.as_str(),
                 _ => continue,
               };

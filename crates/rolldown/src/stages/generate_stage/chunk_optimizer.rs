@@ -2034,14 +2034,23 @@ impl GenerateStage<'_> {
     if consumer_chunks.iter().all(|&chunk_idx| chunk_idx == target_chunk_idx) {
       return true;
     }
-    let target_chunk = &chunk_graph.chunk_table[target_chunk_idx];
-    let ChunkKind::EntryPoint { meta, module: entry_module_idx, .. } = target_chunk.kind else {
+    self.signature_allows_new_exports(&chunk_graph.chunk_table[target_chunk_idx])
+  }
+
+  /// Returns `false` when a new export of `chunk` changes a fixed entry signature. The signature
+  /// is not fixed in these conditions:
+  /// - The chunk is not a user-defined or emitted entry. Only these entries can have a fixed
+  ///   signature.
+  /// - The setting (`preserveEntrySignatures` or `preserveSignature`) is `allow-extension` or
+  ///   `false`, or it is `exports-only` and the entry has no exports.
+  pub(super) fn signature_allows_new_exports(&self, chunk: &Chunk) -> bool {
+    let ChunkKind::EntryPoint { meta, module: entry_module_idx, .. } = chunk.kind else {
       return true;
     };
     if !meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk) {
       return true;
     }
-    match target_chunk.preserve_entry_signature {
+    match chunk.preserve_entry_signature {
       Some(PreserveEntrySignatures::AllowExtension | PreserveEntrySignatures::False) => true,
       Some(PreserveEntrySignatures::Strict) => false,
       // `exports-only` (the default) only fixes the signature of entries that

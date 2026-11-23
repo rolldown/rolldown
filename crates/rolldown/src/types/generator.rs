@@ -1,8 +1,8 @@
 use oxc_index::IndexVec;
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, InstantiatedChunk, ModuleIdx, ModuleRenderOutput, NormalizedBundlerOptions,
-  OutputExports, PathsOutputOption, SymbolRef, UsedSymbolRefs,
+  Chunk, ChunkIdx, InstantiatedChunk, ModuleIdx, ModuleRenderOutput, NamespaceAlias,
+  NormalizedBundlerOptions, OutputExports, PathsOutputOption, SymbolRef, UsedSymbolRefs,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::SharedPluginDriver;
@@ -71,28 +71,8 @@ impl GenerateContext<'_> {
     let canonical_symbol = symbol_db.get(canonical_ref);
     let namespace_alias = &canonical_symbol.namespace_alias;
     if let Some(ns_alias) = namespace_alias {
-      // The namespace itself may be declared in another chunk. This is normally hidden by the
-      // facade and namespace living together, but generated per-record interop carriers place the
-      // namespace beside the CJS importee while its re-export facade stays owned by the barrel.
-      // Resolve the namespace through the same cross-chunk path as an ordinary symbol before
-      // appending the property; otherwise CJS output renders a bare, undeclared local identifier.
-      // The same applies to a namespace owned by an inline common chunk record.
-      let canonical_ns_name =
-        if self.order_wrap_state.is_order_cjs_carrier_namespace(ns_alias.namespace_ref)
-          || self.inline_bridge_pattern(ns_alias.namespace_ref, cur_chunk_idx).is_some()
-        {
-          self.finalized_string_pattern_for_symbol_ref(
-            ns_alias.namespace_ref,
-            cur_chunk_idx,
-            canonical_names,
-          )
-        } else {
-          symbol_db
-            .canonical_name_for_or_original(ns_alias.namespace_ref, canonical_names)
-            .to_string()
-        };
-      let property_name = &ns_alias.property_name;
-      return property_access_str(&canonical_ns_name, property_name);
+      let namespace = self.finalized_namespace_pattern(ns_alias, cur_chunk_idx, canonical_names);
+      return property_access_str(&namespace, &ns_alias.property_name);
     }
 
     if self.link_output.module_table[canonical_ref.owner].is_external() {
@@ -121,39 +101,74 @@ impl GenerateContext<'_> {
           // In cjs output, we need convert the `import { foo } from 'foo'; console.log(foo);`;
           // If `foo` is split into another chunk, we need to convert the code `console.log(foo);` to `console.log(require_xxxx.foo);`
           // instead of keeping `console.log(foo)` as we did in esm output. The reason here is we need to keep live binding in cjs output.
-
-          let require_binding = &self.chunk_graph.chunk_table[cur_chunk_idx]
-            .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
-
-          let exporter_chunk = &self.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol];
-          let exported_name = &exporter_chunk.exports_to_other_chunks[&canonical_ref][0];
-          if exported_name == "default" {
-            // Use the exporter chunk's actual `output_exports`, not the user-level
-            // `options.exports`. Each chunk decides its own export mode (e.g. under
-            // `preserveModules`, one non-entry module can emit `module.exports = ...` while
-            // another emits `exports.default = ...`), so the access pattern must match what the
-            // exporter actually renders.
-            match exporter_chunk.output_exports {
-              OutputExports::Default => require_binding.clone(),
-              OutputExports::Named => {
-                rolldown_utils::ecmascript::property_access_str(require_binding, exported_name)
-              }
-              // `Auto` is always resolved away by `determine_export_mode`. `None`
-              // is unreachable here because we just indexed
-              // `exports_to_other_chunks[canonical_ref]` successfully — a non-empty
-              // entry means the chunk has at least one cross-chunk export, which
-              // forces `output_exports` to `Default` or `Named` (entry chunks via
-              // `determine_export_mode`; common chunks are unconditionally `Named`).
-              OutputExports::Auto | OutputExports::None => unreachable!(),
-            }
-          } else {
-            rolldown_utils::ecmascript::property_access_str(require_binding, exported_name)
-          }
+          self.cross_chunk_pattern(canonical_ref, chunk_idx_of_canonical_symbol, cur_chunk_idx)
         } else {
           self.canonical_name_for(canonical_names, canonical_ref).to_string()
         }
       }
       _ => self.canonical_name_for(canonical_names, canonical_ref).to_string(),
+    }
+  }
+
+  /// The namespace that `ns_alias` reads its property from, as the chunk `cur_chunk_idx` renders it.
+  pub fn finalized_namespace_pattern(
+    &self,
+    ns_alias: &NamespaceAlias,
+    cur_chunk_idx: ChunkIdx,
+    canonical_names: &FxHashMap<SymbolRef, CompactStr>,
+  ) -> String {
+    // The namespace itself may be declared in another chunk. This is normally hidden by the
+    // facade and namespace living together, but generated per-record interop carriers place the
+    // namespace beside the CJS importee while its re-export facade stays owned by the barrel.
+    // Resolve the namespace through the same cross-chunk path as an ordinary symbol before
+    // appending the property; otherwise CJS output renders a bare, undeclared local identifier.
+    // The same applies to a namespace owned by an inline common chunk record.
+    let namespace_ref = ns_alias.namespace_ref;
+    if self.order_wrap_state.is_order_cjs_carrier_namespace(namespace_ref)
+      || self.inline_bridge_pattern(namespace_ref, cur_chunk_idx).is_some()
+    {
+      self.finalized_string_pattern_for_symbol_ref(namespace_ref, cur_chunk_idx, canonical_names)
+    } else {
+      self
+        .link_output
+        .symbol_db
+        .canonical_name_for_or_original(namespace_ref, canonical_names)
+        .to_string()
+    }
+  }
+
+  /// The read of `symbol_ref` through the `require()` binding of the chunk `exporter_chunk_idx`.
+  /// `symbol_ref` must be a key of `exports_to_other_chunks` of that chunk.
+  fn cross_chunk_pattern(
+    &self,
+    symbol_ref: SymbolRef,
+    exporter_chunk_idx: ChunkIdx,
+    cur_chunk_idx: ChunkIdx,
+  ) -> String {
+    let require_binding = &self.chunk_graph.chunk_table[cur_chunk_idx]
+      .require_binding_names_for_other_chunks[&exporter_chunk_idx];
+
+    let exporter_chunk = &self.chunk_graph.chunk_table[exporter_chunk_idx];
+    let exported_name = &exporter_chunk.exports_to_other_chunks[&symbol_ref][0];
+    if exported_name == "default" {
+      // Use the exporter chunk's actual `output_exports`, not the user-level
+      // `options.exports`. Each chunk decides its own export mode (e.g. under
+      // `preserveModules`, one non-entry module can emit `module.exports = ...` while
+      // another emits `exports.default = ...`), so the access pattern must match what the
+      // exporter actually renders.
+      match exporter_chunk.output_exports {
+        OutputExports::Default => require_binding.clone(),
+        OutputExports::Named => property_access_str(require_binding, exported_name),
+        // `Auto` is always resolved away by `determine_export_mode`. `None`
+        // is unreachable here because we just indexed
+        // `exports_to_other_chunks[symbol_ref]` successfully — a non-empty
+        // entry means the chunk has at least one cross-chunk export, which
+        // forces `output_exports` to `Default` or `Named` (entry chunks via
+        // `determine_export_mode`; common chunks are unconditionally `Named`).
+        OutputExports::Auto | OutputExports::None => unreachable!(),
+      }
+    } else {
+      property_access_str(require_binding, exported_name)
     }
   }
 

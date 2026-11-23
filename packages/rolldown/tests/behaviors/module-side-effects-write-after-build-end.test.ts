@@ -52,8 +52,9 @@ test('writes up to buildEnd do not warn', async () => {
   expect(warnings).toEqual([]);
 });
 
-test('only the first write after buildEnd warns', async () => {
+test('a write after buildEnd is ignored, and only the first one warns', async () => {
   const { warnings, onLog } = collectWarnings();
+  const reads: unknown[] = [];
   const build = await rolldown({
     input: 'entry',
     onLog,
@@ -64,6 +65,7 @@ test('only the first write after buildEnd warns', async () => {
         renderStart() {
           this.getModuleInfo('a')!.moduleSideEffects = false;
           this.getModuleInfo('b')!.moduleSideEffects = false;
+          reads.push(this.getModuleInfo('a')!.moduleSideEffects);
         },
       },
     ],
@@ -75,6 +77,8 @@ test('only the first write after buildEnd warns', async () => {
   } finally {
     await build.close();
   }
+  // A read after the write still shows the value from before it.
+  expect(reads).toEqual([true]);
   expect(warnings).toEqual([expect.objectContaining({ code: CODE, id: 'a', plugin: 'writer' })]);
 });
 

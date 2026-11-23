@@ -18,7 +18,7 @@ pub fn log_module_side_effects_write_after_build_end(module_id: &str) -> LogWith
   LogWithoutPlugin {
     code: Some("MODULE_SIDE_EFFECTS_WRITE_AFTER_BUILD_END".to_string()),
     message: format!(
-      "`moduleSideEffects` of \"{module_id}\" was changed after the `buildEnd` hook. Tree shaking already used the value, so this change does not affect the output. Rolldown warns only about the first such change in a build."
+      "A write to `moduleSideEffects` of \"{module_id}\" after the `buildEnd` hook was ignored, because tree shaking has already used the value. Rolldown warns only about the first such write in a build."
     ),
     id: Some(module_id.to_string()),
     ..Default::default()
@@ -46,8 +46,8 @@ pub struct ModuleSideEffectsOverrides {
   /// Without `experimental.importAttributes`, the key is the raw id, so one write reaches every
   /// external with that raw id.
   key_by_raw_id: bool,
-  /// Tree shaking takes the writes after `buildEnd`. A later write in the same build does not
-  /// change it, so Rolldown warns about the first such write.
+  /// Tree shaking takes the writes after `buildEnd`, so a later write in the same build is
+  /// ignored. Rolldown warns about the first one.
   build_end_done: AtomicBool,
   late_write_warned: AtomicBool,
 }
@@ -74,15 +74,6 @@ impl ModuleSideEffectsOverrides {
     self.late_write_warned.store(false, Ordering::Release);
   }
 
-  /// `true` for the first write after `buildEnd` in a build. The caller warns about it.
-  pub fn should_warn_late_write(&self) -> bool {
-    self.build_end_done.load(Ordering::Acquire)
-      && self
-        .late_write_warned
-        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-        .is_ok()
-  }
-
   fn key<'a>(&self, module_id: &'a str) -> &'a str {
     if self.key_by_raw_id {
       ImportAttributes::parse_module_id(module_id).map_or(module_id, |(raw_id, _)| raw_id)
@@ -100,9 +91,21 @@ impl ModuleSideEffectsOverrides {
     self.values.get(self.key(module_id)).map(|value| *value)
   }
 
-  /// `None` is a write of `null` or `undefined`.
-  pub fn set(&self, module_id: &str, value: Option<HookSideEffects>) {
+  /// A write to `getModuleInfo(module_id).moduleSideEffects`. `None` is a write of `null` or
+  /// `undefined`.
+  ///
+  /// A write after `buildEnd` is ignored: tree shaking has already used the values, and keeping
+  /// the write would apply it in the next partial scan. Returns `true` for the first ignored write
+  /// of a build, so the caller can warn.
+  pub fn write(&self, module_id: &str, value: Option<HookSideEffects>) -> bool {
+    if self.build_end_done.load(Ordering::Acquire) {
+      return self
+        .late_write_warned
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        .is_ok();
+    }
     self.values.insert(self.key(module_id).into(), WrittenSideEffects(value));
+    false
   }
 
   pub fn remove_written(&self, module_id: &str) {

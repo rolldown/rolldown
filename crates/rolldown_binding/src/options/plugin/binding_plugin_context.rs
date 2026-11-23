@@ -195,7 +195,8 @@ impl BindingPluginContext {
   /// A write to `getModuleInfo(moduleId).moduleSideEffects`. `null` and `undefined` mean
   /// "not decided". After such a write, the module shows the value without hooks, so
   /// `callOption` runs here if that value needs it. Tree shaking then reuses the result.
-  /// Returns `true` when the caller should warn that the write does not change tree shaking.
+  /// A write after `buildEnd` is ignored. Returns `true` for the first one in a build, so the
+  /// caller can warn.
   #[napi(
     ts_args_type = "moduleId: string, sideEffects: boolean | 'no-treeshake' | null | undefined, callOption?: (id: string, external: boolean) => boolean | undefined | null"
   )]

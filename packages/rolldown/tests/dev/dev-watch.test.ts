@@ -1137,3 +1137,62 @@ test.concurrent(
     expect(probeMeta).toEqual(Array(EDITS + 1).fill({ dep: true }));
   },
 );
+
+test.concurrent(
+  'a moduleSideEffects write after buildEnd does not reach the next partial build',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput('dev-late-write', retryCount);
+    const dep = path.join(dir, 'dep.js');
+    fs.writeFileSync(input, `import './dep.js'\nconsole.log('MAIN_1')`);
+    fs.writeFileSync(dep, `console.log('DEP_EFFECT')`);
+
+    const outputs: string[] = [];
+    let builds = 0;
+    const engine = await dev(
+      {
+        input,
+        logLevel: 'silent',
+        plugins: [
+          {
+            name: 'late-writer',
+            buildStart() {
+              builds++;
+            },
+            renderStart() {
+              if (builds === 1) this.getModuleInfo(dep)!.moduleSideEffects = false;
+            },
+          },
+        ],
+      },
+      { dir: outputDir },
+      {
+        rebuildStrategy: 'always',
+        onOutput: (result) => {
+          if (!(result instanceof Error)) outputs.push(chunkCode(result));
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await expect.poll(() => outputs.length).toBe(1);
+    expect(outputs[0]).toContain('DEP_EFFECT');
+
+    // Only main.js changes. A full build of the same sources keeps `dep.js`.
+    await editFile(input, `import './dep.js'\nconsole.log('MAIN_2')`);
+    await expect
+      .poll(async () => {
+        await engine.ensureLatestBuildOutput();
+        return outputs.at(-1);
+      })
+      .toContain('MAIN_2');
+    expect(outputs.at(-1)).toContain('DEP_EFFECT');
+  },
+);

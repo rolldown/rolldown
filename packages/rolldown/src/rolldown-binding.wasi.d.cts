@@ -1588,7 +1588,8 @@ export declare class BindingChunkingContext {
   /**
    * A write to `getModuleInfo(moduleId).moduleSideEffects`. `null` and `undefined` mean
    * "not decided". See `BindingPluginContext.setModuleSideEffects` for `callOption`.
-   * Returns `true` when the caller should warn that the write does not change tree shaking.
+   * A write after `buildEnd` is ignored. Returns `true` for the first one in a build, so the
+   * caller can warn.
    */
   setModuleSideEffects(moduleId: string, sideEffects: boolean | 'no-treeshake' | null | undefined, callOption?: (id: string, external: boolean) => boolean | undefined | null): boolean
 }
@@ -1860,7 +1861,8 @@ export declare class BindingPluginContext {
    * A write to `getModuleInfo(moduleId).moduleSideEffects`. `null` and `undefined` mean
    * "not decided". After such a write, the module shows the value without hooks, so
    * `callOption` runs here if that value needs it. Tree shaking then reuses the result.
-   * Returns `true` when the caller should warn that the write does not change tree shaking.
+   * A write after `buildEnd` is ignored. Returns `true` for the first one in a build, so the
+   * caller can warn.
    */
   setModuleSideEffects(moduleId: string, sideEffects: boolean | 'no-treeshake' | null | undefined, callOption?: (id: string, external: boolean) => boolean | undefined | null): boolean
   getModuleIds(): Array<string>

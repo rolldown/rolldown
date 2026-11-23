@@ -5,7 +5,8 @@ import { unsupported } from './misc';
 
 /**
  * The binding calls behind `ModuleInfo.moduleSideEffects`. Only Rust keeps the value.
- * `setModuleSideEffects` returns `true` for the first write after `buildEnd` in a build.
+ * `setModuleSideEffects` ignores a write after `buildEnd`, and returns `true` for the first one
+ * in a build.
  */
 export type ModuleSideEffectsAccess = Pick<
   BindingPluginContext,
@@ -44,7 +45,7 @@ export function transformModuleInfo(
       return access.getModuleSideEffects(id, callOption);
     },
     set moduleSideEffects(value: ModuleInfo['moduleSideEffects']) {
-      // Tree shaking takes the writes after `buildEnd`, so a later write changes nothing.
+      // Tree shaking has used the values after `buildEnd`, so Rust ignores a later write.
       if (access.setModuleSideEffects(id, value, callOption)) {
         warnWriteAfterBuildEnd(id);
       }

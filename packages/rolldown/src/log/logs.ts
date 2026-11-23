@@ -61,7 +61,7 @@ export function logModuleSideEffectsWriteAfterBuildEnd(moduleId: string): Rolldo
   return {
     code: MODULE_SIDE_EFFECTS_WRITE_AFTER_BUILD_END,
     id: moduleId,
-    message: `\`moduleSideEffects\` of "${moduleId}" was changed after the \`buildEnd\` hook. Tree shaking already used the value, so this change does not affect the output. Rolldown warns only about the first such change in a build.`,
+    message: `A write to \`moduleSideEffects\` of "${moduleId}" after the \`buildEnd\` hook was ignored, because tree shaking has already used the value. Rolldown warns only about the first such write in a build.`,
   };
 }
 

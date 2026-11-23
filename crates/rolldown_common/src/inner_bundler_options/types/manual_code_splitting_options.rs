@@ -230,15 +230,13 @@ impl ChunkingContextImpl {
   }
 
   /// A write to `getModuleInfo(module_id).moduleSideEffects`. `None` is a write of `null`.
-  /// Returns `true` when the caller should warn: the chunking context runs after `buildEnd`, so
-  /// the write does not change tree shaking. See
-  /// [`ModuleSideEffectsOverrides::should_warn_late_write`].
+  /// The chunking context runs after `buildEnd`, so the write is ignored. Returns `true` when the
+  /// caller should warn. See [`ModuleSideEffectsOverrides::write`].
   pub fn set_module_side_effects(
     &self,
     module_id: &str,
     side_effects: Option<HookSideEffects>,
   ) -> bool {
-    self.module_side_effects_overrides.set(module_id, side_effects);
-    self.module_side_effects_overrides.should_warn_late_write()
+    self.module_side_effects_overrides.write(module_id, side_effects)
   }
 }

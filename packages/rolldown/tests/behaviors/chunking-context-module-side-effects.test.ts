@@ -7,7 +7,7 @@ const modules: Record<string, string> = {
   dep: 'console.log("DEP");',
 };
 
-test('the chunking context reads and writes the same moduleSideEffects as the plugin context', async () => {
+test('the chunking context reads the same moduleSideEffects as the plugin context and ignores writes', async () => {
   let getPluginModuleInfo: PluginContext['getModuleInfo'];
   const seen: Record<string, unknown[]> = { dep: [], ext: [] };
   let renderChunkCalls = 0;
@@ -27,9 +27,9 @@ test('the chunking context reads and writes the same moduleSideEffects as the pl
         },
         renderChunk() {
           renderChunkCalls++;
-          // The writes of the chunking context below.
-          expect(this.getModuleInfo('dep')!.moduleSideEffects).toBe(true);
-          expect(this.getModuleInfo('ext')!.moduleSideEffects).toBe(false);
+          // The writes below come after `buildEnd`, so they were ignored.
+          expect(this.getModuleInfo('dep')!.moduleSideEffects).toBe(false);
+          expect(this.getModuleInfo('ext')!.moduleSideEffects).toBe(true);
         },
       },
     ],
@@ -45,7 +45,7 @@ test('the chunking context reads and writes the same moduleSideEffects as the pl
                 const info: ModuleInfo = ctx.getModuleInfo(id)!;
                 const values = seen[id];
                 values.push(info.moduleSideEffects);
-                // `null` means "not decided": no option and no `package.json`, so `true`.
+                // Every write here comes after `buildEnd`, so it is ignored.
                 info.moduleSideEffects = null;
                 values.push(info.moduleSideEffects, getPluginModuleInfo(id)!.moduleSideEffects);
                 getPluginModuleInfo(id)!.moduleSideEffects = id === 'dep';
@@ -59,11 +59,11 @@ test('the chunking context reads and writes the same moduleSideEffects as the pl
       },
     });
     expect(seen).toStrictEqual({
-      dep: [false, true, true, true],
-      ext: [true, true, true, false],
+      dep: [false, false, false, false],
+      ext: [true, true, true, true],
     });
     expect(renderChunkCalls).toBeGreaterThan(0);
-    // Tree shaking ran before these writes, so they do not change the output.
+    // Tree shaking ran before these writes, and they were ignored.
     expect(output[0].code).not.toContain('DEP');
     expect(output[0].code).toContain('ext');
   } finally {

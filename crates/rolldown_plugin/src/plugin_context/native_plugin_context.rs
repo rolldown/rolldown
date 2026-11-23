@@ -255,23 +255,23 @@ impl NativePluginContextImpl {
     self.module_side_effects_overrides.shown_or_call(&info, call_option)
   }
 
-  /// A write to `getModuleInfo(module_id).moduleSideEffects`. `None` is a write of `null`.
+  /// A write to `getModuleInfo(module_id).moduleSideEffects`. `None` is a write of `null`. A write
+  /// after `buildEnd` is ignored, and the first one in a build logs a warning.
   pub fn set_module_side_effects(&self, module_id: &str, side_effects: Option<HookSideEffects>) {
     if self.set_module_side_effects_without_warning(module_id, side_effects) {
       self.warn(log_module_side_effects_write_after_build_end(module_id));
     }
   }
 
-  /// Like `set_module_side_effects`, but returns `true` for the first write after `buildEnd`
-  /// instead of warning. The binding uses it: it runs on the JS thread, and `warn` needs the
-  /// Tokio runtime.
+  /// Like `set_module_side_effects`, but returns `true` for the first ignored write after
+  /// `buildEnd` instead of warning. The binding uses it: it runs on the JS thread, and `warn`
+  /// needs the Tokio runtime.
   pub fn set_module_side_effects_without_warning(
     &self,
     module_id: &str,
     side_effects: Option<HookSideEffects>,
   ) -> bool {
-    self.module_side_effects_overrides.set(module_id, side_effects);
-    self.module_side_effects_overrides.should_warn_late_write()
+    self.module_side_effects_overrides.write(module_id, side_effects)
   }
 
   pub fn get_module_ids(&self) -> Vec<ArcStr> {

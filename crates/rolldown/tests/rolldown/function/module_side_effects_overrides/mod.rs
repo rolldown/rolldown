@@ -298,7 +298,7 @@ async fn only_the_first_write_after_build_end_warns() {
       Output::Asset(_) => None,
     })
     .expect("the build should emit a chunk");
-  // The late `false` does not change tree shaking.
+  // The late `false` is ignored.
   assert!(code.contains("BUILD_END"), "{code}");
   let first = cwd.join("build-end.js").expect_to_str().to_string();
   assert_eq!(*warnings.lock().unwrap(), vec![(Some("late-writer".to_string()), Some(first))]);

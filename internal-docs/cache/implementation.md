@@ -160,7 +160,9 @@ write works while module tasks still run. The JS setter of the plugin context
   applies the written values to the normal and external modules for tree shaking. It runs after
   the scan, and again after `buildEnd` (`Bundle::end_build_phase`), on the scan output and on the
   incremental snapshot (`ScanStageCache::apply_module_side_effects_overrides`). So a write in
-  `buildEnd` reaches tree shaking. The output hooks run after linking, so a write there does not.
+  `buildEnd` reaches tree shaking. The output hooks run after linking, so
+  `ModuleSideEffectsOverrides::write` ignores a write after `buildEnd`. If it kept the write, the
+  next partial scan would apply it to a module that did not change.
 
 `getModuleInfo(id).moduleSideEffects` shows the declared value, as in Rollup, not the result of
 the statement analysis that tree shaking uses for `true`:

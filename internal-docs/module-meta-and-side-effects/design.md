@@ -212,10 +212,12 @@ value, and Rolldown treats the module as if no hook had decided it. It does
 not go back to a value that a hook returned before the write.
 [Reading `moduleSideEffects`](#reading-modulesideeffects) says what Rolldown uses then.
 
-Tree shaking uses the writes that are made up to the end of `buildEnd`. A
-write in a later hook, such as `renderChunk`, or in a `codeSplitting.groups`
-function, does not change tree shaking. Rolldown warns about the first such
-write in a build (`MODULE_SIDE_EFFECTS_WRITE_AFTER_BUILD_END`).
+Tree shaking uses the writes that are made up to the end of `buildEnd`.
+Rolldown ignores a write in a later hook, such as `renderChunk`, or in a
+`codeSplitting.groups` function: a later read still returns the value from
+before the write, and the next build does not use it either. Rolldown warns
+about the first such write in a build
+(`MODULE_SIDE_EFFECTS_WRITE_AFTER_BUILD_END`).
 
 In the example, `buildEnd` writes `false`, and tree shaking uses `false`
 (step 4). If it wrote `null`, the value would be "not decided" again.
@@ -372,12 +374,12 @@ returns `null`, and tree shaking treats it as `false`. In the example, if
 in Rollup.
 
 **When a write reaches tree shaking.** In Rolldown, tree shaking uses the
-writes made up to the end of `buildEnd`, both `true` and `false`. Later
-writes do not change tree shaking, because Rolldown links the modules before
-the output hooks run. In Rollup, a `false` written as late as `renderStart`
-still removes code. But a `true` written in `buildEnd` or later does not
-bring removed code back. In the example, the `false` in `buildEnd` reaches
-tree shaking in both.
+writes made up to the end of `buildEnd`, both `true` and `false`. Rolldown
+links the modules before the output hooks run, so it ignores later writes,
+and a later read does not show them. In Rollup, a `false` written as late as
+`renderStart` still removes code. But a `true` written in `buildEnd` or later
+does not bring removed code back, and a later read shows any written value.
+In the example, the `false` in `buildEnd` reaches tree shaking in both.
 
 ## Related
 

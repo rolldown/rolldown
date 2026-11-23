@@ -253,10 +253,12 @@ export default {
   plugins: [
     {
       name: 'my-plugin',
-      resolveId(source) {
+      async resolveId(source, importer) {
         if (source === 'my-pure-module') {
+          const resolved = await this.resolve(source, importer, { skipSelf: true });
+          if (resolved === null) return null;
           return {
-            id: source,
+            ...resolved,
             moduleSideEffects: false,
           };
         }

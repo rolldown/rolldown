@@ -1299,7 +1299,7 @@ impl BindingMagicString<'_> {
   ) -> napi::Result<BindingSourceMap> {
     let (source_map, generated_line_count) = self.build_source_map(options)?;
 
-    // The encoder stops at the last token. An empty mappings string represents one line.
+    // The encoder stops at the last token. An empty `mappings` string represents one line.
     let mut tokens = source_map.get_tokens();
     let encoded_line_count = tokens
       .nth(tokens.len().saturating_sub(1))

@@ -28,13 +28,15 @@ impl MagicString<'_> {
     self.build_source_map(opts).0
   }
 
-  /// Also returns the output line count, including lines without any mapping segments.
+  /// Returns the source map and the number of output lines.
+  /// The count includes lines with no mapping segments.
   pub fn source_map_with_generated_line_count(
     &self,
     opts: SourceMapOptions,
   ) -> (oxc_sourcemap::SourceMap<'static>, usize) {
     let (map, line_count) = self.build_source_map(opts);
-    // The builder stops after the last chunk because the global outro cannot emit segments.
+    // The global outro adds no mapping segments, so the builder skips it.
+    // Count the newlines in the global outro separately.
     let outro_lines = self.outro.iter().map(|frag| frag.matches('\n').count()).sum::<usize>();
     (map, line_count + outro_lines)
   }

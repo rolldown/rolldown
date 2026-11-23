@@ -105,7 +105,7 @@ The following MagicString methods are currently available in the native implemen
   - `options.hires` - High-resolution mode: `true`, `false`, or `"boundary"`. The default is the `hires` option of the instance, or `false` when that option is not set
 - `generateDecodedMap(options?)` - Generates a source map object with decoded `mappings`. Its `mappings` is an array with one array of segments for each line. It takes the same options as `generateMap`
 
-Both methods preserve trailing generated lines with no mappings.
+The maps from `generateMap()` and `generateDecodedMap()` include trailing output lines with no mapping segments.
 
 The constructor also accepts a `hires` option, which `magic-string` does not have: `new RolldownMagicString(code, { hires: false })`. It sets the resolution of the source maps that are generated from the instance.
 

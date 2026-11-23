@@ -1300,9 +1300,10 @@ impl BindingMagicString<'_> {
     let (source_map, generated_line_count) = self.build_source_map(options)?;
 
     // The encoder stops at the last token. An empty mappings string represents one line.
-    let last_token_index = source_map.get_tokens().len().saturating_sub(1) as u32;
-    let encoded_line_count =
-      source_map.get_token(last_token_index).map_or(1, |token| token.get_dst_line() as usize + 1);
+    let mut tokens = source_map.get_tokens();
+    let encoded_line_count = tokens
+      .nth(tokens.len().saturating_sub(1))
+      .map_or(1, |token| token.get_dst_line() as usize + 1);
     let mut json = source_map.to_json();
     json.mappings.extend(std::iter::repeat_n(';', generated_line_count - encoded_line_count));
     Ok(BindingSourceMap { json })

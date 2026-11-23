@@ -289,6 +289,10 @@ impl PluginDriver {
     let mut code_arc: Option<ArcStr> = None;
     let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
     let mut plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
+    // A JS plugin holds its transform context weakly. Keep each one until the chain changes, so a
+    // later hook can still call `getCombinedSourcemap` on a context that a plugin kept.
+    #[expect(clippy::collection_is_never_read, reason = "only keeps the contexts alive")]
+    let mut transform_ctxs_on_chain = Vec::new();
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_meta)
     {
@@ -332,7 +336,9 @@ impl PluginDriver {
       // an error all release the map. From here, the context keeps no reference to it, and
       // a later `sendMagicString` through a context that a plugin keeps fails.
       let pending_sourcemap = transform_ctx.take_pending_sourcemap();
+      transform_ctxs_on_chain.push(transform_ctx);
       if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
+        transform_ctxs_on_chain.clear();
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
         let map_was_omitted = matches!(r.map, crate::HookTransformOutputMap::Omitted);
         let map_was_null = matches!(r.map, crate::HookTransformOutputMap::Null);

@@ -28,8 +28,9 @@ pub use crate::{
     HookTransformAstReturn, HookTransformReturn, Plugin,
   },
   plugin_context::{
-    LoadPluginContext, PluginContext, SharedLoadPluginContext, SharedNativePluginContext,
-    SharedTransformPluginContext, TransformPluginContext,
+    COMBINED_SOURCEMAP_AFTER_RELEASE_ERROR, LoadPluginContext, PluginContext,
+    SEND_AFTER_HOOK_ERROR, SharedLoadPluginContext, SharedNativePluginContext,
+    SharedTransformPluginContext, TransformPluginContext, WeakPluginContext,
   },
   plugin_driver::{ContextLoadProgress, PluginDriver, PluginDriverFactory, SharedPluginDriver},
   pluginable::Pluginable,

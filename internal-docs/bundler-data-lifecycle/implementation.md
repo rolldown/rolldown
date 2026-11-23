@@ -275,9 +275,9 @@ Rust keeps the JS functions of the bundler options only while their owner is ope
 ### The problem
 
 - A JS function of the bundler options reaches Rust as a `JsCallback`. Examples are `external`, `onLog`, the file name functions, and the internal `invalidateJsSideCache`, `resetJsModuleOptions` and `createJsModuleOptions`. A `JsCallback` keeps a strong napi reference to its JS function. V8 treats that reference as a GC root ("Global handles" in a heap snapshot).
-- JS can keep a native object that keeps the options alive. An example is the `BindingPluginContext` of `this` in a hook. It reaches the options through `NativePluginContextImpl.options` and `FileEmitter.options`. The options objects that hooks get keep no native object (see [Normalized options objects](#normalized-options-objects)).
+- JS can keep a native object that keeps the options alive. A hook's `this` used to be one. Its `BindingPluginContext` reached the options through `NativePluginContextImpl.options` and `FileEmitter.options`. It now holds the plugin context weakly, and the plugin driver drops the context when the build finishes. The options objects that hooks get keep no native object (see [Normalized options objects](#normalized-options-objects)).
 - A JS function of the options can reach such a native object. Then a cycle goes through native code: root → JS function → … → JS wrapper → `Arc<NormalizedBundlerOptions>` → `JsCallback` → root. The GC cannot see the native edge, so it never frees the cycle.
-- The internal callbacks capture `pluginContextData`, which reaches every plugin of the build. So without the release, every plugin of the build stays alive when one plugin keeps `this`. Before rolldown/rolldown#11623, one empty `buildStart` hook had the same effect (rolldown/rolldown#11444).
+- The internal callbacks capture `pluginContextData`, which reaches every plugin of the build. So without the release, every plugin of the build stayed alive when one plugin kept `this`. Before rolldown/rolldown#11623, one empty `buildStart` hook had the same effect (rolldown/rolldown#11444).
 
 ### The rule
 
@@ -309,7 +309,7 @@ Rust keeps the JS functions of the bundler options only while their owner is ope
   The release does not make them wait, because a wait deadlocks when a `closeBundle` hook awaits that close. Only the release waits for that work.
 
 - Plugin hooks are not in the group. `PluginDriver` keeps them, and the plugin context keeps the driver only as a `Weak` pointer. `ClassicBundler::close()` removes `last_bundle_handle`, so a plugin that keeps the build object does not keep the driver after the close. But a plugin that keeps the dev engine object makes a cycle. The JS dev engine keeps the native engine, and the native engine keeps the plugin driver.
-- A build that the user never closes never releases its callbacks. If JS keeps a native object that keeps its options alive, the GC never frees its plugins. An example of such an object is the `BindingPluginContext` of `this` in a hook. Without such an object, the GC frees the callbacks with the build object.
+- A build that the user never closes never releases its callbacks. If JS keeps a native object that keeps its options alive, the GC never frees its plugins. A hook's `this` is not such an object, because `BindingPluginContext` holds the plugin context weakly. Without such an object, the GC frees the callbacks with the build object.
 - The watcher event listener is not an option callback, so the release does not cover it.
 
 ### Tests

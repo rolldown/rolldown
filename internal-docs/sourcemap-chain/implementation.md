@@ -20,7 +20,7 @@ Each module keeps a `sourcemap_chain` of the maps that the `load` and `transform
 
 Before the collapse, `resolve_sources_against_module` (`crates/rolldown_sourcemap/src/resolve_sources.rs`) resolves the relative `sources` of the first map against the module directory and `sourceRoot`. The chain itself does not change, because `this.getCombinedSourcemap()` reads it.
 
-A saved transform context reads the chain through a weak reference. The driver takes the chain when a transform hook returns a result other than `null`, and after the module's last transform hook. Calls to `getCombinedSourcemap()` through a context whose reference has expired throw an error.
+A saved transform context reads the chain through a weak reference. The driver takes the chain when a transform hook returns a result other than `null`, and after the module's last transform hook. Calls to `getCombinedSourcemap()` through a context whose reference has expired throw an error. The JS object of a transform context holds the context itself weakly as well. The driver keeps each context until the chain changes, and calls after that throw the same error.
 
 ## Normalization at the hook boundary
 

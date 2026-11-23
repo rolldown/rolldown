@@ -8,8 +8,8 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  FilenameTemplate, ImportAttributes, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleLoaderMsg,
-  PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
+  FilenameTemplate, ImportAttributes, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleIdx,
+  ModuleLoaderMsg, PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
   SharedModuleSideEffectsOverrides, SharedNormalizedBundlerOptions, WatchPath,
   log_module_side_effects_write_after_build_end,
   side_effects::{DeterminedSideEffects, HookSideEffects},
@@ -19,7 +19,7 @@ use rolldown_utils::dashmap::FxDashSet;
 use tracing::Instrument;
 
 use crate::{
-  PluginDriver,
+  PluginContext, PluginDriver,
   plugin_context::PluginContextMeta,
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped,
@@ -55,7 +55,57 @@ pub struct NativePluginContextImpl {
   pub(crate) manual_resolve_span: tracing::Span,
 }
 
+/// A plugin context that does not keep its build alive. It stops working when the plugin driver
+/// of the build is dropped.
+#[derive(Debug, Clone)]
+pub struct WeakPluginContext {
+  ctx: Weak<NativePluginContextImpl>,
+  skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
+}
+
+impl WeakPluginContext {
+  pub fn upgrade(&self) -> Option<SharedNativePluginContext> {
+    let ctx = self.ctx.upgrade()?;
+    if self.skipped_resolve_calls.is_empty() {
+      return Some(ctx);
+    }
+    match PluginContext::Native(ctx)
+      .fork_with_skipped_resolve_calls(self.skipped_resolve_calls.clone())
+    {
+      PluginContext::Native(ctx) => Some(ctx),
+      PluginContext::Napi(_) => None,
+    }
+  }
+}
+
 impl NativePluginContextImpl {
+  /// A context forked for one `resolveId` call is dropped after that call, so the weak reference
+  /// points to the context that the plugin driver keeps, and keeps the skipped calls itself.
+  pub fn downgrade(self: &Arc<Self>) -> WeakPluginContext {
+    let ctx = if self.skipped_resolve_calls.is_empty() {
+      Arc::downgrade(self)
+    } else {
+      self
+        .plugin_driver
+        .upgrade()
+        .and_then(|plugin_driver| match plugin_driver.context(self.plugin_idx) {
+          PluginContext::Native(ctx) => Some(Arc::downgrade(ctx)),
+          PluginContext::Napi(_) => None,
+        })
+        .unwrap_or_default()
+    };
+    WeakPluginContext { ctx, skipped_resolve_calls: self.skipped_resolve_calls.clone() }
+  }
+
+  /// `addWatchFile` of a load or transform context, which also records the file as a dependency
+  /// of the module.
+  pub fn add_module_watch_file(&self, module_idx: ModuleIdx, file: &str) {
+    self.add_watch_file(file);
+    if let Some(plugin_driver) = self.plugin_driver.upgrade() {
+      plugin_driver.add_transform_dependency(module_idx, WatchPath::new(file, &self.options.cwd));
+    }
+  }
+
   pub async fn load(
     &self,
     raw_id: &str,

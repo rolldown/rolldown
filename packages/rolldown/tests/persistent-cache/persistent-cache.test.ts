@@ -1590,7 +1590,7 @@ describe('persistent cache', () => {
       }
     });
 
-    test('only a `meta` that would change after a restart gives no saved result', async () => {
+    test('a `meta` that is not a plain object, or that would change after a restart, gives no saved result', async () => {
       class Icons {
         list = ['home'];
         get count() {
@@ -1599,7 +1599,9 @@ describe('persistent cache', () => {
       }
       const withoutPrototype = () => Object.assign(Object.create(null), { home: 1 });
       // For each module: the `meta` that its `load` hook returns, and what a later hook reads.
-      // The module keeps a top-level copy, so the kind of the top-level object does not matter.
+      // Only a plain object, or an object without a prototype, is supported as `meta`. A `Map`
+      // has no own keys, so it adds nothing to the copy of the module, and there is nothing to
+      // save.
       const cases: Record<string, { meta: () => any; read: (meta: any) => unknown }> = {
         'class.js': {
           meta: () => new Icons(),
@@ -1675,6 +1677,8 @@ describe('persistent cache', () => {
         'plain.js': ['home'],
       });
       expect(restart.calls.sort()).toEqual([
+        'array.js',
+        'class.js',
         'half-pair-key.js',
         'nested-no-prototype.js',
         'symbol-key.js',

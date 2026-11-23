@@ -4,9 +4,11 @@ import type { BindingModuleMetaEntry } from '../binding.cjs';
  * The entries that the persistent cache saves for the `meta` of a hook result: one entry for each
  * top-level key. `undefined` when the cache cannot save `meta`.
  *
- * The module keeps a top-level copy of `meta` (`Object.assign`), so only the own enumerable
- * properties count, and the object itself can be of any kind. A copy also takes the properties
- * with a symbol key, which the cache cannot save.
+ * Only a plain object, or an object without a prototype, is supported as `meta`, with the same
+ * rules as for an object inside a value otherwise: no getter or setter, no property that is not
+ * enumerable or has a symbol key, and it can be extended. The module copies `meta` with
+ * `Object.assign`, so another object could give a copy that differs from what the cache saved,
+ * for example a getter that returns another value on each read.
  *
  * Each value is saved as JSON, so it must be the same after it is written as JSON and read back.
  * A string, a boolean, `null`, a finite number, an array and a plain object are. Everything that
@@ -22,16 +24,15 @@ import type { BindingModuleMetaEntry } from '../binding.cjs';
  */
 export function toSavableMetaEntries(meta: object): BindingModuleMetaEntry[] | undefined {
   try {
-    if (
-      Object.getOwnPropertySymbols(meta).some((key) =>
-        Object.prototype.propertyIsEnumerable.call(meta, key),
-      )
-    ) {
+    // The copy that the module keeps has the usual prototype anyway, so `meta` itself can also be
+    // an object without a prototype.
+    const keys = Array.isArray(meta) ? undefined : keysOfPlain(meta, true);
+    if (keys === undefined) {
       return undefined;
     }
     const seen = new Set<object>([meta]);
     const entries: BindingModuleMetaEntry[] = [];
-    for (const key of Object.keys(meta)) {
+    for (const key of keys) {
       // Rust gets the key as UTF-8, which cannot hold one half of a surrogate pair. The JSON
       // text of a value can: `JSON.stringify` writes the half as an escape.
       if (!key.isWellFormed()) {
@@ -79,10 +80,14 @@ export function isSavableAsJson(value: unknown): boolean {
  * has another prototype, a property with a symbol key, a property that is not enumerable, a
  * getter or a setter, or it cannot be extended. JSON keeps none of these: a getter becomes the
  * value that it returned once, and a frozen or sealed object becomes a normal one.
+ *
+ * With `allowNoPrototype`, an object without a prototype counts as plain too.
  */
-function keysOfPlain(value: object): string[] | undefined {
+function keysOfPlain(value: object, allowNoPrototype = false): string[] | undefined {
   const isArray = Array.isArray(value);
-  if (Object.getPrototypeOf(value) !== (isArray ? Array.prototype : Object.prototype)) {
+  const prototype = Object.getPrototypeOf(value);
+  const expected = isArray ? Array.prototype : Object.prototype;
+  if (prototype !== expected && !(allowNoPrototype && !isArray && prototype === null)) {
     return undefined;
   }
   if (!Object.isExtensible(value)) {

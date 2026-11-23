@@ -99,15 +99,18 @@ describe('toSavableMetaEntries', () => {
     expect(toSavableMetaEntries({ before: 1, nested: { value } })).toBeUndefined();
   });
 
-  test('a getter or a frozen object at the top level is saved as the copy of `meta` sees it', () => {
+  test('a `meta` with a getter, or a frozen `meta`, cannot be saved', () => {
+    let reads = 0;
     expect(
       toSavableMetaEntries({
         get a() {
-          return 1;
+          return ++reads;
         },
       }),
-    ).toEqual([{ key: 'a', json: '1' }]);
-    expect(toSavableMetaEntries(Object.freeze({ a: 1 }))).toEqual([{ key: 'a', json: '1' }]);
+    ).toBeUndefined();
+    // The check does not call the getter.
+    expect(reads).toBe(0);
+    expect(toSavableMetaEntries(Object.freeze({ a: 1 }))).toBeUndefined();
   });
 
   test('isSavableAsJson checks a whole value, such as a log', () => {
@@ -128,30 +131,28 @@ describe('toSavableMetaEntries', () => {
     expect(toSavableMetaEntries(meta)).toBeUndefined();
   });
 
-  // The module keeps a copy of the own enumerable properties of `meta`.
+  // Only a plain object is supported as `meta`.
   test.each([
-    ['an instance of a class', new Icon(), [{ key: 'name', json: '"home"' }]],
-    ['a Map', new Map([['icons', 1]]), []],
-    ['an array', ['home'], [{ key: '0', json: '"home"' }]],
-    [
-      'an object without a prototype',
-      Object.assign(Object.create(null), { a: 1 }),
-      [{ key: 'a', json: '1' }],
-    ],
-    ['an object with a property that is not enumerable', hidden, []],
-  ])('%s as the `meta` itself is saved as its copy', (_name, meta, entries) => {
-    expect(toSavableMetaEntries(meta)).toEqual(entries);
-    expect(
-      metaFromEntriesJson(JSON.stringify(entries.map((e) => [e.key, JSON.parse(e.json)]))),
-    ).toEqual({ ...meta });
+    ['an instance of a class', new Icon()],
+    ['a Map', new Map([['icons', 1]])],
+    ['an array', ['home']],
+    ['an object with a property that is not enumerable', hidden],
+  ])('%s as the `meta` itself cannot be saved', (_name, meta) => {
+    expect(toSavableMetaEntries(meta)).toBeUndefined();
+  });
+
+  test('an object without a prototype can be the `meta` itself, but not a value inside it', () => {
+    // The copy that the module keeps has the usual prototype anyway.
+    const dict = () => Object.assign(Object.create(null), { a: 1 });
+    expect(toSavableMetaEntries(dict())).toEqual([{ key: 'a', json: '1' }]);
+    expect(toSavableMetaEntries({ dict: dict() })).toBeUndefined();
   });
 
   test('a `meta` with a symbol key cannot be saved', () => {
     expect(toSavableMetaEntries({ a: 1, [Symbol('s')]: 1 })).toBeUndefined();
-    // A symbol key that is not enumerable is not copied, so it does not matter.
     expect(
       toSavableMetaEntries(Object.defineProperty({ a: 1 }, Symbol('s'), { value: 1 })),
-    ).toEqual([{ key: 'a', json: '1' }]);
+    ).toBeUndefined();
   });
 
   test('one half of a surrogate pair can be saved in a value, but not in a top-level key', () => {

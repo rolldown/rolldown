@@ -19,7 +19,7 @@ impl BindingRenderedModule {
   fn try_get_inner(&self) -> napi::Result<&Arc<RenderedModule>> {
     self.inner.as_ref().ok_or_else(|| {
       napi::Error::from_reason(
-        "Memory has been freed by `freeExternalMemory()`. Cannot access properties. To prevent this, use `freeExternalMemory(handle, true)` with `keepDataAlive`.",
+        "Memory has been freed: this rendered module's native data has already been released. Cannot access properties.",
       )
     })
   }

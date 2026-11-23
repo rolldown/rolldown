@@ -5,6 +5,7 @@ import type {
   BindingHookLoadOutput,
   BindingHookResolveIdOutput,
   BindingHookTransformOutput,
+  BindingMagicString,
   BindingPluginOptions,
   BindingTransformPluginContext,
 } from '../binding.cjs';
@@ -293,7 +294,7 @@ function bindingifyTransformResult(
       // Rust returns it here unless `experimental.nativeMagicString` and
       // sourcemaps are both enabled. Then it is generated natively and the
       // Rust side already knows about it.
-      map = ctx.sendMagicString(magicString) ?? undefined;
+      map = ctx.sendMagicString(magicString as unknown as BindingMagicString) ?? undefined;
     }
   }
 

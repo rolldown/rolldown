@@ -55,7 +55,7 @@ impl<'a> SourcemapBuilder<'a> {
   ) {
     let mut loc = locator.locate(chunk_start_utf16);
     if let Some(edited_content) = &chunk.edited_content {
-      if !edited_content.is_empty() {
+      for line in edited_content.split_inclusive('\n') {
         self.source_map_builder.add_token(
           self.generated_code_line,
           self.generated_code_column,
@@ -64,8 +64,12 @@ impl<'a> SourcemapBuilder<'a> {
           Some(self.source_id),
           name_id,
         );
+        if line.ends_with('\n') {
+          self.bump_line();
+        } else {
+          self.generated_code_column += simd_utf16_len::utf16_len(line) as u32;
+        }
       }
-      self.advance(edited_content);
     } else {
       let chunk_content = chunk.span.text(source);
       let mut new_line = true;

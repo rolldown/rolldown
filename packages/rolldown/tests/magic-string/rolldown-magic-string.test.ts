@@ -41,6 +41,25 @@ describe('sourcemap locations', () => {
     assert.deepStrictEqual(clone.sourcemapLocations, [2, 3, 4, 6]);
     assert.deepStrictEqual(s.sourcemapLocations, [2, 4, 6]);
   });
+
+  it('maps locations registered after generating a map', () => {
+    const s = new MagicString('abcdef');
+    s.addSourcemapLocation(4);
+    s.addSourcemapLocation(2);
+    assert.deepStrictEqual(
+      s.generateDecodedMap().mappings[0]!.map(([column]) => column),
+      [0, 2, 4],
+    );
+
+    s.addSourcemapLocation(3);
+    s.addSourcemapLocation(2);
+    s.addSourcemapLocation(5);
+    assert.deepStrictEqual(
+      s.generateDecodedMap().mappings[0]!.map(([column]) => column),
+      [0, 2, 3, 4, 5],
+    );
+    assert.deepStrictEqual(s.sourcemapLocations, [2, 3, 4, 5]);
+  });
 });
 
 describe('length', () => {

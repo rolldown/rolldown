@@ -26,26 +26,38 @@ impl Default for SourceMapOptions {
 impl MagicString<'_> {
   /// Adds a low-resolution mapping at a UTF-16 index in the original source.
   pub fn add_sourcemap_location(&mut self, index: u32) {
+    if let Some(&last) = self.sourcemap_locations.last() {
+      if last == index {
+        return;
+      }
+      self.sourcemap_locations_sorted &= last < index;
+    }
     self.sourcemap_locations.push(index);
   }
 
   /// Unique registered original-source UTF-16 indices, sorted in ascending order.
-  pub fn sourcemap_locations(&self) -> Vec<u32> {
-    // Sort on read so registering locations in arbitrary order never shifts earlier entries.
-    let mut locations = self.sourcemap_locations.clone();
-    locations.sort_unstable();
-    locations.dedup();
-    locations
+  pub fn sourcemap_locations(&mut self) -> &[u32] {
+    self.sort_sourcemap_locations();
+    &self.sourcemap_locations
   }
 
-  pub fn source_map(&self, opts: SourceMapOptions) -> oxc_sourcemap::SourceMap<'static> {
+  fn sort_sourcemap_locations(&mut self) {
+    if !self.sourcemap_locations_sorted {
+      self.sourcemap_locations.sort_unstable();
+      self.sourcemap_locations.dedup();
+      self.sourcemap_locations_sorted = true;
+    }
+  }
+
+  /// Generates the sourcemap, sorting any out-of-order locations in place for low-resolution maps.
+  pub fn source_map(&mut self, opts: SourceMapOptions) -> oxc_sourcemap::SourceMap<'static> {
     self.build_source_map(opts).0
   }
 
   /// Returns the source map and the number of output lines.
   /// The count includes lines with no mapping segments.
   pub fn source_map_with_generated_line_count(
-    &self,
+    &mut self,
     opts: SourceMapOptions,
   ) -> (oxc_sourcemap::SourceMap<'static>, usize) {
     let (map, line_count) = self.build_source_map(opts);
@@ -55,10 +67,14 @@ impl MagicString<'_> {
     (map, line_count + outro_lines)
   }
 
-  fn build_source_map(&self, opts: SourceMapOptions) -> (oxc_sourcemap::SourceMap<'static>, usize) {
-    let sourcemap_locations =
-      if matches!(opts.hires, Hires::False) { self.sourcemap_locations() } else { Vec::new() };
-    let mut source_builder = SourcemapBuilder::new(opts.hires, &sourcemap_locations);
+  fn build_source_map(
+    &mut self,
+    opts: SourceMapOptions,
+  ) -> (oxc_sourcemap::SourceMap<'static>, usize) {
+    if matches!(opts.hires, Hires::False) {
+      self.sort_sourcemap_locations();
+    }
+    let mut source_builder = SourcemapBuilder::new(opts.hires, &self.sourcemap_locations);
 
     source_builder.set_source_and_content(&opts.source, &self.source);
 

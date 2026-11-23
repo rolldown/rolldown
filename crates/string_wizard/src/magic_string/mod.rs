@@ -55,6 +55,8 @@ pub struct MagicString<'s> {
 
   #[cfg(feature = "sourcemap")]
   sourcemap_locations: Vec<u32>,
+  #[cfg(feature = "sourcemap")]
+  sourcemap_locations_sorted: bool,
 
   // This is used to speed up the search for the chunk that contains a given index.
   last_searched_chunk_idx: ChunkIdx,
@@ -98,6 +100,8 @@ impl<'text> MagicString<'text> {
       stored_names: FxHashMap::default(),
       #[cfg(feature = "sourcemap")]
       sourcemap_locations: Vec::new(),
+      #[cfg(feature = "sourcemap")]
+      sourcemap_locations_sorted: true,
       last_searched_chunk_idx: initial_chunk_idx,
     };
 

@@ -123,7 +123,6 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
             binding_prop.value.into_expression(builder),
             false,
             binding_prop.shorthand,
-            binding_prop.computed,
             builder,
           ));
         });

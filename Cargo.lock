@@ -3790,9 +3790,9 @@ dependencies = [
 
 [[package]]
 name = "testing_macros"
-version = "2.0.0"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "971a7561e3787ce2eb1768b900c385e797395037fecc56aadb2ed8230a4ba774"
+checksum = "8cd90fd288b2b6d2225ceb2777dfb93849d6d2d2414b06210242eb373fe41caa"
 dependencies = [
  "anyhow",
  "glob",

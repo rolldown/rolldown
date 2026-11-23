@@ -251,12 +251,13 @@ impl NativePluginContextImpl {
 
   /// A copy of `value` when this call is recorded. Emits are recorded only after they succeed:
   /// a failed emit that the plugin catches must not fail the build when it is replayed.
-  fn copy_for_record<T: Clone>(&self, value: &T) -> Option<T> {
-    self.cache_recorder.as_ref().map(|_| value.clone())
+  /// `copy` runs only then, so a call that is not recorded copies nothing.
+  fn copy_for_record<T>(&self, copy: impl FnOnce() -> T) -> Option<T> {
+    self.cache_recorder.as_ref().map(|_| copy())
   }
 
   pub fn emit_chunk(&self, chunk: rolldown_common::EmittedChunk) -> anyhow::Result<ArcStr> {
-    let copy = self.copy_for_record(&chunk);
+    let copy = self.copy_for_record(|| chunk.clone());
     let reference_id = self.file_emitter.emit_chunk(Arc::new(chunk))?;
     if let Some(chunk) = copy {
       self.record(|| RecordedAction::EmitChunk(chunk));
@@ -275,11 +276,9 @@ impl NativePluginContextImpl {
     fn_asset_filename: Option<String>,
     fn_sanitized_file_name: Option<String>,
   ) -> anyhow::Result<ArcStr> {
-    let copy = self.copy_for_record(&(
-      file.clone(),
-      fn_asset_filename.clone(),
-      fn_sanitized_file_name.clone(),
-    ));
+    let copy = self.copy_for_record(|| {
+      (file.clone(), fn_asset_filename.clone(), fn_sanitized_file_name.clone())
+    });
     let reference_id = self.emit_file_inner(file, fn_asset_filename, fn_sanitized_file_name)?;
     if let Some((file, fn_asset_filename, fn_sanitized_file_name)) = copy {
       self.record(|| RecordedAction::EmitFile { file, fn_asset_filename, fn_sanitized_file_name });
@@ -311,7 +310,7 @@ impl NativePluginContextImpl {
     &self,
     file: rolldown_common::EmittedAsset,
   ) -> anyhow::Result<ArcStr> {
-    let copy = self.copy_for_record(&file);
+    let copy = self.copy_for_record(|| file.clone());
     let asset_filename = self.options.asset_filename_with_file(&file).await?;
     let sanitized_file_name = self.options.sanitize_file_name_with_file(&file).await?;
     let reference_id = self.file_emitter.emit_file(file, asset_filename, sanitized_file_name)?;

@@ -174,7 +174,7 @@ impl Plugin for SharedReporter {
   ) -> HookNoopReturn {
     self
       .transformed_count
-      .store(ViteReporterPlugin::transformed_module_count(ctx), Ordering::SeqCst);
+      .store(self.reporter.transformed_module_count(ctx), Ordering::SeqCst);
     self
       .progress_count
       .store(self.reporter.transformed_count.load(Ordering::SeqCst) as usize, Ordering::SeqCst);

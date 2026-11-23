@@ -252,9 +252,10 @@ export function bindingifyTransform(
           },
         },
       });
+      const inner = ctx.inner();
       const transformCtx = new TransformPluginContextImpl(
         args.outputOptions,
-        ctx.inner(),
+        inner,
         args.plugin,
         args.pluginContextData,
         ctx,
@@ -267,9 +268,11 @@ export function bindingifyTransform(
       const ret = handler.call(transformCtx, code, id, meta);
 
       if (isPromiseLike(ret)) {
-        return Promise.resolve(ret).then((ret) => bindingifyTransformResult(args, ret, ctx, id));
+        return Promise.resolve(ret).then((ret) =>
+          bindingifyTransformResult(args, ret, ctx, inner, id),
+        );
       }
-      return bindingifyTransformResult(args, ret, ctx, id);
+      return bindingifyTransformResult(args, ret, ctx, inner, id);
     },
     filter: bindingifyTransformFilter(options.filter),
   }));
@@ -279,6 +282,7 @@ function bindingifyTransformResult(
   args: BindingifyPluginArgs,
   ret: TransformResult,
   ctx: BindingTransformPluginContext,
+  inner: BindingPluginContext,
   id: string,
 ): BindingHookTransformOutput | undefined {
   if (ret == null) {
@@ -289,7 +293,7 @@ function bindingifyTransformResult(
     return { code: ret };
   }
 
-  recordModuleMeta(args, ctx.inner(), 'transform', ret.meta);
+  recordModuleMeta(args, inner, 'transform', ret.meta);
   args.pluginContextData.updateModuleMeta(id, ret.meta ?? {});
 
   let normalizedCode: string | undefined = undefined;
@@ -329,10 +333,11 @@ export function bindingifyLoad(
   return bindingifyHook(args.plugin.load, ({ handler, options }) => ({
     plugin: (ctx, id, bindingExtraOptions) => {
       const extraOptions = bindingExtraOptions ?? { rawId: id, attributes: {} };
+      const inner = ctx.inner();
       const ret = handler.call(
         new LoadPluginContextImpl(
           args.outputOptions,
-          ctx.inner(),
+          inner,
           args.plugin,
           args.pluginContextData,
           ctx,
@@ -347,10 +352,10 @@ export function bindingifyLoad(
 
       if (isPromiseLike(ret)) {
         return Promise.resolve(ret).then((ret) =>
-          bindingifyLoadResult(args, ret, ctx.inner(), id, extraOptions.rawId),
+          bindingifyLoadResult(args, ret, inner, id, extraOptions.rawId),
         );
       }
-      return bindingifyLoadResult(args, ret, ctx.inner(), id, extraOptions.rawId);
+      return bindingifyLoadResult(args, ret, inner, id, extraOptions.rawId);
     },
     filter: bindingifyLoadFilter(options.filter),
   }));

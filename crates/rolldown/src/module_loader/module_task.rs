@@ -382,12 +382,24 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
   }
 
   /// Watches the module file when Rolldown read it from disk, and the tsconfig that governs the
-  /// module. The tsconfig is also a transform dependency: it affects `resolveId` and the
-  /// `transform` hooks, which a restart with the persistent cache skips.
+  /// module (#9598).
+  ///
+  /// Without the persistent cache, only a module read from disk gets its tsconfig watched. With
+  /// it, every module does, and the tsconfig is also a transform dependency: it affects
+  /// `resolveId` and the `transform` hooks, which a restart that reuses the saved result skips.
   fn watch_module_files(&self, is_read_from_disk: bool) {
     let raw_id = self.resolved_id.id.raw_id();
     if is_read_from_disk {
       self.ctx.plugin_driver.watch_files.insert(raw_id.into());
+    }
+    if self.ctx.persistent_cache.is_none() {
+      if is_read_from_disk
+        && let Some(tsconfig_path) =
+          self.ctx.options.transform_options.discover_tsconfig_file(std::path::Path::new(raw_id))
+      {
+        self.ctx.plugin_driver.watch_files.insert(tsconfig_path.to_string_lossy().as_ref().into());
+      }
+      return;
     }
     if let Some(tsconfig_path) = self.governing_tsconfig() {
       let tsconfig_path: ArcStr = tsconfig_path.to_string_lossy().as_ref().into();

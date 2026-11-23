@@ -29,6 +29,12 @@ pub type LogInfoFn =
 /// plugin.
 const TRANSFORMED_MARK: &str = "builtin:vite-reporter";
 
+/// Without the persistent cache, every module runs `transform`, so the plugin counts the calls
+/// and keeps no module meta.
+fn uses_persistent_cache(ctx: &PluginContext) -> bool {
+  ctx.options().experimental.cache.is_some()
+}
+
 #[derive(derive_more::Debug)]
 #[expect(clippy::struct_excessive_bools)]
 pub struct ViteReporterPlugin {
@@ -40,10 +46,9 @@ pub struct ViteReporterPlugin {
   pub chunk_limit: usize,
   pub report_compressed_size: bool,
   pub chunk_count: AtomicU32,
-  /// The modules that the progress line has counted in this build. The number that `build_end`
-  /// prints does not come from here: see `transformed_module_count`.
+  /// The modules that the progress line has counted in this build.
   pub transformed_count: AtomicU32,
-  /// The modules that `transform` reported in this build.
+  /// With the persistent cache, the modules that `transform` reported in this build.
   pub reported_in_transform: FxDashSet<String>,
   pub latest_checkpoint: Arc<RwLock<Instant>>,
   #[debug(skip)]
@@ -51,12 +56,17 @@ pub struct ViteReporterPlugin {
 }
 
 impl ViteReporterPlugin {
-  /// The number of modules of this build that have the mark of `transform`.
+  /// The number that `build_end` prints.
   ///
-  /// It does not count the `transform` calls: a module that reuses its saved result from the
-  /// persistent cache runs no `transform`, but Rolldown sets its mark again.
-  pub fn transformed_module_count(ctx: &PluginContext) -> usize {
-    ctx.count_modules_with_meta(TRANSFORMED_MARK)
+  /// With the persistent cache, it is the number of modules of this build that have the mark of
+  /// `transform`, not the number of `transform` calls: a module that reuses its saved result runs
+  /// no `transform`, but Rolldown sets its mark again.
+  pub fn transformed_module_count(&self, ctx: &PluginContext) -> usize {
+    if uses_persistent_cache(ctx) {
+      ctx.count_modules_with_meta(TRANSFORMED_MARK)
+    } else {
+      self.transformed_count.load(Ordering::SeqCst) as usize
+    }
   }
 
   fn report_progress(&self, id: &str) {
@@ -93,8 +103,10 @@ impl Plugin for ViteReporterPlugin {
     ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
-    ctx.set_module_meta(args.id, TRANSFORMED_MARK, [1u8]);
-    self.reported_in_transform.insert(args.id.to_string());
+    if uses_persistent_cache(&ctx) {
+      ctx.set_module_meta(args.id, TRANSFORMED_MARK, [1u8]);
+      self.reported_in_transform.insert(args.id.to_string());
+    }
     self.report_progress(args.id);
     Ok(None)
   }
@@ -109,13 +121,17 @@ impl Plugin for ViteReporterPlugin {
   // module. This hook reports only a module that reused its saved result, since such a module
   // runs no `transform`. The bundler keeps the meta of earlier builds, so a mark from an earlier
   // build must not count.
+  //
+  // Without the persistent cache, the hook returns at once. It stays registered then, because
+  // `register_hook_usage` cannot see the options.
   async fn module_parsed(
     &self,
     ctx: &PluginContext,
     module_info: Arc<ModuleInfo>,
     _normal_module: &NormalModule,
   ) -> rolldown_plugin::HookNoopReturn {
-    if ctx.has_module_meta_in_this_build(&module_info.id, TRANSFORMED_MARK)
+    if uses_persistent_cache(ctx)
+      && ctx.has_module_meta_in_this_build(&module_info.id, TRANSFORMED_MARK)
       && !self.reported_in_transform.contains(module_info.id.as_str())
     {
       self.report_progress(&module_info.id);
@@ -146,7 +162,7 @@ impl Plugin for ViteReporterPlugin {
     utils::log_info(&format!(
       "{} {} modules transformed.",
       utils::paint("✓", Style::new().green()),
-      Self::transformed_module_count(ctx)
+      self.transformed_module_count(ctx)
     ));
 
     Ok(())

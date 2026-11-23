@@ -1,6 +1,7 @@
 use std::{
   cell::{LazyCell, OnceCell},
-  collections::{VecDeque, hash_map::Entry},
+  cmp::Reverse,
+  collections::{BTreeSet, VecDeque, hash_map::Entry},
 };
 
 use arcstr::ArcStr;
@@ -95,6 +96,9 @@ pub struct ChunkOptimizationGraph {
   /// Initial chunks share identical indices; newly-created common chunks
   /// in chunk_graph are registered here so callers can translate.
   chunk_idx_to_temp_chunk_idx: FxHashMap<ChunkIdx, ChunkIdx>,
+  /// The unmerged chunks with side effects of their own, ordered by their latest side effect.
+  /// Filled by `calc_chunk_dependencies`.
+  latest_side_effects: BTreeSet<(u32, ChunkIdx)>,
 }
 
 impl ChunkOptimizationGraph {
@@ -145,7 +149,13 @@ impl ChunkOptimizationGraph {
       bits_to_chunk_idx.iter().map(|(k, v)| (k.clone(), *v)).collect();
     bits_to_chunk_idx.sort_unstable_keys();
 
-    Self { chunks, bits_to_chunk_idx, module_to_chunk, chunk_idx_to_temp_chunk_idx }
+    Self {
+      chunks,
+      bits_to_chunk_idx,
+      module_to_chunk,
+      chunk_idx_to_temp_chunk_idx,
+      latest_side_effects: BTreeSet::default(),
+    }
   }
 
   /// Assigns a module to a temporary chunk based on its reachability bits.
@@ -256,6 +266,11 @@ impl ChunkOptimizationGraph {
       }
       self.chunks[chunk_idx].modules = modules;
     }
+    self.latest_side_effects = self
+      .chunks
+      .iter_enumerated()
+      .filter_map(|(chunk_idx, chunk)| Some((chunk.side_effect_exec_orders?.1, chunk_idx)))
+      .collect();
   }
 
   pub fn add_entry_export_dependencies(&mut self, chunk_idx: ChunkIdx, targets: &[ModuleIdx]) {
@@ -365,10 +380,19 @@ impl ChunkOptimizationGraph {
     // Remove self-reference if it exists (source might have depended on target)
     self.chunks[target_chunk_idx].dependencies.remove(&target_chunk_idx);
     self.chunks[target_chunk_idx].certain_dependencies.remove(&target_chunk_idx);
+    if let Some((_, latest)) = source_side_effect_exec_orders {
+      self.latest_side_effects.remove(&(latest, source_chunk_idx));
+    }
     let target = &mut self.chunks[target_chunk_idx];
     target.has_side_effects |= source_has_side_effects;
+    if let Some((_, latest)) = target.side_effect_exec_orders {
+      self.latest_side_effects.remove(&(latest, target_chunk_idx));
+    }
     target.side_effect_exec_orders =
       widen_exec_order_range(target.side_effect_exec_orders, source_side_effect_exec_orders);
+    if let Some((_, latest)) = target.side_effect_exec_orders {
+      self.latest_side_effects.insert((latest, target_chunk_idx));
+    }
   }
 
   /// Whether merging `source_chunk_idx` into `target_chunk_idx` runs one of the source's side
@@ -383,6 +407,16 @@ impl ChunkOptimizationGraph {
     else {
       return false;
     };
+    // Only a chunk with a later side effect can be in the way, so the walk is skipped when there
+    // is none besides the two chunks themselves.
+    let in_the_way = (earliest_side_effect.saturating_add(1), ChunkIdx::from_raw(0))..;
+    if !self
+      .latest_side_effects
+      .range(in_the_way)
+      .any(|&(_, chunk_idx)| chunk_idx != source_chunk_idx && chunk_idx != target_chunk_idx)
+    {
+      return false;
+    }
     let already_before = self.certainly_loaded_before(source_chunk_idx);
     let mut visited = FxHashSet::default();
     let mut stack: Vec<ChunkIdx> =
@@ -573,32 +607,34 @@ impl GenerateStage<'_> {
       FxHashSet::default()
     };
     // Second pass: apply chunk assignments. A merge that would run a side effect late is held
-    // back, since the chunk in its way may merge into the same target later in the round. Once a
-    // round merges nothing, the held-back chunks are created as they are.
-    let mut pending = assignments;
+    // back, since the chunk in its way may merge into the same target later. Held-back merges are
+    // retried latest side effect first, so a chunk in the way goes before the ones it blocks. Once
+    // a round merges nothing, the held-back chunks are created in their original order.
+    let mut pending: Vec<_> = assignments.into_iter().enumerate().collect();
     let mut hold_back_late_merges = true;
     loop {
       let mut merged_this_round = false;
       let mut held_back = vec![];
-      for (bits, temp_chunk_idx, chunk_idxs, merge_target) in pending {
-        // Check if merging would create a circular dependency
+      for (position, (bits, temp_chunk_idx, chunk_idxs, merge_target)) in pending {
+        // The order check runs first: it is cheaper, and a held-back merge would repeat the cycle
+        // check in every round.
         let merge_target = match merge_target {
-          Some(target_chunk_idx)
-            if temp_chunk_graph
-              .would_create_circular_dependency(temp_chunk_idx, target_chunk_idx) =>
-          {
-            // Skip merge if it would create a circular dependency
-            None
-          }
           Some(target_chunk_idx)
             if !strict_execution_order
               && temp_chunk_graph
                 .merge_runs_side_effects_late(temp_chunk_idx, target_chunk_idx) =>
           {
             if hold_back_late_merges {
-              held_back.push((bits, temp_chunk_idx, chunk_idxs, merge_target));
+              held_back.push((position, (bits, temp_chunk_idx, chunk_idxs, merge_target)));
               continue;
             }
+            None
+          }
+          Some(target_chunk_idx)
+            if temp_chunk_graph
+              .would_create_circular_dependency(temp_chunk_idx, target_chunk_idx) =>
+          {
+            // Skip merge if it would create a circular dependency
             None
           }
           other => other,
@@ -646,6 +682,13 @@ impl GenerateStage<'_> {
       }
       if held_back.is_empty() {
         break;
+      }
+      if merged_this_round {
+        held_back.sort_by_key(|(_, (_, temp_chunk_idx, _, _))| {
+          Reverse(temp_chunk_graph.chunks[*temp_chunk_idx].side_effect_exec_orders)
+        });
+      } else {
+        held_back.sort_by_key(|(position, _)| *position);
       }
       hold_back_late_merges = merged_this_round;
       pending = held_back;

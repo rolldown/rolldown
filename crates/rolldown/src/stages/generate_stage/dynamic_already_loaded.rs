@@ -342,10 +342,28 @@ impl GenerateStage<'_> {
     changed
   }
 
+  /// What the fold and the merge read to keep side effects in order: each module's own side
+  /// effect position, and its predicted static import targets. Strict execution order needs
+  /// neither the predictions nor the merge's order check.
+  pub(super) fn side_effect_order_inputs(
+    &self,
+    needed: bool,
+  ) -> (IndexVec<ModuleIdx, Option<u32>>, IndexVec<ModuleIdx, Vec<ModuleIdx>>) {
+    if !needed {
+      return (IndexVec::new(), IndexVec::new());
+    }
+    let predicted_import_targets = if self.options.is_strict_execution_order_enabled() {
+      IndexVec::new()
+    } else {
+      self.predicted_static_import_targets_by_module()
+    };
+    (self.own_side_effect_exec_orders(), predicted_import_targets)
+  }
+
   /// The execution order of every module with a side effect of its own, `None` for the others. A
   /// side effect a module only reaches through an `import` runs at the imported module's position,
   /// so moving the importer cannot reorder it.
-  pub(super) fn own_side_effect_exec_orders(&self) -> IndexVec<ModuleIdx, Option<u32>> {
+  fn own_side_effect_exec_orders(&self) -> IndexVec<ModuleIdx, Option<u32>> {
     self
       .link_output
       .module_table
@@ -832,9 +850,7 @@ impl GenerateStage<'_> {
 
   /// `predicted_static_import_targets` of every included module, read by both the fold and the
   /// common-chunk merge.
-  pub(super) fn predicted_static_import_targets_by_module(
-    &self,
-  ) -> IndexVec<ModuleIdx, Vec<ModuleIdx>> {
+  fn predicted_static_import_targets_by_module(&self) -> IndexVec<ModuleIdx, Vec<ModuleIdx>> {
     self
       .link_output
       .metas

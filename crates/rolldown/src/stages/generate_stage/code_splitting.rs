@@ -993,21 +993,8 @@ impl GenerateStage<'_> {
     // The pure dynamic entry chunks that a merge gives modules of other entries. See
     // `find_leaking_dynamic_entry_namespaces`.
     let mut dynamic_entry_merge_targets = FxHashSet::default();
-    let own_side_effect_exec_orders =
-      if allow_merge_common_chunks || allow_avoid_redundant_chunk_loads {
-        self.own_side_effect_exec_orders()
-      } else {
-        IndexVec::new()
-      };
-    // Strict execution order needs neither the fold's predictions nor the merge's order check.
-    let mut predicted_import_targets = if (allow_merge_common_chunks
-      || allow_avoid_redundant_chunk_loads)
-      && !self.options.is_strict_execution_order_enabled()
-    {
-      self.predicted_static_import_targets_by_module()
-    } else {
-      IndexVec::new()
-    };
+    let (own_side_effect_exec_orders, mut predicted_import_targets) =
+      self.side_effect_order_inputs(allow_merge_common_chunks || allow_avoid_redundant_chunk_loads);
     // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
     if allow_avoid_redundant_chunk_loads {
       let entries_len: u32 = self

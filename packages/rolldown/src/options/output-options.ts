@@ -1057,6 +1057,15 @@ export type ExperimentalInlineCommonChunksOptions = {
    */
   maxSize?: number;
   /**
+   * Keep a common chunk as a file when its size times the number of files beyond the first that
+   * would print a copy reaches this value. Size is measured as for `maxSize`.
+   *
+   * Must be a non-negative safe integer or `Infinity`. `Infinity` removes the limit.
+   *
+   * @default Infinity
+   */
+  maxDuplicatedSize?: number;
+  /**
    * A matcher for module ids, or an array of them: a string (matched as a regular expression), a
    * RegExp, or a function, each applied like {@linkcode CodeSplittingGroup.test | test}. A common
    * chunk is not inlined when any of its modules matches any matcher.

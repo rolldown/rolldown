@@ -1,0 +1,54 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.cjs
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// a.js
+const a = require("./b-BK-U6TSe.cjs").import_value.x;
+exports.a = a;
+
+```
+
+## b-BK-U6TSe.cjs
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// b.js
+var import_value = (/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.x = 1;
+	exports.y = 2;
+})))();
+const b = import_value.y;
+Object.defineProperty(exports, "b", {
+	enumerable: true,
+	get: function() {
+		return b;
+	}
+});
+Object.defineProperty(exports, "import_value", {
+	enumerable: true,
+	get: function() {
+		return import_value;
+	}
+});
+
+```
+
+## b.cjs
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_b = require("./b-BK-U6TSe.cjs");
+exports.b = require_b.b;
+Object.defineProperty(exports, "x", {
+	enumerable: true,
+	get: function() {
+		return import_value.x;
+	}
+});
+
+```

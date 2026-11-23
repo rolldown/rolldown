@@ -81,7 +81,6 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
               PropertyKey::new_static_identifier(SPAN, key, self),
               BindingPattern::new_binding_identifier(SPAN, value, self),
               true,
-              false,
               self,
             )],
             None,

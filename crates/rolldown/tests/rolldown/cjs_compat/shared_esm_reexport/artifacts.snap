@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## e1.js
+
+```js
+import { a as __toCommonJS, i as __commonJSMin, n as init_esm, r as x, t as esm_exports } from "./esm.js";
+// e1.cjs
+var require_e1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = (init_esm(), __toCommonJS(esm_exports));
+}));
+export default require_e1();
+export { x };
+
+```
+
+## e2.js
+
+```js
+import { a as __toCommonJS, i as __commonJSMin, n as init_esm, r as x, t as esm_exports } from "./esm.js";
+// e2.cjs
+var require_e2 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = (init_esm(), __toCommonJS(esm_exports));
+}));
+export default require_e2();
+export { x };
+
+```
+
+## esm.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// esm.mjs
+var esm_exports = /* @__PURE__ */ __exportAll({ x: () => 1 });
+var x;
+var init_esm = __esmMin((() => {
+	x = 1;
+}));
+export { __toCommonJS as a, __commonJSMin as i, init_esm as n, x as r, esm_exports as t };
+
+```

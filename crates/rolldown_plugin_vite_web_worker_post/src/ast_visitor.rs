@@ -47,7 +47,6 @@ impl<'ast> WebWorkerPostVisitor<'ast> {
           self.create_self_location_href_expr(),
           false,
           false,
-          false,
           self,
         )],
         self,

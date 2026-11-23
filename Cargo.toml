@@ -260,7 +260,9 @@ typedmap = "0.6.0"
 url = "2.5.9"
 uuid = "1.27.0"
 vfs = "0.13.0"
-walkdir = "2.5.0"
+# Pinned to 2.5.0: with 2.5.1, Vite's serve-bundled HMR test on Windows times out waiting for the update.
+# Upgrade once it is known which change in 2.5.1 causes this.
+walkdir = "=2.5.0"
 xxhash-rust = "0.8.16"
 
 prettyplease = "0.3.0"

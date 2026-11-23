@@ -149,3 +149,5 @@ minimumReleaseAgeExclude:
 
 # avoid accidentally relying on `NODE_PATH` env var
 extendNodePath: false
+patchedDependencies:
+  '@napi-rs/cli@3.11.0': patches/@napi-rs__cli@3.11.0.patch

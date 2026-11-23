@@ -32,12 +32,12 @@ mod imp {
     fn mi_theap_quiescent_abandon(theap: *mut c_void);
     fn mi_arenas_purge();
     fn mi_version() -> c_int;
-    fn mi_option_set(option: c_int, value: c_long);
+    fn mi_option_set_default(option: c_int, value: c_long);
   }
 
   /// The mimalloc whose `mimalloc.h` the declarations above and the option numbers below match.
   /// Debug builds, which CI tests with, stop on any other version, so an update checks them again.
-  const CHECKED_MIMALLOC: c_int = 30601;
+  const CHECKED_MIMALLOC: c_int = 30700;
 
   struct Reclaimer {
     events: Mutex<u64>,
@@ -126,26 +126,15 @@ mod imp {
     if version != CHECKED_MIMALLOC {
       return;
     }
-    // Without overcommit, as on Windows, the OS charges commit for every page a thread claims,
-    // even untouched ones. 2 commits pages on demand only on such systems.
-    set_unless_user_defined(PAGE_COMMIT_ON_DEMAND, 2, &["page_commit_on_demand"]);
-    // With transparent huge pages, mimalloc purges in 2 MiB units, which skips most ranges.
-    #[cfg(target_os = "linux")]
-    set_unless_user_defined(
-      ARENA_PURGE_MIN_SIZE,
-      64,
-      &["arena_purge_min_size", "minimal_purge_size"],
-    );
-  }
-
-  fn set_unless_user_defined(option: c_int, value: c_long, names: &[&str]) {
-    let is_user_defined = names.iter().any(|name| {
-      std::env::var_os(format!("MIMALLOC_{}", name.to_uppercase())).is_some()
-        || std::env::var_os(format!("mimalloc_{name}")).is_some()
-    });
-    if !is_user_defined {
-      // SAFETY: nothing reads the options concurrently yet, see `set_allocator_options`.
-      unsafe { mi_option_set(option, value) };
+    // A default does not replace a value set through a `MIMALLOC_*` environment variable.
+    // SAFETY: plain calls with option numbers from `mimalloc.h`.
+    unsafe {
+      // Without overcommit, as on Windows, the OS charges commit for every page a thread claims,
+      // even untouched ones. 2 commits pages on demand only on such systems.
+      mi_option_set_default(PAGE_COMMIT_ON_DEMAND, 2);
+      // With transparent huge pages, mimalloc purges in 2 MiB units, which skips most ranges.
+      #[cfg(target_os = "linux")]
+      mi_option_set_default(ARENA_PURGE_MIN_SIZE, 64);
     }
   }
 

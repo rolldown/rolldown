@@ -11,7 +11,7 @@ After work finishes, native memory returns close to its live size, without slowi
 - A free from another thread only queues the block on the page. Only the owner thread settles it, and an idle worker never runs.
 - After a page returns to the arena, the purge is only scheduled. Nothing runs it unless a later allocation does.
 - Each thread reuses only its own pages. Builds that run back to back spread work over the 21 tokio and 14 rayon threads differently each time, so each thread keeps the most it ever held. In the #10985 test (300 builds back to back), 2 tokio and 2 rayon threads held about 430 MB less.
-- On Linux with transparent huge pages, mimalloc 3.6 purges only whole 2 MiB ranges by default, which skips most ranges. khugepaged also fills the purged parts of a range that still holds live data. See the unresolved questions.
+- On Linux with transparent huge pages, mimalloc 3.6 and 3.7 purge only whole 2 MiB ranges by default, which skips most ranges. khugepaged also fills the purged parts of a range that still holds live data. See the unresolved questions.
 - JS wrappers pin outputs until V8 collects them, and a small JS heap gives V8 no reason to.
 
 ## Decisions
@@ -27,8 +27,8 @@ After work finishes, native memory returns close to its live size, without slowi
   - While JS holds the output of several builds, a given-up page that is mostly used is not reused until more of it is freed. With the release, six three.js x10 builds back to back held 1050 to 1100 MB with their output alive, against 880 to 920 MB without it. The quiet-window round alone gives the same 1030 MB once builds are 700 ms apart, and main holds about 1800 MB.
   - Loops with no pause at all are mostly tests and benchmarks. Watch and dev leave gaps longer than the quiet window. Add it again only for a real workload that needs it.
 - A thread settles only after every thread has taken its task. `mi_theap_quiescent_abandon` takes a global lock, so threads settle one at a time. When each thread waited after settling, every tokio worker was held until the last one was done. With the release between builds above, `close()` right after a three.js x10 build then took 7.5 to 8.5 ms instead of 2 ms.
-- Purge in 64 KiB slices on Linux. mimalloc 3.6 defaults `allow_thp` to 2, which purges only whole 2 MiB ranges to keep huge pages intact, though its header and option table still say 1. After a late GC in the three.js x10 test, that held 460 to 490 MB instead of 123 to 136 MB. Any size set explicitly avoids it. Note that `MIMALLOC_ARENA_PURGE_MIN_SIZE` reads a number without a unit as bytes.
-- Do not change mimalloc options at runtime. Switching `purge_delay` while idle also works but races with readers.
+- Purge in 64 KiB slices on Linux. mimalloc 3.6 and 3.7 default `allow_thp` to 2, which purges only whole 2 MiB ranges to keep huge pages intact, though its header and option table still say 1. After a late GC in the three.js x10 test, that held 460 to 490 MB instead of 123 to 136 MB. Any size set explicitly avoids it. Note that `MIMALLOC_ARENA_PURGE_MIN_SIZE` reads a number without a unit as bytes.
+- Do not change mimalloc options at runtime. Switching `purge_delay` while idle also works. Up to mimalloc 3.6 that raced with readers. Since 3.7 the options are atomic, but each round already purges.
 - Do not disable transparent huge pages. That costs about 10% build time.
 - Commit pages on demand on Windows. Each thread there commits a whole 4 MiB page per size class up front, which Windows charges as commit even when untouched. On the published binaries `MIMALLOC_PAGE_COMMIT_ON_DEMAND=1` cut commit by 40 to 45% with the same build time. The value 2 does this only where the OS has no overcommit, so macOS and most Linux hosts keep eager commit.
 - Settle the JS thread too. Plugin results and output wrappers are allocated there.

@@ -1,19 +1,19 @@
-use std::fmt;
-
 use futures::Future;
 
-pub use tokio::task::{JoinError, JoinHandle};
+// These forward to the runtime unchanged. `spawn` and `try_spawn` below stay
+// wrappers only because they take one generic parameter (`<F>`) where the
+// runtime's take two (`<F, T>`).
+// See internal-docs/async-runtime/implementation.md, "Rust core: facades, module loader, Rayon".
+pub use crate::async_runtime::{
+  JoinError, JoinHandle, RuntimeConfigError as SpawnError, block_on, spawn_blocking, spawn_detached,
+};
 
-#[derive(Debug)]
-pub struct SpawnError;
-
-impl fmt::Display for SpawnError {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    f.write_str("no active async runtime handle")
-  }
-}
-
-impl std::error::Error for SpawnError {}
+/// Submit a fire-and-forget future without consuming it when no executor is
+/// reachable; `Err` hands the future back so the caller decides its fate.
+///
+/// `Ok` means the future was handed to an executor, not that it will run: the
+/// scheduler checks admission, so a closed scheduler returns `Err`.
+pub use crate::async_runtime::try_spawn_detached;
 
 #[inline]
 pub fn spawn<F>(future: F) -> JoinHandle<F::Output>
@@ -21,15 +21,7 @@ where
   F: Future + Send + 'static,
   F::Output: Send + 'static,
 {
-  tokio::spawn(future)
-}
-
-#[inline]
-pub fn spawn_detached<F>(future: F)
-where
-  F: Future<Output = ()> + Send + 'static,
-{
-  drop(tokio::spawn(future));
+  crate::async_runtime::spawn(future)
 }
 
 #[inline]
@@ -38,46 +30,7 @@ where
   F: Future + Send + 'static,
   F::Output: Send + 'static,
 {
-  match tokio::runtime::Handle::try_current() {
-    Ok(handle) => Ok(handle.spawn(future)),
-    Err(_) => Err((SpawnError, future)),
-  }
-}
-
-/// Submit a fire-and-forget future without consuming it when no executor is
-/// reachable; `Err` hands the future back so the caller decides its fate.
-#[inline]
-pub fn try_spawn_detached<F>(future: F) -> Result<(), (SpawnError, F)>
-where
-  F: Future<Output = ()> + Send + 'static,
-{
-  match tokio::runtime::Handle::try_current() {
-    Ok(handle) => {
-      drop(handle.spawn(future));
-      Ok(())
-    }
-    Err(_) => Err((SpawnError, future)),
-  }
-}
-
-#[inline]
-pub fn spawn_blocking<F, R>(f: F) -> JoinHandle<R>
-where
-  F: FnOnce() -> R + Send + 'static,
-  R: Send + 'static,
-{
-  tokio::task::spawn_blocking(f)
-}
-
-pub fn block_on<F: Future>(f: F) -> F::Output {
-  #[cfg(target_family = "wasm")]
-  {
-    futures::executor::block_on(f)
-  }
-  #[cfg(not(target_family = "wasm"))]
-  {
-    tokio::task::block_in_place(move || tokio::runtime::Handle::current().block_on(f))
-  }
+  crate::async_runtime::try_spawn(future)
 }
 
 /// Whether Rolldown starts its own offload threads with `std::thread::spawn`,

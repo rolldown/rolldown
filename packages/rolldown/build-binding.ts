@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -9,9 +9,11 @@ import { globSync } from 'glob';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SOURCE_DIR = join(__dirname, 'src');
 const WASI_THREADS_TARGET = 'wasm32-wasip1-threads';
+const WASI_SINGLE_TARGET = 'wasm32-wasip1';
 const WASI_BINARY_NAME = 'rolldown-binding.wasm32-wasi';
+const PRESERVE_FLAG = '--preserve-generated-sources';
 
-const args = process.argv.slice(2);
+const args = process.argv.slice(2).filter((arg) => arg !== PRESERVE_FLAG);
 
 const napiCli = new NapiCli();
 const buildCommand = createBuildCommand(args);
@@ -31,12 +33,20 @@ const napiArgs = {
   // flags, cargo config, dependency graph) but never the Rust source, so the
   // cache can retain declarations after the Rust binding metadata changes.
   // WASI builds must regenerate their exact declaration surface.
-  dtsCache: argsOptions.target === WASI_THREADS_TARGET ? false : argsOptions.dtsCache,
+  dtsCache:
+    argsOptions.target === WASI_THREADS_TARGET || argsOptions.target === WASI_SINGLE_TARGET
+      ? false
+      : argsOptions.dtsCache,
   constEnum: false,
 };
 
 console.info('args:', napiArgs);
 
+// A test-feature build (`just build-rolldown-async-runtime`) adds test-only
+// exports to the generated sources; keep the committed ones.
+const restoreGeneratedSources = process.argv.includes(PRESERVE_FLAG)
+  ? snapshotGeneratedSources()
+  : () => {};
 try {
   const { task } = await napiCli.build(napiArgs);
   await task;
@@ -53,10 +63,34 @@ try {
     rmSync(file, { force: true, recursive: true });
   }
   process.exitCode = 1;
+} finally {
+  restoreGeneratedSources();
+}
+
+function isGeneratedSource(name: string): boolean {
+  return (
+    name === 'browser.js' ||
+    /^(?:binding(?:\.d)?|rolldown-binding\..+|wasi-worker(?:-browser)?)\.(?:cjs|cts|js|mjs|ts)(?:\.map)?$/.test(
+      name,
+    )
+  );
+}
+
+function snapshotGeneratedSources(): () => void {
+  const list = () => readdirSync(SOURCE_DIR).filter(isGeneratedSource);
+  const sources = new Map(list().map((name) => [name, readFileSync(join(SOURCE_DIR, name))]));
+  return () => {
+    for (const name of list()) {
+      if (!sources.has(name)) rmSync(join(SOURCE_DIR, name), { force: true });
+    }
+    for (const [name, source] of sources) {
+      writeFileSync(join(SOURCE_DIR, name), source);
+    }
+  };
 }
 
 function configureWasiRustc(target: unknown): void {
-  if (target !== WASI_THREADS_TARGET) return;
+  if (target !== WASI_THREADS_TARGET && target !== WASI_SINGLE_TARGET) return;
 
   // RUSTC must be the real toolchain binary, not the rustup shim, so the wasi
   // link step can locate crt1-reactor.o.

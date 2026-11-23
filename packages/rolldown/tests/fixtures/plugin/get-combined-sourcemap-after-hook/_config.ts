@@ -1,3 +1,4 @@
+import { isThreadlessWasi } from '@tests/runtime-flavor';
 import type { SourceMap } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
@@ -25,9 +26,16 @@ export default defineTest({
         transform: {
           filter,
           handler(code) {
-            const map = getSavedMap();
-            expect(map).toEqual(originalMap);
-            expect(map.mappings).not.toBe('');
+            if (isThreadlessWasi) {
+              // Threadless WASI releases per-module hook contexts as soon as the hook settles.
+              expect(getSavedMap).toThrow(
+                /Memory has been freed: this transform context's native data was eagerly released/,
+              );
+            } else {
+              const map = getSavedMap();
+              expect(map).toEqual(originalMap);
+              expect(map.mappings).not.toBe('');
+            }
             return { code, map: null };
           },
         },
@@ -38,7 +46,9 @@ export default defineTest({
           filter,
           handler() {
             expect(getSavedMap).toThrow(
-              /^TransformPluginContext: `getCombinedSourcemap` cannot be called after the sourcemap chain is released$/,
+              isThreadlessWasi
+                ? /Memory has been freed: this transform context's native data was eagerly released/
+                : /^TransformPluginContext: `getCombinedSourcemap` cannot be called after the sourcemap chain is released$/,
             );
           },
         },

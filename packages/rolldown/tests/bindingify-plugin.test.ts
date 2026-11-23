@@ -10,9 +10,11 @@ vi.mock('../src/binding.cjs', async () => {
 
 // These are the arguments the native side supplies. The hooks below only use
 // the plain data and inner context, so no active native bundler is needed.
-const ctx = { inner: () => ({}) };
+// Threadless WASI releases each box when its hook settles, hence `dropInner`.
+const dropInner = () => {};
+const ctx = { inner: () => ({ dropInner }), dropInner };
 const opts = { comments: {} };
-const chunk = {};
+const chunk = { modules: { keys: [], values: [] }, dropInner };
 const bundle = { chunks: [], assets: [] };
 const code = 'export default 1';
 const id = '/entry.js';
@@ -25,9 +27,9 @@ const cases = [
   ['resolveDynamicImport', [ctx, 'entry', null, {}], id, { id }],
   ['load', [ctx, id, undefined], code, { code }],
   ['transform', [ctx, code, id, { moduleType: 'js' }], code, { code }],
-  ['moduleParsed', [ctx, { id }], 'ignored', undefined],
+  ['moduleParsed', [ctx, { id, dropInner }], 'ignored', undefined],
   ['renderStart', [ctx, opts], 'ignored', undefined],
-  ['renderChunk', [ctx, code, chunk, opts, { chunks: {} }], code, { code }],
+  ['renderChunk', [ctx, code, chunk, opts, { chunks: {}, dropInner }], code, { code }],
   ['augmentChunkHash', [ctx, chunk], 'hash', 'hash'],
   ['resolveFileUrl', [ctx, {}], 'url', 'url'],
   ['renderError', [ctx, []], 'ignored', undefined],

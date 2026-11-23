@@ -31,7 +31,7 @@ export async function createBundlerOptions(
    * watch, dev or scan would be written to on every hook call and never read.
    */
   measureTimings = false,
-): Promise<BindingBundlerOptions> {
+): Promise<CreatedBundlerOptions> {
   const inputPlugins = await normalizePluginOption(inputOptions.plugins);
   const outputPlugins = await normalizePluginOption(outputOptions.plugins);
 
@@ -132,7 +132,20 @@ export async function createBundlerOptions(
   );
 
   return {
-    inputOptions: bindingInputOptions,
-    outputOptions: bindingOutputOptions,
+    bundlerOptions: {
+      inputOptions: bindingInputOptions,
+      outputOptions: bindingOutputOptions,
+    },
+    releaseOptionBoxes: () => pluginContextData.releaseRetainedOptionBoxes(),
   };
+}
+
+export interface CreatedBundlerOptions {
+  bundlerOptions: BindingBundlerOptions;
+  /**
+   * Releases the native boxes this build's hooks retained (see
+   * {@linkcode PluginContextData.releaseRetainedOptionBoxes}). Call once the
+   * build is settled, scanned, or closed.
+   */
+  releaseOptionBoxes: () => void;
 }

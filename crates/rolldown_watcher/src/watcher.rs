@@ -188,65 +188,7 @@ impl Watcher {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::WatchEvent;
-  use rolldown::BundlerOptions;
-  use rolldown_common::WatcherChangeKind;
-  use rolldown_workspace::TestDir;
-  use std::sync::atomic::{AtomicUsize, Ordering};
   use std::time::Duration;
-
-  struct ProbeHandler {
-    bundle_ends: Arc<AtomicUsize>,
-    bundle_end_notify: Arc<event_listener::Event>,
-    closes: Arc<AtomicUsize>,
-  }
-
-  impl WatcherEventHandler for ProbeHandler {
-    async fn on_event(&self, event: WatchEvent) {
-      if matches!(event, WatchEvent::BundleEnd(_)) {
-        self.bundle_ends.fetch_add(1, Ordering::SeqCst);
-        self.bundle_end_notify.notify(usize::MAX);
-      }
-    }
-
-    async fn on_change(&self, _path: &str, _kind: WatcherChangeKind) {}
-
-    async fn on_restart(&self) {}
-
-    async fn on_close(&self) {
-      self.closes.fetch_add(1, Ordering::SeqCst);
-    }
-  }
-
-  fn create_probe_watcher(
-    name: &str,
-  ) -> (TestDir, Watcher, Arc<AtomicUsize>, Arc<event_listener::Event>, Arc<AtomicUsize>) {
-    let dir = TestDir::new(name);
-    let input = dir.path().join("main.js");
-    std::fs::write(&input, "export const value = 1;\n").expect("write input");
-    let config = BundlerConfig::new(
-      BundlerOptions {
-        cwd: Some(dir.path().to_path_buf()),
-        input: Some(vec![input.to_string_lossy().into_owned().into()]),
-        ..Default::default()
-      },
-      vec![],
-    );
-    let bundle_ends = Arc::new(AtomicUsize::new(0));
-    let bundle_end_notify = Arc::new(event_listener::Event::new());
-    let closes = Arc::new(AtomicUsize::new(0));
-    let watcher = Watcher::new(
-      vec![config],
-      ProbeHandler {
-        bundle_ends: Arc::clone(&bundle_ends),
-        bundle_end_notify: Arc::clone(&bundle_end_notify),
-        closes: Arc::clone(&closes),
-      },
-      &WatcherConfig::default(),
-    )
-    .unwrap_or_else(|errors| panic!("create watcher: {errors:?}"));
-    (dir, watcher, bundle_ends, bundle_end_notify, closes)
-  }
 
   #[test]
   fn test_watcher_config_default_debounce() {
@@ -258,41 +200,5 @@ mod tests {
   fn test_watcher_config_custom_debounce() {
     let config = WatcherConfig { debounce: Some(Duration::from_millis(500)) };
     assert_eq!(config.debounce_duration(), Duration::from_millis(500));
-  }
-
-  #[test]
-  fn failed_run_preserves_coordinator_for_later_run() {
-    let (_dir, watcher, bundle_ends, bundle_end_notify, closes) =
-      create_probe_watcher("rolldown-watcher-retry-run");
-
-    // Outside any runtime, `run()` fails and keeps the coordinator intact.
-    watcher.run().expect_err("run() outside a runtime must fail");
-    watcher.run().expect_err("repeated run() outside a runtime must still fail");
-
-    let rt = tokio::runtime::Runtime::new().expect("create tokio runtime");
-    rt.block_on(async {
-      let listener = bundle_end_notify.listen();
-      watcher.run().expect("run() inside a runtime must start the preserved coordinator");
-      if bundle_ends.load(Ordering::SeqCst) == 0 {
-        listener.await;
-      }
-      assert!(bundle_ends.load(Ordering::SeqCst) >= 1, "initial build must complete");
-      watcher.close().await.expect("close() must succeed");
-    });
-    assert_eq!(closes.load(Ordering::SeqCst), 1, "close event must be emitted once");
-  }
-
-  #[test]
-  fn failed_run_preserves_coordinator_for_later_close() {
-    let (_dir, watcher, _bundle_ends, _bundle_end_notify, closes) =
-      create_probe_watcher("rolldown-watcher-retry-close");
-
-    watcher.run().expect_err("run() outside a runtime must fail");
-
-    let rt = tokio::runtime::Runtime::new().expect("create tokio runtime");
-    rt.block_on(async {
-      watcher.close().await.expect("close() inside a runtime must succeed");
-    });
-    assert_eq!(closes.load(Ordering::SeqCst), 1, "close event must be emitted once");
   }
 }

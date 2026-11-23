@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import nodePath from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { isWasiTest } from 'rolldown-tests/utils';
+import { isWasiTest } from '@tests/runtime-flavor';
 import { expect, test } from 'vitest';
 
 // Native magic-string sourcemaps go to the sourcemap thread instead of being

@@ -38,6 +38,8 @@ itoa = { workspace = true }
 json-escape-simd = { workspace = true }
 memchr = { workspace = true }
 mime = { workspace = true }
+# Default features off keeps it napi-free; the napi adapter lives in rolldown_binding.
+napi-async-runtime = { workspace = true }
 nom = { workspace = true }
 oxc = { workspace = true }
 oxc_index = { workspace = true }
@@ -49,13 +51,11 @@ rolldown_std_utils = { workspace = true }
 rustc-hash = { workspace = true }
 simdutf8 = { workspace = true }
 sugar_path = { workspace = true }
-tokio = { workspace = true, features = ["rt", "time"] }
 uuid = { workspace = true, features = ["v4"] }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 rayon = { workspace = true }
-tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [dev-dependencies]
 criterion2 = { workspace = true }

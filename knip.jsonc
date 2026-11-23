@@ -43,11 +43,20 @@
         "src/cli/index.ts",
         "src/log/locate-character/index.d.ts",
         "src/rolldown-binding.wasi-browser.js",
+        "src/rolldown-binding.wasip1-browser.js",
+        "src/rolldown-binding.wasip1-deferred.js",
+        "src/workerd.ts",
         "src/{wasi,webcontainer}-*.*",
         "src/api/experimental.ts",
       ],
-      "ignore": ["src/binding.cjs", "src/rolldown-binding.wasi.cjs", "src/browser.js"],
+      "ignore": [
+        "src/binding.cjs",
+        "src/rolldown-binding.wasi.cjs",
+        "src/rolldown-binding.wasip1.cjs",
+        "src/browser.js",
+      ],
       "ignoreDependencies": [
+        "buffer", // Workerd aliases the bare Node builtin name to this polyfill.
         // Linked, never imported: @napi-rs/cli links emnapi's C archives into the wasm build.
         "emnapi",
         "pathe",
@@ -112,6 +121,13 @@
     },
     "packages/browser-tests": {
       "ignore": ["tests/fixtures/**"], // mounted into the container and built there, not here
+    },
+    "packages/workerd-tests": {
+      "entry": ["memory.mjs", "worker.js"],
+      // worker.js runs inside workerd, not Node. Its two sibling specifiers are
+      // supplied at runtime by the Miniflare `modules` list in suite.mjs (they
+      // point at packages/browser/dist), so they are deliberately unresolvable here.
+      "ignoreUnresolved": ["./workerd.browser.mjs", "./rolldown-binding.wasm32-wasip1.wasm"],
     },
     "scripts": {
       "entry": ["misc/**", "wasi/**", "lint/index.ts"],

@@ -9,7 +9,15 @@ export function loadBinding(): typeof Binding {
 
 export function getBindingPath(): string {
   if (process.env.ROLLDOWN_WASI_TEST) {
-    return fileURLToPath(new URL('../../dist/rolldown-binding.wasi.cjs', import.meta.url));
+    // The threadless lane ships `rolldown-binding.wasip1.cjs`; the threaded lane
+    // ships `rolldown-binding.wasi.cjs`. Load whichever flavor dist holds.
+    const wasiFile = readdirSync(new URL('../../dist/', import.meta.url)).find(
+      (file) => file === 'rolldown-binding.wasip1.cjs' || file === 'rolldown-binding.wasi.cjs',
+    );
+    if (!wasiFile) {
+      throw new Error('No WASI binding found in dist. Run `just build-rolldown-wasi` first.');
+    }
+    return fileURLToPath(new URL(`../../dist/${wasiFile}`, import.meta.url));
   }
 
   const bindingFile = readdirSync(new URL('../../dist/', import.meta.url)).find((file) =>

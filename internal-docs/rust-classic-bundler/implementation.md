@@ -68,13 +68,11 @@ pub fn closed(&self) -> bool {
 This is fundamentally different from `Bundler.closed`:
 
 - **`ClassicBundler.closed`** — User-facing API contract. "This build result is done, don't call write/generate again." Correct.
-- **`Bundler.closed`** — Internal hack. Exists to gate `closeBundle` calls, but `closeBundle` is a per-build concern that should live on `Bundle`. Being removed — see [rust-bundler.md](../rust-bundler/implementation.md).
+- **`Bundler.closed`** — Owner guard. `Bundler::close()` sets it, then `write`/`generate`/`scan` reject with "Bundler is closed" and a second `close()` is a no-op. `closeBundle` itself is per-build state on `BundleHandle`; see [rust-bundler](../rust-bundler/implementation.md), "Close mechanism".
 
-`close()` takes the last `BundleHandle` (`take`, not `clone`), so the first close releases it instead of retaining it until the N-API finalizer. A second native close finds no handle and does not run `closeBundle` again. `closeBundle` runs under `catch_unwind`, so a panicking hook becomes an error.
+`close()` takes the last `BundleHandle` (`take`, not `clone`), so the first close releases it instead of retaining it until the N-API finalizer. A copy left on the struct would be freed only by that finalizer, which never runs on threadless WASI. A second native close therefore finds no handle and does not run `closeBundle` again. `closeBundle` runs under `catch_unwind`, so a panicking hook becomes an error.
 
-A second native close does not wait for the first one's `closeBundle`. The JS side guarantees one call: `RolldownBuild.close()` in `packages/rolldown/src/api/rolldown/rolldown-build.ts` keeps the first close promise, and a repeated `close()` only waits for it (the first caller gets any error). Inside that first close every cleanup step runs exactly once, even when an earlier one fails: it calls `BindingBundler.close()`, then always releases the async runtime holder (`shutdownAsyncRuntime`).
-
-On wasm with `tokio_unstable`, each `spawn_boxed_future()` call also holds the shared runtime; napi's finalize callback releases it on the JavaScript thread once the call's promise resolves or rejects. So a method called after its object's `close()` reaches its closed-state check instead of spawning onto a stopped runtime. `BindingPluginContext.resolve()` and `.load()` use the same helper, so a plugin context kept past its owner's close behaves the same way.
+Because the handle is gone, a second native close resolves at once, before the first one's `closeBundle` ends. The JS side guarantees one call: `RolldownBuild.close()` in `packages/rolldown/src/api/rolldown/rolldown-build.ts` keeps the first close promise, and a repeated `close()` only waits for it (the first caller gets any error).
 
 At the end of its close future, `BindingBundler.close()` also requests the release of the JS functions of the options. The release waits for each build that started before the close. See [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md#js-callback-lifetime).
 

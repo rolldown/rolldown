@@ -1,9 +1,10 @@
+import { isWasiTest } from '@tests/runtime-flavor';
 import { stripAnsi } from 'consola/utils';
 import { $, execa } from 'execa';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { isWasiTest, projectDir, testsDir } from 'rolldown-tests/utils';
+import { projectDir, testsDir } from 'rolldown-tests/utils';
 import { describe, expect, it, test, vi } from 'vitest';
 
 function cliFixturesDir(...joined: string[]) {
@@ -478,7 +479,7 @@ describe('config', () => {
 
     const status = await $({
       cwd,
-    })`rolldown -c rolldown.config.js --environment PRODUCTION,FOO:bar,HOST:http://localhost:4000`;
+    })`rolldown -c rolldown.config.js --environment PRODUCTION,FOO:bar,HOST:http://localhost:4000,ROLLDOWN_RUNTIME:single`;
     expect(status.exitCode).toBe(0);
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
@@ -576,18 +577,22 @@ describe('config', () => {
     },
   );
 
-  it('should handle `-c -w` without `-w` being consumed as config filename (#3248)', async () => {
-    const cwd = cliFixturesDir('cli-config-with-watch');
-    const controller = new AbortController();
-    startRolldown(['-c', '-w'], { cwd, cancelSignal: controller.signal });
-    await vi.waitFor(
-      () => {
-        expect(fs.existsSync(path.join(cwd, 'dist/index.js'))).toBe(true);
-      },
-      { timeout: 5_000 },
-    );
-    controller.abort();
-  });
+  // Every `-w` test skips on WASI: `watchSupported` is false on every WASI artifact.
+  it.skipIf(isWasiTest)(
+    'should handle `-c -w` without `-w` being consumed as config filename (#3248)',
+    async () => {
+      const cwd = cliFixturesDir('cli-config-with-watch');
+      const controller = new AbortController();
+      startRolldown(['-c', '-w'], { cwd, cancelSignal: controller.signal });
+      await vi.waitFor(
+        () => {
+          expect(fs.existsSync(path.join(cwd, 'dist/index.js'))).toBe(true);
+        },
+        { timeout: 5_000 },
+      );
+      controller.abort();
+    },
+  );
 });
 
 describe('diagnostics', () => {
@@ -611,7 +616,7 @@ describe('watch cli', () => {
     expect(status.exitCode).toBe(0);
   });
 
-  it('should handle output options', async () => {
+  it.skipIf(isWasiTest)('should handle output options', async () => {
     const cwd = cliFixturesDir('watch-cli-option');
     const controller = new AbortController();
     const child = startRolldown(['index.ts', '-d', 'dist', '-w', '-s'], {
@@ -629,7 +634,7 @@ describe('watch cli', () => {
     expect([child.exitCode, child.signalCode]).toStrictEqual(CANCELLED_EXIT);
   });
 
-  it('should allow multiply options', async () => {
+  it.skipIf(isWasiTest)('should allow multiply options', async () => {
     const cwd = cliFixturesDir('config-multiply-options');
     const controller = new AbortController();
     const child = startRolldown(['-c', 'rolldown.config.ts', '-d', 'watch-dist-options', '-w'], {
@@ -647,7 +652,7 @@ describe('watch cli', () => {
     expect([child.exitCode, child.signalCode]).toStrictEqual(CANCELLED_EXIT);
   });
 
-  it('should allow multiply output', async () => {
+  it.skipIf(isWasiTest)('should allow multiply output', async () => {
     const cwd = cliFixturesDir('config-multiply-output');
     const controller = new AbortController();
     const child = startRolldown(['-c', 'rolldown.config.ts', '-d', 'watch-dist-output', '-w'], {
@@ -678,47 +683,53 @@ describe('watch cli', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
-  it('should require both ROLLDOWN_WATCH and this.meta.watchMode to be true', async () => {
-    const cwd = cliFixturesDir('watch-mode');
-    const status = await $({ cwd })`rolldown -w -c`;
-    expect(cleanStdout(status.stdout)).toMatchSnapshot();
-  });
+  it.skipIf(isWasiTest)(
+    'should require both ROLLDOWN_WATCH and this.meta.watchMode to be true',
+    async () => {
+      const cwd = cliFixturesDir('watch-mode');
+      const status = await $({ cwd })`rolldown -w -c`;
+      expect(cleanStdout(status.stdout)).toMatchSnapshot();
+    },
+  );
 
-  it.each(['successful', 'failed'])('should report a finished %s watch round', async (round) => {
-    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-watch-round-'));
-    try {
-      fs.cpSync(cliFixturesDir('watch-round'), cwd, { recursive: true });
-      if (round === 'failed') {
-        fs.writeFileSync(path.join(cwd, 'b.js'), `import './missing.js';\n`);
-      }
-      const controller = new AbortController();
-      const child = startRolldown(['-c', '-w'], { cwd, cancelSignal: controller.signal });
-      let stdout: string;
+  it.skipIf(isWasiTest).each(['successful', 'failed'])(
+    'should report a finished %s watch round',
+    async (round) => {
+      const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-watch-round-'));
       try {
-        await createStreamWaiter(child.stdout).waitFor('waiting for changes...', {
-          timeout: 5_000,
-        });
+        fs.cpSync(cliFixturesDir('watch-round'), cwd, { recursive: true });
+        if (round === 'failed') {
+          fs.writeFileSync(path.join(cwd, 'b.js'), `import './missing.js';\n`);
+        }
+        const controller = new AbortController();
+        const child = startRolldown(['-c', '-w'], { cwd, cancelSignal: controller.signal });
+        let stdout: string;
+        try {
+          await createStreamWaiter(child.stdout).waitFor('waiting for changes...', {
+            timeout: 5_000,
+          });
+        } finally {
+          controller.abort();
+          ({ stdout } = await child);
+        }
+        const messages = stripAnsi(stdout)
+          .split(/\r?\n/)
+          .flatMap((line) => {
+            const rebuilt = line.match(/Rebuilt .*?(?= in )/)?.[0];
+            if (rebuilt) return [rebuilt.replaceAll('\\', '/')];
+            if (line.includes('UNRESOLVED_IMPORT')) return ['UNRESOLVED_IMPORT'];
+            if (/waiting for changes\.\.\./i.test(line)) return [line.trim()];
+            return [];
+          });
+        expect(messages).toMatchSnapshot();
       } finally {
-        controller.abort();
-        ({ stdout } = await child);
+        fs.rmSync(cwd, { recursive: true, force: true });
       }
-      const messages = stripAnsi(stdout)
-        .split(/\r?\n/)
-        .flatMap((line) => {
-          const rebuilt = line.match(/Rebuilt .*?(?= in )/)?.[0];
-          if (rebuilt) return [rebuilt.replaceAll('\\', '/')];
-          if (line.includes('UNRESOLVED_IMPORT')) return ['UNRESOLVED_IMPORT'];
-          if (/waiting for changes\.\.\./i.test(line)) return [line.trim()];
-          return [];
-        });
-      expect(messages).toMatchSnapshot();
-    } finally {
-      fs.rmSync(cwd, { recursive: true, force: true });
-    }
-  });
+    },
+  );
 
   // Windows has no SIGTERM to exit with 0 on.
-  it.skipIf(process.platform === 'win32')(
+  it.skipIf(process.platform === 'win32' || isWasiTest)(
     'should close with exit code 0 even when there are errors',
     async () => {
       const cwd = cliFixturesDir('watch-error');

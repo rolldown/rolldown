@@ -62,6 +62,7 @@ export class PluginContextData {
   /** The next `this.resolve` receipt. See `saveResolveOptions`. */
   private nextResolveOptionsReceipt = 0;
   loadModulePromiseMap: Map<string, Promise<void>> = new Map();
+  loadModuleWithDependenciesPromiseMap: Map<string, Promise<void>> = new Map();
   renderedChunkMeta: RenderedChunkMeta | null = null;
   normalizedInputOptions: NormalizedInputOptions | null = null;
   normalizedOutputOptions: NormalizedOutputOptions | null = null;
@@ -258,6 +259,7 @@ export class PluginContextData {
   clear(): void {
     this.renderedChunkMeta = null;
     this.loadModulePromiseMap.clear();
+    this.loadModuleWithDependenciesPromiseMap.clear();
     // Watch mode reuses this object across rebuilds; entries hold the previous build's chunk data.
     this.outputCodeCache.clear();
     // `resolveOptionsMap` and its receipt counter stay as they are: a `this.resolve` call of the

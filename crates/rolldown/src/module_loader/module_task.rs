@@ -15,6 +15,7 @@ use rolldown_error::{
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 
 use rolldown_fs::FileSystem;
+use rolldown_plugin::ContextLoadProgress;
 
 use crate::{
   ecmascript::ecma_module_view_factory::{CreateEcmaViewReturn, create_ecma_view},
@@ -91,10 +92,16 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
   pub async fn run(mut self) {
     let guard = TaskMessageGuard::new(&self.ctx, self.resolved_id.id.clone());
     if let Err(errs) = self.run_inner().await {
-      self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
+      self
+        .ctx
+        .plugin_driver
+        .mark_context_load_progress(self.resolved_id.id.clone(), ContextLoadProgress::Completed);
       // The send fails only when the build was dropped before this task finished.
       // Then nothing reads the result, so ignore the error.
-      let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
+      let _ = self
+        .ctx
+        .tx
+        .unbounded_send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
     guard.mark_sent();
   }
@@ -102,23 +109,20 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
   async fn run_inner(&mut self) -> BuildResult<()> {
     let id = self.resolved_id.id.clone();
 
-    self.ctx.plugin_driver.set_module_info(
-      &id,
-      Arc::new(ModuleInfo {
-        code: None,
-        id: id.clone(),
-        is_entry: self.is_user_defined_entry,
-        importers: FxIndexSet::default(),
-        dynamic_importers: FxIndexSet::default(),
-        imported_ids: FxIndexSet::default(),
-        dynamically_imported_ids: FxIndexSet::default(),
-        exports: vec![],
-        input_format: ExportsKind::None,
-        // Filled in once the module has been parsed. Hook values recorded on the JS side
-        // are still visible before that.
-        module_side_effects: None,
-      }),
-    );
+    self.ctx.set_module_info(ModuleInfo {
+      code: None,
+      id: id.clone(),
+      is_entry: self.is_user_defined_entry,
+      importers: FxIndexSet::default(),
+      dynamic_importers: FxIndexSet::default(),
+      imported_ids: FxIndexSet::default(),
+      dynamically_imported_ids: FxIndexSet::default(),
+      exports: vec![],
+      input_format: ExportsKind::None,
+      // Filled in once the module has been parsed. Hook values recorded on the JS side
+      // are still visible before that.
+      module_side_effects: None,
+    });
 
     let mut sourcemap_chain = vec![];
     let mut hook_side_effects = self.resolved_id.side_effects.take();
@@ -139,7 +143,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
 
     let mut warnings = vec![];
 
-    let CreateEcmaViewReturn { mut ecma_view, ecma_related, raw_import_records, tla_keyword_span } =
+    let CreateEcmaViewReturn { ecma_view, ecma_related, raw_import_records, tla_keyword_span } =
       create_ecma_view(
         &mut CreateModuleContext {
           stable_id: &stable_id,
@@ -156,13 +160,38 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       )
       .await?;
 
+    let repr_name = self.resolved_id.id.representative_name();
+    let repr_name = legitimize_identifier_name(&repr_name).into_owned();
+
+    let mut module = NormalModule {
+      repr_name,
+      stable_id,
+      id,
+      debug_id: self.resolved_id.debug_id(&self.ctx.options.cwd),
+      idx: self.module_idx,
+      exec_order: u32::MAX,
+      module_type: module_type.clone(),
+      ecma_view,
+      originative_resolved_id: self.resolved_id.clone(),
+    };
+
+    // A `this.load` without `resolveDependencies` returns here, before the imports are
+    // resolved, so its module info has no imported ids yet.
+    self.ctx.set_module_info(
+      module.to_module_info(Some(&raw_import_records), self.is_user_defined_entry),
+    );
+    self
+      .ctx
+      .plugin_driver
+      .mark_context_load_progress(module.id.clone(), ContextLoadProgress::Parsed);
+
     let resolved_deps = resolve_dependencies(
       &self.resolved_id,
       &self.ctx.options,
       &self.ctx.resolver,
       &self.ctx.plugin_driver,
       &raw_import_records,
-      ecma_view.source.clone(),
+      module.ecma_view.source.clone(),
       &mut warnings,
     )
     .await?;
@@ -170,25 +199,22 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
       match record.kind {
         ImportKind::Import | ImportKind::Require | ImportKind::NewUrl => {
-          ecma_view.imported_ids.insert(info.id.clone());
+          module.ecma_view.imported_ids.insert(info.id.clone());
         }
         ImportKind::DynamicImport => {
-          ecma_view.dynamically_imported_ids.insert(info.id.clone());
+          module.ecma_view.dynamically_imported_ids.insert(info.id.clone());
         }
         ImportKind::HotAccept => {
-          ecma_view.hmr_info.deps.insert(info.id.clone());
+          module.ecma_view.hmr_info.deps.insert(info.id.clone());
         }
         // for a none css module, we should not have `at-import` or `url-import`
         ImportKind::AtImport | ImportKind::UrlImport => unreachable!(),
       }
     }
 
-    let repr_name = self.resolved_id.id.representative_name();
-    let repr_name = legitimize_identifier_name(&repr_name).into_owned();
-
     // Build lazy barrel info if the experimental flag is enabled
     let barrel_info = if self.flat_options.is_lazy_barrel_enabled() {
-      try_extract_lazy_barrel_info(&ecma_view, &raw_import_records)
+      try_extract_lazy_barrel_info(&module.ecma_view, &raw_import_records)
     } else {
       None
     };
@@ -203,15 +229,16 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       let import_record_count = raw_import_records.len();
       if import_record_count > LARGE_BARREL_IMPORT_THRESHOLD {
         if let Some(on_log) = self.ctx.options.on_log.as_ref() {
-          let event = BuildDiagnostic::large_barrel_modules(id.to_string(), import_record_count)
-            .with_severity(rolldown_error::Severity::Info)
-            .to_diagnostic_with(&DiagnosticOptions { cwd: self.ctx.options.cwd.clone() });
+          let event =
+            BuildDiagnostic::large_barrel_modules(module.id.to_string(), import_record_count)
+              .with_severity(rolldown_error::Severity::Info)
+              .to_diagnostic_with(&DiagnosticOptions { cwd: self.ctx.options.cwd.clone() });
           on_log
             .call(
               rolldown_common::LogLevel::Info,
               rolldown_common::Log {
                 message: event.to_stderr_string(),
-                id: Some(id.to_string()),
+                id: Some(module.id.to_string()),
                 code: Some(event.kind()),
                 ..Default::default()
               },
@@ -221,23 +248,14 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       }
     }
 
-    let module = NormalModule {
-      repr_name,
-      stable_id,
-      id,
-      debug_id: self.resolved_id.debug_id(&self.ctx.options.cwd),
-      idx: self.module_idx,
-      exec_order: u32::MAX,
-      module_type: module_type.clone(),
-      ecma_view,
-      originative_resolved_id: self.resolved_id.clone(),
-    };
-
-    let module_info =
-      Arc::new(module.to_module_info(Some(&raw_import_records), self.is_user_defined_entry));
-    self.ctx.plugin_driver.set_module_info(&module.id, Arc::clone(&module_info));
-    self.ctx.plugin_driver.module_parsed(Arc::clone(&module_info), &module).await?;
-    self.ctx.plugin_driver.mark_context_load_modules_loaded(module.id.clone());
+    let module_info = self.ctx.set_module_info(
+      module.to_module_info(Some(&raw_import_records), self.is_user_defined_entry),
+    );
+    self.ctx.plugin_driver.module_parsed(module_info, &module).await?;
+    self
+      .ctx
+      .plugin_driver
+      .mark_context_load_progress(module.id.clone(), ContextLoadProgress::Completed);
 
     let result = ModuleLoaderMsg::NormalModuleDone(Box::new(NormalModuleTaskResult {
       module: module.into(),
@@ -251,7 +269,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
 
     // The send fails only when the build was dropped before this task finished.
     // Then nothing reads the result, so ignore the error.
-    let _ = self.ctx.tx.send(result);
+    let _ = self.ctx.tx.unbounded_send(result);
 
     Ok(())
   }

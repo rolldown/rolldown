@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## group.js
+
+```js
+// index.js
+globalThis.value = 42;
+const ns = await import("./target.js");
+console.log(ns.x);
+// leaf.js
+let x = globalThis.value;
+export { x as t };
+
+```
+
+## index.js
+
+```js
+import "./group.js";
+
+```
+
+## target.js
+
+```js
+export { t as x } from "./group.js";
+
+```

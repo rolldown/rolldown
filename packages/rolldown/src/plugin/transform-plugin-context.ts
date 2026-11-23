@@ -103,8 +103,8 @@ export class TransformPluginContextImpl extends PluginContextImpl {
     this.inner.addWatchFile(id);
   }
 
-  public sendMagicString(s: RolldownMagicString): void {
-    this.inner.sendMagicString(s);
+  public sendMagicString(s: RolldownMagicString): string | null {
+    return this.inner.sendMagicString(s);
   }
 }
 

@@ -753,12 +753,20 @@ impl GenerateStage<'_> {
     }
     let user_defined_entry_modules = Self::collect_entry_modules(&user_defined_entry, chunk_graph)?;
 
-    let merged_user_defined_chunk =
-      Self::find_merge_target(&user_defined_entry, &user_defined_entry_modules, module_table);
+    let merged_user_defined_chunk = Self::find_merge_target(
+      &user_defined_entry,
+      &user_defined_entry_modules,
+      module_table,
+      linking_infos,
+    );
     if user_defined_entry.is_empty() {
       let dynamic_chunk_entry_modules = Self::collect_entry_modules(&dynamic_entry, chunk_graph)?;
-      let target_chunk_idx =
-        Self::find_merge_target(&dynamic_entry, &dynamic_chunk_entry_modules, module_table)?;
+      let target_chunk_idx = Self::find_merge_target(
+        &dynamic_entry,
+        &dynamic_chunk_entry_modules,
+        module_table,
+        linking_infos,
+      )?;
       // Cyclic-merge export-pollution guard for `find_merge_target`.
       //
       // `find_merge_target` accepts any candidate whose entry module is
@@ -919,17 +927,21 @@ impl GenerateStage<'_> {
   }
 
   /// Finds a chunk that can serve as the merge target for all entries.
-  /// A chunk can be the merge target if its entry module is imported by or equal to all other entry modules.
+  /// A chunk can be the merge target if its entry module is equal to, or imported and loaded by,
+  /// all other entry modules. An importer that only reads bindings re-exported by a
+  /// side-effect-free entry does not load it, so that entry's chunk is not one it already fetches.
   fn find_merge_target(
     chunk_indices: &[ChunkIdx],
     entry_modules: &[ModuleIdx],
     module_table: &ModuleTable,
+    linking_infos: &LinkingMetadataVec,
   ) -> Option<ChunkIdx> {
     chunk_indices.iter().zip(entry_modules.iter()).find_map(|(chunk_idx, entry_module_idx)| {
       let module = module_table[*entry_module_idx].as_normal().expect("Should be normal module");
       let can_merge = entry_modules.iter().all(|other_entry_module_idx| {
         *entry_module_idx == *other_entry_module_idx
-          || module.importers_idx.contains(other_entry_module_idx)
+          || (module.importers_idx.contains(other_entry_module_idx)
+            && linking_infos[*other_entry_module_idx].load_dependencies.contains(entry_module_idx))
       });
       can_merge.then_some(*chunk_idx)
     })

@@ -14,7 +14,7 @@ use oxc_str::CompactStr;
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, NamedImport, NormalModule, OutputFormat,
-  PostChunkOptimizationOperation, PreserveEntrySignatures, RUNTIME_HELPER_NAMES,
+  PostChunkOptimizationOperation, PreserveEntrySignatures, RUNTIME_HELPER_NAMES, ResolvedExport,
   ResolvedImportRecord, RuntimeHelper, StaticImport, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
   TaggedSymbolRef, UsedSymbolRefs, UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
 };
@@ -637,9 +637,9 @@ impl GenerateStage<'_> {
     let load_dependencies = &self.link_output.metas[module_idx].load_dependencies;
     let mut symbol_owners = None;
     let mut is_kept = |dependency: ModuleIdx| {
-      // `load_dependencies` also has each imported entry module that has no side effects, only to
-      // place the chunks (see `patch_module_dependencies`). The output imports such a module only
-      // when this module uses one of its bindings.
+      // `load_dependencies` also has each imported code-less entry module that has no side
+      // effects, only to place the chunks (see `codeless_entries` in `patch_module_dependencies`).
+      // The output imports such a module only when this module uses one of its bindings.
       load_dependencies.contains(&dependency)
         && (self.options.treeshake.is_none()
           || !self.link_output.entries.contains_key(&dependency)
@@ -1245,7 +1245,7 @@ impl GenerateStage<'_> {
           let entry = &self.link_output.module_table[*entry_id].as_normal().unwrap();
           let entry_meta = &self.link_output.metas[entry.idx];
 
-          if !matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
+          if self.entry_can_export_bindings(entry.idx) {
             self.register_entry_export_depended_symbols(
               chunk_graph,
               order_state,
@@ -1351,13 +1351,38 @@ impl GenerateStage<'_> {
     }
   }
 
-  /// Register what a non-CJS entry's export signature makes the chunk depend on: the canonical
+  pub(super) fn entry_can_export_bindings(&self, entry: ModuleIdx) -> bool {
+    // With a dropped signature, a CommonJS entry runs its dependencies through its wrapper.
+    !matches!(self.link_output.metas[entry].wrap_kind(), WrapKind::Cjs)
+      || (matches!(self.options.format, OutputFormat::Esm) && self.entry_preserves_signature(entry))
+  }
+
+  pub(super) fn entry_exports_requiring_bindings(
+    &self,
+    entry: ModuleIdx,
+  ) -> impl Iterator<Item = (&CompactStr, &ResolvedExport)> {
+    let meta = &self.link_output.metas[entry];
+    if !matches!(meta.wrap_kind(), WrapKind::Cjs) {
+      return itertools::Either::Left(
+        meta.resolved_exports.iter().filter(|(_, export)| !export.came_from_commonjs),
+      );
+    }
+    let full_signature =
+      self.options.preserve_modules || self.link_output.user_defined_entry_modules.contains(&entry);
+    let kind =
+      if full_signature { EntryPointKind::UserDefined } else { EntryPointKind::DynamicImport };
+    let usage = &self.link_output.dynamic_import_exports_usage_map;
+    let exports = meta.referenced_canonical_exports_symbols(entry, kind, usage, false);
+    itertools::Either::Right(exports.filter(|(name, _)| name.as_str() != "default"))
+  }
+
+  /// Register what the entry's export signature makes the chunk depend on: the canonical
   /// symbol of every re-exported binding, plus — off-strict, for unwrapped entries — the `init_*`
   /// wrapper of every ESM-wrapped module backing one. The wrappers come from the same walk emission
   /// consumes (`collect_entry_reexported_wrapper_inits`), so everything the entry chunk may call
   /// is imported by construction; `None` for the names because registration runs before chunk
   /// names exist — it is what makes a wrapper reachable. The entry's own wrapper is not part of
-  /// the walk; the caller's `esm_init_target` arm covers it. `entry_export_needs_service` drops
+  /// the walk; the caller registers it separately. `entry_export_needs_service` drops
   /// the owners that an entry without a preserved signature does not need to run.
   fn register_entry_export_depended_symbols(
     &self,
@@ -1369,14 +1394,10 @@ impl GenerateStage<'_> {
   ) {
     let symbols = &self.link_output.symbol_db;
     let mut verdicts = FxHashMap::default();
-    let sorted_export_refs = entry_meta
-      .resolved_exports
-      .iter()
+    let sorted_export_refs = self
+      .entry_exports_requiring_bindings(entry_idx)
       .sorted_unstable_by_key(|(name, _)| *name)
       .map(|(_, export)| export)
-      // A chunk should always consume a cjs export symbol by property access, so filter
-      // out a exported symbol that came from a cjs module.
-      .filter(|resolved_export| !resolved_export.came_from_commonjs)
       .filter(|export| {
         self.entry_export_needs_service(
           entry_idx,

@@ -52,7 +52,7 @@ impl Plugin for LoadMapPlugin {
     args: &HookTransformArgs<'_>,
   ) -> HookTransformReturn {
     if args.id.ends_with("main.js") {
-      self.0.lock().unwrap().combined = Some(ctx.get_combined_sourcemap());
+      self.0.lock().unwrap().combined = Some(ctx.get_combined_sourcemap()?);
     }
     Ok(None)
   }

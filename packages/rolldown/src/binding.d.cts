@@ -1839,7 +1839,7 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
-  load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
+  load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, resolveDependencies: boolean, packageJsonPath?: string): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
@@ -2509,6 +2509,7 @@ export interface BindingInjectImportNamespace {
  */
 export interface BindingInlineCommonChunksOptions {
   maxSize?: number
+  maxDuplicatedSize?: number
   exclude?: Array<string | RegExp | ((ids: Array<string>) => Uint8Array)>
 }
 

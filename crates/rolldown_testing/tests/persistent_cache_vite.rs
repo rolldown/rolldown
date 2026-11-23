@@ -172,9 +172,7 @@ impl Plugin for SharedReporter {
     ctx: &PluginContext,
     args: Option<&HookBuildEndArgs<'_>>,
   ) -> HookNoopReturn {
-    self
-      .transformed_count
-      .store(self.reporter.transformed_module_count(ctx), Ordering::SeqCst);
+    self.transformed_count.store(self.reporter.transformed_module_count(ctx), Ordering::SeqCst);
     self
       .progress_count
       .store(self.reporter.transformed_count.load(Ordering::SeqCst) as usize, Ordering::SeqCst);

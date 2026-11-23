@@ -66,9 +66,7 @@ export interface RenderedModule {
  *
  * @category Plugin APIs
  */
-// `dropInner` is a binding-internal release hook: plugins get wrappers or
-// snapshots, never the releasable box.
-export interface RenderedChunk extends Omit<BindingRenderedChunk, 'modules' | 'dropInner'> {
+export interface RenderedChunk extends Omit<BindingRenderedChunk, 'modules'> {
   type: 'chunk';
   /** Information about the modules included in this chunk. */
   modules: {

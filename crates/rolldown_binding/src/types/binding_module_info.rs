@@ -4,7 +4,9 @@ use napi::Either;
 use napi_derive::napi;
 use rolldown_common::{ExportsKind, side_effects::DeterminedSideEffects};
 
-use crate::options::plugin::types::binding_shared_string::BindingSharedString;
+use crate::{
+  options::plugin::types::binding_shared_string::BindingSharedString, types::plain_data::PLAIN_DATA,
+};
 
 #[napi]
 pub struct BindingModuleInfo {
@@ -28,11 +30,7 @@ pub struct BindingModuleInfo {
 #[napi]
 impl BindingModuleInfo {
   pub fn new(inner: Arc<rolldown_common::ModuleInfo>) -> Self {
-    let input_format = match inner.input_format {
-      ExportsKind::Esm => "es",
-      ExportsKind::CommonJs => "cjs",
-      ExportsKind::None => "unknown",
-    };
+    let input_format = input_format(inner.input_format);
     Self {
       id: BindingSharedString::from(inner.id.as_arc_str().clone()),
       importers: inner
@@ -65,6 +63,52 @@ impl BindingModuleInfo {
   #[napi(getter)]
   pub fn code(&self) -> Option<&str> {
     self.inner.code.as_deref()
+  }
+}
+
+/// `BindingModuleInfo` as plain data.
+#[napi(object, object_from_js = false, use_nullable = true)]
+pub struct BindingModuleInfoData {
+  pub id: String,
+  pub importers: Vec<String>,
+  pub dynamic_importers: Vec<String>,
+  pub imported_ids: Vec<String>,
+  pub dynamically_imported_ids: Vec<String>,
+  pub exports: Vec<String>,
+  pub is_entry: bool,
+  #[napi(ts_type = "'es' | 'cjs' | 'unknown'")]
+  pub input_format: String,
+  pub code: Option<String>,
+}
+
+pub fn module_info_for_js(
+  inner: Arc<rolldown_common::ModuleInfo>,
+) -> Either<BindingModuleInfo, BindingModuleInfoData> {
+  if !PLAIN_DATA {
+    return Either::A(BindingModuleInfo::new(inner));
+  }
+  Either::B(BindingModuleInfoData {
+    id: inner.id.to_string(),
+    importers: inner.importers.iter().map(ToString::to_string).collect(),
+    dynamic_importers: inner.dynamic_importers.iter().map(ToString::to_string).collect(),
+    imported_ids: inner.imported_ids.iter().map(ToString::to_string).collect(),
+    dynamically_imported_ids: inner
+      .dynamically_imported_ids
+      .iter()
+      .map(ToString::to_string)
+      .collect(),
+    exports: inner.exports.iter().map(ToString::to_string).collect(),
+    is_entry: inner.is_entry,
+    input_format: input_format(inner.input_format).to_string(),
+    code: inner.code.as_ref().map(ToString::to_string),
+  })
+}
+
+fn input_format(kind: ExportsKind) -> &'static str {
+  match kind {
+    ExportsKind::Esm => "es",
+    ExportsKind::CommonJs => "cjs",
+    ExportsKind::None => "unknown",
   }
 }
 

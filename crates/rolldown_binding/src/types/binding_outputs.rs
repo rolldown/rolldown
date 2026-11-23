@@ -4,8 +4,13 @@ use std::{
 };
 
 use super::{
-  binding_output_asset::{BindingOutputAsset, JsOutputAsset},
-  binding_output_chunk::{BindingOutputChunk, JsOutputChunk, update_output_chunk},
+  binding_output_asset::{
+    BindingOutputAsset, BindingOutputAssetData, JsOutputAsset, output_asset_for_js,
+  },
+  binding_output_chunk::{
+    BindingOutputChunk, BindingOutputChunkData, JsOutputChunk, output_chunk_for_js,
+    update_output_chunk,
+  },
   error::BindingError,
 };
 use napi::Either;
@@ -15,8 +20,8 @@ use rustc_hash::FxBuildHasher;
 
 #[napi(object, object_from_js = false)]
 pub struct BindingOutputs {
-  pub chunks: Vec<BindingOutputChunk>,
-  pub assets: Vec<BindingOutputAsset>,
+  pub chunks: Vec<Either<BindingOutputChunk, BindingOutputChunkData>>,
+  pub assets: Vec<Either<BindingOutputAsset, BindingOutputAssetData>>,
   #[napi(ts_type = "Record<string, string | false>")]
   pub mangle_cache: Option<BTreeMap<String, Either<String, bool>>>,
 }
@@ -30,10 +35,10 @@ impl BindingOutputs {
     let mut assets = vec![];
     outputs.into_iter().for_each(|o| match o {
       rolldown_common::Output::Chunk(chunk) => {
-        chunks.push(BindingOutputChunk::new(chunk));
+        chunks.push(output_chunk_for_js(chunk));
       }
       rolldown_common::Output::Asset(asset) => {
-        assets.push(BindingOutputAsset::new(asset));
+        assets.push(output_asset_for_js(asset));
       }
     });
     let mangle_cache = mangle_cache.map(|cache| {

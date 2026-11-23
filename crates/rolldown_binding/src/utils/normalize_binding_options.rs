@@ -21,7 +21,7 @@ use crate::{
 #[cfg_attr(target_family = "wasm", allow(unused))]
 use crate::{
   options::plugin::JsPlugin,
-  types::{binding_rendered_chunk::BindingRenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
+  types::{binding_rendered_chunk::rendered_chunk_for_js, js_callback::MaybeAsyncJsCallbackExt},
 };
 use napi::bindgen_prelude::{Either, Either3, FnArgs};
 use oxc::transformer::EngineTargets;
@@ -77,7 +77,7 @@ fn normalize_addon_option(
         let fn_js = fn_js.clone();
         Box::pin(async move {
           fn_js
-            .await_call(FnArgs { data: (BindingRenderedChunk::new(chunk),) })
+            .await_call(FnArgs { data: (rendered_chunk_for_js(chunk),) })
             .await
             .context(name)
             .map_err(anyhow::Error::from)

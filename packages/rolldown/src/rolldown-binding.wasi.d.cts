@@ -1579,7 +1579,7 @@ export declare class BindingCallableBuiltinPlugin {
 }
 
 export declare class BindingChunkingContext {
-  getModuleInfo(moduleId: string): BindingModuleInfo | null
+  getModuleInfo(moduleId: string): BindingModuleInfo | BindingModuleInfoData | null
   /**
    * `getModuleInfo(moduleId)?.moduleSideEffects`, without copying the rest of the info. See
    * `BindingPluginContext.getModuleSideEffects` for `callOption`.
@@ -1655,7 +1655,7 @@ export declare class BindingDevEngine {
    * Same data the plugin-context `getModuleInfo` returns, readable from the engine
    * handle at any time (no hook context needed).
    */
-  getModuleInfo(moduleId: string): BindingModuleInfo | null
+  getModuleInfo(moduleId: string): BindingModuleInfo | BindingModuleInfoData | null
   getModuleIds(): Array<string>
 }
 
@@ -1850,7 +1850,7 @@ export declare class BindingPluginContext {
   emitChunk(file: BindingEmittedChunk): string
   emitPrebuiltChunk(file: BindingEmittedPrebuiltChunk): string
   getFileName(referenceId: string): string
-  getModuleInfo(moduleId: string): BindingModuleInfo | null
+  getModuleInfo(moduleId: string): BindingModuleInfo | BindingModuleInfoData | null
   /**
    * `getModuleInfo(moduleId)?.moduleSideEffects`, without copying the rest of the info.
    * `callOption` is the `treeshake.moduleSideEffects` function, if the option is one. It runs
@@ -2683,8 +2683,21 @@ export interface BindingMatchGroup {
   includeDependenciesRecursively?: boolean
 }
 
+/** `BindingModuleInfo` as plain data. */
+export interface BindingModuleInfoData {
+  id: string
+  importers: Array<string>
+  dynamicImporters: Array<string>
+  importedIds: Array<string>
+  dynamicallyImportedIds: Array<string>
+  exports: Array<string>
+  isEntry: boolean
+  inputFormat: 'es' | 'cjs' | 'unknown'
+  code: string | null
+}
+
 export interface BindingModules {
-  values: Array<BindingRenderedModule>
+  values: Array<BindingRenderedModule | BindingRenderedModuleData>
   keys: Array<string>
 }
 
@@ -2715,16 +2728,42 @@ export interface BindingOptimization {
   pifeForModuleWrappers?: boolean
 }
 
+/** The getters of `BindingOutputAsset` as plain data. */
+export interface BindingOutputAssetData {
+  fileName: string
+  originalFileNames: Array<string>
+  source: BindingAssetSource
+  names: Array<string>
+}
+
+/** The getters of `BindingOutputChunk` as plain data. */
+export interface BindingOutputChunkData {
+  name: string
+  isEntry: boolean
+  isDynamicEntry: boolean
+  facadeModuleId: string | null
+  moduleIds: Array<string>
+  exports: Array<string>
+  fileName: string
+  modules: BindingModules
+  imports: Array<string>
+  dynamicImports: Array<string>
+  code: string
+  map: string | null
+  sourcemapFileName: string | null
+  preliminaryFileName: string
+}
+
 export interface BindingOutputOptions {
   name?: string
   assetFileNames?: string | ((chunk: BindingPreRenderedAsset) => string)
   entryFileNames?: string | ((chunk: PreRenderedChunk) => string)
   chunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sanitizeFileName?: boolean | ((name: string) => string)
-  banner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
-  postBanner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
-  footer?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
-  postFooter?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  banner?: string | ((chunk: BindingRenderedChunk | BindingRenderedChunkData) => MaybePromise<VoidNullable<string>>)
+  postBanner?: string | ((chunk: BindingRenderedChunk | BindingRenderedChunkData) => MaybePromise<VoidNullable<string>>)
+  footer?: string | ((chunk: BindingRenderedChunk | BindingRenderedChunkData) => MaybePromise<VoidNullable<string>>)
+  postFooter?: string | ((chunk: BindingRenderedChunk | BindingRenderedChunkData) => MaybePromise<VoidNullable<string>>)
   dir?: string
   file?: string
   charset?: 'ascii' | 'utf8'
@@ -2738,8 +2777,8 @@ export interface BindingOutputOptions {
   hashCharacters?: 'base64' | 'base36' | 'hex'
   inlineDynamicImports?: boolean
   dynamicImportInCjs?: boolean
-  intro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
-  outro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  intro?: string | ((chunk: BindingRenderedChunk | BindingRenderedChunkData) => MaybePromise<VoidNullable<string>>)
+  outro?: string | ((chunk: BindingRenderedChunk | BindingRenderedChunkData) => MaybePromise<VoidNullable<string>>)
   paths?: Record<string, string> | ((id: string) => string)
   plugins: (BindingBuiltinPlugin | BindingPluginOptions)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
@@ -2769,8 +2808,8 @@ export interface BindingOutputOptions {
 }
 
 export interface BindingOutputs {
-  chunks: Array<BindingOutputChunk>
-  assets: Array<BindingOutputAsset>
+  chunks: Array<BindingOutputChunk | BindingOutputChunkData>
+  assets: Array<BindingOutputAsset | BindingOutputAssetData>
   mangleCache?: Record<string, string | false>
 }
 
@@ -2839,14 +2878,14 @@ export interface BindingPluginOptions {
   transform?: (ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
   transformMeta?: BindingPluginHookMeta
   transformFilter?: BindingHookFilter
-  moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>
+  moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo | BindingModuleInfoData) => MaybePromise<VoidNullable>
   moduleParsedMeta?: BindingPluginHookMeta
   buildEnd?: (ctx: BindingPluginContext, error?: BindingError[]) => MaybePromise<VoidNullable>
   buildEndMeta?: BindingPluginHookMeta
-  renderChunk?: (ctx: BindingPluginContext, code: string, chunk: BindingRenderedChunk, opts: BindingNormalizedOptions, meta: BindingRenderedChunkMeta) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
+  renderChunk?: (ctx: BindingPluginContext, code: string, chunk: BindingRenderedChunk | BindingRenderedChunkData, opts: BindingNormalizedOptions, meta: BindingRenderedChunkMeta | BindingRenderedChunkMetaData) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
   renderChunkMeta?: BindingPluginHookMeta
   renderChunkFilter?: BindingHookFilter
-  augmentChunkHash?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => MaybePromise<void | string>
+  augmentChunkHash?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk | BindingRenderedChunkData) => MaybePromise<void | string>
   augmentChunkHashMeta?: BindingPluginHookMeta
   resolveFileUrl?: (ctx: BindingPluginContext, args: BindingHookResolveFileUrlArgs) => MaybePromise<void | string | null>
   resolveFileUrlMeta?: BindingPluginHookMeta
@@ -2866,13 +2905,13 @@ export interface BindingPluginOptions {
   hotUpdateMeta?: BindingPluginHookMeta
   closeWatcher?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
   closeWatcherMeta?: BindingPluginHookMeta
-  banner?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void
+  banner?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk | BindingRenderedChunkData) => void
   bannerMeta?: BindingPluginHookMeta
-  footer?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void
+  footer?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk | BindingRenderedChunkData) => void
   footerMeta?: BindingPluginHookMeta
-  intro?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void
+  intro?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk | BindingRenderedChunkData) => void
   introMeta?: BindingPluginHookMeta
-  outro?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void
+  outro?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk | BindingRenderedChunkData) => void
   outroMeta?: BindingPluginHookMeta
 }
 
@@ -2935,6 +2974,32 @@ export declare enum BindingPropertyWriteSideEffects {
 export declare enum BindingRebuildStrategy {
   Always = 0,
   Never = 1,
+}
+
+/** The getters of `BindingRenderedChunk` as plain data. */
+export interface BindingRenderedChunkData {
+  name: string
+  isEntry: boolean
+  isDynamicEntry: boolean
+  facadeModuleId: string | null
+  moduleIds: Array<string>
+  exports: Array<string>
+  fileName: string
+  modules: BindingModules
+  imports: Array<string>
+  dynamicImports: Array<string>
+}
+
+/** `BindingRenderedChunkMeta` as plain data. */
+export interface BindingRenderedChunkMetaData {
+  chunks: Record<string, BindingRenderedChunkData>
+}
+
+/** The getters of `BindingRenderedModule` as plain data. */
+export interface BindingRenderedModuleData {
+  code: string | null
+  renderedLength: number
+  renderedExports: Array<string>
 }
 
 export interface BindingReplacePluginConfig {

@@ -256,7 +256,19 @@ That loop would keep every plugin of a build alive (rolldown/rolldown#11444). Th
 
 **Test:** `packages/rolldown/tests/build-api/normalized-options.test.ts` checks the rule with a heap query.
 
-**Exception:** a plugin that keeps `this` keeps the plugins of its build alive until the build closes. The plugin context owns the options too (`NativePluginContextImpl.options` in `crates/rolldown_plugin/src/plugin_context/native_plugin_context.rs`), so the same loop runs through it. The release at `close()` removes the root of this loop too.
+A plugin that keeps `this` does not close the loop either. The plugin context owns the options (`NativePluginContextImpl.options` in `crates/rolldown_plugin/src/plugin_context/native_plugin_context.rs`), but `BindingPluginContext` holds the plugin context weakly, and the plugin driver drops it when the build finishes.
+
+## Data objects on wasm
+
+**Rule:** a wasm build gives JS plain data, not native objects, for output chunks and assets, rendered chunks and modules, the `renderChunk` meta and module info. `PLAIN_DATA` in `crates/rolldown_binding/src/types/plain_data.rs` is the switch, and each `*_for_js` function returns `Either<BindingX, BindingXData>`, so the generated types are the same on every target.
+
+**Why:** the GC of the JS engine does not see Wasm memory. A native object whose data is in Wasm memory looks small to the GC, so the GC can wait very long before it collects the object and frees the data. Plain data lives in the JS heap, where the GC sees its size. On native, V8 is told the size of an output instead (rolldown/rolldown#11655).
+
+**How JS reads both forms:** rendered chunks and modules and module info have the same property names in both forms. Output chunks and assets are read through methods, so `packages/rolldown/src/utils/plain-output-data.ts` gives the plain data the same methods, and returns a new array on each call as the binding does.
+
+**Cost:** a wasm build copies every field when the data crosses to JS, also the fields that JS never reads.
+
+**Not covered:** `BindingNormalizedOptions` and `BindingChunkingContext` stay native objects. Both are small and shared by the whole build, and the options objects that hooks get already hold plain values. A native MagicString gives its content to Rust when it is sent, so only one that is never sent waits for the GC.
 
 ## Bugs Found by This Separation
 

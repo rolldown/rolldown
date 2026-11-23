@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use napi::{Env, bindgen_prelude::PromiseRaw};
+use napi::{Either, Env, bindgen_prelude::PromiseRaw};
 use napi_derive::napi;
 use sugar_path::SugarPath;
 
@@ -21,8 +21,8 @@ use super::types::{
 
 use crate::{
   types::binding_module_info::{
-    BindingModuleInfo, BindingModuleSideEffectsOptionFn, call_module_side_effects_option,
-    to_binding_module_side_effects,
+    BindingModuleInfo, BindingModuleInfoData, BindingModuleSideEffectsOptionFn,
+    call_module_side_effects_option, module_info_for_js, to_binding_module_side_effects,
   },
   utils::{napi_error, spawn_boxed_future},
 };
@@ -178,8 +178,11 @@ impl BindingPluginContext {
   }
 
   #[napi]
-  pub fn get_module_info(&self, module_id: String) -> napi::Result<Option<BindingModuleInfo>> {
-    Ok(self.ctx()?.get_module_info(&module_id).map(BindingModuleInfo::new))
+  pub fn get_module_info(
+    &self,
+    module_id: String,
+  ) -> napi::Result<Option<Either<BindingModuleInfo, BindingModuleInfoData>>> {
+    Ok(self.ctx()?.get_module_info(&module_id).map(module_info_for_js))
   }
 
   /// `getModuleInfo(moduleId)?.moduleSideEffects`, without copying the rest of the info.

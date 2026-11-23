@@ -1,6 +1,9 @@
+use napi::Either;
 use napi_derive::napi;
 use rolldown_common::RenderedModule;
 use std::{fmt::Debug, sync::Arc};
+
+use super::plain_data::PLAIN_DATA;
 
 #[napi]
 #[derive(Clone)]
@@ -34,5 +37,28 @@ impl BindingRenderedModule {
 impl Debug for BindingRenderedModule {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("BindingRenderedModule").field("code", &"...").finish()
+  }
+}
+
+/// The getters of `BindingRenderedModule` as plain data.
+#[napi(object, object_from_js = false, use_nullable = true)]
+#[derive(Clone, Debug)]
+pub struct BindingRenderedModuleData {
+  pub code: Option<String>,
+  pub rendered_length: u32,
+  pub rendered_exports: Vec<String>,
+}
+
+pub fn rendered_module_for_js(
+  inner: &Arc<RenderedModule>,
+) -> Either<BindingRenderedModule, BindingRenderedModuleData> {
+  if PLAIN_DATA {
+    Either::B(BindingRenderedModuleData {
+      code: inner.code(),
+      rendered_length: u32::try_from(inner.rendered_utf16_length()).unwrap_or(u32::MAX),
+      rendered_exports: inner.rendered_exports.iter().map(ToString::to_string).collect(),
+    })
+  } else {
+    Either::A(BindingRenderedModule::new(Arc::clone(inner)))
   }
 }

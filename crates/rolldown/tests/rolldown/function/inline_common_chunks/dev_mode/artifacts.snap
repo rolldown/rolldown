@@ -167,10 +167,10 @@ __rolldown_runtime__.registerFactory("shared.js", (function(__rolldown_module_id
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ shared: () => shared });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("leaf.js");
-		var import_leaf_10 = __rolldown_runtime__.loadExports("leaf.js");
+		var import_leaf_0 = __rolldown_runtime__.loadExports("leaf.js");
 		const hot_shared = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		function shared() {
-			return "shared+" + (0, import_leaf_10.leaf)();
+			return "shared+" + (0, import_leaf_0.leaf)();
 		}
 	} finally {}
 }));

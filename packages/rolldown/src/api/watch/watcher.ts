@@ -98,6 +98,13 @@ export async function createWatcher(
   emitter: WatcherEmitter,
   input: WatchOptions | WatchOptions[],
 ): Promise<void> {
+  // `close()` can be called before the `options` hooks resolve, so close the watcher once it exists.
+  const originClose = emitter.close.bind(emitter);
+  let onCreated!: () => void;
+  const created = new Promise<void>((resolve) => (onCreated = resolve));
+  let pendingClose: Promise<void> | undefined;
+  emitter.close = () => (pendingClose ??= created.then(() => emitter.close()));
+
   const options = arraify(input);
   const bundlerOptions = await Promise.all(
     options
@@ -109,7 +116,9 @@ export async function createWatcher(
       )
       .flat(),
   );
+  emitter.close = originClose;
   const callback = createEventCallback(emitter);
   const bindingWatcher = new BindingWatcher(bundlerOptions, callback);
   new Watcher(emitter, bindingWatcher);
+  onCreated();
 }

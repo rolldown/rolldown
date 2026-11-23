@@ -1160,7 +1160,7 @@ if (process.platform === 'win32') {
 test.concurrent(
   'watch close immediately',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
-  async ({ task, onTestFinished }) => {
+  async ({ task, expect, onTestFinished }) => {
     const retryCount = task.result?.retryCount ?? 0;
     const { input, output, dir } = createTestInputAndOutput('watch-close-immediately', retryCount);
     onTestFinished(() => {
@@ -1172,8 +1172,15 @@ test.concurrent(
       input,
       output: { file: output },
     });
+    const eventFn = vi.fn();
+    const closeFn = vi.fn();
+    watcher.on('event', eventFn);
+    watcher.on('close', closeFn);
 
     await watcher.close();
+    expect(closeFn).toHaveBeenCalledTimes(1);
+    expect(eventFn).not.toHaveBeenCalled();
+    expect(fs.existsSync(output)).toBe(false);
   },
 );
 

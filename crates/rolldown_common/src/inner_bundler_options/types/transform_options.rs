@@ -98,6 +98,8 @@ pub enum TransformOptionsInner {
 /// `es2024` target. `tests::env_lowers_anything` below stops compiling when oxc
 /// grows a new `EnvOptions` group, so the list gets revisited.
 const LOWERABLE_ES_FEATURES: &[ESFeature] = &[
+  // A proposal: every concrete target lowers it, `esnext` and no target keep it.
+  ESFeature::StandardDecorators,
   ESFeature::ES2026ExplicitResourceManagement,
   ESFeature::ES2022ClassStaticBlock,
   ESFeature::ES2022ClassProperties,
@@ -152,7 +154,9 @@ pub struct TransformOptions {
 impl TransformOptions {
   #[inline]
   pub fn new(options: OxcTransformOptions, target: EngineTargets, jsx_preset: JsxPreset) -> Self {
-    let should_transform_js = target_needs_js_transform(&target);
+    // `decorator.lower: true` lowers decorators regardless of the target.
+    let should_transform_js =
+      options.decorator.lower == Some(true) || target_needs_js_transform(&target);
     Self {
       inner: TransformOptionsInner::Normal(Arc::new(options)),
       target,
@@ -163,7 +167,10 @@ impl TransformOptions {
 
   #[inline]
   pub fn new_raw(raw: RawTransformOptions, target: EngineTargets, jsx_preset: JsxPreset) -> Self {
-    let should_transform_js = target_needs_js_transform(&target);
+    // Plain JS files never read a tsconfig, so the base options decide for them.
+    let lower_decorators =
+      raw.base_options.decorator.as_ref().and_then(|decorator| decorator.lower) == Some(true);
+    let should_transform_js = lower_decorators || target_needs_js_transform(&target);
     Self { inner: TransformOptionsInner::Raw(raw), target, jsx_preset, should_transform_js }
   }
 
@@ -277,6 +284,7 @@ mod tests {
     let EnvOptions {
       // Driven by the TypeScript transform rather than by `target`.
       module: _,
+      standard_decorators,
       es2026: ES2026Options { explicit_resource_management },
       es2022: ES2022Options { class_static_block, class_properties, top_level_await },
       es2021: ES2021Options { logical_assignment_operators },
@@ -300,7 +308,8 @@ mod tests {
       regexp,
     } = env;
 
-    explicit_resource_management
+    standard_decorators
+      || explicit_resource_management
       || class_static_block
       || class_properties.is_some()
       || top_level_await

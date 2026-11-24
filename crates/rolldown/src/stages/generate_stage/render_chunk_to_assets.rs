@@ -354,12 +354,13 @@ pub fn set_emitted_chunk_preliminary_filenames(
   file_emitter: &SharedFileEmitter,
   chunk_graph: &ChunkGraph,
 ) {
+  let reference_ids_by_file = chunk_graph.emitted_chunk_reference_ids_by_file();
   let emitted_chunk_info = chunk_graph
     .chunk_table
     .chunks
     .iter_enumerated()
     .filter_map(|(idx, chunk)| {
-      chunk_graph.chunk_idx_to_reference_ids.get(&idx).map(|reference_ids| {
+      reference_ids_by_file.get(&idx).map(|reference_ids| {
         reference_ids.iter().map(|reference_id| EmittedChunkInfo {
           reference_id: reference_id.clone(),
           filename: chunk
@@ -380,11 +381,12 @@ fn set_emitted_chunk_filenames(
   assets: &AssetVec,
   chunk_graph: &ChunkGraph,
 ) {
+  let reference_ids_by_file = chunk_graph.emitted_chunk_reference_ids_by_file();
   let emitted_chunk_info = assets
     .iter()
     .filter_map(|asset| {
       asset.originate_from.and_then(|originate_from| {
-        chunk_graph.chunk_idx_to_reference_ids.get(&originate_from).map(|reference_ids| {
+        reference_ids_by_file.get(&originate_from).map(|reference_ids| {
           reference_ids.iter().map(|reference_id| EmittedChunkInfo {
             reference_id: reference_id.clone(),
             filename: asset.filename.clone(),

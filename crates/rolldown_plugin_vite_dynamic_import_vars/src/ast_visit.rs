@@ -7,7 +7,7 @@ use oxc::{
   ast_visit::{VisitJs, walk_js},
   span::{GetSpan, Span},
 };
-use rolldown_error::{BuildDiagnostic, DiagnosticOptions, EventKindSwitcher};
+use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_plugin_utils::to_string_literal;
 use rolldown_std_utils::relative_path_as_js_specifier;
@@ -101,6 +101,7 @@ pub struct DynamicImportVarsVisit<'a> {
   pub vite_ignored_starts: Vec<u32>,
   pub async_imports: Vec<AsyncImport>,
   pub magic_string: Option<MagicString<'a>>,
+  pub warnings: Vec<BuildDiagnostic>,
 }
 
 impl<'ast> VisitJs<'ast> for DynamicImportVarsVisit<'_> {
@@ -230,17 +231,14 @@ impl DynamicImportVarsVisit<'_> {
     if let Some(span) = options.assert_span
       && self.ctx.options().checks.contains(EventKindSwitcher::DeprecatedImportAssertion)
     {
-      let warning = BuildDiagnostic::deprecated_import_assertion(
-        self.id.to_string(),
-        self.source_text.clone(),
-        span,
+      self.warnings.push(
+        BuildDiagnostic::deprecated_import_assertion(
+          self.id.to_string(),
+          self.source_text.clone(),
+          span,
+        )
+        .with_severity_warning(),
       );
-      self.ctx.warn(LogWithoutPlugin {
-        message: warning.to_message_with(&DiagnosticOptions { cwd: self.root.to_path_buf() }),
-        id: warning.id(),
-        code: Some(warning.kind().to_string()),
-        ..Default::default()
-      });
     }
 
     // __variableDynamicImportRuntimeHelper((import.meta.glob(pattern, params)), expr, segments)

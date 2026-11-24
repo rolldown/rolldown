@@ -15,7 +15,7 @@ export function repeatedWith(name: string) {
 }
 
 export function legacyAssert(name: string) {
-  return import(`@/${name}.js`, { assert: { type: 'text' } });
+  return import(`@/${name}.js`, { /* 😀 */ assert: { type: 'text' } });
 }
 
 export function withAndAssert(name: string) {

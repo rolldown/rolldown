@@ -53,6 +53,24 @@ pub struct Log {
 
 impl Log {
   pub fn from_rendered(warning: &BuildDiagnostic, rendered: RenderedDiagnostic) -> Self {
+    LogWithoutPlugin::from_rendered(warning, rendered).into_log(warning.plugin())
+  }
+}
+
+#[derive(Debug, Default)]
+pub struct LogWithoutPlugin {
+  pub message: String,
+  pub id: Option<String>,
+  pub code: Option<String>,
+  pub exporter: Option<String>,
+  pub binding: Option<String>,
+  pub loc: Option<LogLocation>,
+  pub pos: Option<u32>,
+  pub ids: Option<Vec<String>>,
+}
+
+impl LogWithoutPlugin {
+  pub fn from_rendered(warning: &BuildDiagnostic, rendered: RenderedDiagnostic) -> Self {
     #[expect(
       clippy::cast_possible_truncation,
       reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
@@ -76,27 +94,12 @@ impl Log {
       binding: warning.binding(),
       code: Some(warning.kind().to_string()),
       message: rendered.message,
-      plugin: warning.plugin(),
       loc,
       pos,
       ids: warning.ids(),
     }
   }
-}
 
-#[derive(Debug, Default)]
-pub struct LogWithoutPlugin {
-  pub message: String,
-  pub id: Option<String>,
-  pub code: Option<String>,
-  pub exporter: Option<String>,
-  pub binding: Option<String>,
-  pub loc: Option<LogLocation>,
-  pub pos: Option<u32>,
-  pub ids: Option<Vec<String>>,
-}
-
-impl LogWithoutPlugin {
   pub fn into_log(self, plugin_name: Option<String>) -> Log {
     Log {
       message: self.message,

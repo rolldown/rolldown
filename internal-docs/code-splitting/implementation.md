@@ -647,6 +647,9 @@ pub struct ChunkGraph {
   A group uses the explicit `fileName` of an emitted entry if the optimizer removes its facade.
   The optimizer keeps a facade if the group needs a different explicit filename.
   The optimizer also keeps the facade if an entry chunk absorbs the group.
+  The file emitter reserves the group's file and directory paths.
+  It can rename a generated asset until a plugin gets its filename.
+  Conflict checks use the group chunk and its emitted sourcemap.
 
   `set_emitted_chunk_preliminary_filenames` and `set_emitted_chunk_filenames` use `emitted_chunk_reference_ids_by_file`.
   The preliminary and final filenames from `getFileName()` identify the same output chunk, even when the filename pattern contains `[hash]`.

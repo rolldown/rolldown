@@ -7,19 +7,21 @@ const codeSplitting = {
   groups: [{ name: 'group', test: /[\\/][ab]\.js$/ }],
 };
 let referenceIds: string[];
+let assetId: string;
 
 export default defineTest({
   config: {
     input: 'main.js',
     preserveEntrySignatures: 'allow-extension',
     output: [
-      { format: 'es', codeSplitting },
-      { format: 'cjs', codeSplitting, entryFileNames: fileName },
+      { format: 'es', codeSplitting, assetFileNames: '[name][extname]' },
+      { format: 'cjs', codeSplitting, entryFileNames: fileName, assetFileNames: '[name][extname]' },
     ],
     plugins: [
       {
         name: 'test-plugin',
         buildStart() {
+          assetId = this.emitFile({ type: 'asset', name: fileName, source: 'asset' });
           referenceIds = [
             this.emitFile({
               type: 'chunk',
@@ -44,6 +46,9 @@ export default defineTest({
           });
           const mainFileName = options.format === 'cjs' ? 'fixed-a2.js' : 'main.js';
           expect(bundle[mainFileName]).toMatchObject({ type: 'chunk', name: 'main' });
+          const assetFileName = options.format === 'cjs' ? 'fixed-a3.js' : 'fixed-a2.js';
+          expect(this.getFileName(assetId)).toBe(assetFileName);
+          expect(bundle[assetFileName]).toMatchObject({ type: 'asset', source: 'asset' });
         },
       },
     ],

@@ -21,15 +21,15 @@ use super::{
     binding_hot_update_args::BindingHotUpdateArgs,
     binding_import_attributes::to_binding_import_attributes,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
-    binding_render_chunk_meta_chunks::BindingRenderedChunkMeta,
+    binding_render_chunk_meta_chunks::rendered_chunk_meta_for_js,
     binding_shared_string::BindingSharedString,
   },
 };
 use crate::types::{
-  binding_module_info::BindingModuleInfo,
+  binding_module_info::module_info_for_js,
   binding_normalized_options::BindingNormalizedOptions,
   binding_outputs::{JsChangedOutputs, to_binding_error},
-  binding_rendered_chunk::BindingRenderedChunk,
+  binding_rendered_chunk::rendered_chunk_for_js,
   js_callback::MaybeAsyncJsCallbackExt,
 };
 
@@ -280,7 +280,7 @@ impl Plugin for JsPlugin {
     _normal_module: &NormalModule,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.module_parsed {
-      cb.await_call((ctx.clone().into(), BindingModuleInfo::new(Arc::clone(&module_info))).into())
+      cb.await_call((ctx.clone().into(), module_info_for_js(Arc::clone(&module_info))).into())
         .instrument(debug_span!("module_parsed_hook", plugin_name = self.name))
         .await
         .with_context(|| {
@@ -353,14 +353,14 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookInjectionOutputReturn {
     match &self.banner {
       Some(cb) => Ok(
-        cb.await_call(
-          (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
-        )
-        .instrument(debug_span!("banner_hook", plugin_name = self.name))
-        .await?
-        .map(TryInto::try_into)
-        .transpose()
-        .with_context(|| format!("banner hook threw an error for chunkName={}", args.chunk.name))?,
+        cb.await_call((ctx.clone().into(), rendered_chunk_for_js(Arc::clone(&args.chunk))).into())
+          .instrument(debug_span!("banner_hook", plugin_name = self.name))
+          .await?
+          .map(TryInto::try_into)
+          .transpose()
+          .with_context(|| {
+            format!("banner hook threw an error for chunkName={}", args.chunk.name)
+          })?,
       ),
       _ => Ok(None),
     }
@@ -377,14 +377,14 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookInjectionOutputReturn {
     match &self.intro {
       Some(cb) => Ok(
-        cb.await_call(
-          (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
-        )
-        .instrument(debug_span!("intro_hook", plugin_name = self.name))
-        .await?
-        .map(TryInto::try_into)
-        .transpose()
-        .with_context(|| format!("intro hook threw an error for chunkName={}", args.chunk.name))?,
+        cb.await_call((ctx.clone().into(), rendered_chunk_for_js(Arc::clone(&args.chunk))).into())
+          .instrument(debug_span!("intro_hook", plugin_name = self.name))
+          .await?
+          .map(TryInto::try_into)
+          .transpose()
+          .with_context(|| {
+            format!("intro hook threw an error for chunkName={}", args.chunk.name)
+          })?,
       ),
       _ => Ok(None),
     }
@@ -401,14 +401,14 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookInjectionOutputReturn {
     match &self.outro {
       Some(cb) => Ok(
-        cb.await_call(
-          (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
-        )
-        .instrument(debug_span!("outro_hook", plugin_name = self.name))
-        .await?
-        .map(TryInto::try_into)
-        .transpose()
-        .with_context(|| format!("outro hook threw an error for chunkName={}", args.chunk.name))?,
+        cb.await_call((ctx.clone().into(), rendered_chunk_for_js(Arc::clone(&args.chunk))).into())
+          .instrument(debug_span!("outro_hook", plugin_name = self.name))
+          .await?
+          .map(TryInto::try_into)
+          .transpose()
+          .with_context(|| {
+            format!("outro hook threw an error for chunkName={}", args.chunk.name)
+          })?,
       ),
       _ => Ok(None),
     }
@@ -425,14 +425,14 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookInjectionOutputReturn {
     match &self.footer {
       Some(cb) => Ok(
-        cb.await_call(
-          (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
-        )
-        .instrument(debug_span!("footer_hook", plugin_name = self.name))
-        .await?
-        .map(TryInto::try_into)
-        .transpose()
-        .with_context(|| format!("footer hook threw an error for chunkName={}", args.chunk.name))?,
+        cb.await_call((ctx.clone().into(), rendered_chunk_for_js(Arc::clone(&args.chunk))).into())
+          .instrument(debug_span!("footer_hook", plugin_name = self.name))
+          .await?
+          .map(TryInto::try_into)
+          .transpose()
+          .with_context(|| {
+            format!("footer hook threw an error for chunkName={}", args.chunk.name)
+          })?,
       ),
       _ => Ok(None),
     }
@@ -463,9 +463,9 @@ impl Plugin for JsPlugin {
         (
           ctx.clone().into(),
           BindingSharedString::from(Arc::clone(&args.code)),
-          BindingRenderedChunk::new(Arc::clone(&args.chunk)),
+          rendered_chunk_for_js(Arc::clone(&args.chunk)),
           BindingNormalizedOptions::new(Arc::clone(args.options)),
-          BindingRenderedChunkMeta::new(Arc::clone(&args.chunks)),
+          rendered_chunk_meta_for_js(Arc::clone(&args.chunks)),
         )
           .into(),
       )
@@ -491,7 +491,7 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookAugmentChunkHashReturn {
     match &self.augment_chunk_hash {
       Some(cb) => Ok(
-        cb.await_call((ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&chunk))).into())
+        cb.await_call((ctx.clone().into(), rendered_chunk_for_js(Arc::clone(&chunk))).into())
           .instrument(debug_span!("augment_chunk_hash_hook", plugin_name = self.name))
           .await
           .with_context(|| {

@@ -16,13 +16,18 @@ use binding_pre_rendered_chunk::PreRenderedChunk;
 
 use super::plugin::BindingPluginOrBuiltinPlugin;
 use crate::types::{
-  binding_rendered_chunk::BindingRenderedChunk,
+  binding_rendered_chunk::{BindingRenderedChunk, BindingRenderedChunkData},
   binding_string_or_regex::BindingStringOrRegex,
   js_callback_release::{UntrackedJsCallback, UntrackedMaybeAsyncJsCallback},
 };
 
-pub type AddonOutputOption =
-  Either<String, UntrackedMaybeAsyncJsCallback<FnArgs<(BindingRenderedChunk,)>, Option<String>>>;
+pub type AddonOutputOption = Either<
+  String,
+  UntrackedMaybeAsyncJsCallback<
+    FnArgs<(Either<BindingRenderedChunk, BindingRenderedChunkData>,)>,
+    Option<String>,
+  >,
+>;
 pub type ChunkFileNamesOutputOption =
   Either<String, UntrackedJsCallback<FnArgs<(PreRenderedChunk,)>, String>>;
 pub type AssetFileNamesOutputOption =
@@ -64,22 +69,22 @@ pub struct BindingOutputOptions<'env> {
   // amd: NormalizedAmdOptions;
   #[debug(skip)]
   #[napi(
-    ts_type = "string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)"
+    ts_type = "string | ((chunk: BindingRenderedChunk | BindingRenderedChunkData) => MaybePromise<VoidNullable<string>>)"
   )]
   pub banner: Option<AddonOutputOption>,
   #[debug(skip)]
   #[napi(
-    ts_type = "string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)"
+    ts_type = "string | ((chunk: BindingRenderedChunk | BindingRenderedChunkData) => MaybePromise<VoidNullable<string>>)"
   )]
   pub post_banner: Option<AddonOutputOption>,
   #[debug(skip)]
   #[napi(
-    ts_type = "string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)"
+    ts_type = "string | ((chunk: BindingRenderedChunk | BindingRenderedChunkData) => MaybePromise<VoidNullable<string>>)"
   )]
   pub footer: Option<AddonOutputOption>,
   #[debug(skip)]
   #[napi(
-    ts_type = "string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)"
+    ts_type = "string | ((chunk: BindingRenderedChunk | BindingRenderedChunkData) => MaybePromise<VoidNullable<string>>)"
   )]
   pub post_footer: Option<AddonOutputOption>,
   // compact: boolean;
@@ -109,7 +114,7 @@ pub struct BindingOutputOptions<'env> {
   // interop: GetInterop;
   #[debug(skip)]
   #[napi(
-    ts_type = "string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)"
+    ts_type = "string | ((chunk: BindingRenderedChunk | BindingRenderedChunkData) => MaybePromise<VoidNullable<string>>)"
   )]
   pub intro: Option<AddonOutputOption>,
   // manualChunks: ManualChunksOption;
@@ -118,7 +123,7 @@ pub struct BindingOutputOptions<'env> {
   // noConflict: boolean;
   #[debug(skip)]
   #[napi(
-    ts_type = "string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)"
+    ts_type = "string | ((chunk: BindingRenderedChunk | BindingRenderedChunkData) => MaybePromise<VoidNullable<string>>)"
   )]
   pub outro: Option<AddonOutputOption>,
   #[debug(skip)]

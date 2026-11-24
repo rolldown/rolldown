@@ -15,6 +15,7 @@ import { OutputChunkImpl } from '../types/output-chunk-impl';
 import type { OutputAsset, OutputChunk, RolldownOutput, SourceMap } from '../types/rolldown-output';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { type AssetSource, bindingAssetSource, transformAssetSource } from './asset-source';
+import { toBindingOutputAsset, toBindingOutputChunk } from './plain-output-data';
 import { transformChunkModules } from './transform-rendered-chunk';
 
 export function transformToRollupSourceMap(map: string): SourceMap {
@@ -279,8 +280,8 @@ export function transformToRollupOutput(output: BindingOutputs): RolldownOutput 
   const { chunks, assets } = output;
   const transformed = {
     output: [
-      ...chunks.map((chunk) => transformToRollupOutputChunk(chunk)),
-      ...assets.map((asset) => transformToRollupOutputAsset(asset)),
+      ...chunks.map((chunk) => transformToRollupOutputChunk(toBindingOutputChunk(chunk))),
+      ...assets.map((asset) => transformToRollupOutputAsset(toBindingOutputAsset(asset))),
     ],
   } as RolldownOutput;
   if (output.mangleCache !== undefined) {
@@ -297,8 +298,12 @@ function transformToMutableRollupOutput(
   const { chunks, assets } = output;
   return {
     output: [
-      ...chunks.map((chunk) => transformToMutableRollupOutputChunk(chunk, changed, codeCache)),
-      ...assets.map((asset) => transformToMutableRollupOutputAsset(asset, changed)),
+      ...chunks.map((chunk) =>
+        transformToMutableRollupOutputChunk(toBindingOutputChunk(chunk), changed, codeCache),
+      ),
+      ...assets.map((asset) =>
+        transformToMutableRollupOutputAsset(toBindingOutputAsset(asset), changed),
+      ),
     ],
   } as RolldownOutput;
 }

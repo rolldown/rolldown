@@ -189,6 +189,10 @@ impl PluginDriver {
     &self.plugins
   }
 
+  pub(crate) fn context(&self, plugin_idx: PluginIdx) -> &PluginContext {
+    &self.contexts[plugin_idx]
+  }
+
   pub fn add_transform_dependency(&self, module_idx: ModuleIdx, dependency: WatchPath) {
     self
       .transform_dependencies

@@ -9,8 +9,8 @@ use crate::{
   options::plugin::types::binding_hook_side_effects::BindingHookSideEffects,
   types::{
     binding_module_info::{
-      BindingModuleInfo, BindingModuleSideEffectsOptionFn, call_module_side_effects_option,
-      to_binding_module_side_effects,
+      BindingModuleInfo, BindingModuleInfoData, BindingModuleSideEffectsOptionFn,
+      call_module_side_effects_option, module_info_for_js, to_binding_module_side_effects,
     },
     binding_string_or_regex::BindingStringOrRegex,
     js_callback_release::UntrackedJsCallback,
@@ -95,8 +95,11 @@ impl BindingChunkingContext {
 #[napi_derive::napi]
 impl BindingChunkingContext {
   #[napi]
-  pub fn get_module_info(&self, module_id: String) -> Option<BindingModuleInfo> {
-    self.inner.get_module_info(&module_id).map(BindingModuleInfo::new)
+  pub fn get_module_info(
+    &self,
+    module_id: String,
+  ) -> Option<Either<BindingModuleInfo, BindingModuleInfoData>> {
+    self.inner.get_module_info(&module_id).map(module_info_for_js)
   }
 
   /// `getModuleInfo(moduleId)?.moduleSideEffects`, without copying the rest of the info. See

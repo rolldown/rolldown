@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
 use napi::{
-  Env,
+  Either, Env,
   bindgen_prelude::{BufferSlice, JsObjectValue, Object},
 };
 use napi_derive::napi;
 
 use crate::{
   options::plugin::types::binding_asset_source::BindingAssetSource,
-  types::external_memory_status::ExternalMemoryStatus,
+  types::{external_memory_status::ExternalMemoryStatus, plain_data::PLAIN_DATA},
 };
 
 #[napi]
@@ -96,6 +96,29 @@ impl BindingOutputAsset {
   pub fn get_names(&self) -> napi::Result<Vec<&str>> {
     Ok(self.try_get_inner()?.names.iter().map(AsRef::as_ref).collect())
   }
+}
+
+/// The getters of `BindingOutputAsset` as plain data.
+#[napi(object, object_from_js = false)]
+pub struct BindingOutputAssetData {
+  pub file_name: String,
+  pub original_file_names: Vec<String>,
+  pub source: BindingAssetSource,
+  pub names: Vec<String>,
+}
+
+pub fn output_asset_for_js(
+  inner: Arc<rolldown_common::OutputAsset>,
+) -> Either<BindingOutputAsset, BindingOutputAssetData> {
+  if !PLAIN_DATA {
+    return Either::A(BindingOutputAsset::new(inner));
+  }
+  Either::B(BindingOutputAssetData {
+    file_name: inner.filename.to_string(),
+    original_file_names: inner.original_file_names.clone(),
+    source: inner.source.clone().into(),
+    names: inner.names.clone(),
+  })
 }
 
 #[napi_derive::napi(object, object_to_js = false)]

@@ -7,7 +7,7 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import nodePath from 'node:path';
-import { rolldown } from 'rolldown';
+import { type PluginContext, rolldown } from 'rolldown';
 import { expect, test } from 'vitest';
 
 const ENTRY_ID = 'virt:entry.js';
@@ -101,3 +101,39 @@ for (const bindingHook of ['buildStart', 'buildEnd'] as const) {
     }
   });
 }
+
+test('a kept plugin context throws once its build has finished', async () => {
+  let kept: Pick<PluginContext, 'getModuleIds' | 'emitFile' | 'parse' | 'meta'> | undefined;
+  const bundle = await rolldown({
+    input: ENTRY_ID,
+    plugins: [
+      {
+        name: 'retained-build-context',
+        resolveId(id) {
+          kept ??= {
+            getModuleIds: this.getModuleIds.bind(this),
+            emitFile: this.emitFile.bind(this),
+            parse: this.parse.bind(this),
+            meta: this.meta,
+          };
+          return id in MODULES ? id : undefined;
+        },
+        load: (id) => MODULES[id],
+        buildEnd() {
+          expect([...kept!.getModuleIds()].sort()).toEqual([DEP_ID, ENTRY_ID].sort());
+        },
+      },
+    ],
+  });
+  await bundle.generate({ format: 'esm' });
+  await bundle.close();
+
+  const finished = 'This plugin context can no longer be used because its build has finished';
+  expect(() => kept!.getModuleIds()).toThrow(finished);
+  expect(() => kept!.emitFile({ type: 'asset', fileName: 'late.txt', source: '' })).toThrow(
+    finished,
+  );
+  // These do not need the build.
+  expect(kept!.parse('let a = 1').type).toBe('Program');
+  expect(kept!.meta.watchMode).toBe(false);
+});

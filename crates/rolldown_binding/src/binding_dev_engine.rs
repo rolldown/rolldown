@@ -10,7 +10,9 @@ use crate::binding_dev_options::BindingDevOptions;
 use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_client_hmr_update::BindingClientHmrUpdate;
 use crate::types::binding_error_stage::BindingErrorStage;
-use crate::types::binding_module_info::BindingModuleInfo;
+use crate::types::binding_module_info::{
+  BindingModuleInfo, BindingModuleInfoData, module_info_for_js,
+};
 use crate::types::binding_outputs::{BindingOutputs, to_binding_error};
 use crate::types::error::{BindingErrors, BindingResult};
 use crate::types::js_callback_release::{RequestReleaseOnDrop, SharedJsCallbackRelease};
@@ -296,8 +298,11 @@ impl BindingDevEngine {
   /// Same data the plugin-context `getModuleInfo` returns, readable from the engine
   /// handle at any time (no hook context needed).
   #[napi]
-  pub fn get_module_info(&self, module_id: String) -> Option<BindingModuleInfo> {
-    self.inner.get_module_info(&module_id).map(BindingModuleInfo::new)
+  pub fn get_module_info(
+    &self,
+    module_id: String,
+  ) -> Option<Either<BindingModuleInfo, BindingModuleInfoData>> {
+    self.inner.get_module_info(&module_id).map(module_info_for_js)
   }
 
   #[napi]

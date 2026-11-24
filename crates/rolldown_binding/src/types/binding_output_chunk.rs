@@ -6,7 +6,7 @@ use rolldown_sourcemap::SourceMap;
 
 use super::{
   binding_rendered_chunk::BindingModules, binding_sourcemap::BindingSourcemap,
-  external_memory_status::ExternalMemoryStatus,
+  external_memory_status::ExternalMemoryStatus, plain_data::PLAIN_DATA,
 };
 
 #[napi]
@@ -137,6 +137,49 @@ impl BindingOutputChunk {
   pub fn get_name(&self) -> napi::Result<&str> {
     Ok(&self.try_get_inner()?.name)
   }
+}
+
+/// The getters of `BindingOutputChunk` as plain data.
+#[napi(object, object_from_js = false, use_nullable = true)]
+pub struct BindingOutputChunkData {
+  pub name: String,
+  pub is_entry: bool,
+  pub is_dynamic_entry: bool,
+  pub facade_module_id: Option<String>,
+  pub module_ids: Vec<String>,
+  pub exports: Vec<String>,
+  pub file_name: String,
+  pub modules: BindingModules,
+  pub imports: Vec<String>,
+  pub dynamic_imports: Vec<String>,
+  pub code: String,
+  pub map: Option<String>,
+  pub sourcemap_file_name: Option<String>,
+  pub preliminary_file_name: String,
+}
+
+pub fn output_chunk_for_js(
+  inner: Arc<rolldown_common::OutputChunk>,
+) -> Either<BindingOutputChunk, BindingOutputChunkData> {
+  if !PLAIN_DATA {
+    return Either::A(BindingOutputChunk::new(inner));
+  }
+  Either::B(BindingOutputChunkData {
+    name: inner.name.to_string(),
+    is_entry: inner.is_entry,
+    is_dynamic_entry: inner.is_dynamic_entry,
+    facade_module_id: inner.facade_module_id.as_ref().map(ToString::to_string),
+    module_ids: inner.module_ids.iter().map(ToString::to_string).collect(),
+    exports: inner.exports.iter().map(ToString::to_string).collect(),
+    file_name: inner.filename.to_string(),
+    modules: (&inner.modules).into(),
+    imports: inner.imports.iter().map(ToString::to_string).collect(),
+    dynamic_imports: inner.dynamic_imports.iter().map(ToString::to_string).collect(),
+    code: inner.code.clone(),
+    map: inner.map.as_ref().map(SourceMap::to_json_string),
+    sourcemap_file_name: inner.sourcemap_filename.clone(),
+    preliminary_file_name: inner.preliminary_filename.clone(),
+  })
 }
 
 /// What a `generateBundle` or `writeBundle` hook changed in an output chunk. A field that is left

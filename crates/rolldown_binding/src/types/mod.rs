@@ -23,4 +23,5 @@ pub mod error;
 pub mod external_memory_status;
 pub mod js_callback;
 pub mod js_callback_release;
+pub mod plain_data;
 pub mod preserve_entry_signatures;

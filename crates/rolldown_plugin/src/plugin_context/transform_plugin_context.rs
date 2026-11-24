@@ -36,8 +36,10 @@ enum PendingSourcemapSlot {
   Closed,
 }
 
-const SEND_AFTER_HOOK_ERROR: &str =
+pub const SEND_AFTER_HOOK_ERROR: &str =
   "TransformPluginContext: `sendMagicString` can only be called during the transform hook";
+
+pub const COMBINED_SOURCEMAP_AFTER_RELEASE_ERROR: &str = "TransformPluginContext: `getCombinedSourcemap` cannot be called after the sourcemap chain is released";
 
 impl TransformPluginContext {
   pub fn new(
@@ -85,11 +87,15 @@ impl TransformPluginContext {
         _ => collapse_sourcemaps_traced(&chain),
       }
     });
-    map.ok_or_else(|| {
-      anyhow::anyhow!(
-        "TransformPluginContext: `getCombinedSourcemap` cannot be called after the sourcemap chain is released"
-      )
-    })
+    map.ok_or_else(|| anyhow::anyhow!(COMBINED_SOURCEMAP_AFTER_RELEASE_ERROR))
+  }
+
+  pub fn id(&self) -> &str {
+    &self.id
+  }
+
+  pub fn module_idx(&self) -> ModuleIdx {
+    self.module_idx
   }
 
   fn create_sourcemap(&self) -> SourceMap {

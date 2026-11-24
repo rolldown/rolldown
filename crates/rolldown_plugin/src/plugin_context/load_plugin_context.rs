@@ -14,6 +14,10 @@ impl LoadPluginContext {
     Self { inner, module_idx }
   }
 
+  pub fn module_idx(&self) -> ModuleIdx {
+    self.module_idx
+  }
+
   /// Add a file or a directory as a watch dependency.
   pub fn add_watch_file(&self, file: &str) {
     // Call the parent method to add to global watch files

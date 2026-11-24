@@ -256,7 +256,19 @@ That loop would keep every plugin of a build alive (rolldown/rolldown#11444). Th
 
 **Test:** `packages/rolldown/tests/build-api/normalized-options.test.ts` checks the rule with a heap query.
 
-**Exception:** a plugin that keeps `this` keeps the plugins of its build alive until the build closes. The plugin context owns the options too (`NativePluginContextImpl.options` in `crates/rolldown_plugin/src/plugin_context/native_plugin_context.rs`), so the same loop runs through it. The release at `close()` removes the root of this loop too.
+A plugin that keeps `this` does not close the loop either. The plugin context owns the options (`NativePluginContextImpl.options` in `crates/rolldown_plugin/src/plugin_context/native_plugin_context.rs`), but `BindingPluginContext` holds the plugin context weakly, and the plugin driver drops it when the build finishes.
+
+## Data objects on wasm
+
+**Rule:** a wasm build gives JS plain data, not native objects, for output chunks and assets, rendered chunks and modules, the `renderChunk` meta and module info. `PLAIN_DATA` in `crates/rolldown_binding/src/types/plain_data.rs` is the switch, and each `*_for_js` function returns `Either<BindingX, BindingXData>`, so the generated types are the same on every target.
+
+**Why:** the GC of the JS engine does not see Wasm memory. A native object whose data is in Wasm memory looks small to the GC, so the GC can wait very long before it collects the object and frees the data. Plain data lives in the JS heap, where the GC sees its size. On native, V8 is told the size of an output instead (rolldown/rolldown#11655).
+
+**How JS reads both forms:** rendered chunks and modules and module info have the same property names in both forms. Output chunks and assets are read through methods, so `packages/rolldown/src/utils/plain-output-data.ts` gives the plain data the same methods, and returns a new array on each call as the binding does.
+
+**Cost:** a wasm build copies every field when the data crosses to JS, also the fields that JS never reads.
+
+**Not covered:** `BindingNormalizedOptions` and `BindingChunkingContext` stay native objects. Both are small and shared by the whole build, and the options objects that hooks get already hold plain values. A native MagicString gives its content to Rust when it is sent, so only one that is never sent waits for the GC.
 
 ## Bugs Found by This Separation
 
@@ -275,9 +287,9 @@ Rust keeps the JS functions of the bundler options only while their owner is ope
 ### The problem
 
 - A JS function of the bundler options reaches Rust as a `JsCallback`. Examples are `external`, `onLog`, the file name functions, and the internal `invalidateJsSideCache`, `resetJsModuleOptions` and `createJsModuleOptions`. A `JsCallback` keeps a strong napi reference to its JS function. V8 treats that reference as a GC root ("Global handles" in a heap snapshot).
-- JS can keep a native object that keeps the options alive. An example is the `BindingPluginContext` of `this` in a hook. It reaches the options through `NativePluginContextImpl.options` and `FileEmitter.options`. The options objects that hooks get keep no native object (see [Normalized options objects](#normalized-options-objects)).
+- JS can keep a native object that keeps the options alive. A hook's `this` used to be one. Its `BindingPluginContext` reached the options through `NativePluginContextImpl.options` and `FileEmitter.options`. It now holds the plugin context weakly, and the plugin driver drops the context when the build finishes. The options objects that hooks get keep no native object (see [Normalized options objects](#normalized-options-objects)).
 - A JS function of the options can reach such a native object. Then a cycle goes through native code: root → JS function → … → JS wrapper → `Arc<NormalizedBundlerOptions>` → `JsCallback` → root. The GC cannot see the native edge, so it never frees the cycle.
-- The internal callbacks capture `pluginContextData`, which reaches every plugin of the build. So without the release, every plugin of the build stays alive when one plugin keeps `this`. Before rolldown/rolldown#11623, one empty `buildStart` hook had the same effect (rolldown/rolldown#11444).
+- The internal callbacks capture `pluginContextData`, which reaches every plugin of the build. So without the release, every plugin of the build stayed alive when one plugin kept `this`. Before rolldown/rolldown#11623, one empty `buildStart` hook had the same effect (rolldown/rolldown#11444).
 
 ### The rule
 
@@ -309,7 +321,7 @@ Rust keeps the JS functions of the bundler options only while their owner is ope
   The release does not make them wait, because a wait deadlocks when a `closeBundle` hook awaits that close. Only the release waits for that work.
 
 - Plugin hooks are not in the group. `PluginDriver` keeps them, and the plugin context keeps the driver only as a `Weak` pointer. `ClassicBundler::close()` removes `last_bundle_handle`, so a plugin that keeps the build object does not keep the driver after the close. But a plugin that keeps the dev engine object makes a cycle. The JS dev engine keeps the native engine, and the native engine keeps the plugin driver.
-- A build that the user never closes never releases its callbacks. If JS keeps a native object that keeps its options alive, the GC never frees its plugins. An example of such an object is the `BindingPluginContext` of `this` in a hook. Without such an object, the GC frees the callbacks with the build object.
+- A build that the user never closes never releases its callbacks. If JS keeps a native object that keeps its options alive, the GC never frees its plugins. A hook's `this` is not such an object, because `BindingPluginContext` holds the plugin context weakly. Without such an object, the GC frees the callbacks with the build object.
 - The watcher event listener is not an option callback, so the release does not cover it.
 
 ### Tests

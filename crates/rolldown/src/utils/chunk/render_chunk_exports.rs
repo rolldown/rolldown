@@ -242,31 +242,29 @@ pub fn render_chunk_exports(
             .symbol_db
             .canonical_name_for_or_original(canonical_ref, &chunk.canonical_names);
           let rendered_canonical_name = escape_non_ascii(canonical_name, ascii_only);
-          if let Some(ns_alias) = &symbol.namespace_alias {
+          // The finalizer declares the exports synthesized for a CommonJS star export.
+          let declared_by_finalizer = || {
+            let owner = link_output.module_table[canonical_ref.owner].as_normal().unwrap();
+            owner.named_imports.get(&canonical_ref).is_some_and(|import| {
+              let record = &owner.import_records[import.record_idx];
+              record.meta.contains(ImportRecordMeta::CjsStarNamedExports)
+            })
+          };
+          if let Some(ns_alias) = &symbol.namespace_alias
+            && !declared_by_finalizer()
+          {
             let canonical_ns_name = link_output
               .symbol_db
               .canonical_name_for_or_original(ns_alias.namespace_ref, &chunk.canonical_names);
             let property_name = &ns_alias.property_name;
-            let owner = link_output.module_table[canonical_ref.owner].as_normal().unwrap();
-            let own_name = owner.named_imports.get(&canonical_ref).is_some_and(|import| {
-              let record = &owner.import_records[import.record_idx];
-              record.meta.contains(ImportRecordMeta::CjsStarNamedExports)
-            });
-            let ns_name = escape_non_ascii(canonical_ns_name, ascii_only);
             s.push_str("var ");
             s.push_str(&rendered_canonical_name);
             s.push_str(" = ");
-            if own_name {
-              let key = to_ecma_string_literal(property_name, ascii_only);
-              let helper =
-                &chunk.canonical_names[&link_output.runtime.resolve_symbol("__hasOwnProp")];
-              write!(s, "{helper}.call({ns_name}, {key}) ? ")
-                .expect("writing to a string cannot fail");
-            }
-            s.push_str(&property_access_str_with_ascii(&ns_name, property_name, ascii_only));
-            if own_name {
-              s.push_str(" : void 0");
-            }
+            s.push_str(&property_access_str_with_ascii(
+              &escape_non_ascii(canonical_ns_name, ascii_only),
+              property_name,
+              ascii_only,
+            ));
             s.push_str(";\n");
           }
 

@@ -319,6 +319,10 @@ impl LinkStage<'_> {
           || !entry.importers_idx.is_empty()
           || entries.iter().any(|entry| !entry.kind.is_dynamic_import())
           || dependency.exports_kind != ExportsKind::CommonJs
+          // Other code that reaches the CommonJS module, through an entry or another importer, can
+          // change its exports after Node reads them and before the bundle does.
+          || self.entries.contains_key(&importee)
+          || dependency.importers_idx.iter().any(|&importer| importer != idx)
         {
           continue;
         }
@@ -335,8 +339,12 @@ impl LinkStage<'_> {
         let record = &mut entry.import_records[rec_idx];
         record.meta.toggle(ImportRecordMeta::IsExportStar | ImportRecordMeta::CjsStarNamedExports);
         for name in names {
-          let binding =
-            self.symbols.create_facade_root_symbol_ref(idx, &legitimize_identifier_name(&name));
+          // Strict mode code cannot declare `eval` or `arguments`.
+          let binding_name = match name.as_str() {
+            "eval" | "arguments" => Cow::Owned(format!("_{name}")),
+            _ => legitimize_identifier_name(&name),
+          };
+          let binding = self.symbols.create_facade_root_symbol_ref(idx, &binding_name);
           let import = NamedImport {
             imported: Specifier::Literal(name.clone()),
             span_imported: oxc::span::SPAN,

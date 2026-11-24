@@ -20,7 +20,7 @@ test.each([
   }
 });
 
-test('option names cannot pollute Object.prototype', () => {
+test('option names cannot pollute prototypes', () => {
   const originalArgv = process.argv;
   try {
     process.argv = [
@@ -30,10 +30,14 @@ test('option names cannot pollute Object.prototype', () => {
       '--__proto__.polluted=1',
       '--constructor.prototype.polluted=1',
       '--checks.__proto__.polluted=1',
+      '--external.__proto__.polluted=1',
     ];
     parseCliArguments();
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(([] as unknown as Record<string, unknown>).polluted).toBeUndefined();
   } finally {
     process.argv = originalArgv;
+    delete (Object.prototype as Record<string, unknown>).polluted;
+    delete (Array.prototype as unknown as Record<string, unknown>).polluted;
   }
 });

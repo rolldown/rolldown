@@ -47,6 +47,7 @@ const ignoreTests = [
   "rollup@function@jsx@automatic-string-attribute-values: uses the decoded value of JSX string attributes and keys in automatic mode",
   "rollup@function@jsx@classic-string-attribute-values: uses the decoded value of JSX string attributes in classic mode",
   "rollup@function@jsx@this-member-expression: keeps `this` as the object of JSX member expressions inside functions",
+  "rollup@function@circular-namespace-read-in-jsx-before-module: creates namespace objects early if a module in a cycle reads them in JSX before their module ran",
 
   // ## Rollup 5 changed these tests, so their Rollup 5 versions are ported to
   // ## packages/rolldown/tests/fixtures/topics/import-attributes/rollup-5

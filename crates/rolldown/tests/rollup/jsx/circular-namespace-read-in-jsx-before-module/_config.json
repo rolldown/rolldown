@@ -1,0 +1,19 @@
+{
+  "config": {
+    "format": "cjs",
+    "exports": "named",
+    "checks": {
+      "circularDependency": true
+    },
+    "moduleTypes": {
+      ".js": "jsx"
+    },
+    "transform": {
+      "jsx": {
+        "runtime": "classic",
+        "pragma": "h"
+      }
+    }
+  },
+  "expectWarning": true
+}

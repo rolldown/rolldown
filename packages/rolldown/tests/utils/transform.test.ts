@@ -113,6 +113,26 @@ console.log(JSON.stringify({ code: sync.code, errors: async.errors.length }));
     });
   });
 
+  describe('standard decorators lowering', () => {
+    const code = 'class A { @dec accessor x = 1 }';
+
+    it('lowers at a concrete target and preserves at esnext by default', () => {
+      expect(transformSync('a.js', code, { target: 'es2022' }).code).not.toContain('@dec');
+      expect(transformSync('a.js', code, { target: 'esnext' }).code).toContain('@dec');
+    });
+
+    it('respects decorator.lower', () => {
+      const preserved = transformSync('a.js', code, {
+        target: 'es2022',
+        decorator: { lower: false },
+      });
+      expect(preserved.code).toContain('@dec');
+      const lowered = transformSync('a.js', code, { target: 'esnext', decorator: { lower: true } });
+      expect(lowered.code).not.toContain('@dec');
+      expect(Object.keys(lowered.helpersUsed)).toContain('decoratorStart');
+    });
+  });
+
   describe('decorator metadata strictNullChecks from tsconfig', () => {
     const code = `
       function dec(_target: any, _key: string) {}

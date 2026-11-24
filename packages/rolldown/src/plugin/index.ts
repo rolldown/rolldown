@@ -447,7 +447,9 @@ export interface FunctionPluginHooks {
    *   `id`.
    * - A `this.resolve` call does not create the module, so the values that it returns are not
    *   kept.
-   * - Other imports of the same `id` do not change `meta` or `moduleSideEffects`.
+   * - Other imports of the same `id` do not change `meta` or `moduleSideEffects`. If one import,
+   *   entry or emitted chunk resolves the `id` as external and another one does not, the build
+   *   fails, as in Rollup.
    *
    * After the module is created, its {@linkcode load} and {@linkcode transform} hooks can return
    * other `meta` and `moduleSideEffects` values, and these take precedence.

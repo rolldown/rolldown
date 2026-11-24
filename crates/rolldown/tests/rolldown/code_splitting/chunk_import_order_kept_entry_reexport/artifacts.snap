@@ -1,0 +1,56 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## early.js
+
+```js
+import { n as value } from "./lib.js";
+import "./init.js";
+// early.js
+function first() {
+	return value;
+}
+export { first };
+
+```
+
+## index.js
+
+```js
+export { t as dummy, n as value } from "./lib.js";
+
+```
+
+## init.js
+
+```js
+// init.js
+globalThis.rolldownReproValue = {};
+
+```
+
+## later.js
+
+```js
+import "./init.js";
+import { n as value, t as dummy } from "./lib.js";
+// later.js
+const result = [value, dummy()];
+export { result };
+
+```
+
+## lib.js
+
+```js
+// lib/read.js
+const value = typeof rolldownReproValue === "object" ? "ready" : "unset";
+// lib/index.js
+function dummy() {
+	return "dummy";
+}
+export { value as n, dummy as t };
+
+```

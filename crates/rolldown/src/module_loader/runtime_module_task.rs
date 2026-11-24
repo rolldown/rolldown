@@ -252,6 +252,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       let scanner = AstScanner::new(
         self.module_idx,
         scoping,
+        0,
         "rolldown_runtime",
         ModuleDefFormat::EsmMjs,
         source,

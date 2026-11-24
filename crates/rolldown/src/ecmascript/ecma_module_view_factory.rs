@@ -36,6 +36,7 @@ pub async fn create_ecma_view(
   let ParseToEcmaAstResult {
     mut ast,
     scoping,
+    facade_symbol_reserve,
     has_lazy_export,
     warnings,
     preserve_jsx,
@@ -54,6 +55,7 @@ pub async fn create_ecma_view(
     let scanner = AstScanner::new(
       ctx.module_idx,
       scoping,
+      facade_symbol_reserve,
       &repr_name,
       ctx.resolved_id.module_def_format,
       fields.source,

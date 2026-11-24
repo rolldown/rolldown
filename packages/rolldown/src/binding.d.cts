@@ -1826,10 +1826,7 @@ export declare class BindingOutputAsset {
 }
 
 export declare class BindingOutputChunk {
-  /**
-   * V8 cannot see this memory, so without this it feels no pressure to collect this object.
-   * See internal-docs/memory-reclaim/implementation.md
-   */
+  /** V8 cannot see this memory, so without this it feels no pressure to collect this object. */
   trackExternalMemory(): void
   getIsEntry(): boolean
   getIsDynamicEntry(): boolean

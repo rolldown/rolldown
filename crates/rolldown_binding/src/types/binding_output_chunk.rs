@@ -23,7 +23,6 @@ impl BindingOutputChunk {
   }
 
   /// V8 cannot see this memory, so without this it feels no pressure to collect this object.
-  /// See internal-docs/memory-reclaim/implementation.md
   #[napi(enumerable = false)]
   pub fn track_external_memory(&mut self, env: &Env) -> napi::Result<()> {
     if self.external_bytes == 0 {

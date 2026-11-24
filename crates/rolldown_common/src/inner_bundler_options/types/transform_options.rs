@@ -98,8 +98,6 @@ pub enum TransformOptionsInner {
 /// `es2024` target. `tests::env_lowers_anything` below stops compiling when oxc
 /// grows a new `EnvOptions` group, so the list gets revisited.
 const LOWERABLE_ES_FEATURES: &[ESFeature] = &[
-  // A proposal: every concrete target lowers it, `esnext` and no target keep it.
-  ESFeature::StandardDecorators,
   ESFeature::ES2026ExplicitResourceManagement,
   ESFeature::ES2022ClassStaticBlock,
   ESFeature::ES2022ClassProperties,
@@ -136,6 +134,16 @@ fn target_needs_js_transform(target: &EngineTargets) -> bool {
   LOWERABLE_ES_FEATURES.iter().any(|feature| target.has_feature(*feature))
 }
 
+/// Whether plain JS files that contain decorator syntax need the transformer.
+///
+/// Kept apart from [`LOWERABLE_ES_FEATURES`] because no engine ships standard
+/// decorators, so every concrete target would otherwise send every JS module
+/// through the transformer. Callers pair it with a cheap source scan instead.
+/// `decorator.lower` overrides the target, as it does in oxc.
+fn js_needs_decorator_lowering(lower: Option<bool>, target: &EngineTargets) -> bool {
+  lower.unwrap_or_else(|| target.has_feature(ESFeature::StandardDecorators))
+}
+
 #[derive(Debug, Clone)]
 pub struct TransformOptions {
   inner: TransformOptionsInner,
@@ -149,29 +157,38 @@ pub struct TransformOptions {
   /// table once per entry in [`LOWERABLE_ES_FEATURES`]. Set it from
   /// [`target_needs_js_transform`] if you ever build this struct by hand.
   pub should_transform_js: bool,
+  /// Whether plain JS files containing decorator or `accessor` syntax have to go
+  /// through the transformer to lower it. See [`js_needs_decorator_lowering`].
+  pub lower_decorators_in_js: bool,
 }
 
 impl TransformOptions {
   #[inline]
   pub fn new(options: OxcTransformOptions, target: EngineTargets, jsx_preset: JsxPreset) -> Self {
-    // `decorator.lower: true` lowers decorators regardless of the target.
-    let should_transform_js =
-      options.decorator.lower == Some(true) || target_needs_js_transform(&target);
+    let should_transform_js = target_needs_js_transform(&target);
+    let lower_decorators_in_js = js_needs_decorator_lowering(options.decorator.lower, &target);
     Self {
       inner: TransformOptionsInner::Normal(Arc::new(options)),
       target,
       jsx_preset,
       should_transform_js,
+      lower_decorators_in_js,
     }
   }
 
   #[inline]
   pub fn new_raw(raw: RawTransformOptions, target: EngineTargets, jsx_preset: JsxPreset) -> Self {
+    let should_transform_js = target_needs_js_transform(&target);
     // Plain JS files never read a tsconfig, so the base options decide for them.
-    let lower_decorators =
-      raw.base_options.decorator.as_ref().and_then(|decorator| decorator.lower) == Some(true);
-    let should_transform_js = lower_decorators || target_needs_js_transform(&target);
-    Self { inner: TransformOptionsInner::Raw(raw), target, jsx_preset, should_transform_js }
+    let lower = raw.base_options.decorator.as_ref().and_then(|decorator| decorator.lower);
+    let lower_decorators_in_js = js_needs_decorator_lowering(lower, &target);
+    Self {
+      inner: TransformOptionsInner::Raw(raw),
+      target,
+      jsx_preset,
+      should_transform_js,
+      lower_decorators_in_js,
+    }
   }
 
   #[inline]
@@ -237,6 +254,7 @@ impl Default for TransformOptions {
     Self {
       inner: TransformOptionsInner::Normal(Arc::new(OxcTransformOptions::default())),
       should_transform_js: target_needs_js_transform(&target),
+      lower_decorators_in_js: js_needs_decorator_lowering(None, &target),
       target,
       jsx_preset: JsxPreset::default(),
     }
@@ -284,7 +302,8 @@ mod tests {
     let EnvOptions {
       // Driven by the TypeScript transform rather than by `target`.
       module: _,
-      standard_decorators,
+      // Gated separately, see `js_needs_decorator_lowering`.
+      standard_decorators: _,
       es2026: ES2026Options { explicit_resource_management },
       es2022: ES2022Options { class_static_block, class_properties, top_level_await },
       es2021: ES2021Options { logical_assignment_operators },
@@ -308,8 +327,7 @@ mod tests {
       regexp,
     } = env;
 
-    standard_decorators
-      || explicit_resource_management
+    explicit_resource_management
       || class_static_block
       || class_properties.is_some()
       || top_level_await
@@ -375,6 +393,11 @@ mod tests {
         env_lowers_anything(EnvOptions::from(engine_targets)),
         "`should_transform_js` disagrees with oxc's env options for target `{target}`"
       );
+      assert_eq!(
+        options.lower_decorators_in_js,
+        EnvOptions::from(EngineTargets::from_target(target).unwrap()).standard_decorators,
+        "`lower_decorators_in_js` disagrees with oxc's env options for target `{target}`"
+      );
     }
   }
 
@@ -394,5 +417,19 @@ mod tests {
   #[test]
   fn no_target_skips_the_transformer() {
     assert!(!TransformOptions::default().should_transform_js);
+    assert!(!TransformOptions::default().lower_decorators_in_js);
+  }
+
+  #[test]
+  fn decorator_lower_overrides_the_target() {
+    let mut options = OxcTransformOptions::default();
+    options.decorator.lower = Some(true);
+    let esnext = EngineTargets::from_target("esnext").unwrap();
+    assert!(
+      TransformOptions::new(options.clone(), esnext, JsxPreset::default()).lower_decorators_in_js
+    );
+    options.decorator.lower = Some(false);
+    let es2022 = EngineTargets::from_target("es2022").unwrap();
+    assert!(!TransformOptions::new(options, es2022, JsxPreset::default()).lower_decorators_in_js);
   }
 }

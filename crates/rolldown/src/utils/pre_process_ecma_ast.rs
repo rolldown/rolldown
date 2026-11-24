@@ -20,7 +20,9 @@ use oxc_str::CompactStr;
 
 use rolldown_common::{ConstExportMeta, ConstantValue, ModuleId, NormalizedBundlerOptions};
 use rolldown_ecmascript::{EcmaAst, WithMutFields, semantic_builder_for_transform};
-use rolldown_ecmascript_utils::contains_script_closing_tag;
+use rolldown_ecmascript_utils::{
+  contains_decorator_syntax, contains_script_closing_tag, may_contain_decorator_syntax,
+};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -176,6 +178,12 @@ impl PreProcessEcmaAst {
     let mut preserve_jsx = false;
     if is_not_js
       || bundle_options.transform_options.should_transform_js
+      // No engine ships standard decorators, so only pay for the pass when the
+      // module has decorators or auto-accessors: a cheap text scan first, then
+      // an exact AST check for the modules the scan cannot rule out.
+      || (bundle_options.transform_options.lower_decorators_in_js
+        && may_contain_decorator_syntax(ast.source(), &ast.program().comments)
+        && contains_decorator_syntax(ast.program()))
       // Run transformer on JS files containing `</script` to handle tagged template literals.
       || contains_script_closing_tag(ast.source().as_bytes())
     {

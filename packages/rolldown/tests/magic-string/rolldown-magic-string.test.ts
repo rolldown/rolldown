@@ -1,4 +1,5 @@
 import assert from 'node:assert';
+import { decodedMappings, TraceMap } from '@jridgewell/trace-mapping';
 import { RolldownMagicString as MagicString } from 'rolldown';
 import { describe, it } from 'vitest';
 
@@ -257,6 +258,21 @@ describe('storeName', () => {
         [7, 0, 0, 7],
       ],
     ]);
+  });
+});
+
+describe('sourcemap line count', () => {
+  it.each([
+    { source: 'x', expected: 'AAAA;;' },
+    { source: '', expected: ';;' },
+  ])('keeps trailing unmapped lines for source $source', ({ source, expected }) => {
+    const s = new MagicString(source).append('\n\n');
+    const options = { file: 'out.js', source: 'in.js' };
+    const encodedMap = s.generateMap(options);
+    assert.strictEqual(encodedMap.mappings, expected);
+    const decoded = decodedMappings(new TraceMap(encodedMap.toString()));
+    assert.strictEqual(decoded.length, 3);
+    assert.deepStrictEqual(decoded, s.generateDecodedMap(options).mappings);
   });
 });
 

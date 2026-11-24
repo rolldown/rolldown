@@ -1,0 +1,11 @@
+{
+  "config": {
+    "minify": false,
+    "treeshake": {
+      "manualPureFunctions": ["listed"]
+    },
+    "codeSplitting": {
+      "groups": [{ "name": "annotated", "test": "annotated\\.js$" }]
+    }
+  }
+}

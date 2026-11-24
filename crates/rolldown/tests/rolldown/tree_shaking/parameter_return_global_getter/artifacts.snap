@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// lib.js
+function identity(value) {
+	return value;
+}
+
+// main.js
+identity(window);
+globalThis.calls.push("ready");
+
+```

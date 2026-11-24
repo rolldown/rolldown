@@ -68,6 +68,9 @@ bitflags::bitflags! {
     /// function instead of its declaration. The linker checks initialization, the result, and
     /// the rest of the statement before removing these calls. See `cross_module_optimization.rs`.
     const ExportedSeparately = 1 << 9;
+    /// Calling this function only binds and returns a parameter. Its result can expose an
+    /// argument to later code, for example a callback containing a dynamic import.
+    const ReturnsParameter = 1 << 10;
   }
 }
 

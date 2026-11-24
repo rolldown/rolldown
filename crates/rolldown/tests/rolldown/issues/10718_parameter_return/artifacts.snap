@@ -3,29 +3,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## base.js
-
-```js
-// shared.js
-const shared = 1;
-export { shared };
-
-```
-
 ## main.js
 
 ```js
+// main.js
+console.log("ready");
 
 ```
 
-## middle.js
+# Variant: [minify: true]
+
+## Assets
+
+### main.js
 
 ```js
-
-```
-
-## top.js
-
-```js
-
+console.log(`ready`);
 ```

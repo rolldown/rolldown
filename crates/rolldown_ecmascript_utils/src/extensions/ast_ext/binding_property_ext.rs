@@ -48,7 +48,6 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
         self.span,
         self.key,
         value.into_assignment_target_maybe_default(builder),
-        self.computed,
         builder,
       )
       .into_in(builder.allocator()),

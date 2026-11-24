@@ -31,6 +31,11 @@ impl Bundler {
     self.bundle_factory.module_infos()
   }
 
+  /// See [`crate::bundle::bundle_factory::BundleFactory::module_side_effects_overrides`].
+  pub fn module_side_effects_overrides(&self) -> rolldown_common::SharedModuleSideEffectsOverrides {
+    self.bundle_factory.module_side_effects_overrides()
+  }
+
   pub fn watch_files(&self) -> &Arc<FxDashSet<ArcStr>> {
     static EMPTY_SET: LazyLock<Arc<FxDashSet<ArcStr>>> =
       LazyLock::new(|| Arc::new(FxDashSet::default()));

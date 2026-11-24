@@ -1,15 +1,11 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema-jsonc.json",
+  "ignoreBinaries": ["rustup"], // build-binding.ts resolves the toolchain rustc via `rustup which rustc`
   "ignoreWorkspaces": ["examples/**"], // no rolldown plugin yet
   "workspaces": {
     ".": {
       "project": [],
-      "ignoreDependencies": [
-        "@oxc-project/runtime",
-        "cjs-module-lexer",
-        "playwright-chromium",
-        "remove-unused-vars",
-      ],
+      "ignoreDependencies": ["@oxc-project/runtime", "cjs-module-lexer", "playwright-chromium"],
     },
     "crates/rolldown/tests/rolldown/topics/npm_packages": {
       "entry": ["util_deprecate/main.js"],
@@ -36,9 +32,6 @@
       "entry": ["vue-entry.js"],
       "ignoreDependencies": ["react", "react-dom"],
     },
-    "packages/browser": {
-      "ignoreDependencies": ["@emnapi/core", "@emnapi/runtime", "@napi-rs/wasm-runtime"],
-    },
     "packages/rolldown": {
       "entry": [
         "src/browser.js",
@@ -49,7 +42,16 @@
         "src/api/experimental.ts",
       ],
       "ignore": ["src/binding.cjs", "src/rolldown-binding.wasi.cjs", "src/browser.js"],
-      "ignoreDependencies": ["pathe"],
+      "ignoreDependencies": [
+        // Linked, never imported: @napi-rs/cli links emnapi's C archives into the wasm build.
+        "emnapi",
+        "pathe",
+      ],
+    },
+    "packages/browser": {
+      // bundled into dist, so never imported by name; kept declared as the emnapi
+      // ABI pin (see the pnpm-workspace.yaml catalog comment).
+      "ignoreDependencies": ["@emnapi/core", "@emnapi/runtime", "@napi-rs/wasm-runtime"],
     },
     "packages/rolldown/tests": {
       "entry": ["*/**"],
@@ -107,7 +109,7 @@
       "ignore": ["tests/fixtures/**"], // mounted into the container and built there, not here
     },
     "scripts": {
-      "entry": ["misc/**", "lint/index.ts"],
+      "entry": ["misc/**", "wasi/**", "lint/index.ts"],
     },
     "packages/test-dev-server/tests/fixtures/*": {
       "entry": ["dev.config.mjs", "src/*.js"], // no @rolldown/test-dev-server plugin

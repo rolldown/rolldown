@@ -458,7 +458,179 @@ test(
     expect(seenByOwner.some((id) => id.includes('?rolldown-lazy=1'))).toBe(false);
     expect(seenByObserver.some((id) => id.includes('?rolldown-lazy=1'))).toBe(false);
     expect(seenByOwner).toContain('virtual:lazy-me');
-    expect(seenByOwner).toContain(virtualId);
+    // The fetched proxy resolves the real module with the call that the proxy replaced.
+    expect(seenByOwner).not.toContain(virtualId);
+  },
+);
+
+// The fetched proxy imports the real module by its resolved id. The lazy compilation plugin
+// resolves that import with the `resolveId` call that the proxy replaced, so this call creates the
+// real module with its `meta` and `moduleSideEffects`, as without lazy compilation.
+test.for([
+  { name: 'in the build of the first resolution', fullBuildBeforeFetch: false },
+  { name: 'after a full build', fullBuildBeforeFetch: true },
+])(
+  'the real module of a fetched lazy proxy starts with the options of the replaced call ($name)',
+  { timeout: TEST_TIMEOUT },
+  async ({ fullBuildBeforeFetch }, { onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-options-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const main = path.join(dir, 'main.js');
+    const lazy = path.join(dir, 'lazy.js');
+    fs.writeFileSync(main, `globalThis.load = () => import('./lazy.js');\n`);
+    fs.writeFileSync(lazy, `export const value = 'LAZY_VALUE';\n`);
+
+    let calls = 0;
+    const seen: { meta: unknown; moduleSideEffects: unknown }[] = [];
+    const plugin: Plugin = {
+      name: 'lazy-options',
+      resolveId(source, importer) {
+        if (source === './lazy.js' && importer === main) {
+          calls++;
+          return { id: lazy, meta: { call: calls }, moduleSideEffects: false };
+        }
+      },
+      transform(_code, id) {
+        if (id === lazy) {
+          const info = this.getModuleInfo(id)!;
+          seen.push({ meta: { ...info.meta }, moduleSideEffects: info.moduleSideEffects });
+        }
+      },
+    };
+
+    const engine = await dev(
+      {
+        input: main,
+        plugins: [plugin],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    if (fullBuildBeforeFetch) {
+      engine.triggerFullBuild();
+      await engine.ensureLatestBuildOutput();
+    }
+    await engine.registerClient('c1');
+    const callsBeforeFetch = calls;
+    const chunk = await engine.compileEntry(`${lazy}?rolldown-lazy=1`, 'c1');
+
+    expect(chunk.code).toContain('LAZY_VALUE');
+    expect(seen[0]).toEqual({ meta: { call: callsBeforeFetch + 1 }, moduleSideEffects: false });
+  },
+);
+
+// Each build stores the call again, so the fetch runs the call of the latest build.
+test(
+  'the real module of a fetched lazy proxy starts with the options of the latest replaced call',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-latest-call-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const main = path.join(dir, 'main.js');
+    const lazy = path.join(dir, 'lazy.js');
+    fs.writeFileSync(main, `globalThis.load = () => import('./lazy.js');\n`);
+    fs.writeFileSync(lazy, `export const value = 'LAZY_VALUE';\n`);
+
+    const seen: unknown[] = [];
+    const plugin: Plugin = {
+      name: 'lazy-alias',
+      resolveId(source, importer) {
+        if (source === './lazy-alias.js' && importer === main) {
+          return { id: lazy, meta: { alias: true } };
+        }
+      },
+      transform(_code, id) {
+        if (id === lazy) seen.push({ ...this.getModuleInfo(id)!.meta });
+      },
+    };
+
+    const engine = await dev(
+      {
+        input: main,
+        plugins: [plugin],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    // The same proxy, now from another specifier.
+    fs.writeFileSync(main, `globalThis.load = () => import('./lazy-alias.js');\n`);
+    engine.triggerFullBuild();
+    await engine.ensureLatestBuildOutput();
+    await engine.registerClient('c1');
+    const chunk = await engine.compileEntry(`${lazy}?rolldown-lazy=1`, 'c1');
+
+    expect(chunk.code).toContain('LAZY_VALUE');
+    expect(seen).toEqual([{ alias: true }]);
+  },
+);
+
+// The plugin resolves only `virtual:lazy-me`, not the `\0virtual:lazy-me` id that the fetched
+// proxy imports.
+test(
+  'a fetched lazy proxy loads a virtual module whose plugin resolves only the bare id',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-virtual-bare-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const main = path.join(dir, 'main.js');
+    fs.writeFileSync(main, `globalThis.load = () => import('virtual:lazy-me');\n`);
+
+    const virtualId = '\0virtual:lazy-me';
+    const plugin: Plugin = {
+      name: 'virtual-owner',
+      resolveId(source) {
+        if (source === 'virtual:lazy-me') return virtualId;
+      },
+      load(id) {
+        if (id === virtualId) return `export const value = 'VIRTUAL_VALUE';\n`;
+      },
+    };
+
+    const engine = await dev(
+      {
+        input: main,
+        plugins: [plugin],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.registerClient('c1');
+    const chunk = await engine.compileEntry(`${virtualId}?rolldown-lazy=1`, 'c1');
+
+    expect(chunk.code).toContain('VIRTUAL_VALUE');
   },
 );
 

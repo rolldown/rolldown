@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// lib.js
+function identity(value) {
+	return value;
+}
+function readProperty({ state }) {
+	return state;
+}
+function throughThis(callback) {
+	return this === void 0 && callback();
+}
+function throughArguments(callback) {
+	return arguments[0]();
+}
+
+// computed.js
+const widget = { label: [{ [identity({ toString() {
+	globalThis.calls.push("computed key");
+	return "key";
+} })]: 0 }] };
+
+// main.js
+const value = {
+	get state() {
+		globalThis.calls.push("getter");
+		return 1;
+	},
+	valueOf() {
+		globalThis.calls.push("valueOf");
+		return 2;
+	},
+	toString() {
+		globalThis.calls.push("toString");
+		return "value";
+	}
+};
+readProperty(value);
++identity(value);
+`${identity(value)}`;
+identity(value.state);
+String(identity(value));
+throughThis(() => globalThis.calls.push("this"));
+throughArguments(() => globalThis.calls.push("arguments"));
+function effect() {
+	globalThis.calls.push("argument evaluation");
+	return 1;
+}
+identity(effect());
+
+```

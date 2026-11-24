@@ -3,9 +3,9 @@ use std::sync::Arc;
 use oxc::span::Span;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, FlatOptions, ImportRecordIdx,
-  ModuleSideEffectsVerdict, RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions,
-  StmtEvalFlags, module_side_effects_decision,
+  EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, FlatOptions, ImportRecordIdx, ModuleId,
+  ModuleSideEffectsOverrides, RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions,
+  SideEffectsWithoutHook, StmtEvalFlags,
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_error::BuildResult;
@@ -114,9 +114,14 @@ pub async fn create_ecma_view(
 
   ctx.warnings.extend(scan_warnings);
 
-  let side_effects =
-    normalize_side_effects(ctx.options, ctx.resolved_id, Some(&stmt_infos), hook_side_effects)
-      .await?;
+  let side_effects = normalize_side_effects(
+    ctx.options,
+    &ctx.plugin_driver.module_side_effects_overrides,
+    ctx.resolved_id,
+    Some(&stmt_infos),
+    hook_side_effects,
+  )
+  .await?;
 
   // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
   let ecma_view = EcmaView {
@@ -136,8 +141,7 @@ pub async fn create_ecma_view(
     dynamic_importers_idx: FxIndexSet::default(),
     imported_ids: FxIndexSet::default(),
     dynamically_imported_ids: FxIndexSet::default(),
-    side_effects: side_effects.determined,
-    reported_side_effects: side_effects.reported,
+    side_effects,
     meta: {
       let mut meta = ecma_view_meta;
       meta.set(EcmaViewMeta::HasLazyExport, has_lazy_export);
@@ -173,36 +177,117 @@ pub async fn create_ecma_view(
   Ok(CreateEcmaViewReturn { ecma_view, ecma_related, raw_import_records, tla_keyword_span })
 }
 
-/// Inclusion verdict plus the `moduleSideEffects` value plugins see.
-///
-/// Both come from [`rolldown_common::module_side_effects_decision`]. Statement analysis is the
-/// only step that stays here, because reporting an analyzed module is always `true`.
-pub struct NormalizedModuleSideEffects {
-  pub determined: DeterminedSideEffects,
-  pub reported: HookSideEffects,
+/// What `treeshake.moduleSideEffects` says about one module.
+#[derive(Debug, Clone, Copy)]
+pub enum OptionSideEffects {
+  /// `treeshake: false`
+  TreeshakeDisabled,
+  Decided(bool),
+  Undecided,
 }
 
-/// Hook, option, package.json, external, and `treeshake: false` decisions come from
-/// [`rolldown_common::module_side_effects_decision`]. Statement analysis is the only step
-/// that stays here, because reporting an analyzed module is always `true`.
+/// A function option runs only when no earlier call for the module left a result in
+/// `overrides`, because callers ask only when they need the value. See
+/// internal-docs/cache/implementation.md.
+pub async fn read_option_side_effects(
+  options: &SharedNormalizedBundlerOptions,
+  overrides: &ModuleSideEffectsOverrides,
+  module_id: &ModuleId,
+  is_external: bool,
+) -> BuildResult<OptionSideEffects> {
+  let Some(opt) = options.treeshake.as_ref() else {
+    return Ok(OptionSideEffects::TreeshakeDisabled);
+  };
+  let raw_id = module_id.raw_id();
+  let value = if opt.module_side_effects.is_fn() {
+    overrides.option_fn_result_or_call(options, module_id.as_str(), raw_id, is_external).await?
+  } else {
+    opt.module_side_effects.native_resolve(raw_id, is_external)
+  };
+  Ok(value.map_or(OptionSideEffects::Undecided, OptionSideEffects::Decided))
+}
+
+/// The side effects that tree shaking uses, with the same order as
+/// [`rolldown_common::module_side_effects_decision`]:
+/// 1. Hook side effects. With `treeshake: false`, a hook `true` counts as no value.
+/// 2. `treeshake.moduleSideEffects`, read only when no hook decided
+/// 3. For an external module: none for a Node.js built-in, else no tree shaking
+/// 4. Package.json side effects
+/// 5. Analyzed side effects
 pub async fn normalize_side_effects(
   options: &SharedNormalizedBundlerOptions,
+  overrides: &ModuleSideEffectsOverrides,
   resolved_id: &ResolvedId,
   stmt_infos: Option<&rolldown_common::StmtInfos>,
-  hook_side_effects: Option<HookSideEffects>,
-) -> BuildResult<NormalizedModuleSideEffects> {
-  let (determined, reported) =
-    match module_side_effects_decision(&options.treeshake, resolved_id, hook_side_effects).await? {
-      ModuleSideEffectsVerdict::Final { determined, reported } => (determined, reported),
-      ModuleSideEffectsVerdict::Analyze => {
-        (lazy_check_side_effects(stmt_infos), HookSideEffects::True)
-      }
-    };
-  Ok(NormalizedModuleSideEffects { determined, reported })
+  mut hook_side_effects: Option<HookSideEffects>,
+) -> BuildResult<DeterminedSideEffects> {
+  if options.treeshake.is_none() && hook_side_effects == Some(HookSideEffects::True) {
+    hook_side_effects = None;
+  }
+  let is_external = resolved_id.external.is_external();
+  let side_effects = match hook_side_effects {
+    Some(HookSideEffects::False) => DeterminedSideEffects::UserDefined(false),
+    Some(HookSideEffects::NoTreeshake) => DeterminedSideEffects::NoTreeshake,
+    // The hook asserted side effects, so it takes priority over `package.json#sideEffects`.
+    Some(HookSideEffects::True) if is_external => external_side_effects(resolved_id),
+    Some(HookSideEffects::True) => lazy_check_side_effects(stmt_infos),
+    None => match read_option_side_effects(options, overrides, &resolved_id.id, is_external).await?
+    {
+      OptionSideEffects::TreeshakeDisabled => DeterminedSideEffects::NoTreeshake,
+      OptionSideEffects::Decided(value) => DeterminedSideEffects::UserDefined(value),
+      OptionSideEffects::Undecided if is_external => external_side_effects(resolved_id),
+      OptionSideEffects::Undecided => match resolved_id.package_json_side_effects() {
+        Some(value) => DeterminedSideEffects::UserDefined(value),
+        None => lazy_check_side_effects(stmt_infos),
+      },
+    },
+  };
+  Ok(side_effects)
 }
 
-/// Statement-level side effects. `package.json` and externals are decided in
-/// [`rolldown_common::module_side_effects_decision`] before this runs.
+pub fn external_side_effects(resolved_id: &ResolvedId) -> DeterminedSideEffects {
+  if resolved_id.is_external_without_side_effects {
+    DeterminedSideEffects::UserDefined(false)
+  } else {
+    DeterminedSideEffects::NoTreeshake
+  }
+}
+
+/// The value `getModuleInfo().moduleSideEffects` shows when no hook decided:
+/// `treeshake.moduleSideEffects`, else, for an external module, `false` for a Node.js built-in
+/// and `true` otherwise, else `package.json#sideEffects`, else `true`. `true` means "analyze the
+/// statements", so it is not the result of that analysis. It is also `true` with
+/// `treeshake: false`. These are the `reported` values of
+/// [`rolldown_common::module_side_effects_decision`]. A hook value is shown as
+/// `HookSideEffects::declared` gives it. A function option is not called here: see
+/// `SideEffectsWithoutHook::OptionFn`.
+pub fn declared_side_effects_without_hook(
+  options: &SharedNormalizedBundlerOptions,
+  resolved_id: &ResolvedId,
+) -> SideEffectsWithoutHook {
+  let is_external = resolved_id.external.is_external();
+  let fallback = || {
+    if is_external {
+      !resolved_id.is_external_without_side_effects
+    } else {
+      resolved_id.package_json_side_effects().unwrap_or(true)
+    }
+  };
+  match options.treeshake.as_ref() {
+    None => SideEffectsWithoutHook::Known(true),
+    Some(opt) if opt.module_side_effects.is_fn() => {
+      SideEffectsWithoutHook::OptionFn { fallback: fallback(), external: is_external }
+    }
+    Some(opt) => SideEffectsWithoutHook::Known(
+      opt
+        .module_side_effects
+        .native_resolve(resolved_id.id.raw_id(), is_external)
+        .unwrap_or_else(fallback),
+    ),
+  }
+}
+
+/// Statement-level side effects. `package.json` and externals are decided before this runs.
 pub fn lazy_check_side_effects(
   stmt_infos: Option<&rolldown_common::StmtInfos>,
 ) -> DeterminedSideEffects {

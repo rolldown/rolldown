@@ -1,0 +1,5 @@
+{
+  "name": "local-external",
+  "type": "module",
+  "exports": "./external.js"
+}

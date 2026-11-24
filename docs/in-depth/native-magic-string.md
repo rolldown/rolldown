@@ -105,6 +105,8 @@ The following MagicString methods are currently available in the native implemen
   - `options.hires` - High-resolution mode: `true`, `false`, or `"boundary"`. The default is the `hires` option of the instance, or `false` when that option is not set
 - `generateDecodedMap(options?)` - Generates a source map object with decoded `mappings`. Its `mappings` is an array with one array of segments for each line. It takes the same options as `generateMap`
 
+The maps from `generateMap()` and `generateDecodedMap()` include trailing output lines with no mapping segments.
+
 The constructor also accepts a `hires` option, which `magic-string` does not have: `new RolldownMagicString(code, { hires: false })`. It sets the resolution of the source maps that are generated from the instance.
 
 When a `transform` or `renderChunk` hook returns the native MagicString without a `map`, Rolldown generates the map for that step. It uses the `hires` option of the MagicString, or `"boundary"` when the option is not set. With `"boundary"`, the output source map keeps column positions and names after that map is composed with the others in the chain. With `hires: false`, the map for that step is smaller and faster to generate, because it has fewer segments. With `hires: true`, the map for that step is larger and slower to generate. The output source map usually has the same positions as with `"boundary"`, because the maps that Rolldown generates when it prints modules and chunks have segments at the start of tokens, and `"boundary"` has a segment at the start of each word and at each character that is not a letter, a digit or `_`, for example `"`, `[` or `!`. In `renderChunk`, `hires: true` can also make the output source map larger.

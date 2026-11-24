@@ -1,0 +1,21 @@
+{
+  "extendedTests": {
+    "preserveEntrySignaturesAllowExtension": false
+  },
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "./index.ts"
+      },
+      {
+        "name": "mod",
+        "import": "./mod.ts"
+      },
+      {
+        "name": "observer",
+        "import": "./observer.ts"
+      }
+    ]
+  }
+}

@@ -1042,12 +1042,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         let symbol_id = binding_id.symbol_id();
         self.add_local_export(binding_id.name.as_str(), symbol_id, binding_id.span);
         let empty = fn_decl.is_side_effect_free();
-        if empty || fn_decl.pure {
-          self.mark_side_effect_free_function(
-            symbol_id,
-            fn_decl.pure && !empty,
-            SymbolRefFlags::empty(),
-          );
+        let returns_parameter = !fn_decl.pure && returns_parameter(fn_decl);
+        if empty || fn_decl.pure || returns_parameter {
+          let mut flags = SymbolRefFlags::empty();
+          flags.set(SymbolRefFlags::ReturnsParameter, returns_parameter);
+          self.mark_side_effect_free_function(symbol_id, fn_decl.pure && !empty, flags);
         }
       }
       ast::Declaration::ClassDeclaration(cls_decl) => {
@@ -1524,4 +1523,21 @@ pub enum IdentifierReferenceKind {
 /// body is empty or because it carries `@__NO_SIDE_EFFECTS__`.
 fn side_effect_free_function_kind(empty: bool, pure: bool) -> Option<bool> {
   (empty || pure).then_some(pure && !empty)
+}
+
+fn returns_parameter(func: &ast::Function) -> bool {
+  if func.r#async || func.generator {
+    return false;
+  }
+  let Some(body) = &func.body else { return false };
+  let [ast::Statement::ReturnStatement(ret)] = body.statements.as_slice() else { return false };
+  let Some(Expression::Identifier(ident)) =
+    ret.argument.as_ref().map(Expression::get_inner_expression)
+  else {
+    return false;
+  };
+  func.params.is_side_effect_free()
+    && func.params.items.iter().any(|param| {
+      matches!(&param.pattern, BindingPattern::BindingIdentifier(binding) if binding.name == ident.name)
+    })
 }

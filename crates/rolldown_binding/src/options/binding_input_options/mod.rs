@@ -28,7 +28,6 @@ use super::plugin::BindingPluginOrBuiltinPlugin;
 use crate::generated::binding_checks_options;
 use crate::types::binding_plugin_timings::BindingPluginTimingsMeasurement;
 use crate::types::binding_string_or_regex::BindingStringOrRegex;
-use crate::types::defer_sync_scan_data::BindingDeferSyncScanData;
 use crate::types::preserve_entry_signatures::BindingPreserveEntrySignatures;
 use crate::types::{
   binding_log::BindingLog, binding_log_level::BindingLogLevel,
@@ -100,9 +99,6 @@ pub struct BindingInputOptions<'env> {
   pub watch: Option<BindingWatchOption>,
   pub keep_names: Option<bool>,
   pub checks: Option<binding_checks_options::BindingChecksOptions>,
-  #[debug(skip)]
-  #[napi(ts_type = "undefined | (() => BindingDeferSyncScanData[])")]
-  pub defer_sync_scan_data: Option<UntrackedJsCallback<(), Vec<BindingDeferSyncScanData>>>,
   /// Asked for while the build is closing, so what it returns includes `closeBundle`.
   #[debug(skip)]
   #[napi(ts_type = "undefined | (() => BindingPluginTimingsMeasurement)")]
@@ -115,6 +111,9 @@ pub struct BindingInputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "(moduleIds: string[] | null) => void")]
   pub reset_js_module_options: Option<UntrackedJsCallback<FnArgs<(Option<Vec<String>>,)>, ()>>,
+  #[debug(skip)]
+  #[napi(ts_type = "(moduleId: string, moduleOptionsReceipt: number | null) => void")]
+  pub create_js_module_options: Option<UntrackedJsCallback<FnArgs<(String, Option<u32>)>, ()>>,
   pub preserve_entry_signatures: Option<BindingPreserveEntrySignatures>,
   pub optimization: Option<BindingOptimization>,
   pub context: Option<String>,

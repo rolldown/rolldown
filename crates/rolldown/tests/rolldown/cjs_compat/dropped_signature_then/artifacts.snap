@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## e1.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// leaf.mjs
+var leaf_exports = /* @__PURE__ */ __exportAll({ then: () => then });
+function then() {
+	throw new Error("then called");
+}
+var init_leaf = __esmMin((() => {
+	console.log("leaf");
+}));
+// e1.cjs
+var require_e1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = (init_leaf(), __toCommonJS(leaf_exports));
+}));
+export default require_e1();
+export { __commonJSMin as n, require_e1 as t };
+
+```
+
+## e2.js
+
+```js
+import { n as __commonJSMin, t as require_e1 } from "./e1.js";
+// e2.cjs
+var require_e2 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = require_e1();
+}));
+export default require_e2();
+export {};
+
+```

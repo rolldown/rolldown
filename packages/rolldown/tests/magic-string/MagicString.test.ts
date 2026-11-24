@@ -280,7 +280,7 @@ describe('MagicString', () => {
       assert.equal(originLoc.column, 0);
     });
 
-    it.skip('should generate a correct sourcemap including correct lines', () => {
+    it('should generate a correct sourcemap including correct lines', () => {
       const s = new MagicString('var answer = 42;\nconsole.log("the answer is %s", answer);');
       s.append('\n\n\n\n}).call(global);');
       assert.equal(
@@ -424,7 +424,7 @@ describe('MagicString', () => {
       });
     });
 
-    it.skip('generates a map with trimmed content (#53)', () => {
+    it('generates a map with trimmed content (#53)', () => {
       const s1 = new MagicString('abcdefghijkl ').trim();
       const map1 = s1.generateMap({
         file: 'output',
@@ -519,7 +519,7 @@ describe('MagicString', () => {
       assert.equal(loc.column, 33);
     });
 
-    it.skip('generates segments per word boundary with hires "boundary" in the next line', () => {
+    it('generates segments per word boundary with hires "boundary" in the next line', () => {
       const s = new MagicString('// foo\nconsole.log("bar")');
 
       // rename bar to hello
@@ -546,7 +546,7 @@ describe('MagicString', () => {
       assert.equal(loc.column, 12);
     });
 
-    it.skip('generates a correct source map with update using a content containing a new line', () => {
+    it('generates a correct source map with update using a content containing a new line', () => {
       const s = new MagicString('foobar');
       s.update(3, 4, '\nbb');
       assert.equal(s.toString(), 'foo\nbbar');
@@ -568,7 +568,7 @@ describe('MagicString', () => {
       assert.equal(loc4.column, 4);
     });
 
-    it.skip('generates a correct source map with update using content ending with a new line', () => {
+    it('generates a correct source map with update using content ending with a new line', () => {
       const s = new MagicString('foobar');
       s.update(2, 3, 'od\n');
       s.update(4, 5, 'a\nnd\n');
@@ -1958,7 +1958,7 @@ describe('MagicString', () => {
       );
     });
 
-    it.skip('rejects with non-global regexp', () => {
+    it('rejects with non-global regexp', () => {
       assert.throws(() => new MagicString('123').replaceAll(/./, ''), {
         name: 'TypeError',
         message: 'MagicString.prototype.replaceAll called with a non-global RegExp argument',

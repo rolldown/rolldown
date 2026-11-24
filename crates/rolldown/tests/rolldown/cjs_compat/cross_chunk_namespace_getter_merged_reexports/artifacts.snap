@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a-DcVW1vQT.cjs
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// v.js
+var import_foo = (/* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.x = 1;
+	exports.y = 2;
+})))();
+globalThis.y = import_foo.y;
+Object.defineProperty(exports, "import_foo", {
+	enumerable: true,
+	get: function() {
+		return import_foo;
+	}
+});
+
+```
+
+## b.cjs
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+require("./a-DcVW1vQT.cjs");
+Object.defineProperty(exports, "x", {
+	enumerable: true,
+	get: function() {
+		return import_foo.x;
+	}
+});
+
+```
+
+## e.cjs
+
+```js
+require("./a-DcVW1vQT.cjs");
+
+```

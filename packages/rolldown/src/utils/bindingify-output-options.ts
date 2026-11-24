@@ -390,7 +390,7 @@ function bindingifyCodeSplitting(
     const { groups, experimentalInlineCommonChunks, ...restOptions } = effectiveChunksOption;
     let chunkingContext: ChunkingContextImpl | undefined;
     const getChunkingContext = (bindingContext: BindingChunkingContext) =>
-      (chunkingContext ??= new ChunkingContextImpl(bindingContext, pluginContextData));
+      (chunkingContext ??= new ChunkingContextImpl(bindingContext, pluginContextData, onLog));
     advancedChunksResult = {
       ...restOptions,
       experimentalInlineCommonChunks:
@@ -398,6 +398,7 @@ function bindingifyCodeSplitting(
           ? undefined
           : {
               maxSize: experimentalInlineCommonChunks.maxSize,
+              maxDuplicatedSize: experimentalInlineCommonChunks.maxDuplicatedSize,
               exclude:
                 experimentalInlineCommonChunks.exclude == null
                   ? undefined

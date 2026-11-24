@@ -23,6 +23,8 @@ pub struct BindingHookResolveIdOutput {
   /// `experimental.importAttributes`.
   #[napi(ts_type = "Record<string, string>")]
   pub attributes: Option<BindingImportAttributes>,
+  /// @internal See `ResolvedId::module_options_receipt`.
+  pub module_options_receipt: Option<u32>,
 }
 
 impl TryFrom<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutput {
@@ -36,6 +38,7 @@ impl TryFrom<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutpu
       side_effects: value.module_side_effects.map(TryInto::try_into).transpose()?,
       package_json_path: value.package_json_path,
       attributes: value.attributes.map(from_binding_import_attributes),
+      module_options_receipt: value.module_options_receipt,
     })
   }
 }

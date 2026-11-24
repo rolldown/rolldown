@@ -334,10 +334,6 @@
 ### The `output.treeshake.preset` is not supported 
  - rollup@function@unknown-treeshake-preset: throws for unknown presets for the treeshake option
 
-### The `output.treeshake.moduleSideEffect` is not compatible with rollup
- - rollup@function@module-side-effects@resolve-id-external: does not include modules without used exports if moduleSideEffect is false
- - rollup@function@module-side-effects@resolve-id: does not include modules without used exports if moduleSideEffect is false
-
 ### The `ModuleInfo` is not compatible with rollup
  - rollup@function@plugin-module-information-no-cache: handles accessing module information via plugins with cache disabled
  - rollup@function@plugin-module-information: provides module information on the plugin context
@@ -410,6 +406,9 @@
  - rollup@chunking form@synthetic-named-exports@multi-level: handles multiple levels of synthetic named exports@generates cjs
  - rollup@chunking form@synthetic-named-exports@multi-level: handles multiple levels of synthetic named exports@generates es
  - rollup@function@synthetic-named-exports@preserve-modules-static-namespace: includes synthetic named exports in static namespace imports in preserveModules mode
+ - rollup@function@circular-namespace-merged-synthetic-from-other-chunk: creates namespace objects early if they merge a synthetic namespace from another chunk
+ - rollup@function@circular-namespace-merged-synthetic-not-hoisted: does not create namespace objects early if they merge a synthetic namespace from a module that has not run yet
+ - rollup@function@circular-namespace-merged-synthetic-resolved-to-same-chunk: does not create namespace objects early if a synthetic namespace from another chunk resolves to a variable of this chunk
 
 ### The `output.externalImportAttributes` and `output.externalImportAssertions` options are not supported
  - rollup@form@deprecated@removes-dynamic-assertions: keep import assertions for dynamic imports

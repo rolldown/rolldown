@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// lib.js
+function identity(value) {
+	return value;
+}
+function setIdentity(replacement) {
+	identity = replacement;
+}
+
+// update.js
+setIdentity((value) => {
+	globalThis.calls.push("live binding");
+	return value;
+});
+
+// main.js
+identity(2);
+
+```

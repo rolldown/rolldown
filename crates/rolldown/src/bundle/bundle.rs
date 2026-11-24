@@ -459,6 +459,8 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       Err(errors) => return Err(self.handle_render_error(errors).await),
     };
 
+    // Sourcemap names with hashes are final after rendering.
+    self.file_emitter.reserve_finalized_sourcemap_filenames(&output.assets);
     // Add additional files from build plugins.
     self.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
     self.file_emitter.check_asset_filename_conflicts(&output.assets)?;

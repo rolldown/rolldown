@@ -649,10 +649,11 @@ pub struct ChunkGraph {
   The optimizer also keeps the facade if an entry chunk absorbs the group.
 
   An explicit chunk filename takes priority over a generated asset filename.
-  After the generate stage assigns chunk filenames, the file emitter reserves those paths.
-  The emitter gives a conflicting asset a numeric suffix if no plugin set or read its filename.
-  Assets emitted later also use the reserved paths to find a free name.
-  The build reports a conflict before writing if an asset or a prebuilt chunk shares a reserved path.
+  The file emitter reserves the explicit chunk paths, their sourcemaps, and their parent directories.
+  The emitter gives an asset a numeric suffix if it claims a reserved path and its filename can change.
+  During conflict resolution, the emitter keeps an asset filename that a plugin set or read.
+  The build reports a remaining collision before writing if it involves an asset or a prebuilt chunk.
+  A collision can occur when two outputs use the same filename or when one output needs a file as a directory.
 
   `set_emitted_chunk_preliminary_filenames` and `set_emitted_chunk_filenames` use `emitted_chunk_reference_ids_by_file`.
   The preliminary and final filenames from `getFileName()` identify the same output chunk, even when the filename pattern contains `[hash]`.

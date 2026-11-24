@@ -4,8 +4,9 @@ use arcstr::ArcStr;
 use super::BuildEvent;
 
 #[derive(Debug)]
-pub struct FilenameConflict {
-  pub filename: ArcStr,
+pub enum FilenameConflict {
+  File(ArcStr),
+  FileAndDirectory(ArcStr),
 }
 
 impl BuildEvent for FilenameConflict {
@@ -14,9 +15,15 @@ impl BuildEvent for FilenameConflict {
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
-    format!(
-      "The emitted file {} overwrites a previously emitted file of the same name.",
-      self.filename
-    )
+    match self {
+      Self::File(filename) => {
+        format!(
+          "The emitted file {filename} overwrites a previously emitted file of the same name."
+        )
+      }
+      Self::FileAndDirectory(path) => {
+        format!("The emitted files use {path} as a file and as a directory.")
+      }
+    }
   }
 }

@@ -1,7 +1,7 @@
 use crate::{
   AddEntryModuleMsg, FilenameTemplate, ModuleId, ModuleLoaderMsg, Modules,
-  NormalizedBundlerOptions, Output, OutputAsset, OutputChunk, PreserveEntrySignatures, StrOrBytes,
-  is_path_fragment,
+  NormalizedBundlerOptions, Output, OutputAsset, OutputChunk, PreserveEntrySignatures,
+  SourceMapType, StrOrBytes, is_path_fragment,
 };
 use anyhow::Context;
 use arcstr::ArcStr;
@@ -352,7 +352,7 @@ impl FileEmitter {
       file.file_name = Some(if self.protected_filenames.is_empty() {
         make_unique_name(&filename, &self.names)
       } else {
-        let normalized = normalize_filename(&filename);
+        let normalized = normalize_filename(&filename).into();
         let unique = make_unique_name(&normalized, &self.names);
         if unique == normalized {
           filename
@@ -408,35 +408,47 @@ impl FileEmitter {
 
   pub fn reserve_explicit_chunk_filenames(
     &self,
-    explicit_names: &FxHashSet<String>,
+    explicit_outputs: impl IntoIterator<Item = ArcStr>,
     chunk_filenames: impl IntoIterator<Item = ArcStr>,
   ) -> BuildResult<()> {
-    let explicit_names: FxHashSet<_> =
-      explicit_names.iter().map(|name| name.to_lowercase()).collect();
+    let mut explicit_names = FxHashSet::default();
+    let mut directories = FxHashSet::default();
+    for filename in explicit_outputs {
+      explicit_names.insert(normalize_filename(&filename).to_lowercase());
+      directories.extend(output_parent_paths(&filename).map(|path| path.to_lowercase()));
+    }
     for filename in chunk_filenames.into_iter().chain(self.asset_and_prebuilt_chunk_filenames()) {
-      let normalized = normalize_filename(&filename);
-      for path in Path::new(normalized.as_str()).ancestors().filter(|p| !p.as_os_str().is_empty()) {
-        try_reserve_unique_name(&path.to_str().unwrap().into(), &self.names);
-      }
+      self.reserve_output_path(&filename);
     }
 
-    let mut conflicts = self
-      .files
-      .iter()
-      .filter_map(|file| {
-        let normalized = normalize_filename(&file.asset.filename);
-        explicit_names
-          .contains(&normalized.to_lowercase())
-          .then(|| (normalized, file.key().clone()))
-      })
-      .collect::<Vec<_>>();
+    let mut conflicts = Vec::new();
+    for file in &self.files {
+      let filename = &file.asset.filename;
+      if let Some(parent) =
+        output_parent_paths(filename).find(|path| explicit_names.contains(&path.to_lowercase()))
+      {
+        return Err(BuildDiagnostic::file_directory_conflict(parent).into());
+      }
+      let normalized = normalize_filename(filename);
+      let key = normalized.to_lowercase();
+      let is_directory_conflict = directories.contains(&key);
+      if is_directory_conflict || explicit_names.contains(&key) {
+        conflicts.push((ArcStr::from(normalized), file.key().clone(), is_directory_conflict));
+      }
+    }
     conflicts.sort_unstable();
-    for (filename, reference_id) in conflicts {
+    for (filename, reference_id, is_directory_conflict) in conflicts {
       let mut file = self.files.get_mut(&reference_id).expect("The asset must still exist");
       if file.filename_is_fixed.load(Ordering::Relaxed)
         || self.emitted_files.contains(&reference_id)
       {
-        return Err(BuildDiagnostic::filename_conflict(file.asset.filename.clone()).into());
+        let path = file.asset.filename.clone();
+        let error = if is_directory_conflict {
+          BuildDiagnostic::file_directory_conflict(path)
+        } else {
+          BuildDiagnostic::filename_conflict(path)
+        };
+        return Err(error.into());
       }
       let unique = make_unique_name(&filename, &self.names);
       self.protected_filenames.insert(unique.to_lowercase().into());
@@ -448,6 +460,32 @@ impl FileEmitter {
     Ok(())
   }
 
+  fn reserve_output_path(&self, filename: &str) {
+    try_reserve_unique_name(&normalize_filename(filename).into(), &self.names);
+    for parent in output_parent_paths(filename) {
+      try_reserve_unique_name(&parent, &self.names);
+    }
+  }
+
+  pub fn reserve_finalized_sourcemap_filenames(&self, bundle: &[Output]) {
+    if self.protected_filenames.is_empty()
+      || !matches!(self.options.sourcemap, Some(SourceMapType::File | SourceMapType::Hidden))
+    {
+      return;
+    }
+    for output in bundle {
+      if let Output::Chunk(chunk) = output
+        && let Some(map_filename) = &chunk.sourcemap_filename
+        && self
+          .protected_filenames
+          .contains(normalize_filename(&chunk.filename).to_lowercase().as_str())
+        && self.protected_filenames.insert(normalize_filename(map_filename).to_lowercase().into())
+      {
+        self.reserve_output_path(map_filename);
+      }
+    }
+  }
+
   pub fn check_asset_filename_conflicts(&self, bundle: &[Output]) -> BuildResult<()> {
     if self.protected_filenames.is_empty() {
       return Ok(());
@@ -457,18 +495,36 @@ impl FileEmitter {
       .iter()
       .map(|chunk| normalize_filename(&chunk.file_name).to_lowercase())
       .collect();
-    let mut seen = FxHashMap::default();
-    for file in bundle {
-      let filename = normalize_filename(file.filename()).to_lowercase();
-      if !self.protected_filenames.contains(filename.as_str()) {
-        continue;
-      }
-      let is_asset_or_prebuilt =
-        matches!(file, Output::Asset(_)) || prebuilt_filenames.contains(&filename);
-      if let Some(previous_is_asset_or_prebuilt) = seen.insert(filename, is_asset_or_prebuilt)
-        && (is_asset_or_prebuilt || previous_is_asset_or_prebuilt)
+    let paths = bundle
+      .iter()
+      .map(|file| {
+        let filename = normalize_filename(file.filename()).to_lowercase();
+        let is_asset = matches!(file, Output::Asset(_)) || prebuilt_filenames.contains(&filename);
+        (file, filename, is_asset)
+      })
+      .collect::<Vec<_>>();
+    let mut seen = FxHashMap::<&str, bool>::default();
+    for (file, filename, is_asset) in &paths {
+      let previous_is_asset = seen.get(filename.as_str()).copied();
+      let has_asset = *is_asset || previous_is_asset.unwrap_or_default();
+      if previous_is_asset.is_some()
+        && has_asset
+        && self.protected_filenames.contains(filename.as_str())
       {
         return Err(BuildDiagnostic::filename_conflict(file.filename().into()).into());
+      }
+      seen.insert(filename, has_asset);
+    }
+    for (file, filename, is_asset) in &paths {
+      let is_protected = self.protected_filenames.contains(filename.as_str());
+      for parent in output_parent_paths(file.filename()) {
+        let key = parent.to_lowercase();
+        if let Some(&parent_has_asset) = seen.get(key.as_str())
+          && (*is_asset || parent_has_asset)
+          && (is_protected || self.protected_filenames.contains(key.as_str()))
+        {
+          return Err(BuildDiagnostic::file_directory_conflict(parent).into());
+        }
       }
     }
     Ok(())
@@ -602,8 +658,16 @@ impl FileEmitter {
   }
 }
 
-fn normalize_filename(filename: &str) -> ArcStr {
-  normalize_path_buf_to_slash(filename.into()).into()
+fn normalize_filename(filename: &str) -> String {
+  normalize_path_buf_to_slash(filename.into())
+}
+
+fn output_parent_paths(filename: &str) -> impl Iterator<Item = ArcStr> + '_ {
+  Path::new(filename)
+    .ancestors()
+    .skip(1)
+    .filter(|parent| !parent.as_os_str().is_empty())
+    .map(|parent| normalize_path_buf_to_slash(parent.to_path_buf()).into())
 }
 
 pub type SharedFileEmitter = Arc<FileEmitter>;

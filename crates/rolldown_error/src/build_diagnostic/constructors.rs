@@ -297,7 +297,11 @@ impl BuildDiagnostic {
   }
 
   pub fn filename_conflict(filename: ArcStr) -> Self {
-    Self::new_inner(FilenameConflict { filename })
+    Self::new_inner(FilenameConflict::File(filename))
+  }
+
+  pub fn file_directory_conflict(path: ArcStr) -> Self {
+    Self::new_inner(FilenameConflict::FileAndDirectory(path))
   }
 
   pub fn filename_outside_output_directory(filename: String) -> Self {

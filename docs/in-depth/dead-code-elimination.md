@@ -122,16 +122,30 @@ This can be more convenient than adding `@__PURE__` to every call site when you 
 
 ## Marking Entire Modules as Side-Effect-Free
 
-Marking a module as side-effect-free lets Rolldown drop a bare import such as `import './setup.js'`. When Rolldown skips evaluating a module, it also skips dependencies reachable only through that evaluation, even if those dependencies have side effects.
+Marking a module as side-effect-free lets Rolldown skip running its top-level code. Rolldown can drop an import declaration when the importer uses no bindings from the module. It can also skip the module when the importer uses only re-exports and Rolldown can resolve each one to the module that defines it.
 
-If a module is an entry point or must run to provide a locally defined export or its namespace object, Rolldown preserves its top-level side effects and tree-shakes unused pure statements as usual.
+Rolldown can also omit dependencies needed only to run the skipped module, even if those dependencies have side effects.
 
 ### Exports and re-exports
 
-Rolldown can follow a named re-export, an `export *`, or an export of a previously imported binding through a side-effect-free module to the module that defines it.
+A re-export forwards a binding defined in another module. If the only exports a consumer uses are re-exports that Rolldown can resolve to their original definitions, Rolldown can skip running the side-effect-free modules that forward them. This applies to named re-exports, `export *`, and an imported binding that the module exports again.
+
+Rolldown keeps a module's top-level side effects when it needs to run the module to provide a locally defined export or when the consumer uses the module's namespace object itself. A property access that Rolldown can resolve to a specific export only needs that export.
+
+The same rule applies to default exports. For an imported binding `value`, `export { value as default }` forwards the binding. The expression `export default value` defines a default export in the current module.
+
+For example, mark `utils.js` as side-effect-free and build `main.js`.
+
+::: code-group
+
+```js [math.js]
+export function multiply(a, b) {
+  return a * b;
+}
+```
 
 ```js [utils.js]
-// utils.js is marked as side-effect-free
+// this file is marked as side-effect-free
 console.log('utils initialized');
 
 import { multiply } from './math.js';
@@ -142,14 +156,17 @@ export function add(a, b) {
 }
 ```
 
-With `utils.js` marked as side-effect-free:
+```js [main.js]
+import { multiply } from './utils.js';
 
-- A bare `import './utils.js'` is dropped if nothing else needs `utils.js`.
-- If the only binding used from `utils.js` is `multiply`, Rolldown resolves it directly to `math.js` and skips the log in `utils.js`.
-- `import { add } from './utils.js'` followed by a use of `add` keeps `utils.js` and its log.
-- `import * as utils from './utils.js'` followed by `Object.keys(utils)` uses the namespace object and keeps `utils.js` and its log. A statically resolved property access such as `utils.multiply` can follow the re-export directly.
+console.log(multiply(2, 3));
+```
 
-For an imported `multiply`, `export { multiply as default }` forwards the imported binding. The expression `export default multiply` creates a local default export initialized with its value.
+:::
+
+The bundle prints `6`. Rolldown gets `multiply` directly from `math.js` and skips `utils.js`. If `main.js` imports `add` and logs `add(2, 3)`, the bundle prints `utils initialized`, then `5`, because `utils.js` defines `add`.
+
+With `import * as utils from './utils.js'`, `utils.multiply(2, 3)` can still use the re-export directly. `Object.keys(utils)` uses the namespace object itself, so Rolldown keeps the log in `utils.js`.
 
 ::: details What about `import()`?
 
@@ -180,27 +197,45 @@ Here `lib.js` is left out of the bundle and the `import()` resolves to an empty 
 
 ### Re-exports and code splitting
 
-When several entries import from the same side-effect-free [barrel module](/glossary/barrel-module), Rolldown can skip the barrel for an entry that only uses a forwarded binding. Another entry can still load the barrel if it uses a binding defined there.
+Rolldown can skip a side-effect-free [barrel module](/glossary/barrel-module) for one entry and keep it for another. Mark `barrel.js` as side-effect-free, let Rolldown analyze `light.js`, and build both entry files together.
 
-```js
-// barrel.js (marked as side-effect-free)
-import { HeavyService } from './heavy.js';
+::: code-group
 
+```js [barrel.js]
+// this file is marked as side-effect-free
 console.log('barrel initialized');
 
-export const createService = () => new HeavyService();
 export { light } from './light.js';
 
-// entry-light.js
-import { light } from './barrel.js';
-console.log(light());
-
-// entry-heavy.js
-import { createService } from './barrel.js';
-console.log(createService().run());
+export function heavy() {
+  return 'heavy';
+}
 ```
 
-With `barrel.js` marked as side-effect-free, the light entry loads `light.js` directly. The heavy entry loads the barrel and `heavy.js` and prints `barrel initialized`. With default side-effect analysis, Rolldown detects the log and both entries load the barrel.
+```js [light.js]
+export function light() {
+  return 'light';
+}
+```
+
+```js [entry-light.js]
+import { light } from './barrel.js';
+
+console.log(light());
+```
+
+```js [entry-heavy.js]
+import { heavy } from './barrel.js';
+
+console.log(heavy());
+```
+
+:::
+
+- Loading the light entry by itself uses `light` from `light.js` and prints `light`. Rolldown skips the barrel for this entry.
+- Loading the heavy entry by itself uses `heavy` from `barrel.js` and prints `barrel initialized`, then `heavy`. Rolldown can omit `light.js` from this entry because its export is unused here and it has no top-level side effects.
+
+If you add a top-level log to `light.js`, the heavy entry runs that log too. The re-export is a static dependency of `barrel.js`, so when the barrel runs, Rolldown keeps that dependency for its side effects. With default side-effect analysis for `barrel.js`, both entries run the barrel because Rolldown detects its log.
 
 ### How to mark a module as side-effect-free
 

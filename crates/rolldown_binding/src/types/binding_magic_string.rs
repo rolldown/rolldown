@@ -1,6 +1,6 @@
 #![expect(clippy::inherent_to_string)]
 
-use napi::bindgen_prelude::{Either, This, Undefined};
+use napi::bindgen_prelude::{Array, Either, This, Undefined};
 use napi::{Env, JsString};
 use napi_derive::napi;
 use oxc_napi::JsRegExp;
@@ -457,7 +457,7 @@ impl<'a> BindingMagicString<'a> {
   }
 
   fn build_source_map(
-    &self,
+    &mut self,
     options: Option<BindingSourceMapOptions>,
   ) -> napi::Result<(SourceMap, usize)> {
     self.ensure_live()?;
@@ -1290,11 +1290,38 @@ impl BindingMagicString<'_> {
     env.create_string_utf16(&utf16_buf)
   }
 
+  /// Returns the UTF-16 indices in the original source that `addSourcemapLocation()` registers.
+  /// Each index appears once. The indices are in ascending order.
+  #[napi(getter, ts_return_type = "Array<number>")]
+  pub fn sourcemap_locations<'env>(&mut self, env: &'env Env) -> napi::Result<Array<'env>> {
+    self.ensure_live()?;
+    let locations = self.inner.sourcemap_locations();
+    let length = u32::try_from(locations.len()).map_err(|_| {
+      napi::Error::from_reason("Too many sourcemap locations for a JavaScript array")
+    })?;
+    let mut array = env.create_array(length)?;
+    for (index, &location) in (0..length).zip(locations) {
+      array.set(index, location)?;
+    }
+    Ok(array)
+  }
+
+  /// Registers a UTF-16 index in the original source for maps with `hires: false`.
+  /// If the index falls within a non-newline character in an unedited piece,
+  /// the map includes a segment for that index.
+  /// The `offset` option does not change this index.
+  #[napi]
+  pub fn add_sourcemap_location(&mut self, index: u32) -> napi::Result<()> {
+    self.ensure_live()?;
+    self.inner.add_sourcemap_location(index);
+    Ok(())
+  }
+
   /// Generates a source map for the transformations applied to this MagicString.
   /// Returns a BindingSourceMap object with version, file, sources, sourcesContent, names, mappings.
   #[napi]
   pub fn generate_map(
-    &self,
+    &mut self,
     options: Option<BindingSourceMapOptions>,
   ) -> napi::Result<BindingSourceMap> {
     let (source_map, generated_line_count) = self.build_source_map(options)?;
@@ -1313,7 +1340,7 @@ impl BindingMagicString<'_> {
   /// Returns a BindingDecodedMap object with mappings as an array of arrays.
   #[napi]
   pub fn generate_decoded_map(
-    &self,
+    &mut self,
     options: Option<BindingSourceMapOptions>,
   ) -> napi::Result<BindingDecodedMap> {
     let (source_map, generated_line_count) = self.build_source_map(options)?;

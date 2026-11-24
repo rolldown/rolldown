@@ -1,0 +1,65 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## first.js
+
+```js
+import "./read.js";
+
+```
+
+## main.js
+
+```js
+import "./setup.js";
+import "./read.js";
+// main.js
+const loadRoute = () => import("./route.js");
+export { loadRoute };
+
+```
+
+## read.js
+
+```js
+import { t as ready } from "./state.js";
+// read.js
+globalThis.orderExemptionLog.push(["read", ready]);
+
+```
+
+## route.js
+
+```js
+// route.js
+const loadSetup = () => import("./setup.js").then((n) => n.t);
+export { loadSetup };
+
+```
+
+## setup.js
+
+```js
+import { n as set } from "./state.js";
+// HIDDEN [\0rolldown/runtime.js]
+// setup.js
+var setup_exports = /* @__PURE__ */ __exportAll({});
+set();
+globalThis.orderExemptionLog.push("setup");
+export { setup_exports as t };
+
+```
+
+## state.js
+
+```js
+// state.js
+let ready = false;
+function set() {
+	ready = true;
+}
+export { set as n, ready as t };
+
+```

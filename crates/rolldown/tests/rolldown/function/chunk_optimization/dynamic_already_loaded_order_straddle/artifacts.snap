@@ -1,0 +1,62 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+// a.js
+globalThis.orderStraddleLog.push("a");
+
+```
+
+## d.js
+
+```js
+import "./a.js";
+
+```
+
+## e2.js
+
+```js
+import "./a.js";
+import "./t.js";
+
+```
+
+## e3.js
+
+```js
+import "./x.js";
+
+```
+
+## main.js
+
+```js
+import "./a.js";
+import "./x.js";
+import "./t.js";
+// main.js
+const loadD = () => import("./d.js");
+export { loadD };
+
+```
+
+## t.js
+
+```js
+// t.js
+globalThis.orderStraddleLog.push("t");
+
+```
+
+## x.js
+
+```js
+// x.js
+globalThis.orderStraddleLog.push("x");
+
+```

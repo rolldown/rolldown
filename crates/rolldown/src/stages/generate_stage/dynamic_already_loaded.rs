@@ -16,8 +16,11 @@ use crate::stages::link_stage::IncludeContext;
 use crate::utils::chunk::normalize_preserve_entry_signature;
 
 use super::{
-  GenerateStage, code_splitting::IndexSplittingInfo,
-  dynamic_entry_namespace::is_pure_dynamic_entry_chunk, reduced_chunk_graph::ReducedChunkGraph,
+  GenerateStage,
+  code_splitting::IndexSplittingInfo,
+  dynamic_entry_namespace::is_pure_dynamic_entry_chunk,
+  fold_execution_order::{EntryOrders, imported_order_sensitive_externals},
+  reduced_chunk_graph::{AtomExecutionOrders, ReducedChunkGraph},
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
@@ -88,8 +91,9 @@ impl ReducedEntriesAction {
   }
 }
 
-/// A reduction that the pass accepted but did not apply in its first loop: the cycle check rejected
-/// the move, or the move waits for `keep_inlinable_dynamic_entry_atoms_shared`.
+/// A reduction that the pass accepted but did not apply in its first loop: the cycle check or the
+/// execution-order check rejected the move, or the move waits for
+/// `keep_inlinable_dynamic_entry_atoms_shared`.
 struct RejectedMove {
   atom_idx: usize,
   reduced: BitSet,
@@ -147,11 +151,53 @@ impl GenerateStage<'_> {
       atoms.len(),
     );
 
+    // Strict execution order keeps the order through its wrappers.
+    let check_execution_order = !self.options.is_strict_execution_order_enabled();
+    let order_sensitive =
+      if check_execution_order { self.order_sensitive_modules() } else { IndexVec::new() };
+    let atom_modules: Vec<Vec<ModuleIdx>> = if check_execution_order {
+      atoms.iter().map(|atom| atom.modules.clone()).collect()
+    } else {
+      vec![]
+    };
+    let atom_order_sensitive: Vec<Vec<ModuleIdx>> = atom_modules
+      .iter()
+      .map(|modules| {
+        modules.iter().copied().filter(|&module_idx| order_sensitive[module_idx]).collect()
+      })
+      .collect();
+    let atom_externals: Vec<Vec<ModuleIdx>> = atom_modules
+      .iter()
+      .map(|modules| {
+        imported_order_sensitive_externals(
+          modules,
+          &self.link_output.module_table,
+          &order_sensitive,
+        )
+      })
+      .collect();
     let mut reduced_chunk_graph = ReducedChunkGraph::new(
       atoms.iter().map(|atom| &atom.dependent_entries),
       &atom_dependencies.cycle,
       &host_atom_by_entry_bit,
     );
+    if check_execution_order {
+      reduced_chunk_graph.check_execution_order(
+        AtomExecutionOrders {
+          certain_dependencies: &atom_dependencies.reachability,
+          modules: &atom_modules,
+          order_sensitive: &atom_order_sensitive,
+          externals: &atom_externals,
+          module_to_atom_idx: &module_to_atom_idx,
+          module_table: &self.link_output.module_table,
+        },
+        EntryOrders::new(
+          &self.link_output.module_table,
+          &flattened_entry_modules,
+          &order_sensitive,
+        ),
+      );
+    }
     let mut changed = false;
     let mut rejected_moves = vec![];
     // Manual code splitting places its modules after this pass, so the cycle graph does not see

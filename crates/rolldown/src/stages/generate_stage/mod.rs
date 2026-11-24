@@ -130,6 +130,7 @@ mod dynamic_entry_namespace;
 mod entry_facades;
 mod finalize_chunk_plan;
 mod finalize_modules;
+mod fold_execution_order;
 mod inline_common_chunks;
 mod manual_code_splitting;
 pub mod minify_chunks;

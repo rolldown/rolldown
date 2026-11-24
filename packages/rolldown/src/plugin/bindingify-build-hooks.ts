@@ -405,7 +405,8 @@ export function bindingifyModuleParsed(
             args.pluginContextData.getModuleOption(moduleInfo.id),
             ctx,
             args.pluginContextData.moduleSideEffectsOption,
-            pluginContext.warnWriteAfterBuildEnd,
+            (moduleId) =>
+              args.pluginContextData.warnWriteAfterBuildEnd(moduleId, pluginContext.pluginName),
           ),
         ),
       );

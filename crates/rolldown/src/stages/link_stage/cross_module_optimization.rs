@@ -4,14 +4,14 @@ use oxc::{
   ast::{
     AstKind,
     ast::{
-      BindingIdentifier, BindingPattern, CallExpression, Declaration, ExportDeclaration,
-      ExportDefaultDeclaration, ExportDefaultDeclarationKind, Expression, IdentifierReference,
-      MemberExpression, Statement,
+      Argument, ArrowFunctionExpression, BindingIdentifier, BindingPattern, CallExpression,
+      Declaration, ExportDeclaration, ExportDefaultDeclaration, ExportDefaultDeclarationKind,
+      Expression, Function, IdentifierReference, MemberExpression, Statement,
     },
     builder::AstBuilder,
   },
   ast_visit::{VisitJs, walk_js},
-  semantic::{NodeId, SymbolId},
+  semantic::{NodeId, ScopeFlags, SymbolId},
 };
 use oxc_ecmascript::ToBoolean;
 use rolldown_common::{
@@ -26,7 +26,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   ast_scanner::{
     const_eval::{ConstEvalCtx, eval_can_assign, try_extract_const_literal},
-    stmt_eval_analyzer::StmtEvalAnalyzer,
+    stmt_eval_analyzer::{StmtEvalAnalyzer, chain_root_ident},
   },
   type_alias::IndexStmtInfos,
 };
@@ -297,6 +297,8 @@ impl LinkStage<'_> {
             local_constant_symbol_map: FxHashMap::default(),
             tree_shaking_flags_mutations: FxHashMap::default(),
             side_effect_free_call_expr_node_ids: FxHashSet::default(),
+            pure_callee_node_ids: FxHashSet::default(),
+            parameter_return_calls: Vec::new(),
             has_separately_exported_call: false,
             immutable_ctx: CrossModuleOptimizationImmutableCtx {
               eval_ctx: &eval_ctx,
@@ -397,6 +399,9 @@ struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
   local_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   tree_shaking_flags_mutations: FxHashMap<StmtInfoIdx, StmtEvalFlags>,
   side_effect_free_call_expr_node_ids: FxHashSet<NodeId>,
+  pure_callee_node_ids: FxHashSet<NodeId>,
+  /// The call and callee node IDs of parameter-returning calls in the current top-level statement.
+  parameter_return_calls: Vec<(NodeId, NodeId)>,
   has_separately_exported_call: bool,
   immutable_ctx: CrossModuleOptimizationImmutableCtx<'a, 'ast>,
   /// Shared with the constant lookup of `eval_ctx`.
@@ -447,6 +452,25 @@ impl<'ast> CrossModuleOptimizationRunnerContext<'_, 'ast> {
       return Some(self.symbols.canonical_ref_for(self.local_symbol(ident)?));
     }
     self.resolve_member_binding(callee.as_member_expression()?)
+  }
+
+  /// Whether the statement analyzer already treats `call` as pure through a `/* @__PURE__ */`
+  /// comment or `treeshake.manualPureFunctions`, without the parameter-return proof.
+  fn call_is_already_pure(&self, call: &CallExpression<'ast>) -> bool {
+    (call.pure && !self.immutable_ctx.flat_options.ignore_annotations())
+      || self.immutable_ctx.options.treeshake.manual_pure_functions().is_some_and(|names| {
+        chain_root_ident(&call.callee).is_some_and(|root| names.contains(root))
+      })
+  }
+
+  /// Whether an argument reads a global variable when the call runs. Reading a global can run a
+  /// getter on `globalThis` or throw a `ReferenceError`. Function bodies do not run at the call.
+  fn arguments_read_global(&self, call: &CallExpression<'ast>) -> bool {
+    let mut finder = GlobalReadFinder { ctx: self, found: false };
+    for argument in &call.arguments {
+      finder.visit_argument(argument);
+    }
+    finder.found
   }
 
   /// Whether a canonical binding has its initialized value when the current statement runs.
@@ -502,6 +526,16 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
       let pre_node_id_len = self.side_effect_free_call_expr_node_ids.len();
       self.visit_statement(stmt);
       let has_separately_exported_call = std::mem::take(&mut self.has_separately_exported_call);
+      let parameter_return_calls = std::mem::take(&mut self.parameter_return_calls);
+      let mut has_parameter_return = !parameter_return_calls.is_empty();
+      if has_parameter_return && !StatementRemovalGuard::can_remove(self, stmt, true) {
+        // The parameter-return proof does not cover this statement, so analyze it without the proof.
+        for (call, callee) in &parameter_return_calls {
+          self.side_effect_free_call_expr_node_ids.remove(call);
+          self.pure_callee_node_ids.remove(callee);
+        }
+        has_parameter_return = false;
+      }
       if pre_node_id_len != self.side_effect_free_call_expr_node_ids.len() {
         let stmt_info_idx = StmtInfoIdx::new(idx + 1);
         let constants = LinkedConstantLookup {
@@ -521,6 +555,7 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
           Some(self.immutable_ctx.namespace_object_symbol_ids),
           Some(&constants),
         )
+        .with_pure_callees(&self.pure_callee_node_ids)
         .with_top_level_return_ends_module(
           !self.immutable_ctx.modules[self.immutable_ctx.module_idx]
             .as_normal()
@@ -530,12 +565,15 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
         .tree_shaking_flags();
         // Cross-module optimization only refreshes tree-shaking flags. Module-level
         // execution-order sensitivity is recorded during AST scanning.
-        let drops_effects = has_separately_exported_call
+        let drops_effects = (has_separately_exported_call || has_parameter_return)
           && !flags.contains(StmtEvalFlags::UnknownSideEffect)
           && self.stmt_infos[self.immutable_ctx.module_idx][stmt_info_idx]
             .eval_flags
             .contains(StmtEvalFlags::UnknownSideEffect);
-        if !drops_effects || StatementRemovalGuard::can_remove(self, stmt) {
+        if !drops_effects
+          || has_parameter_return
+          || StatementRemovalGuard::can_remove(self, stmt, false)
+        {
           self.tree_shaking_flags_mutations.insert(stmt_info_idx, flags);
         }
       }
@@ -574,13 +612,24 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
     {
       let flags = symbol_ref.flags(self.symbols).copied().unwrap_or_default();
       let exported_separately = flags.contains(SymbolRefFlags::ExportedSeparately);
-      if !exported_separately
-        || (self.binding_is_initialized(symbol_ref) && call_result_runs_no_code(&self.visit_path))
+      let returns_parameter = flags.contains(SymbolRefFlags::ReturnsParameter);
+      if (!exported_separately
+        || (self.binding_is_initialized(symbol_ref) && call_result_runs_no_code(&self.visit_path)))
+        && (!returns_parameter
+          || (it.callee.as_identifier().is_some()
+            && !it.arguments.iter().any(Argument::is_spread)
+            && !self.arguments_read_global(it)
+            && !self.call_is_already_pure(it)
+            && !has_function_or_class_ancestor(&self.visit_path)))
       {
         self.side_effect_free_call_expr_node_ids.insert(it.node_id());
         self.has_separately_exported_call |= exported_separately;
+        if returns_parameter {
+          self.pure_callee_node_ids.insert(it.callee.node_id());
+          self.parameter_return_calls.push((it.node_id(), it.callee.node_id()));
+        }
         // A truly empty function cannot invoke its callback arguments.
-        if !flags.contains(SymbolRefFlags::PureAnnotationOnly)
+        if !flags.intersects(SymbolRefFlags::PureAnnotationOnly | SymbolRefFlags::ReturnsParameter)
           && !self.stmt_idx_to_dynamic_import_expr_node_ids.is_empty()
         {
           self.latest_side_effect_free_call_expr_node_id = Some(it.node_id());
@@ -631,6 +680,9 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
       return;
     }
     walk_js::walk_export_default_declaration(self, it);
+    if !self.immutable_ctx.config.inline_const_optimization {
+      return;
+    }
     let Some(expr) = it.declaration.as_expression() else {
       return;
     };
@@ -656,26 +708,71 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
   }
 }
 
-/// Checks effects that the general statement analyzer does not model. Run this only when a
-/// separately exported call would let us relax a statement's side-effect flags. Check the whole
+/// Checks effects that the general statement analyzer does not model. Run this when a
+/// separately exported or parameter-returning call would relax a statement's flags. Check the whole
 /// statement because other expressions in it can also read bindings or fail to terminate.
 struct StatementRemovalGuard<'ctx, 'a, 'ast> {
   ctx: &'ctx CrossModuleOptimizationRunnerContext<'a, 'ast>,
   can_remove: bool,
+  only_plain_values: bool,
 }
 
 impl<'ast> StatementRemovalGuard<'_, '_, 'ast> {
   fn can_remove(
     ctx: &CrossModuleOptimizationRunnerContext<'_, 'ast>,
     stmt: &Statement<'ast>,
+    only_plain_values: bool,
   ) -> bool {
-    let mut guard = StatementRemovalGuard { ctx, can_remove: true };
+    if only_plain_values {
+      // The proof covers values stored or discarded without any operation on the result.
+      let declaration = match stmt {
+        Statement::VariableDeclaration(decl) => Some(decl.as_ref()),
+        Statement::ExportDeclaration(export)
+          if let Declaration::VariableDeclaration(decl) = &export.declaration =>
+        {
+          Some(decl.as_ref())
+        }
+        Statement::ExpressionStatement(_) => None,
+        _ => return false,
+      };
+      if declaration.is_some_and(|decl| {
+        decl.kind.is_using()
+          || decl.declarations.iter().any(|item| !item.id.is_binding_identifier())
+      }) {
+        return false;
+      }
+    }
+    let mut guard = StatementRemovalGuard { ctx, can_remove: true, only_plain_values };
     guard.visit_statement(stmt);
     guard.can_remove
   }
 }
 
 impl<'ast> VisitJs<'ast> for StatementRemovalGuard<'_, '_, 'ast> {
+  fn visit_expression(&mut self, expr: &Expression<'ast>) {
+    if self.only_plain_values {
+      self.can_remove &= match expr.get_inner_expression() {
+        // Creating a function does not evaluate its body or parameters.
+        Expression::ArrowFunctionExpression(_) | Expression::FunctionExpression(_) => return,
+        Expression::ObjectExpression(obj) => obj
+          .properties
+          .iter()
+          .all(|prop| prop.as_property().is_some_and(|property| !property.key.is_computed())),
+        Expression::ArrayExpression(array) => array
+          .elements
+          .iter()
+          .all(|elem| !matches!(elem, oxc::ast::ast::ArrayExpressionElement::SpreadElement(_))),
+        Expression::CallExpression(call) => {
+          self.ctx.pure_callee_node_ids.contains(&call.callee.node_id())
+        }
+        expr => expr.as_identifier().is_some() || expr.is_literal(),
+      };
+    }
+    if self.can_remove {
+      walk_js::walk_expression(self, expr);
+    }
+  }
+
   fn visit_statement(&mut self, stmt: &Statement<'ast>) {
     let loop_test = match stmt {
       Statement::WhileStatement(stmt) => Some(&stmt.test),
@@ -739,6 +836,29 @@ impl<'ast> VisitJs<'ast> for StatementRemovalGuard<'_, '_, 'ast> {
       walk_js::walk_call_expression(self, call);
     }
   }
+}
+
+struct GlobalReadFinder<'ctx, 'a, 'ast> {
+  ctx: &'ctx CrossModuleOptimizationRunnerContext<'a, 'ast>,
+  found: bool,
+}
+
+impl<'ast> VisitJs<'ast> for GlobalReadFinder<'_, '_, 'ast> {
+  fn visit_identifier_reference(&mut self, it: &IdentifierReference<'ast>) {
+    self.found |= self.ctx.local_symbol(it).is_none();
+  }
+
+  fn visit_function(&mut self, _it: &Function<'ast>, _flags: ScopeFlags) {}
+
+  fn visit_arrow_function_expression(&mut self, _it: &ArrowFunctionExpression<'ast>) {}
+}
+
+/// Whether `visit_path` contains a function, arrow function or class. The parameter-return proof
+/// skips calls inside them, including static class members that run when the class is defined.
+fn has_function_or_class_ancestor(visit_path: &[AstKind]) -> bool {
+  visit_path.iter().any(|kind| {
+    matches!(kind, AstKind::Function(_) | AstKind::ArrowFunctionExpression(_) | AstKind::Class(_))
+  })
 }
 
 /// Whether the call whose ancestors are `visit_path` runs no code on its result. The result can be

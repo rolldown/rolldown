@@ -1,3 +1,0 @@
-import './middle.js';
-
-export {};

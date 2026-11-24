@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dep.js
+
+```js
+// dep.js
+const tag = "dep";
+export { tag };
+
+```
+
+## main.js
+
+```js
+// config.js
+var config_default = "a label that inlineConst false keeps in one place";
+const load = () => import("./dep.js");
+// main.js
+console.log(config_default, config_default, config_default, (await load()).tag);
+
+```

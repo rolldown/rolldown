@@ -1243,10 +1243,10 @@ impl GenerateStage<'_> {
     facade_eliminations: &mut Vec<FacadeChunkElimination>,
   ) {
     for (target_chunk_idx, emitted_chunk_indices) in emitted_chunks_by_target {
-      let Some(target_chunk) = chunk_graph.chunk_table.get(target_chunk_idx) else {
+      let Some(_target_chunk) = chunk_graph.chunk_table.get(target_chunk_idx) else {
         continue;
       };
-      let mut group_file_name = target_chunk.file_name.as_ref();
+      let mut group_file_name = None;
       let mut emitted_entry_modules: Vec<(ChunkIdx, ModuleIdx)> = emitted_chunk_indices
         .iter()
         .filter_map(|item| {

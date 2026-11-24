@@ -1,20 +1,17 @@
 use crate::{
   AddEntryModuleMsg, FilenameTemplate, ModuleId, ModuleLoaderMsg, Modules,
-  NormalizedBundlerOptions, Output, OutputAsset, OutputChunk, PreserveEntrySignatures,
-  SourceMapType, StrOrBytes, is_path_fragment,
+  NormalizedBundlerOptions, Output, OutputAsset, OutputChunk, PreserveEntrySignatures, StrOrBytes,
+  is_path_fragment,
 };
 use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet, Entry};
-use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
+use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rolldown_std_utils::normalize_path_buf_to_slash;
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
-use rolldown_utils::make_unique_name::{
-  make_unique_name, release_unique_name, try_reserve_unique_name,
-};
+use rolldown_utils::make_unique_name::{make_unique_name, release_unique_name};
 use rolldown_utils::stabilize_id::stabilize_id;
 use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
-use rustc_hash::{FxHashMap, FxHashSet};
 use std::ffi::OsStr;
 use std::path::Path;
 use std::sync::Arc;
@@ -76,21 +73,11 @@ pub struct EmittedPrebuiltChunk {
 }
 
 #[derive(Debug)]
-struct EmittedOutputAsset {
-  asset: OutputAsset,
-  /// A plugin set this filename or read it with `getFileName()`.
-  filename_is_fixed: AtomicBool,
-}
-
-#[derive(Debug)]
 pub struct FileEmitter {
   tx: Arc<Mutex<Option<futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   source_hash_to_reference_id: FxDashMap<ArcStr, ArcStr>,
   names: FxDashMap<ArcStr, u32>,
-  files: FxDashMap<ArcStr, EmittedOutputAsset>,
-  /// Check these paths for conflicts before writing.
-  /// See `internal-docs/code-splitting/implementation.md`.
-  protected_filenames: FxDashSet<ArcStr>,
+  files: FxDashMap<ArcStr, OutputAsset>,
   chunks: FxDashMap<ArcStr, Arc<EmittedChunk>>,
   prebuilt_chunks: FxDashMap<ArcStr, Arc<EmittedPrebuiltChunk>>,
   /// True during the build phase (buildStart through buildEnd), false during the output
@@ -119,7 +106,6 @@ impl FileEmitter {
       source_hash_to_reference_id: DashMap::default(),
       names: DashMap::default(),
       files: DashMap::default(),
-      protected_filenames: DashSet::default(),
       chunks: DashMap::default(),
       prebuilt_chunks: DashMap::default(),
       emitted_chunks: DashMap::default(),
@@ -209,7 +195,6 @@ impl FileEmitter {
         Entry::Occupied(entry) => {
           let reference_id = entry.get().clone();
           if let Some(mut output) = self.files.get_mut(&reference_id) {
-            let output = &mut output.asset;
             // Re-pick the shortest name (ties broken lexicographically) only while building and
             // before the asset is flushed to a bundle. Afterwards its name may already have been
             // read via `get_file_name` and cached by a consumer (Vite does this in renderChunk),
@@ -278,8 +263,7 @@ impl FileEmitter {
 
   pub fn get_file_name(&self, reference_id: &str) -> anyhow::Result<ArcStr> {
     if let Some(file) = self.files.get(reference_id) {
-      file.filename_is_fixed.store(true, Ordering::Relaxed);
-      return Ok(file.asset.filename.clone());
+      return Ok(file.filename.clone());
     }
     if let Some(chunk) = self.chunks.get(reference_id) {
       if let Some(filename) = chunk.file_name.as_ref() {
@@ -334,7 +318,7 @@ impl FileEmitter {
       let filename_template =
         filename_template.expect("should has filename template without filename");
 
-      let filename: ArcStr = filename_template
+      let mut filename = filename_template
         .render(
           name.as_deref(),
           None,
@@ -349,18 +333,11 @@ impl FileEmitter {
       if let Some(replaced_file_name) = replaced_file_name {
         release_unique_name(replaced_file_name, &self.names);
       }
-      file.file_name = Some(if self.protected_filenames.is_empty() {
-        make_unique_name(&filename, &self.names)
-      } else {
-        let normalized = normalize_filename(&filename).into();
-        let unique = make_unique_name(&normalized, &self.names);
-        if unique == normalized {
-          filename
-        } else {
-          self.protected_filenames.insert(unique.to_lowercase().into());
-          unique
-        }
-      });
+      // deconflict file name
+      // TODO(underfin): could be using bundle files key as `make_unique_name`
+      filename = make_unique_name(&filename, &self.names);
+
+      file.file_name = Some(filename);
     }
     Ok(())
   }
@@ -373,7 +350,6 @@ impl FileEmitter {
     asset_filename_template: Option<FilenameTemplate>,
     sanitized_file_name: Option<ArcStr>,
   ) -> anyhow::Result<()> {
-    let filename_is_fixed = file.file_name.is_some();
     self.generate_file_name(file, hash, asset_filename_template, sanitized_file_name, None)?;
     // The emitter is reused across dev-mode rebuilds. If this asset was already flushed
     // to a bundle but is now re-emitted with different content, mark it dirty so that
@@ -387,167 +363,20 @@ impl FileEmitter {
     }
     self.files.insert(
       reference_id,
-      EmittedOutputAsset {
-        asset: OutputAsset {
-          filename: file.file_name.clone().unwrap(),
-          source: std::mem::take(&mut file.source),
-          names: std::mem::take(&mut file.name).map_or(vec![], |name| vec![name]),
-          original_file_names: std::mem::take(&mut file.original_file_name)
-            .map_or(vec![], |original_file_name| vec![original_file_name]),
-        },
-        filename_is_fixed: AtomicBool::new(filename_is_fixed),
+      OutputAsset {
+        filename: file.file_name.clone().unwrap(),
+        source: std::mem::take(&mut file.source),
+        names: std::mem::take(&mut file.name).map_or(vec![], |name| vec![name]),
+        original_file_names: std::mem::take(&mut file.original_file_name)
+          .map_or(vec![], |original_file_name| vec![original_file_name]),
       },
     );
     Ok(())
   }
 
   pub fn asset_and_prebuilt_chunk_filenames(&self) -> impl Iterator<Item = ArcStr> + '_ {
-    let assets = self.files.iter().map(|file| file.asset.filename.clone());
+    let assets = self.files.iter().map(|file| file.filename.clone());
     assets.chain(self.prebuilt_chunks.iter().map(|chunk| chunk.file_name.clone()))
-  }
-
-  pub fn reserve_explicit_chunk_filenames(
-    &self,
-    explicit_outputs: impl IntoIterator<Item = ArcStr>,
-    preliminary_sourcemaps: impl IntoIterator<Item = ArcStr>,
-    chunk_filenames: impl IntoIterator<Item = ArcStr>,
-  ) -> BuildResult<()> {
-    let mut explicit_names = FxHashSet::default();
-    let mut directories = FxHashSet::default();
-    for filename in explicit_outputs {
-      explicit_names.insert(normalize_filename(&filename).to_lowercase());
-      directories.extend(output_parent_paths(&filename).map(|path| path.to_lowercase()));
-    }
-    let mut sourcemap_names = FxHashSet::default();
-    let mut sourcemap_directories = FxHashSet::default();
-    for filename in preliminary_sourcemaps {
-      sourcemap_names.insert(normalize_filename(&filename).to_lowercase());
-      sourcemap_directories.extend(output_parent_paths(&filename).map(|path| path.to_lowercase()));
-    }
-    for filename in chunk_filenames.into_iter().chain(self.asset_and_prebuilt_chunk_filenames()) {
-      self.reserve_output_path(&filename);
-    }
-
-    let mut conflicts = Vec::new();
-    for file in &self.files {
-      let filename = &file.asset.filename;
-      if let Some(parent) =
-        output_parent_paths(filename).find(|path| explicit_names.contains(&path.to_lowercase()))
-      {
-        return Err(BuildDiagnostic::file_directory_conflict(parent).into());
-      }
-      let normalized = normalize_filename(filename);
-      let key = normalized.to_lowercase();
-      let is_directory_conflict = directories.contains(&key);
-      let conflicts_with_chunk = is_directory_conflict || explicit_names.contains(&key);
-      if conflicts_with_chunk
-        || sourcemap_names.contains(&key)
-        || sourcemap_directories.contains(&key)
-      {
-        conflicts.push((
-          ArcStr::from(normalized),
-          file.key().clone(),
-          conflicts_with_chunk,
-          is_directory_conflict,
-        ));
-      }
-    }
-    conflicts.sort_unstable();
-    for (filename, reference_id, conflicts_with_chunk, is_directory_conflict) in conflicts {
-      let mut file = self.files.get_mut(&reference_id).expect("The asset must still exist");
-      if file.filename_is_fixed.load(Ordering::Relaxed)
-        || self.emitted_files.contains(&reference_id)
-      {
-        // Check fixed names against the sourcemaps that the build emits.
-        if !conflicts_with_chunk {
-          continue;
-        }
-        let path = file.asset.filename.clone();
-        let error = if is_directory_conflict {
-          BuildDiagnostic::file_directory_conflict(path)
-        } else {
-          BuildDiagnostic::filename_conflict(path)
-        };
-        return Err(error.into());
-      }
-      let unique = make_unique_name(&filename, &self.names);
-      self.protected_filenames.insert(unique.to_lowercase().into());
-      file.asset.filename = unique;
-    }
-    for name in explicit_names {
-      self.protected_filenames.insert(name.into());
-    }
-    Ok(())
-  }
-
-  fn reserve_output_path(&self, filename: &str) {
-    try_reserve_unique_name(&normalize_filename(filename).into(), &self.names);
-    for parent in output_parent_paths(filename) {
-      try_reserve_unique_name(&parent, &self.names);
-    }
-  }
-
-  pub fn reserve_finalized_sourcemap_filenames(&self, bundle: &[Output]) {
-    if self.protected_filenames.is_empty()
-      || !matches!(self.options.sourcemap, Some(SourceMapType::File | SourceMapType::Hidden))
-    {
-      return;
-    }
-    for output in bundle {
-      if let Output::Chunk(chunk) = output
-        && let Some(map_filename) = &chunk.sourcemap_filename
-        && self
-          .protected_filenames
-          .contains(normalize_filename(&chunk.filename).to_lowercase().as_str())
-        && self.protected_filenames.insert(normalize_filename(map_filename).to_lowercase().into())
-      {
-        self.reserve_output_path(map_filename);
-      }
-    }
-  }
-
-  pub fn check_asset_filename_conflicts(&self, bundle: &[Output]) -> BuildResult<()> {
-    if self.protected_filenames.is_empty() {
-      return Ok(());
-    }
-    let prebuilt_filenames: FxHashSet<_> = self
-      .prebuilt_chunks
-      .iter()
-      .map(|chunk| normalize_filename(&chunk.file_name).to_lowercase())
-      .collect();
-    let paths = bundle
-      .iter()
-      .map(|file| {
-        let filename = normalize_filename(file.filename()).to_lowercase();
-        let is_asset = matches!(file, Output::Asset(_)) || prebuilt_filenames.contains(&filename);
-        (file, filename, is_asset)
-      })
-      .collect::<Vec<_>>();
-    let mut seen = FxHashMap::<&str, bool>::default();
-    for (file, filename, is_asset) in &paths {
-      let previous_is_asset = seen.get(filename.as_str()).copied();
-      let has_asset = *is_asset || previous_is_asset.unwrap_or_default();
-      if previous_is_asset.is_some()
-        && has_asset
-        && self.protected_filenames.contains(filename.as_str())
-      {
-        return Err(BuildDiagnostic::filename_conflict(file.filename().into()).into());
-      }
-      seen.insert(filename, has_asset);
-    }
-    for (file, filename, is_asset) in &paths {
-      let is_protected = self.protected_filenames.contains(filename.as_str());
-      for parent in output_parent_paths(file.filename()) {
-        let key = parent.to_lowercase();
-        if let Some(&parent_has_asset) = seen.get(key.as_str())
-          && (*is_asset || parent_has_asset)
-          && (is_protected || self.protected_filenames.contains(key.as_str()))
-        {
-          return Err(BuildDiagnostic::file_directory_conflict(parent).into());
-        }
-      }
-    }
-    Ok(())
   }
 
   pub fn add_additional_files(
@@ -558,7 +387,6 @@ impl FileEmitter {
     let mut additional_assets = Vec::new();
     self.files.iter_mut().for_each(|mut file| {
       let (key, value) = file.pair_mut();
-      let value = &mut value.asset;
       if self.emitted_files.contains(key) {
         return;
       }
@@ -665,7 +493,6 @@ impl FileEmitter {
   pub fn clear(&self) {
     self.chunks.clear();
     self.files.clear();
-    self.protected_filenames.clear();
     self.prebuilt_chunks.clear();
     self.names.clear();
     self.source_hash_to_reference_id.clear();
@@ -676,18 +503,6 @@ impl FileEmitter {
     self.emitted_filenames.clear();
     self.module_to_file_ref.clear();
   }
-}
-
-fn normalize_filename(filename: &str) -> String {
-  normalize_path_buf_to_slash(filename.into())
-}
-
-fn output_parent_paths(filename: &str) -> impl Iterator<Item = ArcStr> + '_ {
-  Path::new(filename)
-    .ancestors()
-    .skip(1)
-    .filter(|parent| !parent.as_os_str().is_empty())
-    .map(|parent| normalize_path_buf_to_slash(parent.to_path_buf()).into())
 }
 
 pub type SharedFileEmitter = Arc<FileEmitter>;

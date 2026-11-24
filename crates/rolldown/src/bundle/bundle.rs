@@ -459,17 +459,13 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       Err(errors) => return Err(self.handle_render_error(errors).await),
     };
 
-    // Sourcemap names with hashes are final after rendering.
-    self.file_emitter.reserve_finalized_sourcemap_filenames(&output.assets);
     // Add additional files from build plugins.
     self.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
-    self.file_emitter.check_asset_filename_conflicts(&output.assets)?;
 
     self
       .plugin_driver
       .generate_bundle(&mut output.assets, is_write, &self.options, &mut output.warnings)
       .await?;
-    self.file_emitter.check_asset_filename_conflicts(&output.assets)?;
 
     if let Err(errors) =
       GenerateStage::validate_mangle_properties_output(&self.options, &output.assets)

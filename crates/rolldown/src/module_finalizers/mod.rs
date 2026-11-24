@@ -3357,8 +3357,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     match &self.ctx.modules[importee_idx] {
       Module::Normal(importee) => {
-        let Some(&importee_chunk_idx) =
-          self.ctx.chunk_graph.entry_module_to_entry_chunk.get(&importee_idx)
+        let Some(importee_chunk_idx) = self.ctx.chunk_graph.dynamic_import_chunk(importee_idx)
         else {
           // TODO: probably we should add the reason why it is replaced with `void 0`(just like webpack) when upstream support codegen with specific operation
           *node = ast::Expression::new_void_0(SPAN, self);

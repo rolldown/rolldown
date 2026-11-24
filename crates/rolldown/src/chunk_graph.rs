@@ -16,6 +16,13 @@ pub struct ChunkGraph {
   /// Module to chunk that contains the module
   pub module_to_chunk: IndexVec<ModuleIdx, Option<ChunkIdx>>,
   pub entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx>,
+  /// The chunk that an `import()` in the bundle loads for an entry module, when it is not the chunk
+  /// in `entry_module_to_entry_chunk`. An emitted entry can keep its facade chunk for code outside
+  /// the bundle while a group chunk holds its module. Then an `import()` in the bundle loads the
+  /// group chunk and reads the namespace object of the entry from it
+  /// (`common_chunk_exported_facade_chunk_namespace`), as it does when the facade is removed. Read it
+  /// through [`ChunkGraph::dynamic_import_chunk`].
+  pub entry_module_to_dynamic_import_chunk: FxHashMap<ModuleIdx, ChunkIdx>,
   /// If the namespace is not merged, `Key` == `Value`.
   /// If the namespace is merged, `Key` is the original namespace symbol, and `Value` is the linked namespace symbol.
   pub finalized_cjs_ns_map_idx_vec: IndexVec<ChunkIdx, FxHashMap<SymbolRef, SymbolRef>>,
@@ -41,12 +48,22 @@ impl ChunkGraph {
       module_to_chunk: index_vec![None; modules_len],
       sorted_chunk_idx_vec: Vec::new(),
       entry_module_to_entry_chunk: FxHashMap::default(),
+      entry_module_to_dynamic_import_chunk: FxHashMap::default(),
       finalized_cjs_ns_map_idx_vec: index_vec![],
       chunk_idx_to_reference_ids: FxHashMap::default(),
       common_chunk_exported_facade_chunk_namespace: FxHashMap::default(),
       common_chunk_preserve_export_names_modules: FxHashMap::default(),
       post_chunk_optimization_operations: FxHashMap::default(),
     }
+  }
+
+  /// The chunk that an `import()` of the entry module `module_idx` in the bundle loads.
+  pub fn dynamic_import_chunk(&self, module_idx: ModuleIdx) -> Option<ChunkIdx> {
+    self
+      .entry_module_to_dynamic_import_chunk
+      .get(&module_idx)
+      .or_else(|| self.entry_module_to_entry_chunk.get(&module_idx))
+      .copied()
   }
 
   pub fn add_chunk(&mut self, chunk: Chunk) -> ChunkIdx {

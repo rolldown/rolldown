@@ -1,9 +1,4 @@
-import {
-  type BindingDecodedMap,
-  BindingMagicString as NativeBindingMagicString,
-  type BindingSourceMap,
-  type BindingSourceMapOptions,
-} from './binding.cjs';
+import { BindingMagicString as NativeBindingMagicString } from './binding.cjs';
 
 // Set `isRolldownMagicString` so external packages (e.g. rolldown-string) can
 // detect native BindingMagicString instances without importing rolldown:
@@ -255,22 +250,7 @@ NativeBindingMagicString.prototype.replaceAll = function (
   return this;
 };
 
-type ReplaceNativeReturn<T> = {
-  [K in keyof T]: T[K] extends (...args: infer A) => infer R
-    ? [R] extends [NativeBindingMagicString]
-      ? (...args: A) => RolldownMagicString
-      : T[K]
-    : T[K];
-};
-
-type RolldownMagicStringBase = ReplaceNativeReturn<
-  Omit<
-    NativeBindingMagicString,
-    'dropInner' | 'replace' | 'replaceAll' | 'generateMap' | 'generateDecodedMap'
-  >
->;
-
-export interface RolldownMagicString extends RolldownMagicStringBase {
+export interface RolldownMagicString extends NativeBindingMagicString {
   readonly isRolldownMagicString: true;
   /**
    * Accepts a string or RegExp pattern with a string replacement (`$&`, `$$`,
@@ -283,18 +263,6 @@ export interface RolldownMagicString extends RolldownMagicStringBase {
    * flag) with a string replacement, or a replacer function.
    */
   replaceAll(from: string | RegExp, to: string | ReplacementFunction): this;
-  /**
-   * Generates a source map for the transformations applied to this MagicString.
-   * Returns a source map object with version, file, sources, sourcesContent, names, mappings.
-   */
-  generateMap(options?: BindingSourceMapOptions | null): Omit<BindingSourceMap, 'dropInner'>;
-  /**
-   * Generates a decoded source map for the transformations applied to this MagicString.
-   * Returns a decoded source map object with mappings as an array of arrays.
-   */
-  generateDecodedMap(
-    options?: BindingSourceMapOptions | null,
-  ): Omit<BindingDecodedMap, 'dropInner'>;
 }
 
 type RolldownMagicStringConstructor = Omit<typeof NativeBindingMagicString, 'prototype'> & {
@@ -307,5 +275,4 @@ type RolldownMagicStringConstructor = Omit<typeof NativeBindingMagicString, 'pro
  *
  * @experimental
  */
-export const RolldownMagicString: RolldownMagicStringConstructor =
-  NativeBindingMagicString as unknown as RolldownMagicStringConstructor;
+export const RolldownMagicString = NativeBindingMagicString as RolldownMagicStringConstructor;

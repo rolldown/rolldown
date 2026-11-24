@@ -1579,7 +1579,6 @@ export declare class BindingCallableBuiltinPlugin {
 }
 
 export declare class BindingChunkingContext {
-  dropInner(): ExternalMemoryStatus
   getModuleInfo(moduleId: string): BindingModuleInfo | null
   /**
    * `getModuleInfo(moduleId)?.moduleSideEffects`, without copying the rest of the info. See
@@ -1597,7 +1596,6 @@ export declare class BindingChunkingContext {
 
 /** A decoded source map with mappings as an array of arrays instead of VLQ-encoded string. */
 export declare class BindingDecodedMap {
-  dropInner(): ExternalMemoryStatus
   /** The source map version (always 3). */
   get version(): number
   /** The generated file name. */
@@ -1662,18 +1660,12 @@ export declare class BindingDevEngine {
 }
 
 export declare class BindingLoadPluginContext {
-  dropInner(): ExternalMemoryStatus
   inner(): BindingPluginContext
   addWatchFile(file: string): void
 }
 
 export declare class BindingMagicString {
   constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
-  /**
-   * Releases the source text and its UTF-16 mapping table — together about nine
-   * times the source bytes — without waiting for a finalizer.
-   */
-  dropInner(): ExternalMemoryStatus
   get original(): string
   get filename(): string | null
   get indentExclusionRanges(): Array<Array<number>> | Array<number> | null
@@ -1770,12 +1762,10 @@ export declare class BindingModuleInfo {
   exports: Array<string>
   isEntry: boolean
   inputFormat: 'es' | 'cjs' | 'unknown'
-  dropInner(): ExternalMemoryStatus
   get code(): string | null
 }
 
 export declare class BindingNormalizedOptions {
-  dropInner(): ExternalMemoryStatus
   get input(): Array<string> | Record<string, string>
   get cwd(): string
   get platform(): 'node' | 'browser' | 'neutral'
@@ -1820,7 +1810,6 @@ export declare class BindingNormalizedOptions {
 }
 
 export declare class BindingOutputAsset {
-  dropInner(): ExternalMemoryStatus
   getFileName(): string
   getOriginalFileName(): string | null
   getOriginalFileNames(): Array<string>
@@ -1830,7 +1819,6 @@ export declare class BindingOutputAsset {
 }
 
 export declare class BindingOutputChunk {
-  dropInner(): ExternalMemoryStatus
   getIsEntry(): boolean
   getIsDynamicEntry(): boolean
   getFacadeModuleId(): string | null
@@ -1854,7 +1842,6 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
-  dropInner(): ExternalMemoryStatus
   load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, resolveDependencies: boolean, options?: BindingPluginContextLoadOptions): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
@@ -1881,7 +1868,6 @@ export declare class BindingPluginContext {
 }
 
 export declare class BindingRenderedChunk {
-  dropInner(): ExternalMemoryStatus
   get name(): string
   get isEntry(): boolean
   get isDynamicEntry(): boolean
@@ -1895,12 +1881,10 @@ export declare class BindingRenderedChunk {
 }
 
 export declare class BindingRenderedChunkMeta {
-  dropInner(): ExternalMemoryStatus
   get chunks(): Record<string, BindingRenderedChunk>
 }
 
 export declare class BindingRenderedModule {
-  dropInner(): ExternalMemoryStatus
   get code(): string | null
   /** `code.length` without materializing `code`. */
   get renderedLength(): number
@@ -1909,7 +1893,6 @@ export declare class BindingRenderedModule {
 
 /** A source map object with properties matching the SourceMap V3 specification. */
 export declare class BindingSourceMap {
-  dropInner(): ExternalMemoryStatus
   /** The source map version (always 3). */
   get version(): number
   /** The generated file name. */
@@ -1934,7 +1917,6 @@ export declare class BindingSourceMap {
 }
 
 export declare class BindingTransformPluginContext {
-  dropInner(): ExternalMemoryStatus
   getCombinedSourcemap(): string
   inner(): BindingPluginContext
   addWatchFile(file: string): void
@@ -3228,11 +3210,6 @@ export declare function enhancedTransformSync(filename: string, sourceText: stri
 export interface ExtensionAliasItem {
   target: string
   replacements: Array<string>
-}
-
-export interface ExternalMemoryStatus {
-  freed: boolean
-  reason?: string
 }
 
 export type FilterTokenKind = 'Id' | 'ImporterId' | 'Code' | 'ModuleType' | 'And' | 'Or' | 'Not' | 'Include' | 'Exclude' | 'CleanUrl' | 'QueryKey' | 'QueryValue'

@@ -1,7 +1,7 @@
 export { dev } from './api/dev';
 export { DevEngine } from './api/dev/dev-engine';
 export type { DevOptions, DevWatchOptions } from './api/dev/dev-options';
-export { freeExternalMemory, scan } from './api/experimental';
+export { scan } from './api/experimental';
 export {
   type BindingClientHmrUpdate,
   type BindingNativeMemoryStats,

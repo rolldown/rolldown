@@ -1,13 +1,12 @@
 import type { BindingRenderedChunk } from '../binding.cjs';
 import type { AssetSource } from '../utils/asset-source';
-import type { ExternalMemoryHandle } from './external-memory-handle';
 
 /**
  * The information about an asset in the generated bundle.
  *
  * @category Plugin APIs
  */
-export interface OutputAsset extends ExternalMemoryHandle {
+export interface OutputAsset {
   type: 'asset';
   /** The file name of this asset. */
   fileName: string;
@@ -66,9 +65,7 @@ export interface RenderedModule {
  *
  * @category Plugin APIs
  */
-// `dropInner` is a binding-internal release hook: plugins get wrappers or
-// snapshots, never the releasable box.
-export interface RenderedChunk extends Omit<BindingRenderedChunk, 'modules' | 'dropInner'> {
+export interface RenderedChunk extends Omit<BindingRenderedChunk, 'modules'> {
   type: 'chunk';
   /** Information about the modules included in this chunk. */
   modules: {
@@ -99,7 +96,7 @@ export interface RenderedChunk extends Omit<BindingRenderedChunk, 'modules' | 'd
  *
  * @category Plugin APIs
  */
-export interface OutputChunk extends ExternalMemoryHandle {
+export interface OutputChunk {
   type: 'chunk';
   /** The generated code of this chunk. */
   code: string;
@@ -136,7 +133,7 @@ export interface OutputChunk extends ExternalMemoryHandle {
  *
  * @category Programmatic APIs
  */
-export interface RolldownOutput extends ExternalMemoryHandle {
+export interface RolldownOutput {
   /**
    * The list of chunks and assets in the generated bundle.
    *

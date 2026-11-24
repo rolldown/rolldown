@@ -593,21 +593,41 @@ impl<'a> GenerateStage<'a> {
       matches!(self.options.sourcemap, Some(SourceMapType::File | SourceMapType::Hidden));
     let implicit_maps = map_files && self.options.sourcemap_filenames.is_none();
     let map_name = |name: &ArcStr| ArcStr::from(format!("{name}.map"));
-    let output_filenames = |idx, chunk: &Chunk| {
-      let filename = chunk.preliminary_filename.as_deref();
-      // `getFileName()` can still return the preliminary filename of a removed chunk.
-      if removed.contains_key(&idx) {
-        return [filename.cloned(), None];
+    let sourcemap_filename = |chunk_graph: &ChunkGraph, idx, chunk: &Chunk| {
+      if !map_files || removed.contains_key(&idx) {
+        return None;
       }
-      let map = chunk.preliminary_sourcemap_filename.as_deref().filter(|_| map_files);
-      let map = map.cloned().or_else(|| filename.filter(|_| implicit_maps).map(map_name));
-      [filename.cloned(), map]
+      let modules = chunk.modules.iter().chain(
+        self
+          .inline_state
+          .carried_by(idx)
+          .iter()
+          .flat_map(|&idx| &chunk_graph.chunk_table[idx].modules),
+      );
+      // A chunk needs a non-virtual module to produce a sourcemap.
+      if !modules
+        .filter_map(|&idx| self.link_output.module_table[idx].as_normal())
+        .any(|module| !module.is_virtual())
+      {
+        return None;
+      }
+      chunk
+        .preliminary_sourcemap_filename
+        .as_deref()
+        .cloned()
+        .or_else(|| chunk.preliminary_filename.as_deref().filter(|_| implicit_maps).map(map_name))
     };
     let chunk_filenames = |chunk_graph: &ChunkGraph| {
       chunk_graph
         .chunk_table
         .iter_enumerated()
-        .flat_map(|(idx, chunk)| output_filenames(idx, chunk))
+        .flat_map(|(idx, chunk)| {
+          // `getFileName()` can still return the preliminary filename of a removed chunk.
+          [
+            chunk.preliminary_filename.as_deref().cloned(),
+            sourcemap_filename(chunk_graph, idx, chunk),
+          ]
+        })
         .flatten()
         .collect::<Vec<_>>()
     };
@@ -646,14 +666,14 @@ impl<'a> GenerateStage<'a> {
         chunk.preliminary_filename = Some(name);
       }
     }
-    let explicit_outputs = explicit_chunks
-      .into_iter()
-      .flat_map(|idx| output_filenames(idx, &chunk_graph.chunk_table[idx]))
-      .flatten();
-    self
-      .plugin_driver
-      .file_emitter
-      .reserve_explicit_chunk_filenames(explicit_outputs, chunk_filenames(chunk_graph))
+    let explicit_outputs = explicit_chunks.iter().map(|&idx| (idx, &chunk_graph.chunk_table[idx]));
+    self.plugin_driver.file_emitter.reserve_explicit_chunk_filenames(
+      explicit_outputs
+        .clone()
+        .filter_map(|(_, chunk)| chunk.preliminary_filename.as_deref().cloned()),
+      explicit_outputs.filter_map(|(idx, chunk)| sourcemap_filename(chunk_graph, idx, chunk)),
+      chunk_filenames(chunk_graph),
+    )
   }
 
   fn compute_chunk_output_exports(

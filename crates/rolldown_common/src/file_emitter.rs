@@ -409,6 +409,7 @@ impl FileEmitter {
   pub fn reserve_explicit_chunk_filenames(
     &self,
     explicit_outputs: impl IntoIterator<Item = ArcStr>,
+    preliminary_sourcemaps: impl IntoIterator<Item = ArcStr>,
     chunk_filenames: impl IntoIterator<Item = ArcStr>,
   ) -> BuildResult<()> {
     let mut explicit_names = FxHashSet::default();
@@ -416,6 +417,12 @@ impl FileEmitter {
     for filename in explicit_outputs {
       explicit_names.insert(normalize_filename(&filename).to_lowercase());
       directories.extend(output_parent_paths(&filename).map(|path| path.to_lowercase()));
+    }
+    let mut sourcemap_names = FxHashSet::default();
+    let mut sourcemap_directories = FxHashSet::default();
+    for filename in preliminary_sourcemaps {
+      sourcemap_names.insert(normalize_filename(&filename).to_lowercase());
+      sourcemap_directories.extend(output_parent_paths(&filename).map(|path| path.to_lowercase()));
     }
     for filename in chunk_filenames.into_iter().chain(self.asset_and_prebuilt_chunk_filenames()) {
       self.reserve_output_path(&filename);
@@ -432,16 +439,29 @@ impl FileEmitter {
       let normalized = normalize_filename(filename);
       let key = normalized.to_lowercase();
       let is_directory_conflict = directories.contains(&key);
-      if is_directory_conflict || explicit_names.contains(&key) {
-        conflicts.push((ArcStr::from(normalized), file.key().clone(), is_directory_conflict));
+      let conflicts_with_chunk = is_directory_conflict || explicit_names.contains(&key);
+      if conflicts_with_chunk
+        || sourcemap_names.contains(&key)
+        || sourcemap_directories.contains(&key)
+      {
+        conflicts.push((
+          ArcStr::from(normalized),
+          file.key().clone(),
+          conflicts_with_chunk,
+          is_directory_conflict,
+        ));
       }
     }
     conflicts.sort_unstable();
-    for (filename, reference_id, is_directory_conflict) in conflicts {
+    for (filename, reference_id, conflicts_with_chunk, is_directory_conflict) in conflicts {
       let mut file = self.files.get_mut(&reference_id).expect("The asset must still exist");
       if file.filename_is_fixed.load(Ordering::Relaxed)
         || self.emitted_files.contains(&reference_id)
       {
+        // Check fixed names against the sourcemaps that the build emits.
+        if !conflicts_with_chunk {
+          continue;
+        }
         let path = file.asset.filename.clone();
         let error = if is_directory_conflict {
           BuildDiagnostic::file_directory_conflict(path)

@@ -1,0 +1,12 @@
+{
+  "config": {
+    "input": [
+      { "name": "index", "import": "index.js" },
+      { "name": "value", "import": "setup-value.js" }
+    ],
+    "codeSplitting": {
+      "groups": [{ "name": "vendor" }]
+    }
+  },
+  "expectExecuted": false
+}

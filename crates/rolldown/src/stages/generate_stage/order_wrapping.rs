@@ -647,12 +647,16 @@ impl GenerateStage<'_> {
       let sites = entry.related_stmt_infos.iter().filter(|&&(importer, stmt, _, record)| {
         self.is_included_dynamic_import_record(importer, stmt, record, target)
       });
+      let mut is_kept = self.kept_importee(target);
       if !is_pure_dynamic_entry_chunk(facade_chunk)
         || facade_chunk.entry_module_idx() != Some(target)
         || !facade_chunk.modules.is_empty()
         || !module.importers_idx.is_empty()
         || meta.is_tla_or_contains_tla_dependency
-        || meta.load_dependencies.iter().any(|&dep| dep != target && dep != runtime)
+        || meta
+          .load_dependencies
+          .iter()
+          .any(|&dep| dep != target && dep != runtime && (module.meta.has_eval() || is_kept(dep)))
         || !self.is_order_wrap_eligible(target)
         || !sites.clone().any(|&(importer, ..)| {
           chunk_graph.module_to_chunk[importer] == Some(host)

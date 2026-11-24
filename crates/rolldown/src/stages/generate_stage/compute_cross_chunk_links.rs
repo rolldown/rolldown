@@ -620,12 +620,28 @@ impl GenerateStage<'_> {
     reads
   }
 
-  /// Pushes the modules that the static imports of a module lead to, in source order. Only the
-  /// imports that tree shaking keeps count, because the output does not have the other imports. An
-  /// import is kept when its module is in `load_dependencies`, the dependencies that survive tree
-  /// shaking. An import that is not kept can still get bindings that other modules declare, for
-  /// example through a re-export module that tree shaking removes. Such an import leads to the
-  /// modules that declare those bindings, because the output imports the bindings from there.
+  /// Returns a predicate for the static dependencies of `module_idx` that the output loads.
+  /// `load_dependencies` includes side-effect-free entry edges kept only for chunk placement
+  /// (`placement_entries` in `patch_module_dependencies`). With tree shaking enabled, those entries
+  /// count only when the module references one of their bindings.
+  pub(super) fn kept_importee(&self, module_idx: ModuleIdx) -> impl FnMut(ModuleIdx) -> bool {
+    let load_dependencies = &self.link_output.metas[module_idx].load_dependencies;
+    let mut symbol_owners = None;
+    move |dependency| {
+      load_dependencies.contains(&dependency)
+        && (self.options.treeshake.is_none()
+          || !self.link_output.entries.contains_key(&dependency)
+          || self.link_output.module_table[dependency].side_effects().has_side_effects()
+          || symbol_owners
+            .get_or_insert_with(|| self.referenced_symbol_owners(module_idx))
+            .contains(&dependency))
+    }
+  }
+
+  /// Pushes kept static importees in source order. An import that is not kept can still get bindings
+  /// that other modules declare, for example through a re-export module that tree shaking removes.
+  /// Such an import leads to the modules that declare those bindings, because the output imports
+  /// the bindings from there.
   pub(super) fn push_kept_static_importees(
     &self,
     module_idx: ModuleIdx,
@@ -634,20 +650,7 @@ impl GenerateStage<'_> {
     let Some(module) = self.link_output.module_table[module_idx].as_normal() else {
       return;
     };
-    let load_dependencies = &self.link_output.metas[module_idx].load_dependencies;
-    let mut symbol_owners = None;
-    let mut is_kept = |dependency: ModuleIdx| {
-      // `load_dependencies` also has imported user-defined and code-less dynamic entries without
-      // side effects for chunk placement (see `placement_entries` in `patch_module_dependencies`).
-      // The output imports such a module only when this module uses one of its bindings.
-      load_dependencies.contains(&dependency)
-        && (self.options.treeshake.is_none()
-          || !self.link_output.entries.contains_key(&dependency)
-          || self.link_output.module_table[dependency].side_effects().has_side_effects()
-          || symbol_owners
-            .get_or_insert_with(|| self.referenced_symbol_owners(module_idx))
-            .contains(&dependency))
-    };
+    let mut is_kept = self.kept_importee(module_idx);
     let mut binding_owners = None;
     for (record_idx, record) in module.import_records.iter_enumerated() {
       if !record.kind.is_static() {

@@ -19,10 +19,11 @@ pub struct ChunkGraph {
   /// If the namespace is not merged, `Key` == `Value`.
   /// If the namespace is merged, `Key` is the original namespace symbol, and `Value` is the linked namespace symbol.
   pub finalized_cjs_ns_map_idx_vec: IndexVec<ChunkIdx, FxHashMap<SymbolRef, SymbolRef>>,
-  /// The reference IDs of `this.emitFile({ type: 'chunk' })`, keyed by the entry chunk of each
-  /// emitted entry. The facade elimination does not move them, so a removed facade keeps its
-  /// reference IDs. Read the file of a reference ID through
-  /// [`ChunkGraph::emitted_chunk_reference_ids_by_file`].
+  /// This map stores the reference IDs from `this.emitFile({ type: 'chunk' })`.
+  /// Each key is the index of an entry chunk.
+  /// If the chunk optimizer removes a facade, the map keeps the index and IDs of that facade.
+  ///
+  /// Use [`ChunkGraph::emitted_chunk_reference_ids_by_file`] to group the IDs by output chunk.
   pub chunk_idx_to_reference_ids: FxHashMap<ChunkIdx, Vec<ArcStr>>,
   pub common_chunk_exported_facade_chunk_namespace: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>>,
   /// Modules from emitted chunks with AllowExtension that were merged into common chunks.
@@ -53,12 +54,13 @@ impl ChunkGraph {
     }
   }
 
-  /// The reference IDs of the emitted chunks, keyed by the chunk whose file holds the exports of
-  /// each emitted entry. When the chunk optimizer removes the facade of an emitted entry, the chunk
-  /// that holds the entry module exports the signature of the entry, and the removed facade is not
-  /// in the output. Then the reference IDs of the facade name the file of the chunk in
-  /// `entry_module_to_entry_chunk`. See internal-docs/code-splitting/implementation.md
-  /// ("ChunkGraph").
+  /// This method groups the reference IDs of emitted entries by the index of the output chunk.
+  ///
+  /// If the chunk optimizer removes an entry facade from the output, another chunk provides the
+  /// exports in the entry signature. That chunk contains the entry module.
+  /// The method finds the index of that chunk in `entry_module_to_entry_chunk`.
+  ///
+  /// See the `ChunkGraph` section in `internal-docs/code-splitting/implementation.md`.
   pub fn emitted_chunk_reference_ids_by_file(&self) -> FxHashMap<ChunkIdx, Vec<ArcStr>> {
     let mut reference_ids_by_file: FxHashMap<ChunkIdx, Vec<ArcStr>> = FxHashMap::default();
     for (&chunk_idx, reference_ids) in &self.chunk_idx_to_reference_ids {

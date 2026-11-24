@@ -32,8 +32,8 @@ export default defineTest({
           if (chunk.name !== 'main') {
             return null;
           }
-          // In `renderChunk`, the file names have hash placeholders. Rolldown replaces the
-          // placeholders in the output code.
+          // In `renderChunk`, the `group` filename from `getFileName()` contains a hash placeholder.
+          // Rolldown replaces the placeholder in the output code.
           const fileNames = referenceIds.map((referenceId) => this.getFileName(referenceId));
           return `${code}\n${fileNamesMarker}${JSON.stringify(fileNames)}\n`;
         },
@@ -42,9 +42,9 @@ export default defineTest({
             Object.values(bundle).find(
               (output): output is OutputChunk => output.type === 'chunk' && output.name === name,
             )!;
-          // The `group` chunk holds the modules of both entries, which have only local exports.
-          // Thus the chunk optimizer removes both facades, and the `group` chunk exports the
-          // exports of both entries.
+          // The `group` chunk contains both entry modules. Each module has only local exports.
+          // The chunk optimizer therefore removes both facades.
+          // The `group` chunk provides the exports of both entries.
           const group = findChunk('group');
           expect(group.exports).toEqual(['a', 'b']);
           expect(referenceIds.map((referenceId) => this.getFileName(referenceId))).toEqual([

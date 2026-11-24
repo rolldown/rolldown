@@ -326,6 +326,18 @@ impl<'a> GenerateStage<'a> {
     &self,
     chunk_graph: &mut ChunkGraph,
   ) -> BuildResult<ChunkNamingResult> {
+    // The output chunk uses the explicit filename of a removed facade.
+    // See the `ChunkGraph` section in `internal-docs/code-splitting/implementation.md`.
+    for &chunk_idx in chunk_graph.chunk_idx_to_reference_ids.keys() {
+      let Some(file_name) = chunk_graph.chunk_table[chunk_idx].file_name.as_ref() else {
+        continue;
+      };
+      let output_chunk_idx = chunk_graph.emitted_entry_output_chunk_idx(chunk_idx);
+      if output_chunk_idx != chunk_idx {
+        chunk_graph.chunk_table[output_chunk_idx].file_name = Some(file_name.clone());
+      }
+    }
+
     let modules = &self.link_output.module_table.modules;
 
     let mut index_chunk_id_to_representative_name = FxHashMap::default();
@@ -559,8 +571,11 @@ impl<'a> GenerateStage<'a> {
     let explicit_names: FxHashSet<_> = chunk_graph
       .chunk_idx_to_reference_ids
       .keys()
-      .filter(|idx| !removed.contains_key(idx))
-      .filter_map(|&idx| chunk_graph.chunk_table[idx].file_name.as_ref())
+      .filter_map(|&idx| {
+        let name = chunk_graph.chunk_table[idx].file_name.as_ref()?;
+        let output_chunk_idx = chunk_graph.emitted_entry_output_chunk_idx(idx);
+        (!removed.contains_key(&output_chunk_idx)).then_some(name)
+      })
       .map(|name| normalize(name.as_path()))
       .collect();
     if explicit_names.is_empty() {

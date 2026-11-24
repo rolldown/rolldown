@@ -1225,11 +1225,17 @@ impl GenerateStage<'_> {
         });
       }
     }
+    // An entry that absorbs a group keeps its own filename.
+    for merge in &common_chunk_merges {
+      if let Some(emitted_chunks) = emitted_chunk_groups.get_mut(&merge.from_chunk_idx) {
+        emitted_chunks.retain(|&idx| chunk_graph.chunk_table[idx].file_name.is_none());
+      }
+    }
     (facade_eliminations, common_chunk_merges, emitted_chunk_groups)
   }
 
-  /// Batch process emitted chunk groups to detect export name conflicts.
-  /// Chunks with conflicting export names need to keep their facade chunks.
+  /// This method checks for conflicts among emitted entries in each group.
+  /// The optimizer keeps the facade if its export names or explicit filename conflict.
   fn resolve_emitted_chunk_group_conflicts(
     &self,
     chunk_graph: &ChunkGraph,
@@ -1237,9 +1243,10 @@ impl GenerateStage<'_> {
     facade_eliminations: &mut Vec<FacadeChunkElimination>,
   ) {
     for (target_chunk_idx, emitted_chunk_indices) in emitted_chunks_by_target {
-      let Some(_target_chunk) = chunk_graph.chunk_table.get(target_chunk_idx) else {
+      let Some(target_chunk) = chunk_graph.chunk_table.get(target_chunk_idx) else {
         continue;
       };
+      let mut group_file_name = target_chunk.file_name.as_ref();
       let mut emitted_entry_modules: Vec<(ChunkIdx, ModuleIdx)> = emitted_chunk_indices
         .iter()
         .filter_map(|item| {
@@ -1257,6 +1264,12 @@ impl GenerateStage<'_> {
       // If an emitted chunk exports a name that conflicts with an already allocated export,
       // its facade chunk cannot be removed.
       for (chunk_idx, entry_module_idx) in emitted_entry_modules {
+        let file_name = chunk_graph.chunk_table[chunk_idx].file_name.as_ref();
+        if let Some(file_name) = file_name
+          && group_file_name.is_some_and(|name| name != file_name)
+        {
+          continue;
+        }
         let module_meta = &self.link_output.metas[entry_module_idx];
         let needs_facade =
           module_meta.resolved_exports.iter().any(|(export_name, resolved_export)| {
@@ -1271,6 +1284,7 @@ impl GenerateStage<'_> {
             }
           });
         if !needs_facade {
+          group_file_name = group_file_name.or(file_name);
           facade_eliminations.push(FacadeChunkElimination {
             reason: FacadeChunkEliminationReason::EmittedChunkMergedIntoManualGroup,
             entry_module_idx,

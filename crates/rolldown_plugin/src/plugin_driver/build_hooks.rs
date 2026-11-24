@@ -280,6 +280,7 @@ impl PluginDriver {
     original_code: String,
     sourcemap_chain: &mut Vec<SourcemapChainElement>,
     side_effects: &mut Option<HookSideEffects>,
+    declared_module_size: &mut Option<usize>,
     module_type: &mut ModuleType,
     magic_string_tx: Option<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>,
     code_changed_by_plugins: &mut Option<Vec<String>>,
@@ -363,6 +364,9 @@ impl PluginDriver {
         if let Some(v) = r.side_effects {
           self.set_hook_side_effects(module_id, *side_effects, v);
           *side_effects = Some(v);
+        }
+        if let Some(v) = r.declared_module_size {
+          *declared_module_size = Some(v);
         }
         if let Some(v) = r.code {
           if let Some(changed_by) = code_changed_by_plugins {

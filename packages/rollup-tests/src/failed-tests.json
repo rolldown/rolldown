@@ -143,6 +143,8 @@
   "rollup@form@namespace-optimization-default-export: it does not include all namespace members when a namespace is re-exported as default",
   "rollup@form@paths-drive-root: does not let \"..\" climb above a drive root when rendering the import path of an external remapped via output.paths",
   "rollup@function@catch-scope-nested-deconflicting: deconflicts nested catch scope parameters correctly",
+  "rollup@function@circular-namespace-nested-dynamic-member: creates namespace objects early if they are reachable through a chain of namespaces",
+  "rollup@function@circular-namespace-read-before-module: creates namespace objects early if a module in a cycle reads them before their module ran",
   "rollup@function@emit-file@no-input: It is not necessary to provide an input if a dynamic entry is emitted",
   "rollup@function@error-file-name-windows-drive-relative-emitted-asset: throws when a plugin emits an asset with a Windows drive-relative file name",
   "rollup@function@error-file-name-windows-drive-relative-input-alias: throws when an object-form input alias is a Windows drive-relative path",

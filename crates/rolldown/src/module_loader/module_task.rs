@@ -135,8 +135,14 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     // Do not take the value out: `resolved_id` becomes `originative_resolved_id`, and a refetch
     // (for example in the HMR stage) loads the module from it again.
     let mut hook_side_effects = self.resolved_id.side_effects;
+    let mut declared_module_size = None;
     let (source, module_type) = self
-      .load_source(&mut sourcemap_chain, &mut hook_side_effects, self.magic_string_tx.clone())
+      .load_source(
+        &mut sourcemap_chain,
+        &mut hook_side_effects,
+        &mut declared_module_size,
+        self.magic_string_tx.clone(),
+      )
       .await?;
 
     let stable_id = id.stabilize(&self.ctx.options.cwd);
@@ -165,7 +171,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
           replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
           flat_options: self.flat_options,
         },
-        CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
+        CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects, declared_module_size },
       )
       .await?;
 
@@ -298,6 +304,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     &self,
     sourcemap_chain: &mut Vec<SourcemapChainElement>,
     hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,
+    declared_module_size: &mut Option<usize>,
     magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
   ) -> BuildResult<(StrOrBytes, ModuleType)> {
     let mut is_read_from_disk = true;
@@ -307,6 +314,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       self.ctx.fs.clone(),
       sourcemap_chain,
       hook_side_effects,
+      declared_module_size,
       &self.ctx.options,
       self.asserted_module_type.as_ref(),
       &mut is_read_from_disk,
@@ -349,6 +357,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
           source,
           sourcemap_chain,
           hook_side_effects,
+          declared_module_size,
           &mut module_type,
           magic_string_tx,
         )

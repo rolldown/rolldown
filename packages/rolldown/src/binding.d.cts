@@ -2401,6 +2401,7 @@ export interface BindingHookLoadExtraArgs {
 export interface BindingHookLoadOutput {
   code: string
   moduleSideEffects?: boolean | 'no-treeshake'
+  declaredModuleSize?: number
   map?: BindingSourcemap
   moduleType?: string
 }
@@ -2490,6 +2491,7 @@ export type BindingHookSideEffects = boolean | string
 export interface BindingHookTransformOutput {
   code?: string
   moduleSideEffects?: BindingHookSideEffects
+  declaredModuleSize?: number
   /**
    * A sourcemap, or `null` to explicitly signal "no sourcemap" (distinct from
    * omitting the field, which mirrors Rollup's "possibly broken" semantics).

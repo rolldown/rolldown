@@ -205,6 +205,25 @@ export interface SourceDescription
    */
   map?: SourceMapInput;
   moduleType?: ModuleType;
+  /**
+   * The module's size in bytes. Size-based code splitting uses it instead of the size of the
+   * module's code.
+   *
+   * This is useful when a plugin emits output for each chunk from the modules in it, and that
+   * output is not in the modules' code. For example, with `build.cssCodeSplit: true`, Vite emits a
+   * stylesheet for each JS chunk from the CSS of the style modules the chunk contains, while the
+   * code of a style module is empty or only a class-name map.
+   *
+   * @example
+   * ```js
+   * transform(code, id) {
+   *   if (isCss(id)) {
+   *     return { code, declaredModuleSize: Buffer.byteLength(code) + Buffer.byteLength(css) }
+   *   }
+   * }
+   * ```
+   */
+  declaredModuleSize?: number;
 }
 
 /**
@@ -418,11 +437,22 @@ export interface FunctionPluginHooks {
    * Returning `false` signals that `source` should be treated as an external module and not included in the bundle. If this happens for a relative import, the id will be renormalized the same way as when the {@linkcode InputOptions.external} option is used.
    * If you return an object, then it is possible to resolve an import to a different id while excluding it from the bundle at the same time.
    *
-   * Note that while `resolveId` will be called for each import of a module and can therefore
-   * resolve to the same `id` many times, values for `external`, `meta` or `moduleSideEffects`
-   * can only be set once before the module is loaded. The reason is that after this call,
-   * Rolldown will continue with the {@linkcode load} and {@linkcode transform} hooks for that
-   * module that may override these values and should take precedence if they do so.
+   * `resolveId` can be called many times for the same `id`: once for each import of the module,
+   * and once for each {@linkcode PluginContext.resolve | this.resolve} call. Only the resolution
+   * that creates the module sets its `external`, `meta` and `moduleSideEffects` values:
+   *
+   * - The module is created by one of the imports, entries or emitted chunks that resolve to its
+   *   `id`, or by a {@linkcode PluginContext.load | this.load} call. Which import creates it
+   *   depends on which importing module finishes first, so return the same values for the same
+   *   `id`.
+   * - A `this.resolve` call does not create the module, so the values that it returns are not
+   *   kept.
+   * - Other imports of the same `id` do not change `meta` or `moduleSideEffects`. If one import,
+   *   entry or emitted chunk resolves the `id` as external and another one does not, the build
+   *   fails, as in Rollup.
+   *
+   * After the module is created, its {@linkcode load} and {@linkcode transform} hooks can return
+   * other `meta` and `moduleSideEffects` values, and these take precedence.
    *
    * @kind async first
    * @group Build Hooks

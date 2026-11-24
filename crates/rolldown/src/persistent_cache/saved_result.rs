@@ -14,7 +14,7 @@ use rolldown_utils::url::clean_url;
 use super::codec::{Decoder, Encoder};
 
 /// Bumped on every change to the encoding below. A saved result in another format is not found.
-pub const SAVED_RESULT_FORMAT: u32 = 2;
+pub const SAVED_RESULT_FORMAT: u32 = 3;
 
 /// What the persistent cache saves for a module: the state after `transform`, the resolve result
 /// of each import, and the actions of the skipped hooks that Rolldown does again on reuse.
@@ -28,6 +28,7 @@ pub struct SavedResult {
   /// Only the `meta` that the JS `load` and `transform` hooks returned, like `hook_side_effects`.
   pub js_meta: JsModuleMeta,
   pub sourcemap_chain: Vec<SourcemapChainElement>,
+  pub declared_module_size: Option<usize>,
   pub is_read_from_disk: bool,
   pub resolved: Vec<SavedResolve>,
   /// The actions of the `load` and `transform` hooks. Done again before the module is parsed.
@@ -126,6 +127,7 @@ impl SavedResult {
     e.opt(self.hook_side_effects, write_hook_side_effects);
     write_js_meta(&mut e, &self.js_meta);
     e.seq(self.sourcemap_chain.iter(), write_sourcemap_element);
+    e.opt(self.declared_module_size, Encoder::usize);
     e.bool(self.is_read_from_disk);
     e.seq(self.resolved.iter(), |e, saved| {
       e.str(&saved.specifier);
@@ -149,6 +151,7 @@ impl SavedResult {
       hook_side_effects: d.opt(read_hook_side_effects)?,
       js_meta: read_js_meta(&mut d)?,
       sourcemap_chain: d.seq(read_sourcemap_element)?,
+      declared_module_size: d.opt(Decoder::usize)?,
       is_read_from_disk: d.bool()?,
       resolved: d.seq(|d| {
         Some(SavedResolve {
@@ -647,6 +650,7 @@ mod tests {
       hook_side_effects: Some(HookSideEffects::False),
       js_meta: own.clone(),
       sourcemap_chain: vec![],
+      declared_module_size: Some(4096),
       is_read_from_disk: true,
       resolved: vec![SavedResolve {
         specifier: "./b.js".to_string(),
@@ -678,6 +682,7 @@ mod tests {
     };
     let decoded = SavedResult::decode(&saved.encode()).expect("should decode");
     assert_eq!(decoded.js_meta, own);
+    assert_eq!(decoded.declared_module_size, Some(4096));
     let restored = decoded.resolved[0].resolved.as_ref().expect("a resolve result");
     assert_eq!(restored.js_meta.as_deref(), Some(&resolved));
     assert_eq!(restored.side_effects, Some(HookSideEffects::NoTreeshake));

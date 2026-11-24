@@ -366,7 +366,7 @@ only when at least half of its data is expired.
   result without a key for an import falls back to resolving it normally.
 - `SAVED_RESULT_FORMAT` in `saved_result.rs` grows with every change to the
   saved format, so a result in an older format is not found. Its value is
-  `2`.
+  `3`.
 
 ## Related
 

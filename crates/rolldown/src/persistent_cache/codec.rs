@@ -26,6 +26,10 @@ impl Encoder {
     self.buf.extend_from_slice(&value.to_le_bytes());
   }
 
+  pub fn usize(&mut self, value: usize) {
+    self.buf.extend_from_slice(&(value as u64).to_le_bytes());
+  }
+
   pub fn len(&mut self, value: usize) {
     self.u32(u32::try_from(value).expect("cache data should be smaller than 4 GiB"));
   }
@@ -101,6 +105,11 @@ impl<'a> Decoder<'a> {
 
   pub fn u32(&mut self) -> Option<u32> {
     self.take(4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+  }
+
+  pub fn usize(&mut self) -> Option<usize> {
+    let b = self.take(8)?;
+    usize::try_from(u64::from_le_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])).ok()
   }
 
   pub fn len(&mut self) -> Option<usize> {

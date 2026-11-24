@@ -73,6 +73,7 @@ struct StateAfterTransform {
   source: StrOrBytes,
   module_type: ModuleType,
   sourcemap_chain: Vec<SourcemapChainElement>,
+  declared_module_size: Option<usize>,
   is_read_from_disk: bool,
   /// The number of actions that `load` and `transform` recorded. The actions after this number
   /// come from the resolve hooks.
@@ -185,7 +186,14 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     {
       saved_resolves = Some(resolved);
       saved_resolve_actions = Some(std::mem::take(&mut saved.resolve_actions));
-      self.reuse_saved_result(saved, &mut sourcemap_chain, &mut hook_side_effects).await?
+      self
+        .reuse_saved_result(
+          saved,
+          &mut sourcemap_chain,
+          &mut hook_side_effects,
+          &mut declared_module_size,
+        )
+        .await?
     } else {
       self
         .load_source(
@@ -203,6 +211,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       source: source.clone(),
       module_type: module_type.clone(),
       sourcemap_chain: sourcemap_chain.clone(),
+      declared_module_size,
       is_read_from_disk,
       action_count: recorder.action_count(),
     });
@@ -427,6 +436,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     saved: SavedResult,
     sourcemap_chain: &mut Vec<SourcemapChainElement>,
     hook_side_effects: &mut Option<HookSideEffects>,
+    declared_module_size: &mut Option<usize>,
   ) -> BuildResult<(StrOrBytes, ModuleType, bool)> {
     self.ctx.plugin_driver.replay_cache_actions(self.module_idx, saved.actions).await?;
     // Not a hook action, so it is not recorded. The replayed actions may already hold the file.
@@ -443,6 +453,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       *hook_side_effects = Some(v);
     }
     *sourcemap_chain = saved.sourcemap_chain;
+    *declared_module_size = saved.declared_module_size;
     self.watch_module_files(saved.is_read_from_disk);
     Ok((saved.source, saved.module_type, saved.is_read_from_disk))
   }
@@ -464,6 +475,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       source,
       module_type,
       sourcemap_chain,
+      declared_module_size,
       is_read_from_disk,
       action_count,
     } = state;
@@ -486,6 +498,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       hook_side_effects,
       js_meta,
       sourcemap_chain,
+      declared_module_size,
       is_read_from_disk,
       resolved,
       actions,

@@ -2091,6 +2091,36 @@ describe('persistent cache', () => {
     expect(out2).toEqual(out1);
   });
 
+  test('the `declaredModuleSize` that a cached `transform` returns is read again after a restart', async () => {
+    writeFiles(BASIC_FILES);
+    const declareSize = (calls: string[]): Plugin => ({
+      name: 'declare-size',
+      transform: {
+        cache: true,
+        handler(code, id) {
+          if (!id.startsWith(src)) return null;
+          calls.push(`transform:${rel(id)}`);
+          return rel(id) === 'b.js' ? { code, declaredModuleSize: 1001 } : null;
+        },
+      },
+    });
+    const output: OutputOptions = {
+      codeSplitting: { groups: [{ name: 'small', test: /b\.js$/, maxModuleSize: 1000 }] },
+    };
+    const hasSmallChunk = (files: Awaited<ReturnType<typeof build>>) =>
+      files.some((file) => file.fileName.startsWith('small'));
+    expect(hasSmallChunk(await build({ plugins: [], cache: undefined, output }))).toBe(true);
+
+    const clean = await build({ plugins: [declareSize([])], cache: undefined, output });
+    expect(hasSmallChunk(clean)).toBe(false);
+    const first = await build({ plugins: [declareSize([])], output });
+    const calls: string[] = [];
+    const restart = await build({ plugins: [declareSize(calls)], output });
+    expect(calls).toEqual([]);
+    expect(first).toEqual(clean);
+    expect(restart).toEqual(clean);
+  });
+
   test('nothing is written when the cache is off', async () => {
     writeFiles(BASIC_FILES);
     for (const cache of [false, undefined] as const) {

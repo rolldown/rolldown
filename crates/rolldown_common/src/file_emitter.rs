@@ -14,7 +14,7 @@ use rolldown_utils::make_unique_name::{
 };
 use rolldown_utils::stabilize_id::stabilize_id;
 use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 use std::ffi::OsStr;
 use std::path::Path;
 use std::sync::Arc;
@@ -448,14 +448,26 @@ impl FileEmitter {
     Ok(())
   }
 
-  pub fn check_filename_conflicts(&self, bundle: &[Output]) -> BuildResult<()> {
+  pub fn check_asset_filename_conflicts(&self, bundle: &[Output]) -> BuildResult<()> {
     if self.protected_filenames.is_empty() {
       return Ok(());
     }
-    let mut seen = FxHashSet::default();
+    let prebuilt_filenames: FxHashSet<_> = self
+      .prebuilt_chunks
+      .iter()
+      .map(|chunk| normalize_filename(&chunk.file_name).to_lowercase())
+      .collect();
+    let mut seen = FxHashMap::default();
     for file in bundle {
       let filename = normalize_filename(file.filename()).to_lowercase();
-      if self.protected_filenames.contains(filename.as_str()) && !seen.insert(filename) {
+      if !self.protected_filenames.contains(filename.as_str()) {
+        continue;
+      }
+      let is_asset_or_prebuilt =
+        matches!(file, Output::Asset(_)) || prebuilt_filenames.contains(&filename);
+      if let Some(previous_is_asset_or_prebuilt) = seen.insert(filename, is_asset_or_prebuilt)
+        && (is_asset_or_prebuilt || previous_is_asset_or_prebuilt)
+      {
         return Err(BuildDiagnostic::filename_conflict(file.filename().into()).into());
       }
     }

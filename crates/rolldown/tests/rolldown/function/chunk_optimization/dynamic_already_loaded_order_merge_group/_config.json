@@ -1,0 +1,11 @@
+{
+  "_comment": "`b.js` runs between `a-start.js` and `a-end.js`, which share a chunk. Merged into `main.js` alone, either chunk would run after the other, so the two chunks merge together and run in the entry's body in source order.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "experimental": {
+      "chunkOptimization": {
+        "avoidRedundantChunkLoads": false
+      }
+    }
+  }
+}

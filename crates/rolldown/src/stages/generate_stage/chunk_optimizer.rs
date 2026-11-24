@@ -353,6 +353,56 @@ impl ChunkOptimizationGraph {
     false
   }
 
+  /// Whether merging all of `source_chunk_idxs` into `target_chunk_idx` together creates a cycle:
+  /// a path that leaves the merged chunks and comes back to one of them. Their edges between each
+  /// other become internal.
+  pub fn group_merge_creates_cycle(
+    &self,
+    source_chunk_idxs: &[ChunkIdx],
+    target_chunk_idx: ChunkIdx,
+  ) -> bool {
+    let is_merged =
+      |chunk_idx: ChunkIdx| chunk_idx == target_chunk_idx || source_chunk_idxs.contains(&chunk_idx);
+    let mut queue: VecDeque<ChunkIdx> = std::iter::once(target_chunk_idx)
+      .chain(source_chunk_idxs.iter().copied())
+      .flat_map(|chunk_idx| self.chunks[chunk_idx].dependencies.iter().copied())
+      .map(|chunk_idx| self.merged_representative(chunk_idx))
+      .filter(|&chunk_idx| !is_merged(chunk_idx))
+      .collect();
+    let mut visited = FxHashSet::default();
+    while let Some(chunk_idx) = queue.pop_front() {
+      let chunk_idx = self.merged_representative(chunk_idx);
+      if is_merged(chunk_idx) {
+        return true;
+      }
+      if visited.insert(chunk_idx) {
+        queue.extend(self.chunks[chunk_idx].dependencies.iter().copied());
+      }
+    }
+    false
+  }
+
+  /// The first target whose held-back merges can all go together, as the set of their sources, or
+  /// an empty set. One group at a time: a group's merges change what the next group's check sees.
+  pub fn find_group_merge(
+    &self,
+    held_back_merges: impl Iterator<Item = (ChunkIdx, ChunkIdx)>,
+  ) -> FxHashSet<ChunkIdx> {
+    let mut sources_by_target: FxIndexMap<ChunkIdx, Vec<ChunkIdx>> = FxIndexMap::default();
+    for (source_chunk_idx, target_chunk_idx) in held_back_merges {
+      sources_by_target.entry(target_chunk_idx).or_default().push(source_chunk_idx);
+    }
+    sources_by_target
+      .into_iter()
+      .find(|(target_chunk_idx, source_chunk_idxs)| {
+        source_chunk_idxs.len() > 1
+          && !self.merge_runs_side_effects_late(source_chunk_idxs, *target_chunk_idx)
+          && !self.group_merge_creates_cycle(source_chunk_idxs, *target_chunk_idx)
+      })
+      .map(|(_, source_chunk_idxs)| source_chunk_idxs.into_iter().collect())
+      .unwrap_or_default()
+  }
+
   /// Returns true if `from` can transitively reach `to` through the dependency graph.
   pub fn is_reachable(&self, from: ChunkIdx, to: ChunkIdx) -> bool {
     let mut queue: VecDeque<ChunkIdx> = self.chunks[from].dependencies.iter().copied().collect();
@@ -423,29 +473,49 @@ impl ChunkOptimizationGraph {
     }
   }
 
-  /// Whether merging `source_chunk_idx` into `target_chunk_idx` runs one of the source's side
-  /// effects late: the same check as `ReducedChunkGraph::runs_side_effects_late`, with
-  /// `dependencies` for the closure and `certain_dependencies` for the exemption.
+  /// Whether merging all of `source_chunk_idxs` into `target_chunk_idx` together runs a side effect
+  /// of one of them late: the same check as `ReducedChunkGraph::runs_side_effects_late`, with
+  /// `dependencies` for the closure and `certain_dependencies` for the exemption. The sources run
+  /// in the target's body in execution order, so they cannot run late against each other.
   pub fn merge_runs_side_effects_late(
     &self,
+    source_chunk_idxs: &[ChunkIdx],
+    target_chunk_idx: ChunkIdx,
+  ) -> bool {
+    source_chunk_idxs.iter().any(|&source_chunk_idx| {
+      self.merge_runs_source_side_effects_late(
+        source_chunk_idx,
+        source_chunk_idxs,
+        target_chunk_idx,
+      )
+    })
+  }
+
+  fn merge_runs_source_side_effects_late(
+    &self,
     source_chunk_idx: ChunkIdx,
+    source_chunk_idxs: &[ChunkIdx],
     target_chunk_idx: ChunkIdx,
   ) -> bool {
     let Some((earliest_side_effect, _)) = self.chunks[source_chunk_idx].side_effect_exec_orders
     else {
       return false;
     };
+    let is_merged =
+      |chunk_idx: ChunkIdx| chunk_idx == target_chunk_idx || source_chunk_idxs.contains(&chunk_idx);
+    let receivers = || std::iter::once(target_chunk_idx).chain(source_chunk_idxs.iter().copied());
     // Only a chunk with a later side effect can be in the way, so the walk is skipped when there
-    // is none besides the two chunks themselves and the target imports no later external.
+    // is none besides the merged chunks themselves and they import no later external.
     let in_the_way = (earliest_side_effect.saturating_add(1), ChunkIdx::from_raw(0))..;
-    if self.chunks[target_chunk_idx]
-      .external_side_effects
-      .last()
-      .is_none_or(|&latest_external| latest_external <= earliest_side_effect)
-      && !self
-        .latest_side_effects
-        .range(in_the_way)
-        .any(|&(_, chunk_idx)| chunk_idx != source_chunk_idx && chunk_idx != target_chunk_idx)
+    if receivers().all(|chunk_idx| {
+      self.chunks[chunk_idx]
+        .external_side_effects
+        .last()
+        .is_none_or(|&latest_external| latest_external <= earliest_side_effect)
+    }) && !self
+      .latest_side_effects
+      .range(in_the_way)
+      .any(|&(_, chunk_idx)| !is_merged(chunk_idx))
     {
       return false;
     }
@@ -460,19 +530,19 @@ impl ChunkOptimizationGraph {
         .iter()
         .any(|&order| order > earliest_side_effect && !externals_before.contains(&order))
     };
-    // The externals the target imports run before its body too.
-    if imports_late_external(target_chunk_idx) {
+    // What the source imports itself ran before it already. What the target and the other
+    // sources import, externals included, now runs before the target's body too.
+    let new_importers = || receivers().filter(|&chunk_idx| chunk_idx != source_chunk_idx);
+    if new_importers().any(imports_late_external) {
       return true;
     }
     let mut visited = FxHashSet::default();
-    let mut stack: Vec<ChunkIdx> =
-      self.chunks[target_chunk_idx].dependencies.iter().copied().collect();
+    let mut stack: Vec<ChunkIdx> = new_importers()
+      .flat_map(|chunk_idx| self.chunks[chunk_idx].dependencies.iter().copied())
+      .collect();
     while let Some(chunk_idx) = stack.pop() {
       let chunk_idx = self.merged_representative(chunk_idx);
-      if chunk_idx == source_chunk_idx
-        || chunk_idx == target_chunk_idx
-        || !visited.insert(chunk_idx)
-      {
+      if is_merged(chunk_idx) || !visited.insert(chunk_idx) {
         continue;
       }
       if !already_before.contains(&chunk_idx)
@@ -659,20 +729,24 @@ impl GenerateStage<'_> {
     // back, since the chunk in its way may merge into the same target later. Held-back merges are
     // retried in descending order of their earliest side effect, so a chunk in the way, whose side
     // effects run later, usually goes before the ones it blocks. Once a round merges nothing, the
-    // held-back chunks are created in their original order.
+    // held-back merges into one target are tried together, since each can be all that keeps the
+    // others late. When that merges nothing either, the held-back chunks are created in their
+    // original order.
     let mut pending: Vec<_> = assignments.into_iter().enumerate().collect();
     let mut hold_back_late_merges = true;
+    let mut group_merges = FxHashSet::default();
     loop {
       let mut merged_this_round = false;
       let mut held_back = vec![];
       for (position, (bits, temp_chunk_idx, chunk_idxs, merge_target)) in pending {
         // The order check runs first: it is cheaper, and a held-back merge would repeat the cycle
-        // check in every round.
+        // check in every round. A merge of a group passed both checks for the whole group.
         let merge_target = match merge_target {
+          Some(target_chunk_idx) if group_merges.remove(&temp_chunk_idx) => Some(target_chunk_idx),
           Some(target_chunk_idx)
             if !strict_execution_order
               && temp_chunk_graph
-                .merge_runs_side_effects_late(temp_chunk_idx, target_chunk_idx) =>
+                .merge_runs_side_effects_late(&[temp_chunk_idx], target_chunk_idx) =>
           {
             if hold_back_late_merges {
               held_back.push((position, (bits, temp_chunk_idx, chunk_idxs, merge_target)));
@@ -733,9 +807,19 @@ impl GenerateStage<'_> {
       if held_back.is_empty() {
         break;
       }
+      if !merged_this_round && hold_back_late_merges {
+        group_merges = temp_chunk_graph.find_group_merge(held_back.iter().filter_map(
+          |(_, (_, temp_chunk_idx, _, merge_target))| Some((*temp_chunk_idx, (*merge_target)?)),
+        ));
+        merged_this_round = !group_merges.is_empty();
+      }
       if merged_this_round {
+        // The members of a group go first, so no other merge lands between them.
         held_back.sort_by_key(|(_, (_, temp_chunk_idx, _, _))| {
-          Reverse(temp_chunk_graph.chunks[*temp_chunk_idx].side_effect_exec_orders)
+          (
+            !group_merges.contains(temp_chunk_idx),
+            Reverse(temp_chunk_graph.chunks[*temp_chunk_idx].side_effect_exec_orders),
+          )
         });
       } else {
         held_back.sort_by_key(|(position, _)| *position);

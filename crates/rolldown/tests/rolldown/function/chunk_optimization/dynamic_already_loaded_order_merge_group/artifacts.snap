@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// a-start.js
+globalThis.mergeGroupLog.push("a-start");
+// b.js
+globalThis.mergeGroupLog.push("b");
+// a-end.js
+globalThis.mergeGroupLog.push("a-end");
+// main.js
+const loadA = () => import("./route-a.js");
+const loadB = () => import("./route-b.js");
+globalThis.mergeGroupLog.push("main");
+export { loadA, loadB };
+
+```
+
+## route-a.js
+
+```js
+import "./main.js";
+// route-a.js
+globalThis.mergeGroupLog.push("route-a");
+
+```
+
+## route-b.js
+
+```js
+import "./main.js";
+// route-b.js
+globalThis.mergeGroupLog.push("route-b");
+
+```

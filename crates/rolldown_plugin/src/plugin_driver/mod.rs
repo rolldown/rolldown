@@ -16,8 +16,9 @@ use arcstr::ArcStr;
 use dashmap::DashMap;
 use event_listener::Event;
 use rolldown_common::{
-  ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, PluginIdx, SharedFileEmitter,
-  SharedModuleInfoDashMap, WatchPath,
+  ModuleId, ModuleIdx, ModuleInfo, ModuleInfoSideEffects, ModuleLoaderMsg, PluginIdx,
+  SharedFileEmitter, SharedModuleInfoDashMap, SharedModuleSideEffectsOverrides, WatchPath,
+  side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_devtools::trace_action_enabled;
 use rolldown_utils::dashmap::FxDashSet;
@@ -59,6 +60,7 @@ pub struct PluginDriver {
   pub file_emitter: SharedFileEmitter,
   pub watch_files: Arc<FxDashSet<ArcStr>>,
   pub module_infos: SharedModuleInfoDashMap,
+  pub module_side_effects_overrides: SharedModuleSideEffectsOverrides,
   /// Module dependencies tracked during load/transform hooks for HMR invalidation
   pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<WatchPath>>>>,
   context_load_completion_manager: ContextLoadCompletionManager,
@@ -74,6 +76,7 @@ impl PluginDriver {
   pub fn clear(&self) {
     self.watch_files.clear();
     self.module_infos.clear();
+    self.module_side_effects_overrides.clear();
     // Note: transform_dependencies is NOT cleared here - it's preserved across incremental builds
     // by BundleFactory which manages its lifecycle (reset on full builds only)
     self.context_load_completion_manager.clear();
@@ -102,6 +105,44 @@ impl PluginDriver {
 
   pub fn set_module_info(&self, module_id: &ModuleId, module_info: Arc<ModuleInfo>) {
     self.module_infos.insert(module_id.as_arc_str().into(), module_info);
+  }
+
+  pub fn module_info_side_effects(&self, module_id: &ModuleId) -> Option<ModuleInfoSideEffects> {
+    self.module_infos.get(module_id.as_str()).and_then(|info| info.side_effects)
+  }
+
+  /// Shows `side_effects`, or the value without hooks when it is `None`. Does nothing when the
+  /// module has no info yet.
+  pub fn set_module_info_side_effects(
+    &self,
+    module_id: &ModuleId,
+    side_effects: Option<DeterminedSideEffects>,
+  ) {
+    let Some(old) = self.module_infos.get(module_id.as_str()).map(|info| Arc::clone(info.value()))
+    else {
+      return;
+    };
+    let Some(old_side_effects) = old.side_effects else {
+      return;
+    };
+    let mut info = ModuleInfo::clone(&old);
+    info.side_effects = Some(ModuleInfoSideEffects { decided: side_effects, ..old_side_effects });
+    self.set_module_info(module_id, Arc::new(info));
+  }
+
+  /// A `load` or `transform` hook of `module_id` returned `side_effects`, and the hook value
+  /// before it was `previous`. The new value replaces a value that a plugin wrote, and the next
+  /// hooks of the module see it.
+  pub fn set_hook_side_effects(
+    &self,
+    module_id: &ModuleId,
+    previous: Option<HookSideEffects>,
+    side_effects: HookSideEffects,
+  ) {
+    self.module_side_effects_overrides.remove_written(module_id.as_str());
+    if previous != Some(side_effects) {
+      self.set_module_info_side_effects(module_id, Some(side_effects.declared()));
+    }
   }
 
   pub fn set_context_load_modules_tx(

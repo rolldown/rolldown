@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      { "name": "e1", "import": "./e1.cjs" },
+      { "name": "e2", "import": "./e2.cjs" }
+    ],
+    "format": "esm",
+    "platform": "node",
+    "preserveEntrySignatures": "false"
+  }
+}

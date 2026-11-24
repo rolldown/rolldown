@@ -17,6 +17,7 @@ pub async fn load_source<Fs: FileSystem + Clone + 'static>(
   fs: Fs,
   sourcemap_chain: &mut Vec<SourcemapChainElement>,
   side_effects: &mut Option<HookSideEffects>,
+  declared_module_size: &mut Option<usize>,
   options: &NormalizedBundlerOptions,
   asserted_module_type: Option<&ModuleType>,
   is_read_from_disk: &mut bool,
@@ -38,7 +39,11 @@ pub async fn load_source<Fs: FileSystem + Clone + 'static>(
       .map(|load_hook_output| {
         sourcemap_chain.extend(load_hook_output.map.map(SourcemapChainElement::Load));
         if let Some(v) = load_hook_output.side_effects {
+          plugin_driver.set_hook_side_effects(&resolved_id.id, *side_effects, v);
           *side_effects = Some(v);
+        }
+        if let Some(v) = load_hook_output.declared_module_size {
+          *declared_module_size = Some(v);
         }
         (Some(load_hook_output.code.to_string()), load_hook_output.module_type)
       })

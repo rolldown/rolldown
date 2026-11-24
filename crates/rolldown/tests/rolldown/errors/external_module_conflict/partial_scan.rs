@@ -58,7 +58,14 @@ impl Plugin for LoadInvalidatedExternal {
     let code = if args.id == self.entry_id {
       if self.is_partial_scan.load(Ordering::Relaxed) {
         ctx
-          .load(&self.lib_id, ImportAttributes::default(), None, ModuleDefFormat::Unknown, false)
+          .load(
+            &self.lib_id,
+            ImportAttributes::default(),
+            None,
+            ModuleDefFormat::Unknown,
+            false,
+            None,
+          )
           .await?;
         "import { value } from './lib.js'; console.log(value);"
       } else {

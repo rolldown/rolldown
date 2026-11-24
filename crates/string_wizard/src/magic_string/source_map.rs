@@ -24,8 +24,61 @@ impl Default for SourceMapOptions {
 }
 
 impl MagicString<'_> {
-  pub fn source_map(&self, opts: SourceMapOptions) -> oxc_sourcemap::SourceMap<'static> {
-    let mut source_builder = SourcemapBuilder::new(opts.hires);
+  /// Registers a UTF-16 index in the original source for maps with [`Hires::False`].
+  /// If the index falls within a non-newline character in an unedited chunk,
+  /// the map includes a segment for that index.
+  pub fn add_sourcemap_location(&mut self, index: u32) {
+    if let Some(&last) = self.sourcemap_locations.last() {
+      if last == index {
+        return;
+      }
+      self.sourcemap_locations_sorted &= last < index;
+    }
+    self.sourcemap_locations.push(index);
+  }
+
+  /// Returns the registered UTF-16 indices in the original source.
+  /// Each index appears once. The indices are in ascending order.
+  pub fn sourcemap_locations(&mut self) -> &[u32] {
+    self.sort_sourcemap_locations();
+    &self.sourcemap_locations
+  }
+
+  fn sort_sourcemap_locations(&mut self) {
+    if !self.sourcemap_locations_sorted {
+      self.sourcemap_locations.sort_unstable();
+      self.sourcemap_locations.dedup();
+      self.sourcemap_locations_sorted = true;
+    }
+  }
+
+  /// Generates a source map.
+  /// For [`Hires::False`], this method sorts the registered indices in place if necessary.
+  pub fn source_map(&mut self, opts: SourceMapOptions) -> oxc_sourcemap::SourceMap<'static> {
+    self.build_source_map(opts).0
+  }
+
+  /// Returns the source map and the number of output lines.
+  /// The count includes lines with no mapping segments.
+  pub fn source_map_with_generated_line_count(
+    &mut self,
+    opts: SourceMapOptions,
+  ) -> (oxc_sourcemap::SourceMap<'static>, usize) {
+    let (map, line_count) = self.build_source_map(opts);
+    // The global outro adds no mapping segments, so the builder skips it.
+    // Count the newlines in the global outro separately.
+    let outro_lines = self.outro.iter().map(|frag| frag.matches('\n').count()).sum::<usize>();
+    (map, line_count + outro_lines)
+  }
+
+  fn build_source_map(
+    &mut self,
+    opts: SourceMapOptions,
+  ) -> (oxc_sourcemap::SourceMap<'static>, usize) {
+    if matches!(opts.hires, Hires::False) {
+      self.sort_sourcemap_locations();
+    }
+    let mut source_builder = SourcemapBuilder::new(opts.hires, &self.sourcemap_locations);
 
     source_builder.set_source_and_content(&opts.source, &self.source);
 
@@ -69,6 +122,7 @@ impl MagicString<'_> {
       });
     });
 
+    let generated_line_count = source_builder.generated_line_count();
     let mut source_map = source_builder.into_source_map();
 
     if self.ignore_list {
@@ -76,7 +130,7 @@ impl MagicString<'_> {
       source_map.set_ignore_list(vec![0]);
     }
 
-    source_map
+    (source_map, generated_line_count)
   }
 }
 

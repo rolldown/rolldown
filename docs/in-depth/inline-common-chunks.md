@@ -22,7 +22,7 @@ export default defineConfig({
 });
 ```
 
-`maxSize` uses transformed source sizes, summed per chunk before rendering, minification and compression. It defaults to `0` (disabled); `Infinity` removes the size limit.
+`maxSize` uses transformed source sizes, or the `declaredModuleSize` a `load` or `transform` hook returns, summed per chunk before rendering, minification and compression. It defaults to `0` (disabled); `Infinity` removes the size limit.
 
 Entries and manual chunks are not inlined. A common chunk that a dynamic import also loads can be inlined into the chunks that import it statically; the dynamic import then loads a file that only registers it (see [Modules loaded with `import()`](#modules-loaded-with-import)). Matching any module with [`exclude`](/reference/TypeAlias.ExperimentalInlineCommonChunksOptions#exclude) prevents its entire common chunk from being inlined.
 

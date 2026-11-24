@@ -1,0 +1,99 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## NAMESPACE_CONFLICT
+
+```text
+[NAMESPACE_CONFLICT] Conflicting namespaces: "src/barrel.mjs" re-exports "x" from one of the modules "src/left.mjs" and "src/right.mjs" (will be ignored).
+   ╭─[ src/left.mjs:1:14 ]
+   │
+ 1 │ export const x = 1;
+   │              ┬  
+   │              ╰── One matching export is here.
+   │
+   ├─[ src/right.mjs:1:14 ]
+   │
+ 1 │ export const x = 2;
+   │              ┬  
+   │              ╰── One matching export is here.
+───╯
+
+```
+
+# Assets
+
+## _virtual/_rolldown/runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __commonJSMin, __esmMin, __exportAll, __toCommonJS };
+
+```
+
+## barrel.js
+
+```js
+import { __esmMin, __exportAll } from "./_virtual/_rolldown/runtime.js";
+import { init_left } from "./left.js";
+import { init_right } from "./right.js";
+// src/barrel.mjs
+var barrel_exports = /* @__PURE__ */ __exportAll({});
+var init_barrel = __esmMin((() => {
+	init_left();
+	init_right();
+}));
+init_barrel();
+export { barrel_exports, init_barrel };
+
+```
+
+## e1.js
+
+```js
+import { __commonJSMin, __toCommonJS } from "./_virtual/_rolldown/runtime.js";
+import { barrel_exports, init_barrel } from "./barrel.js";
+// src/e1.cjs
+var require_e1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = (init_barrel(), __toCommonJS(barrel_exports));
+}));
+export default require_e1();
+export {};
+
+```
+
+## left.js
+
+```js
+import { __esmMin } from "./_virtual/_rolldown/runtime.js";
+// src/left.mjs
+var x;
+var init_left = __esmMin((() => {
+	x = 1;
+}));
+init_left();
+export { init_left, x };
+
+```
+
+## right.js
+
+```js
+import { __esmMin } from "./_virtual/_rolldown/runtime.js";
+// src/right.mjs
+var init_right = __esmMin((() => {}));
+init_right();
+export { init_right };
+
+```
+
+## watch.js
+
+```js
+import { init_left, x } from "./left.js";
+// src/watch.mjs
+init_left();
+export { x };
+
+```

@@ -40,7 +40,12 @@ import {
   summarizeLog,
   validateArchive,
 } from '../lib/replay/run.mjs';
-import { chooseCompression, documentSegments, startReplayServer } from '../lib/replay/server.mjs';
+import {
+  chooseCompression,
+  documentSegments,
+  encode,
+  startReplayServer,
+} from '../lib/replay/server.mjs';
 import { createShaper, urgencyOf } from '../lib/replay/shaper.mjs';
 
 const ORIGIN = 'https://app.example.test';
@@ -722,9 +727,14 @@ function h2request(client, headers, body = null) {
     req.on('response', (h) => {
       head = { status: h[':status'], headers: h, headersMs: performance.now() - t0 };
     });
-    req.on('data', (c) => chunks.push(c));
+    req.on('data', (data) => chunks.push({ atMs: performance.now() - t0, data }));
     req.on('end', () =>
-      resolve({ ...head, body: Buffer.concat(chunks), endMs: performance.now() - t0 }),
+      resolve({
+        ...head,
+        body: Buffer.concat(chunks.map(({ data }) => data)),
+        chunks,
+        endMs: performance.now() - t0,
+      }),
     );
     req.on('error', reject);
     req.end(body ?? undefined);
@@ -758,7 +768,7 @@ test('the replay server routes document, dist, recorded, preflight and unrecorde
   assert.equal(
     doc.headers['content-encoding'],
     undefined,
-    'the document goes uncompressed, so its parts decode at once',
+    'the recorded document had no content encoding',
   );
   assert.match(
     doc.body.toString(),
@@ -836,6 +846,122 @@ test('the replay server routes document, dist, recorded, preflight and unrecorde
     ],
     'a stream the client cancelled before its headers is never answered',
   );
+});
+
+test('replay compresses a navigation using the recorded document encoding', async (t) => {
+  const site = syntheticSite();
+  t.after(() => fs.rmSync(site.dir, { recursive: true, force: true }));
+  // Put enough data in the early flush for it to span HTTP/2 frames.
+  const random = seededRandom(1);
+  const payload = Buffer.from(Array.from({ length: 24_000 }, () => Math.floor(random() * 256)));
+  const head = `<!doctype html><head><script src="/early.js"></script><!--${payload.toString('base64')}--></head>`;
+  const html = Buffer.from(`${head}<body>${'<p>Late content</p>'.repeat(20_000)}</body>`);
+  fs.writeFileSync(path.join(site.dist, 'index.html'), html);
+  const tls = replayCertificate(path.join(site.dir, 'cert'));
+  const headers = {
+    ':authority': 'app.example.test',
+    ':path': '/',
+    'sec-fetch-mode': 'navigate',
+  };
+  const cases = [
+    { name: 'single Brotli body', encoding: 'br', decompress: zlib.brotliDecompressSync },
+    {
+      name: 'Brotli early flush',
+      encoding: 'br',
+      decompress: zlib.brotliDecompressSync,
+      flush: zlib.constants.BROTLI_OPERATION_FLUSH,
+    },
+    {
+      name: 'gzip early flush',
+      encoding: 'gzip',
+      decompress: zlib.gunzipSync,
+      flush: zlib.constants.Z_SYNC_FLUSH,
+    },
+    {
+      name: 'Zstandard early flush',
+      encoding: 'zstd',
+      decompress: zlib.zstdDecompressSync,
+      flush: zlib.constants.ZSTD_e_flush,
+    },
+  ];
+
+  for (const { name, encoding, decompress, flush } of cases) {
+    await t.test(
+      name,
+      { skip: encoding === 'zstd' && typeof zlib.createZstdCompress !== 'function' },
+      async (t) => {
+        const split = flush != null;
+        const document = {
+          ...site.archive.document,
+          headers: { ...site.archive.document.headers, 'content-encoding': encoding },
+          earlyFraction: split ? (head.length - 2) / html.length : 1,
+          ttfbMs: 20,
+          downloadMs: 250,
+        };
+        const server = await startReplayServer({
+          archive: { ...site.archive, document },
+          archiveDir: site.archiveDir,
+          tls,
+          network: site.archive.network,
+          compression: split ? { encoding: 'gzip', level: 9 } : { encoding: 'br', level: 1 },
+          documentSource: 'local',
+        });
+        const client = http2.connect(`https://127.0.0.1:${server.port}`, {
+          rejectUnauthorized: false,
+        });
+        t.after(async () => {
+          client.close();
+          await server.close();
+        });
+        server.beginRun(site.dist);
+
+        const doc = await h2request(client, { ...headers, 'accept-encoding': encoding });
+        assert.equal(doc.status, 200);
+        assert.equal(doc.headers['content-encoding'], encoding);
+        assert.equal(Number(doc.headers['content-length']), doc.body.length);
+        assert.equal(server.takeLog()[0].bytes, doc.body.length);
+        assert.ok(doc.body.length < html.length / 10);
+        assert.deepEqual(decompress(doc.body), html);
+
+        if (split) {
+          const earlyChunks = doc.chunks.filter(
+            ({ atMs }) => atMs - doc.headersMs < document.downloadMs / 2,
+          );
+          const earlyHtml = decompress(Buffer.concat(earlyChunks.map(({ data }) => data)), {
+            finishFlush: flush,
+          });
+          assert.equal(earlyHtml.toString(), head);
+          assert.ok(
+            doc.chunks.at(-1).atMs - doc.headersMs >= document.downloadMs - 50,
+            'the late part waits for the recorded download',
+          );
+        } else {
+          assert.deepEqual(doc.body, encode(html, { encoding: 'br', level: 1 }));
+          const identity = await h2request(client, {
+            ...headers,
+            'accept-encoding': 'br;q=0, gzip',
+          });
+          assert.equal(identity.headers['content-encoding'], undefined);
+          assert.deepEqual(identity.body, html);
+          // `q=0` refuses the coding when another parameter comes before it.
+          const refused = await h2request(client, {
+            ...headers,
+            'accept-encoding': 'br;foo=1;q=0, *',
+          });
+          assert.equal(refused.headers['content-encoding'], undefined);
+          assert.deepEqual(refused.body, html);
+          // HEAD keeps the encoding header and sends no body.
+          const headOnly = await h2request(client, {
+            ...headers,
+            ':method': 'HEAD',
+            'accept-encoding': 'br',
+          });
+          assert.equal(headOnly.headers['content-encoding'], 'br');
+          assert.equal(headOnly.body.length, 0);
+        }
+      },
+    );
+  }
 });
 
 test('record --out refuses a folder that is not an archive', async () => {
@@ -1100,9 +1226,17 @@ test('replay: headless Chrome loads the real origin from the local server and ca
   const manifest = path.join(site.dist, '.vite', 'manifest.json');
   fs.mkdirSync(path.dirname(manifest));
   fs.writeFileSync(manifest, JSON.stringify({ app: { file: 'assets/app.js', src: 'src/app.ts' } }));
+  // Small assets use the first supported encoding when none are fitted.
+  site.archive.assets.unshift({
+    path: '/assets/recorded-only.js',
+    encodedBytes: 400,
+    encoding: 'zstd',
+  });
+  fs.writeFileSync(path.join(site.archiveDir, 'archive.json'), JSON.stringify(site.archive));
   const out = path.join(site.dir, 'report');
+  const replayLog = [];
   const logLine = console.log;
-  console.log = () => {};
+  console.log = (line) => replayLog.push(line);
   let result;
   try {
     result = await cmdReplay([
@@ -1123,6 +1257,8 @@ test('replay: headless Chrome loads the real origin from the local server and ca
   } finally {
     console.log = logLine;
   }
+  const fallback = typeof zlib.createZstdCompress === 'function' ? 'zstd' : 'br';
+  assert.ok(replayLog.includes(`  compression: ${fallback}`));
   const report = JSON.parse(fs.readFileSync(path.join(out, 'replay-report.json'), 'utf8'));
   assert.equal(report.mode, 'replay');
   assert.equal(report.calibration.rows.find((r) => r.key === 'ttfbMs').pass, true);

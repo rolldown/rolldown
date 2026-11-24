@@ -56,7 +56,7 @@ import {
   safeHeaders,
   sha256,
 } from './model.mjs';
-import { chooseCompression, distFile, startReplayServer } from './server.mjs';
+import { chooseCompression, distFile, startReplayServer, supportsEncoding } from './server.mjs';
 
 const mbit = (bps) => (typeof bps === 'number' ? `${((bps * 8) / 1e6).toFixed(1)} Mbit/s` : 'n/a');
 const CLI = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'replay.mjs');
@@ -767,9 +767,7 @@ export async function cmdReplay(argv) {
   if (!['warm', 'empty'].includes(storage)) throw new Error('--storage must be warm or empty');
   const compression = chooseCompression(archive.assets, variants[0].build);
   if (!compression.encoding) {
-    // Only an encoding the server can produce; it sends any other body unencoded.
-    const enc =
-      archive.assets.find((a) => ['br', 'gzip', 'zstd'].includes(a.encoding))?.encoding ?? null;
+    const enc = archive.assets.find((a) => supportsEncoding(a.encoding))?.encoding ?? null;
     Object.assign(compression, { encoding: enc, level: null });
   }
   const redact = makeRedactor(archive.redact);

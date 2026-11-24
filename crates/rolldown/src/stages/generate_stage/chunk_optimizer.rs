@@ -7,6 +7,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc::ast::{Comment, ast::Statement};
 use oxc_index::{IndexVec, index_vec};
+use rolldown_common::StmtInfoMeta;
 use rolldown_common::{
   Chunk, ChunkDebugInfo, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType,
   FacadeChunkEliminationReason, ImportKind, Module, ModuleIdx, ModuleTable, NormalModule,
@@ -538,10 +539,7 @@ impl GenerateStage<'_> {
       })
       || !program.directives.is_empty()
       || program.comments.iter().any(Comment::is_legal)
-      || program.body.is_empty()
-      || !program.body.iter().all(|stmt| {
-        matches!(stmt, Statement::ExportAllDeclaration(_) | Statement::ExportFromDeclaration(_))
-      })
+      || !is_reexport_body(&program.body)
     {
       return None;
     }
@@ -1048,13 +1046,25 @@ impl GenerateStage<'_> {
     let temp_runtime_chunk_idx = chunk_graph.module_to_chunk[self.link_output.runtime.id()]
       .and_then(|idx| temp_chunk_opt_graph.to_temp_idx(idx));
     let mut imported_bindings = None;
+    let module_table = &self.link_output.module_table;
+    let layout_sensitive = StmtInfoMeta::ImportMeta
+      | StmtInfoMeta::NonStaticDynamicImport
+      | StmtInfoMeta::HasDummyRecord;
     for (from_chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
       let ChunkKind::EntryPoint { meta, module } = chunk.kind else {
         continue;
       };
-      let is_emitted_entry_chunk = meta.contains(ChunkMeta::EmittedChunk);
-      let can_eliminate_emitted_entry = is_emitted_entry_chunk
-        && matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::AllowExtension));
+      let is_emitted_entry_chunk = if meta.contains(ChunkMeta::EmittedChunk) {
+        if matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::AllowExtension)) {
+          true
+        } else {
+          // If an emitted chunk has other `preserveEntrySignatures` values, we can't optimize it.
+          // The facade chunk needs to be preserved.
+          continue;
+        }
+      } else {
+        false
+      };
       if !chunk.modules.is_empty() {
         continue;
       }
@@ -1068,20 +1078,14 @@ impl GenerateStage<'_> {
         ChunkReasonType::ManualCodeSplitting { .. }
       );
 
-      if meta.intersects(ChunkMeta::UserDefinedEntry)
-        || (is_emitted_entry_chunk
-          && !self.options.is_strict_execution_order_enabled()
-          && !is_target_manual_chunk
-          && matches!(target_chunk.kind, ChunkKind::Common))
-      {
+      if meta.intersects(ChunkMeta::UserDefinedEntry) {
         if matches!(target_chunk.kind, ChunkKind::Common) {
           // Execution-isolation guard (issue #9463).
-          // See internal-docs/code-splitting/implementation.md#facade-elimination-optimize_facade_entry_chunks.
           //
-          // Folding the common chunk *into* this entry chunk makes the
+          // Folding the common chunk *into* this user-defined entry chunk makes the
           // entry chunk eagerly run this entry's top-level (its `init_*` call)
           // whenever the chunk is loaded. If the common chunk also holds *another*
-          // entry's module, that other entry would be forced to import
+          // user-defined entry's module, that other entry would be forced to import
           // this entry chunk just to reach its own module — and would then run this
           // entry's side effects. e.g. loading entry `b` would trigger entry `a`'s
           // side effects. This happens when manual code splitting (a `codeSplitting`
@@ -1092,18 +1096,51 @@ impl GenerateStage<'_> {
           // shared chunk and runs only its own `init_*`. A shared chunk that holds
           // just this entry's module (plus non-entry deps a sibling genuinely
           // depends on) is still folded in, preserving the #5726 facade-elimination.
-          let holds_other_entry = target_chunk.modules.iter().any(|&module_idx| {
+          let holds_other_user_entry = target_chunk.modules.iter().any(|&module_idx| {
             module_idx != module
-              && if is_emitted_entry_chunk {
-                self.link_output.entries.contains_key(&module_idx)
-              } else {
-                self.link_output.user_defined_entry_modules.contains(&module_idx)
-              }
+              && self.link_output.user_defined_entry_modules.contains(&module_idx)
           });
-          let can_merge = !holds_other_entry
+          let can_merge = !holds_other_user_entry
             && match chunk.preserve_entry_signature {
               Some(PreserveEntrySignatures::Strict) => {
                 self.can_merge_without_changing_entry_signature(chunk, &target_chunk.modules)
+                  || (meta.is_pure_user_defined_entry()
+                    && !is_target_manual_chunk
+                    && self.options.format.is_esm()
+                    && !self.options.is_strict_execution_order_enabled()
+                    && target_chunk.bits.index_of_one().map(ChunkIdx::from_raw).all(|peer| {
+                      peer == from_chunk_idx
+                        || chunk_graph.chunk_table[peer]
+                          .user_defined_entry_module(module_table)
+                          .filter(|m| !m.import_records.is_empty())
+                          .filter(|m| {
+                            m.import_records.iter().all(|r| r.resolved_module == Some(module))
+                          })
+                          .and_then(|m| self.ast_table[m.idx].as_ref())
+                          .is_some_and(|ast| is_reexport_body(&ast.program().body))
+                    })
+                    && target_chunk.modules.iter().all(|&idx| {
+                      let meta = &self.link_output.metas[idx];
+                      meta.wrap_kind().is_none()
+                        && !meta.has_dynamic_exports
+                        && module_table[idx].import_records().iter().all(|rec| {
+                          rec.resolved_module.map_or(!rec.kind.is_static(), |dep| {
+                            !module_table[dep].is_external()
+                              && (!rec.kind.is_static()
+                                || chunk_graph.module_to_chunk[dep] == Some(target_chunk_idx))
+                          })
+                        })
+                        && !meta.stmt_info_included.index_of_one().any(|stmt| {
+                          self.link_output.stmt_infos[idx][stmt].meta.intersects(layout_sensitive)
+                        })
+                    })
+                    && self.can_module_be_facade(
+                      module,
+                      target_chunk_idx,
+                      imported_bindings.get_or_insert_with(|| {
+                        self.bindings_imported_from_other_chunks(chunk_graph)
+                      }),
+                    ))
               }
               _ => true,
             };
@@ -1120,16 +1157,10 @@ impl GenerateStage<'_> {
         continue;
       }
 
-      // Emitted entries with stricter signatures may absorb a compatible common chunk above, but
-      // their facade must otherwise be preserved.
-      if is_emitted_entry_chunk && !can_eliminate_emitted_entry {
-        continue;
-      }
-
       let is_target_pure_user_entry_chunk = matches!(target_chunk.kind, ChunkKind::EntryPoint { meta, module: _ } if meta.is_pure_user_defined_entry());
       let is_target_common_chunk = matches!(target_chunk.kind, ChunkKind::Common);
-      // Six optimization scenarios (scenario 1 is handled above):
-      // 1. User-defined or emitted facade entry chunk merged with common chunk
+      // Six optimization scenarios (scenario 1 is handled above for user-defined entries):
+      // 1. User-defined facade entry chunk merged with common chunk
       //    → Common chunk modules are moved into the entry chunk (handled above)
       // 2. Emitted chunk (AllowExtension) merged into manual code splitting group
       //    → Group by target chunk to detect export name conflicts before merging
@@ -1159,7 +1190,7 @@ impl GenerateStage<'_> {
           to_chunk_idx: from_chunk_idx,
           inherit_group: true,
         });
-      } else if is_target_manual_chunk && can_eliminate_emitted_entry {
+      } else if is_target_manual_chunk && is_emitted_entry_chunk {
         emitted_chunk_groups.entry(target_chunk_idx).or_default().push(from_chunk_idx);
       } else if !is_emitted_entry_chunk {
         // Check if merging would create a circular dependency.
@@ -2350,4 +2381,11 @@ impl StaticChunkReachability {
       })
       .has_bit(to)
   }
+}
+
+fn is_reexport_body(body: &[Statement<'_>]) -> bool {
+  !body.is_empty()
+    && body.iter().all(|stmt| {
+      matches!(stmt, Statement::ExportAllDeclaration(_) | Statement::ExportFromDeclaration(_))
+    })
 }

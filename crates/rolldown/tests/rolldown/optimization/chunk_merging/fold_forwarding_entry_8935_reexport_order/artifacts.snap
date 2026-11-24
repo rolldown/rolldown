@@ -1,0 +1,59 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## fold_forwarding_entry_8935_reexport_order.mjs
+
+```js
+import { set, value } from "./state.mjs";
+// helper.mjs
+set();
+function helper() {
+	return value;
+}
+// index.mjs
+function foo() {
+	return helper();
+}
+export { foo as t };
+
+```
+
+## index.mjs
+
+```js
+import { t as foo } from "./fold_forwarding_entry_8935_reexport_order.mjs";
+import { captured } from "./snapshot.mjs";
+export { captured, foo };
+
+```
+
+## mod.mjs
+
+```js
+export { t as foo } from "./fold_forwarding_entry_8935_reexport_order.mjs";
+
+```
+
+## snapshot.mjs
+
+```js
+import { value } from "./state.mjs";
+// snapshot.mjs
+const captured = value;
+export { captured };
+
+```
+
+## state.mjs
+
+```js
+// state.mjs
+let value = 0;
+function set() {
+	value = 1;
+}
+export { set, value };
+
+```

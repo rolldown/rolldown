@@ -1,0 +1,21 @@
+{
+  "config": {
+    "minify": false,
+    "treeshake": {
+      "manualPureFunctions": ["listed"]
+    },
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "lib",
+          "maxSize": 1
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "minify": true
+    }
+  ]
+}

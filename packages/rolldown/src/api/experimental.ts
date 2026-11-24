@@ -5,8 +5,6 @@ import { createBundlerOptions } from '../utils/create-bundler-option';
 import { unwrapBindingResult } from '../utils/error';
 import { validateOption } from '../utils/validator';
 
-export { freeExternalMemory } from '../types/external-memory-handle';
-
 /**
  * This is an experimental API. Its behavior may change in the future.
  *

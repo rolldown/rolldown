@@ -1,0 +1,13 @@
+{
+  "extendedTests": {
+    "preserveEntrySignaturesAllowExtension": false
+  },
+  "config": {
+    "input": [{ "import": "./index.mjs" }, { "import": "./mod.mjs" }],
+    "platform": "node",
+    "external": ["./sidecar.mjs"],
+    "makeAbsoluteExternalsRelative": { "Bool": false },
+    "entryFilenames": "entries/[name].mjs",
+    "chunkFilenames": "shared/[name].mjs"
+  }
+}

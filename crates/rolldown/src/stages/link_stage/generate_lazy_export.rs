@@ -205,7 +205,15 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
           );
           // TODO(shulaoda): Waiting for oxc transform to support the ES feature `ShorthandProperties`.
           if key == "__proto__" {
-            property.computed = true;
+            property.key.replace_with(|key| match key {
+              ast::PropertyKey::StaticStringLiteral(literal) => {
+                ast::PropertyKey::StringLiteral(literal)
+              }
+              ast::PropertyKey::StaticIdentifier(ident) => {
+                ast::PropertyKey::new_string_literal(ident.span, "__proto__", None, &ast_builder)
+              }
+              key => key,
+            });
           } else if is_legal_ident {
             property.shorthand = is_legal_ident;
             property.key = ast::PropertyKey::new_static_identifier(

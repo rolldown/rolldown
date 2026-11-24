@@ -1,0 +1,8 @@
+{
+  "config": {
+    "input": [{ "import": "./a.js" }, { "import": "./b.js" }],
+    "format": "cjs",
+    "entryFilenames": "[name].cjs",
+    "chunkFilenames": "[name]-[hash].cjs"
+  }
+}

@@ -1,0 +1,49 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## e1.js
+
+```js
+import { n as __commonJSMin, t as require_proxy } from "./proxy.js";
+// e1.cjs
+var require_e1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = require_proxy();
+}));
+export default require_e1();
+export {};
+
+```
+
+## e2.js
+
+```js
+import { n as __commonJSMin, t as require_proxy } from "./proxy.js";
+// e2.cjs
+var require_e2 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = require_proxy();
+}));
+export default require_e2();
+export {};
+
+```
+
+## proxy.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// leaf.mjs
+var leaf_exports = /* @__PURE__ */ __exportAll({ x: () => x });
+var x;
+var init_leaf = __esmMin((() => {
+	console.log("leaf");
+	x = globalThis.value ?? 1;
+}));
+// proxy.cjs
+var require_proxy = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = (init_leaf(), __toCommonJS(leaf_exports));
+}));
+export { __commonJSMin as n, require_proxy as t };
+
+```

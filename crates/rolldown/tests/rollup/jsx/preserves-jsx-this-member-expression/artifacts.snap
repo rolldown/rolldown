@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+var Component = class {
+	render() {
+		return <this.Comp></this.Comp>;
+	}
+};
+const view = {
+	ui: {
+		Comp: "used",
+		Other: "dropped"
+	},
+	get view() {
+		return <this.ui.Comp />;
+	}
+}.view;
+const render = () => <this.Comp />;
+export { Component, render, view };
+
+```

@@ -4,7 +4,7 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
   PreserveEntrySignatures, RuntimeHelper, StmtEvalFlags, StmtInfoIdx, SymbolOrMemberExprRef,
-  SymbolRef, UsedSymbolRefsBuilder, UsedSymbolRefsView, WrapKind,
+  SymbolRef, UsedSymbolRefsBuilder, UsedSymbolRefsView,
   dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::{BitSet, indexmap::FxIndexMap};
@@ -773,8 +773,7 @@ impl GenerateStage<'_> {
   /// An entry chunk imports the canonical symbol of every live resolved export it serves
   /// (`register_entry_export_depended_symbols`), even when no included statement of the entry
   /// references it — a re-export the entry never uses still becomes a real import of the owner's
-  /// chunk. `load_dependencies` only carries the narrowed `referenced_symbols_by_entry_point_chunk`
-  /// set, so these targets are derived separately from the full `resolved_exports`.
+  /// chunk. These targets supplement `load_dependencies` using the same export candidates as registration.
   ///
   /// With `assume_all_live: false` the liveness gate mirrors emission exactly: a dead export
   /// produces no import. `assume_all_live: true` skips the gate for consumers that need a stable
@@ -790,17 +789,13 @@ impl GenerateStage<'_> {
     if !self.link_output.entries.contains_key(&module_idx) {
       return;
     }
-    let meta = &self.link_output.metas[module_idx];
-    if matches!(meta.wrap_kind(), WrapKind::Cjs) {
-      // A CJS entry is consumed through its wrapper, not through per-export symbols.
+    if !self.entry_can_export_bindings(module_idx) {
       return;
     }
+    let meta = &self.link_output.metas[module_idx];
     let symbol_db = &self.link_output.symbol_db;
     let mut verdicts = FxHashMap::default();
-    for resolved_export in meta.resolved_exports.values() {
-      if resolved_export.came_from_commonjs {
-        continue;
-      }
+    for (_, resolved_export) in self.entry_exports_requiring_bindings(module_idx) {
       let served = symbol_db.canonical_ref_resolving_namespace(resolved_export.symbol_ref);
       if !self.entry_export_needs_service(module_idx, served.owner, &mut verdicts) {
         continue;
@@ -834,19 +829,8 @@ impl GenerateStage<'_> {
     }
   }
 
-  /// Whether the entry chunk must import `owner`, the module behind one of its exports. Without a
-  /// preserved signature, only when `owner` or anything it statically imports has a side effect,
-  /// so startup still runs it. `sideEffects: false` modules are crossed without counting their own
-  /// statements, and `Analyzed` verdicts are not used because they also count dynamic imports.
-  /// `verdicts` holds the answer for each owner already walked and maps every module of a walk
-  /// without a side effect to `false`, so each module is walked at most once per cache.
-  pub(super) fn entry_export_needs_service(
-    &self,
-    entry: ModuleIdx,
-    owner: ModuleIdx,
-    verdicts: &mut FxHashMap<ModuleIdx, bool>,
-  ) -> bool {
-    if self.options.preserve_modules
+  pub(super) fn entry_preserves_signature(&self, entry: ModuleIdx) -> bool {
+    self.options.preserve_modules
       || !self.link_output.module_table[entry].as_normal().unwrap().dynamic_importers.is_empty()
       || !matches!(
         normalize_preserve_entry_signature(
@@ -856,7 +840,21 @@ impl GenerateStage<'_> {
         ),
         PreserveEntrySignatures::False
       )
-    {
+  }
+
+  /// Whether the entry chunk must import `owner`, the module behind one of its exports.
+  /// With a dropped signature, an import is needed only when `owner` or a static dependency has
+  /// side effects. The walk skips the statements in `sideEffects: false` modules and reads
+  /// statement flags because `Analyzed` verdicts also count dynamic imports.
+  /// `verdicts` caches each owner's result and marks every module visited by a side-effect-free
+  /// walk as `false`.
+  pub(super) fn entry_export_needs_service(
+    &self,
+    entry: ModuleIdx,
+    owner: ModuleIdx,
+    verdicts: &mut FxHashMap<ModuleIdx, bool>,
+  ) -> bool {
+    if self.entry_preserves_signature(entry) {
       return true;
     }
     let mut pending = vec![owner];

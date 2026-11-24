@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::{
   EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta, ModuleId, ModuleIdx,
-  ModuleInfo, RawImportRecord, ResolvedId, StableModuleId,
+  ModuleInfo, ModuleInfoSideEffects, RawImportRecord, ResolvedId, StableModuleId,
 };
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -49,6 +49,7 @@ impl NormalModule {
     &self,
     raw_import_records: Option<&IndexVec<ImportRecordIdx, RawImportRecord>>,
     is_entry: bool,
+    side_effects: Option<ModuleInfoSideEffects>,
   ) -> ModuleInfo {
     ModuleInfo {
       code: Some(self.ecma_view.source.clone()),
@@ -96,7 +97,7 @@ impl NormalModule {
         exports
       },
       input_format: self.ecma_view.exports_kind,
-      module_side_effects: Some(self.ecma_view.reported_side_effects),
+      side_effects,
     }
   }
 

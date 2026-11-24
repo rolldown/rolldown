@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## fold_forwarding_entry_8935_shared_export.js
+
+```js
+// is-odd.js
+function isOdd(value) {
+	return value % 2 !== 0;
+}
+// index.ts
+function foo(value) {
+	return isOdd(value);
+}
+export { isOdd as n, foo as t };
+
+```
+
+## index.js
+
+```js
+export { t as foo } from "./fold_forwarding_entry_8935_shared_export.js";
+
+```
+
+## mod.js
+
+```js
+export { t as foo } from "./fold_forwarding_entry_8935_shared_export.js";
+
+```
+
+## observer.js
+
+```js
+import { n as isOdd, t as foo } from "./fold_forwarding_entry_8935_shared_export.js";
+// observer.ts
+function check(value) {
+	return foo(value) === isOdd(value);
+}
+export { check };
+
+```

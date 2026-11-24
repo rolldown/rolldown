@@ -174,7 +174,7 @@ Registering the helper from A does not remove the copy embedded in B's file; fet
 
 Saving a request may justify duplicating a small helper. With `maxSize: Infinity`, the same tradeoff applies to the large library shared by A, B and C: if it is eligible for inlining, loading all three entries transfers three copies of the library. The runtime also adds a shared file and execution overhead.
 
-`maxSize` tests a chunk's source size, not the total bytes its copies add to a user's session. Fewer chunks therefore do not guarantee faster loading. Compare loading times with and without inlining for initial loads and later navigation in your application, including cache reuse, before choosing whether to enable it or raise the threshold.
+`maxSize` tests a chunk's source size, not the total bytes its copies add to a user's session. Fewer chunks therefore do not guarantee faster loading. [`maxDuplicatedSize`](/reference/TypeAlias.ExperimentalInlineCommonChunksOptions#maxduplicatedsize) bounds the copies: a common chunk whose size times its copies beyond the first reaches it stays a file. It defaults to `Infinity`; the right value depends on the application. Compare loading times with and without inlining for initial loads and later navigation in your application, including cache reuse, before choosing whether to enable it or raise the threshold.
 
 ## Optimizations
 

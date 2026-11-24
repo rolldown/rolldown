@@ -35,6 +35,8 @@ impl Plugin for LoadExternalId {
           ImportAttributes::default(),
           None,
           ModuleDefFormat::Unknown,
+          false,
+          None,
         )
         .await?;
     }

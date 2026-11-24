@@ -33,6 +33,8 @@ jobs:
             RUSTUP_HOME,{{ DEV_DRIVE }}/.rustup
             PNPM_HOME,{{ DEV_DRIVE }}/.pnpm
 
+      # On Windows, steps that start at the same time can fail with "event.json
+      # is being used by another process". So Windows runs them one by one.
       - parallel:
           - name: Setup Rust
             uses: oxc-project/setup-rust@12a52e3caf7bac9d8b9ca550a82c425ed6343aee # v1.0.18
@@ -42,16 +44,31 @@ jobs:
               save-cache: ${{ github.ref_name == 'main' }}
               target-dir: ${{ runner.os == 'Windows' && format('{0}/target', env.DEV_DRIVE) || '' }}
 
-          - uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
+          - if: runner.os != 'Windows'
+            uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
             with:
               version: '1.7.0'
               cache: true
 
           - name: Cache esbuild snapshots
+            if: runner.os != 'Windows'
             uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
             with:
               path: scripts/tmp/esbuild-tests/snapshots
               key: esbuild-snapshots-${{ hashFiles('scripts/src/esbuild-tests/urls.ts') }}
+
+      - if: runner.os == 'Windows'
+        uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
+        with:
+          version: '1.7.0'
+          cache: true
+
+      - name: Cache esbuild snapshots
+        if: runner.os == 'Windows'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: scripts/tmp/esbuild-tests/snapshots
+          key: esbuild-snapshots-${{ hashFiles('scripts/src/esbuild-tests/urls.ts') }}
 
       - name: Run Test
         run: just test-rust

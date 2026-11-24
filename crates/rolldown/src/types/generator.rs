@@ -71,26 +71,21 @@ impl GenerateContext<'_> {
     let canonical_symbol = symbol_db.get(canonical_ref);
     let namespace_alias = &canonical_symbol.namespace_alias;
     if let Some(ns_alias) = namespace_alias {
-      // The namespace itself may be declared in another chunk. This is normally hidden by the
-      // facade and namespace living together, but generated per-record interop carriers place the
-      // namespace beside the CJS importee while its re-export facade stays owned by the barrel.
-      // Resolve the namespace through the same cross-chunk path as an ordinary symbol before
-      // appending the property; otherwise CJS output renders a bare, undeclared local identifier.
-      // The same applies to a namespace owned by an inline common chunk record.
-      let canonical_ns_name =
-        if self.order_wrap_state.is_order_cjs_carrier_namespace(ns_alias.namespace_ref)
-          || self.inline_bridge_pattern(ns_alias.namespace_ref, cur_chunk_idx).is_some()
-        {
-          self.finalized_string_pattern_for_symbol_ref(
-            ns_alias.namespace_ref,
-            cur_chunk_idx,
-            canonical_names,
-          )
-        } else {
-          symbol_db
-            .canonical_name_for_or_original(ns_alias.namespace_ref, canonical_names)
-            .to_string()
-        };
+      // Resolve the namespace binding before appending the property.
+      // A module namespace in another CommonJS chunk uses the owning chunk's require binding.
+      // A namespace in an inline record uses the consumer's bridge.
+      let namespace_ref = ns_alias.namespace_ref;
+      let canonical_ns_name = if self.order_wrap_state.is_order_cjs_carrier_namespace(namespace_ref)
+        || self.inline_bridge_pattern(namespace_ref, cur_chunk_idx).is_some()
+        || (matches!(self.options.format, rolldown_common::OutputFormat::Cjs)
+          && self.link_output.module_table[namespace_ref.owner].namespace_object_ref()
+            == Some(namespace_ref)
+          && symbol_db.get(namespace_ref).chunk_idx.is_some_and(|owner| owner != cur_chunk_idx))
+      {
+        self.finalized_string_pattern_for_symbol_ref(namespace_ref, cur_chunk_idx, canonical_names)
+      } else {
+        symbol_db.canonical_name_for_or_original(namespace_ref, canonical_names).to_string()
+      };
       let property_name = &ns_alias.property_name;
       return property_access_str(&canonical_ns_name, property_name);
     }

@@ -138,6 +138,9 @@ pub fn collapse_module_sourcemap(
       SourcemapChainElement::Transform((_, sourcemap)) | SourcemapChainElement::Load(sourcemap) => {
         static_chain.push(sourcemap);
       }
+      SourcemapChainElement::MagicString((_, pending)) => {
+        static_chain.push(pending.get());
+      }
       SourcemapChainElement::Omitted { plugin_name, .. } => {
         static_chain.push(&empty);
         warnings.push(

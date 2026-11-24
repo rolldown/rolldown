@@ -200,10 +200,10 @@ impl GenerateStage<'_> {
   /// provisional call in `generate_chunks` runs before the post-chunking
   /// `sweep_unused_runtime_module`, so a still-live chunk the sweep later strips the runtime out of
   /// would otherwise keep an `exec_order` derived from a module it no longer contains — sorting
-  /// ahead of chunks it should follow. `finalize_chunk_plan` therefore re-runs this after such a
-  /// sweep, restoring the ordering the pre-#10104 pipeline produced by sweeping *before* assignment.
+  /// ahead of chunks it should follow. When the runtime sweep removes the runtime,
+  /// `finalize_chunk_plan` recomputes live chunk order from the current layout.
   ///
-  /// Composition with the strict path: `renumber_live_chunks` (strict-only, after order-wrap
+  /// `renumber_live_chunks` (after order-wrap
   /// lowering) merely *compacts* existing `exec_order` values to close tombstone gaps; it never
   /// re-derives them from `modules[0]`. The two compose by last-writer-wins: the re-run happens after
   /// lowering, so when the sweep removes the runtime it re-derives every live chunk's order from its
@@ -1118,6 +1118,7 @@ impl GenerateStage<'_> {
         input_base,
         &mut temp_chunk_graph,
         &mut dynamic_entry_merge_targets,
+        used_symbol_refs_builder.view(),
       );
     }
 

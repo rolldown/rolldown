@@ -77,8 +77,22 @@ impl ModuleGroup {
   }
 }
 
+/// What the `test` of each group answers for the modules that the groups can take. The
+/// already-loaded fold runs before the groups place their modules and needs to know which modules
+/// they can take (see `GenerateStage::manual_group_by_module`), and a `test` function runs once per
+/// group, so the fold and the groups read the same answers.
+pub struct ManualGroupTests {
+  /// The included normal modules other than the runtime module, sorted by `stable_id`. Sorting
+  /// keeps the calls of stateful `test` and `name` functions in the same order across runs:
+  /// `ModuleIdx` follows the order in which parallel `resolveId` and `load` calls complete.
+  pub(super) candidates: Vec<ModuleIdx>,
+  /// Per group, whether its `test` matches each candidate.
+  pub(super) matched: Vec<Vec<bool>>,
+}
+
 struct ManualSplitter<'a> {
   link_output: &'a LinkStageOutput,
+  group_tests: &'a ManualGroupTests,
   index_splitting_info: &'a IndexSplittingInfo,
   options: &'a SharedOptions,
   chunking_options: &'a ManualCodeSplittingOptions,
@@ -167,26 +181,31 @@ impl ManualSplitter<'_> {
     let mut entries_aware_groups: Vec<ModuleGroup> = Vec::new();
     let mut entries_aware_idx_by_id: FxHashMap<ModuleGroupId, usize> = FxHashMap::default();
 
-    // Sort modules by `stable_id` before iterating so that user-supplied
-    // `output.codeSplitting.groups[].name` functions are invoked in a deterministic order.
-    // Without this, a stateful function would produce different chunk assignments across runs
-    // because `ModuleIdx` is assigned in module-load completion order, which varies with
-    // parallel `resolveId`/`load`.
+    // Only the runtime module is placed before the groups, so the modules that `group_tests` asked
+    // about are the ones that are still unplaced.
+    debug_assert!(
+      self.group_tests.candidates.iter().all(|&idx| !self.module_to_assigned.has_bit(idx))
+    );
     let candidate_modules = self
-      .link_output
-      .module_table
-      .modules
+      .group_tests
+      .candidates
       .iter()
-      .filter_map(Module::as_normal)
-      .filter(|module| {
-        metas[module.idx].is_included && !self.module_to_assigned.has_bit(module.idx)
-      })
-      .sorted_unstable_by(|a, b| a.stable_id.cmp(&b.stable_id))
+      .filter_map(|&module_idx| self.link_output.module_table[module_idx].as_normal())
       .collect_vec();
+    debug_assert_eq!(
+      self
+        .link_output
+        .module_table
+        .modules
+        .iter()
+        .filter_map(Module::as_normal)
+        .filter(|module| {
+          metas[module.idx].is_included && !self.module_to_assigned.has_bit(module.idx)
+        })
+        .count(),
+      candidate_modules.len()
+    );
 
-    // `test` and `name` are JS callbacks, so one call per module would cross the napi boundary
-    // M * G times. One batched call per group replaces that.
-    //
     // A group cannot narrow `candidate_modules` to what earlier groups left behind. Priority
     // resolves the overlap later, in `emit_chunk_from_group`. If this loop dropped matched
     // modules, a module would go to the first group in the list, not to the group with the
@@ -197,18 +216,10 @@ impl ManualSplitter<'_> {
     );
 
     for (match_group_index, match_group) in self.match_groups.iter().copied().enumerate() {
-      let matched = match &match_group.test {
-        None => vec![true; candidate_modules.len()],
-        Some(test) => {
-          let ids = candidate_modules.iter().map(|module| module.id.as_str()).collect_vec();
-          match_module_ids(test, &ids, "a `codeSplitting` group `test` function").await?
-        }
-      };
-
       let captured = candidate_modules
         .iter()
         .copied()
-        .zip(matched)
+        .zip(self.group_tests.matched[match_group_index].iter().copied())
         .filter(|(module, is_matched)| {
           *is_matched && self.passes_static_filters(match_group_index, match_group, module)
         })
@@ -533,8 +544,48 @@ impl ManualSplitter<'_> {
 }
 
 impl GenerateStage<'_> {
+  /// Runs the `test` of each group once. `None` without groups.
+  pub async fn run_manual_group_tests(&self) -> BuildResult<Option<ManualGroupTests>> {
+    let Some(match_groups) = self
+      .options
+      .manual_code_splitting
+      .as_ref()
+      .and_then(|options| options.groups.as_ref())
+      .filter(|groups| !groups.is_empty())
+    else {
+      return Ok(None);
+    };
+    let runtime_module_idx = self.link_output.runtime.id();
+    let candidates = self
+      .link_output
+      .module_table
+      .modules
+      .iter()
+      .filter_map(Module::as_normal)
+      .filter(|module| {
+        module.idx != runtime_module_idx && self.link_output.metas[module.idx].is_included
+      })
+      .sorted_unstable_by(|a, b| a.stable_id.cmp(&b.stable_id))
+      .collect_vec();
+    // `test` is a JS callback, so one call per module would cross the napi boundary M * G times.
+    // One batched call per group replaces that.
+    let ids = candidates.iter().map(|module| module.id.as_str()).collect_vec();
+    let mut matched = Vec::with_capacity(match_groups.len());
+    for match_group in match_groups {
+      matched.push(match &match_group.test {
+        None => vec![true; candidates.len()],
+        Some(test) => {
+          match_module_ids(test, &ids, "a `codeSplitting` group `test` function").await?
+        }
+      });
+    }
+    let candidates = candidates.iter().map(|module| module.idx).collect();
+    Ok(Some(ManualGroupTests { candidates, matched }))
+  }
+
   pub async fn apply_manual_code_splitting(
     &self,
+    group_tests: Option<&ManualGroupTests>,
     index_splitting_info: &IndexSplittingInfo,
     module_to_assigned: &mut IndexBitSet<ModuleIdx>,
     chunk_graph: &mut ChunkGraph,
@@ -551,9 +602,9 @@ impl GenerateStage<'_> {
       return Ok(());
     };
 
-    if match_groups.is_empty() {
+    let Some(group_tests) = group_tests.filter(|_| !match_groups.is_empty()) else {
       return Ok(());
-    }
+    };
 
     let flattened_entries: Vec<&EntryPoint> =
       self.link_output.entries.iter().flat_map(|(_idx, entries)| entries.iter()).collect();
@@ -563,6 +614,7 @@ impl GenerateStage<'_> {
       .collect();
     let mut splitter = ManualSplitter {
       link_output: self.link_output,
+      group_tests,
       index_splitting_info,
       options: self.options,
       chunking_options,

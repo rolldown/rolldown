@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+// a.js
+let token = ["a"];
+globalThis.manualGroupCycleLog.push("a");
+export { token as t };
+
+```
+
+## lazy.js
+
+```js
+import { t as token } from "./a.js";
+// lazy.js
+const v = token[0];
+export { v };
+
+```
+
+## main.js
+
+```js
+import { t as value } from "./vendor.js";
+// main.js
+globalThis.manualGroupCycleLog.push(value);
+const loadLazy = () => import("./lazy.js").then((m) => m.v);
+export { loadLazy };
+
+```
+
+## vendor.js
+
+```js
+import { t as token } from "./a.js";
+// vendor.js
+const value = token[0];
+export { value as t };
+
+```

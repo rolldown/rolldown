@@ -39,11 +39,15 @@ pub(super) struct ReducedChunkGraph<'a> {
 }
 
 impl<'a> ReducedChunkGraph<'a> {
-  /// `atom_bits` holds the initial dependent-entry bits of each atom. No two atoms have equal bits.
+  /// `atom_bits` holds the initial dependent-entry bits of each atom. No two atoms outside manual
+  /// groups have equal bits. `manual_group_by_atom` (empty without groups) names the manual group
+  /// that can take each atom: the atoms of one group form one node, since the group puts them in
+  /// its chunks whatever their bits. Such a node has no bits, so no move goes there.
   pub(super) fn new<'b>(
     atom_bits: impl IntoIterator<Item = &'b BitSet>,
     atom_dependencies: &'a [Vec<usize>],
     host_atom_by_entry_bit: &'a [Option<usize>],
+    manual_group_by_atom: &[Option<usize>],
   ) -> Self {
     let atom_count = atom_dependencies.len();
     let mut graph = Self {
@@ -62,18 +66,28 @@ impl<'a> ReducedChunkGraph<'a> {
       marks: Vec::with_capacity(atom_count),
       mark: 0,
     };
-    // Each atom starts as the only atom of its own node, so node and atom indices match.
-    for bits in atom_bits {
-      let node = graph.add_node(bits);
-      debug_assert_eq!(node, graph.node_by_atom.len(), "atoms must have different bits");
+    let mut node_by_manual_group: FxHashMap<usize, usize> = FxHashMap::default();
+    for (atom_idx, bits) in atom_bits.into_iter().enumerate() {
+      let node = match manual_group_by_atom.get(atom_idx).copied().flatten() {
+        Some(group) => {
+          *node_by_manual_group.entry(group).or_insert_with(|| graph.add_manual_group_node())
+        }
+        None => {
+          debug_assert!(!graph.node_by_bits.contains_key(bits), "atoms must have different bits");
+          graph.add_node(bits)
+        }
+      };
       graph.node_by_atom.push(node);
-      graph.atom_count_by_node[node] = 1;
+      graph.atom_count_by_node[node] += 1;
     }
     debug_assert_eq!(graph.node_by_atom.len(), atom_count);
     for (atom_idx, dependencies) in atom_dependencies.iter().enumerate() {
       for &dependency in dependencies {
         graph.atom_dependents[dependency].push(atom_idx);
-        graph.edges.add(atom_idx, dependency);
+        let (from, to) = (graph.node_by_atom[atom_idx], graph.node_by_atom[dependency]);
+        if from != to {
+          graph.edges.add(from, to);
+        }
       }
     }
     for (entry_bit, host_atom_idx) in host_atom_by_entry_bit.iter().enumerate() {
@@ -131,6 +145,15 @@ impl<'a> ReducedChunkGraph<'a> {
       }
     }
     acyclic
+  }
+
+  fn add_manual_group_node(&mut self) -> usize {
+    let node = self.atom_count_by_node.len();
+    self.atom_count_by_node.push(0);
+    self.facade_entry_bit_by_node.push(None);
+    self.edges.add_node();
+    self.marks.push(0);
+    node
   }
 
   fn add_node(&mut self, bits: &BitSet) -> usize {
@@ -509,7 +532,8 @@ mod tests {
     moves: &[(usize, &[u32], bool)],
   ) {
     let mut current: Vec<BitSet> = atom_bits.iter().map(|set| bits(entry_count, set)).collect();
-    let mut graph = ReducedChunkGraph::new(&current, atom_dependencies, host_atom_by_entry_bit);
+    let mut graph =
+      ReducedChunkGraph::new(&current, atom_dependencies, host_atom_by_entry_bit, &[]);
     graph.assert_consistent();
     for &(atom_idx, reduced, expected) in moves {
       let reduced = bits(entry_count, reduced);
@@ -542,6 +566,20 @@ mod tests {
       &[None, None],
       &[(1, &[0], false)],
     );
+  }
+
+  #[test]
+  fn a_fold_through_a_manual_group_chunk_is_rejected() {
+    // Entry 0 (atom 0) imports atom 1, which a manual group takes and which has the same bits, and
+    // atom 1 imports atom 2, which entry 1 also loads. Without the group, atom 1 would be in the
+    // chunk of entry 0, and a fold of atom 2 into entry 0 would be safe. The group puts atom 1 in
+    // its own chunk, which imports atom 2 back from entry 0.
+    let atom_bits = [bits(2, &[0]), bits(2, &[0]), bits(2, &[0, 1])];
+    let atom_dependencies = [vec![1], vec![2], vec![]];
+    let mut graph =
+      ReducedChunkGraph::new(&atom_bits, &atom_dependencies, &[None; 2], &[None, Some(0), None]);
+    assert!(!graph.try_move(2, &bits(2, &[0])));
+    graph.assert_consistent();
   }
 
   #[test]
@@ -621,7 +659,7 @@ mod tests {
       let mut next = current.clone();
       group.iter().for_each(|&atom_idx| next[atom_idx] = target.clone());
       assert!(!has_cycle(&next, atom_dependencies, &[None; 4]));
-      let mut graph = ReducedChunkGraph::new(&current, atom_dependencies, &[None; 4]);
+      let mut graph = ReducedChunkGraph::new(&current, atom_dependencies, &[None; 4], &[]);
       for &atom_idx in rejected {
         assert!(!graph.try_move(atom_idx, &target));
         graph.assert_consistent();
@@ -691,7 +729,7 @@ mod tests {
               for second_atom in 0..3 {
                 for second_bits in &initial {
                   let mut current = initial.clone();
-                  let mut graph = ReducedChunkGraph::new(&current, &dependencies, &hosts);
+                  let mut graph = ReducedChunkGraph::new(&current, &dependencies, &hosts, &[]);
                   check_move(&mut graph, &mut current, first_atom, first_bits);
                   check_move(&mut graph, &mut current, second_atom, second_bits);
                 }
@@ -740,7 +778,7 @@ mod tests {
       let hosts = (0..entry_count)
         .map(|_| (rng.below(3) != 0).then(|| rng.below(atom_count)))
         .collect::<Vec<_>>();
-      let mut graph = ReducedChunkGraph::new(&current, &dependencies, &hosts);
+      let mut graph = ReducedChunkGraph::new(&current, &dependencies, &hosts, &[]);
       for step in 0..256 {
         let atom = rng.below(atom_count);
         let to = match step % 3 {
@@ -810,7 +848,7 @@ mod tests {
         .collect::<Vec<_>>();
 
       let mut graph =
-        ReducedChunkGraph::new(&atom_bits, &atom_dependencies, &host_atom_by_entry_bit);
+        ReducedChunkGraph::new(&atom_bits, &atom_dependencies, &host_atom_by_entry_bit, &[]);
       graph.assert_consistent();
       for step in 0..16 {
         // Odd steps move two atoms together.

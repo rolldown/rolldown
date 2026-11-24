@@ -45,7 +45,7 @@ var import_client = require_client();
 (5:2) "};\n" --> (8:4) "};\n"
 (6:0) "};\n" --> (9:1) "};\n"
 - ../main.js
-(2:0) "createRoot(" --> (14:4) "import_client.createRoot)("
+(2:0) "createRoot(" --> (14:0) "(0, import_client.createRoot)("
 (2:11) "document." --> (14:30) "document."
 (2:20) "getElementById(" --> (14:39) "getElementById("
 (2:35) "'root'" --> (14:54) "\"root\""

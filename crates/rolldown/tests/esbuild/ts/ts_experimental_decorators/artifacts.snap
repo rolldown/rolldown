@@ -39,6 +39,7 @@ __decorate([
 ], Foo$1.prototype, "method", null);
 __decorate([x, y], Foo$1.prototype, "mDecl", void 0);
 __decorate([x, y], Foo$1, "sUndef", void 0);
+__decorate([x, y], Foo$1, "sDef", void 0);
 __decorate([
 	x,
 	y,
@@ -59,20 +60,21 @@ Foo$1 = _Foo = __decorate([
 var all_default = Foo$1;
 // all_computed.ts
 var _ref;
+var _mDecl;
 var _ref2;
+var _mDecl2;
+let _mUndef;
 let _mDef;
 let _xDef;
 let _yDef;
+let _sUndef;
 let _sDef;
 var Foo = class Foo {
 	constructor() {
 		this[_mDef] = 1;
 		this[_xDef] = 2;
 	}
-	static {
-		mDecl();
-	}
-	[_ref = (mUndef(), _mDef = mDef(), method())](arg0, arg1) {
+	[_ref = (_mUndef = mUndef(), _mDef = mDef(), method())](arg0, arg1) {
 		return new Foo();
 	}
 	static {
@@ -81,12 +83,12 @@ var Foo = class Foo {
 	static {
 		this[_sDef] = new Foo();
 	}
-	static [_ref2 = (mDecl(), xUndef(), _xDef = xDef(), yUndef(), _yDef = yDef(), sUndef(), _sDef = sDef(), sMethod())](arg0, arg1) {
+	static [_ref2 = (xUndef(), _xDef = xDef(), yUndef(), _yDef = yDef(), _sUndef = sUndef(), _sDef = sDef(), sMethod())](arg0, arg1) {
 		return new Foo();
 	}
 };
-__decorate([x, y], Foo.prototype, null, void 0);
-__decorate([x, y], Foo.prototype, null, void 0);
+__decorate([x, y], Foo.prototype, _mUndef, void 0);
+__decorate([x, y], Foo.prototype, _mDef, void 0);
 __decorate([
 	x,
 	y,
@@ -95,8 +97,9 @@ __decorate([
 	__decorateParam(1, x1),
 	__decorateParam(1, y1)
 ], Foo.prototype, _ref, null);
-__decorate([x, y], Foo.prototype, null, void 0);
-__decorate([x, y], Foo, null, void 0);
+__decorate([x, y], Foo.prototype, _mDecl, void 0);
+__decorate([x, y], Foo, _sUndef, void 0);
+__decorate([x, y], Foo, _sDef, void 0);
 __decorate([
 	x,
 	y,
@@ -105,7 +108,7 @@ __decorate([
 	__decorateParam(1, x1),
 	__decorateParam(1, y1)
 ], Foo, _ref2, null);
-__decorate([x, y], Foo, null, void 0);
+__decorate([x, y], Foo, _mDecl2, void 0);
 // a.ts
 var _a_class;
 let a_class = class a_class {

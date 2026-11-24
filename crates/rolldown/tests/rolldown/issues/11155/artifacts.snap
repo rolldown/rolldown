@@ -39,9 +39,9 @@ export { loadA, loadB };
 ## plugin.js
 
 ```js
-import { t as __exportAll } from "./rolldown-runtime.js";
 import { t as helper } from "./lib.js";
 import { t as indicator } from "./b.js";
+// HIDDEN [\0rolldown/runtime.js]
 // a.js
 var a_exports = /* @__PURE__ */ __exportAll({ A: () => A });
 function A() {
@@ -56,13 +56,5 @@ function B() {
 	return helper("b") + Menu();
 }
 export { a_exports as n, B as t };
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as t };
 
 ```

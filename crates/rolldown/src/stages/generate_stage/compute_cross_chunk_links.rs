@@ -1273,6 +1273,11 @@ impl GenerateStage<'_> {
           depended_symbols.insert(self.link_output.runtime.resolve_symbol(name));
         }
 
+        if let Some(factory) = &chunk_graph.local_wrapper_factory
+          && factory.chunk == chunk_id
+        {
+          depended_symbols.shift_remove(&factory.symbol);
+        }
         (chunk_id, symbol_needs_to_assign)
       },
     );

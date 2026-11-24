@@ -9,8 +9,20 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{SharedOptions, stages::link_stage::LinkStageOutput};
 
+/// A generated wrapper factory with a single call site. The finalizer emits its expression
+/// directly at that call, so the module needs no runtime import for it.
+#[derive(Debug)]
+pub struct LocalWrapperFactory {
+  pub module: ModuleIdx,
+  pub chunk: ChunkIdx,
+  pub symbol: SymbolRef,
+  pub statement: rolldown_common::StmtInfoIdx,
+  pub expression: oxc::span::Span,
+}
+
 #[derive(Debug)]
 pub struct ChunkGraph {
+  pub local_wrapper_factory: Option<LocalWrapperFactory>,
   pub chunk_table: ChunkTable,
   pub sorted_chunk_idx_vec: Vec<ChunkIdx>,
   /// Module to chunk that contains the module
@@ -37,6 +49,7 @@ pub struct ChunkGraph {
 impl ChunkGraph {
   pub fn new(modules_len: usize) -> Self {
     Self {
+      local_wrapper_factory: None,
       chunk_table: ChunkTable::default(),
       module_to_chunk: index_vec![None; modules_len],
       sorted_chunk_idx_vec: Vec::new(),

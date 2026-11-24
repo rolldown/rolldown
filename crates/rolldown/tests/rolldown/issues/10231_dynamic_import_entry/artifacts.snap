@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // lazy-cjs.cjs
-var require_lazy_cjs = /* @__PURE__ */ require("./rolldown-runtime.js").__commonJSMin(((exports, module) => {
+var require_lazy_cjs = /* @__PURE__ */ ((cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports))(((exports, module) => {
 	module.exports = { a: 1 };
 }));
 module.exports = require_lazy_cjs();
@@ -27,9 +27,9 @@ module.exports = lazy_default;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const require_rolldown_runtime = require("./rolldown-runtime.js");
+// HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
-node_assert = require_rolldown_runtime.__toESM(node_assert);
+node_assert = __toESM(node_assert);
 // main.js
 const ready = Promise.all([Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({
 	__proto__: null,
@@ -37,29 +37,10 @@ const ready = Promise.all([Promise.resolve().then(() => /* @__PURE__ */ Object.f
 })).then((m) => {
 	node_assert.default.strictEqual(m.default, 42);
 	node_assert.default.deepStrictEqual(Object.keys(m), ["default"]);
-}), Promise.resolve().then(() => /* @__PURE__ */ require_rolldown_runtime.__toESM(require("./lazy-cjs.js"))).then((m) => {
+}), Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./lazy-cjs.js"))).then((m) => {
 	node_assert.default.deepStrictEqual(m.default, { a: 1 });
 	node_assert.default.strictEqual(m.a, 1);
 })]);
 exports.ready = ready;
-
-```
-
-## rolldown-runtime.js
-
-```js
-// HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__commonJSMin", {
-	enumerable: true,
-	get: function() {
-		return __commonJSMin;
-	}
-});
-Object.defineProperty(exports, "__toESM", {
-	enumerable: true,
-	get: function() {
-		return __toESM;
-	}
-});
 
 ```

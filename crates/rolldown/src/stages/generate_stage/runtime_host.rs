@@ -12,7 +12,7 @@ use rolldown_common::{
 use rolldown_utils::IndexBitSet;
 use rustc_hash::FxHashSet;
 
-use crate::chunk_graph::ChunkGraph;
+use crate::chunk_graph::{ChunkGraph, LocalWrapperFactory};
 
 use super::{
   FinalEsmInitMetadata, GenerateStage, Sealed,
@@ -25,8 +25,9 @@ use super::{
 struct RuntimeFold {
   runtime_chunk: ChunkIdx,
   host: ChunkIdx,
-  /// The chunks that import the runtime chunk in the baseline.
+  /// Baseline consumers that still need a helper from the host after the fold.
   consumers: FxHashSet<ChunkIdx>,
+  local_factory: Option<LocalWrapperFactory>,
 }
 
 /// The state that `move_runtime_module` changes, so that the fall back can restore it.
@@ -55,16 +56,22 @@ impl GenerateStage<'_> {
     links: CrossChunkLinkState,
   ) -> (Sealed<FinalEsmInitMetadata>, CrossChunkLinkState, ChunkImportOrder) {
     let baseline = self.sort_chunk_imports(chunk_graph, &links);
-    let Some(fold) = self.select_runtime_fold(chunk_graph, &links, &baseline) else {
+    let Some(mut fold) = self.select_runtime_fold(chunk_graph, &links, &baseline) else {
       return (metadata, links, baseline);
     };
     let expected = expected_import_order(chunk_graph, &baseline, &fold);
+    chunk_graph.local_wrapper_factory = fold.local_factory.take();
     // Release the old tables before allocating their replacements.
     drop((metadata, links));
     let runtime_move = self.move_runtime_module(chunk_graph, fold.runtime_chunk, fold.host);
     let (metadata, links) =
       self.compute_final_chunk_links(chunk_graph, used_symbol_refs, order_state);
     if self.fold_keeps_baseline(chunk_graph, &links, &fold, &expected) {
+      if let Some(factory) = &chunk_graph.local_wrapper_factory {
+        self.link_output.metas[factory.symbol.owner]
+          .stmt_info_included
+          .clear_bit(factory.statement);
+      }
       return (metadata, links, expected);
     }
     debug_assert!(
@@ -73,6 +80,7 @@ impl GenerateStage<'_> {
       chunk_graph.chunk_table[fold.host].name
     );
     drop((metadata, links));
+    chunk_graph.local_wrapper_factory = None;
     self.restore_runtime_chunk(chunk_graph, runtime_move);
     let (metadata, links) =
       self.compute_final_chunk_links(chunk_graph, used_symbol_refs, order_state);
@@ -113,20 +121,163 @@ impl GenerateStage<'_> {
     // only chunk. So this case does not need the host rule or precondition 6.
     if let [host] = chunks[..] {
       return (!self.chunk_has_declaration_module(&chunk_graph.chunk_table[host]))
-        .then_some(RuntimeFold { runtime_chunk, host, consumers });
+        .then_some(RuntimeFold { runtime_chunk, host, consumers, local_factory: None });
     }
     // An unused runtime has no host: each root loads no consumer, so the root check rejects each
     // chunk.
     if consumers.is_empty() || !self.runtime_start_is_invisible() {
       return None;
     }
-    let host = HostSearch::new(chunk_graph, baseline, runtime_chunk).select(
-      self,
-      chunk_graph,
-      links,
-      &consumers,
-    )?;
-    Some(RuntimeFold { runtime_chunk, host, consumers })
+    let search = HostSearch::new(chunk_graph, baseline, runtime_chunk);
+    if let Some(host) = search.select(self, chunk_graph, links, &consumers) {
+      return Some(RuntimeFold { runtime_chunk, host, consumers, local_factory: None });
+    }
+    // A sole consumer that only constructs namespaces in its body needs no new import.
+    // Even a cycle that calls one of its hoisted functions cannot read the helper early.
+    if consumers.len() == 1 {
+      let host = *consumers.iter().next()?;
+      if self.only_initializes_namespaces(chunk_graph, links, host, runtime_chunk) {
+        return Some(RuntimeFold { runtime_chunk, host, consumers, local_factory: None });
+      }
+    }
+    // A single-use wrapper factory can travel with its wrapper. Check the host rule again
+    // for the remaining consumer. Neither chunk then imports the other for a helper.
+    if consumers.len() != 2
+      || self.options.profiler_names
+      || self.options.is_strict_execution_order_enabled()
+      || self.options.treeshake.is_none()
+    {
+      return None;
+    }
+    let mut ordered = chunks.into_iter().filter(|idx| consumers.contains(idx));
+    let (a, b) = (ordered.next()?, ordered.next()?);
+    for (host, local) in [(a, b), (b, a)] {
+      // With no other chunk import, the host cannot be in a static cycle. In ESM an
+      // external can still call a hoisted export before the host initializes its helpers.
+      if baseline.importees(host) != [runtime_chunk]
+        || self.chunk_has_declaration_module(&chunk_graph.chunk_table[host])
+        || (matches!(self.options.format, OutputFormat::Esm)
+          && self.chunk_imports_unknown_external(chunk_graph, links, host))
+      {
+        continue;
+      }
+      if let Some(factory) =
+        self.local_wrapper_factory(chunk_graph, links, runtime_chunk, local, host)
+      {
+        return Some(RuntimeFold {
+          runtime_chunk,
+          host,
+          consumers: FxHashSet::from_iter([host]),
+          local_factory: Some(factory),
+        });
+      }
+    }
+    None
+  }
+
+  /// In unwrapped ESM the finalizer emits `__exportAll` only in the namespace declaration at
+  /// the top of the module body. Moving the generated runtime to the front of this chunk keeps
+  /// every such call after its definition. See internal-docs/code-splitting/design.md.
+  fn only_initializes_namespaces(
+    &self,
+    chunk_graph: &ChunkGraph,
+    links: &CrossChunkLinkState,
+    host: ChunkIdx,
+    runtime_chunk: ChunkIdx,
+  ) -> bool {
+    let chunk = &chunk_graph.chunk_table[host];
+    if !matches!(self.options.format, OutputFormat::Esm)
+      || self.options.is_strict_execution_order_enabled()
+      || self.chunk_has_declaration_module(chunk)
+    {
+      return false;
+    }
+    let runtime = &self.link_output.runtime;
+    let Some(items) = links.imports_from_other_chunks(host).get(&runtime_chunk) else {
+      return false;
+    };
+    let export_all = runtime.resolve_symbol("__exportAll");
+    // A user import can call the helper from a hoisted function, directly or through a barrel.
+    let runtime_module = self.link_output.module_table[runtime.id()].as_normal().unwrap();
+    !items.is_empty()
+      && items.iter().all(|item| item.import_ref == export_all)
+      && runtime_module.importers.is_empty()
+      && chunk.modules.iter().all(|&idx| {
+        self.link_output.metas[idx].wrap_kind().is_none()
+          && self.link_output.module_table[idx].as_normal().is_some_and(|m| !m.meta.has_eval())
+      })
+  }
+
+  fn local_wrapper_factory(
+    &self,
+    graph: &ChunkGraph,
+    links: &CrossChunkLinkState,
+    runtime_chunk: ChunkIdx,
+    chunk: ChunkIdx,
+    host: ChunkIdx,
+  ) -> Option<LocalWrapperFactory> {
+    use oxc::ast::ast::{Declaration, Expression, Statement};
+    let runtime = &self.link_output.runtime;
+    let runtime_module = self.link_output.module_table[runtime.id()].as_normal()?;
+    // User code that imports a factory can observe its identity. Only replace generated calls.
+    if !runtime_module.importers.is_empty()
+      || self.chunk_has_declaration_module(&graph.chunk_table[chunk])
+    {
+      return None;
+    }
+    let &[module] = graph.chunk_table[chunk].modules.as_slice() else { return None };
+    let meta = &self.link_output.metas[module];
+    if !meta.stmt_info_included.has_bit(meta.wrapper_stmt_info?) {
+      return None;
+    }
+    let name = match meta.wrap_kind() {
+      WrapKind::Cjs => "__commonJSMin",
+      WrapKind::Esm => "__esmMin",
+      WrapKind::None => return None,
+    };
+    let symbol = runtime.resolve_symbol(name);
+    let items = links.imports_from_other_chunks(chunk).get(&runtime_chunk)?;
+    if !matches!(items.as_slice(), [item] if item.import_ref == symbol)
+      || links
+        .imports_from_other_chunks(host)
+        .get(&runtime_chunk)?
+        .iter()
+        .any(|item| item.import_ref == symbol)
+    {
+      return None;
+    }
+    let stmts = &self.link_output.stmt_infos[runtime.id()];
+    let &[statement] = stmts.declared_stmts_by_symbol(&symbol) else { return None };
+    // Both minified factories close over only their own parameters. Do not move the factory
+    // if a runtime edit gives it another binding to read, or another runtime statement uses it.
+    if !self.link_output.metas[runtime.id()].stmt_info_included.has_bit(statement)
+      || !stmts[statement].referenced_symbols.is_empty()
+      || stmts.iter_enumerated().any(|(idx, stmt)| {
+        self.link_output.metas[runtime.id()].stmt_info_included.has_bit(idx)
+          && stmt
+            .referenced_symbols
+            .iter()
+            .any(|r| matches!(r, rolldown_common::SymbolOrMemberExprRef::Symbol(s) if *s == symbol))
+      })
+    {
+      return None;
+    }
+    let stmt = self.ast_table[runtime.id()]
+      .as_ref()?
+      .program()
+      .body
+      .get(statement.index().checked_sub(1)?)?;
+    let decl = match stmt {
+      Statement::ExportDeclaration(export) => match &export.declaration {
+        Declaration::VariableDeclaration(decl) => decl,
+        _ => return None,
+      },
+      Statement::VariableDeclaration(decl) => decl,
+      _ => return None,
+    };
+    let [binding] = decl.declarations.as_slice() else { return None };
+    let Some(Expression::ArrowFunctionExpression(factory)) = &binding.init else { return None };
+    Some(LocalWrapperFactory { module, chunk, symbol, statement, expression: factory.span })
   }
 
   /// Preconditions 1, 2, 3 and 5: the runtime chunk is a chunk that only the static imports of its
@@ -463,7 +614,10 @@ fn expected_import_order(
           .copied()
           .filter(|&importee| importee != fold.runtime_chunk)
           .collect::<Vec<_>>();
-        if chunk_idx != fold.host && !importees.contains(&fold.host) {
+        if fold.consumers.contains(&chunk_idx)
+          && chunk_idx != fold.host
+          && !importees.contains(&fold.host)
+        {
           importees.push(fold.host);
         }
         importees

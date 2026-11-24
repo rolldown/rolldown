@@ -226,6 +226,22 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     expr
   }
 
+  fn wrapper_factory_expr(&self, name: &str) -> ast::Expression<'ast> {
+    if let Some(factory) = &self.ctx.chunk_graph.local_wrapper_factory
+      && factory.module == self.ctx.idx
+      && factory.symbol == self.ctx.runtime.resolve_symbol(name)
+    {
+      let runtime = self.ctx.modules[factory.symbol.owner].as_normal().expect("runtime module");
+      // Generated spans keep the factory out of the wrapped module's source map.
+      return parse_injected_expression(
+        self.allocator(),
+        factory.expression.source_text(&runtime.source),
+      )
+      .expect("the runtime factory initializer is an arrow expression");
+    }
+    self.finalized_expr_for_runtime_symbol(name)
+  }
+
   fn finalized_require_expr(&self) -> ast::Expression<'ast> {
     let require = self.finalized_expr_for_runtime_symbol("__require");
     let Some((_, module)) = &self.ctx.chunk.node_require_factory else {

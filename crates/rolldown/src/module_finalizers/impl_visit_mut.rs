@@ -443,13 +443,11 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     match wrapper_mode {
       ModuleWrapperMode::InteropCjs(wrapper_ref) => {
         let wrap_ref_name = self.canonical_name_for(wrapper_ref);
-        let commonjs_ref = if self.ctx.options.profiler_names {
-          self.canonical_ref_for_runtime("__commonJS")
+        let commonjs_ref_expr = self.wrapper_factory_expr(if self.ctx.options.profiler_names {
+          "__commonJS"
         } else {
-          self.canonical_ref_for_runtime("__commonJSMin")
-        };
-
-        let (commonjs_ref_expr, _) = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
+          "__commonJSMin"
+        });
         let mut stmts_inside_closure = allocator::Vec::new_in(self);
         // Keep UMD dependencies on their CommonJS path. See internal-docs/renaming/design.md,
         // principle 7.
@@ -544,12 +542,11 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           ));
         }
 
-        let esm_ref = if self.ctx.options.profiler_names {
-          self.canonical_ref_for_runtime("__esm")
+        let esm_ref_expr = self.wrapper_factory_expr(if self.ctx.options.profiler_names {
+          "__esm"
         } else {
-          self.canonical_ref_for_runtime("__esmMin")
-        };
-        let (esm_ref_expr, _) = self.finalized_expr_for_symbol_ref(esm_ref, false, false);
+          "__esmMin"
+        });
         let wrap_ref_name = self.canonical_name_for(target.wrapper_ref);
 
         program.body.push(Statement::new_esm_wrapper_stmt(

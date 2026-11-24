@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy.js
+
+```js
+// lazy.cjs
+var require_lazy = /* @__PURE__ */ ((cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports))(((exports, module) => {
+	globalThis.calls++;
+	module.exports = { value: 42 };
+}));
+export default require_lazy();
+
+```
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// main.js
+const load = () => import("./lazy.js").then((m) => /* @__PURE__ */ __toESM(m.default)).then(({ default: value }) => value);
+globalThis.results = Promise.all([load(), load()]);
+throw new Error("entry failed");
+
+```

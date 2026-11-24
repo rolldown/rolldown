@@ -716,6 +716,12 @@ In ESM output, one exception keeps a fold: `H` is the only consumer, and each mo
 
 Rejected: condition 4 only when a consumer has a top-level function declaration that reads a helper. The second failure needs no function declaration. Also, with strict execution order, each ESM wrapper is a function declaration (`function init_x()`) that calls `__esmMin`.
 
+### Folds that add no helper import
+
+In `issues/11155`, the only consumer belongs to a cycle. Its only helper call constructs a namespace at the start of an unwrapped ESM module body. A peer can call a hoisted function before that body starts, but none of these functions reads a helper. Putting the generated runtime first in the consumer therefore keeps every helper read after its definition. This proof excludes explicit imports of the runtime, direct eval, and strict order wrappers.
+
+Two independent consumers can also share a runtime file without sharing any helper. For example, in `issues/7655` the entry uses `__toESM` and the lazy chunk calls `__commonJSMin` once. The wrapper factory closes over its parameters, and the returned wrapper owns the CommonJS cache. Emitting the factory expression at that one call site keeps one copy of the factory and the same cache. The remaining runtime goes in the entry. The lazy chunk still loads independently, including when the entry throws after starting the import (`code_splitting/runtime_host_local_wrapper_factory`).
+
 ### The runtime start
 
 After a fold, the runtime starts when the host starts, not at the first import of each consumer. User code cannot see this change only for the runtime that rolldown generates. So precondition 6, the known-runtime contract, keeps the runtime chunk in these cases:

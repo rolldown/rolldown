@@ -271,3 +271,40 @@ test('the generated Node ESM runtime moves into its only consumer', async () => 
   expect(chunks.find((chunk) => chunk.name === 'c3')?.imports).toEqual([]);
   expect(logs).toEqual({ c1: ['C1 function'], c3: ['C3'] });
 });
+
+test('an external can call an explicitly imported namespace helper before the host body runs', async () => {
+  const { chunks, logs } = await bundle(
+    {
+      'entry.js': `
+        import { __exportAll } from 'runtime';
+        import 'peer';
+        export function keys() {
+          return Object.keys(__exportAll({ value: () => 1 })).join();
+        }
+      `,
+      'peer.mjs': `
+        import { keys } from '../output/entry.mjs';
+        console.log(keys());
+      `,
+      'cold.js': "console.log('cold');",
+    },
+    ['entry', 'cold'],
+    (source) => ({
+      input: {
+        plugins: [
+          {
+            name: 'resolve-runtime-and-peer',
+            resolveId(id) {
+              if (id === 'runtime') return runtimeId;
+              if (id === 'peer')
+                return { id: pathToFileURL(path.join(source, 'peer.mjs')).href, external: true };
+            },
+          },
+        ],
+      },
+    }),
+  );
+  const runtime = chunks.find((chunk) => chunk.moduleIds.includes(runtimeId));
+  expect(runtime?.moduleIds).toEqual([runtimeId]);
+  expect(logs.entry).toEqual(['value']);
+});

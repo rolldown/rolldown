@@ -207,8 +207,10 @@ export interface SourceDescription
    * The module's size in bytes. Size-based code splitting uses it instead of the size of the
    * module's code.
    *
-   * This is useful when the module's output is not in its code, e.g. a CSS module whose
-   * stylesheet is emitted separately.
+   * This is useful when a plugin emits output for each chunk from the modules in it, and that
+   * output is not in the modules' code. For example, with `build.cssCodeSplit: true`, Vite emits a
+   * stylesheet for each JS chunk from the CSS of the style modules the chunk contains, while the
+   * code of a style module is empty or only a class-name map.
    *
    * @example
    * ```js

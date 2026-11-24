@@ -1,0 +1,7 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "transform": { "target": "es2022" }
+  },
+  "expectExecuted": true
+}

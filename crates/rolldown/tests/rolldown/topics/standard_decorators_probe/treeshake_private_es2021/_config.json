@@ -1,0 +1,4 @@
+{
+  "config": { "transform": { "target": "es2021" } },
+  "expectExecuted": false
+}

@@ -1,0 +1,114 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// main.ts
+var _greet_dec;
+let _init;
+function bound(value, ctx) {
+	ctx.addInitializer(function() {
+		this[ctx.name] = this[ctx.name].bind(this);
+	});
+	return value;
+}
+let _count_accessor_storage = /* @__PURE__ */ new WeakMap();
+_greet_dec = [[void 0, bound]];
+var Greeter = class {
+	constructor() {
+		_runInitializers(_init, 5, this);
+		this.name = "x";
+		_classPrivateFieldInitSpec(this, _count_accessor_storage, 0);
+	}
+	greet() {
+		throw new Error("boom from greet");
+	}
+	get count() {
+		return _classPrivateFieldGet2(_count_accessor_storage, this);
+	}
+	set count(value) {
+		_classPrivateFieldSet2(_count_accessor_storage, this, value);
+	}
+};
+_init = _decoratorStart(null);
+_decorateElement(_init, 1, "greet", _greet_dec, Greeter);
+_decoratorMetadata(_init, Greeter);
+export { Greeter };
+
+//# sourceMappingURL=main.js.map
+```
+
+# Sourcemap Visualizer
+
+```
+- ../main.ts
+(0:0) "function " --> (237:0) "function "
+(0:9) "bound<T extends Function>(" --> (237:9) "bound("
+(0:35) "value: T, " --> (237:15) "value, "
+(0:45) "ctx: ClassMethodDecoratorContext): T " --> (237:22) "ctx) "
+(0:82) "{\n" --> (237:27) "{\n"
+(1:2) "ctx." --> (238:1) "ctx."
+(1:6) "addInitializer(" --> (238:5) "addInitializer("
+(1:21) "function (this: any) " --> (238:20) "function() "
+(1:42) "{ " --> (238:31) "{\n"
+(1:44) "this[" --> (239:2) "this["
+(1:49) "ctx." --> (239:7) "ctx."
+(1:53) "name] = " --> (239:11) "name] = "
+(1:61) "this[" --> (239:19) "this["
+(1:66) "ctx." --> (239:24) "ctx."
+(1:70) "name]" --> (239:28) "name]"
+(1:75) "." --> (239:33) "."
+(1:76) "bind(" --> (239:34) "bind("
+(1:81) "this" --> (239:39) "this"
+(1:85) "); " --> (239:43) ");\n"
+(1:88) "}" --> (240:1) "}"
+(1:89) ");\n" --> (240:2) ");\n"
+(2:2) "return " --> (241:1) "return "
+(2:9) "value;\n" --> (241:8) "value;\n"
+(3:0) "}\n" --> (242:0) "}\n"
+(6:3) "bound\n" --> (244:0) "_greet_dec = "
+(6:3) "bound\n" --> (244:13) "["
+(6:3) "bound\n" --> (244:14) "["
+(6:3) "bound\n" --> (244:15) "void "
+(6:3) "bound\n" --> (244:20) "0, "
+(6:3) "bound\n" --> (244:23) "bound"
+(6:3) "bound\n" --> (244:28) "]"
+(6:3) "bound\n" --> (244:29) "];\n"
+(4:0) "export class " --> (245:0) "var "
+(4:13) "Greeter " --> (245:4) "Greeter = "
+(4:0) "export class Greeter " --> (245:14) "class "
+(4:21) "{\n" --> (245:20) "{\n"
+(5:2) "name: string = " --> (248:2) "this."
+(5:2) "name: string = " --> (248:7) "name = "
+(5:17) "'x';\n" --> (248:14) "\"x\";\n"
+(10:27) "0;\n" --> (249:2) "_classPrivateFieldInitSpec("
+(10:27) "0;\n" --> (249:29) "this, "
+(10:27) "0;\n" --> (249:35) "_count_accessor_storage, "
+(10:27) "0;\n" --> (249:60) "0"
+(10:27) "0;\n" --> (249:61) ");\n"
+(7:2) "greet(): string " --> (251:1) "greet() "
+(7:18) "{\n" --> (251:9) "{\n"
+(8:4) "throw " --> (252:2) "throw "
+(8:10) "new " --> (252:8) "new "
+(8:14) "Error(" --> (252:12) "Error("
+(8:20) "'boom from greet'" --> (252:18) "\"boom from greet\""
+(8:37) ");\n" --> (252:35) ");\n"
+(9:2) "}\n" --> (253:1) "}\n"
+(10:11) "count: number = 0;\n" --> (254:1) "get "
+(10:11) "count: number = 0;\n" --> (254:5) "count() "
+(10:11) "count: number = 0;\n" --> (254:13) "{\n"
+(11:0) "}\n" --> (260:0) "};\n"
+```

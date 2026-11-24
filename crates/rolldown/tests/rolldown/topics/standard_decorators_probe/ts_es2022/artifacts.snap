@@ -1,0 +1,97 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// lib.js
+const log = [];
+function logged(value, ctx) {
+	log.push(`${ctx.kind}:${String(ctx.name)}`);
+	if (ctx.kind === "method") return function(...args) {
+		log.push(`call:${String(ctx.name)}`);
+		return value.call(this, ...args);
+	};
+	if (ctx.kind === "field") return (v) => v * 2;
+	if (ctx.kind === "accessor") return {
+		get() {
+			return value.get.call(this) + 1;
+		},
+		set(v) {
+			value.set.call(this, v);
+		},
+		init(v) {
+			return v + 100;
+		}
+	};
+	if (ctx.kind === "class") {
+		ctx.metadata.tagged = true;
+		ctx.addInitializer(function() {
+			log.push(`init:${this.name}`);
+		});
+	}
+}
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// main.ts
+var _Foo_decorators;
+var _x_dec;
+var _y_dec;
+var _greet_dec;
+var _reveal_dec;
+var _Class_decorators;
+let _init;
+let _init2;
+let _Class;
+let _y_accessor_storage = /* @__PURE__ */ new WeakMap();
+let _secret = /* @__PURE__ */ new WeakMap();
+_Foo_decorators = [[void 0, logged]];
+_x_dec = [[void 0, logged]];
+_y_dec = [[void 0, logged]];
+_greet_dec = [[void 0, logged]];
+_reveal_dec = [[void 0, logged]];
+let _Foo = class Foo {
+	constructor() {
+		_runInitializers(_init, 5, this);
+		this.x = _runInitializers(_init, 12, this, 1);
+		_runInitializers(_init, 15, this);
+		_classPrivateFieldInitSpec(this, _y_accessor_storage, _runInitializers(_init, 8, this, 2));
+		_runInitializers(_init, 11, this);
+	}
+	get y() {
+		return _classPrivateFieldGet2(_y_accessor_storage, this);
+	}
+	set y(value) {
+		_classPrivateFieldSet2(_y_accessor_storage, this, value);
+	}
+	greet(n) {
+		return `hi ${n} ${this.x}`;
+	}
+	static reveal() {
+		return _classPrivateFieldGet2(_secret, _Foo);
+	}
+};
+_init = _decoratorStart(null);
+_decorateElement(_init, 9, "reveal", _reveal_dec, _Foo);
+_decorateElement(_init, 4, "y", _y_dec, _Foo);
+_decorateElement(_init, 1, "greet", _greet_dec, _Foo);
+_decorateElement(_init, 5, "x", _x_dec, _Foo);
+_Foo = _decorateElement(_init, 0, "Foo", _Foo_decorators, _Foo);
+_runInitializers(_init, 3, _Foo);
+_classPrivateFieldInitSpec(_Foo, _secret, 7);
+_runInitializers(_init, 1, _Foo);
+let Foo = _Foo;
+var main_default = (_Class_decorators = [[void 0, logged]], _Class = { default: class {} }.default, _init2 = _decoratorStart(null), _Class = _decorateElement(_init2, 0, "default", _Class_decorators, _Class), _runInitializers(_init2, 1, _Class), _Class);
+export { Foo, main_default as default, log };
+
+```

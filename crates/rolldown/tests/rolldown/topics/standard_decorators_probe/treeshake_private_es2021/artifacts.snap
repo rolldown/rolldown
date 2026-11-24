@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// main.js
+let _three;
+var _two = /* @__PURE__ */ new WeakMap();
+_three = three();
+var Foo = class {
+	constructor() {
+		_classPrivateFieldInitSpec(this, _two, 2);
+		_defineProperty(this, _three, 3);
+	}
+	get two() {
+		return _classPrivateFieldGet2(_two, this);
+	}
+	static get five() {
+		return _five._;
+	}
+};
+_defineProperty(Foo, "four", 4);
+var _five = { _: 5 };
+const x = 1;
+export { x };
+
+```

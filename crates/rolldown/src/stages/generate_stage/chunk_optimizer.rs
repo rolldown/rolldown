@@ -1327,15 +1327,9 @@ impl GenerateStage<'_> {
         let FacadeChunkElimination { reason, entry_module_idx, from_chunk_idx, to_chunk_idx } =
           elimination;
         // Point the entry module to related common chunk
-        chunk_graph.entry_module_to_entry_chunk.remove(entry_module_idx);
-
-        let Some(module) = context.modules[*entry_module_idx].as_normal() else {
-          continue;
-        };
+        chunk_graph.entry_module_to_entry_chunk.insert(*entry_module_idx, *to_chunk_idx);
 
         let wrap_kind = context.metas[*entry_module_idx].wrap_kind();
-
-        chunk_graph.entry_module_to_entry_chunk.insert(*entry_module_idx, *to_chunk_idx);
         let from_chunk = &chunk_graph.chunk_table[*from_chunk_idx];
         let ChunkKind::EntryPoint { meta: chunk_meta, .. } = from_chunk.kind else {
           // We don't have any optimization to merge common chunks into other chunks.
@@ -1376,7 +1370,7 @@ impl GenerateStage<'_> {
             .name
             .as_ref()
             .map_or_else(|| "unnamed".to_string(), ArcStr::to_string);
-          let module_stable_id = module.stable_id.to_string();
+          let module_stable_id = context.modules[*entry_module_idx].stable_id().to_string();
           chunk_graph.chunk_table[*to_chunk_idx].debug_info.push(
             ChunkDebugInfo::EliminatedFacadeChunk {
               chunk_name: eliminated_chunk_name,

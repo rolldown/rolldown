@@ -7,6 +7,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc::ast::{Comment, ast::Statement};
 use oxc_index::{IndexVec, index_vec};
+use rolldown_common::StmtInfoMeta;
 use rolldown_common::{
   Chunk, ChunkDebugInfo, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType,
   FacadeChunkEliminationReason, ImportKind, Module, ModuleIdx, ModuleTable, NormalModule,
@@ -538,10 +539,7 @@ impl GenerateStage<'_> {
       })
       || !program.directives.is_empty()
       || program.comments.iter().any(Comment::is_legal)
-      || program.body.is_empty()
-      || !program.body.iter().all(|stmt| {
-        matches!(stmt, Statement::ExportAllDeclaration(_) | Statement::ExportFromDeclaration(_))
-      })
+      || !is_reexport_body(&program.body)
     {
       return None;
     }
@@ -1048,6 +1046,10 @@ impl GenerateStage<'_> {
     let temp_runtime_chunk_idx = chunk_graph.module_to_chunk[self.link_output.runtime.id()]
       .and_then(|idx| temp_chunk_opt_graph.to_temp_idx(idx));
     let mut imported_bindings = None;
+    let module_table = &self.link_output.module_table;
+    let layout_sensitive = StmtInfoMeta::ImportMeta
+      | StmtInfoMeta::NonStaticDynamicImport
+      | StmtInfoMeta::HasDummyRecord;
     for (from_chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
       let ChunkKind::EntryPoint { meta, module } = chunk.kind else {
         continue;
@@ -1071,6 +1073,10 @@ impl GenerateStage<'_> {
         continue;
       };
       let target_chunk = &chunk_graph.chunk_table[target_chunk_idx];
+      let is_target_manual_chunk = matches!(
+        target_chunk.chunk_reason_type.as_ref(),
+        ChunkReasonType::ManualCodeSplitting { .. }
+      );
 
       if meta.intersects(ChunkMeta::UserDefinedEntry) {
         if matches!(target_chunk.kind, ChunkKind::Common) {
@@ -1098,6 +1104,43 @@ impl GenerateStage<'_> {
             && match chunk.preserve_entry_signature {
               Some(PreserveEntrySignatures::Strict) => {
                 self.can_merge_without_changing_entry_signature(chunk, &target_chunk.modules)
+                  || (meta.is_pure_user_defined_entry()
+                    && !is_target_manual_chunk
+                    && self.options.format.is_esm()
+                    && !self.options.is_strict_execution_order_enabled()
+                    && target_chunk.bits.index_of_one().map(ChunkIdx::from_raw).all(|peer| {
+                      peer == from_chunk_idx
+                        || chunk_graph.chunk_table[peer]
+                          .user_defined_entry_module(module_table)
+                          .filter(|m| !m.import_records.is_empty())
+                          .filter(|m| {
+                            m.import_records.iter().all(|r| r.resolved_module == Some(module))
+                          })
+                          .and_then(|m| self.ast_table[m.idx].as_ref())
+                          .is_some_and(|ast| is_reexport_body(&ast.program().body))
+                    })
+                    && target_chunk.modules.iter().all(|&idx| {
+                      let meta = &self.link_output.metas[idx];
+                      meta.wrap_kind().is_none()
+                        && !meta.has_dynamic_exports
+                        && module_table[idx].import_records().iter().all(|rec| {
+                          rec.resolved_module.map_or(!rec.kind.is_static(), |dep| {
+                            !module_table[dep].is_external()
+                              && (!rec.kind.is_static()
+                                || chunk_graph.module_to_chunk[dep] == Some(target_chunk_idx))
+                          })
+                        })
+                        && !meta.stmt_info_included.index_of_one().any(|stmt| {
+                          self.link_output.stmt_infos[idx][stmt].meta.intersects(layout_sensitive)
+                        })
+                    })
+                    && self.can_module_be_facade(
+                      module,
+                      target_chunk_idx,
+                      imported_bindings.get_or_insert_with(|| {
+                        self.bindings_imported_from_other_chunks(chunk_graph)
+                      }),
+                    ))
               }
               _ => true,
             };
@@ -1114,10 +1157,6 @@ impl GenerateStage<'_> {
         continue;
       }
 
-      let is_target_manual_chunk = matches!(
-        target_chunk.chunk_reason_type.as_ref(),
-        ChunkReasonType::ManualCodeSplitting { .. }
-      );
       let is_target_pure_user_entry_chunk = matches!(target_chunk.kind, ChunkKind::EntryPoint { meta, module: _ } if meta.is_pure_user_defined_entry());
       let is_target_common_chunk = matches!(target_chunk.kind, ChunkKind::Common);
       // Six optimization scenarios (scenario 1 is handled above for user-defined entries):
@@ -2342,4 +2381,11 @@ impl StaticChunkReachability {
       })
       .has_bit(to)
   }
+}
+
+fn is_reexport_body(body: &[Statement<'_>]) -> bool {
+  !body.is_empty()
+    && body.iter().all(|stmt| {
+      matches!(stmt, Statement::ExportAllDeclaration(_) | Statement::ExportFromDeclaration(_))
+    })
 }

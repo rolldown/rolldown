@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+// is-odd.js
+function isOdd(value) {
+	return value % 2 !== 0;
+}
+// index.ts
+function foo(value) {
+	return isOdd(value);
+}
+export { foo };
+
+```
+
+## mod.js
+
+```js
+export { foo } from "./index.js";
+
+```

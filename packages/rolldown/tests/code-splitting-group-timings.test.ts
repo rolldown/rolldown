@@ -42,7 +42,6 @@ function runName(group: BindingMatchGroup): void {
     throw new Error('Expected a code-splitting name callback');
   }
   const context: BindingChunkingContext = {
-    dropInner: () => ({ freed: true }),
     getModuleInfo: () => null,
     getModuleSideEffects: () => null,
     setModuleSideEffects: () => false,

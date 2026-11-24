@@ -1,0 +1,15 @@
+{
+  "extendedTests": {
+    "preserveEntrySignaturesAllowExtension": false
+  },
+  "config": {
+    "input": [
+      { "import": "./index.mjs" },
+      { "import": "./mod.mjs" },
+      { "import": "./snapshot.mjs" },
+      { "import": "./state.mjs" }
+    ],
+    "entryFilenames": "[name].mjs",
+    "chunkFilenames": "[name].mjs"
+  }
+}

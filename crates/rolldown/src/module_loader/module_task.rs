@@ -276,11 +276,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       .plugin_driver
       .mark_context_load_progress(module.id.clone(), ContextLoadProgress::Parsed);
 
-    let dependency_cache = match (&saved_resolves, &cache_recorder) {
-      (Some(saved), _) => DependencyCache::Reuse(saved),
-      (None, Some(recorder)) => DependencyCache::Record(recorder),
-      (None, None) => DependencyCache::Off,
-    };
+    let dependency_cache = DependencyCache::new(saved_resolves.as_ref(), cache_recorder.as_ref());
     let (resolved_deps, resolves_to_save) = resolve_dependencies(
       &self.resolved_id,
       &self.ctx.options,
@@ -302,9 +298,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     if let (Some(cache), Some(key), Some(recorder), Some(state)) =
       (&cache, cache_key, &cache_recorder, state_to_save)
     {
-      if recorder.is_cacheable() {
-        self.save_to_cache(cache, key, recorder, state, resolves_to_save).await;
-      }
+      self.save_to_cache(cache, key, recorder, state, resolves_to_save).await;
     }
 
     for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
@@ -471,6 +465,9 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     state: StateAfterTransform,
     resolved: Vec<SavedResolve>,
   ) {
+    if !recorder.is_cacheable() {
+      return;
+    }
     let StateAfterTransform {
       source,
       module_type,

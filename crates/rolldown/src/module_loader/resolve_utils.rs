@@ -114,6 +114,21 @@ pub enum DependencyCache<'a> {
   Reuse(&'a RestoredResolveMap),
 }
 
+impl<'a> DependencyCache<'a> {
+  /// Saved resolve results win over a recorder: a module that reuses its saved result records
+  /// nothing.
+  pub fn new(
+    saved: Option<&'a RestoredResolveMap>,
+    recorder: Option<&'a SharedModuleCacheRecorder>,
+  ) -> Self {
+    match (saved, recorder) {
+      (Some(saved), _) => Self::Reuse(saved),
+      (None, Some(recorder)) => Self::Record(recorder),
+      (None, None) => Self::Off,
+    }
+  }
+}
+
 /// Fills in the fields that saved resolve results do not hold. `None` when a `package.json` that
 /// one of them names cannot be read any more: then the whole saved result is not used.
 pub fn restore_resolved_ids<Fs: FileSystem>(

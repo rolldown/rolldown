@@ -1,0 +1,3 @@
+{
+  "config": { "transform": { "target": "es2022" } }
+}

@@ -82,17 +82,45 @@ impl ModuleGroup {
 /// they can take (see `GenerateStage::manual_group_by_module`), and a `test` function runs once per
 /// group, so the fold and the groups read the same answers.
 pub struct ManualGroupTests {
-  /// The included normal modules other than the runtime module, sorted by `stable_id`. Sorting
-  /// keeps the calls of stateful `test` and `name` functions in the same order across runs:
-  /// `ModuleIdx` follows the order in which parallel `resolveId` and `load` calls complete.
+  /// The included normal modules other than the runtime module, in the order of
+  /// `sorted_candidate_modules`.
   pub(super) candidates: Vec<ModuleIdx>,
   /// Per group, whether its `test` matches each candidate.
   pub(super) matched: Vec<Vec<bool>>,
 }
 
+/// The included normal modules that `keep` keeps, sorted by `stable_id` so that user-supplied
+/// `test` and `name` functions are invoked in a deterministic order. Without this, a stateful
+/// function would produce different chunk assignments across runs because `ModuleIdx` is assigned
+/// in module-load completion order, which varies with parallel `resolveId`/`load`.
+fn sorted_candidate_modules(
+  link_output: &LinkStageOutput,
+  keep: impl Fn(&NormalModule) -> bool,
+) -> Vec<&NormalModule> {
+  link_output
+    .module_table
+    .modules
+    .iter()
+    .filter_map(Module::as_normal)
+    .filter(|module| link_output.metas[module.idx].is_included && keep(module))
+    .sorted_unstable_by(|a, b| a.stable_id.cmp(&b.stable_id))
+    .collect_vec()
+}
+
+async fn test_group(match_group: &MatchGroup, modules: &[&NormalModule]) -> BuildResult<Vec<bool>> {
+  match &match_group.test {
+    None => Ok(vec![true; modules.len()]),
+    Some(test) => {
+      let ids = modules.iter().map(|module| module.id.as_str()).collect_vec();
+      match_module_ids(test, &ids, "a `codeSplitting` group `test` function").await
+    }
+  }
+}
+
 struct ManualSplitter<'a> {
   link_output: &'a LinkStageOutput,
-  group_tests: &'a ManualGroupTests,
+  /// When the fold asked the groups' `test` before, the answers.
+  group_tests: Option<&'a ManualGroupTests>,
   index_splitting_info: &'a IndexSplittingInfo,
   options: &'a SharedOptions,
   chunking_options: &'a ManualCodeSplittingOptions,
@@ -174,38 +202,24 @@ impl ManualSplitter<'_> {
   async fn build_module_groups(
     &self,
   ) -> BuildResult<(IndexVec<ModuleGroupIdx, ModuleGroup>, Vec<ModuleGroup>)> {
-    let metas = &self.link_output.metas;
     let mut module_groups: IndexVec<ModuleGroupIdx, ModuleGroup> = IndexVec::default();
     let mut group_idx_by_id: FxHashMap<ModuleGroupId, ModuleGroupIdx> = FxHashMap::default();
 
     let mut entries_aware_groups: Vec<ModuleGroup> = Vec::new();
     let mut entries_aware_idx_by_id: FxHashMap<ModuleGroupId, usize> = FxHashMap::default();
 
+    let candidate_modules = sorted_candidate_modules(self.link_output, |module| {
+      !self.module_to_assigned.has_bit(module.idx)
+    });
     // Only the runtime module is placed before the groups, so the modules that `group_tests` asked
     // about are the ones that are still unplaced.
-    debug_assert!(
-      self.group_tests.candidates.iter().all(|&idx| !self.module_to_assigned.has_bit(idx))
-    );
-    let candidate_modules = self
-      .group_tests
-      .candidates
-      .iter()
-      .filter_map(|&module_idx| self.link_output.module_table[module_idx].as_normal())
-      .collect_vec();
-    debug_assert_eq!(
-      self
-        .link_output
-        .module_table
-        .modules
-        .iter()
-        .filter_map(Module::as_normal)
-        .filter(|module| {
-          metas[module.idx].is_included && !self.module_to_assigned.has_bit(module.idx)
-        })
-        .count(),
-      candidate_modules.len()
-    );
+    debug_assert!(self.group_tests.is_none_or(|group_tests| {
+      group_tests.candidates.iter().copied().eq(candidate_modules.iter().map(|module| module.idx))
+    }));
 
+    // `test` and `name` are JS callbacks, so one call per module would cross the napi boundary
+    // M * G times. One batched call per group replaces that.
+    //
     // A group cannot narrow `candidate_modules` to what earlier groups left behind. Priority
     // resolves the overlap later, in `emit_chunk_from_group`. If this loop dropped matched
     // modules, a module would go to the first group in the list, not to the group with the
@@ -216,10 +230,14 @@ impl ManualSplitter<'_> {
     );
 
     for (match_group_index, match_group) in self.match_groups.iter().copied().enumerate() {
+      let matched = match self.group_tests {
+        Some(group_tests) => Cow::Borrowed(&group_tests.matched[match_group_index]),
+        None => Cow::Owned(test_group(match_group, &candidate_modules).await?),
+      };
       let captured = candidate_modules
         .iter()
         .copied()
-        .zip(self.group_tests.matched[match_group_index].iter().copied())
+        .zip(matched.iter().copied())
         .filter(|(module, is_matched)| {
           *is_matched && self.passes_static_filters(match_group_index, match_group, module)
         })
@@ -544,40 +562,46 @@ impl ManualSplitter<'_> {
 }
 
 impl GenerateStage<'_> {
-  /// Runs the `test` of each group once. `None` without groups.
-  pub async fn run_manual_group_tests(&self) -> BuildResult<Option<ManualGroupTests>> {
-    let Some(match_groups) = self
-      .options
-      .manual_code_splitting
-      .as_ref()
-      .and_then(|options| options.groups.as_ref())
-      .filter(|groups| !groups.is_empty())
+  /// Runs the `test` of each group before the already-loaded fold, which needs to know which
+  /// modules the groups can take. The fold has work only with dynamic entries; without them, or
+  /// without groups, this returns `None`, and the groups call `test` when they place their modules.
+  pub async fn run_manual_group_tests_for_fold(
+    &self,
+    fold_runs: bool,
+  ) -> BuildResult<Option<ManualGroupTests>> {
+    let has_dynamic_entries = self
+      .link_output
+      .entries
+      .values()
+      .flatten()
+      .any(|entry_point| entry_point.kind.is_dynamic_import());
+    if !fold_runs || !has_dynamic_entries {
+      return Ok(None);
+    }
+    let Some(chunking_options) = &self.options.manual_code_splitting else {
+      return Ok(None);
+    };
+    let Some(match_groups) = chunking_options.groups.as_ref().filter(|groups| !groups.is_empty())
     else {
       return Ok(None);
     };
     let runtime_module_idx = self.link_output.runtime.id();
-    let candidates = self
-      .link_output
-      .module_table
-      .modules
-      .iter()
-      .filter_map(Module::as_normal)
-      .filter(|module| {
-        module.idx != runtime_module_idx && self.link_output.metas[module.idx].is_included
-      })
-      .sorted_unstable_by(|a, b| a.stable_id.cmp(&b.stable_id))
-      .collect_vec();
-    // `test` is a JS callback, so one call per module would cross the napi boundary M * G times.
-    // One batched call per group replaces that.
-    let ids = candidates.iter().map(|module| module.id.as_str()).collect_vec();
+    let candidates =
+      sorted_candidate_modules(self.link_output, |module| module.idx != runtime_module_idx);
     let mut matched = Vec::with_capacity(match_groups.len());
     for match_group in match_groups {
-      matched.push(match &match_group.test {
-        None => vec![true; candidates.len()],
-        Some(test) => {
-          match_module_ids(test, &ids, "a `codeSplitting` group `test` function").await?
+      match test_group(match_group, &candidates).await {
+        Ok(group_matched) => matched.push(group_matched),
+        Err(error) => {
+          // `apply_manual_code_splitting` does not run, so release the JS module-info cache here.
+          if let Some(invalidate_module_info_cache) =
+            &chunking_options.internal_invalidate_module_info_cache
+          {
+            invalidate_module_info_cache.call().await?;
+          }
+          return Err(error);
         }
-      });
+      }
     }
     let candidates = candidates.iter().map(|module| module.idx).collect();
     Ok(Some(ManualGroupTests { candidates, matched }))
@@ -602,9 +626,9 @@ impl GenerateStage<'_> {
       return Ok(());
     };
 
-    let Some(group_tests) = group_tests.filter(|_| !match_groups.is_empty()) else {
+    if match_groups.is_empty() {
       return Ok(());
-    };
+    }
 
     let flattened_entries: Vec<&EntryPoint> =
       self.link_output.entries.iter().flat_map(|(_idx, entries)| entries.iter()).collect();

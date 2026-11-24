@@ -993,8 +993,8 @@ impl GenerateStage<'_> {
     // The pure dynamic entry chunks that a merge gives modules of other entries. See
     // `find_leaking_dynamic_entry_namespaces`.
     let mut dynamic_entry_merge_targets = FxHashSet::default();
-    // The fold below needs to know which modules the groups can take.
-    let group_tests = self.run_manual_group_tests().await?;
+    let group_tests =
+      self.run_manual_group_tests_for_fold(allow_avoid_redundant_chunk_loads).await?;
     // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
     if allow_avoid_redundant_chunk_loads {
       let entries_len: u32 = self

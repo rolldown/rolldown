@@ -1,8 +1,4 @@
-import type {
-  BindingMagicString,
-  BindingPluginContext,
-  BindingTransformPluginContext,
-} from '../binding.cjs';
+import type { BindingPluginContext, BindingTransformPluginContext } from '../binding.cjs';
 import type { RolldownMagicString } from '../binding-magic-string';
 import {
   type LoggingFunctionWithPosition,
@@ -108,7 +104,7 @@ export class TransformPluginContextImpl extends PluginContextImpl {
   }
 
   public sendMagicString(s: RolldownMagicString): string | null {
-    return this.inner.sendMagicString(s as unknown as BindingMagicString);
+    return this.inner.sendMagicString(s);
   }
 }
 

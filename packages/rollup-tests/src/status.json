@@ -1,9 +1,9 @@
 {
   "failed": 0,
-  "skipFailed": 158,
-  "ignored": 127,
-  "ignored(unsupported features)": 431,
+  "skipFailed": 160,
+  "ignored": 130,
+  "ignored(unsupported features)": 434,
   "ignored(treeshaking)": 331,
   "ignored(behavior passed, snapshot different)": 172,
-  "passed": 1317
+  "passed": 1319
 }

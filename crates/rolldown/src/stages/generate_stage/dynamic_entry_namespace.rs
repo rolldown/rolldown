@@ -278,7 +278,7 @@ impl GenerateStage<'_> {
         }
         _ => None,
       })
-      // The same filters as `register_entry_export_depended_symbols`.
+      // Service imports for dropped signatures only come from entries without a CJS wrapper.
       .filter(|&module| !matches!(self.link_output.metas[module].wrap_kind(), WrapKind::Cjs))
       .flat_map(|module| self.link_output.metas[module].resolved_exports.values())
       .filter(|export| !export.came_from_commonjs)

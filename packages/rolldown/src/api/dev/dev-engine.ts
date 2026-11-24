@@ -27,7 +27,7 @@ import type { DevOptions } from './dev-options';
  * there would pull the whole binding type chain into the public surface.
  */
 interface ModuleGraphSource {
-  getModuleInfo(moduleId: string): BindingModuleInfo | null;
+  getModuleInfo(moduleId: string): Omit<BindingModuleInfo, 'dropInner'> | null;
   getModuleIds(): Array<string>;
 }
 
@@ -44,7 +44,7 @@ export class DevEngineModuleGraph {
    *
    * @returns Module information for that module. `null` if the module could not be found.
    */
-  getModuleInfo(moduleId: string): BindingModuleInfo | null {
+  getModuleInfo(moduleId: string): Omit<BindingModuleInfo, 'dropInner'> | null {
     return this.#inner.getModuleInfo(moduleId) ?? null;
   }
 

@@ -245,3 +245,50 @@ test('plugins are accessible in buildStart hook', async () => {
   expect(names).toContain('plugin-b');
   expect(names).not.toContain('plugin-c');
 });
+
+test('options and output facades stay readable through a Proxy', async () => {
+  const reads: Record<string, unknown> = {};
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [
+      {
+        name: 'proxied-reads',
+        buildStart(inputOptions) {
+          const proxy = new Proxy(inputOptions, {});
+          reads.input = proxy.input;
+          reads.cwd = proxy.cwd;
+          this.emitFile({ type: 'asset', name: 'asset.txt', source: 'asset' });
+        },
+        renderStart(outputOptions, inputOptions) {
+          const output = new Proxy(outputOptions, {});
+          reads.format = output.format;
+          reads.entryFileNames = output.entryFileNames;
+          reads.globals = output.globals;
+          reads.platform = new Proxy(inputOptions, {}).platform;
+        },
+      },
+    ],
+  });
+  const result = await bundle.generate({ format: 'esm', sourcemap: true });
+  await bundle.close();
+
+  expect(reads).toEqual({
+    input: ['./main.js'],
+    cwd: import.meta.dirname,
+    format: 'es',
+    entryFileNames: '[name].js',
+    globals: {},
+    platform: 'browser',
+  });
+  const chunk = result.output.find((item) => item.type === 'chunk')!;
+  const proxiedChunk = new Proxy(chunk, {});
+  expect(proxiedChunk.code).toContain('console.log(1)');
+  expect(Object.keys(proxiedChunk.modules)).toHaveLength(1);
+  expect(proxiedChunk.map?.mappings).toBeTypeOf('string');
+  const asset = result.output.find(
+    (item) => item.type === 'asset' && item.fileName.startsWith('assets/asset'),
+  )!;
+  const proxiedAsset = new Proxy(asset, {});
+  expect(proxiedAsset.type === 'asset' && proxiedAsset.source).toBe('asset');
+});

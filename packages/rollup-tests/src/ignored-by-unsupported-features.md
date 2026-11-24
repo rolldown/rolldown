@@ -334,10 +334,6 @@
 ### The `output.treeshake.preset` is not supported 
  - rollup@function@unknown-treeshake-preset: throws for unknown presets for the treeshake option
 
-### The `output.treeshake.moduleSideEffect` is not compatible with rollup
- - rollup@function@module-side-effects@resolve-id-external: does not include modules without used exports if moduleSideEffect is false
- - rollup@function@module-side-effects@resolve-id: does not include modules without used exports if moduleSideEffect is false
-
 ### The `ModuleInfo` is not compatible with rollup
  - rollup@function@plugin-module-information-no-cache: handles accessing module information via plugins with cache disabled
  - rollup@function@plugin-module-information: provides module information on the plugin context

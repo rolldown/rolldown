@@ -1,0 +1,18 @@
+{
+  "config": {
+    "minify": false,
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "lib",
+          "maxSize": 1
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "minify": true
+    }
+  ]
+}

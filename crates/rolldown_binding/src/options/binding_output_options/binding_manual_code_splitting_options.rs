@@ -5,9 +5,17 @@ use napi::{
 };
 use rolldown::ChunkingContext;
 
-use crate::types::{
-  binding_module_info::BindingModuleInfo, binding_string_or_regex::BindingStringOrRegex,
-  js_callback_release::UntrackedJsCallback,
+use crate::{
+  options::plugin::types::binding_hook_side_effects::BindingHookSideEffects,
+  types::{
+    binding_module_info::{
+      BindingModuleInfo, BindingModuleSideEffectsOptionFn, call_module_side_effects_option,
+      to_binding_module_side_effects,
+    },
+    binding_string_or_regex::BindingStringOrRegex,
+    external_memory_status::ExternalMemoryStatus,
+    js_callback_release::UntrackedJsCallback,
+  },
 };
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -32,6 +40,7 @@ pub struct BindingManualCodeSplittingOptions {
 #[derive(Debug)]
 pub struct BindingInlineCommonChunksOptions {
   pub max_size: Option<f64>,
+  pub max_duplicated_size: Option<f64>,
   #[napi(ts_type = "Array<string | RegExp | ((ids: Array<string>) => Uint8Array)>")]
   #[debug("InlineCommonChunksExclude(...)")]
   pub exclude: Option<Vec<BindingMatchGroupTest>>,
@@ -75,19 +84,81 @@ pub struct BindingMatchGroup {
 #[napi_derive::napi]
 #[derive(Debug)]
 pub struct BindingChunkingContext {
-  inner: ChunkingContext,
+  inner: Option<ChunkingContext>,
 }
 
 impl BindingChunkingContext {
   pub fn new(inner: ChunkingContext) -> Self {
-    Self { inner }
+    Self { inner: Some(inner) }
+  }
+
+  fn try_get_inner(&self) -> napi::Result<&ChunkingContext> {
+    self.inner.as_ref().ok_or_else(|| {
+      napi::Error::from_reason(
+        "Memory has been freed: this chunking context's native data was eagerly released after its group-name invocation settled. Use the context only while the callback runs.",
+      )
+    })
   }
 }
 
 #[napi_derive::napi]
 impl BindingChunkingContext {
+  // `ChunkingContext` keeps its `Arc` private: there is no strong count to report.
+  #[napi(enumerable = false)]
+  pub fn drop_inner(&mut self) -> ExternalMemoryStatus {
+    match self.inner.take() {
+      None => ExternalMemoryStatus {
+        freed: false,
+        reason: Some("Memory has already been freed".to_string()),
+      },
+      Some(_inner) => ExternalMemoryStatus { freed: true, reason: None },
+    }
+  }
+
   #[napi]
-  pub fn get_module_info(&self, module_id: String) -> Option<BindingModuleInfo> {
-    self.inner.get_module_info(&module_id).map(BindingModuleInfo::new)
+  pub fn get_module_info(&self, module_id: String) -> napi::Result<Option<BindingModuleInfo>> {
+    Ok(self.try_get_inner()?.get_module_info(&module_id).map(BindingModuleInfo::new))
+  }
+
+  /// `getModuleInfo(moduleId)?.moduleSideEffects`, without copying the rest of the info. See
+  /// `BindingPluginContext.getModuleSideEffects` for `callOption`.
+  #[napi(
+    ts_args_type = "moduleId: string, callOption?: (id: string, external: boolean) => boolean | undefined | null",
+    ts_return_type = "boolean | 'no-treeshake' | null"
+  )]
+  pub fn get_module_side_effects(
+    &self,
+    module_id: String,
+    call_option: Option<BindingModuleSideEffectsOptionFn<'_>>,
+  ) -> napi::Result<Option<Either<bool, &'static str>>> {
+    let side_effects =
+      self.try_get_inner()?.get_module_side_effects_or_call(&module_id, |raw_id, external| {
+        call_module_side_effects_option(call_option.as_ref(), raw_id, external)
+      })?;
+    Ok(side_effects.map(to_binding_module_side_effects))
+  }
+
+  /// A write to `getModuleInfo(moduleId).moduleSideEffects`. `null` and `undefined` mean
+  /// "not decided". See `BindingPluginContext.setModuleSideEffects` for `callOption`.
+  /// A write after `buildEnd` is ignored. Returns `true` for the first one in a build, so the
+  /// caller can warn.
+  #[napi(
+    ts_args_type = "moduleId: string, sideEffects: boolean | 'no-treeshake' | null | undefined, callOption?: (id: string, external: boolean) => boolean | undefined | null"
+  )]
+  pub fn set_module_side_effects(
+    &self,
+    module_id: String,
+    side_effects: Option<BindingHookSideEffects>,
+    call_option: Option<BindingModuleSideEffectsOptionFn<'_>>,
+  ) -> napi::Result<bool> {
+    let inner = self.try_get_inner()?;
+    let side_effects = side_effects.map(TryInto::try_into).transpose()?;
+    let should_warn = inner.set_module_side_effects(&module_id, side_effects);
+    if side_effects.is_none() && call_option.is_some() {
+      inner.get_module_side_effects_or_call(&module_id, |raw_id, external| {
+        call_module_side_effects_option(call_option.as_ref(), raw_id, external)
+      })?;
+    }
+    Ok(should_warn)
   }
 }

@@ -6,7 +6,7 @@
  * Usage: node download-tests.mjs
  *
  * This script:
- * 1. Downloads test files from https://github.com/Rich-Harris/magic-string/tree/master/test
+ * 1. Downloads the `magic-string` tests for the version in `UPSTREAM_VERSION`.
  * 2. Adapts imports to use rolldown's BindingMagicString
  * 3. Skips tests that use unsupported features
  *
@@ -61,7 +61,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const TEST_FILES = ['MagicString.test.js'];
 
-const BASE_URL = 'https://raw.githubusercontent.com/Rich-Harris/magic-string/master/test';
+const UPSTREAM_VERSION = 'v0.30.21';
+const BASE_URL = `https://raw.githubusercontent.com/Rich-Harris/magic-string/${UPSTREAM_VERSION}/test`;
 
 // Describe blocks to skip entirely (unsupported features)
 const SKIP_DESCRIBE_BLOCKS = [
@@ -130,20 +131,14 @@ const SKIP_TESTS = [
   // replace/replaceAll — regex with string replacement now supported in Rust binding
   // Note: 'works with global regex replace' now works
   // Note: 'works with global regex replace $$' now works
-  'rejects with non-global regexp', // napi-rs can't throw TypeError (only Error), test expects TypeError
   // Note: function replacer tests ('works with global regex replace function',
   // 'replace function offset', 'works with string replace and function replacer',
   // 'should ignore non-changed replacements', 'global regex result the same as
   // .replace') now work via the JS wrapper in src/binding-magic-string.ts
   // Note: 'should support length' and 'should support isEmpty' now work correctly
   // generateMap-specific skips (features not in string_wizard)
-  'should generate a correct sourcemap including correct lines', // uses generateDecodedMap which has different mappings count
   'should generate a sourcemap using specified locations', // addSourcemapLocation not implemented
-  'generates a map with trimmed content', // trim sourcemap behavior differs
   // Note: 'generates x_google_ignoreList' is now supported
-  'generates segments per word boundary with hires "boundary" in the next line', // multiline boundary mappings differ
-  'generates a correct source map with update using a content containing a new line', // multiline update mappings differ
-  'generates a correct source map with update using content ending with a new line', // multiline update mappings differ
 ];
 
 async function downloadFile(filename) {
@@ -151,7 +146,7 @@ async function downloadFile(filename) {
   console.log(`Downloading ${url}...`);
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to download ${url}: ${response.statusText}`);
+    throw new Error(`Failed to download ${url} (HTTP ${response.status} ${response.statusText})`);
   }
   return response.text();
 }
@@ -191,7 +186,7 @@ function transformTestFile(content, filename) {
   // Fix assert import
   transformed = transformed.replace(
     /import assert from ['"]assert['"];?/g,
-    "import assert from 'node:assert';",
+    "import assert from 'node:assert/strict';",
   );
 
   // For Bundle.test.js, skip all tests since Bundle is not supported
@@ -273,22 +268,15 @@ async function main() {
   console.log('Downloading and adapting magic-string tests...\n');
 
   for (const filename of TEST_FILES) {
-    try {
-      const content = await downloadFile(filename);
-      const transformed = transformTestFile(content, filename);
+    const content = await downloadFile(filename);
+    const transformed = transformTestFile(content, filename);
 
-      // Save as .test.ts
-      const outputFilename = filename.replace('.test.js', '.test.ts');
-      const outputPath = join(__dirname, outputFilename);
+    const outputFilename = filename.replace('.test.js', '.test.ts');
+    const outputPath = join(__dirname, outputFilename);
+    const formatted = formatWithVpFmt(transformed, outputFilename);
 
-      // Format with vp fmt before saving
-      const formatted = formatWithVpFmt(transformed, outputFilename);
-
-      writeFileSync(outputPath, formatted, 'utf-8');
-      console.log(`  Saved: ${outputFilename}`);
-    } catch (error) {
-      console.error(`  Error processing ${filename}:`, error.message);
-    }
+    writeFileSync(outputPath, formatted, 'utf-8');
+    console.log(`  Saved: ${outputFilename}`);
   }
 
   console.log('\nDone!');
@@ -296,4 +284,4 @@ async function main() {
   console.log('Skipped test patterns:', SKIP_TESTS.join(', '));
 }
 
-main().catch(console.error);
+await main();

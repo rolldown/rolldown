@@ -13,6 +13,8 @@ pub struct HookResolveIdOutput {
   /// Replaces the attributes of the import. `None` keeps them, and an empty value removes them.
   /// Ignored without `experimental.importAttributes`.
   pub attributes: Option<ImportAttributes>,
+  /// See [`ResolvedId::module_options_receipt`].
+  pub module_options_receipt: Option<u32>,
 }
 
 impl HookResolveIdOutput {
@@ -30,6 +32,7 @@ impl HookResolveIdOutput {
       package_json_path: resolved_id
         .package_json
         .map(|p| p.realpath().to_string_lossy().to_string()),
+      module_options_receipt: resolved_id.module_options_receipt,
     }
   }
 }

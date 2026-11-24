@@ -54,8 +54,6 @@
   "rollup@chunking form@emit-file@filenames-function-patterns-preserve-modules: supports using a function that returns a pattern for entryFileNames, with output.preserveModules option@generates es",
   "rollup@chunking form@emit-file@named-user-chunks: deduplicates with named chunks defined by the user@generates cjs",
   "rollup@chunking form@emit-file@named-user-chunks: deduplicates with named chunks defined by the user@generates es",
-  "rollup@chunking form@empty-module-no-treeshake: associates empty modules with chunks if tree-shaking is disabled for them@generates cjs",
-  "rollup@chunking form@empty-module-no-treeshake: associates empty modules with chunks if tree-shaking is disabled for them@generates es",
   "rollup@chunking form@entry-aliases: alias module dependency inlining@generates cjs",
   "rollup@chunking form@entry-aliases: alias module dependency inlining@generates es",
   "rollup@chunking form@entry-without-code: optimizes chunks when an entry point without own code is imported from another entry@generates cjs",

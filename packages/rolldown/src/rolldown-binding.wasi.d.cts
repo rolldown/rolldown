@@ -1810,7 +1810,6 @@ export declare class BindingNormalizedOptions {
 }
 
 export declare class BindingOutputAsset {
-  dropInner(): ExternalMemoryStatus
   getFileName(): string
   getOriginalFileName(): string | null
   getOriginalFileNames(): Array<string>
@@ -1820,7 +1819,6 @@ export declare class BindingOutputAsset {
 }
 
 export declare class BindingOutputChunk {
-  dropInner(): ExternalMemoryStatus
   getIsEntry(): boolean
   getIsDynamicEntry(): boolean
   getFacadeModuleId(): string | null
@@ -3212,11 +3210,6 @@ export declare function enhancedTransformSync(filename: string, sourceText: stri
 export interface ExtensionAliasItem {
   target: string
   replacements: Array<string>
-}
-
-export interface ExternalMemoryStatus {
-  freed: boolean
-  reason?: string
 }
 
 export type FilterTokenKind = 'Id' | 'ImporterId' | 'Code' | 'ModuleType' | 'And' | 'Or' | 'Not' | 'Include' | 'Exclude' | 'CleanUrl' | 'QueryKey' | 'QueryValue'

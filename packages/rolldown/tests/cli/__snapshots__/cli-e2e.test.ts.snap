@@ -112,6 +112,7 @@ OPTIONS
   --transform.assumptions.setPublicClassFields .
   --transform.decorator.emitDecoratorMetadata .
   --transform.decorator.legacy .
+  --transform.decorator.lower .
   --transform.decorator.strictNullChecks .
   --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
   --transform.dropLabels <transform.dropLabels>Remove labeled statements with these label names.
@@ -270,6 +271,7 @@ OPTIONS
   --transform.assumptions.setPublicClassFields .
   --transform.decorator.emitDecoratorMetadata .
   --transform.decorator.legacy .
+  --transform.decorator.lower .
   --transform.decorator.strictNullChecks .
   --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
   --transform.dropLabels <transform.dropLabels>Remove labeled statements with these label names.
@@ -428,6 +430,7 @@ OPTIONS
   --transform.assumptions.setPublicClassFields .
   --transform.decorator.emitDecoratorMetadata .
   --transform.decorator.legacy .
+  --transform.decorator.lower .
   --transform.decorator.strictNullChecks .
   --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
   --transform.dropLabels <transform.dropLabels>Remove labeled statements with these label names.
@@ -586,6 +589,7 @@ OPTIONS
   --transform.assumptions.setPublicClassFields .
   --transform.decorator.emitDecoratorMetadata .
   --transform.decorator.legacy .
+  --transform.decorator.lower .
   --transform.decorator.strictNullChecks .
   --transform.define <transform.define>Define global variables (syntax: key:value,key2:value2).
   --transform.dropLabels <transform.dropLabels>Remove labeled statements with these label names.

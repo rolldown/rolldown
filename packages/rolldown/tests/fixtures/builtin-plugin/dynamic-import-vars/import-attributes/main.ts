@@ -21,3 +21,7 @@ export function legacyAssert(name: string) {
 export function withAndAssert(name: string) {
   return import(`./files/${name}.js`, { ['with']: { type: 'text' }, assert: { type: 'json' } });
 }
+
+export function malformedAttribute(name: string) {
+  return import(`@/${name}.js?malformed`, { with: { type: 'text', malformed: 123 } });
+}

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
   alias,
   legacyAssert,
+  malformedAttribute,
   relative,
   repeatedWith,
   withAndAssert,
@@ -15,3 +16,4 @@ assert.strictEqual((await withoutAttributes('module')).default, 'module');
 assert.strictEqual((await repeatedWith('module')).default, 'module');
 assert.strictEqual((await legacyAssert('module')).default.trim(), expected);
 assert.strictEqual((await withAndAssert('module')).default.trim(), expected);
+assert.strictEqual((await malformedAttribute('module')).default.trim(), expected);

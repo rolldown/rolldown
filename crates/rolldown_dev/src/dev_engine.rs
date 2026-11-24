@@ -726,6 +726,8 @@ mod tests {
     }
 
     let dir = std::env::temp_dir().join(format!("rolldown-dev-lazy-cache-{}", std::process::id()));
+    // A failed earlier run with the same process id can leave saved results here.
+    let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     let dir = dunce::canonicalize(&dir).unwrap();
     std::fs::write(dir.join("main.js"), "import('./lazy.js');\n").unwrap();

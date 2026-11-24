@@ -554,12 +554,16 @@ impl<'a> GenerateStage<'a> {
       chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
     }
     if self.options.file.is_none() {
-      self.deconflict_template_filenames(chunk_graph, &output_dir);
+      self.deconflict_explicit_filenames(chunk_graph, &output_dir)?;
     }
     Ok((index_chunk_id_to_representative_name, record_ids))
   }
 
-  fn deconflict_template_filenames(&self, chunk_graph: &mut ChunkGraph, output_dir: &Path) {
+  fn deconflict_explicit_filenames(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    output_dir: &Path,
+  ) -> BuildResult<()> {
     use rolldown_common::{PreliminaryFilename, SourceMapType};
     use rolldown_std_utils::PathExt as _;
     use rolldown_utils::make_unique_name::{
@@ -579,12 +583,29 @@ impl<'a> GenerateStage<'a> {
       .map(|name| normalize(name.as_path()))
       .collect();
     if explicit_names.is_empty() {
-      return;
+      return Ok(());
     }
     let map_files =
       matches!(self.options.sourcemap, Some(SourceMapType::File | SourceMapType::Hidden));
     let implicit_maps = map_files && self.options.sourcemap_filenames.is_none();
     let map_name = |name: &ArcStr| ArcStr::from(format!("{name}.map"));
+    let chunk_filenames = |chunk_graph: &ChunkGraph| {
+      chunk_graph
+        .chunk_table
+        .iter_enumerated()
+        .flat_map(|(idx, chunk)| {
+          let filename = chunk.preliminary_filename.as_deref();
+          // `getFileName()` can still return the preliminary filename of a removed chunk.
+          if chunk_graph.post_chunk_optimization_operations.contains_key(&idx) {
+            return [filename.cloned(), None];
+          }
+          let map = chunk.preliminary_sourcemap_filename.as_deref().filter(|_| map_files);
+          let map = map.cloned().or_else(|| filename.filter(|_| implicit_maps).map(map_name));
+          [filename.cloned(), map]
+        })
+        .flatten()
+        .collect::<Vec<_>>()
+    };
     let mut reserved_names = None;
     for idx in &chunk_graph.sorted_chunk_idx_vec {
       let chunk = &chunk_graph.chunk_table[*idx];
@@ -599,18 +620,8 @@ impl<'a> GenerateStage<'a> {
         }
         let reserved = reserved_names.get_or_insert_with(|| {
           let reserved = FxDashMap::default();
-          let chunk_names = chunk_graph.chunk_table.iter_enumerated().flat_map(|(idx, chunk)| {
-            let filename = chunk.preliminary_filename.as_deref();
-            // `getFileName` can still return a removed chunk's preliminary filename.
-            if removed.contains_key(&idx) {
-              return [filename.cloned(), None];
-            }
-            let map = chunk.preliminary_sourcemap_filename.as_deref().filter(|_| map_files);
-            let map = map.cloned().or_else(|| filename.filter(|_| implicit_maps).map(map_name));
-            [filename.cloned(), map]
-          });
           let emitted_names = self.plugin_driver.file_emitter.asset_and_prebuilt_chunk_filenames();
-          for name in chunk_names.flatten().chain(emitted_names) {
+          for name in chunk_filenames(chunk_graph).into_iter().chain(emitted_names) {
             for path in name.as_path().ancestors().filter(|path| !path.as_os_str().is_empty()) {
               try_reserve_unique_name(&normalize(path).into(), &reserved);
             }
@@ -630,6 +641,10 @@ impl<'a> GenerateStage<'a> {
         chunk.preliminary_filename = Some(name);
       }
     }
+    self
+      .plugin_driver
+      .file_emitter
+      .reserve_explicit_chunk_filenames(&explicit_names, chunk_filenames(chunk_graph))
   }
 
   fn compute_chunk_output_exports(

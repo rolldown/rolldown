@@ -13,7 +13,6 @@ export function defineImportAttributesTest(importAttributes?: boolean) {
         viteBuildImportAnalysisPlugin({
           preloadCode: '',
           insertPreload: false,
-          optimizeModulePreloadRelativePaths: false,
           renderBuiltUrl: false,
           isRelativeBase: false,
         }),

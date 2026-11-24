@@ -96,6 +96,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         source,
         &mut sourcemap_chain,
         &mut side_effects,
+        &mut None,
         &mut module_type,
         None,
         &mut code_changed_by_plugins,
@@ -169,6 +170,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
 
       ecma_view: EcmaView {
         source,
+        declared_module_size: None,
 
         import_records: IndexVec::default(),
         sourcemap_chain: Arc::new(sourcemap_chain),

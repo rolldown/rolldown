@@ -31,7 +31,8 @@ pub async fn create_ecma_view(
   ctx: &mut CreateModuleContext<'_>,
   args: CreateModuleViewArgs,
 ) -> BuildResult<CreateEcmaViewReturn> {
-  let CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects } = args;
+  let CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects, declared_module_size } =
+    args;
   let ParseToEcmaAstResult {
     mut ast,
     scoping,
@@ -126,6 +127,7 @@ pub async fn create_ecma_view(
   // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
   let ecma_view = EcmaView {
     source: ast.source().clone(),
+    declared_module_size,
     named_imports,
     named_exports,
     imports,

@@ -468,7 +468,9 @@ impl GenerateStage<'_> {
   }
 
   fn chunk_size(&self, chunk: &Chunk) -> usize {
-    chunk.modules.iter().map(|module_idx| self.link_output.module_table[*module_idx].size()).sum()
+    chunk.modules.iter().fold(0, |size, module_idx| {
+      size.saturating_add(self.link_output.module_table[*module_idx].size())
+    })
   }
 
   /// `None` means the chunk is a candidate. The first failing rule names why it stays a file.
@@ -573,7 +575,7 @@ impl GenerateStage<'_> {
     let Some(options) = &self.options.inline_common_chunks else {
       return false;
     };
-    let mut size = 0;
+    let mut size: usize = 0;
     let mut has_module = false;
     for &module_idx in modules {
       if module_idx == self.link_output.runtime.id() {
@@ -583,7 +585,7 @@ impl GenerateStage<'_> {
       if self.inline_common_chunk_module_bailout(module_idx, dynamic_entries).is_some() {
         return false;
       }
-      size += self.link_output.module_table[module_idx].size();
+      size = size.saturating_add(self.link_output.module_table[module_idx].size());
     }
     has_module && (options.max_size == usize::MAX || size < options.max_size)
   }

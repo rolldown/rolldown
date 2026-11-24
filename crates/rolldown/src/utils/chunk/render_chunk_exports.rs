@@ -1,10 +1,12 @@
 use std::borrow::Cow;
+use std::collections::hash_map::Entry;
 use std::fmt::Write as _;
 
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Chunk, ChunkKind, ExportsKind, GetLocalDb, IndexModules, ModuleIdx, NormalizedBundlerOptions,
-  OutputExports, OutputFormat, Platform, SymbolRef, SymbolRefDb, SymbolRefFlags, WrapKind,
+  Chunk, ChunkKind, ExportsKind, GetLocalDb, IndexModules, ModuleIdx, NamespaceAlias,
+  NormalizedBundlerOptions, OutputExports, OutputFormat, Platform, SymbolRef, SymbolRefDb,
+  SymbolRefFlags, WrapKind,
 };
 use rolldown_utils::{
   concat_string,
@@ -14,10 +16,12 @@ use rolldown_utils::{
   },
   indexmap::FxIndexSet,
 };
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::ast_scanner::const_eval::eval_can_assign;
 use crate::esm_init_obligations::{WrappedEsmInitTarget, collect_entry_reexported_wrapper_inits};
+use crate::stages::generate_stage::{SharedRead, SharedReadDeclaration};
+use crate::utils::chunk::namespace_alias_origin::{NamespaceAliasOrigin, namespace_alias_origin};
 use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
 
 pub fn render_wrapped_entry_chunk(
@@ -221,6 +225,9 @@ pub fn render_chunk_exports(
         return None;
       }
       let mut s = String::new();
+      render_shared_read_declarations(&mut s, ctx);
+      // The saved value of each CommonJS property (`save_commonjs_property`).
+      let mut saved_commonjs_properties = FxHashMap::default();
       let rendered_items = export_items
         .into_iter()
         .map(|(exported_name, export_ref)| {
@@ -237,24 +244,54 @@ pub fn render_chunk_exports(
             exported_name,
             symbol.chunk_idx
           );
-          let canonical_name = link_output
+          let mut canonical_name = link_output
             .symbol_db
             .canonical_name_for_or_original(canonical_ref, &chunk.canonical_names);
-          let rendered_canonical_name = escape_non_ascii(canonical_name, ascii_only);
-          if let Some(ns_alias) = &symbol.namespace_alias {
+          let mut rendered_canonical_name = escape_non_ascii(canonical_name, ascii_only);
+          if let Some(binding) = ctx.shared_commonjs_reads.binding(ctx.chunk_idx, canonical_ref) {
+            // The chunk imports the public export of an entry chunk that reads the property, and
+            // exports this import (`SharedCommonJsReads::binding`).
+            canonical_name =
+              link_output.symbol_db.canonical_name_for_or_original(binding, &chunk.canonical_names);
+            rendered_canonical_name = escape_non_ascii(canonical_name, ascii_only);
+          } else if let Some(ns_alias) = &symbol.namespace_alias {
+            let is_facade_property = is_marked_facade_property(chunk, link_output, ns_alias);
             let canonical_ns_name = link_output
               .symbol_db
               .canonical_name_for_or_original(ns_alias.namespace_ref, &chunk.canonical_names);
+            let namespace = escape_non_ascii(canonical_ns_name, ascii_only);
             let property_name = &ns_alias.property_name;
-            s.push_str("var ");
-            s.push_str(&rendered_canonical_name);
-            s.push_str(" = ");
-            s.push_str(&property_access_str_with_ascii(
-              &escape_non_ascii(canonical_ns_name, ascii_only),
-              property_name,
-              ascii_only,
-            ));
-            s.push_str(";\n");
+            let shared_read = ctx.shared_commonjs_reads.call(ctx.chunk_idx, canonical_ref);
+            if shared_read.is_some() || is_facade_property {
+              let read = match shared_read {
+                Some(read) => SavedRead::Shared {
+                  read: read.clone(),
+                  call: render_shared_read_call(ctx, read, &namespace),
+                },
+                None => SavedRead::Local {
+                  namespace_ref: link_output.symbol_db.canonical_ref_for(ns_alias.namespace_ref),
+                  namespace: &namespace,
+                  property: property_name.as_str(),
+                },
+              };
+              if let Some(saved_name) = save_commonjs_property(
+                &mut s,
+                &mut saved_commonjs_properties,
+                read,
+                canonical_name,
+                &rendered_canonical_name,
+                ascii_only,
+              ) {
+                canonical_name = saved_name;
+                rendered_canonical_name = escape_non_ascii(saved_name, ascii_only);
+              }
+            } else {
+              s.push_str("var ");
+              s.push_str(&rendered_canonical_name);
+              s.push_str(" = ");
+              s.push_str(&property_access_str_with_ascii(&namespace, property_name, ascii_only));
+              s.push_str(";\n");
+            }
           }
 
           if canonical_name == exported_name {
@@ -280,6 +317,7 @@ pub fn render_chunk_exports(
     }
     OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {
       let mut s = String::new();
+      render_shared_read_declarations(&mut s, ctx);
       match chunk.kind {
         ChunkKind::EntryPoint { module, .. } => {
           let module =
@@ -294,16 +332,90 @@ pub fn render_chunk_exports(
             && matches!(export_mode, Some(OutputExports::Default))
             && matches!(link_output.metas[module.idx].wrap_kind(), WrapKind::Cjs);
           if !wrapper_exports_default && !export_items.is_empty() {
+            // The saved value of each CommonJS property in a marked facade
+            // (`save_commonjs_property`).
+            let mut saved_commonjs_properties = FxHashMap::default();
             let rendered_items = export_items
               .into_iter()
               .map(|(exported_name, export_ref)| {
                 let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
-                let exported_value = ctx.finalized_string_pattern_for_symbol_ref(
+                let value_pattern = ctx.finalized_string_pattern_for_symbol_ref(
                   canonical_ref,
                   ctx.chunk_idx,
                   &chunk.canonical_names,
                 );
-                let exported_value = escape_non_ascii(&exported_value, ascii_only);
+                let mut exported_value = escape_non_ascii(&value_pattern, ascii_only);
+                // A marked facade saves the value of each CommonJS property
+                // (`is_marked_facade_property`).
+                let commonjs_property =
+                  link_output.symbol_db.get(canonical_ref).namespace_alias.as_ref().filter(
+                    |ns_alias| {
+                      matches!(export_mode, Some(OutputExports::Named | OutputExports::Default))
+                        && is_marked_facade_property(chunk, link_output, ns_alias)
+                    },
+                  );
+                let binding = ctx.shared_commonjs_reads.binding(ctx.chunk_idx, canonical_ref);
+                let is_saved_value = commonjs_property.is_some() || binding.is_some();
+                let shared_read = ctx.shared_commonjs_reads.call(ctx.chunk_idx, canonical_ref);
+                if let Some(binding) = binding {
+                  // The chunk reads the public export of an entry chunk. The getter of that export
+                  // saves its first read, so this export is a saved value too
+                  // (`SharedCommonJsReads::binding`).
+                  exported_value = Cow::Owned(
+                    escape_non_ascii(
+                      &ctx.finalized_binding_pattern(
+                        binding,
+                        ctx.chunk_idx,
+                        &chunk.canonical_names,
+                      ),
+                      ascii_only,
+                    )
+                    .into_owned(),
+                  );
+                } else if let Some(ns_alias) = commonjs_property {
+                  let name = link_output
+                    .symbol_db
+                    .canonical_name_for_or_original(canonical_ref, &chunk.canonical_names);
+                  let rendered_name = escape_non_ascii(name, ascii_only);
+                  let namespace = escape_non_ascii(
+                    &ctx.finalized_namespace_pattern(
+                      ns_alias,
+                      ctx.chunk_idx,
+                      &chunk.canonical_names,
+                    ),
+                    ascii_only,
+                  )
+                  .into_owned();
+                  let read = match shared_read {
+                    Some(read) => SavedRead::Shared {
+                      read: read.clone(),
+                      call: render_shared_read_call(ctx, read, &namespace),
+                    },
+                    None => SavedRead::Local {
+                      namespace_ref: link_output
+                        .symbol_db
+                        .canonical_ref_for(ns_alias.namespace_ref),
+                      namespace: &namespace,
+                      property: ns_alias.property_name.as_str(),
+                    },
+                  };
+                  exported_value = match save_commonjs_property(
+                    &mut s,
+                    &mut saved_commonjs_properties,
+                    read,
+                    name,
+                    &rendered_name,
+                    ascii_only,
+                  ) {
+                    Some(saved_name) => escape_non_ascii(saved_name, ascii_only),
+                    None => rendered_name,
+                  };
+                } else if let Some(read) = shared_read {
+                  // An export that `share_commonjs_property_reads` gives a shared read keeps the
+                  // getter or the value of its chunk. Only the read changes.
+                  exported_value =
+                    Cow::Owned(shared_read_call_for_export(ctx, read, canonical_ref));
+                }
 
                 match export_mode {
                   Some(OutputExports::Named) => {
@@ -335,7 +447,8 @@ pub fn render_chunk_exports(
                        export branch (`exports.{exported_name} = {exported_value}`): it would \
                        freeze the pre-rebind function and re-run the module body",
                     );
-                    if is_order_wrapper_ref || keep_live_binding {
+                    // A saved value does not change. Thus its export needs no getter.
+                    if !is_saved_value && (is_order_wrapper_ref || keep_live_binding) {
                       render_object_define_property(&exported_name, &exported_value, ascii_only)
                     } else if exported_name.as_str() == "__proto__" {
                       // `__proto__` has special semantics - assigning to it sets the prototype
@@ -445,11 +558,16 @@ pub fn render_chunk_exports(
           let rendered_items = export_items
             .into_iter()
             .map(|(exported_name, export_ref)| {
-              let exported_value = ctx.finalized_string_pattern_for_symbol_ref(
-                export_ref,
-                ctx.chunk_idx,
-                &chunk.canonical_names,
-              );
+              let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
+              let exported_value =
+                match ctx.shared_commonjs_reads.call(ctx.chunk_idx, canonical_ref) {
+                  Some(read) => shared_read_call_for_export(ctx, read, canonical_ref),
+                  None => ctx.finalized_string_pattern_for_symbol_ref(
+                    export_ref,
+                    ctx.chunk_idx,
+                    &chunk.canonical_names,
+                  ),
+                };
               render_object_define_property(
                 &exported_name,
                 &escape_non_ascii(&exported_value, ascii_only),
@@ -499,6 +617,206 @@ pub fn render_object_define_property_value(key: &str, value: &str, ascii_only: b
     "
 });"
   )
+}
+
+/// Returns `true` if `chunk` is a facade that `Chunk::is_cross_chunk_export_facade` marks. Then the
+/// chunk saves the value of the property `ns_alias` (`save_commonjs_property`). Such a facade
+/// exports only properties of CommonJS modules that the early check accepts
+/// (`commonjs_property_verdict`). The check rejects an entry with a property of another origin, for
+/// example of an external module, so the entry gets no such facade.
+fn is_marked_facade_property(
+  chunk: &Chunk,
+  link_output: &LinkStageOutput,
+  ns_alias: &NamespaceAlias,
+) -> bool {
+  if !chunk.is_cross_chunk_export_facade {
+    return false;
+  }
+  debug_assert!(
+    matches!(
+      namespace_alias_origin(link_output, ns_alias),
+      NamespaceAliasOrigin::CommonJs(Some(_))
+    ),
+    "a marked facade exports a property that the early check does not accept: {}",
+    ns_alias.property_name
+  );
+  true
+}
+
+/// The read that `save_commonjs_property` saves.
+enum SavedRead<'a, 'name> {
+  /// A call of the function that `share_commonjs_property_reads` gives to the export.
+  Shared { read: SharedRead, call: String },
+  /// A read of the property in the chunk.
+  Local { namespace_ref: SymbolRef, namespace: &'a str, property: &'name str },
+}
+
+/// The key of a saved read in a chunk: the function of a shared read and the property that the read
+/// takes from its result, or the canonical namespace and the property name.
+#[derive(PartialEq, Eq, Hash)]
+enum SavedReadKey<'a> {
+  Shared(SymbolRef, Option<CompactStr>),
+  Local(SymbolRef, &'a str),
+}
+
+/// Saves the value of a CommonJS property in a facade that `Chunk::is_cross_chunk_export_facade`
+/// marks, or in a chunk that `share_commonjs_property_reads` gives a shared read. For the first
+/// export of a read, the function writes the read to `s` and returns `None`. For the other exports
+/// of the read, it returns the variable of the first export. Thus all names of the property
+/// export the value of one read.
+///
+/// - A shared read writes `var name = read(ns);`, or `var name = read(ns).property;` for the
+///   accessor of a module.
+/// - A read in the chunk writes `var name = ns; try { name = name.property; } catch (e) { name =
+///   void 0; }`. The namespace is resolved before the `try`, and only the property read can throw
+///   into the `catch`.
+///
+/// Without the cross-chunk export, the group chunk replaces the facade, and no file reads the
+/// property when it loads. Node reads each export of a CommonJS module one time when it imports
+/// the module. If the read throws, the export is `undefined`. See
+/// internal-docs/code-splitting/implementation.md.
+fn save_commonjs_property<'name>(
+  s: &mut String,
+  saved: &mut FxHashMap<SavedReadKey<'name>, &'name str>,
+  read: SavedRead<'_, 'name>,
+  name: &'name str,
+  rendered_name: &str,
+  ascii_only: bool,
+) -> Option<&'name str> {
+  let key = match &read {
+    SavedRead::Shared { read, .. } => SavedReadKey::Shared(read.callee, read.property.clone()),
+    SavedRead::Local { namespace_ref, property, .. } => {
+      SavedReadKey::Local(*namespace_ref, property)
+    }
+  };
+  match saved.entry(key) {
+    Entry::Occupied(first) => Some(*first.get()),
+    Entry::Vacant(entry) => {
+      entry.insert(name);
+      match read {
+        SavedRead::Shared { call, .. } => {
+          s.push_str("var ");
+          s.push_str(rendered_name);
+          s.push_str(" = ");
+          s.push_str(&call);
+          s.push_str(";\n");
+        }
+        SavedRead::Local { namespace, property, .. } => {
+          // The `catch` parameter must not hide the variable.
+          let error = if rendered_name == "e" { "error" } else { "e" };
+          s.push_str("var ");
+          s.push_str(rendered_name);
+          s.push_str(" = ");
+          s.push_str(namespace);
+          s.push_str(";\ntry {\n\t");
+          s.push_str(rendered_name);
+          s.push_str(" = ");
+          s.push_str(&property_access_str_with_ascii(rendered_name, property, ascii_only));
+          s.push_str(";\n} catch (");
+          s.push_str(error);
+          s.push_str(") {\n\t");
+          s.push_str(rendered_name);
+          s.push_str(" = void 0;\n}\n");
+        }
+      }
+      None
+    }
+  }
+}
+
+/// `read(ns)`: the call of the function of the shared read `read` with the namespace `namespace`,
+/// as the chunk of `ctx` renders it. For the accessor of a module, the call takes the property
+/// from the result: `read(ns).property`.
+fn render_shared_read_call(
+  ctx: &GenerateContext<'_>,
+  read: &SharedRead,
+  namespace: &str,
+) -> String {
+  let ascii_only = ctx.options.charset.is_ascii();
+  let callee = ctx.finalized_string_pattern_for_symbol_ref(
+    read.callee,
+    ctx.chunk_idx,
+    &ctx.chunk.canonical_names,
+  );
+  let call = concat_string!(escape_non_ascii(&callee, ascii_only), "(", namespace, ")");
+  match &read.property {
+    Some(property) => property_access_str_with_ascii(&call, property, ascii_only),
+    None => call,
+  }
+}
+
+/// The shared read of the export `export_ref`, which is a namespace alias.
+fn shared_read_call_for_export(
+  ctx: &GenerateContext<'_>,
+  read: &SharedRead,
+  export_ref: SymbolRef,
+) -> String {
+  let ns_alias = ctx
+    .link_output
+    .symbol_db
+    .get(export_ref)
+    .namespace_alias
+    .as_ref()
+    .expect("an export with a shared read is a namespace alias");
+  let namespace =
+    ctx.finalized_namespace_pattern(ns_alias, ctx.chunk_idx, &ctx.chunk.canonical_names);
+  render_shared_read_call(ctx, read, &escape_non_ascii(&namespace, ctx.options.charset.is_ascii()))
+}
+
+/// Writes the functions of the shared reads that the chunk of `ctx` declares
+/// (`SharedReadDeclaration`).
+fn render_shared_read_declarations(s: &mut String, ctx: &GenerateContext<'_>) {
+  let ascii_only = ctx.options.charset.is_ascii();
+  let name_of = |symbol_ref: SymbolRef| {
+    escape_non_ascii(
+      &ctx.finalized_string_pattern_for_symbol_ref(
+        symbol_ref,
+        ctx.chunk_idx,
+        &ctx.chunk.canonical_names,
+      ),
+      ascii_only,
+    )
+    .into_owned()
+  };
+  for declaration in ctx.shared_commonjs_reads.declarations(ctx.chunk_idx) {
+    match declaration {
+      SharedReadDeclaration::Accessor { accessor, value, is_read, property } => {
+        let (accessor, value, is_read) = (name_of(*accessor), name_of(*value), name_of(*is_read));
+        writeln!(
+          s,
+          "var {value}, {is_read};\nfunction {accessor}(ns) {{\n\tif (!{is_read}) {{\n\t\ttry {{\n\t\t\t{value} = {read};\n\t\t}} catch (e) {{\n\t\t\tif (ns == null) throw e;\n\t\t}}\n\t\t{is_read} = true;\n\t}}\n\treturn {value};\n}}",
+          read = property_access_str_with_ascii("ns", property, ascii_only),
+        )
+        .expect("writing to a string cannot fail");
+      }
+      SharedReadDeclaration::ModuleAccessor { accessor, values, properties } => {
+        // The name of `values` has `_` (`share_module_reads`), so it is not `ns`, `values` or `e`.
+        let (accessor, values) = (name_of(*accessor), name_of(*values));
+        writeln!(
+          s,
+          "var {values};\nfunction {accessor}(ns) {{\n\tif (!{values}) {{\n\t\tvar values = {{ __proto__: null }};"
+        )
+        .expect("writing to a string cannot fail");
+        for (i, property) in properties.iter().enumerate() {
+          // Only the first read can see a namespace that is `null` or `undefined`.
+          let on_error = if i == 0 { "\n\t\t\tif (ns == null) throw e;\n\t\t" } else { "" };
+          writeln!(
+            s,
+            "\t\ttry {{\n\t\t\t{} = {};\n\t\t}} catch (e) {{{on_error}}}",
+            property_access_str_with_ascii("values", property, ascii_only),
+            property_access_str_with_ascii("ns", property, ascii_only),
+          )
+          .expect("writing to a string cannot fail");
+        }
+        writeln!(s, "\t\t{values} = values;\n\t}}\n\treturn {values};\n}}")
+          .expect("writing to a string cannot fail");
+      }
+      SharedReadDeclaration::Forward { forward, next } => {
+        writeln!(s, "function {}(ns) {{\n\treturn {}(ns);\n}}", name_of(*forward), name_of(*next))
+          .expect("writing to a string cannot fail");
+      }
+    }
+  }
 }
 
 pub fn get_export_items(chunk: &Chunk) -> Vec<(CompactStr, SymbolRef)> {

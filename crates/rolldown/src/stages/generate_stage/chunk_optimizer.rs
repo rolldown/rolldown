@@ -19,11 +19,13 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   chunk_graph::ChunkGraph,
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
+  utils::chunk::namespace_alias_origin::{NamespaceAliasOrigin, namespace_alias_origin},
 };
 
 use super::{
   GenerateStage, chunk_ext::ChunkCreationReason, chunk_ext::ChunkDebugExt,
-  code_splitting::IndexSplittingInfo, compute_cross_chunk_links::chunk_evaluation_order,
+  code_splitting::IndexSplittingInfo, commonjs_facade_guard::CommonJsPropertyGuard,
+  compute_cross_chunk_links::chunk_evaluation_order,
   compute_cross_chunk_links::sort_chunk_importees_by,
   dynamic_entry_namespace::is_pure_dynamic_entry_chunk,
   simulated_facade_inclusion::include_simulated_facade_namespace,
@@ -1210,7 +1212,9 @@ impl GenerateStage<'_> {
   ///   external module. The linker does not know all names of such a chain.
   /// - A property of a namespace, for example a named import from a CommonJS module. In CJS
   ///   output, a named import from an external module is also such a property. When
-  ///   `externalLiveBindings` is `false`, a facade reads it when the facade loads.
+  ///   `externalLiveBindings` is `false`, a facade reads it when the facade loads. The exception
+  ///   is a property of a CommonJS module that the early check accepts
+  ///   (`commonjs_property_verdict`). Such a property does not count.
   /// - The namespace of a CommonJS module, for example `export * as lib from './lib.cjs'`. The
   ///   facade reads no property of it, but its value comes from CommonJS.
   ///
@@ -1223,6 +1227,7 @@ impl GenerateStage<'_> {
   fn exports_binding_from_other_chunk(
     &self,
     chunk_graph: &ChunkGraph,
+    guard: &CommonJsPropertyGuard,
     module_idx: ModuleIdx,
     chunk_idx: ChunkIdx,
   ) -> bool {
@@ -1239,10 +1244,27 @@ impl GenerateStage<'_> {
     let mut has_binding_from_other_chunk = false;
     for name in module_meta.sorted_and_non_ambiguous_resolved_exports.keys() {
       let binding = symbol_db.canonical_ref_for(module_meta.resolved_exports[name].symbol_ref);
-      if symbol_db.get(binding).namespace_alias.is_some()
-        || self.link_output.metas[binding.owner]
-          .import_record_ns_to_cjs_module
-          .contains_key(&binding)
+      if let Some(ns_alias) = symbol_db.get(binding).namespace_alias.as_ref() {
+        // A property of a CommonJS module does not keep the facade. It also does not stop the
+        // facade if the early check accepts the module: then all chunks share one read of the
+        // property (`share_commonjs_property_reads`).
+        let verdict = match namespace_alias_origin(self.link_output, ns_alias) {
+          NamespaceAliasOrigin::CommonJs(Some(source)) => {
+            self.commonjs_property_verdict(chunk_graph, guard, source)
+          }
+          NamespaceAliasOrigin::CommonJs(None) => {
+            self.commonjs_barrel_property_verdict(module_idx, ns_alias)
+          }
+          NamespaceAliasOrigin::External(_) | NamespaceAliasOrigin::Unknown => {
+            Err("the property does not come from CommonJS")
+          }
+        };
+        if verdict.is_ok() {
+          continue;
+        }
+        return false;
+      }
+      if self.link_output.metas[binding.owner].import_record_ns_to_cjs_module.contains_key(&binding)
       {
         return false;
       }
@@ -1259,7 +1281,12 @@ impl GenerateStage<'_> {
   /// - Name check: an entry that the function checked before has the same export name for a
   ///   different binding.
   /// - Cross-chunk check: the entry exports an ESM binding that is in another chunk
-  ///   (`exports_binding_from_other_chunk`).
+  ///   (`exports_binding_from_other_chunk`). The function marks a facade that stays only because of
+  ///   this check (`Chunk::is_cross_chunk_export_facade`).
+  ///
+  /// The cross-chunk check accepts a property of a CommonJS module only if the early check accepts
+  /// the module (`commonjs_property_verdict`). All entries use one `CommonJsPropertyGuard`, so the
+  /// check computes the facts and the result for each module one time.
   ///
   /// The function returns the entries that keep their facades only because of the cross-chunk
   /// check and that the bundle also loads with `import()`. Each item is the group chunk and the
@@ -1272,11 +1299,20 @@ impl GenerateStage<'_> {
   /// See internal-docs/code-splitting/implementation.md.
   fn resolve_emitted_chunk_group_conflicts(
     &self,
-    chunk_graph: &ChunkGraph,
+    chunk_graph: &mut ChunkGraph,
     emitted_chunks_by_target: FxHashMap<ChunkIdx, Vec<ChunkIdx>>,
+    common_chunk_merges: &[CommonChunkMerge],
     facade_eliminations: &mut Vec<FacadeChunkElimination>,
   ) -> Vec<(ChunkIdx, ModuleIdx)> {
     let mut dynamic_import_redirects = vec![];
+    let guard = CommonJsPropertyGuard::new(
+      common_chunk_merges.iter().map(|merge| (merge.from_chunk_idx, merge.to_chunk_idx)),
+      &emitted_chunks_by_target,
+      facade_eliminations
+        .iter()
+        .map(|elimination| (elimination.entry_module_idx, elimination.to_chunk_idx)),
+      chunk_graph,
+    );
     for (target_chunk_idx, emitted_chunk_indices) in emitted_chunks_by_target {
       let Some(_target_chunk) = chunk_graph.chunk_table.get(target_chunk_idx) else {
         continue;
@@ -1319,7 +1355,14 @@ impl GenerateStage<'_> {
         if has_name_conflict {
           continue;
         }
-        if self.exports_binding_from_other_chunk(chunk_graph, entry_module_idx, target_chunk_idx) {
+        if self.exports_binding_from_other_chunk(
+          chunk_graph,
+          &guard,
+          entry_module_idx,
+          target_chunk_idx,
+        ) {
+          // The facade stays for this reason only. See `Chunk::is_cross_chunk_export_facade`.
+          chunk_graph.chunk_table[chunk_idx].is_cross_chunk_export_facade = true;
           if chunk_graph.chunk_table[chunk_idx].is_async_entry() {
             dynamic_import_redirects.push((target_chunk_idx, entry_module_idx));
           }
@@ -1364,6 +1407,7 @@ impl GenerateStage<'_> {
     let dynamic_import_redirects = self.resolve_emitted_chunk_group_conflicts(
       chunk_graph,
       emitted_chunk_groups,
+      &common_chunk_merges,
       &mut facade_eliminations,
     );
 
@@ -2138,14 +2182,23 @@ impl GenerateStage<'_> {
     if consumer_chunks.iter().all(|&chunk_idx| chunk_idx == target_chunk_idx) {
       return true;
     }
-    let target_chunk = &chunk_graph.chunk_table[target_chunk_idx];
-    let ChunkKind::EntryPoint { meta, module: entry_module_idx, .. } = target_chunk.kind else {
+    self.signature_allows_new_exports(&chunk_graph.chunk_table[target_chunk_idx])
+  }
+
+  /// Returns `false` when a new export of `chunk` changes a fixed entry signature. The signature
+  /// is not fixed in these conditions:
+  /// - The chunk is not a user-defined or emitted entry. Only these entries can have a fixed
+  ///   signature.
+  /// - The setting (`preserveEntrySignatures` or `preserveSignature`) is `allow-extension` or
+  ///   `false`, or it is `exports-only` and the entry has no exports.
+  pub(super) fn signature_allows_new_exports(&self, chunk: &Chunk) -> bool {
+    let ChunkKind::EntryPoint { meta, module: entry_module_idx, .. } = chunk.kind else {
       return true;
     };
     if !meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk) {
       return true;
     }
-    match target_chunk.preserve_entry_signature {
+    match chunk.preserve_entry_signature {
       Some(PreserveEntrySignatures::AllowExtension | PreserveEntrySignatures::False) => true,
       Some(PreserveEntrySignatures::Strict) => false,
       // `exports-only` (the default) only fixes the signature of entries that

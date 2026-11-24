@@ -74,7 +74,7 @@ pub struct EmittedPrebuiltChunk {
 
 #[derive(Debug)]
 pub struct FileEmitter {
-  tx: Arc<Mutex<Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
+  tx: Arc<Mutex<Option<futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>>>>,
   source_hash_to_reference_id: FxDashMap<ArcStr, ArcStr>,
   names: FxDashMap<ArcStr, u32>,
   files: FxDashMap<ArcStr, OutputAsset>,
@@ -152,7 +152,7 @@ impl FileEmitter {
       (&chunk.name, chunk.importer.as_deref().map(stable), stable(&chunk.id), &chunk.file_name)
     ));
     sender
-      .send(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg {
+      .unbounded_send(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg {
         chunk: Arc::clone(&chunk),
         reference_id: reference_id.clone(),
       })))
@@ -374,6 +374,11 @@ impl FileEmitter {
     Ok(())
   }
 
+  pub fn asset_and_prebuilt_chunk_filenames(&self) -> impl Iterator<Item = ArcStr> + '_ {
+    let assets = self.files.iter().map(|file| file.filename.clone());
+    assets.chain(self.prebuilt_chunks.iter().map(|chunk| chunk.file_name.clone()))
+  }
+
   pub fn add_additional_files(
     &self,
     bundle: &mut Vec<Output>,
@@ -458,7 +463,7 @@ impl FileEmitter {
 
   pub fn set_context_load_modules_tx(
     &self,
-    tx: Option<tokio::sync::mpsc::UnboundedSender<ModuleLoaderMsg>>,
+    tx: Option<futures::channel::mpsc::UnboundedSender<ModuleLoaderMsg>>,
   ) -> anyhow::Result<()> {
     *self.tx.lock().ok().context("Failed to acquire FileEmitter tx lock")? = tx;
     Ok(())
@@ -528,7 +533,7 @@ mod tests {
     let emit = |cwd: &Path, id: &str| {
       let options = NormalizedBundlerOptions { cwd: cwd.to_path_buf(), ..Default::default() };
       let emitter = FileEmitter::new(Arc::new(options));
-      let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+      let (tx, _rx) = futures::channel::mpsc::unbounded();
       emitter.set_context_load_modules_tx(Some(tx)).unwrap();
       emitter
         .emit_chunk(Arc::new(EmittedChunk { id: id.to_string(), ..Default::default() }))

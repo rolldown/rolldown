@@ -58,6 +58,17 @@ pub fn render_esm<'code>(
     source_joiner.append_source(imports);
   }
 
+  if let Some((_, factory)) = ctx.chunk.node_require_import() {
+    let name = ctx.link_output.symbol_db.canonical_name_for_or_original(
+      ctx.link_output.runtime.resolve_symbol("__require"),
+      &ctx.chunk.canonical_names,
+    );
+    // The function is hoisted so a wrapper in a cycle can use it before this file's body runs.
+    source_joiner.append_source(format!(
+      "function {name}() {{\n\tconst require = {factory}(import.meta.url);\n\t{name} = () => require;\n\treturn require;\n}}\n"
+    ));
+  }
+
   // Registrations and bridges of inline common chunk records come right after the imports and
   // before anything of this file's own runs.
   render_inline_records(ctx, &mut source_joiner, carried_sources);
@@ -153,6 +164,8 @@ fn render_chunk_content<'code>(
 fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
   let mut s = String::new();
   let ascii_only = ctx.options.charset.is_ascii();
+  let require_import = ctx.chunk.node_require_import();
+  let local_require = require_import.map(|_| ctx.link_output.runtime.resolve_symbol("__require"));
   let direct_external_imports = ctx
     .chunk
     .direct_imports_from_external_modules
@@ -166,20 +179,33 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
     let exporter_id = match *static_import {
       StaticImport::Chunk(exporter_id) => exporter_id,
       StaticImport::External(importee_id) => {
-        let Some(named_imports) = direct_external_imports.get(&importee_id) else {
+        let named_imports = direct_external_imports.get(&importee_id);
+        let factory = require_import.filter(|&(module, _)| module == importee_id);
+        if named_imports.is_none() && factory.is_none() {
           continue;
-        };
+        }
         let importee = &ctx.link_output.module_table[importee_id]
           .as_external()
           .expect("Should be external module here");
-        let mut has_importee_imported = false;
-        s += &render_named_imports(
-          ctx,
-          importee,
-          named_imports.iter(),
-          &mut has_importee_imported,
-          &mut rendered_external_import_namespace_modules,
-        );
+        if let Some(named_imports) = named_imports {
+          let mut has_importee_imported = false;
+          s += &render_named_imports(
+            ctx,
+            importee,
+            named_imports.iter(),
+            &mut has_importee_imported,
+            &mut rendered_external_import_namespace_modules,
+          );
+        }
+        if let Some((_, name)) = factory {
+          s += &create_import_declaration(
+            vec![format!("createRequire as {name}")],
+            &[],
+            &importee.get_import_path(ctx.chunk, ctx.resolved_paths),
+            importee.attributes.to_with_clause(ascii_only),
+            ascii_only,
+          );
+        }
         continue;
       }
     };
@@ -198,6 +224,10 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
       .iter()
       .filter_map(|item| {
         let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(item.import_ref);
+        // This chunk declares `__require` locally. The static import evaluates the runtime chunk.
+        if Some(canonical_ref) == local_require {
+          return None;
+        }
         // Skip if we've already processed this canonical symbol
         if !seen_canonical_refs.insert(canonical_ref) {
           return None;

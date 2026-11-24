@@ -18,7 +18,6 @@ pub enum ModuleLoaderMsg {
   FetchModule(Box<ResolvedId>),
   AddEntryModule(Box<AddEntryModuleMsg>),
   BuildErrors(Box<[BuildDiagnostic]>),
-  RuntimeModuleErrors(Box<[BuildDiagnostic]>),
 }
 
 pub struct AddEntryModuleMsg {

@@ -113,9 +113,6 @@ export interface ModuleOptions {
    * ```
    */
   description?: string;
-  // flag used to check if user directly modified the `ModuleInfo`
-  // this is used to sync state between Rust and JavaScript
-  invalidate?: boolean;
   packageJsonPath?: string;
 }
 
@@ -140,23 +137,28 @@ interface SpecifiedModuleOptions {
   /**
    * Indicates whether the module has side effects to Rolldown.
    *
-   * - If `false` is set and no other module imports anything from this module, then this module will not be included in the bundle even if the module would have side effects.
-   * - If `true` is set, Rolldown will use its default algorithm to include all statements in the module that has side effects.
+   * - If `false` is set, Rolldown treats the module as [side-effect-free](https://rolldown.rs/in-depth/dead-code-elimination#marking-entire-modules-as-side-effect-free). It may drop a bare import or resolve a re-export directly to its defining module.
+   * - If `true` is set, Rolldown analyzes bundled modules for side effects, bypassing the `treeshake.moduleSideEffects` option and package `sideEffects` metadata. External modules use Rolldown's default side-effect assumptions.
    * - If `"no-treeshake"` is set, treeshaking will be disabled for this module, and this module will be included in one of the chunks even if it is empty.
    *
    * The precedence of this option is as follows (highest to lowest):
    * 1. {@linkcode Plugin.transform | transform} hook's returned `moduleSideEffects` option
    * 2. {@linkcode Plugin.load | load} hook's returned `moduleSideEffects` option
    * 3. {@linkcode Plugin.resolveId | resolveId} hook's returned `moduleSideEffects` option
-   * 4. {@linkcode TreeshakingOptions.moduleSideEffects | treeshake.moduleSideEffects} option
-   * 5. `sideEffects` field in the `package.json` file
-   * 6. `true` (default)
+   * 4. {@linkcode TreeshakingOptions.moduleSideEffects | treeshake.moduleSideEffects}, when the option supplies a verdict for the module
+   * 5. `sideEffects` field in `package.json` for bundled modules. Rolldown uses this field only when
+   *    its own resolver resolved the module. This is also the case when a `resolveId` hook returned
+   *    a `this.resolve` result that Rolldown's resolver gave. When a hook returned its own id, such
+   *    as a virtual module, Rolldown does not use the field.
+   * 6. Static analysis for bundled modules and Rolldown's default side-effect assumptions for external modules
    *
    * `this.getModuleInfo(id).moduleSideEffects` and `this.resolve(id).moduleSideEffects` report
-   * this effective value. `true` is the normal per-statement treeshake, not a statement-level
-   * analysis result. With no hook value, an external and every module built with `treeshake: false`
-   * also report `true`. A hook `true` counts as no value when `treeshake` is `false`, so it does
-   * not turn statement analysis on. An explicit `"no-treeshake"` from a hook stays `"no-treeshake"`.
+   * the effective setting. They report `true` when Rolldown falls back to statement analysis,
+   * regardless of the analysis result. An external module that falls back to the default
+   * assumption of side effects also reports `true` when no hook supplies a value.
+   *
+   * With `treeshake: false`, a hook's `true` keeps tree-shaking disabled. The APIs report
+   * `true` unless a hook returns `false` or `"no-treeshake"`.
    */
   moduleSideEffects?: ModuleSideEffects | null;
 }
@@ -203,6 +205,25 @@ export interface SourceDescription
    */
   map?: SourceMapInput;
   moduleType?: ModuleType;
+  /**
+   * The module's size in bytes. Size-based code splitting uses it instead of the size of the
+   * module's code.
+   *
+   * This is useful when a plugin emits output for each chunk from the modules in it, and that
+   * output is not in the modules' code. For example, with `build.cssCodeSplit: true`, Vite emits a
+   * stylesheet for each JS chunk from the CSS of the style modules the chunk contains, while the
+   * code of a style module is empty or only a class-name map.
+   *
+   * @example
+   * ```js
+   * transform(code, id) {
+   *   if (isCss(id)) {
+   *     return { code, declaredModuleSize: Buffer.byteLength(code) + Buffer.byteLength(css) }
+   *   }
+   * }
+   * ```
+   */
+  declaredModuleSize?: number;
 }
 
 /**
@@ -416,11 +437,22 @@ export interface FunctionPluginHooks {
    * Returning `false` signals that `source` should be treated as an external module and not included in the bundle. If this happens for a relative import, the id will be renormalized the same way as when the {@linkcode InputOptions.external} option is used.
    * If you return an object, then it is possible to resolve an import to a different id while excluding it from the bundle at the same time.
    *
-   * Note that while `resolveId` will be called for each import of a module and can therefore
-   * resolve to the same `id` many times, values for `external`, `meta` or `moduleSideEffects`
-   * can only be set once before the module is loaded. The reason is that after this call,
-   * Rolldown will continue with the {@linkcode load} and {@linkcode transform} hooks for that
-   * module that may override these values and should take precedence if they do so.
+   * `resolveId` can be called many times for the same `id`: once for each import of the module,
+   * and once for each {@linkcode PluginContext.resolve | this.resolve} call. Only the resolution
+   * that creates the module sets its `external`, `meta` and `moduleSideEffects` values:
+   *
+   * - The module is created by one of the imports, entries or emitted chunks that resolve to its
+   *   `id`, or by a {@linkcode PluginContext.load | this.load} call. Which import creates it
+   *   depends on which importing module finishes first, so return the same values for the same
+   *   `id`.
+   * - A `this.resolve` call does not create the module, so the values that it returns are not
+   *   kept.
+   * - Other imports of the same `id` do not change `meta` or `moduleSideEffects`. If one import,
+   *   entry or emitted chunk resolves the `id` as external and another one does not, the build
+   *   fails, as in Rollup.
+   *
+   * After the module is created, its {@linkcode load} and {@linkcode transform} hooks can return
+   * other `meta` and `moduleSideEffects` values, and these take precedence.
    *
    * @kind async first
    * @group Build Hooks
@@ -566,6 +598,8 @@ export interface FunctionPluginHooks {
    * Called when Rolldown has finished bundling, but before Output Generation Hooks.
    * If an error occurred during the build, it is passed on to this hook.
    *
+   * {@include ./docs/plugin-hooks-buildend.md}
+   *
    * @kind async parallel
    * @group Build Hooks
    */
@@ -660,6 +694,8 @@ export interface FunctionPluginHooks {
    *
    * To get notified when generation completes successfully, use the
    * {@linkcode generateBundle} hook.
+   *
+   * {@include ./docs/plugin-hooks-rendererror.md}
    *
    * @kind async parallel
    * @group Output Generation Hooks

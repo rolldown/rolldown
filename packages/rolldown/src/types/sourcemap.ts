@@ -6,7 +6,7 @@ export interface ExistingRawSourceMap {
   file?: string | null | undefined;
   mappings: string;
   names?: string[] | undefined;
-  sources?: (string | null)[] | undefined;
+  sources?: (string | null | undefined)[] | undefined;
   sourcesContent?: (string | null | undefined)[] | undefined;
   sourceRoot?: string | undefined;
   version?: number | undefined; // make it optional to compat { mappings: '' }

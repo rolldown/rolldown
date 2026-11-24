@@ -66,6 +66,10 @@ impl FinalEsmInitMetadata {
     self.modules.get(&module_idx).is_some_and(|metadata| metadata.init_is_noop)
   }
 
+  pub(crate) fn initializes_namespace(&self, module_idx: ModuleIdx) -> bool {
+    self.modules.get(&module_idx).is_some_and(|metadata| metadata.initializes_namespace)
+  }
+
   pub(crate) fn transitive_init_targets(
     &self,
     module_idx: ModuleIdx,
@@ -77,6 +81,7 @@ impl FinalEsmInitMetadata {
 #[derive(Debug)]
 struct ModuleEsmInitMetadata {
   init_is_noop: bool,
+  initializes_namespace: bool,
   transitive_init_targets: FxHashMap<StmtInfoIdx, Vec<WrappedEsmInitTarget>>,
 }
 
@@ -91,7 +96,6 @@ impl GenerateStage<'_> {
     used_symbol_refs: UsedSymbolRefsView<'_>,
   ) -> Sealed<FinalEsmInitMetadata> {
     let keep_names = self.options.keep_names;
-    // Off-strict, lowering never mutates the chunk graph, so the liveness guard cannot fire.
     let strict = self.options.is_strict_execution_order_enabled();
     let metas = &self.link_output.metas;
     let modules = &self.link_output.module_table.modules;
@@ -104,8 +108,12 @@ impl GenerateStage<'_> {
           return None;
         }
         let init_target = order_state.esm_init_target(module_idx, meta)?;
+        let initializes_namespace = !strict
+          && meta.namespace_included
+          && matches!(init_target.origin, EsmInitOrigin::ExecutionOrder);
         // In dev mode every wrapper's closure holds the module's HMR header.
-        let is_noop = !self.options.is_dev_mode_enabled()
+        let is_noop = !initializes_namespace
+          && !self.options.is_dev_mode_enabled()
           && init_is_noop(meta, ast_table[module_idx].as_ref(), keep_names);
         let targets_by_stmt = modules[module_idx]
           .as_normal()
@@ -132,9 +140,13 @@ impl GenerateStage<'_> {
             )
           })
           .unwrap_or_default();
-        (is_noop || !targets_by_stmt.is_empty()).then_some((
+        (is_noop || initializes_namespace || !targets_by_stmt.is_empty()).then_some((
           module_idx,
-          ModuleEsmInitMetadata { init_is_noop: is_noop, transitive_init_targets: targets_by_stmt },
+          ModuleEsmInitMetadata {
+            init_is_noop: is_noop,
+            initializes_namespace,
+            transitive_init_targets: targets_by_stmt,
+          },
         ))
       })
       .collect::<Vec<_>>();

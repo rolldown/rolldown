@@ -28,15 +28,15 @@ export default defineTest({
           // `sendMagicString` is public on the context impl but not on the declared
           // interface; any JS plugin can reach it, so the runtime path is what matters.
           const ctx = this as unknown as {
-            sendMagicString(s: RolldownMagicString): void;
+            sendMagicString(s: RolldownMagicString): string | null | undefined;
           };
-          // First transfer: the legitimate handoff to the native sourcemap channel.
-          ctx.sendMagicString(ms);
+          // First transfer: hands off to the native sourcemap channel on native,
+          // or generates the map inline and returns JSON on WASI.
+          const map = ctx.sendMagicString(ms);
           // Repeating the transfer must refuse like every other consumed-instance API.
           expect(() => ctx.sendMagicString(ms)).toThrow(/already passed to `sendMagicString/);
-          // `map: null` signals the map was delivered out-of-band via the channel;
-          // omitting it would mark this transform Omitted and wipe the channel map.
-          return { code: out, map: null };
+          // On native `map` is undefined (the channel holds it); on WASI it is the inline map JSON.
+          return { code: out, map: map ?? undefined };
         },
       },
     ],

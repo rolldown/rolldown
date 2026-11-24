@@ -165,7 +165,7 @@ let d = class d {
 };
 d = _d = __decorate([x(() => 0), y(() => 1)], d);
 // e.ts
-let _default$2 = class {};
+let _default$2 = class _default {};
 _default$2 = __decorate([x(() => 0), y(() => 1)], _default$2);
 var e_default = _default$2;
 // f.ts
@@ -184,7 +184,7 @@ let f = class f {
 f = _f = __decorate([x(() => 0), y(() => 1)], f);
 var f_default = f;
 // g.ts
-let _default$1 = class {};
+let _default$1 = class _default {};
 _default$1 = __decorate([x(() => 0), y(() => 1)], _default$1);
 var g_default = _default$1;
 // h.ts

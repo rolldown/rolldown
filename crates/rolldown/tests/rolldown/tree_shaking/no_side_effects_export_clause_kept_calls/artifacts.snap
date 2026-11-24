@@ -115,7 +115,7 @@ export { coercible, iterable, noop, redeclared, replaced, restDefault };
 
 ```js
 // eval.js
-let replaced = /* #__NO_SIDE_EFFECTS__ */ () => {};
+let replaced = () => {};
 eval("replaced = () => globalThis.calls.push('eval')");
 
 // redeclared.js

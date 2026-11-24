@@ -22,6 +22,12 @@
       "enabled": false
     },
     {
+      "description": "walkdir is pinned to 2.5.0 because 2.5.1 makes Vite's serve-bundled HMR test time out on Windows (see the comment in Cargo.toml)",
+      "matchManagers": ["cargo"],
+      "matchPackageNames": ["walkdir"],
+      "enabled": false
+    },
+    {
       "description": "Lockstep oxc packages are always upgraded manually via the `upgrade-oxc` skill, so the Renovate `oxc` group PR is always superseded (e.g. #10809 superseded #10811). Independently released oxc packages (oxc_resolver, oxc_sourcemap, oxc_index, ...) remain auto-updated.",
       "matchDatasources": ["crate", "npm"],
       "matchPackageNames": [

@@ -24,6 +24,7 @@ pub enum InvalidOptionType {
   InvalidEmittedFileName(String),
   NulByteInFilename { pattern_name: String },
   InlineCommonChunksInvalidMaxSize(String),
+  InlineCommonChunksInvalidMaxDuplicatedSize(String),
   InlineCommonChunksRequirement(&'static str),
 }
 
@@ -118,6 +119,9 @@ impl BuildEvent for InvalidOption {
         }
         InvalidOptionType::InlineCommonChunksInvalidMaxSize(value) => {
           format!("Invalid value {value} for option \"output.codeSplitting.experimentalInlineCommonChunks.maxSize\" - it must be a non-negative safe integer or `Infinity` (`0` disables the feature).")
+        }
+        InvalidOptionType::InlineCommonChunksInvalidMaxDuplicatedSize(value) => {
+          format!("Invalid value {value} for option \"output.codeSplitting.experimentalInlineCommonChunks.maxDuplicatedSize\" - it must be a non-negative safe integer or `Infinity`.")
         }
         InvalidOptionType::InlineCommonChunksRequirement(requirement) => {
           format!("Invalid option combination for \"output.codeSplitting.experimentalInlineCommonChunks\" - a `maxSize` greater than 0 requires {requirement}.")

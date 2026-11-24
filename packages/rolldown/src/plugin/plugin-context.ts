@@ -8,7 +8,12 @@ import type {
 } from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
-import { error, logCycleLoading, logFailedValidation } from '../log/logs';
+import {
+  error,
+  logCycleLoading,
+  logFailedValidation,
+  logModuleSideEffectsWriteAfterBuildEnd,
+} from '../log/logs';
 import type { OutputOptions } from '../options/output-options';
 import { parseAst } from '../parse-ast-index';
 import {
@@ -319,8 +324,17 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     private currentLoadingModule?: string,
   ) {
     super(onLog, logLevel, plugin.name!, watchMode);
-    this.getModuleInfo = (id: string) => this.data.getModuleInfo(id, context);
+    this.getModuleInfo = (id: string) =>
+      this.data.getModuleInfo(id, context, this.warnWriteAfterBuildEnd);
   }
+
+  /** @internal */
+  public warnWriteAfterBuildEnd = (moduleId: string): void => {
+    this.onLog(LOG_LEVEL_WARN, {
+      ...logModuleSideEffectsWriteAfterBuildEnd(moduleId),
+      plugin: this.pluginName,
+    });
+  };
 
   public async load(
     options: {
@@ -333,37 +347,35 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     if (id === this.currentLoadingModule) {
       this.onLog(LOG_LEVEL_WARN, logCycleLoading(this.pluginName, this.currentLoadingModule));
     }
-    // resolveDependencies always true at rolldown
-    const moduleInfo = this.data.getModuleInfo(id, this.context);
-    if (moduleInfo && moduleInfo.code !== null /* module already parsed */) {
+    const resolveDependencies = options.resolveDependencies === true;
+    const moduleInfo = this.data.getModuleInfo(id, this.context, this.warnWriteAfterBuildEnd);
+    // The code is set once the module is parsed, which can be before its imports are resolved.
+    if (moduleInfo !== null && moduleInfo.code !== null && !resolveDependencies) {
       return moduleInfo;
     }
-    const rawOptions: ModuleOptions = {
-      meta: options.meta || {},
-      moduleSideEffects: options.moduleSideEffects || null,
-      invalidate: false,
-    };
-    this.data.updateModuleOption(id, rawOptions, true);
 
-    let loadPromise = this.data.loadModulePromiseMap.get(id);
+    const loadPromiseMap = resolveDependencies
+      ? this.data.loadModuleWithDependenciesPromiseMap
+      : this.data.loadModulePromiseMap;
+    let loadPromise = loadPromiseMap.get(id);
     if (!loadPromise) {
+      // The options apply only when this call creates the module.
+      const moduleOptionsReceipt = this.data.saveResolutionOptions({ meta: options.meta || {} });
       loadPromise = this.context
-        .load(
-          rawId,
-          attributes,
-          options.moduleSideEffects ?? undefined,
-          options.packageJsonPath ?? undefined,
-        )
+        .load(rawId, attributes, options.moduleSideEffects ?? undefined, resolveDependencies, {
+          packageJsonPath: options.packageJsonPath ?? undefined,
+          moduleOptionsReceipt,
+        })
         .catch(() => {
           // avoid reusing the promise if it's an error
           // because the error may happen only in non-supported hooks (e.g. `buildStart` hook)
-          this.data.loadModulePromiseMap.delete(id);
+          loadPromiseMap.delete(id);
         });
-      this.data.loadModulePromiseMap.set(id, loadPromise);
+      loadPromiseMap.set(id, loadPromise);
     }
 
     await loadPromise;
-    return this.data.getModuleInfo(id, this.context)!;
+    return this.data.getModuleInfo(id, this.context, this.warnWriteAfterBuildEnd)!;
   }
 
   public async resolve(
@@ -404,23 +416,17 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     }
 
     if (res == null) return null;
-    const info =
-      this.data.getModuleOption(this.data.toModuleId(res.id, res.attributes)) ||
-      ({} as ModuleOptions);
+    // Only this resolution's own options, as in Rollup. It does not change the module.
+    const { moduleOptionsReceipt, ...resolved } = res;
+    const own = this.data.takeResolutionOptions(moduleOptionsReceipt);
     return {
-      ...res,
+      ...resolved,
       external:
         res.external === 'relative'
           ? unreachable(`The PluginContext resolve result external couldn't be 'relative'`)
           : res.external,
-      ...info,
-      // A value recorded by resolveId/load/transform wins. Otherwise use the effective
-      // value for this id (treeshake option, package.json `sideEffects`, then `true`,
-      // including externals and `treeshake: false`).
-      moduleSideEffects:
-        info.moduleSideEffects === undefined
-          ? (res.moduleSideEffects ?? null)
-          : info.moduleSideEffects,
+      meta: own?.meta ?? {},
+      moduleSideEffects: res.moduleSideEffects ?? null,
       packageJsonPath: res.packageJsonPath,
     };
   }

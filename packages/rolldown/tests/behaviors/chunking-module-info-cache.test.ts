@@ -29,9 +29,11 @@ test('shares module info across groups and releases it before rendering', async 
           const info = chunkingContext.getModuleInfo('dep')!;
           expect(info === firstInfo).toBe(false);
           expect(chunkingContext.getModuleInfo('dep') === info).toBe(false);
+          // A write after `buildEnd` is ignored, so both objects still show `true`: `dep` has
+          // no hook value, no option and no `package.json`.
           info.moduleSideEffects = false;
-          expect(this.getModuleInfo('dep')!.moduleSideEffects).toBe(false);
-          this.getModuleInfo('dep')!.moduleSideEffects = true;
+          expect(this.getModuleInfo('dep')!.moduleSideEffects).toBe(true);
+          this.getModuleInfo('dep')!.moduleSideEffects = false;
           expect(info.moduleSideEffects).toBe(true);
         },
       },
@@ -50,15 +52,12 @@ test('shares module info across groups and releases it before rendering', async 
             expect(info.importers).toEqual(['entry']);
             expect(context.getModuleInfo('external')).toBe(context.getModuleInfo('external'));
             expect(context.getModuleInfo('missing')).toBeNull();
-            getPluginModuleInfo('dep')!.moduleSideEffects = true;
-            expect(info.moduleSideEffects).toBe(true);
+            // A write after `buildEnd` is ignored, so both objects still show `true`: `dep` has
+            // no hook value, no option and no `package.json`.
             getPluginModuleInfo('dep')!.moduleSideEffects = false;
-            expect(info.moduleSideEffects).toBe(false);
-            info.moduleSideEffects = true;
+            expect(info.moduleSideEffects).toBe(true);
+            info.moduleSideEffects = false;
             expect(getPluginModuleInfo('dep')!.moduleSideEffects).toBe(true);
-            info.moduleSideEffects = null;
-            expect(info.moduleSideEffects).toBeNull();
-            expect(getPluginModuleInfo('dep')!.moduleSideEffects).toBeNull();
             expect(info.meta).toBe(getPluginModuleInfo('dep')!.meta);
             info.meta.group = 'shared';
             expect(getPluginModuleInfo('dep')!.meta.group).toBe('shared');
@@ -90,14 +89,17 @@ test.each(['name throws', 'name returns invalid type', 'later test throws'])(
           resolveId: (id) => id,
           load: (id) => modules[id],
           renderError() {
-            checkedError = true;
             const info = context.getModuleInfo('dep')!;
             expect(info === cached).toBe(false);
             expect(context.getModuleInfo('dep') === info).toBe(false);
-            info.moduleSideEffects = null;
-            expect(this.getModuleInfo('dep')!.moduleSideEffects).toBeNull();
+            // A write after `buildEnd` is ignored.
+            info.moduleSideEffects = false;
+            expect(this.getModuleInfo('dep')!.moduleSideEffects).toBe(true);
             this.getModuleInfo('dep')!.moduleSideEffects = false;
-            expect(info.moduleSideEffects).toBe(false);
+            expect(info.moduleSideEffects).toBe(true);
+            // Set last: a failed check here only joins the build error, which the test does not
+            // read in full.
+            checkedError = true;
           },
         },
       ],

@@ -80,6 +80,18 @@ pub enum HookSideEffects {
   NoTreeshake,
 }
 
+impl HookSideEffects {
+  /// The value `getModuleInfo().moduleSideEffects` shows for this hook value. Tree shaking reads
+  /// `true` differently: it still analyzes the statements.
+  pub fn declared(self) -> DeterminedSideEffects {
+    match self {
+      HookSideEffects::True => DeterminedSideEffects::UserDefined(true),
+      HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
+      HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
+    }
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::{DeterminedSideEffects, HookSideEffects};

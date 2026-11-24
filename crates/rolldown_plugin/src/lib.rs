@@ -31,7 +31,7 @@ pub use crate::{
     LoadPluginContext, PluginContext, SharedLoadPluginContext, SharedNativePluginContext,
     SharedTransformPluginContext, TransformPluginContext,
   },
-  plugin_driver::{PluginDriver, PluginDriverFactory, SharedPluginDriver},
+  plugin_driver::{ContextLoadProgress, PluginDriver, PluginDriverFactory, SharedPluginDriver},
   pluginable::Pluginable,
   types::build_timings::BuildTimings,
   types::custom_field::CustomField,

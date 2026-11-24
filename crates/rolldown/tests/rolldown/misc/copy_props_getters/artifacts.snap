@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// lib.cjs
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = 1;
+	exports.setValue = (value) => {
+		exports.value = value;
+	};
+	Object.defineProperty(exports, "fixed", {
+		get: () => "fixed",
+		enumerable: true
+	});
+	Object.defineProperty(exports, "replaced", {
+		get: () => "before",
+		enumerable: true,
+		configurable: true
+	});
+	exports.replace = () => {
+		Object.defineProperty(exports, "replaced", { get: () => "after" });
+	};
+}));
+// star.js
+var star_exports = /* @__PURE__ */ __exportAll({}, 2);
+__reExport(star_exports, /* @__PURE__ */ __toESM(require_lib()));
+// esm.js
+var esm_exports = /* @__PURE__ */ __exportAll({
+	bump: () => bump,
+	count: () => count
+});
+function bump() {
+	count++;
+}
+var count;
+var init_esm = __esmMin((() => {
+	count = 0;
+}));
+// req.cjs
+var require_req = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.esm = (init_esm(), __toCommonJS(esm_exports));
+}));
+// main.js
+var import_lib = /* @__PURE__ */ __toESM(require_lib());
+var esm = require_req().esm;
+export { esm, import_lib as ns, star_exports as star };
+
+```

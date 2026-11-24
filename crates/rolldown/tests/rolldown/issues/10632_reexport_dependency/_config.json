@@ -1,0 +1,20 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "index.js"
+      }
+    ],
+    "codeSplitting": {
+      "includeDependenciesRecursively": true,
+      "groups": [
+        {
+          "name": "group",
+          "test": ".*"
+        }
+      ]
+    }
+  },
+  "expectExecuted": false
+}

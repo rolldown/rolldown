@@ -29,6 +29,7 @@ pub struct ExternalModuleTaskResult {
   pub name: ArcStr,
   pub identifier_name: ArcStr,
   pub side_effects: DeterminedSideEffects,
+  pub side_effects_without_option: DeterminedSideEffects,
   pub need_renormalize_render_path: bool,
   pub attributes: ImportAttributes,
 }

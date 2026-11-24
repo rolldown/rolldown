@@ -25,6 +25,7 @@ use rolldown_utils::{
 use smallvec::smallvec;
 
 use super::LinkStage;
+use crate::ast_scanner::facade_symbol_reserve;
 
 /// Index of the first statement after the namespace statement (index 0).
 const FIRST_TOP_LEVEL_STMT_IDX: StmtInfoIdx = StmtInfoIdx::from_raw_unchecked(1);
@@ -205,7 +206,15 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
           );
           // TODO(shulaoda): Waiting for oxc transform to support the ES feature `ShorthandProperties`.
           if key == "__proto__" {
-            property.computed = true;
+            property.key.replace_with(|key| match key {
+              ast::PropertyKey::StaticStringLiteral(literal) => {
+                ast::PropertyKey::StringLiteral(literal)
+              }
+              ast::PropertyKey::StaticIdentifier(ident) => {
+                ast::PropertyKey::new_string_literal(ident.span, "__proto__", None, &ast_builder)
+              }
+              key => key,
+            });
           } else if is_legal_ident {
             property.shorthand = is_legal_ident;
             property.key = ast::PropertyKey::new_static_identifier(
@@ -250,19 +259,22 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   }
   let original_symbol_ref_db = std::mem::take(link_staged.symbols.local_db_mut(module_idx));
   // recreate semantic data
+  let facade_symbol_reserve =
+    facade_symbol_reserve(ecma_ast.program(), module.hmr_hot_ref.is_some());
   #[expect(clippy::cast_possible_truncation)]
   let scoping = ecma_ast.make_symbol_table_and_scope_tree_with_semantic_builder(
     SemanticBuilder::new().with_stats(Stats {
       nodes: declaration_binding_names.len().next_power_of_two() as u32,
       scopes: 1,
-      symbols: declaration_binding_names.len() as u32,
+      symbols: declaration_binding_names.len() as u32 + facade_symbol_reserve,
       references: declaration_binding_names.len() as u32 * 2u32,
     }),
   );
 
   // update semantic data of module
   let root_scope_id = scoping.root_scope_id();
-  let mut symbol_ref_db = SymbolRefDbForModule::new(scoping, module_idx, root_scope_id);
+  let mut symbol_ref_db =
+    SymbolRefDbForModule::new(scoping, module_idx, root_scope_id, facade_symbol_reserve);
   // Re-create facade symbols in the new scoping. The JSON module was re-parsed above,
   // producing a new Scoping with fresh symbol IDs, so old facade IDs are invalid.
   // We allocate new IDs by name and update the module's references.

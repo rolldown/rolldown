@@ -3,11 +3,14 @@ use std::path::Path;
 use arcstr::ArcStr;
 use oxc::ast::ast::CommentContent;
 use oxc::ast::ast::Program;
-use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
-use oxc::ast_visit::{VisitJs, VisitJsMut, walk_js};
+use oxc::ast::ast::{
+  BindingPattern, Declaration, ExportDefaultDeclarationKind, Expression, Function, Statement,
+  VariableDeclarator,
+};
+use oxc::ast_visit::{VisitJs, VisitJsMut, walk_js, walk_js_mut};
 use oxc::diagnostics::{LabeledSpan, Severity as OxcSeverity};
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
-use oxc::semantic::{Scoping, Stats};
+use oxc::semantic::{ScopeFlags, Scoping, Stats, SymbolId};
 use oxc::syntax::symbol::SymbolFlags;
 use oxc::transformer::Transformer;
 use oxc::transformer_plugins::{
@@ -21,6 +24,7 @@ use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
 use rustc_hash::{FxHashMap, FxHashSet};
 
+use crate::ast_scanner::facade_symbol_reserve;
 use crate::types::oxc_parse_type::OxcParseType;
 
 use super::parse_to_ecma_ast::ParseToEcmaAstResult;
@@ -103,6 +107,7 @@ impl PreProcessEcmaAst {
 
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
+    self.clear_no_side_effects_replaceable_by_eval(&mut ast, &mut scoping);
 
     // Extract enum member values before the transformer converts enums.
     // This runs before Step 3 (transformer) because `optimize_const_enums` / `optimize_enums`
@@ -247,7 +252,7 @@ impl PreProcessEcmaAst {
     }
 
     // Step 6: Modify AST for Rolldown.
-    let (scoping, import_defer_spans) =
+    let (scoping, import_defer_spans, facade_symbol_reserve) =
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
         let mut pre_processor = PreProcessor::new(
           allocator,
@@ -256,7 +261,9 @@ impl PreProcessEcmaAst {
         );
         pre_processor.visit_program(program);
         let defer_spans = pre_processor.take_defer_spans();
-        (self.recreate_scoping(&mut None, program), defer_spans)
+        let facade_symbol_reserve =
+          facade_symbol_reserve(program, bundle_options.is_dev_mode_enabled());
+        (self.build_scoping(program, facade_symbol_reserve), defer_spans, facade_symbol_reserve)
       });
 
     warnings.extend(import_defer_spans.into_iter().map(|span| {
@@ -277,6 +284,7 @@ impl PreProcessEcmaAst {
     Ok(ParseToEcmaAstResult {
       ast,
       scoping,
+      facade_symbol_reserve,
       has_lazy_export,
       warnings,
       preserve_jsx,
@@ -284,13 +292,48 @@ impl PreProcessEcmaAst {
     })
   }
 
+  /// oxc treats every call of a `@__NO_SIDE_EFFECTS__` binding as pure. Direct `eval` can replace
+  /// a `let`, a `var` or a function declaration without a write reference, so drop the
+  /// annotation of each such binding before the dead code elimination runs.
+  fn clear_no_side_effects_replaceable_by_eval(
+    &mut self,
+    ast: &mut EcmaAst,
+    scoping: &mut Option<Scoping>,
+  ) {
+    let scoping_ref = scoping.as_ref().unwrap();
+    if !scoping_ref.root_scope_flags().contains_direct_eval() {
+      return;
+    }
+    let symbols = scoping_ref
+      .no_side_effects()
+      .iter()
+      .copied()
+      .filter(|&symbol_id| {
+        !scoping_ref.symbol_flags(symbol_id).is_const_variable()
+          && scoping_ref.scope_flags(scoping_ref.symbol_scope_id(symbol_id)).contains_direct_eval()
+      })
+      .collect::<FxHashSet<_>>();
+    if symbols.is_empty() {
+      return;
+    }
+    ast.program.with_mut(|WithMutFields { program, .. }| {
+      ClearNoSideEffects { symbols: &symbols }.visit_program(program);
+      *scoping = Some(self.recreate_scoping(&mut None, program));
+    });
+  }
+
   fn recreate_scoping(&mut self, scoping: &mut Option<Scoping>, program: &Program<'_>) -> Scoping {
     if let Some(scoping) = scoping.take() {
       return scoping;
     }
+    self.build_scoping(program, 0)
+  }
+
+  /// Builds a scoping with room for `extra_symbols` more symbols than the previous build created.
+  fn build_scoping(&mut self, program: &Program<'_>, extra_symbols: u32) -> Scoping {
     let ret = semantic_builder_for_transform()
       // Preallocate memory for the underlying data structures.
-      .with_stats(self.stats)
+      .with_stats(Stats { symbols: self.stats.symbols + extra_symbols, ..self.stats })
       .build(program)
       .semantic;
     self.stats = ret.stats();
@@ -354,6 +397,33 @@ impl<'ast> VisitJs<'ast> for FunctionDeclarationStartMatcher {
     if self.remaining_target_count > 0 {
       walk_js::walk_statement(self, stmt);
     }
+  }
+}
+
+/// Drops `@__NO_SIDE_EFFECTS__` from the functions that initialize `symbols`.
+struct ClearNoSideEffects<'a> {
+  symbols: &'a FxHashSet<SymbolId>,
+}
+
+impl<'ast> VisitJsMut<'ast> for ClearNoSideEffects<'_> {
+  fn visit_function(&mut self, func: &mut Function<'ast>, flags: ScopeFlags) {
+    if func.id.as_ref().is_some_and(|id| self.symbols.contains(&id.symbol_id())) {
+      func.pure = false;
+    }
+    walk_js_mut::walk_function(self, func, flags);
+  }
+
+  fn visit_variable_declarator(&mut self, decl: &mut VariableDeclarator<'ast>) {
+    if let BindingPattern::BindingIdentifier(id) = &decl.id
+      && self.symbols.contains(&id.symbol_id())
+    {
+      match &mut decl.init {
+        Some(Expression::FunctionExpression(func)) => func.pure = false,
+        Some(Expression::ArrowFunctionExpression(func)) => func.pure = false,
+        _ => {}
+      }
+    }
+    walk_js_mut::walk_variable_declarator(self, decl);
   }
 }
 

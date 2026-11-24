@@ -1,4 +1,5 @@
 import assert from 'node:assert';
+import { decodedMappings, TraceMap } from '@jridgewell/trace-mapping';
 import { RolldownMagicString as MagicString } from 'rolldown';
 import { describe, it } from 'vitest';
 
@@ -14,6 +15,52 @@ import { describe, it } from 'vitest';
  * only exists on the binding boundary. The rest of the string_wizard crate
  * tests stay in Rust.
  */
+
+describe('sourcemap locations', () => {
+  it('keeps original UTF-16 positions, including inside a surrogate pair', () => {
+    const s = new MagicString('a😀b\ncd', { offset: 3 });
+    s.addSourcemapLocation(6);
+    s.addSourcemapLocation(4);
+    s.addSourcemapLocation(2);
+    s.addSourcemapLocation(2);
+
+    assert.deepStrictEqual(s.sourcemapLocations, [2, 4, 6]);
+    assert.deepStrictEqual(s.generateDecodedMap().mappings, [
+      [
+        [0, 0, 0, 0],
+        [2, 0, 0, 2],
+      ],
+      [
+        [0, 0, 1, 0],
+        [1, 0, 1, 1],
+      ],
+    ]);
+
+    const clone = s.clone();
+    clone.addSourcemapLocation(3);
+    assert.deepStrictEqual(clone.sourcemapLocations, [2, 3, 4, 6]);
+    assert.deepStrictEqual(s.sourcemapLocations, [2, 4, 6]);
+  });
+
+  it('maps locations registered after generating a map', () => {
+    const s = new MagicString('abcdef');
+    s.addSourcemapLocation(4);
+    s.addSourcemapLocation(2);
+    assert.deepStrictEqual(
+      s.generateDecodedMap().mappings[0]!.map(([column]) => column),
+      [0, 2, 4],
+    );
+
+    s.addSourcemapLocation(3);
+    s.addSourcemapLocation(2);
+    s.addSourcemapLocation(5);
+    assert.deepStrictEqual(
+      s.generateDecodedMap().mappings[0]!.map(([column]) => column),
+      [0, 2, 3, 4, 5],
+    );
+    assert.deepStrictEqual(s.sourcemapLocations, [2, 3, 4, 5]);
+  });
+});
 
 describe('length', () => {
   // `MagicString::len()` sums UTF-8 byte lengths, but JS measures string length in UTF-16
@@ -257,6 +304,21 @@ describe('storeName', () => {
         [7, 0, 0, 7],
       ],
     ]);
+  });
+});
+
+describe('sourcemap line count', () => {
+  it.each([
+    { source: 'x', expected: 'AAAA;;' },
+    { source: '', expected: ';;' },
+  ])('keeps trailing unmapped lines for source $source', ({ source, expected }) => {
+    const s = new MagicString(source).append('\n\n');
+    const options = { file: 'out.js', source: 'in.js' };
+    const encodedMap = s.generateMap(options);
+    assert.strictEqual(encodedMap.mappings, expected);
+    const decoded = decodedMappings(new TraceMap(encodedMap.toString()));
+    assert.strictEqual(decoded.length, 3);
+    assert.deepStrictEqual(decoded, s.generateDecodedMap(options).mappings);
   });
 });
 

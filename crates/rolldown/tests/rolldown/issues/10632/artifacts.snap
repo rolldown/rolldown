@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## everything.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// example2.js
+async function example2() {
+	console.log("example2");
+}
+var example2_exports;
+function init_example2() {
+	return (init_example2 = __esmMin((() => {
+		example2_exports = /* @__PURE__ */ __exportAll({ example2: () => example2 });
+		globalThis.example2Runs = (globalThis.example2Runs ?? 0) + 1;
+	})))();
+}
+// example1.js
+const value = await Promise.resolve().then(() => (init_example2(), example2_exports));
+const again = await Promise.resolve().then(() => (init_example2(), example2_exports));
+if (!value.example2 || !again.example2 || value !== again || globalThis.example2Runs !== 1) throw new Error("Expected one target evaluation and one namespace");
+async function example1() {
+	console.log("example1");
+}
+// index.js
+example1();
+
+```
+
+## index.js
+
+```js
+import "./everything.js";
+
+```

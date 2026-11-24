@@ -303,7 +303,10 @@ pub fn render_chunk_exports(
               canonical_ref.owner != module.idx
             });
           }
-          if !export_items.is_empty() {
+          let wrapper_exports_default = matches!(options.format, OutputFormat::Cjs)
+            && matches!(export_mode, Some(OutputExports::Default))
+            && matches!(link_output.metas[module.idx].wrap_kind(), WrapKind::Cjs);
+          if !wrapper_exports_default && !export_items.is_empty() {
             let rendered_items = export_items
               .into_iter()
               .map(|(exported_name, export_ref)| {

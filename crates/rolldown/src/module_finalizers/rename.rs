@@ -110,7 +110,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   ) -> Option<Expression<'ast>> {
     if self.ctx.module.dummy_record_set.contains(&ident_ref.node_id()) {
       // use `__require` instead of `require`
-      return Some(self.finalized_expr_for_runtime_symbol("__require"));
+      return Some(self.finalized_require_expr());
     }
 
     if let Some(new_expr) = self.generate_finalized_expr_for_reference(ident_ref, is_callee) {

@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "./index.ts"
+      },
+      {
+        "name": "mod",
+        "import": "./mod.ts"
+      }
+    ]
+  }
+}

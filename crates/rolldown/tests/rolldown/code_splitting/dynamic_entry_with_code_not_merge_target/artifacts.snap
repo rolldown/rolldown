@@ -1,0 +1,64 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+// lib/a.js
+const A = { value: "MODULE_A" };
+export { A as t };
+
+```
+
+## b.js
+
+```js
+// lib/b.js
+const B = { value: "MODULE_B" };
+export { B as t };
+
+```
+
+## lib.js
+
+```js
+import { t as A } from "./a.js";
+import { t as B } from "./b.js";
+// lib/index.js
+const all = [A, B];
+export { A, B, all };
+
+```
+
+## main.js
+
+```js
+// main.js
+const loadR1 = () => import("./r1.js");
+const loadR2 = () => import("./r2.js");
+const loadLib = () => import("./lib.js");
+export { loadLib, loadR1, loadR2 };
+
+```
+
+## r1.js
+
+```js
+import { t as A } from "./a.js";
+// r1.js
+const r1 = () => A.value;
+export { r1 };
+
+```
+
+## r2.js
+
+```js
+import { t as B } from "./b.js";
+// r2.js
+const r2 = () => B.value;
+export { r2 };
+
+```

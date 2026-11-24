@@ -51,21 +51,21 @@ function test() {
 "#
   );
 
-  fn visualize(s: &MagicString, hires: Hires, output: &str) -> String {
+  fn visualize(s: &mut MagicString, hires: Hires, output: &str) -> String {
     let sourcemap = s.source_map(SourceMapOptions { hires, ..Default::default() });
     let visualizer = SourcemapVisualizer::new(output, &sourcemap);
     visualizer.get_text()
   }
 
-  insta::assert_snapshot!("hires_false", visualize(&s, Hires::False, &output));
-  insta::assert_snapshot!("hires_true", visualize(&s, Hires::True, &output));
-  insta::assert_snapshot!("hires_boundary", visualize(&s, Hires::Boundary, &output));
+  insta::assert_snapshot!("hires_false", visualize(&mut s, Hires::False, &output));
+  insta::assert_snapshot!("hires_true", visualize(&mut s, Hires::True, &output));
+  insta::assert_snapshot!("hires_boundary", visualize(&mut s, Hires::Boundary, &output));
 }
 
 #[test]
 fn hires_boundary_maps_word_at_start_of_next_line() {
   // The first line ends with a word char and the second starts with one.
-  let s = MagicString::new("const a = 1\nconst b = 2");
+  let mut s = MagicString::new("const a = 1\nconst b = 2");
   let sm = s.source_map(SourceMapOptions { hires: Hires::Boundary, ..Default::default() });
   assert!(
     sm.get_tokens().any(|t| t.get_dst_line() == 1

@@ -3,6 +3,7 @@ use rolldown_plugin::HookLoadOutput;
 
 use super::{
   binding_hook_side_effects::BindingHookSideEffects, binding_shared_string::BindingSharedString,
+  declared_module_size::declared_module_size_from_js,
 };
 use crate::types::binding_sourcemap::BindingSourcemap;
 
@@ -16,6 +17,7 @@ pub struct BindingHookLoadOutput {
   pub code: BindingSharedString,
   #[napi(ts_type = "boolean | 'no-treeshake'")]
   pub module_side_effects: Option<BindingHookSideEffects>,
+  pub declared_module_size: Option<f64>,
   pub map: Option<BindingSourcemap>,
   pub module_type: Option<String>,
 }
@@ -28,6 +30,10 @@ impl TryFrom<BindingHookLoadOutput> for HookLoadOutput {
       code: value.code.into(),
       map: value.map.map(TryInto::try_into).transpose()?,
       side_effects: value.module_side_effects.map(TryInto::try_into).transpose()?,
+      declared_module_size: value
+        .declared_module_size
+        .map(declared_module_size_from_js)
+        .transpose()?,
       module_type: value.module_type.map(|ty| ModuleType::from_str_with_fallback(ty.as_str())),
     })
   }
@@ -39,6 +45,8 @@ impl From<HookLoadOutput> for BindingHookLoadOutput {
       code: value.code.into(),
       map: value.map.map(|map| map.to_json_string().into()),
       module_side_effects: value.side_effects.map(Into::into),
+      #[expect(clippy::cast_precision_loss, reason = "module sizes are far below 2^53")]
+      declared_module_size: value.declared_module_size.map(|size| size as f64),
       module_type: value.module_type.map(|ty| ty.to_string()),
     }
   }

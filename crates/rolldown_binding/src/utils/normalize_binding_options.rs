@@ -11,7 +11,6 @@ use crate::types::binding_plugin_timings::BindingPluginTimingsMeasurement;
 use crate::types::binding_string_or_regex::{
   BindingStringOrRegex, bindingify_string_or_regex_array,
 };
-use crate::types::defer_sync_scan_data::BindingDeferSyncScanData;
 use crate::{
   options::binding_inject_import::normalize_binding_inject_import,
   types::{
@@ -28,14 +27,13 @@ use napi::bindgen_prelude::{Either, Either3, FnArgs};
 use oxc::transformer::EngineTargets;
 use rolldown::{
   AddonOutputOption, AssetFilenamesOutputOption, BundlerConfig, BundlerOptions,
-  ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, EsModuleFlag,
-  HashCharacters, InlineCommonChunksOptions, IsExternal, ManglePropertiesPattern,
-  ManglePropertiesPatterns, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType,
-  OptimizationOption, OutputCharset, OutputExports, OutputFormat, Platform, PluginTimingsOption,
-  RawCompressOptions, RawMangleOptions, RawManglePropertiesOptions, RawMinifyOptions,
-  RawMinifyOptionsDetailed, SanitizeFilename, StrictMode, TsConfig,
+  ChunkFilenamesOutputOption, CodeSplittingMode, EsModuleFlag, HashCharacters,
+  InlineCommonChunksOptions, IsExternal, ManglePropertiesPattern, ManglePropertiesPatterns,
+  ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType, OptimizationOption,
+  OutputCharset, OutputExports, OutputFormat, Platform, PluginTimingsOption, RawCompressOptions,
+  RawMangleOptions, RawManglePropertiesOptions, RawMinifyOptions, RawMinifyOptionsDetailed,
+  SanitizeFilename, StrictMode, TsConfig,
 };
-use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
 use rolldown_common::ModuleTag;
 use rolldown_plugin::__inner::SharedPluginable;
@@ -295,28 +293,6 @@ fn normalize_plugin_timings_option(
   })
 }
 
-fn normalize_defer_sync_scan_data_option(
-  defer_sync_scan_data: Option<UntrackedJsCallback<(), Vec<BindingDeferSyncScanData>>>,
-  callbacks: &JsCallbackRelease,
-) -> Option<DeferSyncScanDataOption> {
-  defer_sync_scan_data.map(|ts_fn| {
-    let ts_fn = callbacks.track(ts_fn);
-    DeferSyncScanDataOption::new(move || {
-      let ts_fn = ts_fn.clone();
-      Box::pin(async move {
-        ts_fn
-          .invoke_async(())
-          .await
-          .context("deferSyncScanData option")
-          .and_then(|ret| {
-            ret.into_iter().map(TryInto::try_into).collect::<Result<Vec<DeferSyncScanData>, _>>()
-          })
-          .map_err(anyhow::Error::from)
-      })
-    })
-  })
-}
-
 fn normalize_sourcemap_ignore_list_option(
   sourcemap_ignore_list: Option<SourcemapIgnoreListOutputOption>,
   callbacks: &JsCallbackRelease,
@@ -393,6 +369,25 @@ fn normalize_reset_js_module_options_option(
           .invoke_async(FnArgs { data: (module_ids,) })
           .await
           .context("resetJsModuleOptions option")
+          .map_err(anyhow::Error::from)
+      })
+    }))
+  })
+}
+
+fn normalize_create_js_module_options_option(
+  create_js_module_options: Option<UntrackedJsCallback<FnArgs<(String, Option<u32>)>, ()>>,
+  callbacks: &JsCallbackRelease,
+) -> Option<rolldown::CreateJsModuleOptions> {
+  create_js_module_options.map(|ts_fn| {
+    let ts_fn = callbacks.track(ts_fn);
+    rolldown::CreateJsModuleOptions::new(Arc::new(move |module_id, receipt| {
+      let ts_fn = ts_fn.clone();
+      Box::pin(async move {
+        ts_fn
+          .invoke_async(FnArgs { data: (module_id, receipt) })
+          .await
+          .context("createJsModuleOptions option")
           .map_err(anyhow::Error::from)
       })
     }))
@@ -522,6 +517,7 @@ fn normalize_code_splitting(
           .map(|inner| -> napi::Result<InlineCommonChunksOptions> {
             Ok(InlineCommonChunksOptions {
               max_size: inner.max_size,
+              max_duplicated_size: inner.max_duplicated_size,
               exclude: inner
                 .exclude
                 .map(|exclude| {
@@ -573,8 +569,6 @@ pub fn normalize_binding_options(
   let callbacks = JsCallbackRelease::default();
 
   let external = normalize_external_option(input_options.external, &callbacks);
-  let get_defer_sync_scan_data =
-    normalize_defer_sync_scan_data_option(input_options.defer_sync_scan_data, &callbacks);
   let get_plugin_timings =
     normalize_plugin_timings_option(input_options.plugin_timings, &callbacks);
   let sourcemap_ignore_list =
@@ -588,6 +582,8 @@ pub fn normalize_binding_options(
   );
   let reset_js_module_options =
     normalize_reset_js_module_options_option(input_options.reset_js_module_options, &callbacks);
+  let create_js_module_options =
+    normalize_create_js_module_options_option(input_options.create_js_module_options, &callbacks);
   let on_log = normalize_on_log_option(input_options.on_log, &callbacks);
 
   let mut module_types = None;
@@ -880,7 +876,6 @@ pub fn normalize_binding_options(
     drop_labels: input_options.drop_labels,
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,
-    defer_sync_scan_data: get_defer_sync_scan_data,
     plugin_timings: get_plugin_timings,
     transform: transform_options,
     make_absolute_externals_relative: input_options
@@ -892,6 +887,7 @@ pub fn normalize_binding_options(
     }),
     invalidate_js_side_cache,
     reset_js_module_options,
+    create_js_module_options,
     log_level: Some(input_options.log_level.into()),
     on_log,
     preserve_modules: output_options.preserve_modules,

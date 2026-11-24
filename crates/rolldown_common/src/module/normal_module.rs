@@ -2,14 +2,14 @@ use std::fmt::Debug;
 
 use crate::{
   EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta, ModuleId, ModuleIdx,
-  ModuleInfo, RawImportRecord, ResolvedId, StableModuleId,
+  ModuleInfo, ModuleInfoSideEffects, RawImportRecord, ResolvedId, StableModuleId,
 };
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
 
 use itertools::Itertools;
 use oxc_index::IndexVec;
-use oxc_str::CompactStr;
+use oxc_str::{CompactStr, format_compact_str};
 
 #[derive(Debug, Clone)]
 pub struct NormalModule {
@@ -49,6 +49,7 @@ impl NormalModule {
     &self,
     raw_import_records: Option<&IndexVec<ImportRecordIdx, RawImportRecord>>,
     is_entry: bool,
+    side_effects: Option<ModuleInfoSideEffects>,
   ) -> ModuleInfo {
     ModuleInfo {
       code: Some(self.ecma_view.source.clone()),
@@ -68,7 +69,15 @@ impl NormalModule {
       dynamically_imported_ids: self.ecma_view.dynamically_imported_ids.clone(),
       // https://github.com/rollup/rollup/blob/7a8ac460c62b0406a749e367dbd0b74973282449/src/Module.ts#L331
       exports: {
-        let mut exports = self.ecma_view.named_exports.keys().cloned().collect_vec();
+        let mut exports = self
+          .ecma_view
+          .named_exports
+          .keys()
+          .map(|name| {
+            // A lone `*` represents an `export * from` record.
+            if name.starts_with('*') { format_compact_str!("*{name}") } else { name.clone() }
+          })
+          .collect_vec();
         if let Some(e) = raw_import_records {
           exports.extend(
             e.iter()
@@ -88,7 +97,7 @@ impl NormalModule {
         exports
       },
       input_format: self.ecma_view.exports_kind,
-      module_side_effects: Some(self.ecma_view.reported_side_effects),
+      side_effects,
     }
   }
 
@@ -142,7 +151,7 @@ impl NormalModule {
 
   #[expect(clippy::cast_precision_loss)]
   pub fn size(&self) -> f64 {
-    self.ecma_view.source.len() as f64
+    self.ecma_view.declared_module_size.unwrap_or(self.ecma_view.source.len()) as f64
   }
 
   pub fn is_hmr_self_accepting_module(&self) -> bool {

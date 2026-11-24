@@ -968,7 +968,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
     let Some((keyword, with)) = options.properties.iter().find_map(|property| {
       let ast::ObjectPropertyKind::ObjectProperty(property) = property else { return None };
-      let name = property.key.static_name().filter(|_| !property.computed)?;
+      let name = property.key.literal_name()?;
       (name == "with" || name == "assert").then_some((name, property))
     }) else {
       return ImportAttributes::default();
@@ -990,8 +990,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           // Lone surrogates become U+FFFD, like in a static `with` clause.
           Expression::StringLiteral(value) => property
             .key
-            .static_name()
-            .filter(|_| !property.computed)
+            .literal_name()
             .map(|key| (CompactStr::from(to_usv_str(key.as_js_str())), to_usv_str(value.value))),
           _ => None,
         },
@@ -1040,7 +1039,7 @@ fn assert_key_span(options: &Expression) -> Option<Span> {
   let Expression::ObjectExpression(options) = options else { return None };
   options.properties.iter().find_map(|property| {
     let ast::ObjectPropertyKind::ObjectProperty(property) = property else { return None };
-    (!property.computed && property.key.static_name()? == "assert").then(|| property.key.span())
+    property.key.is_specific_literal_name("assert").then(|| property.key.span())
   })
 }
 

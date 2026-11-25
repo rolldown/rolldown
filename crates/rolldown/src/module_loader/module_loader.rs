@@ -1207,7 +1207,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     // `try_spawn_new_task` records it as an error. The code below ends the wait, so
     // the build stops with that error and does not hang. No normal module task runs
     // for an external module in this scan, so the wait gets no second signal.
-    if self.is_external_module(idx) {
+    // A partial scan starts no task for a module that it reuses from a previous build
+    // either, and that build resolved the module's imports.
+    if self.is_external_module(idx) || !self.is_spawned_by_this_scan(idx) {
       self
         .shared_context
         .plugin_driver

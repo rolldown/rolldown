@@ -1747,6 +1747,18 @@ export declare class BindingMagicString {
    */
   slice(start?: number | undefined | null, end?: number | undefined | null): string
   /**
+   * Returns the UTF-16 indices in the original source that `addSourcemapLocation()` registers.
+   * Each index appears once. The indices are in ascending order.
+   */
+  get sourcemapLocations(): Array<number>
+  /**
+   * Registers a UTF-16 index in the original source for maps with `hires: false`.
+   * If the index falls within a non-newline character in an unedited piece,
+   * the map includes a segment for that index.
+   * The `offset` option does not change this index.
+   */
+  addSourcemapLocation(index: number): void
+  /**
    * Generates a source map for the transformations applied to this MagicString.
    * Returns a BindingSourceMap object with version, file, sources, sourcesContent, names, mappings.
    */
@@ -3081,7 +3093,6 @@ export interface BindingViteAliasPluginConfig {
 export interface BindingViteBuildImportAnalysisPluginConfig {
   preloadCode: string
   insertPreload: boolean
-  optimizeModulePreloadRelativePaths: boolean
   renderBuiltUrl: boolean
   isRelativeBase: boolean
 }

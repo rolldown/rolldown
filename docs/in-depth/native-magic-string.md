@@ -99,6 +99,7 @@ The following MagicString methods are currently available in the native implemen
 
 **Source Map Generation:**
 
+- `addSourcemapLocation(index)` registers a UTF-16 index in the original source for maps with `hires: false`. The `offset` option does not change this index. The `sourcemapLocations` property returns each registered index once, in ascending order.
 - `generateMap(options?)` - Generates a source map object. Its `toString()` returns the map as a JSON string, and its `toUrl()` returns the map as a data URL
   - `options.source` - Source file name
   - `options.includeContent` - Include original source in the map
@@ -111,13 +112,15 @@ The constructor also accepts a `hires` option, which `magic-string` does not hav
 
 When a `transform` or `renderChunk` hook returns the native MagicString without a `map`, Rolldown generates the map for that step. It uses the `hires` option of the MagicString, or `"boundary"` when the option is not set. With `"boundary"`, the output source map keeps column positions and names after that map is composed with the others in the chain. With `hires: false`, the map for that step is smaller and faster to generate, because it has fewer segments. With `hires: true`, the map for that step is larger and slower to generate. The output source map usually has the same positions as with `"boundary"`, because the maps that Rolldown generates when it prints modules and chunks have segments at the start of tokens, and `"boundary"` has a segment at the start of each word and at each character that is not a letter, a digit or `_`, for example `"`, `[` or `!`. In `renderChunk`, `hires: true` can also make the output source map larger.
 
-Before any edit, the text of a MagicString is one piece. An edit can split a piece into more pieces. An empty insertion inside a piece also splits it. A `hires: false` map has a segment only at these characters:
+MagicString starts with one piece of text. An edit can split a piece. If you insert an empty string inside a piece, MagicString splits that piece.
 
-- The first character of each piece.
-- The first character after each newline in a piece.
-- The first character of each replacement that is not empty.
+For `hires: false`, the source map includes segments according to these rules. A newline is `\n`.
 
-In a piece, a newline has no segment. Inserted text has no segment.
+- The map includes a segment at the first non-newline character on each line of an unedited piece. This rule also applies if the piece starts partway through a line.
+- The map includes a segment for each index from `addSourcemapLocation()` that falls within a non-newline character in an unedited piece.
+- The map includes a segment at the start of each line of replacement text. Each segment points to the start of the replaced range in the original source.
+
+The map includes no segments for inserted text.
 
 When Rolldown composes the maps, a position resolves to the last segment at or before it on its line. If the position is before the first segment of its line, it resolves to that first segment. If its line has no segment, the position has no mapping.
 

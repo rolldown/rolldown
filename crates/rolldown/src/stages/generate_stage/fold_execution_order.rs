@@ -3,6 +3,7 @@ use rolldown_common::{
   ImportKind, ModuleIdx, ModuleTable, NormalModule, StmtInfo, StmtInfoMeta, SymbolRefDb, WrapKind,
   side_effects::DeterminedSideEffects,
 };
+use rolldown_utils::BitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::GenerateStage;
@@ -11,11 +12,16 @@ use super::GenerateStage;
 /// walk over all entries, so it gives a module the position that the first entry to reach it
 /// gives it; another entry can run two modules the other way round. This walk is the one of
 /// `sort_modules`, started from one entry. Entries are walked when a check first needs them.
+///
+/// A dynamic entry runs after the modules that every importer has loaded already
+/// (`already_loaded_atoms_by_entry`), so its walk gives them no position: they ran before any
+/// module of the entry, and the entries that load them check their order.
 pub(super) struct EntryOrders<'a> {
   module_table: &'a ModuleTable,
   entry_module_by_bit: &'a [ModuleIdx],
   order_sensitive: &'a IndexVec<ModuleIdx, bool>,
   module_to_atom_idx: &'a IndexVec<ModuleIdx, Option<usize>>,
+  already_loaded_atoms_by_entry: &'a [BitSet],
   by_entry_bit: FxHashMap<usize, EntryOrder>,
 }
 
@@ -37,12 +43,14 @@ impl<'a> EntryOrders<'a> {
     entry_module_by_bit: &'a [ModuleIdx],
     order_sensitive: &'a IndexVec<ModuleIdx, bool>,
     module_to_atom_idx: &'a IndexVec<ModuleIdx, Option<usize>>,
+    already_loaded_atoms_by_entry: &'a [BitSet],
   ) -> Self {
     Self {
       module_table,
       entry_module_by_bit,
       order_sensitive,
       module_to_atom_idx,
+      already_loaded_atoms_by_entry,
       by_entry_bit: FxHashMap::default(),
     }
   }
@@ -54,6 +62,7 @@ impl<'a> EntryOrders<'a> {
       entry_module_by_bit,
       order_sensitive,
       module_to_atom_idx,
+      already_loaded_atoms_by_entry,
       by_entry_bit,
     } = self;
     for &entry_bit in entry_bits {
@@ -63,6 +72,7 @@ impl<'a> EntryOrders<'a> {
           entry_module_by_bit[entry_bit],
           order_sensitive,
           module_to_atom_idx,
+          &already_loaded_atoms_by_entry[entry_bit],
         )
       });
     }
@@ -75,13 +85,15 @@ fn walk_entry(
   entry_module: ModuleIdx,
   order_sensitive: &IndexVec<ModuleIdx, bool>,
   module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
+  already_loaded_atoms: &BitSet,
 ) -> EntryOrder {
   enum Step {
     Enter(ModuleIdx),
     Exit(ModuleIdx),
   }
   let mut position = FxHashMap::default();
-  let mut entered = FxHashSet::default();
+  let mut entered =
+    already_loaded_modules(module_table, entry_module, module_to_atom_idx, already_loaded_atoms);
   let mut stack = vec![Step::Enter(entry_module)];
   let mut next_position = 0;
   while let Some(step) = stack.pop() {
@@ -121,6 +133,40 @@ fn walk_entry(
     last_exec_order_by_atom.insert(atom_idx, exec_order).is_some_and(|last| last > exec_order)
   });
   EntryOrder { position, order_sensitive, runs_an_atom_out_of_order }
+}
+
+/// The modules of `already_loaded_atoms` and the externals that they import statically. A dynamic
+/// entry without importers counts every atom as loaded already, its own one too, so its walk keeps
+/// them all.
+fn already_loaded_modules(
+  module_table: &ModuleTable,
+  entry_module: ModuleIdx,
+  module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
+  already_loaded_atoms: &BitSet,
+) -> FxHashSet<ModuleIdx> {
+  let is_already_loaded = |module_idx: ModuleIdx| {
+    module_to_atom_idx[module_idx].is_some_and(|atom_idx| {
+      already_loaded_atoms.has_bit(atom_idx.try_into().expect("Too many atoms, u32 overflowed."))
+    })
+  };
+  let mut loaded = FxHashSet::default();
+  if is_already_loaded(entry_module) {
+    return loaded;
+  }
+  let mut stack: Vec<ModuleIdx> =
+    module_to_atom_idx.indices().filter(|&module_idx| is_already_loaded(module_idx)).collect();
+  while let Some(module_idx) = stack.pop() {
+    if loaded.insert(module_idx) {
+      stack.extend(
+        module_table[module_idx]
+          .import_records()
+          .iter()
+          .filter(|record| record.kind.is_static())
+          .filter_map(|record| record.resolved_module),
+      );
+    }
+  }
+  loaded
 }
 
 /// The externals whose position matters that `modules` import statically. An external import is

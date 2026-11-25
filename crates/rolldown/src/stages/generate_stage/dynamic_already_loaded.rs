@@ -196,6 +196,7 @@ impl GenerateStage<'_> {
           &flattened_entry_modules,
           &order_sensitive,
           &module_to_atom_idx,
+          &already_loaded_atoms_by_entry,
         ),
       );
     }

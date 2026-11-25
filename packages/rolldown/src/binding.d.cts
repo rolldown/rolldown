@@ -1004,10 +1004,6 @@ export interface DecoratorOptions {
    * target. Other target-selected transforms still run on unrelated syntax.
    * `legacy: true` takes precedence over this option.
    *
-   * With `helpers: { mode: "External" }`, the lowered output calls decorator helpers on
-   * `babelHelpers` that only `@oxc-project/runtime` provides, so the `Runtime` helper mode
-   * is recommended.
-   *
    * @default undefined
    */
   lower?: boolean

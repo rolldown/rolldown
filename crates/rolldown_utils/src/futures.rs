@@ -69,17 +69,6 @@ where
   tokio::task::spawn_blocking(f)
 }
 
-pub fn block_on<F: Future>(f: F) -> F::Output {
-  #[cfg(target_family = "wasm")]
-  {
-    futures::executor::block_on(f)
-  }
-  #[cfg(not(target_family = "wasm"))]
-  {
-    tokio::task::block_in_place(move || tokio::runtime::Handle::current().block_on(f))
-  }
-}
-
 /// Whether Rolldown starts its own offload threads with `std::thread::spawn`,
 /// such as the scan stage's sourcemap drainer.
 ///

@@ -3089,7 +3089,6 @@ export interface BindingViteAliasPluginConfig {
 export interface BindingViteBuildImportAnalysisPluginConfig {
   preloadCode: string
   insertPreload: boolean
-  optimizeModulePreloadRelativePaths: boolean
   renderBuiltUrl: boolean
   isRelativeBase: boolean
 }

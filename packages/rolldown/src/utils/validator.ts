@@ -300,7 +300,6 @@ const WatcherOptionsSchema = v.strictObject({
   exclude: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
   include: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
   watcher: v.optional(WatcherFileWatcherOptionsSchema),
-  notify: v.optional(WatcherFileWatcherOptionsSchema),
   skipWrite: v.pipe(v.optional(v.boolean()), v.description('Skip the bundle.write() step')),
   buildDelay: v.pipe(v.optional(v.number()), v.description('Throttle watch rebuilds')),
   clearScreen: v.pipe(

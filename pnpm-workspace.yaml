@@ -129,6 +129,7 @@ trustPolicyExcludePrune: true
 trustPolicyExclude:
   - chokidar@4.0.3
   - rxjs@7.8.2
+  - tsrs@7.1.0-beta.tsrs4
 
 verifyDepsBeforeRun: install
 minimumReleaseAgeExcludePrune: true

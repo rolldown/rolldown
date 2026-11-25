@@ -394,6 +394,42 @@ test.each([
   expect(run('other')).toEqual(['other']);
 });
 
+test.each([false, true])(
+  'a synchronous sibling releases the only top-level await, separate wait chunk %s',
+  async (separateWait) => {
+    const run = await bundle(
+      {
+        'main.mjs':
+          "import defer * as a from './a.mjs'; import './release.mjs'; console.log('main', typeof a);",
+        'a.mjs': waitsForRelease,
+        'release.mjs': "console.log('release'); globalThis.release();",
+      },
+      separateWait ? { codeSplitting: { groups: [{ name: 'wait', test: /[\\/]a\.mjs$/ }] } } : {},
+      ['main'],
+      'comes after a deferred import',
+    );
+    expect(run()).toEqual(['a start', 'release', 'a end', 'main object']);
+  },
+);
+
+test('a synchronous release reached through a re-export can start in another entry', async () => {
+  const run = await bundle(
+    {
+      'main.mjs': "import defer * as x from './x.mjs'; import './y.mjs'; console.log(typeof x);",
+      'other.mjs': "import './release.mjs'; console.log('other');",
+      'x.mjs': "export * from './wait.mjs';",
+      'y.mjs': "export * from './release.mjs';",
+      'wait.mjs': waitsForRelease,
+      'release.mjs': "console.log('release'); globalThis.release?.();",
+    },
+    { codeSplitting: { groups: [{ name: 'deps', test: /[\\/](wait|release)\.mjs$/ }] } },
+    ['main', 'other'],
+    'comes after a deferred import',
+  );
+  expect(run()).toEqual(['a start', 'release', 'a end', 'object']);
+  expect(run('other')).toEqual(['release', 'other']);
+});
+
 test('a later deferred request can reject while an earlier request is pending', async () => {
   const run = await bundle({
     'main.mjs': "try { await import('./requests.mjs') } catch (e) { console.log(e.message) }",

@@ -1,9 +1,9 @@
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkModulesOrderBy, CrossChunkImportItem, EcmaModuleAstUsage,
-  ImportKind, ImportRecordIdx, ModuleIdx, NormalModule, NormalizedBundlerOptions, OutputExports,
-  OutputFormat, PreliminaryFilename, RuntimeHelper, StaticImport, UsedSymbolRefs, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, ChunkModulesOrderBy, CrossChunkImportItem, ImportKind,
+  ImportRecordIdx, ModuleIdx, NormalModule, NormalizedBundlerOptions, OutputExports, OutputFormat,
+  PreliminaryFilename, RuntimeHelper, StaticImport, UsedSymbolRefs, WrapKind,
 };
 use rolldown_error::{BuildDiagnostic, EventKind};
 use rolldown_utils::{concat_string, dashmap::FxDashMap, make_unique_name::make_unique_name};
@@ -370,75 +370,58 @@ impl GenerateStage<'_> {
     }
   }
 
-  /// An eager fallback relies on native ESM to start async siblings. Concatenating two
-  /// roots of a deferred preparation into one file would turn that evaluation into a
-  /// serial wait. See internal-docs/import-defer/implementation.md.
+  /// An eager fallback relies on native ESM to start independent requests before awaiting
+  /// any of them. See internal-docs/import-defer/implementation.md.
   pub(super) fn split_async_fallback_chunks(&self, graph: &mut ChunkGraph) {
     let link = &self.link_output;
     if link.async_fallback_importers.is_empty() {
       return;
     }
-    let static_deps = |idx: ModuleIdx| {
-      link.module_table[idx]
-        .import_records()
-        .iter()
-        .filter(|rec| rec.kind == ImportKind::Import)
-        .filter_map(|rec| rec.resolved_module)
-    };
-    let mut affected = Vec::new();
-    let mut visited = FxHashSet::default();
-    let mut async_hosts = FxHashSet::default();
-    let mut stack = Vec::new();
-    for &importer in &link.async_fallback_importers {
-      if !link.metas[importer].is_included {
-        continue;
-      }
-      visited.clear();
-      async_hosts.clear();
-      stack.clear();
-      stack.push((importer, importer));
-      while let Some((idx, parent)) = stack.pop() {
-        if !link.metas[idx].is_tla_or_contains_tla_dependency || !visited.insert((idx, parent)) {
-          continue;
-        }
-        let Some(module) = link.module_table[idx].as_normal() else { continue };
-        let parent = if idx != importer
-          && module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait)
-        {
-          // Two async siblings reached through plain re-exports can still occupy one file.
-          // An async module's own prerequisites start in a separate walk: a child and its
-          // waiting parent alone do not need independent chunks.
-          if graph.module_to_chunk[idx].is_some_and(|chunk| !async_hosts.insert((parent, chunk))) {
-            affected.push(importer);
-            break;
-          }
-          idx
-        } else {
-          parent
-        };
-        stack.extend(static_deps(idx).map(|dep| (dep, parent)));
-      }
-    }
-    // The importer and the direct requests of a module with an async dependency need
-    // independent evaluation boundaries. A synchronous sibling must be able to run while
-    // the async request waits. Leave chunks with only one such boundary intact.
+    let mut stack: Vec<_> = link
+      .async_fallback_importers
+      .iter()
+      .copied()
+      .filter(|&idx| {
+        link.metas[idx].is_included && link.metas[idx].is_tla_or_contains_tla_dependency
+      })
+      .collect();
     let mut seen = FxHashSet::default();
-    let mut hosts = FxHashSet::default();
-    let mut chunks = FxHashSet::default();
-    while let Some(idx) = affected.pop() {
+    let mut private_children = FxHashSet::default();
+    while let Some(idx) = stack.pop() {
       if !seen.insert(idx) {
         continue;
       }
+      let mut deps = link.module_table[idx]
+        .import_records()
+        .iter()
+        .filter(|rec| rec.kind == ImportKind::Import)
+        .filter_map(|rec| rec.resolved_module);
+      // A synchronous request can release a wait through any number of imports or re-exports.
+      stack.extend(deps.clone());
+      // A module and its sole, privately imported dependency can share an evaluation
+      // boundary. Use the parent as the representative: it inherits any top-level await
+      // in the chain. Decreasing execution order breaks cycles.
+      if let Some(child_idx) = deps.next()
+        && deps.all(|other| other == child_idx)
+        && graph.module_to_chunk[idx].is_some()
+        && graph.module_to_chunk[idx] == graph.module_to_chunk[child_idx]
+        && let Some(child) = link.module_table[child_idx].as_normal()
+        && child.importers_idx.len() == 1
+        && !link.entries.contains_key(&child_idx)
+        && child.exec_order < link.module_table[idx].exec_order()
+      {
+        private_children.insert(child_idx);
+      }
+    }
+    let mut hosts = FxHashMap::default();
+    let mut chunks = FxHashSet::default();
+    for &idx in seen.difference(&private_children) {
+      let is_async = link.metas[idx].is_tla_or_contains_tla_dependency;
       if let Some(host) = graph.module_to_chunk[idx]
-        && !hosts.insert(host)
+        && let Some(previous_async) = hosts.insert(host, is_async)
+        && (is_async || previous_async)
       {
         chunks.insert(host);
-      }
-      if link.metas[idx].is_tla_or_contains_tla_dependency {
-        let deps = static_deps(idx);
-        if deps.clone().any(|dep| link.metas[dep].is_tla_or_contains_tla_dependency) {
-          affected.extend(deps);
-        }
       }
     }
     let mut chunks: Vec<_> = chunks.into_iter().collect();

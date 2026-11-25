@@ -9,8 +9,8 @@ import type { InputOptions, OutputOptions, RolldownLog } from 'rolldown';
 import { afterAll, describe, expect, test } from 'vitest';
 
 // A build that `experimental.importDefer` does not support lowers each deferred import to a normal
-// import. Its output must be the output of the build with the option off, and its warnings must
-// differ only in the reason.
+// import. An async-order fallback can split an ESM chunk to preserve evaluation order.
+// Other fallbacks keep the option-off output. The warnings identify the reason.
 
 const LOG_JS = 'export const log = [];\n';
 const X_JS = "import { log } from './log.js';\nlog.push('x');\nexport const value = 1;\n";
@@ -22,6 +22,7 @@ const AFTER_ASYNC_DEFER = {
   't.js': 'await 0;\n',
   'y.js': "import { log } from './log.js';\nlog.push('y');\n",
 };
+const AFTER_ASYNC_DEFER_LOGS = { on: ['y', 'x'], off: ['x', 'y'] };
 const AFTER_ASYNC_DEFER_REASON =
   'an import in `main.js` comes after a deferred import of a module that has a top-level `await` or imports one';
 const CJS_MAIN_JS = "import defer * as ns from './x.cjs';\nexport const read = () => ns.value;\n";
@@ -43,6 +44,7 @@ interface Case {
   output?: OutputOptions;
   // A text of the warning when the build falls back. `undefined` when the build keeps the deferral.
   reason?: string;
+  expectedLogs?: { on: string[]; off: string[] };
 }
 
 const cases: Case[] = [
@@ -78,8 +80,12 @@ const cases: Case[] = [
   })),
   {
     name: 'an import after a deferred import of a module with top-level await',
-    files: { 'main.js': MAIN_JS + "import './y.js';\n", ...AFTER_ASYNC_DEFER },
+    files: {
+      'main.js': MAIN_JS + "import './y.js';\nexport { log } from './log.js';\n",
+      ...AFTER_ASYNC_DEFER,
+    },
     reason: AFTER_ASYNC_DEFER_REASON,
+    expectedLogs: AFTER_ASYNC_DEFER_LOGS,
   },
   {
     // With more than one chunk, the file of `main.js` imports `ext` before its body prepares the
@@ -193,10 +199,12 @@ const cases: Case[] = [
   {
     name: 'a read statement',
     files: {
-      'main.js': "import defer * as ns from './x.js';\nimport './y.js';\nns.value;\n",
+      'main.js':
+        "import defer * as ns from './x.js';\nimport './y.js';\nns.value;\nexport { log } from './log.js';\n",
       ...AFTER_ASYNC_DEFER,
     },
     reason: AFTER_ASYNC_DEFER_REASON,
+    expectedLogs: AFTER_ASYNC_DEFER_LOGS,
   },
 ];
 
@@ -483,7 +491,13 @@ async function build(root: string, c: Case, importDefer: boolean): Promise<Build
 }
 
 // Runs the entry in a new Node.js process, and calls the exports of `steps` in this order.
-function run(dir: string, entry: string, steps: string[]): unknown {
+function run(root: string, output: BuildResult['output'], steps: string[]): unknown {
+  const dir = path.join(root, 'out');
+  for (const file of output) {
+    fs.mkdirSync(path.dirname(path.join(dir, file.fileName)), { recursive: true });
+    fs.writeFileSync(path.join(dir, file.fileName), file.content);
+  }
+  const entry = output[0].fileName;
   const url = pathToFileURL(path.join(dir, entry)).href;
   const script = `
     const ns = await import(${JSON.stringify(url)});
@@ -511,7 +525,12 @@ describe('import defer fallback', () => {
     const on = await build(root, c, true);
     expect(off.error).toBeUndefined();
     expect(on.error).toBeUndefined();
-    expect(on.output).toStrictEqual(off.output);
+    if (c.expectedLogs) {
+      expect(run(root, on.output, [])).toStrictEqual({ before: c.expectedLogs.on, steps: [] });
+      expect(run(root, off.output, [])).toStrictEqual({ before: c.expectedLogs.off, steps: [] });
+    } else {
+      expect(on.output).toStrictEqual(off.output);
+    }
     expect(positions(on.warnings)).toStrictEqual(positions(off.warnings));
     const deferWarnings = on.warnings.filter((log) => log.code === 'UNSUPPORTED_FEATURE');
     expect(deferWarnings.some((log) => log.message.includes(c.reason!))).toBe(true);
@@ -583,15 +602,10 @@ describe('import defer fallback', () => {
     expect(on.warnings.map((log) => log.message)).toStrictEqual(
       (c.warnings ?? []).map((text) => expect.stringContaining(text)),
     );
-    const dir = path.join(root, 'out');
-    for (const file of on.output) {
-      fs.mkdirSync(path.dirname(path.join(dir, file.fileName)), { recursive: true });
-      fs.writeFileSync(path.join(dir, file.fileName), file.content);
-    }
     expect(
       run(
-        dir,
-        on.output[0].fileName,
+        root,
+        on.output,
         c.steps.map(([name]) => name),
       ),
     ).toStrictEqual({ before: [], steps: c.steps.map(([, value, log]) => [value, log]) });

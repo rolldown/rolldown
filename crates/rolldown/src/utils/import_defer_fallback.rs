@@ -710,8 +710,7 @@ fn lower_deferred_imports(
   let check_async_chunks = matches!(
     reason,
     UnsupportedReason::SerialAsyncImports(_) | UnsupportedReason::ImportAfterAsyncDeferredImport(_)
-  ) && output.tla_module_count > 1
-    && matches!(options.format, OutputFormat::Esm)
+  ) && matches!(options.format, OutputFormat::Esm)
     && !options.code_splitting.is_disabled()
     && !options.preserve_modules
     // Strict wrappers evaluate their requests themselves, even across chunk boundaries.

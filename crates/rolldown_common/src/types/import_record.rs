@@ -78,6 +78,8 @@ bitflags::bitflags! {
     /// The import record is solely for re-export purposes, created by
     /// `export { .. } from '..'` or `export * as ns from '..'`
     const IsReExportOnly = 1 << 10;
+    /// A direct CommonJS star export lowered to named re-exports for a dynamic entry.
+    const CjsStarNamedExports = 1 << 11;
 
     const TopLevelPureDynamicImport = Self::IsTopLevel.bits() | Self::PureDynamicImport.bits();
   }

@@ -1,0 +1,23 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "reader",
+        "import": "./reader.js"
+      },
+      {
+        "name": "setup-only",
+        "import": "./setup-only.js"
+      },
+      {
+        "name": "later",
+        "import": "./later.js"
+      },
+      {
+        "name": "lib",
+        "import": "./lib.js"
+      }
+    ]
+  },
+  "snapshot": false
+}

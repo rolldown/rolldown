@@ -47,7 +47,7 @@ use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan, EventKindSwitc
 use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
 use rolldown_utils::ecmascript::{legitimize_identifier_name, to_usv_str};
-use rolldown_utils::indexmap::FxIndexMap;
+use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::borrow::Cow;
 use sugar_path::SugarPath;
@@ -83,6 +83,7 @@ pub struct ScanResult {
   /// may not know if it is a esm at the time, a simple case would be swap the order of two export
   /// stmt).
   pub commonjs_exports: FxHashMap<CompactStr, Vec<LocalExport>>,
+  pub cjs_literal_export_names: FxIndexSet<CompactStr>,
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub default_export_ref: SymbolRef,
@@ -208,6 +209,34 @@ pub struct AstScanner<'me, 'ast> {
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
+  fn literal_cjs_export(&self, node: &ast::AssignmentExpression<'ast>) -> Option<CompactStr> {
+    let member = node.left.as_member_expression()?;
+    if node.operator != ast::AssignmentOperator::Assign
+      || node.span.start != member.object().span().start
+    {
+      return None;
+    }
+    match member {
+      ast::MemberExpression::StaticMemberExpression(member) => {
+        let name = member.property.name.as_str();
+        (member.property.span.source_text(self.immutable_ctx.source) == name).then(|| name.into())
+      }
+      ast::MemberExpression::ComputedMemberExpression(member) => {
+        let Expression::StringLiteral(name) = &member.expression else { return None };
+        let start = member.object.span().end;
+        let prefix = Span::new(start, name.span.start).source_text(self.immutable_ctx.source);
+        let comments = self.immutable_ctx.comments;
+        let direct = prefix.match_indices('(').all(|(offset, _)| {
+          let position = start + u32::try_from(offset).unwrap();
+          let next = comments.partition_point(|comment| comment.span.end <= position);
+          comments.get(next).is_some_and(|comment| comment.span.start <= position)
+        });
+        name.value.as_str().filter(|_| direct).map(CompactStr::from)
+      }
+      ast::MemberExpression::PrivateFieldExpression(_) => None,
+    }
+  }
+
   #[expect(clippy::too_many_arguments)]
   pub fn new(
     idx: ModuleIdx,
@@ -266,6 +295,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       directive_range: vec![],
       dummy_record_set: FxHashSet::default(),
       commonjs_exports: FxHashMap::default(),
+      cjs_literal_export_names: FxIndexSet::default(),
       constant_export_map: FxHashMap::default(),
       deferred_write_constants: Vec::new(),
       ecma_view_meta: EcmaViewMeta::default(),

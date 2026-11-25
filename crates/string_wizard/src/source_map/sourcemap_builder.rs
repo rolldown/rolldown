@@ -1,6 +1,6 @@
 use crate::chunk::Chunk;
 
-use super::locator::Locator;
+use super::locator::{Location, Locator};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum Hires {
@@ -15,16 +15,18 @@ pub struct SourcemapBuilder<'a> {
   generated_code_line: u32,
   /// `generated_code_column` is calculated based on utf-16.
   generated_code_column: u32,
+  sourcemap_locations: &'a [u32],
   source_id: u32,
   source_map_builder: oxc_sourcemap::SourceMapBuilder<'a>,
 }
 
 impl<'a> SourcemapBuilder<'a> {
-  pub fn new(hires: Hires) -> Self {
+  pub fn new(hires: Hires, sourcemap_locations: &'a [u32]) -> Self {
     Self {
       hires,
       generated_code_line: 0,
       generated_code_column: 0,
+      sourcemap_locations,
       source_id: 0,
       source_map_builder: oxc_sourcemap::SourceMapBuilder::default(),
     }
@@ -57,7 +59,7 @@ impl<'a> SourcemapBuilder<'a> {
     source: &str,
     name_id: Option<u32>,
   ) {
-    let mut loc = locator.locate(chunk_start_utf16);
+    let loc = locator.locate(chunk_start_utf16);
     if let Some(edited_content) = &chunk.edited_content {
       for line in edited_content.split_inclusive('\n') {
         self.source_map_builder.add_token(
@@ -76,33 +78,51 @@ impl<'a> SourcemapBuilder<'a> {
       }
     } else {
       let chunk_content = chunk.span.text(source);
-      let mut new_line = true;
-      let mut char_in_hires_boundary = false;
-      for char in chunk_content.chars() {
-        match char {
-          '\n' => {
-            loc.bump_line();
-            self.bump_line();
-            new_line = true;
-            // A newline ends the current word run.
-            char_in_hires_boundary = false;
+      if matches!(self.hires, Hires::False) && !self.sourcemap_locations.is_empty() {
+        self.add_original_chunk::<true>(chunk_content, chunk_start_utf16, loc, name_id);
+      } else {
+        self.add_original_chunk::<false>(chunk_content, chunk_start_utf16, loc, name_id);
+      }
+    }
+  }
+
+  fn add_original_chunk<const WITH_LOCATIONS: bool>(
+    &mut self,
+    chunk_content: &str,
+    chunk_start_utf16: u32,
+    mut loc: Location,
+    name_id: Option<u32>,
+  ) {
+    let mut source_index = chunk_start_utf16;
+    let mut locations = if WITH_LOCATIONS {
+      let first = self.sourcemap_locations.partition_point(|&index| index < source_index);
+      &self.sourcemap_locations[first..]
+    } else {
+      &[]
+    }
+    .iter()
+    .copied()
+    .peekable();
+    let mut new_line = true;
+    let mut char_in_hires_boundary = false;
+    for char in chunk_content.chars() {
+      let char_utf16_len = char.len_utf16() as u32;
+      match char {
+        '\n' => {
+          if WITH_LOCATIONS {
+            locations.next_if_eq(&source_index);
           }
-          _ => {
-            if new_line || !matches!(self.hires, Hires::False) {
-              if matches!(self.hires, Hires::Boundary) {
-                if char.is_alphanumeric() || char == '_' {
-                  if !char_in_hires_boundary {
-                    self.source_map_builder.add_token(
-                      self.generated_code_line,
-                      self.generated_code_column,
-                      loc.line,
-                      loc.column,
-                      Some(self.source_id),
-                      name_id,
-                    );
-                    char_in_hires_boundary = true;
-                  }
-                } else {
+          loc.bump_line();
+          self.bump_line();
+          new_line = true;
+          // A newline ends the current word.
+          char_in_hires_boundary = false;
+        }
+        _ => {
+          if new_line || !matches!(self.hires, Hires::False) {
+            if matches!(self.hires, Hires::Boundary) {
+              if char.is_alphanumeric() || char == '_' {
+                if !char_in_hires_boundary {
                   self.source_map_builder.add_token(
                     self.generated_code_line,
                     self.generated_code_column,
@@ -111,7 +131,7 @@ impl<'a> SourcemapBuilder<'a> {
                     Some(self.source_id),
                     name_id,
                   );
-                  char_in_hires_boundary = false;
+                  char_in_hires_boundary = true;
                 }
               } else {
                 self.source_map_builder.add_token(
@@ -122,14 +142,42 @@ impl<'a> SourcemapBuilder<'a> {
                   Some(self.source_id),
                   name_id,
                 );
+                char_in_hires_boundary = false;
+              }
+            } else {
+              self.source_map_builder.add_token(
+                self.generated_code_line,
+                self.generated_code_column,
+                loc.line,
+                loc.column,
+                Some(self.source_id),
+                name_id,
+              );
+            }
+          }
+          if WITH_LOCATIONS {
+            while let Some(index) = locations.next_if(|&i| i < source_index + char_utf16_len) {
+              // The start of this line or chunk already has a segment.
+              if !new_line || index != source_index {
+                let delta = index - source_index;
+                self.source_map_builder.add_token(
+                  self.generated_code_line,
+                  self.generated_code_column + delta,
+                  loc.line,
+                  loc.column + delta,
+                  Some(self.source_id),
+                  name_id,
+                );
               }
             }
-            let char_utf16_len = char.len_utf16() as u32;
-            loc.column += char_utf16_len;
-            self.generated_code_column += char_utf16_len;
-            new_line = false;
           }
+          loc.column += char_utf16_len;
+          self.generated_code_column += char_utf16_len;
+          new_line = false;
         }
+      }
+      if WITH_LOCATIONS {
+        source_index += char_utf16_len;
       }
     }
   }

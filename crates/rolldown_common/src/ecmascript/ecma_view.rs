@@ -133,6 +133,7 @@ pub struct EcmaView {
   pub namespace_object_ref: SymbolRef,
   pub named_imports: FxIndexMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<CompactStr, LocalExport>,
+  pub cjs_literal_export_names: FxIndexSet<CompactStr>,
   pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,
   /// Cross-pass AST-node side tables use post-semantic `NodeId`. See internal-docs/ast-mutation/implementation.md.
   ///

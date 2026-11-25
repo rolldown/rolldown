@@ -1,4 +1,4 @@
-import type { RolldownLog } from 'rolldown';
+import type { ModuleInfo, RolldownLog } from 'rolldown';
 import { rolldown } from 'rolldown';
 import { expect, test } from 'vitest';
 
@@ -102,4 +102,69 @@ test('a write in the chunking context warns', async () => {
     await build.close();
   }
   expect(warnings).toEqual([expect.objectContaining({ code: CODE, id: 'a' })]);
+});
+test('a write to the module info from moduleParsed warns', async () => {
+  const { warnings, onLog } = collectWarnings();
+  let parsed: ModuleInfo | undefined;
+  const build = await rolldown({
+    input: 'entry',
+    onLog,
+    plugins: [
+      virtualModules,
+      {
+        name: 'writer',
+        moduleParsed(info) {
+          if (info.id === 'a') parsed = info;
+        },
+        renderStart() {
+          parsed!.moduleSideEffects = false;
+        },
+      },
+    ],
+  });
+  try {
+    await build.generate({});
+  } finally {
+    await build.close();
+  }
+  expect(warnings).toEqual([expect.objectContaining({ code: CODE, id: 'a', plugin: 'writer' })]);
+});
+
+test('internal members stay off the enumerable keys of plugin and code-splitting group contexts', async () => {
+  const keys: Record<string, string[]> = {};
+  const build = await rolldown({
+    input: 'entry',
+    plugins: [
+      virtualModules,
+      {
+        name: 'inspector',
+        buildStart() {
+          keys.buildStart = Object.keys(this);
+        },
+        transform() {
+          keys.transform ??= Object.keys(this);
+        },
+      },
+    ],
+  });
+  try {
+    await build.generate({
+      codeSplitting: {
+        groups: [
+          {
+            name(_id, ctx) {
+              keys.group ??= Object.keys(ctx);
+              return null;
+            },
+          },
+        ],
+      },
+    });
+  } finally {
+    await build.close();
+  }
+  expect(keys.buildStart).not.toContain('warnWriteAfterBuildEnd');
+  expect(keys.transform).not.toContain('warnWriteAfterBuildEnd');
+  expect(keys.group).not.toContain('warnWriteAfterBuildEnd');
+  expect(keys.group).not.toContain('onLog');
 });

@@ -24,6 +24,7 @@ use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
 use rustc_hash::{FxHashMap, FxHashSet};
 
+use crate::ast_scanner::facade_symbol_reserve;
 use crate::types::oxc_parse_type::OxcParseType;
 
 use super::parse_to_ecma_ast::ParseToEcmaAstResult;
@@ -251,7 +252,7 @@ impl PreProcessEcmaAst {
     }
 
     // Step 6: Modify AST for Rolldown.
-    let (scoping, import_defer_spans) =
+    let (scoping, import_defer_spans, facade_symbol_reserve) =
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
         let mut pre_processor = PreProcessor::new(
           allocator,
@@ -260,7 +261,9 @@ impl PreProcessEcmaAst {
         );
         pre_processor.visit_program(program);
         let defer_spans = pre_processor.take_defer_spans();
-        (self.recreate_scoping(&mut None, program), defer_spans)
+        let facade_symbol_reserve =
+          facade_symbol_reserve(program, bundle_options.is_dev_mode_enabled());
+        (self.build_scoping(program, facade_symbol_reserve), defer_spans, facade_symbol_reserve)
       });
 
     warnings.extend(import_defer_spans.into_iter().map(|span| {
@@ -281,6 +284,7 @@ impl PreProcessEcmaAst {
     Ok(ParseToEcmaAstResult {
       ast,
       scoping,
+      facade_symbol_reserve,
       has_lazy_export,
       warnings,
       preserve_jsx,
@@ -322,9 +326,14 @@ impl PreProcessEcmaAst {
     if let Some(scoping) = scoping.take() {
       return scoping;
     }
+    self.build_scoping(program, 0)
+  }
+
+  /// Builds a scoping with room for `extra_symbols` more symbols than the previous build created.
+  fn build_scoping(&mut self, program: &Program<'_>, extra_symbols: u32) -> Scoping {
     let ret = semantic_builder_for_transform()
       // Preallocate memory for the underlying data structures.
-      .with_stats(self.stats)
+      .with_stats(Stats { symbols: self.stats.symbols + extra_symbols, ..self.stats })
       .build(program)
       .semantic;
     self.stats = ret.stats();

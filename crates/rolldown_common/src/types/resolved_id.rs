@@ -1,6 +1,5 @@
 use std::{path::Path, sync::Arc};
 
-use arcstr::ArcStr;
 use rolldown_utils::{
   concat_string, dataurl::is_data_url, ecmascript::escape_line_terminators,
   stabilize_id::stabilize_id,
@@ -114,20 +113,6 @@ impl ResolvedId {
     let package_root = package_json.realpath().parent()?;
     let module_path_relative_to_package = self.id.relative_path(package_root);
     package_json.check_side_effects_for(&module_path_relative_to_package.to_string_lossy())
-  }
-
-  pub fn new_external_without_side_effects(id: ArcStr) -> Self {
-    Self {
-      id: ModuleId::new(id),
-      attributes: ImportAttributes::default(),
-      module_def_format: ModuleDefFormat::Unknown,
-      external: true.into(),
-      normalize_external_id: None,
-      package_json: None,
-      side_effects: None,
-      is_external_without_side_effects: true,
-      module_options_receipt: None,
-    }
   }
 }
 

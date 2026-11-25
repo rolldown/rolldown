@@ -631,6 +631,22 @@ pub struct ChunkGraph {
 
 - `chunk_table` — All chunks, indexed by `ChunkIdx`. May contain removed chunks (marked in `post_chunk_optimization_operations`) since re-indexing would be expensive.
 - `module_to_chunk` — Which chunk each module belongs to. O(1) lookup.
+- `chunk_idx_to_reference_ids` stores the reference IDs from `this.emitFile({ type: 'chunk' })`.
+  Each key is the index of an entry chunk.
+  `create_entry_facade` moves the IDs to the index of the new facade.
+  If the chunk optimizer removes a facade, the map keeps the index and IDs of that facade.
+
+  `emitted_chunk_reference_ids_by_file` groups the IDs by the index of the output chunk.
+  For a removed facade, the method finds the index in `entry_module_to_entry_chunk`.
+
+  - When `optimize_facade_entry_chunks` removes a facade, it stores the index of the chunk that contains the entry module.
+    That chunk provides the exports of the entry.
+  - If `apply_common_chunk_merges` merges that chunk into another chunk, it stores the index of the destination chunk.
+  - `restore_order_wrap_entry_facades` stores the index of a restored facade.
+
+  `set_emitted_chunk_preliminary_filenames` and `set_emitted_chunk_filenames` use `emitted_chunk_reference_ids_by_file`.
+  The preliminary and final filenames from `getFileName()` identify the same output chunk, even when the filename pattern contains `[hash]`.
+  See the `plugin/context/emit-chunk-in-code-splitting-group` test.
 
 ## Related
 

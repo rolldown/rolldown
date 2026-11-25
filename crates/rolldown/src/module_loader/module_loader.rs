@@ -877,7 +877,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
 
           self.symbol_ref_db.store_local_db(
             idx,
-            SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0)),
+            SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0), 0),
           );
           let symbol_ref = self.symbol_ref_db.create_facade_root_symbol_ref(idx, &identifier_name);
           let external_module = Module::External(Box::new(ExternalModule::new(
@@ -1207,7 +1207,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     // `try_spawn_new_task` records it as an error. The code below ends the wait, so
     // the build stops with that error and does not hang. No normal module task runs
     // for an external module in this scan, so the wait gets no second signal.
-    if self.is_external_module(idx) {
+    // A partial scan starts no task for a module that it reuses from a previous build
+    // either, and that build resolved the module's imports.
+    if self.is_external_module(idx) || !self.is_spawned_by_this_scan(idx) {
       self
         .shared_context
         .plugin_driver

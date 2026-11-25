@@ -9,6 +9,8 @@ import type {
 import type { BindingOutputChunk, BindingPluginContext } from '../binding.cjs';
 import { type BindingNormalizedOptions } from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
+import { LOG_LEVEL_WARN } from '../log/logging';
+import { logModuleSideEffectsWriteAfterBuildEnd } from '../log/logs';
 import { NormalizedInputOptionsImpl } from '../options/normalized-input-options';
 import { NormalizedOutputOptionsImpl } from '../options/normalized-output-options';
 import type { ModuleInfo } from '../types/module-info';
@@ -185,6 +187,11 @@ export class PluginContextData {
       return raw;
     }
     return option;
+  }
+
+  warnWriteAfterBuildEnd(moduleId: string, pluginName?: string): void {
+    const log = logModuleSideEffectsWriteAfterBuildEnd(moduleId);
+    this.onLog(LOG_LEVEL_WARN, pluginName === undefined ? log : { ...log, plugin: pluginName });
   }
 
   getModuleInfo(

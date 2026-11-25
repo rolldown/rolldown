@@ -71,7 +71,7 @@ impl Plugin for ViteImportGlobPlugin {
         return Err(err);
       }
       matchers = visitor.matchers;
-      output = visitor.magic_string.map(|magic_string| HookTransformOutput {
+      output = visitor.magic_string.map(|mut magic_string| HookTransformOutput {
         code: Some(magic_string.to_string()),
         map: HookTransformOutputMap::from_if_enabled(self.sourcemap, || {
           magic_string.source_map(string_wizard::SourceMapOptions {

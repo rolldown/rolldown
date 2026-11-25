@@ -123,6 +123,9 @@ impl EcmaView {
 pub struct EcmaView {
   pub dummy_record_set: FxHashSet<NodeId>,
   pub source: ArcStr,
+  /// The size a `load` or `transform` hook declares as `declaredModuleSize`. When present,
+  /// [`crate::Module::size`] uses it instead of the length of the code.
+  pub declared_module_size: Option<usize>,
   pub def_format: ModuleDefFormat,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,

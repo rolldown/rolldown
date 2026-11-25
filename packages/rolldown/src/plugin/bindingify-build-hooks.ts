@@ -304,6 +304,7 @@ function bindingifyTransformResult(
       bindingifySourcemap(prepareTransformHookSourcemap(map)) ??
       (ret.map === null ? null : undefined),
     moduleSideEffects: ret.moduleSideEffects ?? undefined,
+    declaredModuleSize: ret.declaredModuleSize,
     moduleType: ret.moduleType,
   };
 }
@@ -364,6 +365,7 @@ function bindingifyLoadResult(
     map: bindingifySourcemap(map),
     moduleType: ret.moduleType,
     moduleSideEffects: ret.moduleSideEffects ?? undefined,
+    declaredModuleSize: ret.declaredModuleSize,
   };
 }
 
@@ -405,7 +407,8 @@ export function bindingifyModuleParsed(
             args.pluginContextData.getModuleOption(moduleInfo.id),
             ctx,
             args.pluginContextData.moduleSideEffectsOption,
-            pluginContext.warnWriteAfterBuildEnd,
+            (moduleId) =>
+              args.pluginContextData.warnWriteAfterBuildEnd(moduleId, pluginContext.pluginName),
           ),
         ),
       );

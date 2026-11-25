@@ -40,7 +40,7 @@ export default {
 ```
 
 - `devMode` alone enables the dev/HMR machinery (`HmrPlugin`); `lazy: true` additionally prepends `LazyCompilationPlugin` before user plugins (`crates/rolldown/src/utils/apply_inner_plugins.rs`).
-- The plugin's `context()` exposes the shared `fetched_entries` set as a `LazyCompilationContext`, which is handed to the `DevEngine` so it can call `mark_as_fetched` before each lazy compile.
+- The plugin's `context()` exposes the shared `fetched_entries` set as a `LazyCompilationContext`, which the `Bundler` keeps. `Bundler::render_patch` passes it to `HmrStage::render_patch`, which marks a proxy as fetched only when a lazy pull scans its route (see [Proxy Module States](#3-proxy-module-states)).
 - rolldown-vite's bundled dev mode enables `lazy: true` by default.
 
 ## Scope

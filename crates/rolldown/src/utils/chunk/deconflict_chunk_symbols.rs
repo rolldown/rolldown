@@ -61,9 +61,16 @@ pub fn deconflict_chunk_symbols(
 ) -> Option<FileInlineNames> {
   // The modules and chunks whose root-scope declarations land in this file.
   let own_chunk = [chunk_idx];
+  let mut own_modules;
   let (modules, chunks): (&[ModuleIdx], &[ChunkIdx]) = match inline {
     Some(inline) => (&inline.modules, &inline.chunks),
-    None => (&chunk.modules, &own_chunk),
+    None => {
+      // The renamer walks modules in reverse execution order.
+      // `module-id` moves side-effect-free leaves to the front of the print list.
+      own_modules = chunk.modules.clone();
+      own_modules.sort_by_key(|idx| link_output.module_table[*idx].exec_order());
+      (&own_modules, &own_chunk)
+    }
   };
   let inner_binding_names = InnerBindingNames::new(
     modules

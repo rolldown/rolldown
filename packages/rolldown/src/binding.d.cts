@@ -1004,9 +1004,6 @@ export interface DecoratorOptions {
    * target. Other target-selected transforms still run on unrelated syntax.
    * `legacy: true` takes precedence over this option.
    *
-   * Lowering needs helpers that only `@oxc-project/runtime` provides, so it reports an error
-   * with `helpers: { mode: "External" }`.
-   *
    * @default undefined
    */
   lower?: boolean

@@ -8,7 +8,6 @@ import { getInputCliKeys, getOutputCliKeys, validateCliOptions } from '../../uti
 import { logger } from '../logger.ts';
 import type { ConfigLoader } from '../../utils/load-config.ts';
 import type { CliOptions } from './alias.ts';
-import { setNestedProperty } from './utils.ts';
 
 const reservedKeys = new Set(['help', 'version', 'config', 'watch', 'environment', 'configLoader']);
 
@@ -27,7 +26,7 @@ export function normalizeCliOptions(
   cliOptions: CliOptions,
   positionals: string[],
 ): NormalizedCliOptions {
-  // cliOptions is already unflattened (cac's setDotProp) and prototype-safe (post-processing in arguments/index.ts)
+  // cliOptions is already unflattened by cac's setDotProp
   const [data, errors] = validateCliOptions<CliOptions>(cliOptions);
   if (errors?.length) {
     errors.forEach((error) => {
@@ -63,12 +62,10 @@ export function normalizeCliOptions(
   const keysOfOutput = new Set(getOutputCliKeys());
 
   for (let [key, value] of Object.entries(options)) {
-    const keys = key.split('.');
-    const [primary] = keys;
-    if (keysOfInput.has(primary)) {
-      setNestedProperty(result.input, key, value);
-    } else if (keysOfOutput.has(primary)) {
-      setNestedProperty(result.output, key, value);
+    if (keysOfInput.has(key)) {
+      (result.input as Record<string, unknown>)[key] = value;
+    } else if (keysOfOutput.has(key)) {
+      (result.output as Record<string, unknown>)[key] = value;
     } else if (!reservedKeys.has(key)) {
       logger.error(`Unknown option: ${key}`);
       process.exit(1);

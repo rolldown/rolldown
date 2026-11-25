@@ -19,8 +19,7 @@ pub use {
   rolldown::BundlerConfig,
   rolldown_dev_common::types::{
     BundleOutput, DevOptions, DevWatchOptions, NormalizedDevOptions, OnAdditionalAssetsCallback,
-    OnHmrUpdatesCallback, OnOutputCallback, RebuildStrategy, SharedNormalizedDevOptions,
-    normalize_dev_options,
+    OnHmrUpdatesCallback, OnOutputCallback, RebuildStrategy, normalize_dev_options,
   },
 };
 

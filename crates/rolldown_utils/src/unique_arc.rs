@@ -11,7 +11,7 @@ impl<T> UniqueArc<T> {
   }
 
   /// # Panics
-  /// - Don't call this method while calling the `WeakRef#with_inner` method.
+  /// - Don't call this method while calling the `WeakRef#try_with_inner` method.
   pub fn into_inner(self) -> T {
     Arc::into_inner(self.0).unwrap_or_else(|| {
       let t_name = pretty_type_name::<T>();
@@ -35,18 +35,6 @@ impl<T> WeakRef<T> {
     F: FnOnce(&T) -> R,
   {
     self.0.upgrade().map(|arc| f(&*arc))
-  }
-
-  pub fn with_inner<F, R>(&self, f: F) -> R
-  where
-    F: FnOnce(&T) -> R,
-  {
-    self.try_with_inner(f).unwrap_or_else(|| {
-      let t_name = pretty_type_name::<T>();
-      panic!(
-        "UniqueArc<{t_name}> is already dropped. You can't access it by this WeakRef<{t_name}>",
-      )
-    })
   }
 }
 

@@ -863,7 +863,6 @@ export interface InputOptions {
 
 interface OverwriteInputOptionsForCli {
   external?: string[];
-  inject?: Record<string, string>;
   treeshake?: boolean;
 }
 

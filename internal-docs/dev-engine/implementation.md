@@ -750,8 +750,9 @@ without forcing a rebuild.
    `generate_hmr_updates`.
 4. **Rebuild** — if `requires_rebuild()`: when step 3 pushed a
    `Changed` update, first waits for the consumer and for the pulls
-   ("Pulls before the rebuild" below). Then sets `has_rebuild_happen =
-   true` and calls `rebuild()`.
+   ("Pulls before the rebuild" below). Then calls `rebuild()`, which
+   takes the bundler lock, skips the build when the engine is closed,
+   and otherwise sets `has_rebuild_happen = true` and builds.
 
 ### `generate_hmr_updates` (`bundling_task.rs`)
 
@@ -1021,9 +1022,11 @@ client:                    push --> GET --> [lock: render_patch]
 The wait starts only after step 1, so a JS thread that is busy when the
 push is queued (a GC, serving a large chunk, or async work of the
 consumer) does not use up the quiet period. A pull that arrived during
-the wait and still waits for the lock also runs before the rebuild:
-`async_lock::Mutex` gives the lock to a waiter that waited longer than
-0.5 ms before a new caller.
+the wait and still waits for the lock usually runs before the rebuild
+too: `async_lock::Mutex` wakes waiters in the order they started to
+wait, and the rebuild starts to wait after them. A new caller can still
+take the lock in the short time between an unlock and the poll of the
+woken waiter.
 
 `DevEngine::close` waits for the running task, so both steps also end
 when the engine closes (`DevContext::closed`). `rebuild` checks

@@ -230,8 +230,10 @@ impl BundlingTask {
   /// Clients pull the code of an update after its push, and a pull needs the bundler lock. The
   /// rebuild holds that lock for the whole build. So after the consumer handled the push, the
   /// rebuild first waits until no pull arrived for `PULL_QUIET_PERIOD`, and at most
-  /// `PULL_WAIT_LIMIT`. A pull that still waits for the lock then also runs first, because
-  /// `async_lock::Mutex` serves a waiter that waited longer than 0.5 ms before a new caller.
+  /// `PULL_WAIT_LIMIT`. A pull that still waits for the lock usually runs first too:
+  /// `async_lock::Mutex` wakes waiters in the order they started to wait, and the rebuild starts
+  /// to wait after them. A new caller can still take the lock in the short time between an
+  /// unlock and the poll of the woken waiter.
   /// The wait ends when the engine closes, because `DevEngine::close` waits for this task.
   /// See internal-docs/dev-engine/implementation.md ("Pulls before the rebuild").
   async fn wait_for_pulls(&self, push_handled: HmrUpdatesHandled) {

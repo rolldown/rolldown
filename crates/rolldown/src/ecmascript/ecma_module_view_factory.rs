@@ -31,10 +31,12 @@ pub async fn create_ecma_view(
   ctx: &mut CreateModuleContext<'_>,
   args: CreateModuleViewArgs,
 ) -> BuildResult<CreateEcmaViewReturn> {
-  let CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects } = args;
+  let CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects, declared_module_size } =
+    args;
   let ParseToEcmaAstResult {
     mut ast,
     scoping,
+    facade_symbol_reserve,
     has_lazy_export,
     warnings,
     preserve_jsx,
@@ -53,6 +55,7 @@ pub async fn create_ecma_view(
     let scanner = AstScanner::new(
       ctx.module_idx,
       scoping,
+      facade_symbol_reserve,
       &repr_name,
       ctx.resolved_id.module_def_format,
       fields.source,
@@ -67,6 +70,7 @@ pub async fn create_ecma_view(
 
   let ScanResult {
     commonjs_exports,
+    cjs_literal_export_names,
     named_imports,
     mut named_exports,
     stmt_infos,
@@ -124,8 +128,10 @@ pub async fn create_ecma_view(
   // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
   let ecma_view = EcmaView {
     source: ast.source().clone(),
+    declared_module_size,
     named_imports,
     named_exports,
+    cjs_literal_export_names,
     imports,
     default_export_ref,
     exports_kind,

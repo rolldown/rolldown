@@ -24,3 +24,4 @@ pub mod binding_render_chunk_meta_chunks;
 pub mod binding_resolved_external;
 pub mod binding_shared_string;
 pub mod binding_vite_plugin_custom;
+pub mod declared_module_size;

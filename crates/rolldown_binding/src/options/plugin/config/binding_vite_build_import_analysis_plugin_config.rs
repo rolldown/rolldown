@@ -1,11 +1,9 @@
 use rolldown_plugin_vite_build_import_analysis::ViteBuildImportAnalysisPlugin;
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[expect(clippy::struct_excessive_bools)]
 pub struct BindingViteBuildImportAnalysisPluginConfig {
   pub preload_code: String,
   pub insert_preload: bool,
-  pub optimize_module_preload_relative_paths: bool,
   pub render_built_url: bool,
   pub is_relative_base: bool,
 }

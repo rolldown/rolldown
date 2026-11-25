@@ -44,6 +44,7 @@ use crate::{SharedOptions, SharedResolver};
 
 use super::external_module_task::ExternalModuleTask;
 use super::module_task::ModuleTask;
+use super::resolve_utils::refresh_package_json;
 use super::runtime_module_task::RuntimeModuleTask;
 use super::task_context::{TaskContext, TaskContextMeta};
 
@@ -446,7 +447,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
 
   fn try_spawn_new_task(
     &mut self,
-    mut resolved_id: ResolvedId,
+    resolved_id: ResolvedId,
     owner: Option<ModuleTaskOwner>,
     is_user_defined_entry: bool,
     assert_module_type: Option<&ModuleType>,
@@ -462,13 +463,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       }
       Some(VisitState::Invalidate(idx)) => {
         is_new_module = false;
-        // An incremental rebuild resolves a changed file again without an importer, but the
-        // module keeps the `moduleSideEffects` of the resolution that created it.
-        if let Some(Module::Normal(module)) =
-          self.cache.snapshot().and_then(|snapshot| snapshot.module_table.modules.get(idx))
-        {
-          resolved_id.side_effects = module.originative_resolved_id.side_effects;
-        }
         // Full scan mode the idx will never be invalidated right?
         self.intermediate_normal_modules.alloc_ecma_module_idx_sparse(idx);
         self.cache.module_id_to_idx.insert(resolved_id.id.clone(), VisitState::Seen(idx));
@@ -617,8 +611,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
         changed_resolved_ids.push(resolved_id);
       }
     }
-    // Keep only the module options set when the changed modules were resolved, because their
-    // importers do not resolve them again.
+    for resolved_id in &mut changed_resolved_ids {
+      refresh_package_json(resolved_id, &self.shared_context.resolver, &self.shared_context.fs);
+    }
+    // Each changed module starts again from the resolution that created it (`changed_resolved_ids`
+    // in `scan_stage.rs`), so drop the module options that its hooks and writes set after that.
+    // `ScanStage::scan` reset them before `buildStart` too. This reset also drops what
+    // `buildStart` set.
     for resolved_id in &changed_resolved_ids {
       self
         .shared_context
@@ -657,8 +656,16 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     let mut dynamic_import_entry_ids = FxHashMap::default();
     let mut dynamic_import_exports_usage_pairs = vec![];
 
-    while self.remaining > 0 || !pending_entries.is_empty() {
-      let event = if pending_entries.is_empty() {
+    loop {
+      let event = if self.remaining == 0 && pending_entries.is_empty() {
+        // No task runs, but a hook that ran before this loop can have queued a message, such as
+        // a chunk that `buildStart` emitted. A partial scan in which no module changed starts no
+        // task, so read the queued messages before stopping.
+        match self.rx.try_next() {
+          Ok(Some(msg)) => Either::Left(msg),
+          Ok(None) | Err(_) => break,
+        }
+      } else if pending_entries.is_empty() {
         let Some(msg) = self.rx.next().await else { break };
         Either::Left(msg)
       } else {
@@ -819,20 +826,15 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             //   `entry_cannot_be_external`.
             // - `try_spawn_new_task` rejects an entry whose id is already an external module.
             if matches!(raw_rec.kind, ImportKind::DynamicImport) && !is_external {
+              let site = raw_rec
+                .dynamic_import_expr_info
+                .as_ref()
+                .map(|info| (module_idx, info.stmt_info_idx, info.node_id, rec_idx));
               match dynamic_import_entry_ids.entry(idx) {
-                Entry::Vacant(vac) => match raw_rec.dynamic_import_expr_info.as_ref() {
-                  Some(info) => {
-                    vac.insert(vec![(module_idx, info.stmt_info_idx, info.node_id, rec_idx)]);
-                  }
-                  None => {
-                    vac.insert(vec![]);
-                  }
-                },
-                Entry::Occupied(mut occ) => {
-                  if let Some(info) = raw_rec.dynamic_import_expr_info.as_ref() {
-                    occ.get_mut().push((module_idx, info.stmt_info_idx, info.node_id, rec_idx));
-                  }
+                Entry::Vacant(vac) => {
+                  vac.insert(site.into_iter().collect::<Vec<_>>());
                 }
+                Entry::Occupied(mut occ) => occ.get_mut().extend(site),
               }
             }
             import_records.push(raw_rec.into_resolved(Some(idx)));
@@ -877,7 +879,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
 
           self.symbol_ref_db.store_local_db(
             idx,
-            SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0)),
+            SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0), 0),
           );
           let symbol_ref = self.symbol_ref_db.create_facade_root_symbol_ref(idx, &identifier_name);
           let external_module = Module::External(Box::new(ExternalModule::new(
@@ -1207,7 +1209,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     // `try_spawn_new_task` records it as an error. The code below ends the wait, so
     // the build stops with that error and does not hang. No normal module task runs
     // for an external module in this scan, so the wait gets no second signal.
-    if self.is_external_module(idx) {
+    // A partial scan starts no task for a module that it reuses from a previous build
+    // either, and that build resolved the module's imports.
+    if self.is_external_module(idx) || !self.is_spawned_by_this_scan(idx) {
       self
         .shared_context
         .plugin_driver

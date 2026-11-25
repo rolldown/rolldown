@@ -17,7 +17,7 @@ use crate::utils::chunk::normalize_preserve_entry_signature;
 
 use super::{
   GenerateStage, code_splitting::IndexSplittingInfo,
-  dynamic_entry_namespace::is_pure_dynamic_entry_chunk, manual_code_splitting::ManualGroupTests,
+  dynamic_entry_namespace::is_pure_dynamic_entry_chunk, manual_code_splitting::ManualGroupPlan,
   reduced_chunk_graph::ReducedChunkGraph,
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
@@ -25,7 +25,7 @@ use super::{
 struct ChunkAtom {
   modules: Vec<ModuleIdx>,
   dependent_entries: BitSet,
-  /// The manual groups that can take the atom's modules (see `manual_group_by_module`). Such an
+  /// The planned manual group chunk that takes the atom's modules (see `ManualGroupPlan`). Such an
   /// atom keeps its bits.
   manual_group: Option<usize>,
 }
@@ -108,7 +108,7 @@ impl GenerateStage<'_> {
     entries_len: u32,
     used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
     dynamic_entry_merge_targets: &mut FxHashSet<ChunkIdx>,
-    group_tests: Option<&ManualGroupTests>,
+    manual_group_plan: Option<&ManualGroupPlan>,
   ) {
     let mut namespace_extractions = FxHashSet::default();
     let DynamicEntryAnalysis {
@@ -121,7 +121,9 @@ impl GenerateStage<'_> {
       return;
     }
 
-    let manual_group_by_module = self.manual_group_by_module(group_tests);
+    let module_count = self.link_output.module_table.modules.len();
+    let manual_group_by_module = manual_group_plan
+      .map_or_else(|| index_vec![None; module_count], |plan| plan.chunk_by_module(module_count));
     let mut atoms =
       self.group_modules_by_dependent_entries(index_splitting_info, &manual_group_by_module);
     if atoms.is_empty() {
@@ -173,8 +175,8 @@ impl GenerateStage<'_> {
         && self.prefers_inline_with_dynamic_entries(&atom.modules)
     };
     for (atom_idx, atom) in atoms.iter_mut().enumerate() {
-      // A group takes the module wherever its bits put it, so a move would not change its chunk,
-      // and the cycle graph could not check where it lands if the group leaves it behind.
+      // A group takes the module wherever its bits put it, so a move would not change its chunk.
+      // Its bits also stay as they were when the groups were planned.
       if atom.manual_group.is_some() {
         continue;
       }
@@ -1013,73 +1015,6 @@ impl GenerateStage<'_> {
     import_record.kind == ImportKind::DynamicImport
       && import_record.resolved_module == Some(dynamic_entry_module_idx)
       && !import_record.meta.contains(ImportRecordMeta::DeadDynamicImport)
-  }
-
-  /// The modules that the manual groups can take, with a group for each. A group takes the
-  /// modules its `test` matches, and with `includeDependenciesRecursively` their dependencies.
-  /// Its size and share filters and its `name` can still leave a module out, so this can only
-  /// put too many modules in groups. Groups that can take the same module get one number: which
-  /// of them takes it depends on priorities, and in the cycle graph one node for both keeps every
-  /// path that either has.
-  fn manual_group_by_module(
-    &self,
-    group_tests: Option<&ManualGroupTests>,
-  ) -> IndexVec<ModuleIdx, Option<usize>> {
-    let module_count = self.link_output.module_table.modules.len();
-    let (Some(group_tests), Some(chunking_options)) =
-      (group_tests, self.options.manual_code_splitting.as_ref())
-    else {
-      return index_vec![None; module_count];
-    };
-    let Some(match_groups) = chunking_options.groups.as_ref() else {
-      return index_vec![None; module_count];
-    };
-    let mut parent: Vec<usize> = (0..match_groups.len()).collect();
-    let find = |parent: &mut Vec<usize>, mut group: usize| {
-      while parent[group] != group {
-        parent[group] = parent[parent[group]];
-        group = parent[group];
-      }
-      group
-    };
-    let mut group_by_module: IndexVec<ModuleIdx, Option<usize>> = index_vec![None; module_count];
-    for (group, (match_group, matched)) in match_groups.iter().zip(&group_tests.matched).enumerate()
-    {
-      let recursively = match_group
-        .include_dependencies_recursively
-        .or(chunking_options.include_dependencies_recursively)
-        .unwrap_or(true);
-      let mut stack: Vec<ModuleIdx> = group_tests
-        .candidates
-        .iter()
-        .zip(matched)
-        .filter_map(|(&module_idx, &is_matched)| is_matched.then_some(module_idx))
-        .collect();
-      let mut visited = FxHashSet::default();
-      while let Some(module_idx) = stack.pop() {
-        if !visited.insert(module_idx)
-          || module_idx == self.link_output.runtime.id()
-          || !self.link_output.module_table[module_idx].is_normal()
-          || !self.link_output.metas[module_idx].is_included
-        {
-          continue;
-        }
-        match group_by_module[module_idx] {
-          Some(other) => {
-            let (root, other_root) = (find(&mut parent, group), find(&mut parent, other));
-            parent[other_root] = root;
-          }
-          None => group_by_module[module_idx] = Some(group),
-        }
-        if recursively {
-          stack.extend(self.link_output.metas[module_idx].dependencies.iter().copied());
-        }
-      }
-    }
-    for group in group_by_module.iter_mut().flatten() {
-      *group = find(&mut parent, *group);
-    }
-    group_by_module
   }
 
   fn group_modules_by_dependent_entries(

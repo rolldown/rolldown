@@ -1,0 +1,15 @@
+{
+  "_comment": "The `vendor` group chunk and `main.js` import each other with or without the fold. The fold of `lib.js` into `main.js` adds no edge to that cycle, so it still happens, and `setup.js` runs before `lib.js`, as in Node.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "vendor",
+          "test": "[\\\\/]vendor\\.js$",
+          "includeDependenciesRecursively": false
+        }
+      ]
+    }
+  }
+}

@@ -993,10 +993,10 @@ impl GenerateStage<'_> {
     // The pure dynamic entry chunks that a merge gives modules of other entries. See
     // `find_leaking_dynamic_entry_namespaces`.
     let mut dynamic_entry_merge_targets = FxHashSet::default();
-    let group_tests =
-      self.run_manual_group_tests_for_fold(allow_avoid_redundant_chunk_loads).await?;
+    let mut group_plan = None;
     // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
     if allow_avoid_redundant_chunk_loads {
+      group_plan = self.plan_manual_groups_for_fold(index_splitting_info, &tag_registry).await?;
       let entries_len: u32 = self
         .link_output
         .entries
@@ -1011,7 +1011,7 @@ impl GenerateStage<'_> {
         entries_len,
         used_symbol_refs_builder,
         &mut dynamic_entry_merge_targets,
-        group_tests.as_ref(),
+        group_plan.as_ref(),
       );
     }
     self.extract_standalone_runtime_chunk(
@@ -1023,7 +1023,7 @@ impl GenerateStage<'_> {
 
     self
       .apply_manual_code_splitting(
-        group_tests.as_ref(),
+        group_plan,
         index_splitting_info,
         &mut module_is_assigned,
         chunk_graph,

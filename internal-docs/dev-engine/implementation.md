@@ -881,9 +881,9 @@ Known gap, kept on purpose for now:
 `compile_lazy_entry`, and parses the query with the session's number
 count (`ClientHave::parse_query`,
 `crates/rolldown_common/src/hmr/client_have.rs`). A query that does not
-parse gets `HmrPullResponse::Reload`: a set that is not a `b…` bitset,
-or a number at or above the count. A pull that arrives during a rebuild
-waits for it.
+parse gets `HmrPullResponse::Reload`: a set that is neither a `b…`
+bitset nor a `d…` gap list, or a number at or above the count. A pull
+that arrives during a rebuild waits for it.
 
 `HmrStage::render_patch(&have)`:
 

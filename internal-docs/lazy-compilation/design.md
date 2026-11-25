@@ -161,7 +161,7 @@ The state transition is managed by `LazyCompilationContext.mark_as_fetched()`.
 
 The dev server owns the lazy endpoint URL. The client loads a lazy chunk through `DevRuntime#loadLazyChunk(proxyModuleId)` (`runtime-extra-dev-common.js`):
 
-- The default imports `lazyUrl(proxyModuleId, query)`, which is `/@vite/lazy?id=<proxy id>&s=<epoch>&g=<knownGen>&e=<E>&f=<F>&n=<nonce>`. The query after `id` is `encodeHave` with an empty update set, the same have-set a patch request sends.
+- The default imports `lazyUrl(proxyModuleId, query)`, which is `/@vite/lazy?id=<proxy id>&s=<epoch>&g=<knownGen>&e=<E>&f=<F>&n=<nonce>`. The query after `id` is `encodeHave` with an empty update set, the same have-set a patch request sends. A query longer than `maxQueryLength` goes first in a POST body, and the URL carries `t=<token>&n=<nonce>` instead (`requestQuery`, see [hmr/design.md](../hmr/design.md), principle 6, "Request size").
 - A server that serves the endpoint at another URL overrides `lazyUrl` in its `DevRuntime` subclass. A client that does not load through `import()`, such as Vite's module runner, overrides `loadLazyChunk`.
 - Emitted code carries ids only. It never contains the URL, the have-set, or `encodeURIComponent` (a user binding of that name in the importer's scope cannot break the request).
 

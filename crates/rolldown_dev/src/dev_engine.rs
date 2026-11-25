@@ -1521,9 +1521,14 @@ mod tests {
       HmrPullResponse::Reload { .. }
     ));
     assert!(matches!(engine.render_patch("g=1").await.unwrap(), HmrPullResponse::Reload { .. }));
-    // Number 1000 was never given out.
-    let unknown = format!("s=7&g=1&u={}", HmrNumSet::from_nums([1000]).encode());
-    assert!(matches!(engine.render_patch(&unknown).await.unwrap(), HmrPullResponse::Reload { .. }));
+    // Number 1000 was never given out: as a gap list (the varint e8 07), and as a bitset whose
+    // byte 125 is 01.
+    for unknown in ["d6Ac".to_owned(), format!("b{}B", "A".repeat(167))] {
+      assert!(matches!(
+        engine.render_patch(&format!("s=7&g=1&u={unknown}")).await.unwrap(),
+        HmrPullResponse::Reload { .. }
+      ));
+    }
 
     engine.close().await.unwrap();
     std::fs::remove_dir_all(&dir).unwrap();

@@ -78,6 +78,7 @@ The messages are:
 | client → server | patch GET                   | epoch, known gen, `U`, executed set, factories  |
 | client → server | payload map GET (devtools)  | the id of a sourcemap Vite served a link to     |
 | client → server | lazy GET (`/@vite/lazy`)    | proxy id, epoch, known gen, executed, factories |
+| client → server | have-set POST (long query)  | the query of the next patch or lazy GET         |
 | client → server | reload request              | the reason                                      |
 
 Every principle below follows from this split.
@@ -127,12 +128,17 @@ for it. The client tells it, inside the GET it makes to load that code:
   per URL)
 
 An empty set is left out. So is `g` while the client does not know it
-(principle 3).
+(principle 3). A query longer than 6000 characters goes to the server in
+a POST body first, and the GET carries only a token for it (principle 6,
+"Request size").
 
 The client builds this query right before the GET, after `markStale`
 (principle 4). So it is exact at the moment the server reads it. Nothing
 can land between "the client reported" and "the server rendered", because
-the report and the request are the same message.
+the report and the request are the same message. The POST path is the one
+exception: the report is the POST and the request is the GET after it.
+A push can land in between, and `ensureRunnable` covers that case
+(principle 6, "Request size").
 
 The server reads the request with `holds_current` and
 `collect_unheld_sync_deps` (principle 7) and carries exactly the code
@@ -417,18 +423,34 @@ the update. So the runtime counts `registerModule` calls:
   client sends sets of modules as sets of numbers. A module with no
   number is left out; the server then counts it as not executed and not
   held, which can only add bytes.
-- **Set encoding.** A set is `b` and a bitset: bit `i` is set for number
-  `i`, bytes in little-endian bit order, base64url without padding.
-  Example: `{0, 3, 8, 17}` is the bytes `09 01 02`, sent as `bCQEC`. A
-  bitset costs about `n / 6` characters, where `n` is the highest number
-  in the set.
+- **Set encoding.** Each set has two forms. The client sends the shorter
+  one, after a one-character prefix. On equal length it picks `b`.
+  - `b` — a bitset: bit `i` is set for number `i`, bytes in
+    little-endian bit order, base64url without padding. Example:
+    `{0, 3, 8, 17}` is the bytes `09 01 02`, sent as `bCQEC`.
+  - `d` — the sorted numbers as LEB128 varints of their gaps, base64url
+    without padding. The first varint is the first number, and each next
+    one is the number minus the one before it. Example: `{5, 1000, 10000}`
+    has the gaps `5, 995, 9000`, the bytes `05 e3 07 a8 46`, sent as
+    `dBeMHqEY`. Its bitset would be 1251 bytes.
+
+  A bitset costs about `n / 6` characters, where `n` is the highest
+  number in the set. Numbers are never reused, so `n` grows with every
+  module the engine has seen, also modules this tab never loaded. A gap
+  list costs about 4/3 characters per member when the members are close
+  together (a gap below 128 is one byte). Numbers are given out per build
+  and per lazy compile, so the modules of one route get close numbers. So
+  a tab that ran a few routes of a large app sends short gap lists, and a
+  tab that ran most of the app sends bitsets.
+
 - **Decoding limits.** The server parses the sets in
   `crates/rolldown_common/src/hmr/client_have.rs`, with the session's
   number count. It rejects a set with another prefix, a set that names a
-  number at or above that count, and input longer than any valid set of
-  the session. The decoded set is a bitset of at most `count / 8` bytes,
-  whatever the input. A rejected query is a Reload ("the query does not
-  parse" below).
+  number at or above that count, a varint that is cut off, longer than
+  needed, or too large for a `u32`, a gap of 0, and input longer than any
+  valid set of the session. The decoded set is a bitset of at most
+  `count / 8` bytes, whatever the input. A rejected query is a Reload
+  ("the query does not parse" below).
 - **Epoch.** Each `DevEngine` picks a random nonzero `u32`. A tab that
   survived a dev server restart has numbers that mean other modules in
   the new engine. Its epoch does not match, so it reloads.
@@ -477,7 +499,8 @@ The server answers **Reload** instead of a payload when:
 - an update after `g` is no longer kept (the session keeps 64), or `g`
   is older than the last engine full reload (Failure policy). Both set
   one floor, `min_client_gen`: a `g` below it reloads.
-- the query does not parse
+- the query does not parse, or its token is unknown or expired (Vite
+  answers this one itself; see "Request size")
 - no build has a module graph
 
 Reload must always end in a page reload. A failed import cannot say
@@ -498,13 +521,88 @@ requests: `ensureRunnable` returns `reload`, and a `requestLazy` or
 `loadDynamic` call rejects.
 
 **Request size.** Node's default `maxHeaderSize` is 16 KiB for the
-request line and all headers, and Vite keeps it. Each set costs about
-`n / 6` characters, so three dense sets pass that limit at about 30,000
-module numbers. Such a request fails with 431: an update then reloads,
-and a lazy load rejects the user's `import()`. See Unresolved Questions.
+request line and all headers, and Vite keeps it. A longer request fails
+with 431. So when the query is longer than `maxQueryLength` (6000
+characters), `requestQuery` in the runtime sends it first:
 
-`encodeHave` builds each set as a bitset. The runtime keeps the ids of
-the factories of modules that did not run (`factoriesNotRun`), so `f`
+1. `POST <haveUrl()>` with the query as the body
+   (`application/x-rolldown-hmr-have`). The default URL is
+   `/__rolldown_hmr_have`; Vite serves `<base>__rolldown_hmr_have`.
+2. The server stores the query and answers a random token as text.
+3. The GET carries only the token:
+   `__rolldown_hmr_patch.js?t=<token>&n=<nonce>` or
+   `/@vite/lazy?id=<proxy id>&t=<token>&n=<nonce>`.
+
+The server resolves the token to the stored query before it calls the
+engine, so the engine never sees a token. Each token is used once and
+expires after 10 minutes. An unknown or expired token gets the same
+Reload body as any other Reload. A failed POST rejects like a failed GET.
+
+The store never drops a token before it expires. A GET starts only after
+its POST answered, so many lazy loads that start at once send all their
+POSTs first. Their GETs then wait in the browser queue (6 connections
+per host on HTTP/1.1), and lazy compiles run one at a time. So a GET can
+reach the server many seconds after its POST. To bound its memory, the
+store refuses new queries instead:
+
+- at most 1024 queries and 64 MiB in all; a POST beyond that gets 503
+- a body over 1 MiB gets 413 (about 2 million numbers, far more than a
+  real app has)
+
+Vite's client resolves `haveUrl()` against its own module URL, the same
+way `import()` resolves the patch URL. With `server.origin` (backend
+integration), the page is on another origin, and the POST still goes to
+Vite.
+
+The POST keeps data on the server, so other sites must not reach it.
+The body type is not CORS-safelisted, and a plain form or a `no-cors`
+fetch cannot send it. So a page on another origin can only post after a
+preflight, and Vite's `server.cors` answers the preflight, the same way
+it allows the module scripts. The route compares only the media type, so
+a parameter such as `charset` does not matter. Any other body type gets 415.
+
+In middleware mode, a body parser of the parent app can read the body
+before Vite sees it. The route then takes the body from `req.body`, and
+the 1 MiB limit applies to that body too.
+
+The query is built before the POST, so it describes the client one round
+trip before the GET. A push that lands in between is the same case as a
+push that lands while a GET is on the way: `ensureRunnable` checks again
+after the pull and makes the second pull if needed (principle 5).
+
+Rejected: **a POST for every request**. It adds a round trip to every
+pull, and most queries are short (below). Rejected: **the payload as the
+POST answer**. The payload must run as a module of the page, and
+`import()` can only make a GET. The module runner has no header limit,
+so it never posts (`maxQueryLength = Infinity`).
+
+Query length on generated benchmark apps with 1000, 5000 and 10000 React
+components (lazy routes at depth 2 or 3, numbers in lazy mode):
+
+| app   | numbers | tab                     | request     | query length |
+| ----- | ------- | ----------------------- | ----------- | ------------ |
+| 1000  | 2553    | 3 routes (400 executed) | leaf edit   | 395          |
+| 5000  | 10054   | 3 routes (814 executed) | leaf edit   | 888          |
+| 10000 | 20054   | boot only (36 executed) | lazy load   | 49           |
+| 10000 | 20054   | 3 routes (660 executed) | leaf edit   | 933          |
+| 10000 | 20054   | 3 routes (660 executed) | shared edit | 938          |
+| 10000 | 20054   | every route (all 20054) | leaf edit   | 3384         |
+
+A tab that ran a few routes sends about 4/3 characters per member of
+`e`, whatever the number count, and `f` holds only the factories of
+modules it did not run and of `U`. A tab that ran most of a large app
+sends `e` as a bitset of about `n / 6` characters, so it crosses 6000
+characters at about 36,000 numbers.
+
+Rejected: **bitsets only**. A bitset costs about `n / 6` characters
+however few members it has. On the 10000 app a set that names a high
+number is about 3300 characters as a bitset. So the tab that ran 3
+routes would send `u`, `e` and `f` at up to 3300 characters each, while
+the gap lists send 933 characters in all.
+
+`encodeHave` builds each set as a bitset first. The bitset gives the
+numbers in order, so neither form needs a sort. The runtime keeps the ids
+of the factories of modules that did not run (`factoriesNotRun`), so `f`
 does not walk every factory.
 
 ### 7. Patches carry only what the request lacks; the payload generation keeps the newest copy
@@ -642,12 +740,13 @@ boundary from static data that the module did not accept at runtime.
 
 The runtime owns what the request needs, because it owns the stores the
 request describes: `beginPayload`, `markStale`, `catchUp`, `canRun`,
-`ensureRunnable` and `encodeHave`. The URL methods `patchUrl(query)` and
-`lazyUrl(proxyModuleId, query)` build the request URLs. Vite overrides
-them for its base path. Its module runner overrides `importPatch` and
-`loadLazyChunk` to load through the runner. A full reload of the runner
-replaces its runtime, and a request of the old runtime can still be on
-the way. So the runner runs each payload against the runtime that asked
+`ensureRunnable`, `encodeHave` and `requestQuery`. The URL methods
+`patchUrl(query)`, `lazyUrl(proxyModuleId, query)` and `haveUrl()` build
+the request URLs. Vite overrides them for its base path. Its module
+runner overrides `importPatch` and `loadLazyChunk` to load through the
+runner, and sets `maxQueryLength` to `Infinity`. A full reload of the
+runner replaces its runtime, and a request of the old runtime can still
+be on the way. So the runner runs each payload against the runtime that asked
 for it (`_importPayload` in `runner.ts`), and the hooks of a replaced
 runtime do not ask for a reload. The Node test client overrides
 `importPatch` too.
@@ -882,9 +981,6 @@ way), the patch would start with
   code, and `missedUpdate()` is false, so nothing catches up until the
   next edit of them.
 
-- **Request size** — the sets are bitsets only, so a request of an app
-  with more than about 30,000 module numbers can pass Node's 16 KiB
-  header limit (principle 6).
 - **Pulls during a rebuild** — a task that pushes an update and then
   rebuilds the output (`rebuildStrategy: 'always'`, or the recovery after
   a failed rebuild) holds the bundler lock for the whole build, so a pull
@@ -925,9 +1021,10 @@ way), the patch would start with
   `removeModuleCache`, `loadExports`, `requestLazy`, `loadDynamic`;
   request methods `beginPayload`, `setOutputGeneration`, `markStale`,
   `missedUpdate`, `catchUp`, `ensureRunnable`, `refetchDropped`,
-  `reloadNeeded`, `encodeHave`, `importPatch`, `loadLazyChunk`; request
-  URLs `patchUrl`, `lazyUrl`; read-only queries `getImporters`, `isEntry`,
-  `isExecuted`, `hasFactory`, `canRun`; hooks `createModuleHotContext`,
+  `reloadNeeded`, `encodeHave`, `requestQuery`, `importPatch`,
+  `loadLazyChunk`; request URLs `patchUrl`, `lazyUrl`, `haveUrl`;
+  read-only queries `getImporters`, `isEntry`, `isExecuted`,
+  `hasFactory`, `canRun`; hooks `createModuleHotContext`,
   `onModuleCacheRemoval`, `onMissingFactory`, `onReloadNeeded`, `onCaughtUp`
 - Key code: `crates/rolldown_common/src/hmr/hmr_session.rs` (epoch,
   generation, stamps, numbers, catch-up),

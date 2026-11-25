@@ -205,8 +205,8 @@ impl BindingDevEngine {
 
   /// Renders the patch a client asks for. `query` is the query string of the client's patch
   /// request: `s=<epoch>&g=<gen>&u=<set>&e=<set>&f=<set>` (other keys are ignored). Each set is
-  /// `b` and a base64url bitset (`HmrNumSet` in `rolldown_common`). A `Reload` answer means the
-  /// client must reload; a bad query gets one too.
+  /// `b` and a base64url bitset, or `d` and base64url gap varints (`HmrNumSet` in
+  /// `rolldown_common`). A `Reload` answer means the client must reload; a bad query gets one too.
   #[napi]
   pub fn render_patch<'env>(
     &self,

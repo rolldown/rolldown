@@ -181,7 +181,7 @@ export class DevEngine {
    *
    * @param query - The query string of the client's patch request,
    * `s=<epoch>&g=<gen>&u=<set>&e=<set>&f=<set>`. Each set is `b` and a
-   * base64url bitset. Other keys are ignored.
+   * base64url bitset, or `d` and base64url gap varints. Other keys are ignored.
    * @returns The patch, or `{ type: 'Reload' }` when the client must reload (it
    * belongs to another engine, its generation is too old to catch up, or the
    * query is bad). With `sourcemap: true` or `'hidden'`, `sourcemap` is the map

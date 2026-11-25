@@ -38,7 +38,7 @@ The server keeps nothing per tab. The runtime (`DevRuntime` in `runtime-extra-de
 | `f`       | `factories` keys   | the modules whose factory the client holds and that it did not execute                                                                          |
 | `n`       | `requestNonce`     | a nonce, so each URL is new                                                                                                                     |
 
-Sets are module numbers (`nums` from the `registerGraph` rows), each sent as a bitset (`b…`); an empty set is left out. The format and the reasons are in [hmr/design.md](../hmr/design.md), principles 2 and 6. A lazy request has no `u`: nothing runs again.
+Sets are module numbers (`nums` from the `registerGraph` rows), each sent as the shorter of a bitset (`b…`) and a gap list (`d…`); an empty set is left out. The format and the reasons are in [hmr/design.md](../hmr/design.md), principles 2 and 6. A lazy request has no `u`: nothing runs again.
 
 ### Fetched vs Held
 
@@ -248,7 +248,7 @@ The error contract (no longer "POC — Err or panic is fine"):
 ### The Have-Set Query
 
 - Built by `DevRuntime#encodeHave` (`runtime-extra-dev-common.js`) when `loadLazyChunk` runs: `id=<proxy id>&s=…&g=…&e=…&f=…&n=…`
-- `loadLazyChunk` gets the query from `encodeHave` and the URL from `lazyUrl(proxyModuleId, query)`. Each set is a `b` bitset (see [hmr/design.md](../hmr/design.md), principle 6)
+- `loadLazyChunk` gets the query from `requestQuery` and the URL from `lazyUrl(proxyModuleId, query)`. Each set is a `b` bitset or a `d` gap list (see [hmr/design.md](../hmr/design.md), principle 6). A query longer than `maxQueryLength` is POSTed first, and the URL carries only `t=<token>&n=<nonce>`; the dev server resolves the token before it calls `compileEntry`
 - Its only role is **chunk sizing**: the returned chunk omits what the client ran or holds current. Nothing is "routed" — the compiled code returns in the HTTP response
 - A module with no number on the client is left out of `e` and `f`, so the server carries it. That can only add bytes
 - `ClientHave::parse_query` ignores keys it does not know (`id`, `n`). A missing set is empty. A set that names a number at or above the session's number count, or is not in the wire format, makes the query fail to parse, which is a Reload
@@ -504,6 +504,7 @@ E2E playground: `packages/test-dev-server/tests/playground/lazy-compilation/` (o
 | `basic`                     | lazy module arrives in exactly one JS request (`/@vite/lazy`), no stub chunk                                                                                                                                                  |
 | `aliased-import`            | idempotent proxy-id creation under alias re-entrancy (vite#22454)                                                                                                                                                             |
 | `emitted-asset`             | assets emitted during lazy compile are servable on first load (vite#22596)                                                                                                                                                    |
+| `have-post`                 | with `maxQueryLength = 0`, a lazy load and an HMR update each POST their query first, and the GET carries only the token                                                                                                      |
 | `late-lazy-chunk`           | a lazy chunk that lands after a newer HMR patch does not replace its code                                                                                                                                                     |
 | `lazy-init-error`           | init errors catchable with try/catch — cold and warm paths (#9975/#9981)                                                                                                                                                      |
 | `lazy-init-error-unhandled` | exactly one `unhandledrejection` without a handler — cold and warm paths                                                                                                                                                      |
@@ -535,7 +536,7 @@ For future debugging, these files handle lazy compilation:
 7. **`crates/rolldown_dev/src/types/coordinator_msg.rs`** - `ModuleChanged` message variant
 8. **`crates/rolldown_dev/src/bundle_coordinator.rs`** - Handles `ModuleChanged` (watch the compile's files; rebuild only for a lost HMR update), state machine
 9. **`crates/rolldown_binding/src/binding_dev_engine.rs`** - napi surface (`compile_entry` → `BindingLazyChunkResponse`)
-10. **`crates/rolldown_common/src/hmr/client_have.rs`** + **`hmr_session.rs`** - the request format (`ClientHave`, `HmrNumSet` with its bitset form and decoding limits) and the session (numbers, stamps, catch-up)
+10. **`crates/rolldown_common/src/hmr/client_have.rs`** + **`hmr_session.rs`** - the request format (`ClientHave`, `HmrNumSet` with its two forms and decoding limits) and the session (numbers, stamps, catch-up)
 
 ### HMR/Build
 
@@ -543,7 +544,7 @@ For future debugging, these files handle lazy compilation:
 12. **`crates/rolldown/src/hmr/hmr_ast_finalizer.rs`** + **`impl_traverse_for_hmr_ast_finalizer.rs`** - `registerFactory` wrappers, dynamic-import rewrites (incl. the `/@vite/lazy` rewrite), computed-property exports
 13. **`crates/rolldown/src/hmr/utils.rs`** - register-module / hot-context statement builders (`__rolldown_module_id__` param)
 14. **`crates/rolldown/src/bundler/impl_bundler_hmr.rs`** - `Bundler::compile_lazy_entry` entry point
-15. **`crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js`** - browser runtime: `registerFactory`, `initModule` (module-cache gate), `registerModule`, `loadExports`, `requestLazy`, `loadLazyChunk`, `encodeHave`, `lazyUrl`
+15. **`crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js`** - browser runtime: `registerFactory`, `initModule` (module-cache gate), `registerModule`, `loadExports`, `requestLazy`, `loadLazyChunk`, `encodeHave`, `requestQuery`, `lazyUrl`, `haveUrl`
 
 ### Reference Dev Server (Vite full bundle mode, vendored at `vite/` (repo root))
 

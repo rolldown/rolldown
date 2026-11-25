@@ -15,7 +15,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   ExportsKind, HmrInfo, ImportRecordIdx, ImporterRecord, LocalExport, ModuleDefFormat, ModuleId,
   ModuleIdx, NamedImport, ResolvedImportRecord, StmtInfoIdx, SymbolRef,
-  side_effects::{DeterminedSideEffects, HookSideEffects},
+  side_effects::DeterminedSideEffects,
 };
 
 bitflags! {
@@ -123,11 +123,15 @@ impl EcmaView {
 pub struct EcmaView {
   pub dummy_record_set: FxHashSet<NodeId>,
   pub source: ArcStr,
+  /// The size a `load` or `transform` hook declares as `declaredModuleSize`. When present,
+  /// [`crate::Module::size`] uses it instead of the length of the code.
+  pub declared_module_size: Option<usize>,
   pub def_format: ModuleDefFormat,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,
   pub named_imports: FxIndexMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<CompactStr, LocalExport>,
+  pub cjs_literal_export_names: FxIndexSet<CompactStr>,
   pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,
   /// Cross-pass AST-node side tables use post-semantic `NodeId`. See internal-docs/ast-mutation/implementation.md.
   ///
@@ -157,11 +161,6 @@ pub struct EcmaView {
   // the module ids imported by this module via dynamic import()
   pub dynamically_imported_ids: FxIndexSet<ModuleId>,
   pub side_effects: DeterminedSideEffects,
-  /// Plugin-facing `moduleSideEffects`. Produced with `side_effects` by
-  /// [`crate::module_side_effects_decision`]. `treeshake: false` (no hook value, or a hook
-  /// `true`) and an external with no hook value stay [`DeterminedSideEffects::NoTreeshake`]
-  /// for inclusion and report `true`.
-  pub reported_side_effects: HookSideEffects,
   pub ast_usage: EcmaModuleAstUsage,
   pub self_referenced_class_decl_symbol_ids: FxHashSet<SymbolId>,
   // the range of hashbang in source

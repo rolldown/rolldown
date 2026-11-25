@@ -273,9 +273,9 @@ Rolldown checks these sources in order to determine a module's side effects:
 
 1. `transform` hook's returned `moduleSideEffects`
 2. `load` hook's returned `moduleSideEffects`
-3. `resolveId` hook's returned `moduleSideEffects`
+3. `resolveId` hook's returned `moduleSideEffects`, from the resolution that first loaded the module.
 4. [`treeshake.moduleSideEffects`](/reference/InputOptions.treeshake#modulesideeffects), when the option supplies a verdict for the module
-5. `sideEffects` field in `package.json` for bundled modules
+5. `sideEffects` field in `package.json` for bundled modules. Rolldown uses this field only when its own resolver resolved the module. This is also the case when a `resolveId` hook returned a `this.resolve` result that Rolldown's resolver gave. When a hook returned its own id, such as a virtual module, Rolldown does not use the field.
 6. Static analysis for bundled modules and Rolldown's default side-effect assumptions for external modules
 
 The default option value `true`, unmatched rules, and callbacks that return `undefined` all fall through to the remaining sources. A hook that returns `moduleSideEffects: true` sends a bundled module directly to static analysis, bypassing both the option and package metadata.

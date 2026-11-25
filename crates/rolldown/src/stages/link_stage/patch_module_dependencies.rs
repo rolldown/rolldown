@@ -200,21 +200,24 @@ impl LinkStage<'_> {
     //
     let tree_shaking = self.options.treeshake.is_some();
     let strict_execution_order = self.options.is_strict_execution_order_enabled();
-    let codeless_entries = self.codeless_entries();
+    let placement_entries = self.placement_entries();
     for (module_idx, extended_dependencies, runtime_helper) in processed_module_results {
       // Symbol-derived dependencies always force their owner module to be loaded. Import-record
       // targets (what `meta.dependencies` holds at this point) only do so when evaluating them
       // has side effects — the same edge semantics `include_side_effectful_dependencies` uses
       // during tree-shaking and `compute_cross_chunk_links` uses when emitting bare imports.
       //
-      // Record edges into code-less entry modules are kept even when side-effect-free: an entry's
-      // chunk exists regardless, and letting static importers participate in its bit pattern keeps
-      // shared code co-located with the entry chunk (Rollup collapses such code-less entry
-      // facades onto the chunk holding their exports — e.g. a statically imported re-export
-      // barrel that is also a dynamic entry must not push its re-export targets into a separate
-      // chunk, see rollup's `entry-without-code-dynamic`). An entry with code of its own does not
-      // collapse, and following the edge would mark everything that code imports as loaded by
-      // every static importer, even one that only reads a re-exported binding.
+      // Record edges into user-defined entries, and into dynamic entries whose included statements
+      // only import or re-export, are kept even when side-effect-free. The entry's chunk exists
+      // regardless, and letting static importers participate in its bit pattern keeps shared code
+      // co-located with the entry chunk. For a user-defined entry, a module that an importer reads
+      // through it then loads at the position of that import
+      // (`code_splitting/chunk_import_order_kept_entry_reexport`). Rollup collapses code-less entry
+      // facades onto the chunk holding their exports (e.g. a statically imported re-export barrel
+      // that is also a dynamic entry must not push its re-export targets into a separate chunk, see
+      // rollup's `entry-without-code-dynamic`). A dynamic entry with code of its own does not
+      // collapse, and following the edge would mark everything that code imports as loaded by every
+      // static importer, even one that only reads a re-exported binding.
       let execution_dependencies = strict_execution_order.then(|| {
         extended_dependencies
           .iter()
@@ -234,7 +237,7 @@ impl LinkStage<'_> {
                 .dependencies
                 .iter()
                 .copied()
-                .filter(|dep_idx| codeless_entries.contains(dep_idx)),
+                .filter(|dep_idx| placement_entries.contains(dep_idx)),
             )
             .collect()
         } else {
@@ -243,7 +246,7 @@ impl LinkStage<'_> {
             .copied()
             .chain(self.metas[module_idx].dependencies.iter().copied().filter(|dep_idx| {
               !tree_shaking
-                || codeless_entries.contains(dep_idx)
+                || placement_entries.contains(dep_idx)
                 || self.module_table[*dep_idx].side_effects().has_side_effects()
             }))
             .collect()
@@ -285,19 +288,18 @@ impl LinkStage<'_> {
     }
   }
 
-  /// Entry modules whose included statements only import or re-export: they declare nothing and
-  /// evaluate nothing of their own.
-  fn codeless_entries(&self) -> FxHashSet<ModuleIdx> {
+  /// User-defined entries and dynamic entries whose included statements only import or re-export.
+  fn placement_entries(&self) -> FxHashSet<ModuleIdx> {
     self
       .entries
-      .keys()
-      .copied()
-      .filter(|&entry_idx| {
-        let Some(module) = self.module_table[entry_idx].as_normal() else {
-          return false;
-        };
+      .iter()
+      .filter_map(|(&entry_idx, entries)| {
+        if entries.iter().any(|entry| entry.kind.is_user_defined()) {
+          return Some(entry_idx);
+        }
+        let module = self.module_table[entry_idx].as_normal()?;
         let meta = &self.metas[entry_idx];
-        self.stmt_infos[entry_idx].iter_enumerated().all(|(stmt_idx, stmt_info)| {
+        let codeless = self.stmt_infos[entry_idx].iter_enumerated().all(|(stmt_idx, stmt_info)| {
           // Only `import` and `export … from` declarations hold `ImportKind::Import` records. A
           // declaration that contains `import()` or `require()` is code of the entry's own.
           let is_import_or_reexport = !stmt_info.import_records.is_empty()
@@ -310,7 +312,8 @@ impl LinkStage<'_> {
             || is_import_or_reexport
             || (stmt_info.declared_symbols.is_empty()
               && !stmt_info.eval_flags.has_side_effect_for_tree_shaking())
-        })
+        });
+        codeless.then_some(entry_idx)
       })
       .collect()
   }

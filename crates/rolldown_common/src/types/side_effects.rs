@@ -18,22 +18,6 @@ impl DeterminedSideEffects {
       DeterminedSideEffects::NoTreeshake => true,
     }
   }
-
-  /// `moduleSideEffects` for a settled inclusion verdict (`boolean | 'no-treeshake'`).
-  ///
-  /// `Analyzed` is the default inclusion algorithm. Plugins see that as `true`; the
-  /// statement-level result stays internal. `treeshake: false` and an external with no
-  /// hook value also report `true`, but those stay [`Self::NoTreeshake`] for inclusion
-  /// and are chosen in [`crate::module_side_effects_decision`], not here.
-  pub fn to_module_side_effects(self) -> HookSideEffects {
-    match self {
-      DeterminedSideEffects::UserDefined(false) => HookSideEffects::False,
-      DeterminedSideEffects::UserDefined(true) | DeterminedSideEffects::Analyzed(_) => {
-        HookSideEffects::True
-      }
-      DeterminedSideEffects::NoTreeshake => HookSideEffects::NoTreeshake,
-    }
-  }
 }
 
 #[derive(Debug, Clone)]
@@ -80,31 +64,14 @@ pub enum HookSideEffects {
   NoTreeshake,
 }
 
-#[cfg(test)]
-mod tests {
-  use super::{DeterminedSideEffects, HookSideEffects};
-
-  #[test]
-  fn analyzed_side_effects_are_reported_as_true() {
-    assert_eq!(
-      DeterminedSideEffects::Analyzed(false).to_module_side_effects(),
-      HookSideEffects::True,
-    );
-    assert_eq!(
-      DeterminedSideEffects::Analyzed(true).to_module_side_effects(),
-      HookSideEffects::True
-    );
-    assert_eq!(
-      DeterminedSideEffects::UserDefined(false).to_module_side_effects(),
-      HookSideEffects::False,
-    );
-    assert_eq!(
-      DeterminedSideEffects::UserDefined(true).to_module_side_effects(),
-      HookSideEffects::True,
-    );
-    assert_eq!(
-      DeterminedSideEffects::NoTreeshake.to_module_side_effects(),
-      HookSideEffects::NoTreeshake
-    );
+impl HookSideEffects {
+  /// The value `getModuleInfo().moduleSideEffects` shows for this hook value. Tree shaking reads
+  /// `true` differently: it still analyzes the statements.
+  pub fn declared(self) -> DeterminedSideEffects {
+    match self {
+      HookSideEffects::True => DeterminedSideEffects::UserDefined(true),
+      HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
+      HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
+    }
   }
 }

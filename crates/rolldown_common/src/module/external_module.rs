@@ -29,6 +29,9 @@ pub struct ExternalModule {
   pub identifier_name: ArcStr,
   pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,
   pub side_effects: DeterminedSideEffects,
+  /// What tree shaking uses when neither a hook nor `treeshake.moduleSideEffects` decides. A
+  /// `null` write to `moduleSideEffects` needs it.
+  pub side_effects_without_option: DeterminedSideEffects,
   pub need_renormalize_render_path: bool,
 }
 
@@ -40,6 +43,7 @@ impl ExternalModule {
     name: ArcStr,
     identifier_name: ArcStr,
     side_effects: DeterminedSideEffects,
+    side_effects_without_option: DeterminedSideEffects,
     namespace_ref: SymbolRef,
     need_renormalize_render_path: bool,
     attributes: ImportAttributes,
@@ -56,6 +60,7 @@ impl ExternalModule {
       identifier_name,
       import_records: IndexVec::default(),
       side_effects,
+      side_effects_without_option,
       need_renormalize_render_path,
     }
   }

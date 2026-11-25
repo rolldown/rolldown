@@ -1,0 +1,7 @@
+{
+  "config": {
+    "input": [{ "name": "entry", "import": "./entry.js" }],
+    "platform": "node"
+  },
+  "snapshot": false
+}

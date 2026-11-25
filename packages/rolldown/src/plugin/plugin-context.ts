@@ -319,7 +319,10 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     private currentLoadingModule?: string,
   ) {
     super(onLog, logLevel, plugin.name!, watchMode);
-    this.getModuleInfo = (id: string) => this.data.getModuleInfo(id, context);
+    this.getModuleInfo = (id: string) =>
+      this.data.getModuleInfo(id, context, (moduleId) =>
+        this.data.warnWriteAfterBuildEnd(moduleId, this.pluginName),
+      );
   }
 
   public async load(
@@ -334,19 +337,12 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       this.onLog(LOG_LEVEL_WARN, logCycleLoading(this.pluginName, this.currentLoadingModule));
     }
     const resolveDependencies = options.resolveDependencies === true;
-    const moduleInfo = this.data.getModuleInfo(id, this.context);
+    const moduleInfo = this.data.getModuleInfo(id, this.context, (moduleId) =>
+      this.data.warnWriteAfterBuildEnd(moduleId, this.pluginName),
+    );
     // The code is set once the module is parsed, which can be before its imports are resolved.
-    if (moduleInfo !== null && moduleInfo.code !== null) {
-      if (!resolveDependencies) {
-        return moduleInfo;
-      }
-    } else {
-      const rawOptions: ModuleOptions = {
-        meta: options.meta || {},
-        moduleSideEffects: options.moduleSideEffects || null,
-        invalidate: false,
-      };
-      this.data.updateModuleOption(id, rawOptions, true);
+    if (moduleInfo !== null && moduleInfo.code !== null && !resolveDependencies) {
+      return moduleInfo;
     }
 
     const loadPromiseMap = resolveDependencies
@@ -354,14 +350,13 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       : this.data.loadModulePromiseMap;
     let loadPromise = loadPromiseMap.get(id);
     if (!loadPromise) {
+      // The options apply only when this call creates the module.
+      const moduleOptionsReceipt = this.data.saveResolutionOptions({ meta: options.meta || {} });
       loadPromise = this.context
-        .load(
-          rawId,
-          attributes,
-          options.moduleSideEffects ?? undefined,
-          resolveDependencies,
-          options.packageJsonPath ?? undefined,
-        )
+        .load(rawId, attributes, options.moduleSideEffects ?? undefined, resolveDependencies, {
+          packageJsonPath: options.packageJsonPath ?? undefined,
+          moduleOptionsReceipt,
+        })
         .catch(() => {
           // avoid reusing the promise if it's an error
           // because the error may happen only in non-supported hooks (e.g. `buildStart` hook)
@@ -371,7 +366,9 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     }
 
     await loadPromise;
-    return this.data.getModuleInfo(id, this.context)!;
+    return this.data.getModuleInfo(id, this.context, (moduleId) =>
+      this.data.warnWriteAfterBuildEnd(moduleId, this.pluginName),
+    )!;
   }
 
   public async resolve(
@@ -412,23 +409,17 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     }
 
     if (res == null) return null;
-    const info =
-      this.data.getModuleOption(this.data.toModuleId(res.id, res.attributes)) ||
-      ({} as ModuleOptions);
+    // Only this resolution's own options, as in Rollup. It does not change the module.
+    const { moduleOptionsReceipt, ...resolved } = res;
+    const own = this.data.takeResolutionOptions(moduleOptionsReceipt);
     return {
-      ...res,
+      ...resolved,
       external:
         res.external === 'relative'
           ? unreachable(`The PluginContext resolve result external couldn't be 'relative'`)
           : res.external,
-      ...info,
-      // A value recorded by resolveId/load/transform wins. Otherwise use the effective
-      // value for this id (treeshake option, package.json `sideEffects`, then `true`,
-      // including externals and `treeshake: false`).
-      moduleSideEffects:
-        info.moduleSideEffects === undefined
-          ? (res.moduleSideEffects ?? null)
-          : info.moduleSideEffects,
+      meta: own?.meta ?? {},
+      moduleSideEffects: res.moduleSideEffects ?? null,
       packageJsonPath: res.packageJsonPath,
     };
   }

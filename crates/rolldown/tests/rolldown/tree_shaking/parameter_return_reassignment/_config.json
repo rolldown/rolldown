@@ -1,0 +1,11 @@
+{
+  "config": {
+    "minify": false
+  },
+  "configVariants": [
+    {
+      "minify": true,
+      "_snapshot": false
+    }
+  ]
+}

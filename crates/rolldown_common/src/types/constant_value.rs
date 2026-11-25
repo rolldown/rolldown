@@ -89,14 +89,11 @@ impl ConstantValue {
 
   pub fn to_expression<'ast>(&self, ast: &oxc::ast::builder::AstBuilder<'ast>) -> Expression<'ast> {
     match self {
-      ConstantValue::Number(n) => {
-        Expression::new_numeric_literal(SPAN, *n, None, oxc::ast::ast::NumberBase::Decimal, ast)
-      }
+      ConstantValue::Number(n) => Expression::new_numeric_literal(SPAN, *n, None, ast),
       ConstantValue::BigInt(b) => Expression::new_big_int_literal(
         SPAN,
         oxc::ast::ast::Str::from_str_in(&b.to_string(), ast),
         None,
-        oxc::ast::ast::BigintBase::Decimal,
         ast,
       ),
       ConstantValue::String(s) => {

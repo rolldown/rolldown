@@ -3,8 +3,9 @@ use std::fmt::Write as _;
 
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Chunk, ChunkKind, ExportsKind, GetLocalDb, IndexModules, ModuleIdx, NormalizedBundlerOptions,
-  OutputExports, OutputFormat, Platform, SymbolRef, SymbolRefDb, SymbolRefFlags, WrapKind,
+  Chunk, ChunkKind, ExportsKind, GetLocalDb, ImportRecordMeta, IndexModules, ModuleIdx,
+  NormalizedBundlerOptions, OutputExports, OutputFormat, Platform, SymbolRef, SymbolRefDb,
+  SymbolRefFlags, WrapKind,
 };
 use rolldown_utils::{
   concat_string,
@@ -241,7 +242,17 @@ pub fn render_chunk_exports(
             .symbol_db
             .canonical_name_for_or_original(canonical_ref, &chunk.canonical_names);
           let rendered_canonical_name = escape_non_ascii(canonical_name, ascii_only);
-          if let Some(ns_alias) = &symbol.namespace_alias {
+          // The finalizer declares the exports synthesized for a CommonJS star export.
+          let declared_by_finalizer = || {
+            let owner = link_output.module_table[canonical_ref.owner].as_normal().unwrap();
+            owner.named_imports.get(&canonical_ref).is_some_and(|import| {
+              let record = &owner.import_records[import.record_idx];
+              record.meta.contains(ImportRecordMeta::CjsStarNamedExports)
+            })
+          };
+          if let Some(ns_alias) = &symbol.namespace_alias
+            && !declared_by_finalizer()
+          {
             let canonical_ns_name = link_output
               .symbol_db
               .canonical_name_for_or_original(ns_alias.namespace_ref, &chunk.canonical_names);

@@ -60,17 +60,22 @@ pub async fn resolve_id<Fs: FileSystem>(
 
 /// Reads the `package.json` of a reused resolution again, and the module format that its `type`
 /// field gives. The resolution keeps what its hooks decided, but the file can change after it. A
-/// `package.json` that no longer exists gives `None`. See internal-docs/cache/implementation.md.
+/// `package.json` that no longer exists gives `None`. A `package.json` that cannot be read or
+/// parsed keeps the data of the last read. See internal-docs/cache/implementation.md.
 pub fn refresh_package_json<Fs: FileSystem>(
   resolved_id: &mut ResolvedId,
   resolver: &Resolver<Fs>,
   fs: &Fs,
-) -> anyhow::Result<()> {
+) {
   let Some(old) = resolved_id.package_json.clone() else {
-    return Ok(());
+    return;
   };
-  let package_json = if fs.exists(old.realpath()) {
-    Some(resolver.try_get_package_json_or_create(old.realpath())?)
+  // `metadata` also sees a file inside a Yarn PnP zip archive.
+  let package_json = if matches!(fs.metadata(old.realpath()), Ok(metadata) if metadata.is_file()) {
+    let Ok(package_json) = resolver.try_get_package_json_or_create(old.realpath()) else {
+      return;
+    };
+    Some(package_json)
   } else {
     None
   };
@@ -88,7 +93,6 @@ pub fn refresh_package_json<Fs: FileSystem>(
       infer_module_def_format(clean_url(raw_id), package_json.as_ref());
   }
   resolved_id.package_json = package_json;
-  Ok(())
 }
 
 pub async fn resolve_dependencies<Fs: FileSystem>(

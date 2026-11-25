@@ -1540,6 +1540,86 @@ test.concurrent(
 );
 
 test.concurrent(
+  'a package.json that cannot be parsed does not fail an update of a module under it',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir } = createTestWithMultiFiles('dev-package-json-unparsable', retryCount, {
+      'main.js': `import './pkg/dep.js';\nimport.meta.hot.accept();\n`,
+      'pkg/dep.js': `globalThis.value = 'DEP_1'`,
+      'pkg/package.json': `{}`,
+    });
+    const main = path.join(dir, 'main.js');
+    const dep = path.join(dir, 'pkg/dep.js');
+    const packageJson = path.join(dir, 'pkg/package.json');
+
+    const outputs: (RolldownOutput | Error)[] = [];
+    const onHmrUpdates = vi.fn();
+    const engine = await dev(
+      {
+        input: main,
+        experimental: { devMode: true },
+        plugins: [
+          {
+            name: 'watch-package-json',
+            buildStart() {
+              this.addWatchFile(packageJson);
+            },
+          },
+        ],
+      },
+      { dir: path.join(dir, 'dist') },
+      {
+        rebuildStrategy: 'always',
+        onOutput: (result) => {
+          outputs.push(result);
+        },
+        onHmrUpdates,
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await expect.poll(() => outputs.length).toBeGreaterThan(0);
+    await engine.registerClient('client');
+
+    const hmrErrors = () =>
+      onHmrUpdates.mock.calls.map(([result]) => result).filter((result) => result instanceof Error);
+    const patchCodes = () =>
+      onHmrUpdates.mock.calls
+        .flatMap(([result]) => (result instanceof Error ? [] : result.updates))
+        .filter((u) => u.clientId === 'client' && u.update.type === 'Patch')
+        .map((u) => (u.update as { type: 'Patch'; code: string }).code);
+    const lastOutput = async () => {
+      await engine.ensureLatestBuildOutput();
+      const last = outputs.at(-1);
+      return last instanceof Error
+        ? last.message
+        : last?.output.map((chunk) => (chunk.type === 'chunk' ? chunk.code : '')).join('\n');
+    };
+
+    // `dep.js` keeps the `package.json` data of the last read.
+    await editFile(packageJson, `{ not json`);
+    await editFile(dep, `globalThis.value = 'DEP_2'`);
+    await expect.poll(lastOutput).toMatch(/value = ["']DEP_2/);
+    expect(patchCodes().some((code) => code.includes('DEP_2'))).toBe(true);
+    expect(hmrErrors()).toEqual([]);
+
+    onHmrUpdates.mockClear();
+    await editFile(main, `globalThis.value = 'MAIN';\nimport.meta.hot.accept();\n`);
+    await expect.poll(lastOutput).toMatch(/value = ["']MAIN/);
+    expect(await lastOutput()).not.toContain('DEP_');
+    expect(patchCodes().length).toBeGreaterThan(0);
+    expect(hmrErrors()).toEqual([]);
+  },
+);
+
+test.concurrent(
   'buildStart of a rebuild sees the start options of a changed module',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {

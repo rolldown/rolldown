@@ -1,10 +1,13 @@
 use std::{
   borrow::Cow,
+  path::{Path, PathBuf},
   sync::{Arc, Mutex},
 };
 
 use arcstr::ArcStr;
-use rolldown::{BundleOutput, Bundler, BundlerOptions, ExperimentalOptions, InputItem};
+use rolldown::{
+  BundleOutput, Bundler, BundlerOptions, ExperimentalOptions, InputItem, ResolveOptions,
+};
 use rolldown_common::{Output, ScanMode};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -137,22 +140,28 @@ async fn partial_scan_skips_a_changed_file_that_is_not_a_module() {
   assert_eq!(*resolve_calls.lock().unwrap(), Vec::<String>::new());
 }
 
-/// A `package.json` that cannot be parsed fails a partial scan before it fetches the changed
-/// module. The module is queued again, so the scan after the fix fetches it.
+/// An empty temporary directory for one test. Module ids are real paths, and the temporary
+/// directory can be a symlink (macOS), so the path is canonical.
+fn temp_dir(name: &str) -> PathBuf {
+  let dir = std::env::temp_dir().join(format!("rolldown-{name}-{}", std::process::id()));
+  let _ = std::fs::remove_dir_all(&dir);
+  std::fs::create_dir_all(&dir).unwrap();
+  dunce::canonicalize(&dir).unwrap()
+}
+
+/// A `package.json` that cannot be parsed does not fail a partial scan. The changed module keeps
+/// the data of the last read, and the scan fetches its new content. The next read after the fix
+/// gives the new data.
 #[tokio::test(flavor = "multi_thread")]
-async fn partial_scan_queues_a_changed_module_again_after_a_package_json_error() {
-  let dir =
-    std::env::temp_dir().join(format!("rolldown-partial-scan-package-json-{}", std::process::id()));
+async fn partial_scan_keeps_the_last_package_json_data_when_it_cannot_be_parsed() {
+  let dir = temp_dir("partial-scan-package-json-unparsable");
   std::fs::create_dir_all(dir.join("pkg")).unwrap();
-  // Module ids are real paths, and the temporary directory can be a symlink (macOS).
-  let dir = dunce::canonicalize(&dir).unwrap();
-  let pkg = dir.join("pkg");
   let entry = dir.join("entry.js");
-  let dep = pkg.join("dep.js");
-  let package_json = pkg.join("package.json");
-  std::fs::write(&entry, "import './pkg/dep.js';").unwrap();
+  let dep = dir.join("pkg/dep.js");
+  let package_json = dir.join("pkg/package.json");
+  std::fs::write(&entry, "import './pkg/dep.js'; globalThis.value = 'ENTRY';").unwrap();
   std::fs::write(&dep, "globalThis.value = 'DEP_1';").unwrap();
-  std::fs::write(&package_json, "{}").unwrap();
+  std::fs::write(&package_json, r#"{"sideEffects":false}"#).unwrap();
 
   let mut bundler = Bundler::new(BundlerOptions {
     input: Some(vec![InputItem { name: None, import: entry.expect_to_str().to_string() }]),
@@ -162,20 +171,101 @@ async fn partial_scan_queues_a_changed_module_again_after_a_package_json_error()
   })
   .unwrap();
   let output = bundler.incremental_generate(ScanMode::Full).await.unwrap();
-  assert!(chunk_code(&output).contains("DEP_1"));
+  assert!(!chunk_code(&output).contains("DEP_"));
 
+  // `dep.js` keeps `sideEffects: false`, so it is still left out.
   std::fs::write(&package_json, "{ not json").unwrap();
   std::fs::write(&dep, "globalThis.value = 'DEP_2';").unwrap();
   bundler.clear_resolver_cache();
   let changed: ArcStr = dep.expect_to_str().into();
-  assert!(bundler.incremental_generate(ScanMode::Partial(vec![changed])).await.is_err());
-
-  // Only `package.json` changes now. It is not a module, so only the queued `dep.js` is fetched.
-  std::fs::write(&package_json, "{}").unwrap();
-  bundler.clear_resolver_cache();
-  let changed: ArcStr = package_json.expect_to_str().into();
   let output = bundler.incremental_generate(ScanMode::Partial(vec![changed])).await.unwrap();
-  assert!(chunk_code(&output).contains("DEP_2"));
+  assert!(!chunk_code(&output).contains("DEP_"));
+
+  std::fs::write(&package_json, r#"{"sideEffects":true}"#).unwrap();
+  std::fs::write(&dep, "globalThis.value = 'DEP_3';").unwrap();
+  bundler.clear_resolver_cache();
+  let changed: ArcStr = dep.expect_to_str().into();
+  let output = bundler.incremental_generate(ScanMode::Partial(vec![changed])).await.unwrap();
+  assert!(chunk_code(&output).contains("DEP_3"));
+
+  std::fs::remove_dir_all(&dir).unwrap();
+}
+
+/// Writes a zip archive that stores `files` without compression, as Yarn PnP keeps a package.
+/// The zip reader of Yarn PnP does not check the CRC, so it is zero.
+fn write_zip(path: &Path, files: &[(&str, &str)]) {
+  let mut data = Vec::new();
+  let mut central_directory = Vec::new();
+  for (name, content) in files {
+    let offset = u32::try_from(data.len()).unwrap();
+    let name_len = u16::try_from(name.len()).unwrap().to_le_bytes();
+    let size = u32::try_from(content.len()).unwrap().to_le_bytes();
+    // Local file header: signature, version, flags, method 0 (stored), time, date, CRC, sizes.
+    data.extend_from_slice(&0x0403_4b50_u32.to_le_bytes());
+    data.extend_from_slice(&[20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    data.extend_from_slice(&size);
+    data.extend_from_slice(&size);
+    data.extend_from_slice(&name_len);
+    data.extend_from_slice(&[0, 0]);
+    data.extend_from_slice(name.as_bytes());
+    data.extend_from_slice(content.as_bytes());
+    // Central directory header: the same fields, then attributes and the local header offset.
+    central_directory.extend_from_slice(&0x0201_4b50_u32.to_le_bytes());
+    central_directory.extend_from_slice(&[20, 0, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    central_directory.extend_from_slice(&size);
+    central_directory.extend_from_slice(&size);
+    central_directory.extend_from_slice(&name_len);
+    central_directory.extend_from_slice(&[0; 12]);
+    central_directory.extend_from_slice(&offset.to_le_bytes());
+    central_directory.extend_from_slice(name.as_bytes());
+  }
+  let central_directory_offset = u32::try_from(data.len()).unwrap();
+  let count = u16::try_from(files.len()).unwrap().to_le_bytes();
+  data.extend_from_slice(&central_directory);
+  // End of central directory record.
+  data.extend_from_slice(&0x0605_4b50_u32.to_le_bytes());
+  data.extend_from_slice(&[0, 0, 0, 0]);
+  data.extend_from_slice(&count);
+  data.extend_from_slice(&count);
+  data.extend_from_slice(&u32::try_from(central_directory.len()).unwrap().to_le_bytes());
+  data.extend_from_slice(&central_directory_offset.to_le_bytes());
+  data.extend_from_slice(&[0, 0]);
+  std::fs::write(path, data).unwrap();
+}
+
+/// A partial scan reads the `package.json` of a module in a Yarn PnP zip archive again, so the
+/// module keeps `sideEffects: false`.
+#[tokio::test(flavor = "multi_thread")]
+async fn partial_scan_reads_the_package_json_in_a_yarn_pnp_zip_archive() {
+  let dir = temp_dir("partial-scan-yarn-pnp");
+  write_zip(
+    &dir.join("foo.zip"),
+    &[
+      ("node_modules/foo/package.json", r#"{"sideEffects":false}"#),
+      ("node_modules/foo/index.js", "globalThis.value = 'FOO';"),
+    ],
+  );
+  let foo = dir.join("foo.zip/node_modules/foo/index.js");
+  let entry = dir.join("entry.js");
+  std::fs::write(&entry, format!("import {:?}; globalThis.value = 'ENTRY';", foo.expect_to_str()))
+    .unwrap();
+
+  let mut bundler = Bundler::new(BundlerOptions {
+    input: Some(vec![InputItem { name: None, import: entry.expect_to_str().to_string() }]),
+    cwd: Some(dir.clone()),
+    resolve: Some(ResolveOptions { yarn_pnp: Some(true), ..Default::default() }),
+    experimental: Some(ExperimentalOptions { incremental_build: Some(true), ..Default::default() }),
+    ..Default::default()
+  })
+  .unwrap();
+  let output = bundler.incremental_generate(ScanMode::Full).await.unwrap();
+  let code = chunk_code(&output);
+  assert!(code.contains("ENTRY"));
+  assert!(!code.contains("FOO"));
+
+  let changed: ArcStr = foo.expect_to_str().into();
+  let output = bundler.incremental_generate(ScanMode::Partial(vec![changed])).await.unwrap();
+  assert!(!chunk_code(&output).contains("FOO"));
 
   std::fs::remove_dir_all(&dir).unwrap();
 }

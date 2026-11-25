@@ -22,7 +22,6 @@ use crate::{
   module_loader::{
     ModuleLoader,
     module_loader::{ModuleLoaderOutput, VisitState},
-    resolve_utils::refresh_package_json,
   },
   type_alias::{IndexEcmaAst, IndexStmtInfos},
   types::scan_stage_cache::ScanStageCache,
@@ -165,8 +164,8 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     let fetch_mode = match mode {
       ScanMode::Full => ScanMode::Full,
       ScanMode::Partial(changed_ids) => {
-        let mut resolved_ids = changed_resolved_ids(&changed_ids, cache);
-        if let Err(err) = self.prepare_changed_modules(&mut resolved_ids, cache).await {
+        let resolved_ids = changed_resolved_ids(&changed_ids, cache);
+        if let Err(err) = self.reset_changed_modules(&resolved_ids, &cache.pending_rescans).await {
           // `fetch_modules` has not taken the changed modules yet. Queue them for the next scan,
           // as a failed fetch does (`ModuleLoader::revert_partial_scan`).
           for resolved_id in resolved_ids {
@@ -217,19 +216,6 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     self.plugin_driver.set_context_load_modules_tx(None)?;
 
     Ok(module_loader_output.into())
-  }
-
-  /// Prepares the modules that a partial scan fetches again, `changed` and the ones that an
-  /// earlier failed scan queued, before `buildStart` runs.
-  async fn prepare_changed_modules(
-    &self,
-    changed: &mut [ResolvedId],
-    cache: &mut ScanStageCache,
-  ) -> BuildResult<()> {
-    for resolved_id in changed.iter_mut().chain(cache.pending_rescans.iter_mut()) {
-      refresh_package_json(resolved_id, &self.resolver, &self.fs)?;
-    }
-    self.reset_changed_modules(changed, &cache.pending_rescans).await
   }
 
   /// Resets the changed modules to the module options of the resolution that created them, before

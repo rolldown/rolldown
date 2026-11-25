@@ -44,6 +44,7 @@ use crate::{SharedOptions, SharedResolver};
 
 use super::external_module_task::ExternalModuleTask;
 use super::module_task::ModuleTask;
+use super::resolve_utils::refresh_package_json;
 use super::runtime_module_task::RuntimeModuleTask;
 use super::task_context::{TaskContext, TaskContextMeta};
 
@@ -609,6 +610,9 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       if seen_changed_ids.insert(resolved_id.id.clone()) {
         changed_resolved_ids.push(resolved_id);
       }
+    }
+    for resolved_id in &mut changed_resolved_ids {
+      refresh_package_json(resolved_id, &self.shared_context.resolver, &self.shared_context.fs);
     }
     // Each changed module starts again from the resolution that created it (`changed_resolved_ids`
     // in `scan_stage.rs`), so drop the module options that its hooks and writes set after that.

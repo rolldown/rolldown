@@ -134,22 +134,44 @@ On the Rust side, the HMR stage and an incremental rebuild fetch a changed modul
 that created the module (`ModuleTask::run_inner`).
 
 It also keeps the `package.json` that the resolution found, and the module format that its
-`type` field gave. The file can change after the resolution, so the HMR stage and an incremental
-rebuild read it again from the same path before they fetch the module (`refresh_package_json` in
-`module_loader/resolve_utils.rs`), also for the modules in `pending_rescans`. It infers the
-format again from the whole id or from the id without `?query` and `#fragment`, whichever gave
-the old format. When both gave it, it uses the whole id, so an id with a query from Rolldown's
-resolver that started as `Unknown` stays `Unknown`.
+`type` field gave. The file can change after the resolution, so `ModuleLoader::fetch_modules`
+reads it again from the same path before it fetches a changed module, also for the modules in
+`pending_rescans` (`refresh_package_json` in `module_loader/resolve_utils.rs`). The HMR stage,
+lazy compilation and an incremental rebuild all fetch through it. It checks that the file exists
+with `metadata` of the file system, which also sees a file in a Yarn PnP zip archive. It infers
+the format again from the whole id or from the id without `?query` and `#fragment`, whichever
+gave the old format. When both gave it, it uses the whole id, so an id with a query from
+Rolldown's resolver that started as `Unknown` stays `Unknown`.
 
-A `package.json` that cannot be parsed fails the HMR update or the scan before `fetch_modules`.
-So `ScanStage::scan` and `HmrStage::refresh_package_json_of` queue the changed modules in
-`pending_rescans` themselves, and a later change, such as the fix of the file, fetches them again.
-The `package.json` cache of the resolver is up to date then: the dev engine clears it when a
-watched `package.json` changes (`internal-docs/dev-engine/implementation.md` §9c).
+A `package.json` that cannot be read or parsed keeps the data of the last read, and the module is
+fetched as usual. The refresh never fails the scan, for two reasons:
 
-A `package.json` that no longer exists gives no `package.json` data. A `package.json` that a user
-adds nearer to the module is not found: the path is the one that the resolution found. Both need
-the files that the resolution looked for and did not find, which Rolldown does not track yet.
+- The refresh runs before the scan knows which modules the graph still needs. The same change can
+  remove the last import of the module, and then a fresh build does not read the file at all.
+- A successful scan must fetch each changed module again, because the HMR stage stamps and ships
+  each of them.
+
+A fresh build can give another result here. It fails to resolve the module when the file cannot be
+parsed, and it uses the next `package.json` up when the file cannot be read.
+
+The refresh reads the file through the `package.json` cache of the resolver, so it sees a change
+only after that cache was cleared. The dev engine clears it, among other cases, when a watched
+`package.json` changes (`internal-docs/dev-engine/implementation.md` §9c). Core does not watch a
+`package.json`, so a plugin must watch it, for example with `addWatchFile`. A direct caller of a
+partial scan clears the cache with `Bundler::clear_resolver_cache`. After the cache was cleared,
+other resolutions read the file again too. A new import of a module under a `package.json` that
+cannot be parsed then fails as in a fresh build.
+
+A `package.json` that no longer exists gives no `package.json` data. Three cases are not handled:
+
+- A `package.json` that a user adds nearer to the module is not found, because the path is the one
+  that the resolution found.
+- A `package.json` that a user adds after it was missing is not read again.
+- When only the `package.json` changes, the module is not fetched again, so it keeps the old data
+  until the module itself changes.
+
+All three need the files that the resolution depends on, also the ones that it looked for and did
+not find. Rolldown does not track them yet.
 
 `moduleSideEffects` lives only in Rust. A hook value reaches Rust with the hook result: the
 `resolveId`, `resolveDynamicImport`, `load` and `transform` wrappers send Rust only the

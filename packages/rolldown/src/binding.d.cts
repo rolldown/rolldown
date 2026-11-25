@@ -1039,6 +1039,12 @@ export interface Es2015Options {
 export type HelperMode = 'Runtime' | 'External'
 
 export interface Helpers {
+  /**
+   * How helper functions are loaded. Defaults to `Runtime`.
+   *
+   * Lowered decorators, legacy or standard, call helpers that only `@oxc-project/runtime`
+   * provides and Babel's helpers lack, so use the `Runtime` mode when decorators are lowered.
+   */
   mode?: HelperMode
 }
 

@@ -389,7 +389,8 @@ normal update, not an update that propagated back to it.
 
 A catch-up can also come with a request outside an update: a lazy
 chunk, a `loadDynamic` pull, or a refetch. Then no walk is waiting for
-it. So after the requested module ran, the runtime calls
+it. So once the request settled (the requested module ran, or the
+request failed after the catch-up landed), the runtime calls
 `hooks.onCaughtUp()`, and the Vite client queues an update with the
 caught-up ids (`catchUpMissedUpdates`). The new module ran against the
 old code of those modules for that short time, as a module that runs

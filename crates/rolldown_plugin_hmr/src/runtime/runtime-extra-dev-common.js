@@ -523,13 +523,16 @@ export class DevRuntime {
         this.throwIfMissing([id]);
       });
       const started = loaded.then(() => {
-        const exports = this.initModule(id);
-        this.notifyCaughtUp();
-        return exports;
+        try {
+          return this.initModule(id);
+        } finally {
+          this.notifyCaughtUp();
+        }
       });
       pending = started;
       loaded.catch(() => {
         if (this.lazyRequests.get(id) === started) this.lazyRequests.delete(id);
+        this.notifyCaughtUp();
       });
       this.lazyRequests.set(id, pending);
     }
@@ -565,14 +568,16 @@ export class DevRuntime {
    */
   async pullAndInit(id) {
     const roots = new Set([id]);
-    for (let pulls = 0; pulls < 2 && this.needsRequest(id); pulls++) {
-      this.throwIfReloadNeeded();
-      await this.pullPatch(roots);
+    try {
+      for (let pulls = 0; pulls < 2 && this.needsRequest(id); pulls++) {
+        this.throwIfReloadNeeded();
+        await this.pullPatch(roots);
+      }
+      this.throwIfMissing(roots);
+      return this.initModule(id);
+    } finally {
+      this.notifyCaughtUp();
     }
-    this.throwIfMissing(roots);
-    const exports = this.initModule(id);
-    this.notifyCaughtUp();
-    return exports;
   }
 
   /**
@@ -601,8 +606,9 @@ export class DevRuntime {
   /**
    * A request outside an update (a lazy chunk, a dynamic import, a refetch) can bring a
    * catch-up. Its changes would wait for the next push, and the page would run their old code
-   * until then. So the client is told, and it runs them as an update. Called after the module
-   * of the request ran, so the update does not race with it.
+   * until then. So the client is told, and it runs them as an update. Called once the request
+   * settled: after the module ran, or after the request failed, so the update does not race with
+   * the module.
    * @internal
    */
   notifyCaughtUp() {

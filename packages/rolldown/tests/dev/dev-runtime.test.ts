@@ -1028,6 +1028,35 @@ test('loadDynamic gets the catch-up before it runs a held factory', async () => 
   expect(onCaughtUp).toHaveBeenCalledTimes(1);
 });
 
+test('requestLazy reports a catch-up when the module it loaded throws', async () => {
+  const { runtime, onCaughtUp, catchUp } = await createRuntimeThatMissedAnUpdate();
+  runtime.loadLazyChunk = async () => {
+    catchUp();
+    runtime.beginPayload(3).registerFactory('boom.js', (id: string) => {
+      runtime.registerModule(id, { exports: {} });
+      throw new Error('boom');
+    });
+  };
+  await expect(runtime.requestLazy('boom.js', 'boom.js?rolldown-lazy=1')).rejects.toThrow('boom');
+  expect(onCaughtUp).toHaveBeenCalledTimes(1);
+});
+
+test('requestLazy reports a catch-up when the chunk lacks the module', async () => {
+  const { runtime, onCaughtUp, catchUp } = await createRuntimeThatMissedAnUpdate();
+  runtime.loadLazyChunk = async () => catchUp();
+  await expect(runtime.requestLazy('gone.js', 'gone.js?rolldown-lazy=1')).rejects.toThrow(
+    'gone.js',
+  );
+  expect(onCaughtUp).toHaveBeenCalledTimes(1);
+});
+
+test('loadDynamic reports a catch-up when the pull lacks the module', async () => {
+  const { runtime, onCaughtUp, catchUp } = await createRuntimeThatMissedAnUpdate();
+  runtime.importPatch = async () => catchUp();
+  await expect(runtime.loadDynamic('gone.js')).rejects.toThrow('gone.js');
+  expect(onCaughtUp).toHaveBeenCalledTimes(1);
+});
+
 test('requestLazy asks again after a failed load, but not after an init error', async () => {
   const { runtime } = await createRuntime();
   registerBuildRows(runtime, ['main.js'], [[]], 1);

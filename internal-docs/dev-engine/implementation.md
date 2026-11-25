@@ -91,9 +91,10 @@ share is the **HMR session** (`HmrSession`,
 - `epoch` — a random nonzero `u32` that `DevEngine::new` sets
   (`random_epoch` in `dev_engine.rs`, through `Bundler::set_hmr_epoch`).
   A plain `Bundler` without a dev engine has epoch 0.
-- `generation` — the number of the newest rebuild that stamped a module.
-- `latest` — module stable id → the stamp of the rebuild that last
-  changed it. A module that never changed has stamp 0.
+- `generation` — goes up by 1 for each `Changed` update
+  (`begin_rebuild`) and for each engine full reload (`begin_full_reload`).
+- `latest` — module stable id → the generation of the last `Changed`
+  update that stamped it. A module that never changed has stamp 0.
 - `num_by_id` / `id_by_num` — the module numbers. Append-only for the
   whole engine life.
 - the catch-up ring — the last 64 `Changed` updates, ids only.

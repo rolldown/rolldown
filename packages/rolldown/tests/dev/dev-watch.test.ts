@@ -96,6 +96,20 @@ async function pullPatch(
   return response.code;
 }
 
+/** Hears every push so far, then pulls the patch for the last one. */
+async function pullLatestPatch(
+  engine: DevEngine,
+  client: DevRuntimeModule.DevRuntime,
+  onHmrUpdates: ReturnType<typeof vi.fn>,
+  fileNames: string[],
+): Promise<string> {
+  const pushes = changedUpdates(onHmrUpdates);
+  for (const push of pushes.slice(0, -1)) {
+    client.markStale(push.staleIds, push.gen);
+  }
+  return pullPatch(engine, client, pushes.at(-1)!, fileNames);
+}
+
 test.concurrent(
   'dev watch exclude',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
@@ -1556,19 +1570,17 @@ test.concurrent(
 
     await engine.run();
     await expect.poll(() => onOutput).toHaveBeenCalled();
-    await engine.registerClient('client');
+    const client = await createClient(dir);
 
     await editFile(packageJson, `{"type":"commonjs"}`);
     await editFile(dep, `this.value = "CJS"`);
 
-    const findPatch = () =>
-      onHmrUpdates.mock.calls
-        .flatMap(([result]) => (result instanceof Error ? [] : result.updates))
-        .find((u) => u.clientId === 'client' && u.update.type === 'Patch');
-    await expect.poll(findPatch, { timeout: 20_000 }).toBeTruthy();
-
-    const patch = findPatch()!.update as { type: 'Patch'; code: string };
-    const depFactory = patch.code
+    const changesDep = (push: ChangedUpdate) => push.changedIds.some((id) => id.endsWith('dep.js'));
+    await expect
+      .poll(() => changedUpdates(onHmrUpdates).some(changesDep), { timeout: 20_000 })
+      .toBe(true);
+    const code = await pullLatestPatch(engine, client, onHmrUpdates, ['dep.js']);
+    const depFactory = code
       .split('//#region ')
       .find((region) => region.split('\n', 1)[0].endsWith('pkg/dep.js'));
     // `dep.js` is CommonJS now, so its factory fills `module.exports`.
@@ -1624,15 +1636,10 @@ test.concurrent(
 
     await engine.run();
     await expect.poll(() => outputs.length).toBeGreaterThan(0);
-    await engine.registerClient('client');
+    const client = await createClient(dir);
 
     const hmrErrors = () =>
       onHmrUpdates.mock.calls.map(([result]) => result).filter((result) => result instanceof Error);
-    const patchCodes = () =>
-      onHmrUpdates.mock.calls
-        .flatMap(([result]) => (result instanceof Error ? [] : result.updates))
-        .filter((u) => u.clientId === 'client' && u.update.type === 'Patch')
-        .map((u) => (u.update as { type: 'Patch'; code: string }).code);
     const lastOutput = async () => {
       await engine.ensureLatestBuildOutput();
       const last = outputs.at(-1);
@@ -1645,14 +1652,14 @@ test.concurrent(
     await editFile(packageJson, `{ not json`);
     await editFile(dep, `globalThis.value = 'DEP_2'`);
     await expect.poll(lastOutput).toMatch(/value = ["']DEP_2/);
-    expect(patchCodes().some((code) => code.includes('DEP_2'))).toBe(true);
+    expect(await pullLatestPatch(engine, client, onHmrUpdates, ['dep.js'])).toContain('DEP_2');
     expect(hmrErrors()).toEqual([]);
 
     onHmrUpdates.mockClear();
     await editFile(main, `globalThis.value = 'MAIN';\nimport.meta.hot.accept();\n`);
     await expect.poll(lastOutput).toMatch(/value = ["']MAIN/);
     expect(await lastOutput()).not.toContain('DEP_');
-    expect(patchCodes().length).toBeGreaterThan(0);
+    expect(await pullLatestPatch(engine, client, onHmrUpdates, ['main.js'])).toContain('MAIN');
     expect(hmrErrors()).toEqual([]);
   },
 );

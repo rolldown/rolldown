@@ -36,9 +36,9 @@ pub enum HmrCatchUp {
 
 /// Dev-engine-wide HMR state. It lives for the whole engine and survives full builds.
 ///
-/// - `generation` numbers the rebuilds that changed some module's rendered factory.
-///   `latest[m]` is the last such rebuild for module `m`. A module that never changed has no
-///   entry and stamp 0.
+/// - `generation` goes up by 1 for each `Changed` update (`begin_rebuild`) and for each engine
+///   full reload (`begin_full_reload`). `latest[m]` is the generation of the last `Changed`
+///   update that stamped `m`. A module that never changed has no entry and stamp 0.
 /// - Every module gets a number on first sight. The client sends sets of modules as sets of
 ///   these numbers (`HmrNumSet`). Numbers are never reused, so they stay valid across full
 ///   builds.
@@ -50,7 +50,7 @@ pub enum HmrCatchUp {
 pub struct HmrSession {
   epoch: u32,
   generation: u32,
-  /// module stable id → the rebuild that last changed it
+  /// module stable id → the generation of the last `Changed` update that stamped it
   latest: FxHashMap<ArcStr, u32>,
   num_by_id: FxHashMap<ArcStr, u32>,
   id_by_num: Vec<ArcStr>,

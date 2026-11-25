@@ -4,10 +4,11 @@ import { page, serverUrl, waitForBuildStable } from '~utils';
 // A lazy-compiled module that throws during init must be catchable at the
 // consumer's `await import(...)` — and stay catchable across a page refresh.
 //
-// The two loads exercise two different proxy code paths against the SAME dev
-// engine (only the browser page reloads):
+// Two loads of the same build output against the SAME dev engine (only the
+// browser page reloads):
 //   1. cold  — first compile, served through the on-demand `@vite/lazy` response
-//   2. warm  — after the engine rebuilds main.js around the now-"fetched" proxy
+//   2. warm  — a repeat visit after the reload: the engine already holds the
+//      route and serves it from its graph, with no scan
 //
 // Either way the result is identical: caught at `await import(...)`, with no
 // unhandled rejection. Regression test for vitejs/vite#21626 / rolldown#9975.
@@ -37,12 +38,12 @@ describe('lazy-compilation: lazy-init-error (try/catch)', () => {
     // 1. Cold: first compile.
     await clickAndExpectCaught();
 
-    // Let the rebuild triggered by the lazy compile settle, then refresh the
-    // page WITHOUT restarting the dev engine — main.js now uses the fetched proxy.
+    // Let the engine settle, then refresh the page WITHOUT restarting the dev
+    // engine — the route is now in the engine's module graph.
     await waitForBuildStable();
     await page.reload({ waitUntil: 'domcontentloaded' });
 
-    // 2. Warm: fetched-proxy path. Same result.
+    // 2. Warm: a repeat visit. Same result.
     await clickAndExpectCaught();
   });
 });

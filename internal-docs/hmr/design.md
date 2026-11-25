@@ -366,7 +366,7 @@ only (`holds_current` in `hmr_stage.rs`):
 | -------------------------------------------------------------------------------------------- | --------------------------------- | ---------------------------------- |
 | A sourcemap-only edit (the unchanged-output compare checks code only)                        | AST, `sourcemap_chain`            | a stale sourcemap                  |
 | An importee's `def_format` flips (it is not one of the interop facts that restamp importers) | the importer's `import()` interop | the old interop of that `import()` |
-| A `pending_rescans` retry by a lazy compile or by the `Rebuild` after it                     | AST                               | old code                           |
+| A `pending_rescans` retry by a `Rebuild`                                                     | AST                               | old code                           |
 | The second read of the changed files in `HmrRebuild`                                         | AST                               | old code                           |
 
 ## Failure policy

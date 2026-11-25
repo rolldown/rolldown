@@ -7,11 +7,11 @@ import { page, serverUrl, waitForBuildStable } from '~utils';
 //
 // Two loads, same dev engine (only the browser page reloads):
 //   1. cold  — first compile, via the on-demand `@vite/lazy` response
-//   2. warm  — after the engine rebuilds main.js around the "fetched" proxy
+//   2. warm  — a repeat visit after the reload: the engine already holds the
+//      route and serves it from its graph, with no scan
 //
-// The bug this guards (vitejs/vite#21626 / rolldown#9975) made the cold path
-// swallow the error (no rejection at all); the warm path was already correct.
-// Pinning both keeps them consistent.
+// The bug this guards (vitejs/vite#21626 / rolldown#9975) made the error
+// disappear: no rejection at all. Both loads must surface it.
 const lines = (text: string | null) => (text ?? '').split('\n').filter(Boolean);
 
 async function clickAndExpectUnhandled() {
@@ -30,13 +30,13 @@ describe('lazy-compilation: lazy-init-error (no handler)', () => {
     // 1. Cold: first compile.
     await clickAndExpectUnhandled();
 
-    // Settle the rebuild, then refresh WITHOUT restarting the dev engine. The
+    // Let the engine settle, then refresh WITHOUT restarting the dev engine. The
     // reload resets the DOM, so the unhandled log starts empty again.
     await waitForBuildStable();
     await page.reload({ waitUntil: 'domcontentloaded' });
     expect(lines(await page.textContent('#lazy-init-error-unhandled'))).toEqual([]);
 
-    // 2. Warm: fetched-proxy path. The unhandled rejection surfaces again.
+    // 2. Warm: a repeat visit. The unhandled rejection surfaces again.
     await clickAndExpectUnhandled();
   });
 });

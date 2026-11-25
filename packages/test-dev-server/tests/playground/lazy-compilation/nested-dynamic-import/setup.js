@@ -1,7 +1,7 @@
 // nested-dynamic-import: outer.js is itself a lazy chunk and runs
 // `import('./inner.js')` — a lazy import inside a lazy chunk. Regression for
 // `hmr_ast_finalizer.rs::try_rewrite_dynamic_import`: without the fix,
-// `inner.foo` was undefined. Only shows on the first click of a fresh page.
+// `inner.foo` was undefined.
 const log = (msg) => {
   document.getElementById('nested-dynamic-import-log').textContent += msg + '\n';
 };

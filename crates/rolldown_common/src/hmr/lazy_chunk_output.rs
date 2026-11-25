@@ -13,7 +13,4 @@ pub struct HmrLazyChunkOutput {
   /// pending-payload entry that the delivery-time ship-map write consumes
   /// (`DevEngine::notify_payload_delivered`).
   pub carried: Vec<(ArcStr, u32)>,
-  /// Whether the compile ran a partial scan. A repeat visit of a fetched route skips it,
-  /// and then the build output has nothing new to rebuild.
-  pub scanned: bool,
 }

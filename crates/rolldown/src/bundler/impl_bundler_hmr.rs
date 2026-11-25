@@ -57,8 +57,10 @@ impl Bundler {
   }
 
   /// Starts a new session with `epoch`. Call it before the first build.
-  pub fn set_hmr_epoch(&self, epoch: u32) {
+  pub fn set_hmr_epoch(&mut self, epoch: u32) {
     *self.bundle_factory.hmr_session.lock() = HmrSession::new(epoch);
+    // Stamps start again at 0, so a cached factory could match a module that changed since.
+    self.hmr_render_cache.clear();
   }
 
   pub fn hmr_session(&self) -> &SharedHmrSession {
@@ -66,8 +68,15 @@ impl Bundler {
   }
 
   /// See `HmrSession::begin_full_reload`.
-  pub fn begin_hmr_full_reload(&self) {
+  pub fn begin_hmr_full_reload(&mut self) {
     self.bundle_factory.hmr_session.lock().begin_full_reload();
+    // A full reload follows a graph change that no stamp records, such as a lost update.
+    self.hmr_render_cache.clear();
+  }
+
+  #[cfg(feature = "testing")]
+  pub fn hmr_render_cache_hits_for_testing(&self) -> crate::RenderCacheHits {
+    self.hmr_render_cache.hits()
   }
 
   /// Leaves the graph as a failure after the merge of an HMR update does: with an edit that no
@@ -91,6 +100,79 @@ impl Bundler {
       cache: &mut self.cache,
       lost_hmr_update: &mut self.lost_hmr_update,
       session: self.bundle_factory.hmr_session.clone(),
+      render_cache: &mut self.hmr_render_cache,
     }))
+  }
+}
+
+#[cfg(all(test, feature = "experimental"))]
+mod tests {
+  use std::sync::Arc;
+
+  use crate::{Bundler, BundlerOptions, hmr::render_cache::RenderedFactory};
+
+  #[test]
+  fn a_new_epoch_clears_the_render_cache() {
+    let mut bundler = Bundler::new(BundlerOptions::default()).unwrap();
+    let factory = Arc::new(RenderedFactory { code: "x".to_string(), map: None });
+    bundler.hmr_render_cache.insert("a.js".into(), 1, 0, factory);
+    bundler.set_hmr_epoch(2);
+    assert!(bundler.hmr_render_cache.get("a.js", 1, 0).is_none());
+  }
+
+  /// The proxy of a first visit is read again: the stub becomes the fetched template. No stamp
+  /// records it, so the scan must drop the proxy's factory. A proxy never runs in a client, so
+  /// the test puts one in the cache by hand.
+  #[tokio::test(flavor = "multi_thread")]
+  async fn a_lazy_scan_forgets_the_factories_of_its_proxies() {
+    use rolldown_common::{ClientHave, HmrNumSet, HmrPullResponse, ScanMode};
+
+    use crate::{DevModeOptions, ExperimentalOptions};
+
+    let dir = std::env::temp_dir().join(format!("rolldown-lazy-forget-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let dir = dunce::canonicalize(&dir).unwrap();
+    std::fs::write(dir.join("main.js"), "import('./lazy.js');\n").unwrap();
+    std::fs::write(dir.join("lazy.js"), "export const value = 1;\n").unwrap();
+
+    let mut bundler = Bundler::new(BundlerOptions {
+      input: Some(vec!["./main.js".to_string().into()]),
+      cwd: Some(dir.clone()),
+      experimental: Some(ExperimentalOptions {
+        incremental_build: Some(true),
+        dev_mode: Some(DevModeOptions { lazy: Some(true), ..Default::default() }),
+        ..Default::default()
+      }),
+      ..Default::default()
+    })
+    .unwrap();
+    bundler.set_hmr_epoch(7);
+    bundler.incremental_generate(ScanMode::Full).await.unwrap();
+
+    let proxy = "lazy.js?rolldown-lazy=1";
+    let factory = Arc::new(RenderedFactory { code: "x".to_string(), map: None });
+    bundler.hmr_render_cache.insert(proxy.into(), 0, 0, factory);
+    let have = ClientHave {
+      epoch: 7,
+      lazy: HmrNumSet::from_nums([bundler.hmr_session().lock().num_of("lazy.js").unwrap()]),
+      ..ClientHave::default()
+    };
+    let mut merged = false;
+    let response = bundler.render_patch(&have, &mut merged).await;
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    assert!(matches!(response.unwrap(), HmrPullResponse::Payload(_)));
+    assert!(merged, "the visit scans");
+    assert!(bundler.hmr_render_cache.get(proxy, 0, 0).is_none());
+  }
+
+  #[test]
+  fn a_full_reload_clears_the_render_cache() {
+    let mut bundler = Bundler::new(BundlerOptions::default()).unwrap();
+    let factory = Arc::new(RenderedFactory { code: "x".to_string(), map: None });
+    bundler.hmr_render_cache.insert("a.js".into(), 1, 0, factory);
+    bundler.begin_hmr_full_reload();
+    assert!(bundler.hmr_render_cache.get("a.js", 1, 0).is_none());
   }
 }

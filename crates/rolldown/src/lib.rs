@@ -41,3 +41,6 @@ pub use rolldown_plugin as plugin;
 
 #[cfg(feature = "testing")]
 pub use crate::utils::determine_minify_internal_exports_default;
+
+#[cfg(all(feature = "testing", feature = "experimental"))]
+pub use crate::hmr::render_cache::RenderCacheHits;

@@ -820,9 +820,15 @@ Then, across all files of the batch:
    build (recovery must reach clients stuck on the overlay), and
    modules a `hotUpdate` hook explicitly returned (the change may live
    outside the module's own code, so identical output proves nothing).
-   Both renders skip the sourcemap: the factory text does not depend on
-   the stamp or on the payload, so the compare needs the code only.
-6. **Refetch** — one partial scan and cache merge. The merge sets
+   The compare needs the code only: the factory text does not depend on
+   the stamp or on the payload. The pre-rebuild render skips the
+   sourcemap. With 32 changed modules or fewer
+   (`MAX_CACHED_RECHECK_RENDERS`), the post-merge render makes the
+   sourcemap too, and step 7 keeps those factories in the render cache
+   under the new stamp.
+6. **Refetch** — one partial scan and cache merge. Before the scan, the
+   render cache drops the factories of the modules it reads again
+   (`HmrRenderCache::forget_rescanned`). The merge sets
    `Bundler::lost_hmr_update`. The update sets it back to its earlier
    value after the last step that can fail, right before it stamps
    (§9b).
@@ -923,7 +929,8 @@ some time (see "Pulls before the rebuild" under `rebuild`).
    each number to its target and its proxy in the module table; neither
    in the graph is an error. `scan_lazy_routes` scans a proxy whose
    target is not in the graph, or whose own entry waits in
-   `pending_rescans`. It marks the proxy as fetched, scans with
+   `pending_rescans`. It drops the render cache entries of the proxies
+   it scans, marks the proxy as fetched, scans with
    `retry_pending_rescans: false`, undoes the mark when the scan fails,
    and sets `merged` just before `merge`. See
    [lazy-compilation/design.md](../lazy-compilation/design.md) ("Repeat
@@ -937,12 +944,16 @@ some time (see "Pulls before the rebuild" under `rebuild`).
    targets the client did not run. Ids that left the graph are skipped.
 5. **Render** (`render_payload`) — external modules are dropped, the rest
    sorted by id and given numbers. Under one session lock it reads the
-   generation `G` and renders the rows. The payload is the prelude
+   generation `G`, renders the rows, and reads each module's stamp and
+   `render_inputs` hash. A payload with the same `PayloadKey` comes from
+   the render cache, and so does each factory with the same key. The
+   misses render in parallel and go into the cache (see
+   [hmr/design.md](../hmr/design.md), "Render cache"). The payload is the prelude
    `const __rolldown_payload__ = __rolldown_runtime__.beginPayload(G)`,
    the catch-up statement (when needed), the rows, then one `//#region`
    factory per module (`__rolldown_payload__.registerFactory(id, fn)`).
-   No tail statement. The factories render in parallel, and their
-   sourcemaps are joined per response. The caller holds the bundler, so
+   No tail statement. The sourcemaps of the factories are joined per
+   response. The caller holds the bundler, so
    no stamp or merge runs while the payload renders, and `G` names the
    state of every factory in it (see [hmr/design.md](../hmr/design.md),
    principle 7).
@@ -1442,8 +1453,8 @@ barrel state. Relevant methods:
 ### HMR reads `Bundler::cache`
 
 `impl_bundler_hmr.rs` builds an `HmrStageInput` from `&mut self.cache`
-(`Bundler::cache`) and a clone of the HMR session (`Bundler::hmr_stage`)
-at two call sites:
+(`Bundler::cache`), a clone of the HMR session and
+`&mut self.hmr_render_cache` (`Bundler::hmr_stage`) at two call sites:
 
 - `compute_hmr_update_for_file_changes` — file-change-driven HMR.
 - `render_patch` — a client's pull, which also scans the lazy routes it

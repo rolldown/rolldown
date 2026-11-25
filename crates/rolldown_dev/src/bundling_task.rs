@@ -144,7 +144,7 @@ impl BundlingTask {
     // task kind: no client ran its edit. This includes the `FullBuild` that
     // recovers from a failed full build; nothing else reloads the clients then.
     let reload_reason = {
-      let bundler = self.bundler.lock().await;
+      let mut bundler = self.bundler.lock().await;
       let changed_tsconfig = self
         .input
         .changed_files()

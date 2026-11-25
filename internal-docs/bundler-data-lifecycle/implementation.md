@@ -116,6 +116,14 @@ edit. A `FullBuild` has no changed files, and Vite ignores an update whose
 path. It is a workaround until Vite delivers a `FullReload` with no changed
 files.
 
+`Bundler::hmr_render_cache` also lives next to the cache. It keeps rendered
+HMR factories, keyed by each module's stamp (see
+[hmr/design.md](../hmr/design.md), "Render cache"). A build stamps nothing, so
+`Bundler::incremental_bundle` updates it before the scan
+(`forget_rendered_factories`): a full scan clears it, and a partial scan drops
+the factories of its changed paths and of both queues of failed scans
+(`pending_rescans`, `pending_build_rescans`).
+
 ### Cache integrity on a failed build
 
 `ScanStageCache` must survive a _failed_ build whole, not just a successful one

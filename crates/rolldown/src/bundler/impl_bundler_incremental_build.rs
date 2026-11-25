@@ -10,6 +10,8 @@ use rolldown_common::{BundleMode, ScanMode};
 use rolldown_error::BuildResult;
 #[cfg(feature = "experimental")]
 use std::{mem, sync::atomic::Ordering};
+#[cfg(feature = "experimental")]
+use sugar_path::SugarPath;
 
 #[cfg(feature = "experimental")]
 impl Bundler {
@@ -74,6 +76,7 @@ impl Bundler {
     // the plugin driver state.
     let scan_mode = if self.cache.has_snapshot() { scan_mode } else { ScanMode::Full };
     let is_full_scan = scan_mode.is_full();
+    self.forget_rendered_factories(&scan_mode);
     let bundle_mode = match scan_mode {
       ScanMode::Full => BundleMode::IncrementalFullBuild,
       ScanMode::Partial(_) => BundleMode::IncrementalBuild,
@@ -94,5 +97,23 @@ impl Bundler {
       self.lost_hmr_update = false;
     }
     output
+  }
+
+  /// A full scan can change any module without a stamp, so every rendered HMR factory goes. A
+  /// partial scan reads again its paths and both queues of earlier failures, so only their
+  /// factories go.
+  fn forget_rendered_factories(&mut self, scan_mode: &ScanMode<ArcStr>) {
+    let ScanMode::Partial(paths) = scan_mode else {
+      self.hmr_render_cache.clear();
+      return;
+    };
+    let cache = &self.cache;
+    let changed = paths.iter().filter_map(|path| {
+      cache.module_idx_by_abs_path.get(&ArcStr::from(path.as_str().to_slash())).copied()
+    });
+    let failed_builds = cache.pending_build_rescans.iter().filter_map(|resolved_id| {
+      cache.module_id_to_idx.get(&resolved_id.id).map(|state| state.idx())
+    });
+    self.hmr_render_cache.forget_rescanned(cache, changed.chain(failed_builds));
   }
 }

@@ -985,7 +985,10 @@ watcher batch. It runs before `schedule_build_if_stale`, and no other
 task can start while the state is `InProgress`, so the list a task wrote
 to is registered before the next task's build can replace it. A lazy
 compile writes to the list outside any task, so it carries its list in
-`ModuleChanged` instead (§15).
+`ModuleChanged` instead (§15). `update_watch_paths` holds the bundler
+lock only to take the `Arc` of the list. The registration walks every
+watched file, and it runs after the lock is released, so lazy compiles
+do not wait for it.
 
 Key facts:
 

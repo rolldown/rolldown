@@ -472,12 +472,15 @@ impl BundleCoordinator {
   /// Watch the files a finished task loaded: the latest build's list, and the list its HMR
   /// stage wrote to when its rebuild replaced that list. The rebuild does not load again the
   /// modules the HMR stage cached, so the latest list can miss them.
+  ///
+  /// The bundler lock is held only to take the list. Registering walks every watched file
+  /// (several ms in a large app), and lazy compiles wait for the same lock.
   async fn update_watch_paths(
     &self,
     hmr_stage_watch_files: Option<&FxDashSet<ArcStr>>,
   ) -> BuildResult<()> {
-    let bundler = self.bundler.lock().await;
-    self.register_watch_files(hmr_stage_watch_files.into_iter().chain([&**bundler.watch_files()]))
+    let latest = Arc::clone(self.bundler.lock().await.watch_files());
+    self.register_watch_files(hmr_stage_watch_files.into_iter().chain([&*latest]))
   }
 
   /// Add the files of `watch_files` lists to the watcher in one batch, filtered by

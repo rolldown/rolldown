@@ -696,7 +696,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
     // 2. Scan the route into the graph, unless the graph holds it already. Only the fetched
     // template has an `import()`, and a failed scan never reaches `merge`, so a resolved
-    // `import()` on the proxy means an earlier compile merged the route. A route whose own proxy
+    // `import()` on the proxy means the graph already holds the route (from an earlier compile
+    // or a build after the proxy was marked fetched). A route whose own proxy
     // waits for a rescan scans again, so a deleted route file reports its error.
     // See internal-docs/lazy-compilation/design.md ("Repeat Visits").
     let route_merged =

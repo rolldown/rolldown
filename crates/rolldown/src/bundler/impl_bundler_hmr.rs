@@ -151,9 +151,9 @@ impl Bundler {
   /// Compile a lazy entry module and return compiled code plus the pending-payload
   /// entry the delivery-time ship-map write consumes.
   ///
-  /// This is called when a dynamically imported module is first requested at runtime.
-  /// The module was previously stubbed with a proxy, and now we need to compile the
-  /// actual module and its dependencies.
+  /// Serves a lazy route to a client. A first visit scans the route into the graph; a repeat
+  /// visit renders it from the graph (see internal-docs/lazy-compilation/design.md, "Repeat
+  /// Visits").
   ///
   /// `merged` becomes `true` once the compile merges a scan into the graph, also when a later
   /// step fails. See `HmrStage::compile_lazy_entry`.

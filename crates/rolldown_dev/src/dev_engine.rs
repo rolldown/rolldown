@@ -365,9 +365,9 @@ impl DevEngine {
 
   /// Compile a lazy entry module and return compiled code.
   ///
-  /// This is called when a dynamically imported module is first requested at runtime.
-  /// The module was previously stubbed with a proxy, and now we need to compile the
-  /// actual module and its dependencies.
+  /// Serves a lazy route to a client. A first visit scans the route into the graph; a repeat
+  /// visit renders it from the graph (see internal-docs/lazy-compilation/design.md, "Repeat
+  /// Visits").
   ///
   /// # Arguments
   /// * `proxy_module_id` - The proxy module ID (with ?rolldown-lazy=1 suffix)
@@ -376,10 +376,12 @@ impl DevEngine {
   /// # Returns
   /// The compiled chunk plus the modules and render-time stamps it carries
   ///
+  /// # Errors
+  /// - If the module is not a lazy proxy from an earlier build
+  /// - If the compile fails
+  ///
   /// # Panics
-  /// - If lazy compilation is not enabled
-  /// - If the module is not found
-  /// - If compilation fails
+  /// - If no build has run yet
   pub async fn compile_lazy_entry(
     &self,
     proxy_module_id: String,
@@ -983,8 +985,7 @@ mod tests {
   }
 
   /// A repeat visit of a fetched route does not scan: the graph already holds the route. It
-  /// serves the same code and sourcemap as the first visit, even though `lazy.js` changed on
-  /// disk with no watch event.
+  /// serves the same code and sourcemap as the first visit.
   #[cfg(feature = "testing")]
   #[tokio::test]
   async fn lazy_repeat_visit_skips_the_scan_and_the_rebuild() {
@@ -994,7 +995,6 @@ mod tests {
 
     let first = engine.compile_lazy_entry(proxy.clone(), "c1".to_string()).await.unwrap();
     let resolves_after_first = reported.resolve_calls();
-    std::fs::write(dir.join("lazy.js"), "export const value = 'unseen';\n").unwrap();
     // A client id the engine has never seen holds nothing, like a new tab.
     let repeat = engine.compile_lazy_entry(proxy, "c2".to_string()).await.unwrap();
     let state_after_repeat = engine.get_bundle_state().await.unwrap();

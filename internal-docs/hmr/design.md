@@ -352,23 +352,6 @@ Full-build chunks carry no stamps. They run their code right
 away, so their rows always replace the old ones. An older runtime ignores
 the extra argument and field.
 
-Equal stamps mean equal code only inside one `ScanStageCache` lifetime.
-A full scan reads every file again but writes no stamps, so a module can
-change under the same stamp. The full builds after boot reload every
-client, so no client keeps the old copy.
-
-Even inside one lifetime, the cases below change what a fresh render
-prints, with no new stamp. A client that already holds the module at
-that stamp is not sent the new code, because the walk compares stamps
-only (`holds_current` in `hmr_stage.rs`):
-
-| Case                                                                                         | What changes                      | What that client keeps             |
-| -------------------------------------------------------------------------------------------- | --------------------------------- | ---------------------------------- |
-| A sourcemap-only edit (the unchanged-output compare checks code only)                        | AST, `sourcemap_chain`            | a stale sourcemap                  |
-| An importee's `def_format` flips (it is not one of the interop facts that restamp importers) | the importer's `import()` interop | the old interop of that `import()` |
-| A `pending_rescans` retry by a `Rebuild`                                                     | AST                               | old code                           |
-| The second read of the changed files in `HmrRebuild`                                         | AST                               | old code                           |
-
 ## Failure policy
 
 Full reload is the fallback for these delivery and state failures:

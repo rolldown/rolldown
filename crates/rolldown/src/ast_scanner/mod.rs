@@ -47,7 +47,7 @@ use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan, EventKindSwitc
 use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
 use rolldown_utils::ecmascript::{legitimize_identifier_name, to_usv_str};
-use rolldown_utils::indexmap::FxIndexMap;
+use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::borrow::Cow;
 use sugar_path::SugarPath;
@@ -83,7 +83,7 @@ pub struct ScanResult {
   /// may not know if it is a esm at the time, a simple case would be swap the order of two export
   /// stmt).
   pub commonjs_exports: FxHashMap<CompactStr, Vec<LocalExport>>,
-  pub cjs_literal_export_names: Vec<CompactStr>,
+  pub cjs_literal_export_names: FxIndexSet<CompactStr>,
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub default_export_ref: SymbolRef,
@@ -295,7 +295,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       directive_range: vec![],
       dummy_record_set: FxHashSet::default(),
       commonjs_exports: FxHashMap::default(),
-      cjs_literal_export_names: Vec::new(),
+      cjs_literal_export_names: FxIndexSet::default(),
       constant_export_map: FxHashMap::default(),
       deferred_write_constants: Vec::new(),
       ecma_view_meta: EcmaViewMeta::default(),

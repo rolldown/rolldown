@@ -334,7 +334,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
               if id.span.source_text(self.immutable_ctx.source) == "exports"
                 && let Some(name) = self.literal_cjs_export(node)
               {
-                self.result.cjs_literal_export_names.push(name);
+                self.result.cjs_literal_export_names.insert(name);
               }
               let exported_symbol =
                 self.result.symbol_ref_db.create_facade_root_symbol_ref(export_name);
@@ -372,7 +372,7 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
                 && module_exports.property.span.source_text(self.immutable_ctx.source) == "exports"
                 && let Some(name) = self.literal_cjs_export(node)
               {
-                self.result.cjs_literal_export_names.push(name);
+                self.result.cjs_literal_export_names.insert(name);
               }
             }
           }

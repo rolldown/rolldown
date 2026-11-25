@@ -2871,7 +2871,6 @@ dependencies = [
  "rolldown_sourcemap",
  "rolldown_utils",
  "rustc-hash",
- "serde",
  "serde_json",
  "string_wizard",
  "sugar_path",

@@ -637,9 +637,9 @@ impl GenerateStage<'_> {
     let load_dependencies = &self.link_output.metas[module_idx].load_dependencies;
     let mut symbol_owners = None;
     let mut is_kept = |dependency: ModuleIdx| {
-      // `load_dependencies` also has each imported code-less entry module that has no side
-      // effects, only to place the chunks (see `codeless_entries` in `patch_module_dependencies`).
-      // The output imports such a module only when this module uses one of its bindings.
+      // `load_dependencies` also has imported user-defined and code-less dynamic entries without
+      // side effects for chunk placement (see `placement_entries` in `patch_module_dependencies`).
+      // Such a module counts as kept only when this module uses one of its bindings.
       load_dependencies.contains(&dependency)
         && (self.options.treeshake.is_none()
           || !self.link_output.entries.contains_key(&dependency)

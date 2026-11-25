@@ -130,7 +130,7 @@ pub async fn create_ecma_view(
   // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
   let ecma_view = EcmaView {
     source: ast.source().clone(),
-    pre_render_size: declared_module_size.or(json_source_len).unwrap_or(ast.source().len()),
+    declared_module_size: declared_module_size.or(json_source_len),
     named_imports,
     named_exports,
     cjs_literal_export_names,

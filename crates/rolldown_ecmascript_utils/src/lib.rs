@@ -22,7 +22,5 @@ pub use crate::{
   },
   injected_expression::parse_injected_expression,
   scope::is_top_level,
-  source_utils::{
-    contains_decorator_syntax, contains_script_closing_tag, may_contain_decorator_syntax,
-  },
+  source_utils::contains_script_closing_tag,
 };

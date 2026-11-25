@@ -20,9 +20,7 @@ use oxc_str::CompactStr;
 
 use rolldown_common::{ConstExportMeta, ConstantValue, ModuleId, NormalizedBundlerOptions};
 use rolldown_ecmascript::{EcmaAst, WithMutFields, semantic_builder_for_transform};
-use rolldown_ecmascript_utils::{
-  contains_decorator_syntax, contains_script_closing_tag, may_contain_decorator_syntax,
-};
+use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -109,6 +107,9 @@ impl PreProcessEcmaAst {
 
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
+    // Read before later steps replace `scoping`. None of them adds decorators.
+    let has_decorator_syntax =
+      scoping.as_ref().is_some_and(oxc::semantic::Scoping::has_decorators_or_auto_accessors);
     self.clear_no_side_effects_replaceable_by_eval(&mut ast, &mut scoping);
 
     // Extract enum member values before the transformer converts enums.
@@ -180,11 +181,8 @@ impl PreProcessEcmaAst {
     if is_not_js
       || bundle_options.transform_options.should_transform_js
       // No engine ships standard decorators, so only pay for the pass when the
-      // module has decorators or auto-accessors: a cheap text scan first, then
-      // an exact AST check for the modules the scan cannot rule out.
-      || (bundle_options.transform_options.lower_decorators_in_js
-        && may_contain_decorator_syntax(ast.source(), &ast.program().comments)
-        && contains_decorator_syntax(ast.program()))
+      // module has decorators or auto-accessors.
+      || (bundle_options.transform_options.lower_decorators_in_js && has_decorator_syntax)
       // Run transformer on JS files containing `</script` to handle tagged template literals.
       || contains_script_closing_tag(ast.source().as_bytes())
     {

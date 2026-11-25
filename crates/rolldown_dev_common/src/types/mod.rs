@@ -7,7 +7,7 @@ pub use self::{
   bundle_output::BundleOutput,
   dev_options::{
     DevOptions, NormalizedDevOptions, OnAdditionalAssetsCallback, OnHmrUpdatesCallback,
-    OnOutputCallback, SharedNormalizedDevOptions, normalize_dev_options,
+    OnOutputCallback, normalize_dev_options,
   },
   dev_watch_options::DevWatchOptions,
   rebuild_strategy::RebuildStrategy,

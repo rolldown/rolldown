@@ -18,18 +18,6 @@ pub enum LogLevel {
   Debug,
 }
 
-impl From<String> for LogLevel {
-  fn from(value: String) -> Self {
-    match value.as_str() {
-      "silent" => Self::Silent,
-      "warn" => Self::Warn,
-      "info" => Self::Info,
-      "debug" => Self::Debug,
-      _ => panic!("Invalid log level: {value}"),
-    }
-  }
-}
-
 impl Display for LogLevel {
   fn fmt(&self, f: &mut Formatter) -> fmt::Result {
     match self {

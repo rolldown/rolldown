@@ -19,8 +19,8 @@ use crate::{
 };
 use arcstr::ArcStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, GetLocalDb, ImportKind, ModuleIdx, NormalModule, OutputFormat,
-  StmtInfo, SymbolRef, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, ChunkModulesOrderBy, GetLocalDb, ImportKind, ModuleIdx, NormalModule,
+  OutputFormat, StmtInfo, SymbolRef, WrapKind,
 };
 use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
 use rustc_hash::FxHashMap;
@@ -54,6 +54,7 @@ pub fn deconflict_chunk_symbols(
   link_output: &LinkStageOutput,
   order_wrap_state: &OrderWrapState,
   format: OutputFormat,
+  chunk_modules_order: ChunkModulesOrderBy,
   node_require_ref: Option<SymbolRef>,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
   chunk_assignments: ChunkAssignments<'_>,
@@ -64,13 +65,13 @@ pub fn deconflict_chunk_symbols(
   let mut own_modules;
   let (modules, chunks): (&[ModuleIdx], &[ChunkIdx]) = match inline {
     Some(inline) => (&inline.modules, &inline.chunks),
-    None => {
-      // The renamer walks modules in reverse execution order.
-      // `module-id` moves side-effect-free leaves to the front of the print list.
+    None if matches!(chunk_modules_order, ChunkModulesOrderBy::ModuleId) => {
+      // The renamer visits modules in reverse execution order. Module-id printing can move leaves.
       own_modules = chunk.modules.clone();
-      own_modules.sort_by_key(|idx| link_output.module_table[*idx].exec_order());
+      own_modules.sort_unstable_by_key(|idx| link_output.module_table[*idx].exec_order());
       (&own_modules, &own_chunk)
     }
+    None => (&chunk.modules, &own_chunk),
   };
   let inner_binding_names = InnerBindingNames::new(
     modules

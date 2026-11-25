@@ -70,6 +70,7 @@ pub async fn create_ecma_view(
 
   let ScanResult {
     commonjs_exports,
+    cjs_literal_export_names,
     named_imports,
     mut named_exports,
     stmt_infos,
@@ -130,6 +131,7 @@ pub async fn create_ecma_view(
     declared_module_size,
     named_imports,
     named_exports,
+    cjs_literal_export_names,
     imports,
     default_export_ref,
     exports_kind,

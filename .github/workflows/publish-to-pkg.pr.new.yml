@@ -29,6 +29,8 @@ concurrency:
 jobs:
   debounce:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write # for delete-cancelled-runs
     steps:
       # Remove ❌ from main branch.
       - uses: MercuryTechnologies/delete-cancelled-runs@f5c9d322d9c7afbd41f779199818c1ffe381d34b # 1.0.0
@@ -36,12 +38,12 @@ jobs:
         with:
           workflow-file: 'publish-to-pkg.pr.new.yml'
 
-      - name: Debounce for 20 mins
+      - name: Debounce for 15 mins
         if: github.repository == 'rolldown/rolldown' && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        # sleep for 20mins, which should be 1.5 times larger than time for https://github.com/rolldown/rolldown/queue/main.
+        # Merges on main usually land 5 to 15 mins apart, so one batch publishes once.
         run: |
           echo "Start debounce wait: $(date)"
-          sleep 1200
+          sleep 900
           echo "End debounce wait: $(date)"
 
   build:

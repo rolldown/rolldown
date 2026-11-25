@@ -837,6 +837,9 @@ mod tests {
   fn hmr_import_binding_name_is_unique_per_importer_and_record() {
     assert_ne!(external_binding_name("src/a.js", 12), external_binding_name("src/a1.js", 2));
     assert_ne!(external_binding_name("a$2e", 0), external_binding_name("a.", 0));
-    assert_ne!(external_binding_name("a_1", 2), external_binding_name("a", 12));
+    assert_ne!(
+      external_import_binding_name("a", 1, "b_2_c"),
+      external_import_binding_name("a_1_b", 2, "c")
+    );
   }
 }

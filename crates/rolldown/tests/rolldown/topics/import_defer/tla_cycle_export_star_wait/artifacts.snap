@@ -113,8 +113,7 @@ function init_m0() {
 }
 // main.js
 init_log();
-__esmGather(init_m0) || await __esmGather();
-__esmGather(init_m2) || await __esmGather();
+__esmGather([init_m0, init_m2]) || await __esmGather();
 const read = () => [(__esmDefer(init_m0), 0), (__esmDefer(init_m2), 2)];
 export { log, read };
 

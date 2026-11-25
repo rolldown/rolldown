@@ -138,6 +138,7 @@ impl GenerateStage<'_> {
       order_state,
       used_symbol_refs,
       final_esm_init_metadata,
+      loads_split_async_group: chunks_loading_split_async_groups(chunk_graph),
       runs_code_at_load: FxHashMap::default(),
     };
     chunk_graph.lazy_host_inits = planner.plan();
@@ -998,6 +999,33 @@ pub(super) fn avoid_reserved_names(
   if name == original { filename } else { PreliminaryFilename::new(name, None) }
 }
 
+/// A static import waits for a split async group member even through intermediate chunks.
+fn chunks_loading_split_async_groups(graph: &ChunkGraph) -> FxHashSet<ChunkIdx> {
+  let mut loads_async = graph.split_async_group_chunks.clone();
+  if loads_async.is_empty() {
+    return loads_async;
+  }
+  let mut importers = IndexVec::from_vec(vec![Vec::new(); graph.chunk_table.len()]);
+  for (idx, chunk) in graph.chunk_table.iter_enumerated() {
+    if graph.chunk_is_live(idx) {
+      for import in &chunk.static_imports {
+        if let StaticImport::Chunk(dep) = *import {
+          importers[dep].push(idx);
+        }
+      }
+    }
+  }
+  let mut stack: Vec<_> = loads_async.iter().copied().collect();
+  while let Some(idx) = stack.pop() {
+    for &importer in &importers[idx] {
+      if loads_async.insert(importer) {
+        stack.push(importer);
+      }
+    }
+  }
+  loads_async
+}
+
 /// The read-only inputs of `plan_lazy_host_inits`.
 struct LazyHostInitPlanner<'a> {
   link_output: &'a LinkStageOutput,
@@ -1006,6 +1034,7 @@ struct LazyHostInitPlanner<'a> {
   order_state: &'a OrderWrapState,
   used_symbol_refs: &'a UsedSymbolRefs,
   final_esm_init_metadata: &'a FinalEsmInitMetadata,
+  loads_split_async_group: FxHashSet<ChunkIdx>,
   /// The memo of `chunk_runs_code_at_load`.
   runs_code_at_load: FxHashMap<ChunkIdx, bool>,
 }
@@ -1333,10 +1362,10 @@ impl LazyHostInitPlanner<'_> {
       });
     // A body following an async static import would wait for its completion. An init chunk
     // after that import instead starts the sibling while the earlier module is suspended.
-    let earlier_async = !chunk_graph.split_async_group_chunks.is_empty()
+    let earlier_async = !self.loads_split_async_group.is_empty()
       && chunk.static_imports[..=position].iter().any(|import| {
         matches!(import,
-        StaticImport::Chunk(idx) if chunk_graph.split_async_group_chunks.contains(idx))
+        StaticImport::Chunk(idx) if self.loads_split_async_group.contains(idx))
       });
     (later_import_runs_code || earlier_async)
       .then_some((LazyHostInit { after, host: host_idx, module: target_idx }, position))

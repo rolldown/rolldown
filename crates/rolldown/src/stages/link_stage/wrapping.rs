@@ -1,9 +1,10 @@
+use oxc::semantic::ScopeFlags;
 use oxc_index::index_vec;
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
-  ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
-  OutputFormat, RuntimeHelper, RuntimeModuleBrief, Specifier, StmtInfo, StmtInfoMeta, StmtInfos,
-  SymbolRefDb, TaggedSymbolRef, WrapKind,
+  ExportsKind, GetLocalDb, ImportKind, IndexModules, Module, ModuleIdx, NormalModule,
+  NormalizedBundlerOptions, OutputFormat, RuntimeHelper, RuntimeModuleBrief, Specifier, StmtInfo,
+  StmtInfoMeta, StmtInfos, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::IndexBitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -268,7 +269,7 @@ impl LinkStage<'_> {
     }
 
     let mut visited = IndexBitSet::new(self.module_table.modules.len());
-    self.wrap_defer_dependencies(stack, &mut visited);
+    self.wrap_defer_dependencies(stack, &mut visited, false);
     self.track_import_defer_modules(&visited, &esm_targets);
     (esm_targets, visited)
   }
@@ -277,6 +278,7 @@ impl LinkStage<'_> {
     &mut self,
     mut stack: Vec<ModuleIdx>,
     visited: &mut IndexBitSet<ModuleIdx>,
+    eager_siblings: bool,
   ) {
     let runtime_idx = self.runtime.id();
     while let Some(module_idx) = stack.pop() {
@@ -291,6 +293,21 @@ impl LinkStage<'_> {
           ExportsKind::Esm | ExportsKind::None => WrapKind::Esm,
           ExportsKind::CommonJs => WrapKind::Cjs,
         });
+      }
+      // These additional modules are reached by ordinary eager imports. Use the normal
+      // module-level arrow wrapper if a hoisted function would capture their free
+      // `arguments` or change the enclosing function seen by direct eval.
+      if eager_siblings && meta.wrap_kind() == WrapKind::Esm {
+        let scope = self.symbols.local_db(module_idx).scoping();
+        meta.needs_lexical_esm_wrapper = module.meta.has_eval()
+          || scope.root_unresolved_references().get("arguments").is_some_and(|references| {
+            references.iter().any(|&id| {
+              scope.scope_ancestors(scope.get_reference(id).scope_id()).all(|idx| {
+                let flags = scope.scope_flags(idx);
+                !flags.contains(ScopeFlags::Function) || flags.contains(ScopeFlags::Arrow)
+              })
+            })
+          });
       }
       stack.extend(
         module
@@ -355,7 +372,7 @@ impl LinkStage<'_> {
         follows_wrapped |= reaches_wrapped.has_bit(target);
       }
     }
-    self.wrap_defer_dependencies(stack, wrapped);
+    self.wrap_defer_dependencies(stack, wrapped, true);
   }
 
   /// Marks the modules that need the state records of `__esmState`, in the graph of the requested

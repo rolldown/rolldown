@@ -1053,7 +1053,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   /// Returns the hoisted form `function init_x()` for each module with
-  /// `ModuleWrapperMode::ExecutionOrder` and for each module that `import defer` wraps. A call of
+  /// `ModuleWrapperMode::ExecutionOrder` and for each module of a deferred closure. A call of
   /// `init_x` can run before the declaration of the module, for example from a member of a module
   /// cycle that the order puts first. A hoisted function is callable at such a call.
   /// `var init_x = ...` is not. A deferred access calls `init_x` at the position of the access, so
@@ -1061,7 +1061,8 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   /// code sees the `arguments` of `init_x`, and direct `eval` code sees its function context.
   fn esm_wrapper_decl_kind(&self, wrapper_mode: ModuleWrapperMode) -> EsmWrapperDeclKind {
     if matches!(wrapper_mode, ModuleWrapperMode::ExecutionOrder(_))
-      || self.ctx.linking_info.wrapped_by_import_defer
+      || (self.ctx.linking_info.wrapped_by_import_defer
+        && !self.ctx.linking_info.needs_lexical_esm_wrapper)
     {
       EsmWrapperDeclKind::HoistedFunction
     } else {

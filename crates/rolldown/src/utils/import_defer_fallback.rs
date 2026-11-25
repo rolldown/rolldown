@@ -424,12 +424,16 @@ fn unsupported_async_import_order(
     }
   }
   let mut import_cycles = None;
+  let mut shared = None;
   normal_modules().find_map(|module| {
     let wrapped = closures.has_bit(module.idx);
     if !eager.has_bit(module.idx) {
       return None;
     }
     let mut after_async_import = false;
+    let mut consecutive_deferred = true;
+    let mut batch_can_split =
+      options.preserve_modules || options.has_manual_code_splitting_groups();
     let mut after_async_deferred_import = false;
     let mut evaluation = None;
     let mut checked = 0;
@@ -439,6 +443,10 @@ fn unsupported_async_import_order(
         continue;
       }
       let is_async = reaches_tla.has_bit(target);
+      if after_async_import || is_async {
+        consecutive_deferred &= rec.is_defer_phase()
+          && modules[target].as_normal().is_some_and(|m| m.exports_kind != ExportsKind::CommonJs);
+      }
       if !wrapped
         && after_async_deferred_import
         && !rec.is_defer_phase()
@@ -458,19 +466,29 @@ fn unsupported_async_import_order(
       if multiple_chunks && after_async_import && later_init {
         // Only expand the requests once we encounter a possible serial wait.
         let earlier_requests = evaluation.get_or_insert_with(EarlierRequests::default);
+        let known_tlas = earlier_requests.tla.len();
         for request in &module.import_records.as_raw_slice()[checked..index] {
           earlier_requests.visit(request, modules, module.idx, &reaches_tla);
         }
         let earlier_tlas = earlier_requests.tla.len();
         earlier_requests.visit(rec, modules, module.idx, &reaches_tla);
         checked = index + 1;
-        if earlier_requests.needs_concurrent_start(
-          earlier_tlas,
-          modules,
-          &importers,
-          &reaches_tla,
-          &mut import_cycles,
-        ) {
+        // Consecutive deferred ESM requests in a private entry chunk share one gather.
+        // Eager fallback here would concatenate their async bodies and wait in sequence.
+        if consecutive_deferred && !batch_can_split {
+          let shared = shared.get_or_insert_with(|| modules_shared_by_entries(output));
+          batch_can_split =
+            earlier_requests.tla[known_tlas..].iter().any(|&idx| shared.has_bit(idx));
+        }
+        if (!consecutive_deferred || batch_can_split)
+          && earlier_requests.needs_concurrent_start(
+            earlier_tlas,
+            modules,
+            &importers,
+            &reaches_tla,
+            &mut import_cycles,
+          )
+        {
           return Some(UnsupportedReason::SerialAsyncImports(module.idx));
         }
       }
@@ -479,6 +497,36 @@ fn unsupported_async_import_order(
     }
     None
   })
+}
+
+/// With default chunking, an internal module reachable from only one entry belongs to
+/// that entry. Include dynamic entry roots and require edges. Each module's dependencies
+/// are visited at most twice, once for its first owner and once when it becomes shared.
+fn modules_shared_by_entries(output: &NormalizedScanStageOutput) -> IndexBitSet<ModuleIdx> {
+  let modules = &output.module_table.modules;
+  let mut first_entry = IndexVec::from_vec(vec![None; modules.len()]);
+  let mut shared = IndexBitSet::new(modules.len());
+  let mut stack = Vec::new();
+  for entry in &output.entry_points {
+    stack.push(entry.idx);
+    while let Some(idx) = stack.pop() {
+      if let Some(first) = first_entry[idx] {
+        if first == entry.idx || !shared.set_bit(idx) {
+          continue;
+        }
+      } else {
+        first_entry[idx] = Some(entry.idx);
+      }
+      stack.extend(
+        modules[idx]
+          .import_records()
+          .iter()
+          .filter(|rec| rec.kind.is_static())
+          .filter_map(|rec| rec.resolved_module),
+      );
+    }
+  }
+  shared
 }
 
 /// An eager request evaluates its target. A deferred request only prepares it until it

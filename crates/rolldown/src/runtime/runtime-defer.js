@@ -130,7 +130,13 @@ export var __esmGather = (d, importer) => {
       if (m.s === 4) started.push(m);
       for (var dep of m.d().map((f) => f(__esmState))) walk(dep);
     };
-  walk(d(__esmState));
+  // A run of deferred requests shares the visited set and the wait. Resolve all the
+  // hoisted init functions before walking the first root: it can also reach a later root.
+  if (typeof d === "function") walk(d(__esmState));
+  else {
+    for (var i = 0; i < d.length; i++) d[i] = d[i](__esmState);
+    for (i = 0; i < d.length; i++) walk(d[i]);
+  }
   if (!g.length && !started.length) return true;
   __esmStack.w = async () => {
     if (g.length === 1) await g[0].f(importer);

@@ -108,9 +108,11 @@ pub struct LinkingMetadata {
   /// link time.
   pub folded_namespace_in_checks: FxHashMap<NodeId, bool>,
   /// Set on the static closures of defer targets and of their order-sensitive eager siblings.
-  /// The ESM wrapper of such a module is a hoisted function, so that a call that runs before the
-  /// declaration works.
+  /// The ESM wrapper is hoisted unless the eager sibling needs its original lexical scope.
   pub wrapped_by_import_defer: bool,
+  /// An order-sensitive eager sibling needs a module-level arrow for its lexical scope.
+  /// Its body must also stay out of another module's hoisted wrapper.
+  pub needs_lexical_esm_wrapper: bool,
   /// Set on each ESM module that an `import.defer()` call targets. The chunk that holds the
   /// module must not evaluate it when the chunk loads, unless the module has no interop wrapper
   /// (a JSON module). Each `import.defer()` of the module reads `x_deferred` from that chunk. Each

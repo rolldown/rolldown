@@ -14,7 +14,7 @@ use oxc::{
 };
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ChunkKind, ConcatenateWrappedModuleKind, ConcatenatedGroupEvent,
-  ExportsKind, ImportAttributes, ImportRecordIdx, ImportRecordMeta, InlineConstMode,
+  ExportsKind, ImportAttributes, ImportKind, ImportRecordIdx, ImportRecordMeta, InlineConstMode,
   MemberExprProp, MemberExprRefResolution, Module, ModuleIdx, ModuleNamespaceIncludedReason,
   ModuleType, NamespaceAlias, NormalModule, OutputExports, OutputFormat, Platform,
   RenderedConcatenatedModuleParts, Specifier, SymbolRef, SymbolRefFlags, WrapKind, is_lazy_proxy,
@@ -132,6 +132,8 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   /// Wrapped-ESM importees whose `init_*()` call was already emitted while finalizing this
   /// module, so the various init-emission paths don't emit duplicates.
   pub generated_init_esm_importee_ids: FxHashSet<ModuleIdx>,
+  /// Last static request included in an earlier deferred preparation in this module.
+  prepared_through: Option<ImportRecordIdx>,
   pub generated_order_cjs_carriers: FxHashSet<OrderCjsCarrierKey>,
   pub scope_stack: Vec<ScopeFlags>,
   pub state: TraverseState,
@@ -530,18 +532,58 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// `GatherAsynchronousTransitiveDependencies`). The importer waits for the modules with
   /// top-level await that a deferred access to `foo` can evaluate. `init_bar` is absent when this
   /// module is not tracked. `None` when `foo` is not TLA-tainted: the statement evaluates nothing.
-  fn deferred_import_preparation_stmt(&self, importee_idx: ModuleIdx) -> Option<Statement<'ast>> {
-    let importee_info = &self.ctx.linking_infos[importee_idx];
-    if !importee_info.is_tla_or_contains_tla_dependency
-      || importee_info.import_defer_tracked_deps.is_none()
-    {
+  fn deferred_import_preparation_stmt(
+    &mut self,
+    rec_idx: ImportRecordIdx,
+    importee_idx: ModuleIdx,
+  ) -> Option<Statement<'ast>> {
+    if self.prepared_through.is_some_and(|last| rec_idx <= last) {
       return None;
     }
-    let importee_init =
-      self.finalized_expr_for_symbol_ref(importee_info.wrapper_ref?, false, false).0;
+    let preparation = |idx: ModuleIdx| {
+      let info = &self.ctx.linking_infos[idx];
+      (info.is_tla_or_contains_tla_dependency && info.import_defer_tracked_deps.is_some())
+        .then_some(info.wrapper_ref)
+        .flatten()
+    };
+    let first = preparation(importee_idx)?;
+    let mut roots = FxIndexSet::default();
+    if !self.is_transferred_import(rec_idx) {
+      // Static requests precede the module body. Collect adjacent deferred ESM requests
+      // in source order, without crossing an eager import or a moved initialization.
+      for (idx, rec) in self.ctx.module.import_records.iter_enumerated().skip(rec_idx.index() + 1) {
+        if rec.kind != ImportKind::Import {
+          continue;
+        }
+        let Some(target) = rec.resolved_module else { break };
+        if !rec.is_defer_phase()
+          || self.is_transferred_import(idx)
+          || self.ctx.modules[target]
+            .as_normal()
+            .is_none_or(|m| m.exports_kind == ExportsKind::CommonJs)
+        {
+          break;
+        }
+        if let Some(init) = preparation(target) {
+          if roots.is_empty() {
+            roots.insert(first);
+          }
+          roots.insert(init);
+          self.prepared_through = Some(idx);
+        }
+      }
+    }
+    let init = if roots.len() <= 1 {
+      self.finalized_expr_for_symbol_ref(first, false, false).0
+    } else {
+      let elements = roots
+        .into_iter()
+        .map(|symbol| self.finalized_expr_for_symbol_ref(symbol, false, false).0.into());
+      Expression::new_array_expression(SPAN, allocator::Vec::from_iter_in(elements, self), self)
+    };
     Some(Statement::new_expression_statement(
       SPAN,
-      self.esm_gather_expr(importee_init, self.tracked_caller_expr()),
+      self.esm_gather_expr(init, self.tracked_caller_expr()),
       self,
     ))
   }
@@ -1627,7 +1669,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // A deferred import evaluates nothing at its statement. Each deferred access calls the
         // init instead. A TLA-tainted target first gets its preparation.
         if rec.is_defer_phase() {
-          let Some(preparation) = self.deferred_import_preparation_stmt(importee.idx) else {
+          let Some(preparation) = self.deferred_import_preparation_stmt(rec_idx, importee.idx)
+          else {
             return true;
           };
           *stmt = preparation;

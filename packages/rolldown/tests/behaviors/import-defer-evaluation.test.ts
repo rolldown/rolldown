@@ -179,6 +179,122 @@ test('the loader starts independent siblings of an async grouped module', async 
   expect(run('other')).toEqual(['a start', 'release', 'a', 'a end', 'last']);
 });
 
+test.each([false, true])(
+  'an earlier chunk transitively waits for a group member, minify %s',
+  async (minify) => {
+    const run = await bundle(
+      {
+        'main.mjs': "import defer * as a from './a.mjs'; console.log('main', typeof a);",
+        'first.mjs': "import './a.mjs'; import './last.mjs'; console.log('first');",
+        'other.mjs': "import './relay.mjs'; import './a.mjs'; console.log('other');",
+        'relay.mjs': "import './last.mjs'; console.log('relay');",
+        'a.mjs':
+          "globalThis.ready = true; globalThis.release?.(); console.log('a'); export const x = 1;",
+        'last.mjs':
+          "if (!globalThis.ready) await new Promise(r => globalThis.release = r); console.log('last');",
+      },
+      {
+        minify,
+        codeSplitting: {
+          groups: [
+            { name: 'deps', test: /[\\/](a|last)\.mjs$/ },
+            { name: 'relay', test: /[\\/]relay\.mjs$/ },
+          ],
+        },
+      },
+      ['main', 'first', 'other'],
+      'separate chunks',
+    );
+    expect(run()).toEqual(['main object']);
+    expect(run('first')).toEqual(['a', 'last', 'first']);
+    expect(run('other')).toEqual(['a', 'last', 'relay', 'other']);
+  },
+);
+
+test.each([false, true])(
+  'an eager sibling keeps its module scope, matching group %s',
+  async (matches) => {
+    const run = await bundle(
+      {
+        'main.mjs':
+          "import defer * as a from './a.mjs'; import './last.mjs'; console.log('main', typeof a);",
+        'first.mjs': "import './a.mjs'; import './last.mjs'; console.log('first');",
+        'a.mjs': "console.log('a'); export const x = 1;",
+        'last.mjs': "import './read.mjs'; console.log('last', typeof arguments);",
+        'read.mjs': `
+        try { (() => arguments)(); } catch (error) { console.log(error.name); }
+        globalThis.arguments = 'global';
+        console.log((() => arguments)(), (function () { return arguments.length })(1));
+        delete globalThis.arguments;
+      `,
+      },
+      {
+        codeSplitting: {
+          groups: [{ name: 'deps', test: matches ? /[\\/](a|last)\.mjs$/ : /[\\/]missing\.mjs$/ }],
+        },
+      },
+      ['main', 'first'],
+    );
+    const sibling = ['ReferenceError', 'global 1', 'last undefined'];
+    expect(run()).toEqual([...sibling, 'main object']);
+    expect(run('first')).toEqual(['a', ...sibling, 'first']);
+  },
+);
+
+test('eager re-exports keep both module scope and the request order of each entry', async () => {
+  const run = await bundle(
+    {
+      'main.mjs':
+        "import defer * as a from './a.mjs'; import { y } from './later.mjs'; console.log('main', typeof a, y);",
+      'first.mjs':
+        "import * as a from './middle.mjs'; import { y } from './later.mjs'; console.log('first', typeof a, y);",
+      'other.mjs':
+        "import { y } from './later.mjs'; import * as a from './middle.mjs'; console.log('other', typeof a, y);",
+      'a.mjs': "console.log('a'); export const x = 1;",
+      'last.mjs': "console.log('last', typeof arguments); export const y = 2;",
+      'middle.mjs': "export * from './a.mjs';",
+      'later.mjs': "export * from './last.mjs';",
+    },
+    { codeSplitting: { groups: [{ name: 'deps', test: /[\\/](a|last)\.mjs$/ }] } },
+    ['main', 'first', 'other'],
+  );
+  expect(run()).toEqual(['last undefined', 'main object 2']);
+  expect(run('first')).toEqual(['a', 'last undefined', 'first object 2']);
+  expect(run('other')).toEqual(['last undefined', 'a', 'other object 2']);
+});
+
+test.each([false, true])(
+  'private deferred requests prepare all async siblings together, minify %s',
+  async (minify) => {
+    const run = await bundle(
+      {
+        'main.mjs':
+          "import defer * as ns from './target.mjs'; import defer * as extra from './extra.mjs'; console.log('main', ns.x, typeof extra);",
+        'other.mjs': "console.log('other');",
+        'target.mjs': "import './a.mjs'; import defer * as b from './b.mjs'; export const x = 1;",
+        'a.mjs': waitsForRelease,
+        'b.mjs': "console.log('b start'); await 0; console.log('b end');",
+        'extra.mjs': "console.log('extra'); globalThis.release(); await 0;",
+      },
+      { minify },
+      ['main', 'other'],
+    );
+    expect(run()).toEqual(['a start', 'b start', 'extra', 'b end', 'a end', 'main 1 object']);
+    expect(run('other')).toEqual(['other']);
+  },
+);
+
+test('a later deferred request can reject while an earlier request is pending', async () => {
+  const run = await bundle({
+    'main.mjs': "try { await import('./requests.mjs') } catch (e) { console.log(e.message) }",
+    'requests.mjs':
+      "import defer * as a from './a.mjs'; import defer * as b from './b.mjs'; console.log('unreachable');",
+    'a.mjs': "console.log('waiting'); await new Promise(() => {});",
+    'b.mjs': "console.log('rejecting'); await 0; throw new Error('failed');",
+  });
+  expect(run()).toEqual(['waiting', 'rejecting', 'failed']);
+});
+
 test('a cyclic reader sees the deferred namespace before its importer evaluates', async () => {
   const run = await bundle({
     'main.mjs':

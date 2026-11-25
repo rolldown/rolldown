@@ -56,6 +56,7 @@ pub fn apply_import_defer_support(
 enum UnsupportedReason {
   InlineCommonChunks,
   NonRecursiveGroups,
+  PreservedImporterCycle(ModuleIdx),
   /// An `import.defer()` call targets this CommonJS module.
   DynamicImportOfCommonJs(ModuleIdx),
   /// A deferred import evaluates this external module, and the output format evaluates it before
@@ -79,6 +80,10 @@ impl UnsupportedReason {
         "a code splitting group sets `includeDependenciesRecursively: false`, so the chunks can import each other in a cycle"
           .to_string()
       }
+      Self::PreservedImporterCycle(idx) => format!(
+        "`preserveModules` is on and a static import cycle can access the deferred namespace in `{}` before its runtime helpers load",
+        modules[*idx].stable_id()
+      ),
       Self::DynamicImportOfCommonJs(idx) => format!(
         "an `import.defer()` call targets the CommonJS module `{}`",
         modules[*idx].stable_id()
@@ -141,8 +146,54 @@ fn unsupported_reason(
   if let Some(module) = commonjs_module_run_at_load(output, options, &closures, &commonjs) {
     return Some(UnsupportedReason::CommonJsRunAtLoad(module));
   }
+  if options.preserve_modules
+    && let Some(module) = preserved_importer_cycle(output)
+  {
+    return Some(UnsupportedReason::PreservedImporterCycle(module));
+  }
   import_after_async_deferred_import(output, options, &closures)
     .map(UnsupportedReason::ImportAfterAsyncDeferredImport)
+}
+
+/// A sibling in an eager cycle can call an exported function or read a re-exported namespace
+/// before the deferred host and its helpers load. Declarations in separate files cannot move
+/// ahead of that call. See internal-docs/import-defer/implementation.md.
+fn preserved_importer_cycle(output: &NormalizedScanStageOutput) -> Option<ModuleIdx> {
+  let modules = &output.module_table.modules;
+  let mut cycles = None;
+  modules
+    .iter()
+    .filter_map(Module::as_normal)
+    .filter(|module| {
+      module.import_records.iter().any(|rec| {
+        rec.kind == ImportKind::Import
+          && rec.is_defer_phase()
+          && rec.resolved_module.is_some_and(|idx| modules[idx].is_normal())
+      })
+    })
+    .filter(|module| {
+      module.named_exports.iter().any(|(name, export)| {
+        // An anonymous default function has a synthetic export symbol.
+        (name.as_str() == "default" && output.symbol_ref_db.is_facade_symbol(export.referenced))
+          || export.referenced.is_declared_by_function(&output.symbol_ref_db)
+          || module
+            .named_imports
+            .get(&export.referenced)
+            .is_some_and(|import| module.import_records[import.record_idx].is_defer_phase())
+      })
+    })
+    .filter(|module| {
+      cycles
+        .get_or_insert_with(|| {
+          crate::utils::synchronous_cycle_modules(modules, |importer, rec| {
+            // A self-import cannot call back from another file while dependencies load.
+            !rec.is_defer_phase() && rec.resolved_module != Some(importer)
+          })
+        })
+        .contains(&module.idx)
+    })
+    .min_by_key(|module| &module.stable_id)
+    .map(|module| module.idx)
 }
 
 /// The modules that the link stage makes CommonJS (`determine_module_exports_kind`): the scan gives

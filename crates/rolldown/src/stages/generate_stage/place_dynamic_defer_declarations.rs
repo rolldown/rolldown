@@ -1,5 +1,5 @@
 use rolldown_common::{ChunkIdx, ImportKind, Module, ModuleIdx, ModuleType, WrapKind};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashSet;
 
 use crate::chunk_graph::ChunkGraph;
 
@@ -23,8 +23,7 @@ impl GenerateStage<'_> {
   /// `wrap_import_defer_closures` wraps each module of the static closure. The code of a wrapped
   /// module has only declarations, so the move does not change when a module evaluates. A module
   /// with no wrapper does not move, except a JSON module, whose code has only data
-  /// (`unwrap_json_module`). A module that comes before the first importer of the target in the
-  /// chunk does not move either: its declarations already run before each call.
+  /// (`unwrap_json_module`).
   ///
   /// A module that its chunk runs at load (`ChunkGraph::deferred_modules_run_at_load`) also has its
   /// init call. It moves, but its init call stays at its place: the last module before it that
@@ -64,68 +63,59 @@ impl GenerateStage<'_> {
       if self.inline_state.is_record(chunk_idx) {
         continue;
       }
-      // The position of the first importer of each target, in the order of the chunk.
-      let mut first_importer: FxHashMap<ModuleIdx, usize> = FxHashMap::default();
-      for (position, &importer_idx) in chunk.modules.iter().enumerate() {
+      // An earlier module can call a hoisted function that contains the import.
+      // Make the declarations available before any module body in the chunk.
+      let mut stack = vec![];
+      for &importer_idx in &chunk.modules {
         let Module::Normal(importer) = &module_table[importer_idx] else { continue };
         for rec in &importer.import_records {
-          if rec.kind != ImportKind::DynamicImport || !rec.is_defer_phase() {
-            continue;
-          }
-          let Some(target) = rec.resolved_module else { continue };
-          if metas[target].dynamic_defer_target && module_to_chunk[target] == Some(chunk_idx) {
-            first_importer.entry(target).or_insert(position);
+          if rec.kind == ImportKind::DynamicImport
+            && rec.is_defer_phase()
+            && let Some(target) = rec.resolved_module
+            && metas[target].dynamic_defer_target
+            && module_to_chunk[target] == Some(chunk_idx)
+          {
+            stack.push(target);
           }
         }
       }
-      if first_importer.is_empty() {
-        continue;
-      }
-      let positions: FxHashMap<ModuleIdx, usize> =
-        chunk.modules.iter().enumerate().map(|(position, &idx)| (idx, position)).collect();
+      let mut visited = FxHashSet::default();
       let mut moved = FxHashSet::default();
-      for (&target, &importer_position) in &first_importer {
-        // The static closure of the target, in this chunk.
-        let mut visited = FxHashSet::default();
-        let mut stack = vec![target];
-        while let Some(module_idx) = stack.pop() {
-          if module_idx == runtime_idx || !visited.insert(module_idx) {
-            continue;
-          }
-          let Some(&position) = positions.get(&module_idx) else { continue };
-          let Module::Normal(module) = &module_table[module_idx] else { continue };
-          if position > importer_position && has_only_declarations(module_idx) {
-            moved.insert(module_idx);
-          }
-          stack.extend(
-            module
-              .import_records
-              .iter()
-              .filter(|rec| rec.kind.is_static())
-              .filter_map(|rec| rec.resolved_module),
-          );
-        }
-      }
-      // The first importer of a target keeps its place, so each moved module has an anchor.
-      for (position, &module_idx) in chunk.modules.iter().enumerate() {
-        if !moved.contains(&module_idx) || !deferred_modules_run_at_load.contains(&module_idx) {
+      while let Some(module_idx) = stack.pop() {
+        if module_idx == runtime_idx
+          || module_to_chunk[module_idx] != Some(chunk_idx)
+          || !visited.insert(module_idx)
+        {
           continue;
         }
-        let anchor = chunk.modules[..position]
-          .iter()
-          .rev()
-          .find(|&&idx| idx != runtime_idx && !moved.contains(&idx));
-        match anchor {
-          Some(&anchor) => {
-            run_at_load_anchors.insert(module_idx, anchor);
-          }
-          None => {
-            moved.remove(&module_idx);
-          }
+        let Module::Normal(module) = &module_table[module_idx] else { continue };
+        if has_only_declarations(module_idx) {
+          moved.insert(module_idx);
         }
+        stack.extend(
+          module
+            .import_records
+            .iter()
+            .filter(|rec| rec.kind.is_static())
+            .filter_map(|rec| rec.resolved_module),
+        );
       }
       if moved.is_empty() {
         continue;
+      }
+      let mut anchor = None;
+      for &module_idx in &chunk.modules {
+        if moved.contains(&module_idx) && deferred_modules_run_at_load.contains(&module_idx) {
+          if let Some(anchor) = anchor {
+            run_at_load_anchors.insert(module_idx, anchor);
+          } else {
+            // Its init is the first code at load. Keep it in place.
+            moved.remove(&module_idx);
+          }
+        }
+        if module_idx != runtime_idx && !moved.contains(&module_idx) {
+          anchor = Some(module_idx);
+        }
       }
       let mut modules = Vec::with_capacity(chunk.modules.len());
       modules.extend(chunk.modules.iter().copied().filter(|&idx| idx == runtime_idx));

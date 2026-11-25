@@ -130,8 +130,22 @@ export var __esmGather = (d, importer) => {
   walk(d(__esmState));
   if (!g.length && !started.length) return true;
   __esmStack.w = async () => {
-    for (var m of g) if (m.s !== 2) await m.f(importer);
-    for (m of started) await Promise.resolve(m.f()).then(
+    if (g.length === 1) await g[0].f(importer);
+    else if (g.length) await new Promise((resolve, reject) => {
+      // Start siblings in request order. Each await observes its own rejection immediately,
+      // even if an earlier sibling never settles. As in SafePerformPromiseAll, avoid looking
+      // up `then` on their promises.
+      var pending = g.length;
+      g.forEach(async (m) => {
+        try {
+          await m.f(importer);
+          if (!--pending) resolve();
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    for (var m of started) await Promise.resolve(m.f()).then(
       () => {},
       () => {},
     );

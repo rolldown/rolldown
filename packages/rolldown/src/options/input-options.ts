@@ -779,6 +779,8 @@ export interface InputOptions {
      * An `import.defer()` call must not load a CommonJS module. With `codeSplitting: false`, the
      * target of an `import.defer()` call is also a CommonJS module when it has no `import` or
      * `export` statement, unless its file extension or its `package.json` marks it as ESM.
+     * With `preserveModules`, Rolldown also falls back when a static deferred importer is in an
+     * eager import cycle and exposes a potentially hoisted export or a deferred namespace.
      * When a deferred module, or a module that it imports, has a top-level `await`, each later
      * import in the same importer must import a module that a deferred import evaluates. In a build
      * that makes one chunk, an import of an external module is also allowed. A build makes one
@@ -789,9 +791,8 @@ export interface InputOptions {
      * `import(specifier)`, with a warning, when the specifier is not a string literal or a
      * template literal with no expressions, or when the call has a `@vite-ignore` comment.
      *
-     * A deferred import of a module with a top-level `await` waits for that module first. As in a
-     * build without `import defer`, a module with a top-level `await` ends before the next import
-     * starts, so two such modules do not run at the same time.
+     * A deferred import starts the top-level `await` dependencies it gathers in request order
+     * and waits for them together before the importer runs.
      *
      * Rolldown evaluates a deferred module, and each module that it imports directly or through
      * other modules, inside a function. Thus a top-level `arguments` in such a module is the

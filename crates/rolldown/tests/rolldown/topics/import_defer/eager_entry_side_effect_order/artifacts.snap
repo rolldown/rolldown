@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.init.js
+
+```js
+import { n as init_a } from "./a.js";
+init_a();
+
+```
+
+## a.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// a.js
+var a_exports = /* @__PURE__ */ __exportAll({ x: () => 1 });
+var a_deferred = /* @__PURE__ */ __deferNs(() => (init_a(), a_exports), a_exports);
+function init_a() {
+	return (init_a = __esmMin((() => {
+		console.log("a");
+	})))();
+}
+export { init_a as n, a_deferred as t };
+
+```
+
+## last.js
+
+```js
+// last.js
+console.log("last");
+
+```
+
+## main.js
+
+```js
+import "./last.js";
+import { t as a_deferred } from "./a.js";
+// main.js
+console.log("main", typeof a_deferred);
+
+```
+
+## other.js
+
+```js
+import "./a.js";
+import "./a.init.js";
+import "./last.js";
+// other.js
+console.log("other");
+
+```

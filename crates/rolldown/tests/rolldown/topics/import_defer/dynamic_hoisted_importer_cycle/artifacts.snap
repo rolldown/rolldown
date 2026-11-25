@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] target.js is dynamically imported by helper.js but also statically imported by helper.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// target.js
+var target_exports = /* @__PURE__ */ __exportAll({ x: () => 1 });
+var target_deferred = /* @__PURE__ */ __deferNs(() => (init_target(), target_exports), target_exports);
+function init_target() {
+	return (init_target = __esmMin((() => {
+		console.log("target");
+	})))();
+}
+// trigger.js
+console.log("trigger");
+load().then((ns) => {
+	console.log("loaded", typeof ns);
+	console.log("value", ns.x);
+});
+// helper.js
+function load() {
+	return (async () => target_deferred)();
+}
+
+```

@@ -649,9 +649,8 @@ impl GenerateStage<'_> {
             .contains(&dependency))
     };
     let mut binding_owners = None;
-    // With `import defer`, the deferred imports come after the eager imports, as in `sort_modules`:
-    // a module that only a deferred import reaches runs after the eager dependencies of the
-    // importer.
+    // Rank eager edges first. Loading a shared chunk for a deferred binding can run unrelated
+    // eager modules in that chunk. See internal-docs/import-defer/implementation.md.
     let import_defer = self.options.experimental.is_import_defer_enabled();
     let deferred = import_defer.then(|| {
       module.import_records.iter_enumerated().filter(|(_, record)| record.is_defer_phase())

@@ -7,24 +7,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-// required.js
-var required_exports = /* @__PURE__ */ __exportAll({ value: () => value$1 });
-var value$1;
-var init_required = __esmMin(() => {
-	globalThis.events.push("required");
-	value$1 = "required";
-});
 // lazy.js
-var value;
+var value$1;
 function init_lazy() {
 	return (init_lazy = __esmMin((() => {
 		globalThis.events.push("lazy");
-		value = "lazy";
+		value$1 = "lazy";
 	})))();
 }
+// required.js
+var required_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+var value;
+var init_required = __esmMin(() => {
+	globalThis.events.push("required");
+	value = "required";
+});
 // main.js
 function run() {
-	return [(init_lazy(), value), (init_required(), __toCommonJS(required_exports)).value];
+	return [(init_lazy(), value$1), (init_required(), __toCommonJS(required_exports)).value];
 }
 export { run };
 
@@ -38,24 +38,24 @@ export { run };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-// required.js
-var required_exports = /* @__PURE__ */ __exportAll({ value: () => value$1 });
-var value$1;
-var init_required = __esmMin(() => {
-	globalThis.events.push("required");
-	value$1 = "required";
-});
 // lazy.js
-var value;
+var value$1;
 function init_lazy() {
 	return (init_lazy = __esmMin(() => {
 		globalThis.events.push("lazy");
-		value = "lazy";
+		value$1 = "lazy";
 	}))();
 }
+// required.js
+var required_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+var value;
+var init_required = __esmMin(() => {
+	globalThis.events.push("required");
+	value = "required";
+});
 // main.js
 function run() {
-	return [(init_lazy(), value), (init_required(), __toCommonJS(required_exports)).value];
+	return [(init_lazy(), value$1), (init_required(), __toCommonJS(required_exports)).value];
 }
 export { run };
 

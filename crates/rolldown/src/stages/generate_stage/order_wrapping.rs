@@ -144,26 +144,7 @@ fn statement_is_direct_reexport(stmt: &Statement) -> bool {
 }
 
 pub(super) fn synchronous_cycle_modules(modules: &IndexModules) -> FxHashSet<ModuleIdx> {
-  let mut graph = petgraph::prelude::DiGraphMap::<ModuleIdx, ()>::new();
-  for module in modules.iter().filter_map(|module| module.as_normal()) {
-    graph.add_node(module.idx);
-    for rec in &module.import_records {
-      if matches!(rec.kind, ImportKind::Import | ImportKind::Require)
-        && let Some(importee_idx) = rec.resolved_module
-        && modules[importee_idx].is_normal()
-      {
-        graph.add_edge(module.idx, importee_idx, ());
-      }
-    }
-  }
-
-  let mut cyclic = FxHashSet::default();
-  for component in petgraph::algo::tarjan_scc(&graph) {
-    if component.len() > 1 || graph.contains_edge(component[0], component[0]) {
-      cyclic.extend(component);
-    }
-  }
-  cyclic
+  crate::utils::synchronous_cycle_modules(modules, |_, _| true)
 }
 
 /// Eligibility here must stay independent of the order-wrap plan: pre-chunk placement, the

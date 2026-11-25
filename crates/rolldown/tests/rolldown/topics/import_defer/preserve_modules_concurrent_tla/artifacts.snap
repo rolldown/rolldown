@@ -1,0 +1,89 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## _virtual/_rolldown/runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmDefer, __esmDepDone, __esmEnd, __esmFail, __esmGather, __esmState };
+
+```
+
+## a.js
+
+```js
+import { __esmEnd, __esmFail, __esmState } from "./_virtual/_rolldown/runtime.js";
+// a.js
+function init_a() {
+	return (init_a = __esmState((async () => {
+		try {
+			console.log("a start");
+			await new Promise((resolve) => globalThis.release = resolve);
+			console.log("a end");
+		} catch (e) {
+			throw __esmFail(init_a, e);
+		}
+		__esmEnd(init_a);
+	}), () => [], 3))(arguments[0]);
+}
+export { init_a };
+
+```
+
+## b.js
+
+```js
+import { __esmEnd, __esmFail, __esmState } from "./_virtual/_rolldown/runtime.js";
+// b.js
+function init_b() {
+	return (init_b = __esmState((async () => {
+		try {
+			console.log("b start");
+			if (globalThis.rejectSibling) throw new Error("b failed");
+			globalThis.release();
+			await 0;
+			console.log("b end");
+		} catch (e) {
+			throw __esmFail(init_b, e);
+		}
+		__esmEnd(init_b);
+	}), () => [], 3))(arguments[0]);
+}
+export { init_b };
+
+```
+
+## main.js
+
+```js
+import { __esmDefer, __esmGather } from "./_virtual/_rolldown/runtime.js";
+import { init_target } from "./target.js";
+// main.js
+__esmGather(init_target) || await __esmGather();
+console.log("main", (__esmDefer(init_target), 1));
+
+```
+
+## target.js
+
+```js
+import { __esmDepDone, __esmEnd, __esmFail, __esmState } from "./_virtual/_rolldown/runtime.js";
+import { init_a } from "./a.js";
+import { init_b } from "./b.js";
+function init_target() {
+	return (init_target = __esmState((async () => {
+		try {
+			__esmDepDone(init_a(init_target), init_a, init_target) || await init_a(init_target);
+			__esmDepDone(init_b(init_target), init_b, init_target) || await init_b(init_target);
+			console.log("target");
+		} catch (e) {
+			throw __esmFail(init_target, e);
+		}
+		__esmEnd(init_target);
+	}), () => [init_a, init_b], 1))(arguments[0]);
+}
+export { init_target };
+
+```

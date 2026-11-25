@@ -64,6 +64,18 @@ const cases: Case[] = [
     },
     reason: 'a code splitting group sets `includeDependenciesRecursively: false`',
   },
+  ...[
+    ['anonymous default function', 'export default function () { return ns.value; }'],
+    ['re-exported namespace', 'export { ns as default };'],
+  ].map(([name, declaration]) => ({
+    name: `preserved importer cycle (${name})`,
+    files: {
+      'main.js': `import defer * as ns from './x.js';\nimport './reader.js';\n${declaration}\n`,
+      'reader.js': "import value from './main.js';\nconsole.log(value);\n",
+    },
+    output: { preserveModules: true },
+    reason: 'a static import cycle can access the deferred namespace in `main.js`',
+  })),
   {
     name: 'an import after a deferred import of a module with top-level await',
     files: { 'main.js': MAIN_JS + "import './y.js';\n", ...AFTER_ASYNC_DEFER },
@@ -310,6 +322,24 @@ const keptCases: KeptCase[] = [
         },
       ],
     },
+    steps: [['read', 1, ['x']]],
+  },
+  {
+    name: 'preserved importer with a self-import',
+    files: {
+      'main.js':
+        "import './main.js';\nimport defer * as ns from './x.js';\nexport { log } from './log.js';\nexport function read() { return ns.value; }\n",
+    },
+    output: { preserveModules: true },
+    steps: [['read', 1, ['x']]],
+  },
+  {
+    name: 'preserved importer in a cycle with only a lexical export',
+    files: {
+      'main.js': "import './reader.js';\n" + LOGGED_MAIN('./x.js'),
+      'reader.js': "import './main.js';\n",
+    },
+    output: { preserveModules: true },
     steps: [['read', 1, ['x']]],
   },
   {

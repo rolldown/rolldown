@@ -12,6 +12,7 @@ use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, EntryPoint, ManualCodeSplittingOptions, MatchGroup,
   MatchGroupName, Module, ModuleIdx, ModuleTable, ModuleTagBitSet, ModuleTagRegistry, NormalModule,
+  UsedSymbolRefsBuilder,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::SharedPluginDriver;
@@ -28,6 +29,7 @@ use super::{
   GenerateStage,
   chunk_ext::{ChunkCreationReason, ChunkDebugExt},
   code_splitting::IndexSplittingInfo,
+  dynamic_already_loaded::FoldWithoutGroups,
 };
 
 // `ModuleGroup` is a temporary representation of `Chunk`. A valid `ModuleGroup` would be converted to a `Chunk` in the end.
@@ -78,9 +80,9 @@ impl ModuleGroup {
 }
 
 /// The chunks that the manual groups make, in the order they are emitted, decided before the
-/// already-loaded fold. The fold keeps the bits of these modules and sees each chunk in its cycle
-/// graph, and `apply_manual_code_splitting` emits these chunks instead of deciding again, so the
-/// fold and the groups agree on every module. See
+/// already-loaded fold. The fold sees each chunk in its cycle graph, and
+/// `apply_manual_code_splitting` emits these chunks instead of deciding again, so the fold and the
+/// groups agree on every module. See
 /// internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
 pub struct ManualGroupPlan {
   groups: Vec<ModuleGroup>,
@@ -591,14 +593,20 @@ impl GenerateStage<'_> {
   /// groups take. The fold has work only with dynamic entries; without them, or without groups,
   /// this returns `None`, and `apply_manual_code_splitting` plans the chunks itself.
   ///
-  /// The plan sees the bits from before the fold. The fold keeps the bits of every module in the
-  /// plan, and it only removes bits from the others, so a `minShareCount` or `minSize` that
-  /// rejects a module before the fold would also reject it after the fold.
-  pub async fn plan_manual_groups_for_fold(
+  /// The groups run after the fold, so they see the bits without the dynamic entries that the fold
+  /// drops. The plan sees the same bits: `fold_without_groups` first writes the bits that the fold
+  /// gives each module when its cycle graph has no group chunk, which is the fold that runs when
+  /// the groups are decided after it. A group then counts the shares of a module and splits
+  /// `entriesAware` chunks as it does after that fold. The fold against the plan starts from what
+  /// `fold_without_groups` returns.
+  pub(super) async fn plan_manual_groups_for_fold(
     &self,
-    index_splitting_info: &IndexSplittingInfo,
+    index_splitting_info: &mut IndexSplittingInfo,
+    chunk_graph: &ChunkGraph,
+    entries_len: u32,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
     tag_registry: &ModuleTagRegistry,
-  ) -> BuildResult<Option<ManualGroupPlan>> {
+  ) -> BuildResult<Option<(ManualGroupPlan, FoldWithoutGroups)>> {
     let has_dynamic_entries = self
       .link_output
       .entries
@@ -619,6 +627,14 @@ impl GenerateStage<'_> {
     else {
       return Ok(None);
     };
+    let Some(fold) = self.fold_without_groups(
+      index_splitting_info,
+      chunk_graph,
+      entries_len,
+      used_symbol_refs_builder,
+    ) else {
+      return Ok(None);
+    };
     let module_to_assigned = self.modules_assigned_before_manual_groups();
     let result = self
       .plan_manual_groups(
@@ -628,7 +644,8 @@ impl GenerateStage<'_> {
         &module_to_assigned,
         tag_registry,
       )
-      .await;
+      .await
+      .map(|plan| (plan, fold));
     if result.is_err() {
       // `apply_manual_code_splitting` does not run, so release the JS module-info cache here.
       if let Some(invalidate_module_info_cache) =

@@ -1,0 +1,9 @@
+{
+  "_comment": "`main.js` loads `lib.js` and imports it again lazily. The fold drops the lazy entry from `lib.js`, so its share count is 1 and the `vendor` group, which needs 2, leaves it out. The groups plan on the bits after the fold, so `lib.js` stays in `main.js` and runs after `setup.js`.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "codeSplitting": {
+      "groups": [{ "name": "vendor", "test": "lib\\.js$", "minShareCount": 2 }]
+    }
+  }
+}

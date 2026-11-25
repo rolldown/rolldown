@@ -1,0 +1,81 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { i as c0, n as c2, r as c1, t as c3 } from "./vendor~main.js";
+// main.js
+globalThis.entriesAwareMain = {
+	core: [
+		c0,
+		c1,
+		c2,
+		c3
+	].map((module) => module.name).join(),
+	routes: [
+		() => import("./r0.js"),
+		() => import("./r1.js"),
+		() => import("./r2.js"),
+		() => import("./r3.js")
+	]
+};
+
+```
+
+## r0.js
+
+```js
+import { i as c0, r as c1 } from "./vendor~main.js";
+// routes/r0.js
+const value = c0.name + c1.name;
+export { value };
+
+```
+
+## r1.js
+
+```js
+import { n as c2, r as c1 } from "./vendor~main.js";
+// routes/r1.js
+const value = c1.name + c2.name;
+export { value };
+
+```
+
+## r2.js
+
+```js
+import { n as c2, t as c3 } from "./vendor~main.js";
+// routes/r2.js
+const value = c2.name + c3.name;
+export { value };
+
+```
+
+## r3.js
+
+```js
+import { i as c0, t as c3 } from "./vendor~main.js";
+// routes/r3.js
+const value = c3.name + c0.name;
+export { value };
+
+```
+
+## vendor~main.js
+
+```js
+// core/c0.js
+const c0 = { name: "c0" };
+// core/c1.js
+const c1 = { name: "c1" };
+// core/c2.js
+const c2 = { name: "c2" };
+// core/c3.js
+const c3 = { name: "c3" };
+export { c0 as i, c2 as n, c1 as r, c3 as t };
+
+```

@@ -51,7 +51,7 @@ export { value };
 ## other.js
 
 ```js
-import { t as value } from "./vendor.js";
+import { t as value } from "./peer.js";
 // other.js
 const other = value;
 export { other };
@@ -61,9 +61,12 @@ export { other };
 ## peer.js
 
 ```js
-import { t as value } from "./vendor.js";
+import { t as token } from "./shared.js";
+// vendor.js
+const value = token[0];
 // peer.js
 globalThis.minShareCountLog.push(`peer:${value}`);
+export { value as t };
 
 ```
 
@@ -73,15 +76,5 @@ globalThis.minShareCountLog.push(`peer:${value}`);
 // shared.js
 let token = ["ok"];
 export { token as t };
-
-```
-
-## vendor.js
-
-```js
-import { t as token } from "./shared.js";
-// vendor.js
-const value = token[0];
-export { value as t };
 
 ```

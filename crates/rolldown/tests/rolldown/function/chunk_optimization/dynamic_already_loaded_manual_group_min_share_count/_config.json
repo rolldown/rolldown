@@ -1,5 +1,5 @@
 {
-  "_comment": "The `vendor` group takes `vendor.js`, which three entries load (`a`, `b` and `other.js`), but not `peer.js`, which two entries load, so `peer.js` stays in the chunk of `a` and `b`. A fold of `shared.js` into that chunk would make it and `vendor` import each other, and `vendor.js` would read `token` before `shared.js` declares it, so `shared.js` stays a file.",
+  "_comment": "Three entries load `vendor.js` (`a`, `b` and `other.js`), but `a` loads it before it imports `other.js`, so the fold drops `other.js` from its bits. The `vendor` group, which needs three entries, then takes neither `vendor.js` nor `peer.js`, and both land in the chunk of `a` and `b`. While `vendor.js` is still in its own chunk, a fold of `shared.js` into the chunk of `a` and `b` would make the two import each other, so `shared.js` stays a file.",
   "config": {
     "input": [
       { "name": "a", "import": "./a.js" },

@@ -1,0 +1,1 @@
+globalThis.minShareCountOrderLog.push('setup');

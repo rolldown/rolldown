@@ -11,6 +11,7 @@ async function bundle(
   output: OutputOptions = {},
   entries = ['main'],
   fallback: boolean | string = false,
+  expectedChunks?: number,
 ) {
   const cwd = await mkdtemp(path.join(tmpdir(), 'rolldown-import-defer-'));
   onTestFinished(() => rm(cwd, { recursive: true, force: true }));
@@ -29,12 +30,15 @@ async function bundle(
     },
   });
   try {
-    await build.write({
+    const result = await build.write({
       dir: 'out',
       entryFileNames: '[name].mjs',
       chunkFileNames: '[name]-[hash].mjs',
       ...output,
     });
+    if (expectedChunks !== undefined) {
+      expect(result.output.filter((item) => item.type === 'chunk')).toHaveLength(expectedChunks);
+    }
   } finally {
     await build.close();
   }
@@ -392,6 +396,121 @@ test.each([
     'main 1 object',
   ]);
   expect(run('other')).toEqual(['other']);
+});
+
+test.each([
+  [1, false],
+  [1, true],
+  [64, false],
+  [64, true],
+] as const)(
+  '%i consumers of one async dependency share one file, minify %s',
+  async (count, minify) => {
+    const consumers = Array.from({ length: count }, (_, i) => `consumer-${i}.mjs`);
+    const run = await bundle(
+      {
+        'main.mjs':
+          "import defer * as a from './a.mjs'; import './boot.mjs'; console.log('main', a.value);",
+        'a.mjs':
+          "console.log('start'); await 0; console.log('end'); queueMicrotask(() => console.log('settled')); export const value = 1;",
+        'boot.mjs': consumers.map((file) => `import './${file}';`).join('\n'),
+        ...Object.fromEntries(
+          consumers.map((file, i) => [
+            file,
+            `import { value } from './a.mjs'; console.log('consumer', ${i}, value); ${i === 0 ? "queueMicrotask(() => console.log('consumer microtask'));" : ''}`,
+          ]),
+        ),
+      },
+      { minify },
+      ['main'],
+      'comes after a deferred import',
+      2,
+    );
+    const expected = [
+      'start',
+      'end',
+      'settled',
+      ...consumers.map((_, i) => `consumer ${i} 1`),
+      'main 1',
+    ];
+    expect(run()).toEqual([...expected, 'consumer microtask']);
+    expect(
+      run('main', [
+        '--input-type=module',
+        '-e',
+        "import './out/main.mjs'; console.log('external importer')",
+      ]),
+    ).toEqual([...expected, 'external importer', 'consumer microtask']);
+  },
+);
+
+test('keepNames restores function names inside async sibling scopes', async () => {
+  const consumer = "import './a.mjs'; console.log(named.name); function named() {}";
+  const run = await bundle(
+    {
+      'main.mjs': "import defer * as a from './a.mjs'; import './join.mjs'; console.log(typeof a);",
+      'a.mjs': 'await 0;',
+      'one.mjs': consumer,
+      'two.mjs': consumer,
+      'join.mjs': "import './one.mjs'; import './two.mjs';",
+    },
+    { keepNames: true, minify: true },
+    ['main'],
+    'comes after a deferred import',
+    3,
+  );
+  expect(run()).toEqual(['named', 'named', 'object']);
+});
+
+test('a throw before a shared await stops an external importer’s later request', async () => {
+  const run = await bundle(
+    {
+      'main.mjs':
+        "import defer * as a from './a.mjs'; import './consumer.mjs'; console.log(typeof a);",
+      'a.mjs': "import './bad.mjs'; await 0;",
+      'bad.mjs': "console.log('bad'); throw new Error('boom');",
+      'consumer.mjs': "import './a.mjs'; console.log('consumer');",
+      'later.mjs': "console.log('later');",
+    },
+    {},
+    ['main'],
+    'comes after a deferred import',
+    3,
+  );
+  expect(() =>
+    run('main', ['--input-type=module', '-e', "import './out/main.mjs'; import './later.mjs';"]),
+  ).toThrow(
+    expect.objectContaining({
+      status: 1,
+      stdout: 'bad\n',
+      stderr: expect.stringContaining('Error: boom'),
+    }),
+  );
+});
+
+test('a shared await resumes ready siblings even when the first throws', async () => {
+  const run = await bundle(
+    {
+      'main.mjs':
+        "import defer * as a from './a.mjs'; import './join.mjs'; console.log('main', typeof a);",
+      'a.mjs': "await 0; console.log('a');",
+      'first.mjs': "import './a.mjs'; console.log('first'); throw undefined;",
+      'second.mjs':
+        "import './a.mjs'; console.log('second', typeof arguments); throw Error('second');",
+      'join.mjs': "import './first.mjs'; import './second.mjs'; console.log('join');",
+    },
+    {},
+    ['main'],
+    'comes after a deferred import',
+    2,
+  );
+  expect(
+    run('main', [
+      '--input-type=module',
+      '-e',
+      "await import('./out/main.mjs').catch(e => console.log('caught', e))",
+    ]),
+  ).toEqual(['a', 'first', 'second undefined', 'caught undefined']);
 });
 
 test.each([false, true])(

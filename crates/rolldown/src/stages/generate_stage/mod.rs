@@ -119,6 +119,7 @@ use crate::{
   utils::external_import_interop::ChunkAssignments,
 };
 
+mod async_fallback_chunks;
 mod chunk_ext;
 mod chunk_optimizer;
 mod code_splitting;

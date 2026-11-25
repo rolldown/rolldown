@@ -53,6 +53,9 @@ pub struct ChunkGraph {
   /// out (`GenerateStage::split_modules_before_deferred_imports`), and an init after the import of
   /// the chunk would run after them. These modules have no host (`deferred_init_host`).
   pub deferred_modules_run_at_load: FxHashSet<ModuleIdx>,
+  /// Eager fallback entries whose synchronous consumer layers run together after one async chunk.
+  /// Each layer waits for all modules in the previous one. See `render_async_consumers`.
+  pub async_consumer_layers: FxHashMap<ChunkIdx, Vec<usize>>,
   /// ESM chunks split from a manual group to let the loader start its independent requests.
   /// An eager wrapper after one of these imports must start while its top-level await is pending.
   pub split_async_group_chunks: FxHashSet<ChunkIdx>,
@@ -146,6 +149,7 @@ impl ChunkGraph {
       common_chunk_preserve_export_names_modules: FxHashMap::default(),
       post_chunk_optimization_operations: FxHashMap::default(),
       lazy_host_inits: LazyHostInits::default(),
+      async_consumer_layers: FxHashMap::default(),
       split_async_group_chunks: FxHashSet::default(),
       deferred_modules_run_at_load: FxHashSet::default(),
       run_at_load_anchors: FxHashMap::default(),

@@ -1324,6 +1324,8 @@ impl GenerateStage<'_> {
       );
     }
 
+    // Check the final placement of user modules while the runtime still has its own chunk.
+    self.split_async_fallback_chunks(chunk_graph);
     for consumers in facade_runtime_consumers.iter().map(Some).chain([None]) {
       self.try_merge_runtime_chunk(
         chunk_graph,

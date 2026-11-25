@@ -384,6 +384,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // the dedup set, and splices at the same after-imports index the HMR header uses (an HMR
     // header spliced below lands before these calls, which is fine — it is registration glue).
     let entry_init_prelude = self.entry_reexported_wrapper_init_prelude();
+    let mut user_body_start = last_import_stmt_idx + entry_init_prelude.len();
     if !entry_init_prelude.is_empty() {
       program.body.splice(last_import_stmt_idx..last_import_stmt_idx, entry_init_prelude);
     }
@@ -396,6 +397,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         // Let's skip it for now.
         self.generate_hmr_header()
       };
+      user_body_start += hmr_header.len();
       program.body.splice(last_import_stmt_idx..last_import_stmt_idx, hmr_header);
     }
 
@@ -496,7 +498,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
 
         // Hoist all top-level "var" and "function" declarations out of the closure
-        old_body.into_iter().for_each(|mut stmt| match &mut stmt {
+        let mut dependency_count = stmts_inside_closure.len();
+        for (i, mut stmt) in old_body.into_iter().enumerate() {
+          match &mut stmt {
             ast::Statement::FunctionDeclaration(_) => {
               fn_stmts.push(stmt);
             }
@@ -510,8 +514,12 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             }
             _ => {
               stmts_inside_closure.push(stmt);
+              if i < user_body_start {
+                dependency_count = stmts_inside_closure.len();
+              }
             }
-          });
+          }
+        }
 
         // Safety net for the `init_is_noop` predictive classifier (see
         // `generate_stage::compute_wrapped_esm_init_metadata`): if a module was flagged as
@@ -559,6 +567,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               program,
               target.wrapper_ref,
               stmts_inside_closure,
+              dependency_count,
               wrapper_mode,
             );
             // The chunk runs this deferred module at its place, as the build without `import
@@ -997,6 +1006,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     program: &mut ast::Program<'ast>,
     wrapper_ref: SymbolRef,
     statements: allocator::Vec<'ast, Statement<'ast>>,
+    dependency_count: usize,
     wrapper_mode: ModuleWrapperMode,
   ) {
     let (esm_ref_expr, _) =
@@ -1022,7 +1032,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           EsmWrapperBodyKind::Sync
         },
         decl_kind: self.esm_wrapper_decl_kind(wrapper_mode),
-        state: self.esm_wrapper_state(),
+        state: self.esm_wrapper_state(dependency_count),
       },
       self,
     ));
@@ -1043,7 +1053,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
         && self.ctx.linking_info.import_defer_tracked_deps.is_none(),
       "the root of a deferred group has a sync wrapper with no state record"
     );
-    self.push_esm_wrapper_stmt(program, wrapper_ref, allocator::Vec::new_in(self), wrapper_mode);
+    self.push_esm_wrapper_stmt(program, wrapper_ref, allocator::Vec::new_in(self), 0, wrapper_mode);
     let wrapper = program.body.pop().expect("`push_esm_wrapper_stmt` pushes one statement");
     let text = wrapper.to_output_source_string(self.ctx.options.charset.is_ascii());
     let text = text.trim_end();
@@ -1092,7 +1102,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   /// `() => [init_y, ...]` (the init functions of the tracked modules that it requests, for the
   /// ready check of a deferred access), its own top-level await, and, for an async body,
   /// `__esmEnd` and `__esmFail`.
-  fn esm_wrapper_state(&self) -> Option<EsmWrapperState<'ast>> {
+  fn esm_wrapper_state(&self, dependency_count: usize) -> Option<EsmWrapperState<'ast>> {
     let deps = self.ctx.linking_info.import_defer_tracked_deps.as_ref()?;
     let elements = deps.iter().filter_map(|&dep| {
       let wrapper_ref = self.ctx.linking_infos[dep].wrapper_ref?;
@@ -1102,6 +1112,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       Expression::new_array_expression(SPAN, allocator::Vec::from_iter_in(elements, self), self);
     Some(EsmWrapperState {
       deps: Expression::new_arrow_returning(array, self),
+      dependency_count,
       own_tla: self.ctx.module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait),
       end_and_fail: self.ctx.linking_info.is_tla_or_contains_tla_dependency.then(|| {
         (

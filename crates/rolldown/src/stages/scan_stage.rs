@@ -52,6 +52,9 @@ pub struct NormalizedScanStageOutput {
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   // TODO: merge the preserve_entry_signatures_map in incremental build
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
+  /// Modules with static deferred requests lowered by an async-order fallback. Chunking
+  /// checks whether their independent async dependencies can start in the eager layout.
+  pub async_fallback_importers: Vec<ModuleIdx>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub flat_options: FlatOptions,
   pub user_defined_entry_modules: FxHashSet<ModuleIdx>,
@@ -80,6 +83,7 @@ impl NormalizedScanStageOutput {
       warnings: vec![],
       dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map.clone(),
       overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map.clone(),
+      async_fallback_importers: self.async_fallback_importers.clone(),
       entry_point_to_reference_ids: self.entry_point_to_reference_ids.clone(),
       flat_options: self.flat_options,
       user_defined_entry_modules: self.user_defined_entry_modules.clone(),
@@ -118,6 +122,7 @@ impl TryFrom<ScanStageOutput> for NormalizedScanStageOutput {
       warnings: value.warnings,
       dynamic_import_exports_usage_map: value.dynamic_import_exports_usage_map,
       overrode_preserve_entry_signature_map: value.overrode_preserve_entry_signature_map,
+      async_fallback_importers: Vec::new(),
       entry_point_to_reference_ids: value.entry_point_to_reference_ids,
       flat_options: value.flat_options,
       user_defined_entry_modules: value.user_defined_entry_modules,

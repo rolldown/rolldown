@@ -20,6 +20,10 @@ function init_b() {
 	return (init_b = __esmState((async () => {
 		try {
 			init_log();
+		} catch (e) {
+			throw __esmFail(init_b, e, true);
+		}
+		try {
 			await 0;
 			throw new Error("b failed");
 		} catch (e) {
@@ -35,6 +39,10 @@ function init_a() {
 	return (init_a = __esmState((async () => {
 		try {
 			init_log();
+		} catch (e) {
+			throw __esmFail(init_a, e, true);
+		}
+		try {
 			await 0;
 			await 0;
 			await 0;

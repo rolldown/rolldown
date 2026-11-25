@@ -22,8 +22,8 @@ use crate::{
 ///
 /// The scanner keeps the results of an eager import and saves the deferred results in
 /// `EcmaView::import_defer_scan`. A build that keeps the deferral gets the saved results here. A
-/// build that does not keep it lowers each deferred import to a normal import: it gives the output
-/// of the build with `experimental.importDefer` off, and a warning for each deferred import.
+/// fallback keeps the eager scan results and warns for each lowered import. An async-order
+/// fallback can split chunks to let the native loader start independent dependencies.
 ///
 /// Returns the `assign_to_import` errors of a build that lowers the deferred imports.
 pub fn apply_import_defer_support(
@@ -47,7 +47,7 @@ pub fn apply_import_defer_support(
       keep_deferral(output);
       Ok(())
     }
-    Some(reason) => lower_deferred_imports(output, &reason),
+    Some(reason) => lower_deferred_imports(output, &reason, options),
   }
 }
 
@@ -705,12 +705,25 @@ fn keep_deferral(output: &mut NormalizedScanStageOutput) {
 fn lower_deferred_imports(
   output: &mut NormalizedScanStageOutput,
   reason: &UnsupportedReason,
+  options: &NormalizedBundlerOptions,
 ) -> Result<(), Vec<BuildDiagnostic>> {
+  let check_async_chunks = matches!(
+    reason,
+    UnsupportedReason::SerialAsyncImports(_) | UnsupportedReason::ImportAfterAsyncDeferredImport(_)
+  ) && output.tla_module_count > 1
+    && matches!(options.format, OutputFormat::Esm)
+    && !options.code_splitting.is_disabled()
+    && !options.preserve_modules
+    // Strict wrappers evaluate their requests themselves, even across chunk boundaries.
+    && !options.is_strict_execution_order_enabled()
+    && options.file.is_none();
   let (static_message, dynamic_message) = reason.messages(&output.module_table.modules);
   let mut warnings = vec![];
   let mut errors = vec![];
   for module in output.module_table.modules.iter_mut().filter_map(Module::as_normal_mut) {
+    let mut has_static_defer = false;
     for rec in module.ecma_view.import_records.iter_mut().filter(|rec| rec.is_defer_phase()) {
+      has_static_defer |= rec.kind == ImportKind::Import;
       rec.meta.remove(ImportRecordMeta::DeferPhase);
       let message =
         if rec.kind == ImportKind::DynamicImport { &dynamic_message } else { &static_message };
@@ -726,6 +739,9 @@ fn lower_deferred_imports(
         )
         .with_severity_warning(),
       );
+    }
+    if check_async_chunks && has_static_defer {
+      output.async_fallback_importers.push(module.idx);
     }
     if let Some(scan) = module.ecma_view.import_defer_scan.take() {
       // With an eager import, the scanner reports these errors.

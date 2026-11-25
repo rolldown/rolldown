@@ -19,6 +19,10 @@ function init_c() {
 	return (init_c = __esmState((async () => {
 		try {
 			init_log();
+		} catch (e) {
+			throw __esmFail(init_c, e, true);
+		}
+		try {
 			await Promise.resolve();
 			log.push("c");
 		} catch (e) {

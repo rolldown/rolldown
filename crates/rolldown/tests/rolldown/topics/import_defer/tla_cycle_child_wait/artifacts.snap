@@ -21,6 +21,10 @@ function init_b() {
 		try {
 			init_log();
 			__esmDepDone(init_a(init_b), init_a, init_b) || await init_a(init_b);
+		} catch (e) {
+			throw __esmFail(init_b, e, true);
+		}
+		try {
 			x = "unset";
 			log.push("b start");
 			await new Promise((r) => setTimeout(r, 10));

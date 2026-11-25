@@ -12,6 +12,10 @@ function init_t() {
 	return (init_t = __esmState((async () => {
 		try {
 			init_log();
+		} catch (e) {
+			throw __esmFail(init_t, e, true);
+		}
+		try {
 			log.push("t start");
 			await 0;
 			log.push("t end");

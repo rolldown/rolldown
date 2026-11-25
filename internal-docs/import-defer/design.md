@@ -10,7 +10,7 @@
 
 ### Goal
 
-A build with a shape that the deferral does not support yet gives the output of the build with the option off, and a warning for each deferred import. Thus each step can add the deferral for some shapes, and all other shapes keep the eager result that they had before.
+A build with a shape that deferral does not support lowers each deferred import to an eager import and emits a warning. It uses the normal eager chunk layout wherever that layout allows independent async dependencies to start. When a single chunk would serialize their top-level awaits, the ESM loader needs separate files to evaluate them concurrently.
 
 ### Decisions
 

@@ -19,6 +19,10 @@ function init_tla() {
 	return (init_tla = __esmState((async () => {
 		try {
 			init_log();
+		} catch (e) {
+			throw __esmFail(init_tla, e, true);
+		}
+		try {
 			log.push("tla start");
 			await Promise.resolve(0);
 			log.push("tla end");

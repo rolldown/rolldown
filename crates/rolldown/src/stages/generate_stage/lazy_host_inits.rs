@@ -1,9 +1,9 @@
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkModulesOrderBy, CrossChunkImportItem, ImportKind,
-  ImportRecordIdx, ModuleIdx, NormalModule, NormalizedBundlerOptions, OutputExports, OutputFormat,
-  PreliminaryFilename, RuntimeHelper, StaticImport, UsedSymbolRefs, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, ChunkModulesOrderBy, CrossChunkImportItem, EcmaModuleAstUsage,
+  ImportKind, ImportRecordIdx, ModuleIdx, NormalModule, NormalizedBundlerOptions, OutputExports,
+  OutputFormat, PreliminaryFilename, RuntimeHelper, StaticImport, UsedSymbolRefs, WrapKind,
 };
 use rolldown_error::{BuildDiagnostic, EventKind};
 use rolldown_utils::{concat_string, dashmap::FxDashMap, make_unique_name::make_unique_name};
@@ -363,6 +363,99 @@ impl GenerateStage<'_> {
       chunk_graph.deferred_modules_run_at_load.remove(idx);
     }
     self.move_host_modules(chunk_graph, group, &moved, HostPlacement::Separate);
+    for idx in moved {
+      if self.link_output.metas[idx].is_tla_or_contains_tla_dependency {
+        chunk_graph.split_async_group_chunks.insert(chunk_graph.module_to_chunk[idx].unwrap());
+      }
+    }
+  }
+
+  /// An eager fallback relies on native ESM to start async siblings. Concatenating two
+  /// roots of a deferred preparation into one file would turn that evaluation into a
+  /// serial wait. See internal-docs/import-defer/implementation.md.
+  pub(super) fn split_async_fallback_chunks(&self, graph: &mut ChunkGraph) {
+    let link = &self.link_output;
+    if link.async_fallback_importers.is_empty() {
+      return;
+    }
+    let static_deps = |idx: ModuleIdx| {
+      link.module_table[idx]
+        .import_records()
+        .iter()
+        .filter(|rec| rec.kind == ImportKind::Import)
+        .filter_map(|rec| rec.resolved_module)
+    };
+    let mut affected = Vec::new();
+    let mut visited = FxHashSet::default();
+    let mut async_hosts = FxHashSet::default();
+    let mut stack = Vec::new();
+    for &importer in &link.async_fallback_importers {
+      if !link.metas[importer].is_included {
+        continue;
+      }
+      visited.clear();
+      async_hosts.clear();
+      stack.clear();
+      stack.push((importer, importer));
+      while let Some((idx, parent)) = stack.pop() {
+        if !link.metas[idx].is_tla_or_contains_tla_dependency || !visited.insert((idx, parent)) {
+          continue;
+        }
+        let Some(module) = link.module_table[idx].as_normal() else { continue };
+        let parent = if idx != importer
+          && module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait)
+        {
+          // Two async siblings reached through plain re-exports can still occupy one file.
+          // An async module's own prerequisites start in a separate walk: a child and its
+          // waiting parent alone do not need independent chunks.
+          if graph.module_to_chunk[idx].is_some_and(|chunk| !async_hosts.insert((parent, chunk))) {
+            affected.push(importer);
+            break;
+          }
+          idx
+        } else {
+          parent
+        };
+        stack.extend(static_deps(idx).map(|dep| (dep, parent)));
+      }
+    }
+    // The importer and the direct requests of a module with an async dependency need
+    // independent evaluation boundaries. A synchronous sibling must be able to run while
+    // the async request waits. Leave chunks with only one such boundary intact.
+    let mut seen = FxHashSet::default();
+    let mut hosts = FxHashSet::default();
+    let mut chunks = FxHashSet::default();
+    while let Some(idx) = affected.pop() {
+      if !seen.insert(idx) {
+        continue;
+      }
+      if let Some(host) = graph.module_to_chunk[idx]
+        && !hosts.insert(host)
+      {
+        chunks.insert(host);
+      }
+      if link.metas[idx].is_tla_or_contains_tla_dependency {
+        let deps = static_deps(idx);
+        if deps.clone().any(|dep| link.metas[dep].is_tla_or_contains_tla_dependency) {
+          affected.extend(deps);
+        }
+      }
+    }
+    let mut chunks: Vec<_> = chunks.into_iter().collect();
+    chunks.sort_unstable();
+    for chunk_idx in chunks {
+      let chunk = &graph.chunk_table[chunk_idx];
+      let mut modules = chunk.modules.clone();
+      modules.sort_unstable_by_key(|&idx| link.module_table[idx].exec_order());
+      // Keep the public entry at its configured filename. A common chunk keeps one
+      // member and its existing name, including a user-supplied manual group name.
+      let anchor = match chunk.kind {
+        ChunkKind::EntryPoint { module, .. } => module,
+        ChunkKind::Common => modules[0],
+      };
+      modules.retain(|&idx| idx != anchor);
+      self.move_host_modules(graph, chunk_idx, &modules, HostPlacement::Separate);
+    }
   }
 
   /// The new common chunks inherit the entry bits of the old chunk. Keep runtime helpers that
@@ -400,10 +493,6 @@ impl GenerateStage<'_> {
         self.options,
       );
       let split_idx = chunk_graph.add_chunk(split);
-      if placement == HostPlacement::Separate && metas[members[0]].is_tla_or_contains_tla_dependency
-      {
-        chunk_graph.split_async_group_chunks.insert(split_idx);
-      }
       for &idx in members {
         chunk_graph.add_module_to_chunk(idx, split_idx, metas[idx].depended_runtime_helper);
       }

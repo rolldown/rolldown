@@ -14,10 +14,11 @@ use oxc::{
 };
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ChunkKind, ConcatenateWrappedModuleKind, ConcatenatedGroupEvent,
-  ExportsKind, ImportAttributes, ImportKind, ImportRecordIdx, ImportRecordMeta, InlineConstMode,
-  MemberExprProp, MemberExprRefResolution, Module, ModuleIdx, ModuleNamespaceIncludedReason,
-  ModuleType, NamespaceAlias, NormalModule, OutputExports, OutputFormat, Platform,
-  RenderedConcatenatedModuleParts, Specifier, SymbolRef, SymbolRefFlags, WrapKind, is_lazy_proxy,
+  EcmaModuleAstUsage, ExportsKind, ImportAttributes, ImportKind, ImportRecordIdx, ImportRecordMeta,
+  InlineConstMode, MemberExprProp, MemberExprRefResolution, Module, ModuleIdx,
+  ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule, OutputExports,
+  OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier, SymbolRef, SymbolRefFlags,
+  WrapKind, is_lazy_proxy,
 };
 use rolldown_ecmascript::{EcmaAst, ToSourceString};
 use rolldown_ecmascript_utils::{
@@ -3251,6 +3252,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   #[expect(clippy::too_many_lines)]
   fn remove_unused_top_level_stmt(&mut self, program: &mut ast::Program<'ast>) -> usize {
     let mut last_import_stmt_idx = None;
+    // The preprocessor puts all static requests first. An excluded re-export can still
+    // emit an initializer, so count the actual output prefix for a tracked async body.
+    let tracked_tla = self.ctx.module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait)
+      && self.ctx.linking_info.import_defer_tracked_deps.is_some();
+    let mut user_body_start = None;
     let warns_dropped_import_attributes =
       self.ctx.options.checks.contains(EventKindSwitcher::DroppedImportAttribute)
         && !self.ctx.options.format.keep_esm_import_export_syntax();
@@ -3260,6 +3266,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
     old_body.into_iter().enumerate().zip(self.ctx.stmt_infos.iter_enumerated().skip(1)).for_each(
       |((_top_stmt_idx, mut top_stmt), (stmt_info_idx, stmt_info))| {
+        if tracked_tla && user_body_start.is_none() && !top_stmt.is_module_declaration_with_source()
+        {
+          user_body_start = Some(program.body.len());
+        }
         // Runs for excluded statements too. An `export *` from an external is excluded, but its
         // `require()` is still rendered.
         if warns_dropped_import_attributes
@@ -3783,7 +3793,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       },
     );
     debug_assert!(self.pending_group_init.is_none(), "a group statement did not reach the body");
-    let mut last_import_stmt_idx = last_import_stmt_idx.unwrap_or(0);
+    let mut last_import_stmt_idx = if tracked_tla {
+      user_body_start.unwrap_or(program.body.len())
+    } else {
+      last_import_stmt_idx.unwrap_or(0)
+    };
     self.move_group_init_stmts(program, &mut last_import_stmt_idx);
     last_import_stmt_idx
   }

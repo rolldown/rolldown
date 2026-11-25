@@ -19,6 +19,10 @@ function init_a() {
 	return (init_a = __esmState((async () => {
 		try {
 			init_log();
+		} catch (e) {
+			throw __esmFail(init_a, e, true);
+		}
+		try {
 			log.push("a start");
 			await 0;
 			log.push("a end");

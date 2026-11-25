@@ -16,7 +16,7 @@
 //! See `internal-docs/ast-construction/implementation.md`.
 
 use oxc::{
-  allocator::{self, GetAllocator, IntoIn},
+  allocator::{self, CloneIn, GetAllocator, IntoIn},
   ast::{
     ast::{
       Argument, ArrowFunctionBody, ArrowFunctionExpression, AssignmentOperator, AssignmentTarget,
@@ -57,6 +57,8 @@ pub struct EsmWrapperState<'ast> {
   pub deps: Expression<'ast>,
   /// The module has its own top-level await: flag 2 of the third argument.
   pub own_tla: bool,
+  /// Leading initializer statements evaluated before the module body starts.
+  pub dependency_count: usize,
   /// `(__esmEnd, __esmFail)` for an async body (flag 1 of the third argument). The body becomes
   /// `try { ... } catch (e) { throw __esmFail(init_x, e) } __esmEnd(init_x);`, because a promise
   /// cannot tell synchronously that the body finished.
@@ -895,18 +897,23 @@ pub trait StatementFactoryExt<'ast> {
       state,
     } = options;
     let has_state = state.is_some();
-    let (state_deps, state_flags, end_and_fail) = match state {
-      Some(EsmWrapperState { deps, own_tla, end_and_fail }) => {
+    let (state_deps, state_flags, end_and_fail, dependency_count) = match state {
+      Some(EsmWrapperState { deps, own_tla, end_and_fail, dependency_count }) => {
         debug_assert_eq!(end_and_fail.is_some(), matches!(body_kind, EsmWrapperBodyKind::Async));
         let flags = u8::from(end_and_fail.is_some()) | (u8::from(own_tla) << 1);
-        (Some(deps), flags, end_and_fail)
+        (Some(deps), flags, end_and_fail, if own_tla { dependency_count } else { 0 })
       }
-      None => (None, 0, None),
+      None => (None, 0, None, 0),
     };
     let statements = match end_and_fail {
-      Some((end_expr, fail_expr)) => {
-        esm_state_async_body(binding_name, statements, end_expr, fail_expr, builder)
-      }
+      Some((end_expr, fail_expr)) => esm_state_async_body(
+        binding_name,
+        statements,
+        dependency_count,
+        end_expr,
+        fail_expr,
+        builder,
+      ),
       None => statements,
     };
     let params = FormalParameters::boxed(SPAN, FormalParameterKind::Signature, [], None, builder);
@@ -1018,17 +1025,17 @@ pub trait StatementFactoryExt<'ast> {
 
 impl<'ast> StatementFactoryExt<'ast> for Statement<'ast> {}
 
-/// `try { <statements> } catch (e) { throw __esmFail(init_x, e) } __esmEnd(init_x);`
-fn esm_state_async_body<'ast, B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
+/// Preserve the origin of a throw from the static requests of a TLA module.
+fn esm_state_try_stmt<'ast, B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
   binding_name: &str,
   statements: allocator::Vec<'ast, Statement<'ast>>,
-  end_expr: Expression<'ast>,
-  fail_expr: Expression<'ast>,
+  fail: Expression<'ast>,
+  dependency: bool,
   builder: &B,
-) -> allocator::Vec<'ast, Statement<'ast>> {
-  let fail_call = Expression::new_call_expression(
+) -> Statement<'ast> {
+  let mut fail_call = CallExpression::new(
     SPAN,
-    fail_expr,
+    fail,
     None,
     [
       Expression::new_id_ref_expr(SPAN, binding_name, builder).into(),
@@ -1037,6 +1044,10 @@ fn esm_state_async_body<'ast, B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     false,
     builder,
   );
+  if dependency {
+    fail_call.arguments.push(Expression::new_boolean_literal(SPAN, true, builder).into());
+  }
+  let fail_call = Expression::CallExpression(fail_call.into_in(builder.allocator()));
   let handler = CatchClause::boxed(
     SPAN,
     Some(CatchParameter::new(
@@ -1056,13 +1067,37 @@ fn esm_state_async_body<'ast, B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     ),
     builder,
   );
-  let try_stmt = Statement::new_try_statement(
+  Statement::new_try_statement(
     SPAN,
     BlockStatement::boxed(SPAN, statements, builder),
     Some(handler),
     None,
     builder,
-  );
+  )
+}
+
+/// `try { <statements> } catch (e) { throw __esmFail(init_x, e) } __esmEnd(init_x);`
+fn esm_state_async_body<'ast, B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
+  binding_name: &str,
+  mut statements: allocator::Vec<'ast, Statement<'ast>>,
+  dependency_count: usize,
+  end_expr: Expression<'ast>,
+  fail_expr: Expression<'ast>,
+  builder: &B,
+) -> allocator::Vec<'ast, Statement<'ast>> {
+  let mut body = allocator::Vec::new_in(builder);
+
+  if dependency_count != 0 {
+    let dependencies = allocator::Vec::from_iter_in(statements.drain(..dependency_count), builder);
+    body.push(esm_state_try_stmt(
+      binding_name,
+      dependencies,
+      fail_expr.clone_in(builder.allocator()),
+      true,
+      builder,
+    ));
+  }
+  body.push(esm_state_try_stmt(binding_name, statements, fail_expr, false, builder));
   let end_call = Expression::new_call_expression(
     SPAN,
     end_expr,
@@ -1071,10 +1106,8 @@ fn esm_state_async_body<'ast, B: GetAstBuilder<'ast> + GetAllocator<'ast>>(
     false,
     builder,
   );
-  allocator::Vec::from_array_in(
-    [try_stmt, Statement::new_expression_statement(SPAN, end_call, builder)],
-    builder,
-  )
+  body.push(Statement::new_expression_statement(SPAN, end_call, builder));
+  body
 }
 
 /// `<expr>.then(n => (<expressions>))`, or `<expr>.then(n => (n = <module>, <expressions>))`

@@ -49,6 +49,7 @@ async function bundle(
     execFileSync(process.execPath, [...args, `out/${entry}.mjs`], {
       cwd,
       encoding: 'utf8',
+      stdio: 'pipe',
       timeout: 10_000,
     })
       .trim()
@@ -283,6 +284,78 @@ test.each([false, true])(
     expect(run('other')).toEqual(['other']);
   },
 );
+
+test.each([
+  { source: "import './bad.mjs'; await 0;", stdout: 'bad\n' },
+  { source: "if (globalThis.Promise) throw new Error('boom'); await 0;", stdout: 'b\n' },
+  { source: "await 0; throw new Error('boom');", stdout: 'b\n' },
+])('a combined wait preserves the origin of a throw in $source', async ({ source, stdout }) => {
+  const run = await bundle({
+    'main.mjs':
+      "import defer * as a from './a.mjs'; import defer * as b from './b.mjs'; console.log('main', typeof a, typeof b);",
+    'a.mjs': source,
+    'bad.mjs': "console.log('bad'); throw new Error('boom');",
+    'b.mjs': "console.log('b'); await 0;",
+  });
+  expect(() => run()).toThrow(
+    expect.objectContaining({ status: 1, stdout, stderr: expect.stringContaining('Error: boom') }),
+  );
+});
+
+test('a synchronous failure stops the walk while an earlier request is pending', async () => {
+  const run = await bundle({
+    'main.mjs': `
+      globalThis.failure = {};
+      try { await import('./requests.mjs'); } catch (error) { console.log(error === globalThis.failure); }
+    `,
+    'requests.mjs': `
+      import defer * as first from './pending.mjs';
+      import defer * as second from './async.mjs';
+      import defer * as last from './last.mjs';
+      console.log('unreachable');
+    `,
+    'pending.mjs': "console.log('pending'); await new Promise(() => {});",
+    'async.mjs': "export * from './bad.mjs'; await 0;",
+    'bad.mjs': "console.log('bad'); throw globalThis.failure;",
+    'last.mjs': "console.log('last'); await 0;",
+  });
+  expect(run()).toEqual(['pending', 'bad', 'true']);
+});
+
+test.each([
+  'shared request',
+  'shared request with an async parent',
+  'unmatched group',
+  'eager request between deferred imports',
+])('an eager fallback starts async siblings in source order with a %s', async (shape) => {
+  const interleaved = shape === 'eager request between deferred imports';
+  const shared = shape.startsWith('shared request');
+  const run = await bundle(
+    {
+      'main.mjs': `import defer * as ns from './target.mjs'; ${interleaved ? "import './middle.mjs';" : ''} import defer * as extra from './extra.mjs'; console.log('main', ns.x, typeof extra);`,
+      'other.mjs': `${shared ? "import './extra.mjs';" : ''} console.log('other');`,
+      'target.mjs': `import './a.mjs'; import defer * as b from './b.mjs'; ${shape === 'shared request with an async parent' ? 'await 0;' : ''} export const x = 1;`,
+      'a.mjs': waitsForRelease,
+      'b.mjs': "console.log('b start'); globalThis.release(); await 0; console.log('b end');",
+      'extra.mjs': 'await 0; export const x = 1;',
+      'middle.mjs': "console.log('middle');",
+    },
+    shape === 'unmatched group'
+      ? { codeSplitting: { groups: [{ name: 'deps', test: /missing/ }] } }
+      : {},
+    ['main', 'other'],
+    interleaved ? 'comes after a deferred import' : true,
+  );
+  expect(run()).toEqual([
+    'a start',
+    'b start',
+    ...(interleaved ? ['middle'] : []),
+    'a end',
+    'b end',
+    'main 1 object',
+  ]);
+  expect(run('other')).toEqual(['other']);
+});
 
 test('a later deferred request can reject while an earlier request is pending', async () => {
   const run = await bundle({

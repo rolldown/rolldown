@@ -91,6 +91,10 @@ function init_m3() {
 			init_log();
 			__esmDepDone(init_m0(init_m3), init_m0, init_m3) || await init_m0(init_m3);
 			__esmDepDone(init_m4(init_m3), init_m4, init_m3) || await init_m4(init_m3);
+		} catch (e) {
+			throw __esmFail(init_m3, e, true);
+		}
+		try {
 			await 0;
 			log.push("3");
 		} catch (e) {

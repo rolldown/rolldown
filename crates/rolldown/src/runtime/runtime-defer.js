@@ -50,7 +50,7 @@ export var __esmState = (body, deps, flags, rec) => (
     __esmStack.push(rec);
     if (flags & 1) {
       rec.p = body();
-      // The sync part threw, and `__esmFail` popped the stack.
+      // A static dependency threw during startup and `__esmFail` popped the stack.
       if (rec.s === 3) return rec.p;
     } else {
       try {
@@ -74,11 +74,15 @@ export var __esmEnd = (init, rec) => {
   rec.b = 1;
   if (rec.s === 4) rec.s = 2;
 };
-// An error of a body. In the sync part, each module on the stack above the module is in its cycle,
-// and gets the error. Returns the error, for `throw`.
-export var __esmFail = (init, e, rec, x) => {
+// A synchronous dependency failure aborts the walk and marks its cycle. A rejection from
+// the module’s own async body is observed after startup. Return the original thrown value.
+export var __esmFail = (init, e, dependency, rec, x) => {
   rec = init(__esmState);
-  if (rec.s === 1) {
+  if (rec.s === 1 && rec.t && !dependency) {
+    // Executing a TLA module rejects asynchronously even if its first statement throws.
+    // Leave it evaluating while the synchronous walk starts the remaining requests.
+    (async () => { await 0; rec.s = 3; rec.e = e; })();
+  } else if (rec.s === 1) {
     do ((x = __esmStack.pop()).s = 3), (x.e = e);
     while (x !== rec);
   } else (rec.s = 3), (rec.e = e);
@@ -138,33 +142,39 @@ export var __esmGather = (d, importer) => {
     for (i = 0; i < d.length; i++) walk(d[i]);
   }
   if (!g.length && !started.length) return true;
-  __esmStack.w = async () => {
-    if (g.length === 1) await g[0].f(importer);
-    else if (g.length) {
-      // Start and observe every sibling now, including a rejection while an earlier sibling
-      // is pending. Await supplies intrinsic resolving functions when it calls the thenable
-      // on the next microtask. A sibling may have already finished by then.
-      var pending = g.length, failure, finish;
-      var start = async (m) => {
-        try {
-          await m.f(importer);
-        } catch (e) {
-          if (!failure) failure = [e];
-        }
-        if ((--pending === 0 || failure) && finish) finish();
-      };
-      for (var sibling of g) start(sibling);
-      await {
-        then(resolve, reject) {
-          finish = () => failure ? reject(failure[0]) : resolve();
-          if (!pending || failure) finish();
-        },
-      };
+  __esmStack.w = () => {
+    var pending = g.length, failure, finish, p;
+    var observe = async (p) => {
+      try {
+        await p;
+      } catch (e) {
+        if (!failure) failure = [e];
+      }
+      if ((--pending === 0 || failure) && finish) finish();
+    };
+    for (var sibling of g) {
+      p = sibling.f(importer);
+      // A synchronous dependency failure stops this evaluation walk, including a
+      // gather nested in another module's import list. Observe every started promise.
+      if (g.length !== 1 || sibling.s === 3) observe(p);
+      if (sibling.s === 3) throw sibling.e;
     }
-    for (var m of started) await m.f().then(
-      () => {},
-      () => {},
-    );
+    return (async () => {
+      if (g.length === 1) await p;
+      else if (g.length) {
+        // Await supplies intrinsic resolving functions on the next microtask.
+        await {
+          then(resolve, reject) {
+            finish = () => failure ? reject(failure[0]) : resolve();
+            if (!pending || failure) finish();
+          },
+        };
+      }
+      for (var m of started) await m.f().then(
+        () => {},
+        () => {},
+      );
+    })();
   };
   return false;
 };

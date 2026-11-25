@@ -81,6 +81,7 @@ pub struct LinkStageOutput {
   /// https://rollupjs.org/plugin-development/#this-emitfile
   /// Used to store `preserveSignature` specified with `this.emitFile` in plugins.
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
+  pub async_fallback_importers: Vec<ModuleIdx>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
@@ -128,6 +129,7 @@ pub struct LinkStage<'a> {
   pub kept_inlined_constant_reads: FxHashSet<SymbolRef>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
+  pub async_fallback_importers: Vec<ModuleIdx>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   /// Imports whose binding lazy barrel left uncertain by skipping a record they depend on.
@@ -267,6 +269,7 @@ impl<'a> LinkStage<'a> {
       external_import_namespace_merger: FxHashMap::default(),
       overrode_preserve_entry_signature_map: scan_stage_output
         .overrode_preserve_entry_signature_map,
+      async_fallback_importers: scan_stage_output.async_fallback_importers,
       entry_point_to_reference_ids: scan_stage_output.entry_point_to_reference_ids,
       flat_options: scan_stage_output.flat_options,
       user_defined_entry_modules: scan_stage_output.user_defined_entry_modules,
@@ -331,6 +334,7 @@ impl<'a> LinkStage<'a> {
         safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
         external_import_namespace_merger: self.external_import_namespace_merger,
         overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
+        async_fallback_importers: self.async_fallback_importers,
         entry_point_to_reference_ids: self.entry_point_to_reference_ids,
         global_constant_symbol_map: self.global_constant_symbol_map,
         normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,

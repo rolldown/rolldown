@@ -198,15 +198,22 @@ impl GenerateStage<'_> {
         (chunk_idx, split)
       })
       .collect::<Vec<_>>();
+    let mut grouped_inits = FxHashSet::default();
     for (chunk_idx, split) in host_splits {
       match split {
         HostSplit::Keep => {}
         HostSplit::Move(moved) => {
           self.move_modules_to_new_common_chunk(chunk_graph, chunk_idx, &moved);
         }
+        HostSplit::RunAtLoad(modules)
+          if chunk_graph.chunk_table[chunk_idx].chunk_reason_type.group_index().is_some() =>
+        {
+          grouped_inits.extend(modules);
+        }
         HostSplit::RunAtLoad(modules) => chunk_graph.deferred_modules_run_at_load.extend(modules),
       }
     }
+    self.plan_grouped_run_at_load(chunk_graph, grouped_inits);
     if module_id_order {
       return;
     }
@@ -220,6 +227,56 @@ impl GenerateStage<'_> {
     for (chunk_idx, moved) in splits {
       self.move_modules_to_new_common_chunk(chunk_graph, chunk_idx, &moved);
     }
+  }
+
+  /// A manual group cannot be split. A deferred request can put a wrapper before the eager
+  /// members of its group in chunk order, even when every eager importer needs it *after* them.
+  /// In that case leave the init with the importer. Loading the group from another entry then
+  /// only runs its eager members. See internal-docs/import-defer/implementation.md.
+  fn plan_grouped_run_at_load(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    mut candidates: FxHashSet<ModuleIdx>,
+  ) {
+    if candidates.is_empty() {
+      return;
+    }
+    let runtime = self.link_output.runtime.id();
+    let mut group_sizes = FxHashMap::default();
+    for &idx in &candidates {
+      let group = chunk_graph.module_to_chunk[idx].expect("candidate has a host");
+      group_sizes.entry(group).or_insert_with(|| {
+        chunk_graph.chunk_table[group]
+          .modules
+          .iter()
+          .filter(|&&m| {
+            m != runtime && matches!(self.link_output.metas[m].wrap_kind(), WrapKind::None)
+          })
+          .count()
+      });
+    }
+    let mut seen_eagerly = FxHashSet::default();
+    for &root in self.link_output.entries.keys() {
+      let mut remaining = group_sizes.clone();
+      for idx in self.expected_order_for_root(root, false) {
+        let Some(count) =
+          chunk_graph.module_to_chunk[idx].and_then(|group| remaining.get_mut(&group))
+        else {
+          continue;
+        };
+        if idx != runtime && matches!(self.link_output.metas[idx].wrap_kind(), WrapKind::None) {
+          *count -= 1;
+        } else if candidates.contains(&idx) {
+          seen_eagerly.insert(idx);
+          if *count != 0 {
+            chunk_graph.deferred_modules_run_at_load.insert(idx);
+          }
+        }
+      }
+    }
+    // Keep the original placement when no eager entry walk reached the candidate.
+    candidates.retain(|idx| !seen_eagerly.contains(idx));
+    chunk_graph.deferred_modules_run_at_load.extend(candidates);
   }
 
   /// Moves the modules to a new common chunk with the bits of their chunk. The old chunk keeps the

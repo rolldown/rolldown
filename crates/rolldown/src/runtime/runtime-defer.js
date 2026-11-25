@@ -36,7 +36,10 @@ export var __esmState = (body, deps, flags, rec) => (
     if (rec.s) {
       if (rec.s === 1 && from && rec.a < from.a) from.a = rec.a;
       if ((x = __esmError(rec))) {
-        if (flags & 1) return rec.p.catch(() => {}), Promise.reject(x[0]);
+        if (flags & 1) {
+          rec.p.catch(() => {});
+          return (async () => { throw x[0]; })();
+        }
         throw x[0];
       }
       return rec.p;
@@ -131,21 +134,27 @@ export var __esmGather = (d, importer) => {
   if (!g.length && !started.length) return true;
   __esmStack.w = async () => {
     if (g.length === 1) await g[0].f(importer);
-    else if (g.length) await new Promise((resolve, reject) => {
-      // Start siblings in request order. Each await observes its own rejection immediately,
-      // even if an earlier sibling never settles. As in SafePerformPromiseAll, avoid looking
-      // up `then` on their promises.
-      var pending = g.length;
+    else if (g.length) {
+      // Start and observe every sibling now, including a rejection while an earlier sibling
+      // is pending. Await supplies intrinsic resolving functions when it calls the thenable
+      // on the next microtask. A sibling may have already finished by then.
+      var pending = g.length, failure, finish;
       g.forEach(async (m) => {
         try {
           await m.f(importer);
-          if (!--pending) resolve();
         } catch (e) {
-          reject(e);
+          if (!failure) failure = [e];
         }
+        if ((--pending === 0 || failure) && finish) finish();
       });
-    });
-    for (var m of started) await Promise.resolve(m.f()).then(
+      await {
+        then(resolve, reject) {
+          finish = () => failure ? reject(failure[0]) : resolve();
+          if (!pending || failure) finish();
+        },
+      };
+    }
+    for (var m of started) await m.f().then(
       () => {},
       () => {},
     );

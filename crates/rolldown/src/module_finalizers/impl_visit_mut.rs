@@ -592,7 +592,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
     self.append_order_cjs_carriers(program);
 
-    // The run-at-load modules that `plan_dynamic_defer_declarations` moves before this module run
+    // The run-at-load modules that `plan_defer_declarations` moves before this module run
     // here, at their place in the order of execution (`ChunkGraph::run_at_load_anchors`).
     let anchors = &self.ctx.chunk_graph.run_at_load_anchors;
     if !anchors.is_empty() {

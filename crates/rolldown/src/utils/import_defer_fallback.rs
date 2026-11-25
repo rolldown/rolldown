@@ -56,6 +56,7 @@ pub fn apply_import_defer_support(
 enum UnsupportedReason {
   InlineCommonChunks,
   NonRecursiveGroups,
+  SerialAsyncImports(ModuleIdx),
   PreservedImporterCycle(ModuleIdx),
   /// An `import.defer()` call targets this CommonJS module.
   DynamicImportOfCommonJs(ModuleIdx),
@@ -80,6 +81,10 @@ impl UnsupportedReason {
         "a code splitting group sets `includeDependenciesRecursively: false`, so the chunks can import each other in a cycle"
           .to_string()
       }
+      Self::SerialAsyncImports(idx) => format!(
+        "the imports in `{}` can start a later dependency while a top-level `await` is pending, but deferred initialization would wait for them in sequence",
+        modules[*idx].stable_id()
+      ),
       Self::PreservedImporterCycle(idx) => format!(
         "`preserveModules` is on and a static import cycle can access the deferred namespace in `{}` before its runtime helpers load",
         modules[*idx].stable_id()
@@ -151,8 +156,7 @@ fn unsupported_reason(
   {
     return Some(UnsupportedReason::PreservedImporterCycle(module));
   }
-  import_after_async_deferred_import(output, options, &closures)
-    .map(UnsupportedReason::ImportAfterAsyncDeferredImport)
+  unsupported_async_import_order(output, options, &closures)
 }
 
 /// A sibling in an eager cycle can call an exported function or read a re-exported namespace
@@ -184,12 +188,7 @@ fn preserved_importer_cycle(output: &NormalizedScanStageOutput) -> Option<Module
     })
     .filter(|module| {
       cycles
-        .get_or_insert_with(|| {
-          crate::utils::synchronous_cycle_modules(modules, |importer, rec| {
-            // A self-import cannot call back from another file while dependencies load.
-            !rec.is_defer_phase() && rec.resolved_module != Some(importer)
-          })
-        })
+        .get_or_insert_with(|| crate::utils::eager_import_cycle_modules(modules))
         .contains(&module.idx)
     })
     .min_by_key(|module| &module.stable_id)
@@ -354,25 +353,24 @@ fn deferred_closures(
   Ok(visited)
 }
 
-/// The first module outside the deferred closures with an import of a module outside the closures
-/// after a deferred import of a module that reaches a top-level `await` (the early flag of
-/// `mark_tla_before_tree_shaking`).
+/// Finds import lists where deferred preparation or an async wrapper changes when a sibling
+/// starts. Uses the early top-level await flag of `mark_tla_before_tree_shaking`.
 ///
 /// The preparation of the deferred import (`__esmGather`) waits for the modules with top-level
 /// `await` in the body of the importer. A module outside the closures has no wrapper, so the code
 /// of its imports runs before its body: the later import runs before the modules with top-level
-/// `await` start. In native order, they start first. A module of a closure has a wrapper that runs
-/// its import statements in order, and so does a later import of a closure module. In a build with
+/// `await` start. In native order, they start first. Async wrappers can also suspend before later
+/// imports run, where native ESM would start the remaining siblings. In a build with
 /// one chunk, an external module runs first also without the deferral, so it does not count. In a
 /// build with more chunks, a chunk imports an external module in the order of its imports.
-fn import_after_async_deferred_import(
+fn unsupported_async_import_order(
   output: &NormalizedScanStageOutput,
   options: &NormalizedBundlerOptions,
   closures: &IndexBitSet<ModuleIdx>,
-) -> Option<ModuleIdx> {
+) -> Option<UnsupportedReason> {
   let modules = &output.module_table.modules;
   let normal_modules = || modules.iter().filter_map(Module::as_normal);
-  let externals_count = can_have_more_chunks(output, options);
+  let multiple_chunks = can_have_more_chunks(output, options);
   let mut queue = normal_modules()
     .filter(|module| module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait))
     .map(|module| module.idx)
@@ -401,25 +399,94 @@ fn import_after_async_deferred_import(
       }
     }
   }
-  normal_modules().filter(|module| !closures.has_bit(module.idx)).find_map(|module| {
+  normal_modules().find_map(|module| {
+    let wrapped = closures.has_bit(module.idx);
+    let own_tla = module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait);
+    let mut after_async_import = false;
     let mut after_async_deferred_import = false;
-    for rec in &module.import_records {
+    for (index, rec) in module.import_records.iter().enumerate() {
       let Some(target) = rec.resolved_module else { continue };
-      if !matches!(rec.kind, ImportKind::Import) {
+      if rec.kind != ImportKind::Import || target == output.runtime.id() {
         continue;
       }
-      if rec.is_defer_phase() {
-        after_async_deferred_import |= reaches_tla.has_bit(target);
-      } else if after_async_deferred_import
+      let is_async = reaches_tla.has_bit(target);
+      if !wrapped
+        && after_async_deferred_import
+        && !rec.is_defer_phase()
         && !closures.has_bit(target)
-        && target != output.runtime.id()
-        && (externals_count || matches!(modules[target], Module::Normal(_)))
+        && (multiple_chunks || modules[target].is_normal())
       {
-        return Some(module.idx);
+        return Some(UnsupportedReason::ImportAfterAsyncDeferredImport(module.idx));
       }
+      // Native module loading starts siblings before waiting for their async evaluations.
+      // A deferred preparation in the importer body cannot start while an earlier import
+      // waits. An own-TLA wrapper likewise awaits an eager dependency before its next init.
+      let later_init = if rec.is_defer_phase() {
+        is_async
+      } else {
+        wrapped && own_tla && modules[target].side_effects().has_side_effects()
+      };
+      if multiple_chunks
+        && after_async_import
+        && later_init
+        && needs_new_evaluation(
+          module.import_records.iter().take(index),
+          target,
+          rec.is_defer_phase(),
+          modules,
+          module.idx,
+        )
+      {
+        return Some(UnsupportedReason::SerialAsyncImports(module.idx));
+      }
+      after_async_import |= is_async;
+      after_async_deferred_import |= rec.is_defer_phase() && is_async;
     }
     None
   })
+}
+
+/// An eager import needs its target's body. A deferred import only needs the modules with
+/// their own top-level await in its static closure. An earlier request, eager or deferred,
+/// already starts the async modules it reaches. Stop paths back through the importer so its
+/// later requests cannot count as earlier ones.
+fn needs_new_evaluation<'a>(
+  earlier: impl Iterator<Item = &'a ResolvedImportRecord>,
+  target: ModuleIdx,
+  deferred: bool,
+  modules: &IndexModules,
+  importer: ModuleIdx,
+) -> bool {
+  let dependency = |rec: &ResolvedImportRecord| {
+    if rec.kind == ImportKind::Import && (deferred || !rec.is_defer_phase()) {
+      rec.resolved_module
+    } else {
+      None
+    }
+  };
+  let mut stack: Vec<_> = earlier.filter_map(dependency).collect();
+  let mut visited = rustc_hash::FxHashSet::default();
+  visited.insert(importer);
+  while let Some(idx) = stack.pop() {
+    if visited.insert(idx) {
+      stack.extend(modules[idx].import_records().iter().filter_map(dependency));
+    }
+  }
+  if !deferred {
+    return !visited.contains(&target);
+  }
+  stack.push(target);
+  while let Some(idx) = stack.pop() {
+    if !visited.insert(idx) {
+      continue;
+    }
+    let Some(module) = modules[idx].as_normal() else { continue };
+    if module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait) {
+      return true;
+    }
+    stack.extend(module.import_records.iter().filter_map(dependency));
+  }
+  false
 }
 
 /// The first CommonJS module of the deferred closures whose output file runs the module at load.

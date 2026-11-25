@@ -1,6 +1,13 @@
 use rolldown_common::{ImportKind, IndexModules, ModuleIdx, ResolvedImportRecord};
 use rustc_hash::FxHashSet;
 
+/// An eager cycle through another module can execute an importer before its dependencies load.
+pub fn eager_import_cycle_modules(modules: &IndexModules) -> FxHashSet<ModuleIdx> {
+  synchronous_cycle_modules(modules, |importer, rec| {
+    !rec.is_defer_phase() && rec.resolved_module != Some(importer)
+  })
+}
+
 pub fn synchronous_cycle_modules(
   modules: &IndexModules,
   include_record: impl Fn(ModuleIdx, &ResolvedImportRecord) -> bool,

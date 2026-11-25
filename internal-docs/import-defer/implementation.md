@@ -66,6 +66,8 @@ The build keeps the deferral when all of these conditions are true:
 
 7. With `preserveModules`, a static deferred importer in an eager import or require cycle can expose a binding before its host or runtime helpers load. The build falls back if that importer exports a function declaration, re-exports a deferred binding, or has a synthetic default export (which can be an anonymous function declaration). Cycles reached only through deferred edges do not trigger this check.
 
+8. In a build that can emit multiple chunks, an importer can deadlock if it waits for one asynchronous dependency before starting a sibling. The scan checks two cases: a later deferred import that requires async preparation, and a later eager import with side effects in a deferred closure module that has its own top-level `await`. An earlier eager path to the later eager dependency needs no fallback. For a later deferred request, only an own top-level `await` outside the static closures of the earlier requests needs to start. The eager fallback lets the ESM loader start dependencies in separate chunks concurrently.
+
 When the build keeps the deferral, the saved `eval_flags` go into `stmt_infos`. The new flags are the union of both runs, because the deferred run only adds side effects. A module with `DeterminedSideEffects::Analyzed(false)` gets `Analyzed(true)` when one of its statements gets `UnknownSideEffect`.
 
 When the build falls back, `DeferPhase` goes away from each record. If the build has a write to a deferred namespace, the saved errors fail the build with the hooks of a scan error (`buildEnd` and `closeBundle` get the errors). Else each deferred import gets an `UNSUPPORTED_FEATURE` warning that names the reason. The warning of an `import.defer()` call says that the call becomes `import()` (`UnsupportedReason::messages`). All other scan results are already the results of an eager import, so the output is the output of the build with the option off.
@@ -133,7 +135,7 @@ A deferred import of a module that has a top-level `await`, or that reaches one 
 - The import forms in the body of a tracked module `bar` (`import_stmt_init_expr` in `crates/rolldown/src/module_finalizers/mod.rs`):
   - `init_foo(init_bar)` when `foo` is also tracked. The record of `foo` gets the importer, so the walk follows the evaluation order.
   - `__esmDepDone(init_foo(init_bar), init_foo, init_bar) || await init_foo(init_bar)` when `foo` also has the early flag. The body waits only when `foo` did not finish, so the body of `bar` runs synchronously after a preparation.
-- The preparation. The statement of a deferred import of a module with the early flag becomes `__esmGather(init_foo, init_bar) || await __esmGather();` (`deferred_import_preparation_stmt`). `init_bar` is absent when the importer is not tracked. The first call walks the records from `foo` and returns `true` when nothing is pending. Else the second call starts the gathered modules in order, waits for them together, then waits for previously started modules. A rejection from any gathered module rejects the preparation. `reference_needed_symbols` keeps the statement also when `foo` has no side effects.
+- The preparation. The statement of a deferred import of a module with the early flag becomes `__esmGather(init_foo, init_bar) || await __esmGather();` (`deferred_import_preparation_stmt`). `init_bar` is absent when the importer is not tracked. The first call walks the records from `foo` and returns `true` when nothing is pending. Else the second call starts the gathered modules in order, waits for them together, then waits for previously started modules. Each sibling gets an immediate rejection handler. Awaiting a thenable supplies the resolving functions for the group even if user code has replaced the global `Promise`. A rejection from any gathered module rejects the preparation. `reference_needed_symbols` keeps the statement also when `foo` has no side effects.
 - The access. A deferred access to a tracked module calls `__esmDefer(init_foo)`, not `init_foo()` (`deferred_init_call_expr`).
 
 A module whose top-level `await` already rejected is complete for the gather step. A later deferred importer can observe `typeof ns` as `"object"`. Reading `ns.x` rethrows the original error. [GatherAsynchronousTransitiveDependencies, step 6](https://tc39.es/proposal-defer-import-eval/#sec-GatherAsynchronousTransitiveDependencies).
@@ -278,6 +280,7 @@ A second deferred module of the host can come after `w.js` in the imports of `b.
 
 A host that does not split still runs `w` at load, before the init of `a`. Thus the host runs `a` at load too, at its place: the finalizer adds `init_a();` right after the wrapper of `a`, or `await init_a();` when `a` reaches a top-level `await` (`ChunkGraph::deferred_modules_run_at_load`, and the finalizer in `crates/rolldown/src/module_finalizers/impl_visit_mut.rs`). The build without `import defer` runs `a` at the same place, so each importer gets the order of that build. In the shapes of the conditions above, that order is also the native order. A deferred-only importer that loads the host then also runs `a` at load, as the build without `import defer` does.
 
+- For a manual group, `plan_grouped_run_at_load` walks the eager dependencies of each entry in evaluation order. If every walk that evaluates the deferred module has already evaluated all unwrapped members of the group, the eager importer can run its init. Entries that only defer it can then load the same group without evaluating it.
 - Only a deferred module with an eager importer in another chunk, and with a later module of the host that runs at load in execution order, runs at load. A deferred module after the last such module keeps its init after the import of the host.
 - Such a module has no host (`ChunkGraph::deferred_init_host`), so the plan adds no init for it. Its importers keep their calls, which do nothing after the first call. The plan counts its import as an import that runs at load (`chunk_load_step`).
 - Only a common chunk takes part. The split of a common host does not change a lazy host either.
@@ -287,7 +290,7 @@ A host that does not split still runs `w` at load, before the init of `a`. Thus 
 
 `move_modules_to_new_common_chunk` does both splits. The old chunk keeps the runtime helpers of its other modules, and it also keeps `ExportAll`, which the chunk optimizer adds for the namespace of an eliminated facade.
 
-The splits do not run with `strictExecutionOrder`, `preserveModules`, dev mode, `experimentalInlineCommonChunks` or `codeSplitting: false`, or for `iife` and `umd` output. With `preserveModules`, each module already has its own file. With `experimental.chunkModulesOrder: 'module-id'`, neither split moves a module, and a common host runs its deferred modules at load instead (see "Run at load"). Neither split changes the chunk of a code splitting group. Such a chunk also runs its deferred modules at load. The split of an importer chunk also skips a chunk that holds the runtime module, and an entry facade, whose entry module is in another chunk. Each new chunk adds a file to the output, only in a build with `import defer`.
+The splits do not run with `strictExecutionOrder`, `preserveModules`, dev mode, `experimentalInlineCommonChunks` or `codeSplitting: false`, or for `iife` and `umd` output. With `preserveModules`, each module already has its own file. With `experimental.chunkModulesOrder: 'module-id'`, neither split moves a module, and a common host runs its deferred modules at load instead (see "Run at load"). Neither split changes the chunk of a code splitting group. The eager entry walks determine which of its deferred modules run at load. The split of an importer chunk also skips a chunk that holds the runtime module, and an entry facade, whose entry module is in another chunk. Each new chunk adds a file to the output, only in a build with `import defer`.
 
 ## `import.defer()`
 
@@ -308,11 +311,13 @@ The splits do not run with `strictExecutionOrder`, `preserveModules`, dev mode, 
 
 In the same chunk, the call reads `x_deferred` when it runs. An earlier module of the chunk can call `import.defer()` before the code of `x.js` runs. A callback can also read the namespace during a pause at a top-level `await`. Without a move, the call reads `undefined`, or the read reaches a namespace object of the closure that does not exist yet.
 
-Thus `plan_dynamic_defer_declarations` (`crates/rolldown/src/stages/generate_stage/place_dynamic_defer_declarations.rs`) puts the code of each target, and of its static closure in that chunk, before the other modules of the chunk, after the runtime module:
+A static deferred namespace is also observable before its importer runs when another member of an eager cycle calls a hoisted function. Its namespace must exist when that call runs, while the target body stays lazy.
+
+Thus `plan_defer_declarations` (`crates/rolldown/src/stages/generate_stage/place_defer_declarations.rs`) puts the code of each target, and of its static closure in that chunk, before the other modules of the chunk, after the runtime module:
 
 - Only a module whose code has only declarations moves: a module with an init wrapper, a CommonJS module, or a JSON module (`unwrap_json_module`). Thus the move does not change when a module evaluates.
 - The earliest call can come from a module that invokes a hoisted function in a cycle. The position of the module containing the `import.defer()` expression therefore gives no lower bound on the call.
-- The plan runs before `finalize_modules`, and `place_dynamic_defer_declarations` applies it after `finalize_modules`. The order analyses and the finalizers read the order of a chunk as the order of execution.
+- The plan runs before `finalize_modules`, and `place_defer_declarations` applies it after `finalize_modules`. The order analyses and the finalizers read the order of a chunk as the order of execution.
 
 A module that its common chunk runs at load (see "Run at load") has an init call after its wrapper. When such a module moves, its call stays at its old place: the last module before it that keeps its place runs the call at the end of its code (`ChunkGraph::run_at_load_anchors`, and the finalizer in `crates/rolldown/src/module_finalizers/impl_visit_mut.rs`). When no such module exists, the module does not move. Without the anchor, the call moves with the declarations, and the module runs before the modules that came before it in the chunk (fixtures `dynamic_same_chunk_call_before_target` and `dynamic_same_chunk_top_level_await`).
 
@@ -426,7 +431,7 @@ function init_first() {
 
 ### Membership: `crates/rolldown/src/stages/generate_stage/deferred_groups.rs`
 
-`GenerateStage::group_deferred_modules` runs after `commit_cross_chunk_links` (which writes the chunk exports), `ensure_lazy_module_initialization_order` and `plan_dynamic_defer_declarations` (which sets the anchors), and before `finalize_modules`.
+`GenerateStage::group_deferred_modules` runs after `commit_cross_chunk_links` (which writes the chunk exports), `ensure_lazy_module_initialization_order` and `plan_defer_declarations` (which sets the anchors), and before `finalize_modules`.
 
 1. Guards. No groups if `importDefer` is off, or with these conditions: a format other than ESM, strict execution order, dev mode, `profilerNames`, inline common chunks. Only `render_esm` renders the groups.
 2. Groupable module: in a chunk, included, `wrapped_by_import_defer`, `WrapKind::Esm`, has a `wrapper_ref`, no top-level await, no state record (`import_defer_tracked_deps`), not a `dynamic_defer_target`, not the runtime. Also not in `ChunkGraph::deferred_modules_run_at_load`, and not an anchor (a value of `ChunkGraph::run_at_load_anchors`).

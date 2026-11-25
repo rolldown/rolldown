@@ -792,7 +792,9 @@ export interface InputOptions {
      * template literal with no expressions, or when the call has a `@vite-ignore` comment.
      *
      * A deferred import starts the top-level `await` dependencies it gathers in request order
-     * and waits for them together before the importer runs.
+     * and waits for them together before the importer runs. In builds that can emit multiple
+     * chunks, Rolldown falls back to eager imports when a wait in the importer could prevent
+     * an independent sibling dependency from starting.
      *
      * Rolldown evaluates a deferred module, and each module that it imports directly or through
      * other modules, inside a function. Thus a top-level `arguments` in such a module is the

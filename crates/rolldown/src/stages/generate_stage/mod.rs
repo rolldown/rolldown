@@ -138,7 +138,7 @@ pub mod minify_chunks;
 mod order_analysis;
 pub mod order_wrap_state;
 mod order_wrapping;
-mod place_dynamic_defer_declarations;
+mod place_defer_declarations;
 mod post_banner_footer;
 mod reduced_chunk_graph;
 mod render_chunk_to_assets;
@@ -320,8 +320,7 @@ impl<'a> GenerateStage<'a> {
     }
 
     let resolved_file_urls = self.resolve_file_urls(&chunk_graph).await?;
-    let dynamic_defer_placements =
-      self.plan_dynamic_defer_declarations(&mut chunk_graph, &order_state);
+    let defer_placements = self.plan_defer_declarations(&mut chunk_graph, &order_state);
     self.group_deferred_modules(&mut chunk_graph, &final_esm_init_metadata);
     self.finalize_modules(
       &mut chunk_graph,
@@ -341,7 +340,7 @@ impl<'a> GenerateStage<'a> {
         }
       }
     }
-    Self::place_dynamic_defer_declarations(&mut chunk_graph, dynamic_defer_placements);
+    Self::place_defer_declarations(&mut chunk_graph, defer_placements);
     self.detect_ineffective_dynamic_imports(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs, &order_state).await
   }

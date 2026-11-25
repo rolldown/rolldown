@@ -54,6 +54,7 @@ A deferred import of a module with top-level `await` keeps the steps of native N
 
 - Only the tracked modules get a state record (`__esmState`). The other modules of a closure keep `__esmMin`, so a closure with no top-level `await` costs nothing more.
 - Preparation starts all gathered top-level `await` modules in request order before waiting for them. One sibling can then release a promise that an earlier sibling awaits (fixture `preserve_modules_concurrent_tla`).
+- Across separate static requests, a wait in an importer body can prevent the loader from reaching a sibling that releases it. The same issue arises inside the wrapper of a module with its own top-level `await`. For builds that can split the siblings across ESM chunks, the eager fallback delegates their scheduling to the loader.
 - A build falls back when a module with no wrapper has an import after a deferred import of a module that reaches a top-level `await`. In the output, the code of that import runs before the modules with top-level `await` start, but native Node starts them first. The fallback gives the eager order, in which the modules with top-level `await` also run first. A build with `strictExecutionOrder` also falls back, because the fallback runs before the link stage and does not know the wrappers.
 
 ### Rejected alternatives

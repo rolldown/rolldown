@@ -37,7 +37,7 @@ impl GenerateStage<'_> {
   ///
   /// Call it after `commit_cross_chunk_links`, which writes the chunk exports, and after
   /// `ensure_lazy_module_initialization_order`, because a member must not have a moved init call.
-  /// Call it after `plan_dynamic_defer_declarations`, which sets the anchors, and before
+  /// Call it after `plan_defer_declarations`, which sets the anchors, and before
   /// `finalize_modules`, which reads the groups.
   /// See internal-docs/import-defer/implementation.md ("Deferred groups").
   pub fn group_deferred_modules(

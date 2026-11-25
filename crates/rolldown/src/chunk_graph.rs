@@ -54,7 +54,7 @@ pub struct ChunkGraph {
   /// the chunk would run after them. These modules have no host (`deferred_init_host`).
   pub deferred_modules_run_at_load: FxHashSet<ModuleIdx>,
   /// The modules of `deferred_modules_run_at_load` that
-  /// `GenerateStage::plan_dynamic_defer_declarations` puts before the other modules of their
+  /// `GenerateStage::plan_defer_declarations` puts before the other modules of their
   /// chunk, with their anchor: the last module before them, in the order of the chunk, that keeps
   /// its place. The finalizer of the anchor calls `init_x()` at the end of its code, so that the
   /// module still runs at its place.

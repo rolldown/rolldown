@@ -50,6 +50,7 @@ struct ModuleGroupId {
 
 /// Lightweight representation used during entries_aware subgroup merge.
 /// Contains only the fields needed for bitset-based merge operations.
+#[derive(Clone)]
 struct EntriesAwareSubgroup {
   bits: BitSet,
   modules: FxHashSet<ModuleIdx>,
@@ -351,6 +352,14 @@ impl ManualSplitter<'_> {
 
       // Optionally merge small subgroups
       if merge_threshold > 0.0 && subgroups.len() > 1 {
+        // Merging non-adjacent levels of the entry-set graph can make an entry load one of
+        // its own importers. Preserve the original entry sets if this creates a cycle through
+        // deferred initialization. See internal-docs/manual-code-splitting/implementation.md.
+        let original = (self.options.experimental.is_import_defer_enabled()
+          && subgroups.values().any(|g| {
+            g.modules.iter().any(|&idx| self.link_output.metas[idx].wrapped_by_import_defer)
+          }))
+        .then(|| subgroups.clone());
         let keys: Vec<u32> = subgroups.keys().copied().collect();
         merge_entries_aware_subgroups(
           &mut subgroups,
@@ -358,6 +367,11 @@ impl ManualSplitter<'_> {
           merge_threshold,
           &self.link_output.module_table,
         );
+        if let Some(original) = original
+          && self.subgroups_form_cycle(&subgroups)
+        {
+          subgroups = original;
+        }
       }
 
       // Convert each subgroup into a ModuleGroup and push into the IndexVec
@@ -375,6 +389,24 @@ impl ManualSplitter<'_> {
         });
       }
     }
+  }
+
+  fn subgroups_form_cycle(&self, subgroups: &FxHashMap<u32, EntriesAwareSubgroup>) -> bool {
+    let owners: FxHashMap<_, _> = subgroups
+      .iter()
+      .flat_map(|(&key, group)| group.modules.iter().map(move |&module| (module, key)))
+      .collect();
+    let mut graph = petgraph::graphmap::DiGraphMap::<u32, ()>::new();
+    for (&module, &key) in &owners {
+      for dep in &self.link_output.metas[module].load_dependencies {
+        if let Some(&other) = owners.get(dep)
+          && other != key
+        {
+          graph.add_edge(key, other, ());
+        }
+      }
+    }
+    petgraph::algo::toposort(&graph, None).is_err()
   }
 
   fn into_priority_sorted_groups(

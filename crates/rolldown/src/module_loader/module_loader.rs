@@ -819,12 +819,16 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
             //   `entry_cannot_be_external`.
             // - `try_spawn_new_task` rejects an entry whose id is already an external module.
             if matches!(raw_rec.kind, ImportKind::DynamicImport) && !is_external {
-              dynamic_import_entry_ids.entry(idx).or_insert_with(Vec::new).extend(
-                raw_rec
-                  .dynamic_import_expr_info
-                  .as_ref()
-                  .map(|info| (module_idx, info.stmt_info_idx, info.node_id, rec_idx)),
-              );
+              let site = raw_rec
+                .dynamic_import_expr_info
+                .as_ref()
+                .map(|info| (module_idx, info.stmt_info_idx, info.node_id, rec_idx));
+              match dynamic_import_entry_ids.entry(idx) {
+                Entry::Vacant(vac) => {
+                  vac.insert(site.into_iter().collect::<Vec<_>>());
+                }
+                Entry::Occupied(mut occ) => occ.get_mut().extend(site),
+              }
             }
             import_records.push(raw_rec.into_resolved(Some(idx)));
           }

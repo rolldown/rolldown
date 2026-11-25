@@ -142,24 +142,20 @@ impl BundleCoordinator {
             .unwrap_or_default();
           let _ = reply.send(result);
         }
-        CoordinatorMsg::ModuleChanged { module_id, watch_files, rebuild } => {
-          // Handle programmatic module change (e.g., lazy compilation executed)
-
-          // Watch the files the lazy compile loaded, so later edits to them trigger
-          // updates. Take them from the list the message carries, not from the latest
-          // build: a build that started after the compile has a new list without them,
-          // and no later build loads these cached modules again.
+        CoordinatorMsg::LazyCompiled { watch_files, recover_lost_update } => {
+          // Watch the files the lazy scan loaded, so later edits to them trigger updates. Take
+          // them from the list the message carries, not from the latest build: a build that
+          // started after the scan has a new list without them, and no later build loads these
+          // cached modules again.
           let _ = self.register_watch_files([&*watch_files]);
 
-          // Only a lost HMR update asks for a build: the task upgrades it to the full build
-          // that reloads every client. A lazy route needs none, because no page loads it
-          // from the build output.
-          if rebuild {
-            let mut changed_files = FxIndexMap::default();
-            changed_files.insert(PathBuf::from(&module_id), WatcherChangeKind::Update);
-
-            // Queue a rebuild task and mark output as stale
-            self.queued_tasks.push_back(TaskInput::Rebuild { changed_files });
+          // Only a lost HMR update asks for a build: every task kind that runs with one reloads
+          // every client. A lazy route needs none, because no page loads it from the build
+          // output.
+          if recover_lost_update {
+            if !self.queued_tasks.iter().any(TaskInput::requires_full_rebuild) {
+              self.queued_tasks.push_back(TaskInput::FullBuild);
+            }
             self.has_stale_bundle_output = true;
 
             let _ = self.schedule_build_if_stale().await;

@@ -3,7 +3,7 @@
 > **Implementation map** — the server-side step order lives in
 > [dev-engine/implementation.md](../dev-engine/implementation.md)
 > ("Inside `compute_hmr_update_for_file_changes`" and "Inside
-> `render_patch`"); the lazy chunk path in
+> `render_patch`"); the lazy path in
 > [lazy-compilation/implementation.md](../lazy-compilation/implementation.md).
 
 ## Summary
@@ -39,8 +39,8 @@ last 64 updates.
 
 Terms used below:
 
-- A **payload** is any code the server sends: the entry chunk, a lazy
-  chunk, or a patch.
+- A **payload** is the code a pull gets: for an update, for a lazy
+  `import()`, or for a `loadDynamic`. The entry chunk is not a payload.
 - A **client** is one browser tab.
 - A **stamp** is the number of the rebuild that last changed a module's
   rendered factory. A module that never changed has stamp 0.
@@ -66,20 +66,21 @@ the server keeping a record of it.
   code, the stamps, the generation, the module numbers, and the recent
   updates. It holds nothing about any single client.
 - **The client describes itself only when it needs code.** It sends its
-  state as part of the patch or lazy request it makes anyway. The
+  state as part of the pull it makes anyway. The
   protocol has no hello session, no delivery ack, and no state report
   ahead of time.
 
 The messages are:
 
-| Direction       | Message                     | Carries                                         |
-| --------------- | --------------------------- | ----------------------------------------------- |
-| server → all    | push (`bundled-dev-update`) | `changedIds`, `staleIds`, `gen`, `seq`          |
-| client → server | patch GET                   | epoch, known gen, `U`, executed set, factories  |
-| client → server | payload map GET (devtools)  | the id of a sourcemap Vite served a link to     |
-| client → server | lazy GET (`/@vite/lazy`)    | proxy id, epoch, known gen, executed, factories |
-| client → server | have-set POST (long query)  | the query of the next patch or lazy GET         |
-| client → server | reload request              | the reason                                      |
+| Direction       | Message                     | Carries                                                  |
+| --------------- | --------------------------- | -------------------------------------------------------- |
+| server → all    | push (`bundled-dev-update`) | `changedIds`, `staleIds`, `gen`, `seq`                   |
+| client → server | pull GET                    | epoch, known gen, `U`, lazy targets, executed, factories |
+| client → server | payload map GET (devtools)  | the id of a sourcemap Vite served a link to              |
+| client → server | have-set POST (long query)  | the query of the next pull                               |
+| client → server | reload request              | the reason                                               |
+
+Updates, lazy loads and `loadDynamic` all use the one pull route.
 
 Every principle below follows from this split.
 
@@ -115,10 +116,16 @@ The server needs to know what a client lacks before it can render code
 for it. The client tells it, inside the GET it makes to load that code:
 
 ```
-/__rolldown_hmr_patch.js?s=<epoch>&g=<knownGen>&u=<U>&e=<E>&f=<F>&n=<nonce>
+/__rolldown_hmr_patch.js?s=<epoch>&g=<knownGen>&u=<U>&l=<L>&e=<E>&f=<F>&n=<nonce>
 ```
 
-- `u` — the update set `U`
+- `u` — the update set `U`, a `loadDynamic` target, and the dropped
+  factories of `droppedDeps` (principle 4)
+- `l` — the targets of lazy `import()` calls (`requestLazy`). The server
+  compiles a route that is not in the graph yet, then answers like any
+  pull. It reads only numbers it gave out, and it looks them up in the
+  graph, so a request never makes it resolve a path
+  ([lazy-compilation/design.md](../lazy-compilation/design.md))
 - `e` — the executed modules (module cache keys) minus `U`
 - `f` — the modules whose factory the client holds and that are not in
   `e`. A module in `e` keeps its exports, so the server never reads its
@@ -309,7 +316,7 @@ This gives two rules:
 
 Example: the tab holds a factory of `baz.js` from a payload of gen 1. A
 push says `staleIds: ["baz.js"], gen: 2`. The runtime deletes the factory
-and sets the floor to 2. A lazy chunk that the server rendered just
+and sets the floor to 2. A lazy payload that the server rendered just
 before the rebuild lands next, at gen 1. `1 < 2`, so its `baz.js` is
 dropped. The next request sends `f` without `baz.js`, and the server
 carries the new copy.
@@ -366,7 +373,7 @@ sits in a full-build chunk the page never loaded. `loadDynamic` runs the
 target when `isRunnableHere(id)` holds and `missedUpdate()` is false. A
 client that missed an update must not run a factory it holds before the
 catch-up, so it pulls first; `requestLazy` has the same rule. Otherwise
-it imports `patchUrl({id})`: the target is the update root. It did not execute, so
+it pulls with the target as the update root (`u`). It did not execute, so
 it is not in `e`, and the server carries it and its unheld static deps
 like any root. Then it checks again, with the same two-pull limit, and
 runs the target. Example: an edit adds `import('./route.js')` to a
@@ -394,8 +401,8 @@ a full reload. After apply, the client sets `appliedGen` to the
 `firstInvalidatedBy`: a new edit of the module that invalidated is a
 normal update, not an update that propagated back to it.
 
-A catch-up can also come with a request outside an update: a lazy
-chunk, a `loadDynamic` pull, or a refetch. Then no walk is waiting for
+A catch-up can also come with a pull outside an update: a lazy load, a
+`loadDynamic` pull, or a refetch. Then no walk is waiting for
 it. So once the request settled (the requested module ran, or the
 request failed after the catch-up landed), the runtime calls
 `hooks.onCaughtUp()`, and the Vite client queues an update with the
@@ -420,7 +427,9 @@ the update. So the runtime counts `registerModule` calls:
 
 - **Module numbers.** Every module gets a number on first sight. Numbers
   are append-only for the whole engine life: a full build, a cache clear
-  or a lazy compile never reuses or moves one. Rows carry them, and the
+  or a lazy scan never reuses or moves one. A lazy proxy target gets its
+  number under the target's own id before its first visit, so
+  `requestLazy` can name it. Rows carry them, and the
   client sends sets of modules as sets of numbers. A module with no
   number is left out; the server then counts it as not executed and not
   held, which can only add bytes.
@@ -440,7 +449,7 @@ the update. So the runtime counts `registerModule` calls:
   module the engine has seen, also modules this tab never loaded. A gap
   list costs about 4/3 characters per member when the members are close
   together (a gap below 128 is one byte). Numbers are given out per build
-  and per lazy compile, so the modules of one route get close numbers. So
+  and per payload, so the modules of one route get close numbers. So
   a tab that ran a few routes of a large app sends short gap lists, and a
   tab that ran most of the app sends bitsets.
 
@@ -483,7 +492,7 @@ changed ids of entries newer than `appliedGen` go to the caller of
 `ensureRunnable` (principle 5). The runtime keeps each such id with the
 generation of its entry, and drops it once `appliedGen` reaches that
 generation. Example: the update of gen 2 is `ready`, and the client
-waits for a `vite:beforeUpdate` listener. A lazy chunk asked for at
+waits for a `vite:beforeUpdate` listener. A lazy payload asked for at
 `g=1` lands then, with the change of `a.js` at gen 2. The update of gen
 2 runs `a.js` and sets `appliedGen` to 2, so `a.js` is not walked a
 second time.
@@ -507,8 +516,7 @@ The server answers **Reload** instead of a payload when:
 Reload must always end in a page reload. A failed import cannot say
 that: for a lazy or plain `import()` it only rejects the user's
 promise, the same as a compile error (HTTP 500). So Vite serves a
-Reload with status 200 and this body, on the patch route and on the
-lazy route:
+Reload with status 200 and this body:
 
 ```js
 __rolldown_runtime__.reloadNeeded('the epoch does not match');
@@ -531,8 +539,7 @@ characters), `requestQuery` in the runtime sends it first:
    `/__rolldown_hmr_have`; Vite serves `<base>__rolldown_hmr_have`.
 2. The server stores the query and answers a random token as text.
 3. The GET carries only the token:
-   `__rolldown_hmr_patch.js?t=<token>&n=<nonce>` or
-   `/@vite/lazy?id=<proxy id>&t=<token>&n=<nonce>`.
+   `__rolldown_hmr_patch.js?t=<token>&n=<nonce>`.
 
 The server resolves the token to the stored query before it calls the
 engine, so the engine never sees a token. Each token is used once and
@@ -542,7 +549,7 @@ Reload body as any other Reload. A failed POST rejects like a failed GET.
 The store never drops a token before it expires. A GET starts only after
 its POST answered, so many lazy loads that start at once send all their
 POSTs first. Their GETs then wait in the browser queue (6 connections
-per host on HTTP/1.1), and lazy compiles run one at a time. So a GET can
+per host on HTTP/1.1), and pulls run one at a time. So a GET can
 reach the server many seconds after its POST. To bound its memory, the
 store refuses new queries instead:
 
@@ -653,7 +660,7 @@ between payloads.
 **On the wire every number is a generation.** The server keeps a stamp
 per module (`HmrSession.latest`) for `holds_current` and for the catch-up,
 but no stamp goes to the client. Registration keeps the newest copy:
-payloads can land out of render order, for example a lazy chunk rendered
+payloads can land out of render order, for example a lazy payload rendered
 before an edit can land after the patch for that edit. The runtime keeps
 `rowGens` and `factoryGens`, and drops a row or a factory from a payload
 older than the one it holds or than the floor `markStale` set.
@@ -686,7 +693,7 @@ re-runs it for this reason.
 Example: `importer.js` imports `dep.js`, and an edit at gen 1 turns
 `dep.js` from ESM into CommonJS. The push lists both in `staleIds`. A
 client that holds `importer.js` drops it, and its next request gets the
-new copy with the `__toESM` interop. A lazy chunk that was rendered
+new copy with the `__toESM` interop. A lazy payload that was rendered
 before the edit (gen 0) still has the old `importer.js`, so the runtime
 drops it when it lands late.
 
@@ -694,7 +701,7 @@ drops it when it lands late.
 flowchart LR
   edit["edit at gen 1: dep.js ESM → CJS"] --> dep["dep.js — floor 1"]
   edit --> imp["importer.js — floor 1, __toESM interop"]
-  late["late lazy chunk rendered at gen 0: importer.js"] -. "0 < 1: dropped" .-> imp
+  late["late lazy payload rendered at gen 0: importer.js"] -. "0 < 1: dropped" .-> imp
 ```
 
 Full-build chunks call `__rolldown_runtime__.registerGraph(delta)`
@@ -717,7 +724,7 @@ import record, not on the payload, so a factory's text is the same in
 every payload that carries it (see `hmr_import_binding_name` in
 `hmr_ast_finalizer.rs`).
 
-**Payload sourcemaps.** A patch and a lazy chunk have no file, so the
+**Payload sourcemaps.** A payload has no file, so the
 engine returns their map as JSON (`sourcemap: true`), and Vite links it
 instead of inlining it: it keeps the maps it served lately
 (`PayloadMapStore`, at most 256 maps and 64 MiB, the least recently used
@@ -728,9 +735,14 @@ the out dir. A map that was dropped is no longer served (Vite answers
 404, or the SPA fallback page): devtools shows the code without its
 sources.
 
-- Patches and lazy chunks have one store each (ids `p<n>` and `l<n>`).
-  A lazy chunk's code runs for as long as the page uses its route, so
-  many patches must not drop its map.
+- Pulls with lazy targets and the other pulls have one store each (ids
+  `l<n>` and `p<n>`). Vite reads `l` from the query after it resolved a
+  token. A lazy payload's code runs for as long as the page uses its
+  route, so many patches must not drop its map.
+- The module runner keeps a payload's map while a module that the payload
+  installed is still installed (`beginPayload` lists the installed ids),
+  so a later, smaller payload for the same route does not drop the map
+  of the code an earlier one brought.
 - A map that is already stored keeps its id. Tabs in the same state get
   the same payload, so N tabs cost one entry.
 
@@ -752,10 +764,9 @@ boundary from static data that the module did not accept at runtime.
 The runtime owns what the request needs, because it owns the stores the
 request describes: `beginPayload`, `markStale`, `catchUp`, `canRun`,
 `ensureRunnable`, `encodeHave` and `requestQuery`. The URL methods
-`patchUrl(query)`, `lazyUrl(proxyModuleId, query)` and `haveUrl()` build
-the request URLs. Vite overrides them for its base path. Its module
-runner overrides `importPatch` and `loadLazyChunk` to load through the
-runner, and sets `maxQueryLength` to `Infinity`. A full reload of the
+`patchUrl(query)` and `haveUrl()` build the request URLs. Vite overrides
+them for its base path. Its module runner overrides `importPatch` to load
+through the runner, and sets `maxQueryLength` to `Infinity`. A full reload of the
 runner replaces its runtime, and a request of the old runtime can still
 be on the way. So the runner runs each payload against the runtime that asked
 for it (`_importPayload` in `runner.ts`), and the hooks of a replaced
@@ -796,7 +807,7 @@ runtime never emits a second variant. `initModule(id)` skips a module
 already in the module cache and runs the factory otherwise. Whether a
 module re-runs is decided by whether the updater first removed it from
 the module cache: the HMR apply removes the update set (those re-run);
-a lazy chunk removes nothing (shared modules are skipped). Rejected: a
+a lazy load removes nothing (shared modules are skipped). Rejected: a
 per-payload re-run flag written into the generated code — that puts
 runtime policy into codegen and cannot express "re-run this time, skip
 next time".
@@ -859,7 +870,7 @@ flowchart LR
 Full reload is the fallback for these delivery and state failures:
 
 - `canRun(U)` still false after two pulls
-- a patch or lazy request answered with Reload (principle 6)
+- a pull answered with Reload (principle 6)
 - a failed patch import of an update: a compile error (HTTP 500) or a
   network error
 - `seq` gap
@@ -870,7 +881,7 @@ Full reload is the fallback for these delivery and state failures:
 - a factory missing at `initModule` time: the runtime calls
   `hooks.onMissingFactory(id)` before it throws `MissingFactoryError`,
   and the Vite hook requests a reload. `requestLazy` does the same when
-  the module is still not runnable after two lazy loads, and
+  the module is still not runnable after two pulls, and
   `loadDynamic` when its target is still not runnable after two pulls.
 
 A failed lazy load or a failed `loadDynamic` pull is not on this list.
@@ -1026,14 +1037,14 @@ way), the patch would start with
   step order inside `compute_hmr_update_for_file_changes` and
   `render_patch`
 - [lazy-compilation/design.md](../lazy-compilation/design.md) — the
-  `requestLazy` entry point; lazy requests carry the same have-set
+  `requestLazy` entry point; a lazy load is an ordinary pull with `l`
 - Runtime API (`runtime-extra-dev-common.js`): lifecycle methods
   `registerGraph`, `registerFactory`, `registerModule`, `initModule`,
   `removeModuleCache`, `loadExports`, `requestLazy`, `loadDynamic`;
   request methods `beginPayload`, `setOutputGeneration`, `markStale`,
   `missedUpdate`, `catchUp`, `ensureRunnable`, `refetchDropped`,
-  `reloadNeeded`, `encodeHave`, `requestQuery`, `importPatch`,
-  `loadLazyChunk`; request URLs `patchUrl`, `lazyUrl`, `haveUrl`;
+  `reloadNeeded`, `encodeHave`, `requestQuery`, `pullPatch`,
+  `importPatch`; request URLs `patchUrl`, `haveUrl`;
   read-only queries `getImporters`, `isEntry`, `isExecuted`,
   `hasFactory`, `canRun`; hooks `createModuleHotContext`,
   `onModuleCacheRemoval`, `onMissingFactory`, `onReloadNeeded`, `onCaughtUp`
@@ -1054,12 +1065,11 @@ way), the patch would start with
     `packages/vite/src/module-runner/runner.ts` — runtime subclass +
     hooks, for the browser and for the module runner
   - `packages/vite/src/node/server/bundledDev.ts` — push broadcast with
-    `seq`, reload requests, the Reload body; `renderPatch` and
-    `triggerLazyBundling` resolve a have-set token and fill in `g` when
-    the query has none
+    `seq`, reload requests, the Reload body; `renderPatch` resolves a
+    token, fills in `g` when the query has none, and says whether the
+    query has lazy targets
   - `packages/vite/src/node/server/middlewares/bundledDevPayload.ts` — the
     have-set POST route (`bundledDevHaveMiddleware`) and its token store
-    (`HaveQueryStore`), the patch route, the payload map route and its
-    store (`PayloadMapStore`); `triggerLazyBundling.ts` — the lazy
-    route; `packages/vite/src/node/ssr/fetchModule.ts` serves patches and
-    lazy chunks to the module runner
+    (`HaveQueryStore`), the one pull route, the payload map route and its
+    stores (`PayloadMapStore`); `packages/vite/src/node/ssr/fetchModule.ts`
+    serves pulls to the module runner

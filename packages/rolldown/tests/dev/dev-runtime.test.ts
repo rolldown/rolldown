@@ -611,7 +611,35 @@ test('a missing factory calls the onMissingFactory hook before it throws', async
   expect(onMissingFactory).toHaveBeenCalledWith('nope.js');
 });
 
-test('requestLazy loads the chunk again once, then asks for a reload', async () => {
+test('requestLazy pulls with the target number in l and never a path', async () => {
+  const { runtime } = await createRuntime();
+  // `lazy.js` is only a foreign `import()` target of `main.js`, but its number is known.
+  runtime.setOutputGeneration(1);
+  runtime.registerGraph({
+    ids: ['main.js', 'lazy.js'],
+    localCount: 1,
+    edges: [[]],
+    dynamicEdges: { 0: [1] },
+    nums: [0, 1],
+    epoch: 7,
+  });
+  runtime.registerModule('main.js');
+
+  const urls: string[] = [];
+  runtime.importPatch = async (url: string) => {
+    urls.push(url);
+    runtime
+      .beginPayload(1)
+      .registerFactory('lazy.js', (id: string) =>
+        runtime.registerModule(id, { exports: { value: 1 } }),
+      );
+  };
+  expect(await runtime.requestLazy('lazy.js')).toEqual({ value: 1 });
+  expect(urls).toHaveLength(1);
+  expect(urls[0]).toMatch(/^\/__rolldown_hmr_patch\.js\?s=7&g=1&l=bAg&e=bAQ&n=\d+$/);
+});
+
+test('requestLazy pulls again once, then rejects without keeping the failed load', async () => {
   const { runtime, MissingFactoryError } = await createRuntime();
   const onMissingFactory = vi.fn();
   runtime.hooks = {
@@ -619,15 +647,19 @@ test('requestLazy loads the chunk again once, then asks for a reload', async () 
     onModuleCacheRemoval: () => {},
     onMissingFactory,
   };
-  const loads: string[] = [];
-  runtime.loadLazyChunk = async (proxyModuleId: string) => {
-    loads.push(proxyModuleId);
+  registerBuildRows(runtime, ['main.js', 'lazy.js'], [[], []], 1);
+  runtime.registerModule('main.js');
+  const urls: string[] = [];
+  runtime.importPatch = async (url: string) => {
+    urls.push(url);
   };
-  await expect(runtime.requestLazy('lazy.js', 'lazy.js?rolldown-lazy=1')).rejects.toThrow(
-    MissingFactoryError,
-  );
-  expect(loads).toEqual(['lazy.js?rolldown-lazy=1', 'lazy.js?rolldown-lazy=1']);
+  await expect(runtime.requestLazy('lazy.js')).rejects.toThrow(MissingFactoryError);
+  expect(urls).toHaveLength(2);
   expect(onMissingFactory).toHaveBeenCalledWith('lazy.js');
+
+  // The next `import()` asks again.
+  await expect(runtime.requestLazy('lazy.js')).rejects.toThrow(MissingFactoryError);
+  expect(urls).toHaveLength(4);
 });
 
 test('loadDynamic pulls a target the client never received, with the target as the root', async () => {
@@ -701,15 +733,8 @@ test('a reload answer calls the onReloadNeeded hook once and stops all requests'
   expect(urls).toHaveLength(1);
 
   // Later requests are not sent, and the `import()` calls reject.
-  const loads: string[] = [];
-  runtime.loadLazyChunk = async (proxyModuleId: string) => {
-    loads.push(proxyModuleId);
-  };
-  await expect(runtime.requestLazy('lazy.js', 'lazy.js?rolldown-lazy=1')).rejects.toThrow(
-    'the epoch does not match',
-  );
+  await expect(runtime.requestLazy('lazy.js')).rejects.toThrow('the epoch does not match');
   await expect(runtime.loadDynamic('route.js')).rejects.toThrow('the epoch does not match');
-  expect(loads).toEqual([]);
   expect(urls).toHaveLength(1);
   runtime.reloadNeeded('another reason');
   expect(onReloadNeeded.mock.calls).toEqual([['the epoch does not match']]);
@@ -837,25 +862,23 @@ test('a token URL keeps its nonce while other requests start during the POST', a
   }
 });
 
-test('loadLazyChunk posts a long query and imports the lazy URL with the token', async () => {
+test('requestLazy posts a long query, with its lazy root, and pulls with the token', async () => {
   const { runtime } = await createRuntime();
-  registerBuildRows(runtime, ['main.js'], [[]], 1);
+  registerBuildRows(runtime, ['main.js', 'lazy.js'], [[], []], 1);
   runtime.registerModule('main.js');
   runtime.maxQueryLength = 0;
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async () => new Response('abc', { status: 200 })),
-  );
+  const fetch = vi.fn(async (_url: string, _init: RequestInit) => new Response('abc'));
+  vi.stubGlobal('fetch', fetch);
   const urls: string[] = [];
+  runtime.importPatch = async (url: string) => {
+    urls.push(url);
+    runtime.reloadNeeded('stop');
+  };
   try {
-    // The default `loadLazyChunk` imports this URL; a data URL stands for the server's answer.
-    runtime.lazyUrl = (proxyModuleId: string, query: string) => {
-      urls.push(`/@vite/lazy?id=${encodeURIComponent(proxyModuleId)}&${query}`);
-      return 'data:text/javascript,export {}';
-    };
-    await runtime.loadLazyChunk('lazy.js?rolldown-lazy=1');
+    await expect(runtime.requestLazy('lazy.js')).rejects.toThrow('stop');
+    expect(new URLSearchParams(fetch.mock.calls[0][1].body as string).get('l')).toBe('bAg');
     expect(urls).toHaveLength(1);
-    expect(urls[0]).toMatch(/^\/@vite\/lazy\?id=lazy\.js%3Frolldown-lazy%3D1&t=abc&n=\d+$/);
+    expect(urls[0]).toMatch(/^\/__rolldown_hmr_patch\.js\?t=abc&n=\d+$/);
   } finally {
     vi.unstubAllGlobals();
   }
@@ -1166,15 +1189,14 @@ async function createRuntimeThatMissedAnUpdate() {
 
 test('requestLazy gets the catch-up before it runs a held factory', async () => {
   const { runtime, onCaughtUp, catchUp } = await createRuntimeThatMissedAnUpdate();
-  const loads: string[] = [];
-  runtime.loadLazyChunk = async (proxyModuleId: string) => {
-    loads.push(proxyModuleId);
+  const urls: string[] = [];
+  runtime.importPatch = async (url: string) => {
+    urls.push(url);
     catchUp();
   };
-  expect(await runtime.requestLazy('lazy.js', 'lazy.js?rolldown-lazy=1')).toEqual({
-    value: 'new',
-  });
-  expect(loads).toEqual(['lazy.js?rolldown-lazy=1']);
+  expect(await runtime.requestLazy('lazy.js')).toEqual({ value: 'new' });
+  expect(urls).toHaveLength(1);
+  expect(new URLSearchParams(urls[0].split('?')[1]).get('l')).toBe('bAg');
   expect(runtime.knownGen).toBe(3);
   expect(onCaughtUp).toHaveBeenCalledTimes(1);
 });
@@ -1223,11 +1245,11 @@ test('loadDynamic reports a catch-up when the pull lacks the module', async () =
 
 test('requestLazy asks again after a failed load, but not after an init error', async () => {
   const { runtime } = await createRuntime();
-  registerBuildRows(runtime, ['main.js'], [[]], 1);
+  registerBuildRows(runtime, ['main.js', 'ok.js', 'boom.js'], [[], [], []], 1);
   runtime.registerModule('main.js');
 
   let loads = 0;
-  runtime.loadLazyChunk = async () => {
+  runtime.importPatch = async () => {
     loads++;
     if (loads === 1) throw new Error('500');
     const payload = runtime.beginPayload(1);
@@ -1239,12 +1261,39 @@ test('requestLazy asks again after a failed load, but not after an init error', 
       throw new Error('boom');
     });
   };
-  await expect(runtime.requestLazy('ok.js', 'ok.js?rolldown-lazy=1')).rejects.toThrow('500');
-  expect(await runtime.requestLazy('ok.js', 'ok.js?rolldown-lazy=1')).toEqual({ value: 1 });
+  await expect(runtime.requestLazy('ok.js')).rejects.toThrow('500');
+  expect(await runtime.requestLazy('ok.js')).toEqual({ value: 1 });
   expect(loads).toBe(2);
 
-  await expect(runtime.requestLazy('boom.js', 'boom.js?rolldown-lazy=1')).rejects.toThrow('boom');
-  await expect(runtime.requestLazy('boom.js', 'boom.js?rolldown-lazy=1')).rejects.toThrow('boom');
-  // The factory came with the chunk of `ok.js`, so `boom.js` needed no load.
+  await expect(runtime.requestLazy('boom.js')).rejects.toThrow('boom');
+  await expect(runtime.requestLazy('boom.js')).rejects.toThrow('boom');
+  // The factory came with the payload of `ok.js`, so `boom.js` needed no load.
   expect(loads).toBe(2);
+});
+
+test('a failed lazy pull keeps the dropped deps, and the next pull asks for them', async () => {
+  const runtime = await createRuntimeWithDroppedDep();
+  runtime.registerGraph({ ids: ['lazy.js'], localCount: 0, edges: [], nums: [2] });
+  const urls: string[] = [];
+  runtime.importPatch = async (url: string) => {
+    urls.push(url);
+    throw new Error('500');
+  };
+  await expect(runtime.requestLazy('lazy.js')).rejects.toThrow('500');
+  expect([...runtime.droppedDeps]).toEqual(['b.js']);
+  const query = new URLSearchParams(urls[0].split('?')[1]);
+  // `b.js` is 1 and `lazy.js` is 2.
+  // spellchecker:ignore-next-line
+  expect([query.get('u'), query.get('l')]).toEqual(['bAg', 'bBA']);
+});
+
+test('a payload lists the modules whose factory it installed', async () => {
+  const { runtime } = await createRuntime();
+  const newer = runtime.beginPayload(2);
+  newer.registerFactory('a.js', () => {});
+  const older = runtime.beginPayload(1);
+  older.registerFactory('a.js', () => {});
+  older.registerFactory('b.js', () => {});
+  expect(newer.ids).toEqual(['a.js']);
+  expect(older.ids).toEqual(['b.js']);
 });

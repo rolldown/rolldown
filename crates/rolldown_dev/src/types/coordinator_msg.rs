@@ -38,15 +38,14 @@ pub enum CoordinatorMsg {
   GetWatchedFiles {
     reply: GetWatchedFilesSender,
   },
-  /// Notify that a module has changed programmatically (e.g., lazy compilation executed)
-  ModuleChanged {
-    module_id: String,
-    /// The watch list of the build the lazy compile ran against. It holds the files
-    /// the compile loaded. See `DevEngine::compile_lazy_entry`.
+  /// A pull with lazy routes merged a scan into the graph, or found a lost HMR update. See
+  /// `DevEngine::render_patch`.
+  LazyCompiled {
+    /// The watch list of the build the scan ran against. It holds the files the scan loaded.
     watch_files: Arc<FxDashSet<ArcStr>>,
-    /// Whether a lost HMR update is pending. Then the coordinator queues a `Rebuild`, and the
-    /// task upgrades it to a full build that reloads every client (`BundlingTask::run_inner`).
-    rebuild: bool,
+    /// Whether a lost HMR update is pending. Then the coordinator queues a `FullBuild`, and the
+    /// task reloads every client (`BundlingTask::run_inner`).
+    recover_lost_update: bool,
   },
   Close,
 }

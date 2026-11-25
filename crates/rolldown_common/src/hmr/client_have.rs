@@ -142,9 +142,9 @@ fn write_varint(out: &mut Vec<u8>, mut value: u32) {
   out.push(value as u8);
 }
 
-/// What one client tab holds, as it describes itself in the query of a patch or lazy request:
-/// `s=<epoch>&g=<generation>&u=<set>&e=<set>&f=<set>`. Other keys (the nonce `n`, the lazy
-/// `id`) are ignored, and a missing set is empty.
+/// What one client tab holds, as it describes itself in the query of a pull request:
+/// `s=<epoch>&g=<generation>&u=<set>&l=<set>&e=<set>&f=<set>`. Other keys (the nonce `n`) are
+/// ignored, and a missing set is empty.
 #[derive(Debug, Default, Clone)]
 pub struct ClientHave {
   /// `s`: the epoch of the engine whose output the client runs.
@@ -156,6 +156,9 @@ pub struct ClientHave {
   pub generation: u32,
   /// `u`: the modules the client's update removes and runs again.
   pub update: HmrNumSet,
+  /// `l`: the targets of the lazy `import()` calls the request is for. The server compiles a
+  /// route that is not in the graph yet.
+  pub lazy: HmrNumSet,
   /// `e`: the modules the client executed, minus `u`.
   pub executed: HmrNumSet,
   /// `f`: the modules whose factory the client holds, except those in `e`. The server never
@@ -183,6 +186,7 @@ impl ClientHave {
         "s" => epoch = Some(number()?),
         "g" => generation = Some(number()?),
         "u" => have.update = set()?,
+        "l" => have.lazy = set()?,
         "e" => have.executed = set()?,
         "f" => have.factories = set()?,
         _ => {}
@@ -196,7 +200,9 @@ impl ClientHave {
   /// The query the runtime builds for this have-set, without the nonce. Empty sets are left out.
   pub fn to_query(&self) -> String {
     let mut query = format!("s={}&g={}", self.epoch, self.generation);
-    for (key, set) in [("u", &self.update), ("e", &self.executed), ("f", &self.factories)] {
+    for (key, set) in
+      [("u", &self.update), ("l", &self.lazy), ("e", &self.executed), ("f", &self.factories)]
+    {
       if !set.is_empty() {
         query.push('&');
         query.push_str(key);
@@ -275,13 +281,15 @@ mod tests {
 
   #[test]
   fn parses_the_patch_query() {
-    let have = ClientHave::parse_query("/__rolldown_hmr_patch.js?s=42&g=3&u=bAg&f=dAA&n=x1", 2)
-      .expect("valid query");
+    let have =
+      ClientHave::parse_query("/__rolldown_hmr_patch.js?s=42&g=3&u=bAg&l=bAg&f=dAA&n=x1", 2)
+        .expect("valid query");
     assert_eq!((have.epoch, have.generation), (42, 3));
     assert_eq!(have.update.iter().collect::<Vec<_>>(), [1]);
+    assert_eq!(have.lazy.iter().collect::<Vec<_>>(), [1]);
     assert!(have.executed.is_empty());
     assert_eq!(have.factories.iter().collect::<Vec<_>>(), [0]);
-    assert_eq!(have.to_query(), "s=42&g=3&u=bAg&f=bAQ");
+    assert_eq!(have.to_query(), "s=42&g=3&u=bAg&l=bAg&f=bAQ");
     assert_eq!(ClientHave::parse_query(&have.to_query(), 2).unwrap().factories, have.factories);
   }
 
@@ -293,6 +301,7 @@ mod tests {
     ClientHave::parse_query("s=1&g=1&u=b***", 10).unwrap_err();
     ClientHave::parse_query("s=1&g=1&u=dAAA", 10).unwrap_err();
     ClientHave::parse_query("s=1&g=1&e=", 10).unwrap_err();
+    ClientHave::parse_query("s=1&g=1&l=bAQ", 0).unwrap_err();
     ClientHave::parse_query("s=1&g=1&f=bAQ", 0).unwrap_err();
   }
 }

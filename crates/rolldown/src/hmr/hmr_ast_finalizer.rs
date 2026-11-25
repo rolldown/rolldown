@@ -571,7 +571,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     // TODO: hyf0 should switch to a more robust way to identify lazy proxy modules
     if is_lazy_proxy(&importee.id) {
-      *it = create_request_lazy_call(&importee.id, &importee.stable_id, is_node_mode, self);
+      *it = create_request_lazy_call(&importee.stable_id, is_node_mode, self);
       return;
     }
 

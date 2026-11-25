@@ -215,10 +215,9 @@ pub enum CoordinatorMsg {
   EnsureLatestBundleOutput { reply: … },     // "I need a fresh full bundle"
   TriggerFullBuild,                           // unconditional full build (fire-and-forget)
   GetWatchedFiles { reply: … },              // list of watched paths
-  ModuleChanged {                            // programmatic module change
-    module_id: String,
-    watch_files: Arc<FxDashSet<ArcStr>>,     // the lazy compile's watch list; see §15
-    rebuild: bool,                           // a lost HMR update is pending, so queue a Rebuild
+  LazyCompiled {                             // a lazy pull merged a scan, or saw a lost update
+    watch_files: Arc<FxDashSet<ArcStr>>,     // the lazy scan's watch list; see §15
+    recover_lost_update: bool,               // a lost HMR update is pending, so queue a FullBuild
   },
   Close,                                     // shut the coordinator down
 }
@@ -226,17 +225,17 @@ pub enum CoordinatorMsg {
 
 Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:98-150`):
 
-| Message                    | Handler                                                       |
-| -------------------------- | ------------------------------------------------------------- |
-| `WatchEvent`               | `handle_watch_event` → `handle_file_changes`                  |
-| `BundleCompleted`          | `handle_bundle_completed`                                     |
-| `ScheduleBuildIfStale`     | `schedule_build_if_stale`, reply with result                  |
-| `GetState`                 | `create_state_snapshot`, reply                                |
-| `EnsureLatestBundleOutput` | `ensure_latest_bundle_output`, reply                          |
-| `TriggerFullBuild`         | `trigger_full_build` (no reply)                               |
-| `GetWatchedFiles`          | reply with the watched paths of the watcher                   |
-| `ModuleChanged`            | watch its files; if `rebuild`, queue a `Rebuild` and schedule |
-| `Close`                    | await running task, then `break` the loop                     |
+| Message                    | Handler                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------- |
+| `WatchEvent`               | `handle_watch_event` → `handle_file_changes`                                                |
+| `BundleCompleted`          | `handle_bundle_completed`                                                                   |
+| `ScheduleBuildIfStale`     | `schedule_build_if_stale`, reply with result                                                |
+| `GetState`                 | `create_state_snapshot`, reply                                                              |
+| `EnsureLatestBundleOutput` | `ensure_latest_bundle_output`, reply                                                        |
+| `TriggerFullBuild`         | `trigger_full_build` (no reply)                                                             |
+| `GetWatchedFiles`          | reply with the watched paths of the watcher                                                 |
+| `LazyCompiled`             | watch its files; if `recover_lost_update`, queue a `FullBuild` (unless queued) and schedule |
+| `Close`                    | await running task, then `break` the loop                                                   |
 
 The producers:
 
@@ -246,9 +245,9 @@ The producers:
 - A finishing **`BundlingTask`** sends `BundleCompleted` from its
   `run()` (`bundling_task.rs:73-78`).
 - The **`DevEngine`** sends `ScheduleBuildIfStale`, `GetState`,
-  `EnsureLatestBundleOutput`, `GetWatchedFiles`, `ModuleChanged`,
+  `EnsureLatestBundleOutput`, `GetWatchedFiles`, `LazyCompiled`,
   `Close` on behalf of its public API callers (the dev server, HTTP
-  middleware, lazy-compilation endpoint, etc.).
+  middleware, the pull route, etc.).
 
 ---
 
@@ -292,7 +291,7 @@ two halves joined by `Idle`:
 Edges are grouped by what drives them: **scheduling** (a queued task
 starts), **completion** (`BundleCompleted`), **file-change recovery**, and
 the **rebuild triggers** that enqueue work without a file change
-(access-driven `EnsureLatestBundleOutput`, programmatic `ModuleChanged`,
+(access-driven `EnsureLatestBundleOutput`, a lazy pull's `LazyCompiled`,
 manual `TriggerFullBuild`). Every rebuild trigger enqueues a task and then
 calls `schedule_build_if_stale`, which is the actual state-mutation site
 (§8) — so while a build is already running, a trigger only appends to the
@@ -322,7 +321,7 @@ stateDiagram-v2
 
     %% rebuild triggers (no file change)
     Idle --> InProgress : EnsureLatestBundleOutput when stale<br/>queue empty Rebuild
-    Idle --> InProgress : ModuleChanged with rebuild (lost HMR update)<br/>queue Rebuild
+    Idle --> FullBuildInProgress : LazyCompiled with recover_lost_update<br/>queue FullBuild
     Idle --> FullBuildInProgress : TriggerFullBuild<br/>clear queue + FullBuild
     Failed --> FullBuildInProgress : TriggerFullBuild
     FullBuildFailed --> FullBuildInProgress : TriggerFullBuild
@@ -349,15 +348,15 @@ the state mutation itself is the `schedule_build_if_stale` row above. They
 are the distinct ways a build gets initiated — a file change is only one
 of them.
 
-| Trigger                                                                      | Enqueues                       | Resulting state       | Site                                                |
-| ---------------------------------------------------------------------------- | ------------------------------ | --------------------- | --------------------------------------------------- |
-| File change, steady state (`Idle` / `InProgress` / `Failed`)                 | `Hmr` or `HmrRebuild`          | `InProgress`          | `handle_file_changes`, `:202`                       |
-| File change, `FullBuildFailed`                                               | `FullBuild` (clears the stash) | `FullBuildInProgress` | `handle_file_changes`, `:248`                       |
-| Browser access while stale (`EnsureLatestBundleOutput`)                      | empty-files `Rebuild`          | `InProgress`          | `ensure_latest_bundle_output`, `:401` (push `:419`) |
-| Lazy compile while an HMR update is lost (`ModuleChanged { rebuild: true }`) | `Rebuild`                      | `InProgress`          | run loop, `:150-172`                                |
-| Manual full build (`TriggerFullBuild`)                                       | clears queue, `FullBuild`      | `FullBuildInProgress` | `trigger_full_build`, `:457`                        |
+| Trigger                                                                              | Enqueues                       | Resulting state       | Site                                                |
+| ------------------------------------------------------------------------------------ | ------------------------------ | --------------------- | --------------------------------------------------- |
+| File change, steady state (`Idle` / `InProgress` / `Failed`)                         | `Hmr` or `HmrRebuild`          | `InProgress`          | `handle_file_changes`, `:202`                       |
+| File change, `FullBuildFailed`                                                       | `FullBuild` (clears the stash) | `FullBuildInProgress` | `handle_file_changes`, `:248`                       |
+| Browser access while stale (`EnsureLatestBundleOutput`)                              | empty-files `Rebuild`          | `InProgress`          | `ensure_latest_bundle_output`, `:401` (push `:419`) |
+| Lazy pull while an HMR update is lost (`LazyCompiled { recover_lost_update: true }`) | `FullBuild` (unless queued)    | `FullBuildInProgress` | run loop, `:145-163`                                |
+| Manual full build (`TriggerFullBuild`)                                               | clears queue, `FullBuild`      | `FullBuildInProgress` | `trigger_full_build`, `:457`                        |
 
-Any other lazy compile enqueues nothing (`ModuleChanged { rebuild: false }`
+Any other lazy pull enqueues nothing (`LazyCompiled { recover_lost_update: false }`
 only registers watch files): no page loads a lazy route from the build
 output, and the graph already holds the route for the next build (see
 [Repeat Visits](../lazy-compilation/design.md#6-repeat-visits)).
@@ -621,12 +620,12 @@ A lost update stays pending from the failure until the first successful
 full build. Every task that starts in that window is upgraded, whatever
 started it:
 
-| Trigger                                                                   | Task                   |
-| ------------------------------------------------------------------------- | ---------------------- |
-| A file change                                                             | `Hmr` / `HmrRebuild`   |
-| A lazy compile, scanned or not (`ModuleChanged { rebuild: true }`)        | `Rebuild { proxy id }` |
-| Vite page access while `Failed{Hmr}` (`triggerBundleRegenerationIfStale`) | `FullBuild`            |
-| Manual retry (`trigger_full_build`, `bundle_coordinator.rs:427`)          | `FullBuild`            |
+| Trigger                                                                    | Task                 |
+| -------------------------------------------------------------------------- | -------------------- |
+| A file change                                                              | `Hmr` / `HmrRebuild` |
+| A lazy pull, scanned or not (`LazyCompiled { recover_lost_update: true }`) | `FullBuild`          |
+| Vite page access while `Failed{Hmr}` (`triggerBundleRegenerationIfStale`)  | `FullBuild`          |
+| Manual retry (`trigger_full_build`, `bundle_coordinator.rs:427`)           | `FullBuild`          |
 
 So a lazy route opened in one tab reloads every tab. This is intended.
 The tabs reload only after the full build succeeds, and that output has
@@ -646,7 +645,7 @@ triggers above:
   so a failed upgraded build does not start it again.
 - Vite keeps the pending reload when the build fails (`onOutput` error)
   and sends it after the first successful `onOutput`, so no tab reloads
-  onto failed output. A reload could start a new lazy compile, and no
+  onto failed output. A reload could start a new lazy pull, and no
   reload goes out after a failed build, so the lazy-route trigger does
   not repeat either.
 
@@ -891,18 +890,18 @@ Known gap, kept on purpose for now:
 
 ### Inside `render_patch` (`hmr_stage.rs`)
 
-`DevEngine::render_patch(query)` takes the bundler lock, like
-`compile_lazy_entry`, and parses the query with the session's number
-count (`ClientHave::parse_query`,
+`DevEngine::render_patch(query)` serves every pull: an update, a lazy
+`import()` and a `loadDynamic`. It takes the bundler lock and parses the
+query with the session's number count (`ClientHave::parse_query`,
 `crates/rolldown_common/src/hmr/client_have.rs`). A query that does not
 parse gets `HmrPullResponse::Reload`: a set that is neither a `b…`
 bitset nor a `d…` gap list, or a number at or above the count. A pull
-that arrives during a rebuild waits for it. Both methods count each
-request (`DevContext::pull_requests`) before they take the lock, so the
-rebuild of a task that pushed an update can first give the pulls of
-that push some time (see "Pulls before the rebuild" under `rebuild`).
+that arrives during a rebuild waits for it. It counts each request
+(`DevContext::pull_requests`) before it takes the lock, so the rebuild
+of a task that pushed an update can first give the pulls of that push
+some time (see "Pulls before the rebuild" under `rebuild`).
 
-`HmrStage::render_patch(&have)`:
+`HmrStage::render_patch(&have, lazy_ctx, &mut merged)`:
 
 1. **No module graph** (the last full build failed) → `Reload`.
 2. **Catch-up** — `HmrSession::catch_up`: another epoch, a `g` newer
@@ -911,14 +910,23 @@ that push some time (see "Pulls before the rebuild" under `rebuild`).
    the ring entries with a generation in `(g, gen]`, oldest first, each
    id only under the newest entry that names it, an entry with no ids
    left out, and an empty `changedIds` left out.
-3. **Carried set** — every module of `u` that the client does not hold
-   current (`holds_current(m) = f.has(num(m)) && latest[m] <= g`), plus
-   `collect_unheld_sync_deps` walking static deps from every module of
-   `u` on the current graph: a dep in `e` and not in `u` stops the walk;
-   a dep held current is walked through but not carried; any other dep is
-   carried and walked through. Ids of `u` that left the graph are
-   skipped.
-4. **Render** (`render_payload`) — external modules are dropped, the rest
+3. **Lazy routes** — only when the query has `l`. `lazy_routes` maps
+   each number to its target and its proxy in the module table; neither
+   in the graph is an error. `scan_lazy_routes` scans a proxy whose
+   target is not in the graph, or whose own entry waits in
+   `pending_rescans`. It marks the proxy as fetched, scans with
+   `retry_pending_rescans: false`, undoes the mark when the scan fails,
+   and sets `merged` just before `merge`. See
+   [lazy-compilation/design.md](../lazy-compilation/design.md) ("Repeat
+   Visits").
+4. **Carried set** — every root the client does not hold current
+   (`holds_current(m) = f.has(num(m)) && latest[m] <= g`), plus
+   `collect_unheld_sync_deps` walking static deps from every root on the
+   current graph: a dep in `e` and not in `u` stops the walk; a dep held
+   current is walked through but not carried; any other dep is carried
+   and walked through. The roots are the modules of `u` and the lazy
+   targets the client did not run. Ids that left the graph are skipped.
+5. **Render** (`render_payload`) — external modules are dropped, the rest
    sorted by id and given numbers. Under one session lock it reads the
    generation `G` and renders the rows. The payload is the prelude
    `const __rolldown_payload__ = __rolldown_runtime__.beginPayload(G)`,
@@ -929,17 +937,22 @@ that push some time (see "Pulls before the rebuild" under `rebuild`).
    no stamp or merge runs while the payload renders, and `G` names the
    state of every factory in it (see [hmr/design.md](../hmr/design.md),
    principle 7).
-5. **Sourcemap** (`finish_payload_sourcemap`) — no file is kept for a
+6. **Sourcemap** (`finish_payload_sourcemap`) — no file is kept for a
    pulled payload. With `sourcemap` `Inline`, the code ends with an
    inline `//# sourceMappingURL=data:...`. With `File` or `Hidden`, the
    map comes back as JSON and the code has no comment: the consumer
    serves the map and adds the comment that points to it. The map is
    prepared for the fixed name `__rolldown_hmr_patch.js` in the out dir.
 
+After a pull with `l` that got no Reload, `DevEngine::render_patch`
+delivers the assets of a scan that merged (§17), and sends
+`LazyCompiled` when the scan merged or a lost HMR update waits (§15).
+
 The binding returns `{ type: 'Patch', code, sourcemap? }` or
 `{ type: 'Reload', reason }` (`BindingPatchResponse`). Plugin errors are
-still thrown. Vite serves the patch at `__rolldown_hmr_patch.js` next to
-the output files. It serves a `Reload` with status 200 and a body that
+still thrown. Vite serves the payload at `__rolldown_hmr_patch.js` next
+to the output files, and answers an error with HTTP 500 and no error
+overlay. It serves a `Reload` with status 200 and a body that
 calls `__rolldown_runtime__.reloadNeeded(reason)`, so the page always
 reloads (see [hmr/design.md](../hmr/design.md), principle 6).
 
@@ -1042,8 +1055,9 @@ Costs and gaps:
   rebuild and does not wait.
 - A consumer whose `HmrUpdatesHandled` never ends stops this task and
   every task after it, until the engine closes.
-- A `Rebuild` task that a lazy compile queued has no push and does not
-  wait, so a pull during that build still waits for it.
+- A `FullBuild` task that a lazy pull queued for a lost update has no
+  push and does not wait, so a pull during that build still waits for
+  it.
 - A save during the wait is lost for the clients. The partial scan of
   the rebuild reads the changed files again and merges the save. The
   task of that save then finds the module unchanged and sends `Noop`:
@@ -1126,8 +1140,8 @@ the task sent one, `hmr_stage_watch_files` (§10 `rebuild`), in one
 watcher batch. It runs before `schedule_build_if_stale`, and no other
 task can start while the state is `InProgress`, so the list a task wrote
 to is registered before the next task's build can replace it. A lazy
-compile writes to the list outside any task, so it carries its list in
-`ModuleChanged` instead (§15).
+scan writes to the list outside any task, so it carries its list in
+`LazyCompiled` instead (§15).
 
 Key facts:
 
@@ -1154,11 +1168,11 @@ output on disk / in memory may not reflect the latest source."
 | Successful task that rebuilt (`Rebuild`/`HmrRebuild`) | `false`                           |
 | Successful `Hmr`-only task (no rebuild)               | `true`                            |
 | Failed incremental task                               | `true`                            |
-| `ModuleChanged { rebuild: true }` received            | `true`                            |
+| `LazyCompiled { recover_lost_update: true }` received | `true`                            |
 
-A lazy compile sends `rebuild: true` only while an HMR update is lost. Any
-other lazy compile leaves the flag as it was: no page loads a lazy route
-from the build output.
+A lazy pull sends `recover_lost_update: true` only while an HMR update is
+lost. Any other lazy pull leaves the flag as it was: no page loads a lazy
+route from the build output.
 
 It is consumed by `ensure_latest_bundle_output` (§13) to decide whether
 a lazy rebuild is needed before serving the full bundle. It is also
@@ -1420,11 +1434,11 @@ barrel state. Relevant methods:
 
 `impl_bundler_hmr.rs` builds an `HmrStageInput` from `&mut self.cache`
 (`Bundler::cache`) and a clone of the HMR session (`Bundler::hmr_stage`)
-at three call sites:
+at two call sites:
 
 - `compute_hmr_update_for_file_changes` — file-change-driven HMR.
-- `render_patch` — a client's patch request.
-- `compile_lazy_entry` — lazy-compilation entry compilation.
+- `render_patch` — a client's pull, which also scans the lazy routes it
+  asks for that are not in the graph yet.
 
 `HmrStage` then reads the cache's snapshot (e.g. `module_table()` in
 `hmr/hmr_stage.rs` calls `get_snapshot()`).
@@ -1441,56 +1455,62 @@ client lacks code (see [hmr/design.md](../hmr/design.md), principle 1).
 Beyond `ensure_latest_bundle_output`, the public methods on `DevEngine`
 (`dev_engine.rs`):
 
-| Method                                       | Purpose                                                                                        |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `new(config, options)`                       | builds the `Bundler`, normalizes options, creates the watcher and coordinator                  |
-| `run()`                                      | spawns the coordinator task, awaits the initial build via `ensure_latest_bundle_output`        |
-| `trigger_full_build()`                       | sends `TriggerFullBuild` (fire-and-forget, compose with `ensure_latest_bundle_output` to wait) |
-| `wait_for_close()`                           | awaits the coordinator's join handle                                                           |
-| `wait_for_ongoing_bundle()`                  | `GetState`, awaits any running future                                                          |
-| `get_bundle_state()`                         | `GetState` → `BundleState { last_build_errored, has_stale_output }`                            |
-| `render_patch(query)`                        | renders the patch a client asks for, or `Reload` (§10, "Inside `render_patch`")                |
-| `compile_lazy_entry(proxy_module_id, query)` | checks epoch / generation, compiles a lazy entry, then sends `ModuleChanged`                   |
-| `close()`                                    | sends `Close`, runs `closeBundle`, awaits coordinator shutdown                                 |
-| `is_closed()` / `bundler_options()`          | accessors                                                                                      |
+| Method                              | Purpose                                                                                        |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `new(config, options)`              | builds the `Bundler`, normalizes options, creates the watcher and coordinator                  |
+| `run()`                             | spawns the coordinator task, awaits the initial build via `ensure_latest_bundle_output`        |
+| `trigger_full_build()`              | sends `TriggerFullBuild` (fire-and-forget, compose with `ensure_latest_bundle_output` to wait) |
+| `wait_for_close()`                  | awaits the coordinator's join handle                                                           |
+| `wait_for_ongoing_bundle()`         | `GetState`, awaits any running future                                                          |
+| `get_bundle_state()`                | `GetState` → `BundleState { last_build_errored, has_stale_output }`                            |
+| `render_patch(query)`               | answers every pull (an update, a lazy `import()`, a `loadDynamic`), or `Reload` (§10)          |
+| `close()`                           | sends `Close`, runs `closeBundle`, awaits coordinator shutdown                                 |
+| `is_closed()` / `bundler_options()` | accessors                                                                                      |
 
-`compile_lazy_entry` sends `ModuleChanged` after a compile that returns,
-and after a compile that fails past its `merge` (the graph keeps the
-route, so its files must be watched). `rebuild` is
-`Bundler::has_lost_hmr_update()`.
+A lazy load is a pull to `renderPatch` whose query names the target in
+`l`. The runtime's `requestLazy` pulls through `pullPatch` and
+`importPatch`, so a dev server serves one route for every pull.
 
-`ModuleChanged` handling (`bundle_coordinator.rs:150-172`): registers the
-watch files the message carries. When `rebuild` is true, it also queues a
-`TaskInput::Rebuild` for the proxy id, sets
-`has_stale_bundle_output = true`, and schedules. The task upgrades to the
-full build that reloads every client (§9b). Otherwise only the watch files
-are registered: no page loads a lazy route from the build output (see
+After a pull with `l` that got no Reload, `render_patch` sends
+`LazyCompiled` when the lazy scan merged, also when a later step failed
+(the graph keeps the route, so its files must be watched), and when a
+lost HMR update waits. `recover_lost_update` is
+`Bundler::has_lost_hmr_update()`. A pull that did not merge and sees no
+lost update sends nothing.
+
+`LazyCompiled` handling (`bundle_coordinator.rs:145-163`): registers the
+watch files the message carries. When `recover_lost_update` is true, it
+also queues a `TaskInput::FullBuild` (unless one is queued already), sets
+`has_stale_bundle_output = true`, and schedules. Every task kind that
+runs with a lost update reloads every client (§9b), so the message
+carries no changed path. Otherwise only the watch files are registered:
+no page loads a lazy route from the build output (see
 [Repeat Visits](../lazy-compilation/design.md#6-repeat-visits)).
 
 Why the message carries the watch files: each build starts with a new,
 empty watch list (`PluginDriverFactory::create_plugin_driver`), and
 `update_watch_paths` (§11) reads only the latest build's list. A lazy
-compile adds the files it loads to the list of the build that is latest
+scan adds the files it loads to the list of the build that is latest
 while it holds the bundler lock. A new build can start between the
-compile and the moment the coordinator handles the message:
+scan and the moment the coordinator handles the message:
 
 ```
-compile_lazy_entry              rebuild task             coordinator
+render_patch (lazy scan)        rebuild task             coordinator
 loads lazy.js into list A
-sends ModuleChanged
+sends LazyCompiled
                                 new build, list B (empty)
-                                                         handles ModuleChanged
+                                                         handles LazyCompiled
 ```
 
 Reading the latest list there reads list B. Cached modules are not
 loaded again, so no later build adds `lazy.js` back, and edits to it go
-unseen for the rest of the session. So `compile_lazy_entry` sends the
+unseen for the rest of the session. So `render_patch` sends the
 `Arc` of list A (`Bundler::watch_files()`, read under the same lock), and
 the coordinator registers list A, whichever build is the latest by then.
 
 The engine has no method for client connect, disconnect, or delivery.
-`render_patch` and `compile_lazy_entry` are the engine's whole view of a
-client, and each reads the client only from its own query. The
+`render_patch` is the engine's whole view of a client, and it reads the
+client only from its own query. The
 reasoning is in [hmr/design.md](../hmr/design.md), principle 2.
 
 The `#[cfg(feature = "testing")]` methods —
@@ -1517,9 +1537,8 @@ audience.
   failures.
 - **Binding consumer** — the framework or tool integrating `rolldown_dev`
   (typically Vite). Owns the engine lifecycle: constructs it, calls `run`,
-  forwards patch and lazy requests to `render_patch` /
-  `compile_lazy_entry`, calls `close` on shutdown. Sees errors when it calls the engine at the wrong
-  time (`compile_lazy_entry` after `close`, `ensure_latest_build_output`
+  forwards every pull to `render_patch`, calls `close` on shutdown. Sees errors when it calls the engine at the wrong
+  time (`render_patch` after `close`, `ensure_latest_build_output`
   before `run`, etc.). They
   are responsible for sequencing correctly; we surface the misuse so they
   can detect their own bug.
@@ -1543,8 +1562,8 @@ Examples:
 
 - `Bundler::compute_hmr_update_for_file_changes` — diagnostics from HMR
   computation, surfaced inside `BundlingTask::generate_hmr_updates`.
-- `Bundler::compile_lazy_entry` — diagnostics from compiling a lazy
-  entry, surfaced by `DevEngine::compile_lazy_entry` (`dev_engine.rs:362`).
+- `Bundler::render_patch` — diagnostics from the lazy scan of a pull,
+  surfaced by `DevEngine::render_patch`.
 - `Bundler::incremental_write` / `incremental_generate` — diagnostics from a
   rebuild, surfaced inside `BundlingTask::rebuild`.
 - `plugin_driver.watch_change` — an `anyhow::Error` from a plugin's
@@ -1585,11 +1604,11 @@ and return a single result use `BindingResult<T> = Either<BindingErrors, T>`
 on the boundary, and the JS wrapper calls `unwrapBindingResult` to either
 return the success value or throw a `BundleError`.
 
-Used by: `ensureLatestBuildOutput`, `renderPatch` and `compileEntry`
-(`ensure_latest_build_output`, `render_patch` and `compile_entry` in
+Used by: `ensureLatestBuildOutput` and `renderPatch`
+(`ensure_latest_build_output` and `render_patch` in
 `binding_dev_engine.rs`, unwrapped in
 `packages/rolldown/src/api/dev/dev-engine.ts`). A client that must reload
-is not an error: `renderPatch` and `compileEntry` answer it with a
+is not an error: `renderPatch` answers it with a
 `{ type: 'Reload', reason }` value. The other napi
 methods that can fail (`run`, `ensureCurrentBuildFinish`, `getBundleState`,
 `close`) convert their error to a plain `napi::Error` with a reason string
@@ -1597,10 +1616,8 @@ instead. The thrown error reaches whichever audience called the method:
 
 - `ensureLatestBuildOutput` is called by the consumer's dev-server
   middleware before serving a request. The consumer handles or propagates.
-- `renderPatch` is called by the consumer's patch route when a client
-  pulls a patch. `compileEntry` is called by the consumer's lazy-compile
-  middleware when a lazy chunk is requested. The consumer handles or
-  propagates.
+- `renderPatch` is called by the consumer's pull route when a client
+  pulls, also for a lazy `import()`. The consumer handles or propagates.
 - `close`, `run`, lifecycle-shaped methods are consumer-driven by
   construction.
 
@@ -1654,7 +1671,7 @@ early.
 
 Lifecycle errors (engine closed, coordinator gone, channel dropped) are
 surfaced **to the binding consumer**, not silently swallowed. Vite needs
-to see that it called `compile_lazy_entry` after `close` so it can fix
+to see that it called `render_patch` after `close` so it can fix
 the sequencing; swallowing hides the misuse and lets the bug spread.
 
 **Per-method exception**: a method MAY return `Ok` instead of the lifecycle
@@ -1824,9 +1841,9 @@ flowchart TD
   %% ===== triggers =====
   T1([initial load]) --> FULL["TaskInput: FullBuild"]
   T2([file edit]) --> D{"rebuild_strategy?"}
-  T3([dynamic import]) --> LAZY["compileEntry (DevEngine)"]
-  T5([client pulls a patch]) --> PULL["renderPatch (DevEngine)"]
-  T4([stale page load / ModuleChanged with rebuild (lost HMR update)]) --> REB["TaskInput: Rebuild"]
+  T5([client pulls: update, lazy import, loadDynamic]) --> PULL["renderPatch (DevEngine)"]
+  T4([stale page load]) --> REB["TaskInput: Rebuild"]
+  T6([LazyCompiled with a lost HMR update]) --> FULL
 
   %% ===== dispatch (handle_file_changes) =====
   D -->|"Never (default)"| HMR["TaskInput: Hmr"]
@@ -1838,21 +1855,19 @@ flowchart TD
   HMR --> GH["generate_hmr_updates():<br/>compute_hmr_update_for_file_changes (ids)<br/>+ add_additional_files"]
   HR --> GH
   HR -. "then" .-> RB
-  LAZY --> CL["compile_lazy_entry (code)<br/>+ add_additional_files"]
-  PULL --> RP["render_patch (code)"]
+  PULL --> RP["render_patch (code)<br/>+ add_additional_files after a lazy scan"]
 
   %% ===== shared emitter (asset bytes converge here) =====
   FE[("FileEmitter.files<br/>emit_file writes;<br/>add_additional_files drains once<br/>(emitted_files gate)")]
   RB <-->|"emit / drain"| FE
   GH <-->|"emit / drain"| FE
-  CL <-->|"emit / drain"| FE
+  RP <-->|"emit / drain (lazy scan)"| FE
 
   %% ===== callbacks =====
   RB --> OUT[["on_output"]]
   GH --> HMRU[["on_hmr_updates"]]
   GH --> ADD[["on_additional_assets"]]
-  CL --> ADD
-  CL --> RET[["compileEntry return"]]
+  RP --> ADD
   RP --> PRET[["renderPatch return"]]
 
   %% ===== sinks =====
@@ -1860,7 +1875,6 @@ flowchart TD
   ADD --> MEM
   MEM --> MW["memoryFilesMiddleware<br/>serves /assets/*"]
   HMRU --> B(["browser / client"])
-  RET --> B
   PRET --> B
   MW --> B
 ```
@@ -1869,13 +1883,13 @@ How to read it:
 
 - **Asset bytes** (path to `memoryFiles`): every operation emits into
   `FileEmitter.files` and drains via `add_additional_files`; the outputs leave
-  through `on_output` (build/rebuild) or `on_additional_assets` (HMR patch /
-  lazy). All converge on the consumer's `memoryFiles`.
+  through `on_output` (build/rebuild) or `on_additional_assets` (HMR update /
+  lazy scan). All converge on the consumer's `memoryFiles`.
 - **Code / patch** (path to the client): build & rebuild ship chunks via
-  `on_output`; an HMR update sends ids only via `on_hmr_updates`; a patch is
-  the `renderPatch` return value and a lazy chunk the `compileEntry` return
-  value. `render_patch` loads no module, so it emits no assets: the assets
-  of an edit were emitted by the HMR update's partial scan.
+  `on_output`; an HMR update sends ids only via `on_hmr_updates`; every
+  payload is the `renderPatch` return value. A pull with no lazy scan
+  loads no module, so it emits no assets: the assets of an edit were
+  emitted by the HMR update's partial scan.
 - **`HmrRebuild`** is the only fork: `generate_hmr_updates()` runs first
   (→ `on_hmr_updates` + `on_additional_assets`), _then_ `rebuild()`
   (→ `on_output`). The shared `emitted_files` gate means an asset drained in the
@@ -1883,23 +1897,23 @@ How to read it:
 
 ### The three delivery callbacks
 
-| Callback               | Fires from                                              | Carries                                                                 |
-| ---------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `on_output`            | `rebuild()` → `bundle_up`                               | full `BundleOutput` (chunks + assets, and `hmr_generation`)             |
-| `on_hmr_updates`       | `generate_hmr_updates()`                                | one `HmrUpdate` for every client — **ids** only, no code                |
-| `on_additional_assets` | `generate_hmr_updates()` **and** `compile_lazy_entry()` | `BundleOutput` — emitted assets + their `add_additional_files` warnings |
+| Callback               | Fires from                                                                      | Carries                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `on_output`            | `rebuild()` → `bundle_up`                                                       | full `BundleOutput` (chunks + assets, and `hmr_generation`)             |
+| `on_hmr_updates`       | `generate_hmr_updates()`                                                        | one `HmrUpdate` for every client — **ids** only, no code                |
+| `on_additional_assets` | `generate_hmr_updates()` **and** `render_patch()` after a lazy scan that merged | `BundleOutput` — emitted assets + their `add_additional_files` warnings |
 
 `on_additional_assets` is the fix for the asset-not-served bug (vite#22596 and
-its HMR analog): a pure HMR update and a lazy compile never go through
+its HMR analog): a pure HMR update and a lazy scan never go through
 `on_output`, so without this callback their emitted assets would never reach
 the consumer. It fires **before** the patch / lazy code reaches the client (in
-`generate_hmr_updates` it runs before `on_hmr_updates`; in `compile_lazy_entry`
-before the code is returned), so a consumer that serves built files (e.g. Vite,
+`generate_hmr_updates` it runs before `on_hmr_updates`; in `render_patch`
+before the code is returned, also when a step after the merge failed), so a consumer that serves built files (e.g. Vite,
 which writes them to `memoryFiles`) can serve the asset by the time the browser
 requests it. It carries only what `add_additional_files` produces (emit_file'd
 assets + prebuilt chunks) — not the rendered chunks, and not assets emitted
 inside a `generateBundle` hook (that hook does not run for HMR updates or
-lazy compiles). It is a
+lazy scans). It is a
 `BundleOutput` so `add_additional_files` warnings ride along, as on `on_output`.
 
 ---
@@ -1943,8 +1957,8 @@ lazy compiles). It is a
 - [watch-mode](../watch-mode/implementation.md) — `rolldown_watcher`, the actor-based
   watch architecture; `rolldown_dev` reuses the same actor pattern
 - [lazy-compilation](../lazy-compilation/implementation.md) — lazy entry compilation,
-  reached via `DevEngine::compile_lazy_entry` and the `ModuleChanged`
-  message
+  reached via the `l` set of a pull to `DevEngine::render_patch` and the
+  `LazyCompiled` message
 - [dev-server-test-harness](../dev-server-test-harness/implementation.md) — browser
   test harness for the dev server
 - `crates/rolldown_dev/` — dev engine implementation

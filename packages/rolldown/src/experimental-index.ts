@@ -4,7 +4,6 @@ export type { DevOptions, DevOutputInfo, DevWatchOptions } from './api/dev/dev-o
 export { scan } from './api/experimental';
 export {
   type BindingHmrUpdate,
-  type BindingLazyChunkResponse,
   type BindingNativeMemoryStats,
   type BindingPatchResponse,
   BindingRebuildStrategy,

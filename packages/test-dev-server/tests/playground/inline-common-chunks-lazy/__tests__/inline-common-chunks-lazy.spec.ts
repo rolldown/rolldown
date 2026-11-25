@@ -3,7 +3,7 @@ import { editFile, page, plantReloadMarker, readReloadMarker, waitForBuildStable
 
 // `experimentalInlineCommonChunks` with lazy compilation. The rebuild after the lazy compile
 // prints the routes' shared `shared.js` -> `leaf.js` into the route chunks, but the page gets
-// lazy routes as factories from `/@vite/lazy` and never loads those chunks (see
+// lazy routes as factories from pull requests and never loads those chunks (see
 // internal-docs/lazy-compilation/design.md). `inline-common-chunks` covers the route chunks
 // that carry the inlined modules, without lazy compilation.
 

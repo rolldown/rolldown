@@ -534,7 +534,7 @@ Consequence: every module present in a scan output was registered in
 - `Bundle::normalize_scan_stage_output_and_update_cache` — the non-full-scan
   branch.
 - `HmrStage::compute_hmr_update_for_file_changes` and
-  `HmrStage::compile_lazy_entry` — the HMR update and lazy-compile paths.
+  `HmrStage::render_patch` (its lazy scan) — the HMR update and lazy-compile paths.
 
 The full-scan build path does not call `merge`; it uses `set_snapshot` instead
 (`bundle.rs:250`). All current callers pass a partial-scan output, whose

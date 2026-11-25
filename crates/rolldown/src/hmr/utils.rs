@@ -243,18 +243,18 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast
   }
 }
 
-/// `__rolldown_runtime__.requestLazy("<stable_real_id>", "<proxy_module_id>"[, 1])`
+/// `__rolldown_runtime__.requestLazy("<stable_real_id>"[, 1])`
 ///
 /// The one shape both codegen paths emit for a lazy boundary, so a boundary never becomes a
 /// chunk the browser fetches.
 ///
-/// The emitted code carries ids only. The runtime's `loadLazyChunk` builds the request, so the
-/// dev server decides the URL (Vite adds its `base`).
+/// The emitted code carries the stable id only, never an absolute path. The runtime names the
+/// module by its session number in the pull request, so the dev server decides the URL (Vite
+/// adds its `base`).
 ///
 /// `is_node_mode` is the importer's interop choice, as in a production build. Whether the
 /// importee is CommonJS is unknown here, so the runtime decides that from its registration.
 pub fn create_request_lazy_call<'ast, B>(
-  proxy_module_id: &str,
   stable_proxy_id: &str,
   is_node_mode: bool,
   builder: &B,
@@ -263,23 +263,12 @@ where
   B: oxc::ast::builder::GetAstBuilder<'ast> + GetAllocator<'ast>,
 {
   let mut arguments = oxc::allocator::Vec::from_iter_in(
-    [
-      ast::Argument::new_string_literal(
-        SPAN,
-        ast::Str::from_str_in(
-          lazy_proxy_target(stable_proxy_id).unwrap_or(stable_proxy_id),
-          builder,
-        ),
-        None,
-        builder,
-      ),
-      ast::Argument::new_string_literal(
-        SPAN,
-        ast::Str::from_str_in(proxy_module_id, builder),
-        None,
-        builder,
-      ),
-    ],
+    [ast::Argument::new_string_literal(
+      SPAN,
+      ast::Str::from_str_in(lazy_proxy_target(stable_proxy_id).unwrap_or(stable_proxy_id), builder),
+      None,
+      builder,
+    )],
     builder,
   );
   if is_node_mode {

@@ -112,7 +112,7 @@ socket.onmessage = function(event) {
     console.debug('[hmr]: Connection established with server');
   } else if (data.type === 'hmr:update') {
     // This runtime has no boundary walk, so it cannot apply an update. It marks the modules
-    // stale, so a lazy chunk that arrives late cannot install old factories, and then reloads.
+    // stale, so a lazy payload that arrives late cannot install old factories, and then reloads.
     // A node process cannot reload: its dev server restarts it.
     runtime.markStale(data.staleIds, data.gen);
     if (typeof location !== 'undefined') {

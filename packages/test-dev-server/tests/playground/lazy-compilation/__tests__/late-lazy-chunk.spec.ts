@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { editFile, page, serverUrl, waitForBuildStable } from '~utils';
+import { editFile, isPullUrl, lazyTargetsOf, page, serverUrl, waitForBuildStable } from '~utils';
 
 describe('lazy-compilation: late-lazy-chunk', () => {
   test('a lazy chunk rendered before an edit does not bring back the old code', async () => {
@@ -8,8 +8,12 @@ describe('lazy-compilation: late-lazy-chunk', () => {
     let bRendered!: () => void;
     const bRenderedPromise = new Promise<void>((resolve) => (bRendered = resolve));
     await page.route(
-      (url) => url.pathname === '/@vite/lazy' && url.search.includes('route-b.js'),
+      (url) => isPullUrl(url.href),
       async (route) => {
+        const targets = await lazyTargetsOf(route.request().url());
+        if (!targets.some((id) => id.endsWith('route-b.js'))) {
+          return route.continue();
+        }
         const response = await route.fetch();
         bRendered();
         await bReleased;

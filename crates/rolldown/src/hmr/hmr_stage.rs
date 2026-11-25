@@ -10,14 +10,15 @@ use itertools::Itertools;
 use oxc::ast::builder::AstBuilder;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
-  ClientHave, ExportsKind, HmrCatchUp, HmrLazyChunkOutput, HmrPatch, HmrPullResponse, HmrRingEntry,
-  HmrSession, HmrUpdate, ImportKind, Module, ModuleIdx, ModuleTable, NormalModule, ScanMode,
-  SharedHmrSession, SourceMapType, WatcherChangeKind, is_lazy_proxy, lazy_proxy_target,
+  ClientHave, ExportsKind, HmrCatchUp, HmrPatch, HmrPullResponse, HmrRingEntry, HmrSession,
+  HmrUpdate, Module, ModuleIdx, ModuleTable, NormalModule, ResolvedId, ScanMode, SharedHmrSession,
+  SourceMapType, WatcherChangeKind, is_lazy_proxy, lazy_proxy_target, write_lazy_proxy_id,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
 use rolldown_error::BuildResult;
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_plugin_lazy_compilation::LazyCompilationContext;
 use rolldown_sourcemap::{Source, SourceJoiner, SourceMap, SourceMapSource};
 use rolldown_utils::{
   concat_string,
@@ -33,7 +34,7 @@ use crate::{
     hmr_ast_finalizer::HmrAstFinalizer,
     module_graph_delta::{RowsSession, assign_payload_nums, render_register_graph_source},
   },
-  module_loader::ModuleLoader,
+  module_loader::{ModuleLoader, module_loader::ModuleLoaderOutput},
   type_alias::IndexEcmaAst,
   types::scan_stage_cache::ScanStageCache,
   utils::{
@@ -41,10 +42,9 @@ use crate::{
   },
 };
 
-/// The file names the sourcemap of a pulled payload is prepared for. Patches are served next to
+/// The file name the sourcemap of a pulled payload is prepared for. Payloads are served next to
 /// the output files.
 const HMR_PATCH_FILENAME: &str = "__rolldown_hmr_patch.js";
-const LAZY_CHUNK_FILENAME: &str = "__rolldown_lazy_chunk.js";
 
 pub struct HmrStageInput<'a, Fs: FileSystem + Clone + 'static> {
   pub options: SharedOptions,
@@ -470,34 +470,78 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     })
   }
 
-  /// Renders the factories a client needs to run its update `U` (`have.update`). The client
-  /// describes what it holds in the request, so the server keeps no state per client.
+  /// Answers one pull: the factories a client needs to run its update `U` (`have.update`) and
+  /// its lazy `import()` targets (`have.lazy`). The client describes what it holds in the
+  /// request, so the server keeps no state per client.
   ///
-  /// Carries each module of `U` the client does not hold a current factory of, and the static
-  /// deps that `collect_unheld_sync_deps` finds. When the client is behind the session, the
-  /// payload tells it about the updates it missed (`render_catch_up`).
-  pub async fn render_patch(&self, have: &ClientHave) -> BuildResult<HmrPullResponse<HmrPatch>> {
+  /// Carries each root the client does not hold a current factory of, and the static deps that
+  /// `collect_unheld_sync_deps` finds. When the client is behind the session, the payload tells
+  /// it about the updates it missed (`render_catch_up`).
+  ///
+  /// A lazy target that is not in the graph yet, or whose own proxy waits in `pending_rescans`,
+  /// is scanned first (`scan_lazy_routes`).
+  /// `merged` becomes `true` once that scan merges into the graph. It stays `true` when a later
+  /// step fails, because the graph keeps the route.
+  /// See internal-docs/lazy-compilation/design.md ("Repeat Visits").
+  pub async fn render_patch(
+    &mut self,
+    have: &ClientHave,
+    lazy_ctx: Option<&LazyCompilationContext>,
+    merged: &mut bool,
+  ) -> BuildResult<HmrPullResponse<HmrPatch>> {
     if !self.cache.has_snapshot() {
       return Ok(HmrPullResponse::Reload {
         reason: "the last full build failed, so there is no module graph".to_owned(),
       });
     }
 
+    // A client that must reload changes nothing on the server, so this check comes before any
+    // scan.
+    let catch_up = catch_up_statement(&self.session.lock(), have);
+    let catch_up = match catch_up {
+      Ok(catch_up) => catch_up,
+      Err(reason) => return Ok(HmrPullResponse::Reload { reason }),
+    };
+
+    let mut scanned = false;
+    if !have.lazy.is_empty() {
+      let routes = self.lazy_routes(have)?;
+      let to_scan = routes
+        .iter()
+        .filter_map(|route| {
+          let proxy = route.proxy?;
+          let queued = || {
+            let proxy_id =
+              &self.module_table().modules[proxy].as_normal()?.originative_resolved_id.id;
+            Some(self.cache.pending_rescans.iter().any(|queued| queued.id == *proxy_id))
+          };
+          (route.target.is_none() || queued() == Some(true)).then_some(proxy)
+        })
+        .collect::<Vec<_>>();
+      if !to_scan.is_empty() {
+        self.scan_lazy_routes(&to_scan, lazy_ctx, merged).await?;
+        scanned = true;
+      }
+    }
+
     let (carried, catch_up) = {
       let session = self.session.lock();
-      let catch_up = match catch_up_statement(&session, have) {
-        Ok(catch_up) => catch_up,
-        Err(reason) => return Ok(HmrPullResponse::Reload { reason }),
-      };
       let modules = &self.module_table().modules;
+      let module_of = |id: &str| {
+        self
+          .cache
+          .module_idx_by_stable_id
+          .get(id)
+          .copied()
+          .filter(|module_idx| modules[*module_idx].is_normal())
+      };
       // An id that left the graph is skipped. The client then still cannot run its update, and
       // it reloads.
       let update = have
         .update
         .iter()
         .filter_map(|num| session.id_of(num))
-        .filter_map(|id| self.cache.module_idx_by_stable_id.get(id.as_str()).copied())
-        .filter(|module_idx| modules[*module_idx].is_normal())
+        .filter_map(|id| module_of(id.as_str()))
         .collect::<Vec<_>>();
       let client = ClientView { have, session: &session };
       let mut carried = update
@@ -505,159 +549,146 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .copied()
         .filter(|module_idx| !client.holds_current(modules[*module_idx].stable_id().as_str()))
         .collect::<FxIndexSet<_>>();
-      self.collect_unheld_sync_deps(&update, None, &client, &mut carried);
+      let mut walk_from = update;
+      // A lazy target the client ran keeps its exports: `requestLazy` only reads them.
+      for module_idx in have
+        .lazy
+        .iter()
+        .filter_map(|num| session.id_of(num))
+        .filter(|id| !client.keeps_exports(id.as_str()))
+        .filter_map(|id| module_of(id.as_str()))
+      {
+        if !client.holds_current(modules[module_idx].stable_id().as_str()) {
+          carried.insert(module_idx);
+        }
+        walk_from.push(module_idx);
+      }
+      self.collect_unheld_sync_deps(&walk_from, &client, &mut carried);
       (carried, catch_up)
     };
 
-    let (code, sourcemap) = self.render_payload(carried, catch_up, HMR_PATCH_FILENAME).await?;
+    let modules = carried.len();
+    let phase_start = Instant::now();
+    let (code, sourcemap) = self.render_payload(carried, catch_up).await?;
+    if !have.lazy.is_empty() {
+      tracing::debug!(
+        target: "hmr",
+        scanned,
+        modules,
+        render_time = ?phase_start.elapsed(),
+        "render_patch: lazy request done"
+      );
+    }
     Ok(HmrPullResponse::Payload(HmrPatch { code, sourcemap }))
   }
 
-  /// Compile a lazy entry module and render the factories the client needs to run it.
-  ///
-  /// A lazy chunk is pure first-evaluation demand: nothing the client already executed runs
-  /// again, so the walk stops at every module whose exports the client keeps, and it carries
-  /// only the modules the client holds no current factory of. Both come from the client's own
-  /// request (`have`). The catch-up rule is the one of `render_patch`.
-  ///
-  /// `merged` becomes `true` once the compile merges a scan into the graph. It stays `true` when
-  /// a later step fails, because the graph keeps the route.
-  pub async fn compile_lazy_entry(
+  /// Maps each number of `have.lazy` to its target and its proxy. The numbers come from the
+  /// session and the modules from the graph, so a request can never make the server resolve a
+  /// path it sends (#9969).
+  fn lazy_routes(&self, have: &ClientHave) -> BuildResult<Vec<LazyRoute>> {
+    let session = self.session.lock();
+    let modules = &self.module_table().modules;
+    let module_of = |id: &str| {
+      self
+        .cache
+        .module_idx_by_stable_id
+        .get(id)
+        .copied()
+        .filter(|module_idx| modules[*module_idx].is_normal())
+    };
+    let mut proxy_id = String::new();
+    have
+      .lazy
+      .iter()
+      .map(|num| {
+        // `ClientHave::parse_query` rejected every number the session did not give out.
+        let id = session.id_of(num).expect("the query names only known numbers");
+        write_lazy_proxy_id(&mut proxy_id, id);
+        let route = LazyRoute { target: module_of(id), proxy: module_of(&proxy_id) };
+        if route.target.is_none() && route.proxy.is_none() {
+          return Err(
+            vec![anyhow::anyhow!("Lazy entry module not found in cache. module_id={id}").into()]
+              .into(),
+          );
+        }
+        Ok(route)
+      })
+      .collect()
+  }
+
+  /// Scans the routes of the lazy proxies `proxies` into the graph. The lazy plugin's `load`
+  /// returns the fetched template of a proxy marked as fetched, and that template's `import()`
+  /// reaches the real module. Only the proxies' own entries leave `pending_rescans`: a broken
+  /// file of another route must not fail this one.
+  async fn scan_lazy_routes(
     &mut self,
-    module_id: &str,
-    have: &ClientHave,
+    proxies: &[ModuleIdx],
+    lazy_ctx: Option<&LazyCompilationContext>,
     merged: &mut bool,
-  ) -> BuildResult<HmrPullResponse<HmrLazyChunkOutput>> {
-    tracing::debug!(
-      target: "hmr",
-      "compile_lazy_entry: module_id: {}",
-      module_id,
-    );
+  ) -> BuildResult<()> {
+    let resolved_ids = proxies
+      .iter()
+      .filter_map(|proxy| self.module_table().modules[*proxy].as_normal())
+      .map(|proxy| proxy.originative_resolved_id.clone())
+      .collect::<Vec<_>>();
+    let newly_fetched = lazy_ctx.map_or_else(Vec::new, |lazy_ctx| {
+      resolved_ids
+        .iter()
+        .filter(|resolved_id| lazy_ctx.mark_as_fetched(&resolved_id.id))
+        .map(|resolved_id| resolved_id.id.clone())
+        .collect()
+    });
 
-    // module_id is the proxy module ID (e.g., "/abs/path/async-entry-a.js?rolldown-lazy=1")
-    // The proxy has been marked as fetched, so the lazy compilation plugin's load hook
-    // will return the fetched template which imports the real module.
-
-    // A failed full build leaves `module_id_to_idx` repopulated but the
-    // snapshot unset; `module_table()` would panic. Surface an error the
-    // client can handle instead.
-    if !self.cache.has_snapshot() {
-      return Err(
-        vec![
-          anyhow::anyhow!(
-            "Cannot compile lazy entry `{module_id}`: the last full build failed, so there is no module graph to compile against."
-          )
-          .into(),
-        ]
-        .into(),
-      );
-    }
-
-    // A client that must reload changes nothing on the server.
-    let catch_up = catch_up_statement(&self.session.lock(), have);
-    let catch_up = match catch_up {
-      Ok(catch_up) => catch_up,
-      Err(reason) => return Ok(HmrPullResponse::Reload { reason }),
+    let phase_start = Instant::now();
+    let module_loader_output = match self.fetch_lazy_routes(resolved_ids).await {
+      Ok(output) => output,
+      Err(errors) => {
+        if let Some(lazy_ctx) = lazy_ctx {
+          for id in &newly_fetched {
+            lazy_ctx.unmark_fetched(id);
+          }
+        }
+        return Err(errors);
+      }
     };
 
-    // 1. Get the originative resolved_id from the cached module
-    // The proxy module should already be in the cache from the initial build.
-    let (entry_module_idx, resolved_id) = self
+    *merged = true;
+    let plugin_driver = Arc::clone(&self.plugin_driver);
+    self
       .cache
-      .module_id_to_idx
-      .get(module_id)
-      .and_then(|state| {
-        let idx = state.idx();
-        let module = &self.module_table().modules[idx];
-        if let Module::Normal(module) = module {
-          Some((idx, module.originative_resolved_id.clone()))
-        } else {
-          None
-        }
-      })
-      .ok_or_else(|| {
-        vec![anyhow::anyhow!("Lazy entry module not found in cache. module_id={module_id}").into()]
-      })?;
+      .merge(module_loader_output.into(), &plugin_driver)
+      .map_err(|e| vec![anyhow::anyhow!(e).into()])?;
 
-    // 2. Scan the route into the graph, unless the graph holds it already. Only the fetched
-    // template has an `import()`, and a failed scan never reaches `merge`, so a resolved
-    // `import()` on the proxy means the graph already holds the route (from an earlier compile
-    // or a build after the proxy was marked fetched). A route whose own proxy
-    // waits for a rescan scans again, so a deleted route file reports its error.
-    // See internal-docs/lazy-compilation/design.md ("Repeat Visits").
-    let route_merged =
-      self.module_table().modules[entry_module_idx].as_normal().is_some_and(|proxy| {
-        proxy
-          .import_records
-          .iter()
-          .any(|rec| rec.kind == ImportKind::DynamicImport && rec.resolved_module.is_some())
-      });
-    let needs_scan =
-      !route_merged || self.cache.pending_rescans.iter().any(|queued| queued.id == resolved_id.id);
-
-    let phase_start = Instant::now();
-    if needs_scan {
-      let fetch_mode = ScanMode::Partial(vec![resolved_id]);
-
-      let mut module_loader = ModuleLoader::new(
-        self.fs.clone(),
-        Arc::clone(&self.options),
-        Arc::clone(&self.resolver),
-        Arc::clone(&self.plugin_driver),
-        self.cache,
-        fetch_mode.is_full(),
-        None,
-      )?;
-      module_loader.set_retry_pending_rescans(false);
-
-      let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
-      drop(module_loader);
-
-      *merged = true;
-      let plugin_driver = Arc::clone(&self.plugin_driver);
-      self
-        .cache
-        .merge(module_loader_output.into(), &plugin_driver)
-        .map_err(|e| vec![anyhow::anyhow!(e).into()])?;
-
-      let options = Arc::clone(&self.options);
-      self
-        .cache
-        .apply_module_side_effects_overrides(&options, &plugin_driver.module_side_effects_overrides)
-        .await?;
-    }
-    let scan_time = phase_start.elapsed();
-
-    // The proxy is only the walk root: it never runs in the client, so the payload does not
-    // carry it.
-    let mut modules_to_be_updated = FxIndexSet::default();
-    {
-      let session = self.session.lock();
-      let client = ClientView { have, session: &session };
-      self.collect_unheld_sync_deps(
-        &[entry_module_idx],
-        Some(entry_module_idx),
-        &client,
-        &mut modules_to_be_updated,
-      );
-    }
-
-    // Registrations only — deliberately no execute-entry tail; `requestLazy` runs the module.
-    // Executing here would run it inside the proxy's async wrapper, turning a throw from its
-    // body into a floating rejection instead of one that reaches the importer.
-    let phase_start = Instant::now();
-    let modules = modules_to_be_updated.len();
-    let (code, sourcemap) =
-      self.render_payload(modules_to_be_updated, catch_up, LAZY_CHUNK_FILENAME).await?;
+    let options = Arc::clone(&self.options);
+    self
+      .cache
+      .apply_module_side_effects_overrides(&options, &plugin_driver.module_side_effects_overrides)
+      .await?;
     tracing::debug!(
       target: "hmr",
-      scanned = needs_scan,
-      modules,
-      ?scan_time,
-      render_time = ?phase_start.elapsed(),
-      "compile_lazy_entry: done"
+      routes = proxies.len(),
+      scan_time = ?phase_start.elapsed(),
+      "render_patch: scanned lazy routes"
     );
-    Ok(HmrPullResponse::Payload(HmrLazyChunkOutput { code, sourcemap }))
+    Ok(())
+  }
+
+  async fn fetch_lazy_routes(
+    &mut self,
+    resolved_ids: Vec<ResolvedId>,
+  ) -> BuildResult<ModuleLoaderOutput> {
+    let fetch_mode = ScanMode::Partial(resolved_ids);
+    let mut module_loader = ModuleLoader::new(
+      self.fs.clone(),
+      Arc::clone(&self.options),
+      Arc::clone(&self.resolver),
+      Arc::clone(&self.plugin_driver),
+      self.cache,
+      fetch_mode.is_full(),
+      None,
+    )?;
+    module_loader.set_retry_pending_rescans(false);
+    module_loader.fetch_modules(fetch_mode).await
   }
 
   /// Renders a pulled payload:
@@ -678,7 +709,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     &self,
     mut carried_modules: FxIndexSet<ModuleIdx>,
     catch_up: Option<String>,
-    filename: &str,
   ) -> BuildResult<(String, Option<String>)> {
     // External modules have no factory to send.
     carried_modules.retain(|idx| self.module_table().modules[*idx].is_normal());
@@ -739,7 +769,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     }
 
     let (mut code, map) = source_joiner.join();
-    let sourcemap = self.finish_payload_sourcemap(&mut code, map, filename).await?;
+    let sourcemap = self.finish_payload_sourcemap(&mut code, map).await?;
     Ok((code, sourcemap))
   }
 
@@ -750,13 +780,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     &self,
     code: &mut String,
     map: Option<SourceMap>,
-    filename: &str,
   ) -> BuildResult<Option<String>> {
     let Some(mut map) = map else {
       return Ok(None);
     };
     let file_dir = self.options.cwd.as_path().join(&self.options.out_dir);
-    prepare_sourcemap(&self.options, &mut map, &file_dir, filename).await?;
+    prepare_sourcemap(&self.options, &mut map, &file_dir, HMR_PATCH_FILENAME).await?;
     match self.options.sourcemap {
       Some(SourceMapType::File | SourceMapType::Hidden) => Ok(Some(map.to_json_string())),
       Some(SourceMapType::Inline) => {
@@ -832,7 +861,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
     // The codegen map is the last element of the module's sourcemap chain, so on its
     // own it maps back to what the plugins produced rather than to the original file.
-    // Collapsing the chain is what lets a position in a patch or a lazy chunk resolve
+    // Collapsing the chain is what lets a position in a pulled payload resolve
     // to the source the user wrote, the same way `render_ecma_module` does for a
     // module rendered into a chunk.
     //
@@ -863,6 +892,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 struct ModuleRenderInput {
   pub idx: ModuleIdx,
   pub ecma_ast: EcmaAst,
+}
+
+/// The modules behind one number of `ClientHave::lazy`. At least one of them is in the graph.
+struct LazyRoute {
+  /// The module the client runs. `None` before the first visit.
+  target: Option<ModuleIdx>,
+  /// The lazy proxy that stands for `target`. `None` when nothing calls `import()` on it.
+  proxy: Option<ModuleIdx>,
 }
 
 /// A client's have-set read against the session.
@@ -900,7 +937,6 @@ impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
   fn collect_unheld_sync_deps(
     &self,
     walk_from: &[ModuleIdx],
-    follow_dynamic_of: Option<ModuleIdx>,
     client: &ClientView<'_>,
     out: &mut FxIndexSet<ModuleIdx>,
   ) {
@@ -934,10 +970,9 @@ impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
         continue;
       };
       for rec in &module.import_records {
-        // The proxy entry's fetched template reaches the real module through `import()`.
-        let follow = rec.kind.is_static()
-          || (Some(module_idx) == follow_dynamic_of && rec.kind == ImportKind::DynamicImport);
-        if follow && let Some(dep_idx) = rec.resolved_module {
+        if rec.kind.is_static()
+          && let Some(dep_idx) = rec.resolved_module
+        {
           to_sort.push(dep_idx);
         }
       }

@@ -1,0 +1,62 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// lib.js
+var _Decorated_decorators;
+var _m_dec;
+var _field_dec;
+let _init;
+let _init2;
+function dec(value, ctx) {
+	globalThis.__decCalls = (globalThis.__decCalls ?? 0) + 1;
+}
+_Decorated_decorators = [[void 0, dec]];
+_m_dec = [[void 0, dec]];
+var Decorated = class {
+	constructor() {
+		_runInitializers(_init, 5, this);
+	}
+	m() {}
+};
+_init = _decoratorStart(null);
+_decorateElement(_init, 1, "m", _m_dec, Decorated);
+Decorated = _decorateElement(_init, 0, "Decorated", _Decorated_decorators, Decorated);
+_runInitializers(_init, 1, Decorated);
+_field_dec = [[void 0, dec]];
+var OnlyMemberDecorated = class {
+	constructor() {
+		_defineProperty(this, "field", _runInitializers(_init2, 8, this, 1));
+		_runInitializers(_init2, 11, this);
+	}
+};
+_init2 = _decoratorStart(null);
+_decorateElement(_init2, 5, "field", _field_dec, OnlyMemberDecorated);
+_decoratorMetadata(_init2, OnlyMemberDecorated);
+var Used = class {
+	#_v_accessor_storage = 3;
+	get v() {
+		return this.#_v_accessor_storage;
+	}
+	set v(value) {
+		this.#_v_accessor_storage = value;
+	}
+};
+// main.js
+const value = new Used().v;
+export { value };
+
+```

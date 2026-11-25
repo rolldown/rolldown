@@ -286,11 +286,12 @@ the seed only; the client-side decision is unchanged.
   up empty, every client gets `HmrUpdate::Noop` (a server no-op,
   distinct from the client no-op in principle 2). `Noop` is server-wide:
   a client whose patch would carry no factory still gets a push with
-  `changedIds` and a new `seq`. Two cases ship anyway: everything after
+  `changedIds` and a new `seq`. Three cases ship anyway: everything after
   an errored build (clients stuck on the error overlay must receive the
-  recovery), and modules a `hotUpdate` hook returned (the change may
+  recovery), modules a `hotUpdate` hook returned (the change may
   live outside the module's own code, so identical output proves
-  nothing).
+  nothing), and modules that a rebuild read again after an HMR update
+  (the graph may hold a save that no client got).
 
 The rules of both steps are in
 [dev-engine/implementation.md](../dev-engine/implementation.md).

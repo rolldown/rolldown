@@ -771,6 +771,96 @@ mod tests {
     assert!(watched.contains(&dep), "{watched:#?}");
   }
 
+  /// With `RebuildStrategy::Always` one task runs the HMR stage and then a rebuild. The
+  /// `on_hmr_updates` callback runs between the two, so a save in the callback lands after the
+  /// HMR stage read the file. The next task must send that save as an update.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn a_save_after_the_hmr_stage_is_the_next_update() {
+    use std::sync::{Arc, Mutex};
+
+    use rolldown::{DevModeOptions, ExperimentalOptions};
+    use rolldown_common::{HmrUpdate, WatcherChangeKind};
+    use rolldown_utils::indexmap::FxIndexMap;
+
+    let dir = std::env::temp_dir()
+      .join(format!("rolldown-dev-save-after-hmr-stage-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    // The resolver returns real paths, and the temp dir can sit behind a symlink.
+    let dir = dunce::canonicalize(&dir).unwrap();
+    let main = dir.join("main.js");
+    std::fs::write(&main, "export const value = 1;\nimport.meta.hot.accept();\n").unwrap();
+
+    // One entry per `on_hmr_updates` call: the code of each patch, or `None` for any other update.
+    let updates = Arc::new(Mutex::new(Vec::<Vec<Option<String>>>::new()));
+    let on_hmr_updates = {
+      let updates = Arc::clone(&updates);
+      let main = main.clone();
+      Arc::new(move |result: rolldown_error::BuildResult<(Vec<_>, Vec<String>)>| {
+        let (client_updates, _) = result.unwrap();
+        let mut updates = updates.lock().unwrap();
+        updates.push(
+          client_updates
+            .into_iter()
+            .map(|client_update: rolldown_common::ClientHmrUpdate| match client_update.update {
+              HmrUpdate::Patch(patch) => Some(patch.code),
+              HmrUpdate::FullReload { .. } | HmrUpdate::Noop => None,
+            })
+            .collect(),
+        );
+        if updates.len() == 1 {
+          std::fs::write(&main, "export const value = 3;\nimport.meta.hot.accept();\n").unwrap();
+        }
+      })
+    };
+
+    let engine = super::DevEngine::new(
+      BundlerConfig::new(
+        BundlerOptions {
+          input: Some(vec!["./main.js".to_string().into()]),
+          cwd: Some(dir.clone()),
+          experimental: Some(ExperimentalOptions {
+            dev_mode: Some(DevModeOptions::default()),
+            ..Default::default()
+          }),
+          ..Default::default()
+        },
+        vec![],
+      ),
+      crate::DevOptions {
+        on_hmr_updates: Some(on_hmr_updates),
+        rebuild_strategy: Some(crate::RebuildStrategy::Always),
+        watch: Some(crate::DevWatchOptions {
+          enabled: Some(false),
+          skip_write: true,
+          ..Default::default()
+        }),
+        ..Default::default()
+      },
+    )
+    .unwrap();
+    engine.run().await.unwrap();
+    engine.create_client_for_testing().await;
+
+    let changed_main = || FxIndexMap::from_iter([(main.clone(), WatcherChangeKind::Update)]);
+    std::fs::write(&main, "export const value = 2;\nimport.meta.hot.accept();\n").unwrap();
+    engine.ensure_task_with_changed_files(changed_main()).await;
+    engine.ensure_task_with_changed_files(changed_main()).await;
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    let updates = updates.lock().unwrap();
+    assert_eq!(updates.len(), 2, "{updates:#?}");
+    let has_value = |update: &[Option<String>], value: &str| {
+      let expected = format!("value = {value}");
+      matches!(update, [Some(code)] if code.contains(&expected))
+    };
+    assert!(has_value(&updates[0], "2"), "{updates:#?}");
+    assert!(has_value(&updates[1], "3"), "{updates:#?}");
+  }
+
   #[cfg(feature = "testing")]
   const LAZY_FILES: &[(&str, &str)] = &[
     ("main.js", "import('./lazy.js');\n"),

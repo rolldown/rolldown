@@ -797,10 +797,12 @@ Then, across all files of the batch:
    cannot block error recovery.
 5. **Unchanged-output suppression** — modules whose re-rendered output
    is byte-identical to the pre-rebuild render are dropped from the
-   update. Two exemptions ship anyway: everything after an errored
-   build (recovery must reach clients stuck on the overlay), and
-   modules a `hotUpdate` hook explicitly returned (the change may live
-   outside the module's own code, so identical output proves nothing).
+   update. Three exemptions ship anyway: everything after an errored
+   build (recovery must reach clients stuck on the overlay), modules a
+   `hotUpdate` hook explicitly returned (the change may live outside
+   the module's own code, so identical output proves nothing), and the
+   modules in `Bundler::hmr_resend_module_ids` (a rebuild read them
+   again after an HMR update, see §10).
 6. **Refetch and stamp** — one partial scan and cache merge. The
    merge sets `Bundler::lost_hmr_update`, and the update clears it only
    when it returns its patches (§9b). Then the stamp table starts a
@@ -889,13 +891,15 @@ Known gaps in this walk, kept on purpose for now:
   rule. A tagged marker is possible later, but it must change on both
   sides in the same release.
 
-### `rebuild` (`bundling_task.rs:359-408`)
+### `BundlingTask::rebuild` (`bundling_task.rs`)
 
 - Locks the `Bundler`.
 - If the task ran the HMR stage (`HmrRebuild`: `RebuildStrategy::Always`,
   or the recovery from a `Rebuild`-stage failure, §7), keeps an `Arc` of
   the latest build's watch list. If the build below replaces that list,
-  the task sends it as `hmr_stage_watch_files`.
+  the task sends it as `hmr_stage_watch_files`. It also calls
+  `Bundler::mark_hmr_merged_modules_read_again` (see "Why the next HMR
+  update ships the modules this rebuild read again" below).
 - Picks the scan mode:
   ```rust
   let scan_mode = if self.input.requires_full_rebuild() {
@@ -936,6 +940,37 @@ sends BundleCompleted { hmr_stage_watch_files: A }
 `dep.js` is never watched and later edits to it produce nothing. An
 `Hmr`-only task has no such gap: no build replaces its list before the
 coordinator registers it (§11).
+
+Why the next HMR update ships the modules this rebuild read again: the
+HMR stage reads each changed file and merges its module into the graph.
+The rebuild reads the same files again, so its build hooks
+(`buildStart`, `transform`, `buildEnd`) see every changed module. A save
+can land between the two reads. Then only the rebuild merges it, and no
+client gets it. The save's own task compares the module with the graph,
+finds no change, and would send `Noop`:
+
+```
+HmrRebuild task                    file main.js     graph main.js
+HMR stage: reads, merges, sends 2  2                2
+save                               3
+rebuild:   reads main.js again     3                3   <- no client got 3
+next Hmr task: 3 vs 3              3                3   -> must still send 3
+```
+
+So the HMR stage records the ids of the modules it merged
+(`HmrStageInput::merged_module_ids`, filled right after `cache.merge`
+in `hmr_stage.rs`). `Bundler::compute_hmr_update_for_file_changes`
+(`impl_bundler_hmr.rs`) clears that list when it starts and when it
+fails. Before the build, `rebuild` calls
+`Bundler::mark_hmr_merged_modules_read_again`, which moves the list
+into `Bundler::hmr_resend_module_ids`. The next HMR stage that changes
+one of these modules skips its unchanged-output check, the same way as
+for a module that a `hotUpdate` hook selected, and removes it from the
+set after the merge. If no save landed in between, the next change to
+such a module ships it even when its output did not change; the clients
+then run the same code again.
+The test is `a_save_after_the_hmr_stage_is_the_next_update`
+(`dev_engine.rs`).
 
 ---
 

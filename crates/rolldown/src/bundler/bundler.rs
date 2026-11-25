@@ -29,6 +29,15 @@ pub struct Bundler {
   /// runs a full build. A successful full build clears it. It lives outside `cache` because
   /// a full scan drops `cache`, even when the scan fails.
   pub(super) lost_hmr_update: bool,
+  /// The ids of the modules that the last successful `compute_hmr_update_for_file_changes`
+  /// merged. See `mark_hmr_merged_modules_read_again`.
+  #[cfg_attr(not(feature = "experimental"), allow(dead_code))]
+  pub(super) hmr_merged_module_ids: rustc_hash::FxHashSet<arcstr::ArcStr>,
+  /// The ids of the modules that a rebuild read again after an HMR update merged them. The next
+  /// HMR update that changes one of them ships it, even when its output looks unchanged. See
+  /// `mark_hmr_merged_modules_read_again`.
+  #[cfg_attr(not(feature = "experimental"), allow(dead_code))]
+  pub(super) hmr_resend_module_ids: rustc_hash::FxHashSet<arcstr::ArcStr>,
   pub(super) closed: bool,
 }
 
@@ -53,6 +62,8 @@ impl Bundler {
       session: rolldown_devtools::Session::dummy(),
       cache: ScanStageCache::default(),
       lost_hmr_update: false,
+      hmr_merged_module_ids: rustc_hash::FxHashSet::default(),
+      hmr_resend_module_ids: rustc_hash::FxHashSet::default(),
       closed: false,
     })
   }

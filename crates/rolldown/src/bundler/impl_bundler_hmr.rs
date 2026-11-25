@@ -38,6 +38,7 @@ impl Bundler {
     // `BundleFactory::build_bundle`; wait for any deferred drops here too.
     crate::utils::defer_drop::drain();
     let _activity = crate::utils::build_activity::BuildActivity::enter();
+    self.hmr_merged_module_ids.clear();
 
     let Some(plugin_driver) = self.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver) else {
       return Err(anyhow::format_err!(
@@ -51,9 +52,11 @@ impl Bundler {
       plugin_driver: Arc::clone(plugin_driver),
       cache: &mut self.cache,
       lost_hmr_update: &mut self.lost_hmr_update,
+      merged_module_ids: &mut self.hmr_merged_module_ids,
+      resend_module_ids: &mut self.hmr_resend_module_ids,
       next_hmr_patch_id,
     });
-    hmr_stage
+    let result = hmr_stage
       .compute_hmr_update_for_file_changes(
         changed_file_paths,
         clients,
@@ -61,7 +64,21 @@ impl Bundler {
         last_build_errored,
         hot_update_hook_enabled,
       )
-      .await
+      .await;
+    if result.is_err() {
+      self.hmr_merged_module_ids.clear();
+    }
+    result
+  }
+
+  /// Call before a rebuild that reads again the files of the last successful
+  /// `compute_hmr_update_for_file_changes`. A save that lands between the two reaches the graph
+  /// only through the rebuild, so no client got it. The next HMR update that changes these
+  /// modules ships them even when their output equals the graph's.
+  /// See internal-docs/dev-engine/implementation.md §10.
+  pub fn mark_hmr_merged_modules_read_again(&mut self) {
+    let merged = std::mem::take(&mut self.hmr_merged_module_ids);
+    self.hmr_resend_module_ids.extend(merged);
   }
 
   /// Compute the top-level-evaluated set of the current snapshot: the modules whose
@@ -181,6 +198,8 @@ impl Bundler {
       plugin_driver: Arc::clone(plugin_driver),
       cache: &mut self.cache,
       lost_hmr_update: &mut self.lost_hmr_update,
+      merged_module_ids: &mut self.hmr_merged_module_ids,
+      resend_module_ids: &mut self.hmr_resend_module_ids,
       next_hmr_patch_id,
     });
     hmr_stage.compile_lazy_entry(&module_id, shipped, evaluated, stamp_table, merged).await

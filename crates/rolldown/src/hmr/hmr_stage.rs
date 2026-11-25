@@ -49,6 +49,11 @@ pub struct HmrStageInput<'a, Fs: FileSystem + Clone + 'static> {
   pub plugin_driver: SharedPluginDriver,
   pub cache: &'a mut ScanStageCache,
   pub lost_hmr_update: &'a mut bool,
+  /// `compute_hmr_update_for_file_changes` adds the ids of the modules it merged.
+  pub merged_module_ids: &'a mut FxHashSet<ArcStr>,
+  /// See `Bundler::mark_hmr_merged_modules_read_again`. `compute_hmr_update_for_file_changes`
+  /// ships these modules without the unchanged-output check, and removes the ones it merged.
+  pub resend_module_ids: &'a mut FxHashSet<ArcStr>,
   pub next_hmr_patch_id: Arc<AtomicU32>,
 }
 
@@ -260,6 +265,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     // broken edit rebuilds byte-identical output — the graph can't tell "broke,
     // then fixed" from "nothing happened", but clients are stuck on the error
     // (overlay / fallback page) and a suppressed update would leave them there.
+    // The modules in `resend_module_ids` skip the capture too: the graph may already hold
+    // content that no client got.
     let pre_rebuild_renders = if last_build_errored {
       FxHashMap::default()
     } else {
@@ -267,7 +274,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .iter()
         .filter(|module_idx| !hook_selected_modules.contains(*module_idx))
         .filter_map(|module_idx| {
-          self.module_table().modules[*module_idx].as_normal()?;
+          let module = self.module_table().modules[*module_idx].as_normal()?;
+          if self.resend_module_ids.contains(module.id.as_arc_str()) {
+            return None;
+          }
           let ecma_ast = self.index_ecma_ast()[*module_idx].as_ref()?;
           Some(ModuleRenderInput {
             idx: *module_idx,
@@ -354,6 +364,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       *self.lost_hmr_update = true;
       let plugin_driver = Arc::clone(&self.plugin_driver);
       self.cache.merge(module_loader_output.into(), &plugin_driver)?;
+      let modules = &self.input.cache.get_snapshot().module_table.modules;
+      for module in changed_modules.iter().filter_map(|module_idx| modules[*module_idx].as_normal())
+      {
+        let id = module.id.as_arc_str();
+        self.input.resend_module_ids.remove(id);
+        self.input.merged_module_ids.insert(id.clone());
+      }
 
       let options = Arc::clone(&self.options);
       self

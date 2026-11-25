@@ -51,6 +51,16 @@ class ModuleHotContext {
   }
 }
 
+/** @param {string} reason */
+function reload(reason) {
+  console.log(`[hmr]: Full reload required (${reason}), reloading page`);
+  if (typeof location !== 'undefined') {
+    location.reload();
+  } else {
+    console.log('[hmr]: location is undefined, cannot reload page');
+  }
+}
+
 class DefaultDevRuntime extends BaseDevRuntime {
   /**
    * @type {Map<string, ModuleHotContext>}
@@ -65,29 +75,28 @@ class DefaultDevRuntime extends BaseDevRuntime {
     this.moduleHotContexts.set(moduleId, hotContext);
     return hotContext;
   }
-}
 
-/** @param {string} url */
-function loadScript(url) {
-  var script = document.createElement('script');
-  script.src = url;
-  script.type = 'module';
-  script.onerror = function() {
-    console.error('Failed to load script: ' + url);
-  };
-  document.body.appendChild(script);
+  /**
+   * @override
+   * @param {string} reason
+   */
+  reloadNeeded(reason) {
+    const first = this.reloadReason === undefined;
+    super.reloadNeeded(reason);
+    if (first) reload(reason);
+  }
 }
 
 console.debug('HMR runtime loaded', '$ADDR');
-// Generate client ID immediately at runtime initialization
-// This ensures the client ID is available before any lazy imports
+// The dev server tells connections apart by this id.
 const clientId = crypto.randomUUID();
 const addr = new URL('ws://$ADDR');
 addr.searchParams.set('clientId', clientId);
 
 const socket = new WebSocket(addr);
 
-(/** @type {any} */ (globalThis)).__rolldown_runtime__ ??=
+/** @type {InstanceType<BaseDevRuntime>} */
+const runtime = (/** @type {any} */ (globalThis)).__rolldown_runtime__ ??=
   new DefaultDevRuntime(clientId);
 
 /** @param {MessageEvent} event */
@@ -98,19 +107,16 @@ socket.onmessage = function(event) {
     // Server acknowledged the connection
     console.debug('[hmr]: Connection established with server');
   } else if (data.type === 'hmr:update') {
-    if (typeof process === 'object') {
-      import(data.path);
-      console.debug(`[hmr]: Importing HMR patch: ${data.path}`);
-    } else {
-      console.debug(`[hmr]: Loading HMR patch: ${data.path}`);
-      loadScript(data.url);
-    }
-  } else if (data.type === 'hmr:reload') {
-    console.log('[hmr]: Full reload required, reloading page');
+    // This runtime has no boundary walk, so it cannot apply an update. It marks the modules
+    // stale, so a lazy chunk that arrives late cannot install old factories, and then reloads.
+    // A node process cannot reload: its dev server restarts it.
+    runtime.markStale(data.staleIds, data.gen);
     if (typeof location !== 'undefined') {
       location.reload();
     } else {
-      console.log('[hmr]: location is undefined, cannot reload page');
+      console.debug('[hmr]: Update received, waiting for a restart');
     }
+  } else if (data.type === 'hmr:reload') {
+    reload('the server sent a reload');
   }
 };

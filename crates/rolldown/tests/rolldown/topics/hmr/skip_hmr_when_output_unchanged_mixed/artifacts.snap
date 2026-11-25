@@ -22,6 +22,13 @@ __rolldown_runtime__.registerGraph({
 		[0, 1],
 		[2]
 	],
+	nums: [
+		0,
+		1,
+		2,
+		3
+	],
+	epoch: 1,
 	entries: [3]
 });
 // a.js
@@ -56,12 +63,33 @@ process.on("beforeExit", (code) => {
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- b.js
+
+### Stale Ids
+
+- b.js
+
+## Pull 0
+
+- g: 1
+- update: b.js, hub.js
+- executed: a.js, main.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["b.js","hub.js","a.js"],localCount:2,edges:[[],[2,0]],stamps:{0:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["b.js","hub.js","a.js"],localCount:2,edges:[[],[2,0]],nums:[1,2,0]});
 //#region b.js
-__rolldown_runtime__.registerFactory("b.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("b.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ b: () => b });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -69,11 +97,11 @@ __rolldown_runtime__.registerFactory("b.js", (function(__rolldown_module_id__) {
 		const b = "b2";
 		globalThis.__mixed_runs_b = (globalThis.__mixed_runs_b ?? 0) + 1;
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 //#region hub.js
-__rolldown_runtime__.registerFactory("hub.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("hub.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ combined: () => combined });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -93,13 +121,9 @@ __rolldown_runtime__.registerFactory("hub.js", (function(__rolldown_module_id__)
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- b.js
+- result: applied
 
 # HMR Step 1
 
@@ -109,12 +133,33 @@ __rolldown_runtime__.registerFactory("hub.js", (function(__rolldown_module_id__)
 
 # HMR Step 2
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 2
+
+### Changed Ids
+
+- a.js
+
+### Stale Ids
+
+- a.js
+
+## Pull 0
+
+- g: 2
+- update: a.js, hub.js
+- executed: b.js, main.js
+- factories: hub.js
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["a.js","hub.js","b.js"],localCount:2,edges:[[],[0,2]],stamps:{0:3}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(2);
+__rolldown_payload__.registerGraph({ids:["a.js"],localCount:1,edges:[[]],nums:[0]});
 //#region a.js
-__rolldown_runtime__.registerFactory("a.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("a.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ a: () => a });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -122,34 +167,11 @@ __rolldown_runtime__.registerFactory("a.js", (function(__rolldown_module_id__) {
 		const a = "a2";
 		globalThis.__mixed_runs_a = (globalThis.__mixed_runs_a ?? 0) + 1;
 	} finally {}
-}), 3);
-
-//#endregion
-//#region hub.js
-__rolldown_runtime__.registerFactory("hub.js", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ combined: () => combined });
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		__rolldown_runtime__.initModule("a.js");
-		var import_a_0 = __rolldown_runtime__.loadExports("a.js");
-		__rolldown_runtime__.initModule("b.js");
-		var import_b_1 = __rolldown_runtime__.loadExports("b.js");
-		const hot_hub = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		const combined = import_a_0.a + import_b_1.b;
-		globalThis.__mixed_runs_hub = (globalThis.__mixed_runs_hub ?? 0) + 1;
-		if (hot_hub) {
-			hot_hub.accept(() => {});
-		}
-	} finally {}
 }));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- a.js
+- result: applied

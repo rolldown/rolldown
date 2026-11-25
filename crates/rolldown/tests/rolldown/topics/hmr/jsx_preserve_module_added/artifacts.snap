@@ -11,6 +11,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["main.js"],
 	localCount: 1,
 	edges: [[]],
+	nums: [0],
+	epoch: 1,
 	entries: [0]
 });
 // main.js
@@ -25,23 +27,47 @@ export { value };
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- main.js
+
+### Stale Ids
+
+- main.js
+- view.jsx
+- tag.js
+- foo.js
+
+## Pull 0
+
+- g: 1
+- update: main.js
+- executed: (none)
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["foo.js","main.js","tag.js","view.jsx"],localCount:4,edges:[[],[3],[],[2,0]],stamps:{0:1,1:1,2:1,3:1},entries:[1]});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["foo.js","main.js","tag.js","view.jsx"],localCount:4,edges:[[],[3],[],[2,0]],nums:[1,0,3,2],entries:[1]});
 //#region foo.js
-__rolldown_runtime__.registerFactory("foo.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("foo.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		const hot_foo = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		function foo() {}
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 //#region main.js
-__rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("main.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ a: () => import_view_0.a });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -50,22 +76,22 @@ __rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__
 		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		hot_main.accept();
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 //#region tag.js
-__rolldown_runtime__.registerFactory("tag.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("tag.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ Tag: () => Tag });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		const hot_tag = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const Tag = "div";
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 //#region view.jsx
-__rolldown_runtime__.registerFactory("view.jsx", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("view.jsx", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			a: () => a,
@@ -80,18 +106,14 @@ __rolldown_runtime__.registerFactory("view.jsx", (function(__rolldown_module_id_
 		const a = <import_tag_0.Tag />;
 		const b = <import_foo_1.foo />;
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- main.js
+- result: not run: the fixture runs no client, so the harness made this pull
 
 ## Build Output
 
@@ -115,6 +137,13 @@ __rolldown_runtime__.registerGraph({
 		[0, 1],
 		[2]
 	],
+	nums: [
+		3,
+		1,
+		2,
+		0
+	],
+	epoch: 1,
 	entries: [3]
 });
 // tag.js

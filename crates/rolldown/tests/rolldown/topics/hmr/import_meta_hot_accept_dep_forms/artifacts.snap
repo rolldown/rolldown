@@ -93,6 +93,23 @@ __rolldown_runtime__.registerGraph({
 			12
 		]
 	],
+	nums: [
+		5,
+		6,
+		12,
+		13,
+		7,
+		8,
+		9,
+		10,
+		11,
+		3,
+		2,
+		0,
+		1,
+		4
+	],
+	epoch: 1,
 	entries: [13]
 });
 // one_arg/child.js
@@ -207,12 +224,33 @@ process.on("beforeExit", (code) => {
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- one_arg/child.js
+
+### Stale Ids
+
+- one_arg/child.js
+
+## Pull 0
+
+- g: 1
+- update: one_arg/child.js
+- executed: array_one_arg/child.js, array_one_arg/parent.js, falsy_deps/parent.js, falsy_deps/self.js, main.js, one_arg/parent.js, template/child.js, template/parent.js, template_array/a.js, template_array/b.js, template_array/parent.js, three_args/child.js, three_args/parent.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["one_arg/child.js"],localCount:1,edges:[[]],stamps:{0:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["one_arg/child.js"],localCount:1,edges:[[]],nums:[5]});
 //#region one_arg/child.js
-__rolldown_runtime__.registerFactory("one_arg/child.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("one_arg/child.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -220,27 +258,44 @@ __rolldown_runtime__.registerFactory("one_arg/child.js", (function(__rolldown_mo
 		globalThis.one_argChildRuns = (globalThis.one_argChildRuns ?? 0) + 1;
 		const count = 1;
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- one_arg/child.js
+- result: applied
 
 # HMR Step 1
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 2
+
+### Changed Ids
+
+- three_args/child.js
+
+### Stale Ids
+
+- three_args/child.js
+
+## Pull 0
+
+- g: 2
+- update: three_args/child.js
+- executed: array_one_arg/child.js, array_one_arg/parent.js, falsy_deps/parent.js, falsy_deps/self.js, main.js, one_arg/child.js, one_arg/parent.js, template/child.js, template/parent.js, template_array/a.js, template_array/b.js, template_array/parent.js, three_args/parent.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["three_args/child.js"],localCount:1,edges:[[]],stamps:{0:2}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(2);
+__rolldown_payload__.registerGraph({ids:["three_args/child.js"],localCount:1,edges:[[]],nums:[12]});
 //#region three_args/child.js
-__rolldown_runtime__.registerFactory("three_args/child.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("three_args/child.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -248,27 +303,44 @@ __rolldown_runtime__.registerFactory("three_args/child.js", (function(__rolldown
 		globalThis.three_argsChildRuns = (globalThis.three_argsChildRuns ?? 0) + 1;
 		const count = 1;
 	} finally {}
-}), 2);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- three_args/child.js
+- result: applied
 
 # HMR Step 2
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 3
+
+### Changed Ids
+
+- template/child.js
+
+### Stale Ids
+
+- template/child.js
+
+## Pull 0
+
+- g: 3
+- update: template/child.js
+- executed: array_one_arg/child.js, array_one_arg/parent.js, falsy_deps/parent.js, falsy_deps/self.js, main.js, one_arg/child.js, one_arg/parent.js, template/parent.js, template_array/a.js, template_array/b.js, template_array/parent.js, three_args/child.js, three_args/parent.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["template/child.js"],localCount:1,edges:[[]],stamps:{0:3}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(3);
+__rolldown_payload__.registerGraph({ids:["template/child.js"],localCount:1,edges:[[]],nums:[7]});
 //#region template/child.js
-__rolldown_runtime__.registerFactory("template/child.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("template/child.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -276,27 +348,44 @@ __rolldown_runtime__.registerFactory("template/child.js", (function(__rolldown_m
 		globalThis.templateChildRuns = (globalThis.templateChildRuns ?? 0) + 1;
 		const count = 1;
 	} finally {}
-}), 3);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- template/child.js
+- result: applied
 
 # HMR Step 3
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 4
+
+### Changed Ids
+
+- template_array/a.js
+
+### Stale Ids
+
+- template_array/a.js
+
+## Pull 0
+
+- g: 4
+- update: template_array/a.js
+- executed: array_one_arg/child.js, array_one_arg/parent.js, falsy_deps/parent.js, falsy_deps/self.js, main.js, one_arg/child.js, one_arg/parent.js, template/child.js, template/parent.js, template_array/b.js, template_array/parent.js, three_args/child.js, three_args/parent.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["template_array/a.js"],localCount:1,edges:[[]],stamps:{0:4}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(4);
+__rolldown_payload__.registerGraph({ids:["template_array/a.js"],localCount:1,edges:[[]],nums:[9]});
 //#region template_array/a.js
-__rolldown_runtime__.registerFactory("template_array/a.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("template_array/a.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -304,27 +393,44 @@ __rolldown_runtime__.registerFactory("template_array/a.js", (function(__rolldown
 		globalThis.template_array_aRuns = (globalThis.template_array_aRuns ?? 0) + 1;
 		const count = 1;
 	} finally {}
-}), 4);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- template_array/a.js
+- result: applied
 
 # HMR Step 4
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 5
+
+### Changed Ids
+
+- template_array/b.js
+
+### Stale Ids
+
+- template_array/b.js
+
+## Pull 0
+
+- g: 5
+- update: template_array/b.js
+- executed: array_one_arg/child.js, array_one_arg/parent.js, falsy_deps/parent.js, falsy_deps/self.js, main.js, one_arg/child.js, one_arg/parent.js, template/child.js, template/parent.js, template_array/a.js, template_array/parent.js, three_args/child.js, three_args/parent.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["template_array/b.js"],localCount:1,edges:[[]],stamps:{0:5}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(5);
+__rolldown_payload__.registerGraph({ids:["template_array/b.js"],localCount:1,edges:[[]],nums:[10]});
 //#region template_array/b.js
-__rolldown_runtime__.registerFactory("template_array/b.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("template_array/b.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -332,27 +438,44 @@ __rolldown_runtime__.registerFactory("template_array/b.js", (function(__rolldown
 		globalThis.template_array_bRuns = (globalThis.template_array_bRuns ?? 0) + 1;
 		const count = 1;
 	} finally {}
-}), 5);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- template_array/b.js
+- result: applied
 
 # HMR Step 5
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 6
+
+### Changed Ids
+
+- falsy_deps/self.js
+
+### Stale Ids
+
+- falsy_deps/self.js
+
+## Pull 0
+
+- g: 6
+- update: falsy_deps/self.js
+- executed: array_one_arg/child.js, array_one_arg/parent.js, falsy_deps/parent.js, main.js, one_arg/child.js, one_arg/parent.js, template/child.js, template/parent.js, template_array/a.js, template_array/b.js, template_array/parent.js, three_args/child.js, three_args/parent.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["falsy_deps/self.js"],localCount:1,edges:[[]],stamps:{0:6}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(6);
+__rolldown_payload__.registerGraph({ids:["falsy_deps/self.js"],localCount:1,edges:[[]],nums:[3]});
 //#region falsy_deps/self.js
-__rolldown_runtime__.registerFactory("falsy_deps/self.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("falsy_deps/self.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -363,27 +486,44 @@ __rolldown_runtime__.registerFactory("falsy_deps/self.js", (function(__rolldown_
 			globalThis.falsy_depsCallbackRan = true;
 		});
 	} finally {}
-}), 6);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- falsy_deps/self.js
+- result: applied
 
 # HMR Step 6
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 7
+
+### Changed Ids
+
+- array_one_arg/child.js
+
+### Stale Ids
+
+- array_one_arg/child.js
+
+## Pull 0
+
+- g: 7
+- update: array_one_arg/child.js
+- executed: array_one_arg/parent.js, falsy_deps/parent.js, falsy_deps/self.js, main.js, one_arg/child.js, one_arg/parent.js, template/child.js, template/parent.js, template_array/a.js, template_array/b.js, template_array/parent.js, three_args/child.js, three_args/parent.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["array_one_arg/child.js"],localCount:1,edges:[[]],stamps:{0:7}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(7);
+__rolldown_payload__.registerGraph({ids:["array_one_arg/child.js"],localCount:1,edges:[[]],nums:[0]});
 //#region array_one_arg/child.js
-__rolldown_runtime__.registerFactory("array_one_arg/child.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("array_one_arg/child.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ count: () => count });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -391,15 +531,11 @@ __rolldown_runtime__.registerFactory("array_one_arg/child.js", (function(__rolld
 		globalThis.array_one_argChildRuns = (globalThis.array_one_argChildRuns ?? 0) + 1;
 		const count = 1;
 	} finally {}
-}), 7);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- array_one_arg/child.js
+- result: applied

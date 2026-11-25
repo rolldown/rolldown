@@ -20,6 +20,12 @@ __rolldown_runtime__.registerGraph({
 		[0],
 		[1]
 	],
+	nums: [
+		0,
+		2,
+		1
+	],
+	epoch: 1,
 	entries: [2]
 });
 // child.js
@@ -75,12 +81,35 @@ process.on("beforeExit", (code) => {
 
 # HMR Step 1
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- child.js
+- parent.js
+
+### Stale Ids
+
+- child.js
+- parent.js
+
+## Pull 0
+
+- g: 1
+- update: child.js, parent.js
+- executed: main.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["child.js","parent.js"],localCount:2,edges:[[],[0]],stamps:{0:1,1:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["child.js","parent.js"],localCount:2,edges:[[],[0]],nums:[0,2]});
 //#region child.js
-__rolldown_runtime__.registerFactory("child.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("child.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			value: () => value,
@@ -91,11 +120,11 @@ __rolldown_runtime__.registerFactory("child.js", (function(__rolldown_module_id_
 		const value = "child";
 		const recreated = true;
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 //#region parent.js
-__rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("parent.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			parentValue: () => parentValue,
@@ -113,16 +142,11 @@ __rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id
 			globalThis.__delete_file_used_parent_reran = true;
 		});
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- child.js
-- parent.js
+- result: applied

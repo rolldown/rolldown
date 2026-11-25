@@ -85,20 +85,23 @@ Test cases can be skipped by prefixing the folder name with `.` (e.g., `.test_ca
 
 #### HMR tests
 
-If a test case folder contains any files named `*.hmr-*.js`, the test will run in HMR enabled mode.
+If a test case folder contains any file named `<name>.hmr-<step>.<ext>`, such as `main.hmr-0.js` or `tsconfig.hmr-1.json`, the test runs in HMR mode with a dev engine.
 
 ##### HMR edit files
 
-- Files that match the pattern `*.hmr-*.js` are called **HMR edit files**.
-- These files represent changes to existing source files.
-- The part after `hmr-` indicates the **step number** of the change. For example, `main.hmr-1.js` means a change applied in **step 1**.
+- Files that match the pattern `*.hmr-<step>.*` are called **HMR edit files**.
+- These files represent changes to source files. An edit file of a file that does not exist yet adds it.
+- The number after `hmr-` is the **step** of the change, counted from 0. For example, `main.hmr-1.js` replaces `main.js` in **step 1**.
 
 ##### How the test works
 
 1. All non-HMR files are copied to a temporary directory.
-2. An initial build is generated from these files.
-3. Then, HMR step 1 begins: files with `.hmr-1.js` are used to overwrite the corresponding files in the temporary directory, and an HMR patch is generated.
-4. This process repeats for step 2, 3, and so on. Files like `*.hmr-2.js`, `*.hmr-3.js`, etc., are applied step by step.
+2. The dev engine makes an initial build from these files.
+3. A Node.js process runs the output like one browser tab: the **test client** (`crates/rolldown_testing/src/hmr_test_client.rs` and `hmr-client-driver.js`). The client stays alive for all steps.
+4. In step 0, the files with `.hmr-0.` overwrite their files in the temporary directory. The engine sends its update to the client as a push. The client walks its module graph like the Vite client, and pulls the code it needs from `DevEngine::render_patch`. Then it applies the hot update.
+5. This repeats for step 1, 2, and so on.
+
+The snapshot shows, for each step, the update, each pull of the client (the decoded request and the patch code), and the result of the client.
 
 :::details Example
 
@@ -106,21 +109,38 @@ If the test folder has these files:
 
 - `main.js`
 - `sub.js`
-- `main.hmr-1.js`
-- `sub.hmr-1.js`
-- `sub2.hmr-2.js`
+- `main.hmr-0.js`
+- `sub.hmr-0.js`
+- `sub2.hmr-1.js`
 
 The test will go through these steps:
 
 1. **Initial build**: `main.js`, `sub.js`
-2. **Step 1**:
-   - `main.js` is replaced with `main.hmr-1.js`
-   - `sub.js` is replaced with `sub.hmr-1.js`
-3. **Step 2**:
-   - `main.js` and `sub.js` remain as in Step 1
-   - `sub2.js` is added using the contents of `sub2.hmr-2.js`
+2. **Step 0**:
+   - `main.js` is replaced with `main.hmr-0.js`
+   - `sub.js` is replaced with `sub.hmr-0.js`
+3. **Step 1**:
+   - `main.js` and `sub.js` remain as in step 0
+   - `sub2.js` is added using the contents of `sub2.hmr-1.js`
 
 :::
+
+##### Rules for fixtures that run the test client
+
+- Put the checks in a `process.on('beforeExit', ...)` handler of the entry. The client ends after the last step, so the checks see the state after every hot update. Return early when the exit code is not 0, so a failed step shows its own error.
+- The process must be able to exit by itself. A timer that keeps running, such as `setInterval`, keeps it alive, and the test fails with "the client did not exit" after a long wait.
+- `_test.mjs` and `_test.cjs` are not supported. The test panics when one of them exists.
+- A full reload that the client decides on is a test failure, because an executed fixture checks hot updates. A reload that the server asks for (a failed pull, or a Reload answer) is recorded, and the next successful build starts a new client.
+- `import()` calls that run at the same time can pull in any order, so the snapshot changes from run to run. Run them one after the other.
+
+With `"expectExecuted": false`, no client runs. The harness then makes one pull for each `Changed` update instead: the pull says that it ran every module of the last full build and holds no factories. The snapshot still shows the patch code.
+
+Options under `dev` in `_config.json` change the steps:
+
+- `fullBuildAfterSteps` — after each listed step, run a full build. When it succeeds, the client reloads onto its output.
+- `lostPushSteps` — the client does not get the update of each listed step, as when its connection drops for a moment. Its next pull has an old generation, so the server answers with a catch-up or a Reload.
+- `ensureLatestBuildOutputForEachStep` — after each step, wait for the build output to be up to date, so the snapshot shows every build.
+- `checkStateParity` (default `true`) — after each step, compare the scan state with a fresh full build of the same files.
 
 ### Manual testing
 

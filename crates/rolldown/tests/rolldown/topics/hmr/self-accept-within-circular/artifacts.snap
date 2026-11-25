@@ -22,6 +22,13 @@ __rolldown_runtime__.registerGraph({
 		[1],
 		[2]
 	],
+	nums: [
+		2,
+		1,
+		0,
+		3
+	],
+	epoch: 1,
 	entries: [3]
 });
 // c.js
@@ -52,13 +59,34 @@ assert.strictEqual(a.b.c, "c");
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- c.js
+
+### Stale Ids
+
+- c.js
+
+## Pull 0
+
+- g: 1
+- update: c.js
+- executed: a.js, b.js, main.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["c.js","b.js"],localCount:1,edges:[[1]],stamps:{0:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["c.js","b.js"],localCount:1,edges:[[1]],nums:[2,1]});
 //#region c.js
 import * as import$c$2ejs_0_node_assert from "node:assert";
-__rolldown_runtime__.registerFactory("c.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("c.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ c: () => c });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -71,15 +99,11 @@ __rolldown_runtime__.registerFactory("c.js", (function(__rolldown_module_id__) {
 			import$c$2ejs_0_node_assert.default.fail("the last generation has no further edit to accept");
 		});
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- c.js
+- result: applied

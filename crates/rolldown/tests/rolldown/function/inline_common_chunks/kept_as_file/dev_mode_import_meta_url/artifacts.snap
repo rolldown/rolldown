@@ -12,6 +12,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["a.js", "shared.js"],
 	localCount: 1,
 	edges: [[1]],
+	nums: [0, 2],
+	epoch: 0,
 	entries: [0]
 });
 // a.js
@@ -37,6 +39,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["b.js", "shared.js"],
 	localCount: 1,
 	edges: [[1]],
+	nums: [1, 2],
+	epoch: 0,
 	entries: [0]
 });
 // b.js
@@ -68,7 +72,9 @@ import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["shared.js"],
 	localCount: 1,
-	edges: [[]]
+	edges: [[]],
+	nums: [2],
+	epoch: 0
 });
 // shared.js
 var shared_exports = /* @__PURE__ */ __exportAll({ url: () => url });

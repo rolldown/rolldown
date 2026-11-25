@@ -19,6 +19,12 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0, 1]
 	],
+	nums: [
+		0,
+		1,
+		2
+	],
+	epoch: 1,
 	entries: [2]
 });
 // a.js
@@ -78,12 +84,35 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 # HMR Step 2
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- b.js
+- a.js
+
+### Stale Ids
+
+- b.js
+- a.js
+
+## Pull 0
+
+- g: 1
+- update: a.js, b.js
+- executed: main.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["a.js","b.js"],localCount:2,edges:[[],[]],stamps:{0:1,1:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["a.js","b.js"],localCount:2,edges:[[],[]],nums:[0,1]});
 //#region a.js
-__rolldown_runtime__.registerFactory("a.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("a.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ a: () => a });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -91,11 +120,11 @@ __rolldown_runtime__.registerFactory("a.js", (function(__rolldown_module_id__) {
 		const a = "a-edited-while-b-broken";
 		hot_a.accept();
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 //#region b.js
-__rolldown_runtime__.registerFactory("b.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("b.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ b: () => b });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -103,19 +132,14 @@ __rolldown_runtime__.registerFactory("b.js", (function(__rolldown_module_id__) {
 		const b = "b-fixed";
 		hot_b.accept();
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- b.js
-- a.js
+- result: not run: the fixture runs no client, so the harness made this pull
 
 ## Build Output
 
@@ -137,6 +161,12 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0, 1]
 	],
+	nums: [
+		0,
+		1,
+		2
+	],
+	epoch: 1,
 	entries: [2]
 });
 // a.js

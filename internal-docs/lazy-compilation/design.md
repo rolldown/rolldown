@@ -7,14 +7,14 @@
 1. **Transparent UX** - `import('./module')` just works; the finalizer rewrites the import into a `requestLazy` call
 2. **Dynamic imports only** - static imports always compiled immediately. Boundary creation is module-type-blind (see Scope)
 3. **`requestLazy` entry point** - a lazy `import()` compiles to `__rolldown_runtime__.requestLazy(realStableId, proxyId)`; the runtime loads the chunk once through `loadLazyChunk`, then runs the module through the ordinary `initModule` gate
-4. **Compilation granularity** - lazy module + the sync deps whose current copy the requesting client does not already hold; nested `import()` become new lazy boundaries
-5. **Dev server returns JS directly** - `/@vite/lazy` returns the compiled code as a single JS string; the browser loads it as an ES module (only inline sourcemaps survive — see implementation.md)
+4. **Compilation granularity** - lazy module + the sync deps that the requesting client neither ran nor holds a current factory of; nested `import()` become new lazy boundaries
+5. **Dev server returns JS directly** - `/@vite/lazy` returns the compiled code as a single JS string; the browser loads it as an ES module. The engine returns the sourcemap next to the code, or inlines it for `sourcemap: 'inline'` (see implementation.md)
 6. **Module IDs** - runtime module-map lookups use **stable IDs** (cwd-relative); absolute paths appear only in the proxy id that `requestLazy` passes to `loadLazyChunk` (sent as the `/@vite/lazy?id=` param) and the fetched template's `import($MODULE_ID)`
 7. **Proxy module states** - a proxy is a server-side graph node, never fetched as a chunk. Two states: **not fetched** (empty body, keeps the real module out of the build) and **fetched** (imports the real module, rooting the partial scan)
 8. **No build after a compile** - a lazy compile merges the route into the graph and queues no build: no page loads a lazy route from the build output. The next build of any kind takes the route from the graph. A repeat visit of a fetched route also skips the scan (see [Repeat Visits](#6-repeat-visits))
-9. **Dedup** - the server skips modules whose current copy the client already holds (its ship map + boot-evaluated map, `HmrStage::compile_lazy_entry`); in the browser `initModule` runs a factory only when the module is not yet in the module cache — a shared module never executes twice
+9. **Dedup** - the server skips modules the client already ran or holds a current factory of, as the request says (`HmrStage::compile_lazy_entry`); in the browser `initModule` runs a factory only when the module is not yet in the module cache — a shared module never executes twice
 10. **Error handling** - unknown module ids are rejected (security gate, #9969); init errors in lazy modules reject the consumer's `await import()` catchably (#9981)
-11. **ClientId** - browser-generated id per tab (Vite's `bundledDevClient.ts`); selects the per-client `ClientSession` (`crates/rolldown_dev/src/types/client_session.rs`) whose ship map and boot-evaluated map size the lazy chunk
+11. **The request describes the client** - the lazy URL carries the same have-set as an HMR patch request: epoch, known generation, executed modules and held factories (see [hmr/design.md](../hmr/design.md), principle 2). The server keeps no state per tab
 12. **After boot, only factories** - a page gets scope-hoisted code only at boot; every lazy route reaches it as factories, even a route the server compiled before (see [After Boot, Only Factories](#5-after-boot-only-factories))
 
 ## What is Lazy Compilation?
@@ -46,7 +46,7 @@ export default {
 ## Scope
 
 - **Dynamic imports only** (`import()`) - static imports are always compiled
-- **Standalone feature** - Reuses the HMR runtime/rendering path for module output. The `/@vite/lazy` request itself emits no HMR update — but once fetched, the lazy module is an ordinary watched graph module, and later edits to it flow through the normal per-client HMR pipeline (see implementation.md "Editing a fetched lazy module")
+- **Standalone feature** - Reuses the HMR runtime/rendering path for module output. The `/@vite/lazy` request itself emits no HMR update — but once fetched, the lazy module is an ordinary watched graph module, and later edits to it flow through the normal HMR pipeline (see implementation.md "Editing a fetched lazy module")
 - **Module-type-blind boundary** - `resolve_id` proxies every dynamic import that resolves to a module in this build, with no extension or module-type filter, so the real target is not loaded until the first `/@vite/lazy` request. External resolutions are the exception: there is nothing to defer, and the dev runtime never gets a factory for an external, so `requestLazy` cannot run it. Config `external` and a plugin `resolveId` that returns `{ external: true }` both keep the original `import()` (#11273). Everything in the compiled unit must render as an ECMAScript AST:
   - **CSS** - unsupported in rolldown (removed, #4271); lazy compilation _defers_ the hard error from server startup to the first `/lazy` request (HTTP 500, catchable rejection at the consumer's `await import()`)
   - **JSON / text / base64 / dataurl** - currently broken inside lazy chunks: their exports are synthesized at link time, which the lazy render path skips, so they register empty exports until a rebuild + page refresh (see implementation.md Known Limitations)
@@ -57,7 +57,7 @@ export default {
 
 When a lazy module is requested:
 
-- Compile **that module + its synchronous dependencies** — minus any module whose current copy the requesting client already holds: its factory was shipped (the ship map `shipped[C]`) or the entry chunk ran it at top level (the boot-evaluated map). Both records live in the client's `ClientSession` (`crates/rolldown_dev/src/types/client_session.rs`); the HMR model behind them is in [hmr/design.md](../hmr/design.md)
+- Compile **that module + its synchronous dependencies** — minus what the requesting client says it has. A module it ran (`e`) stops the walk: its exports stay live. A module whose current factory it holds (`f`, stamp at or below its `g`) is walked through but not carried. The request format and the rules are in [hmr/design.md](../hmr/design.md), principles 2 and 7
 - Nested dynamic imports (`import()` within the lazy module) are **not** compiled - they become their own lazy boundaries
 - This creates a natural "lazy boundary" at each dynamic import
 
@@ -103,10 +103,11 @@ sequenceDiagram
   alt lazy.js and its static imports already ran or have factories here
     R->>R: no request
   else
-    R->>V: loadLazyChunk(proxyId): GET /@vite/lazy?id=proxyId&clientId=C
-    V->>E: compileEntry(proxyId, C)
-    E-->>V: registerGraph, then one registerFactory per module that C lacks
-    V-->>R: JS, ending with payloadDelivered(filename)
+    R->>V: loadLazyChunk(proxyId): GET /@vite/lazy?id=proxyId&s=…&g=…&e=…&f=…&n=…
+    V->>E: compileEntry(proxyId, query)
+    E-->>V: catch-up (if needed), registerGraph, then one registerFactory per module the query lacks
+    V-->>R: JS
+    R->>R: still not runnable → load once more; then onMissingFactory
   end
   R->>R: initModule('lazy.js')
   R-->>P: exports
@@ -120,7 +121,7 @@ The second argument is the boundary's own id (absolute path + `?rolldown-lazy=1`
 
 Nothing is registered under the proxy id in the client. A cache entry with no factory behind it reads as "executed" to the HMR boundary walk, which would turn a patch arriving mid-load into a full page reload.
 
-The client graph has no proxy node either: `registerGraph` links the importer straight to the real module. A proxy node would be the real module's only importer, and since it never runs, the boundary walk would stop at it and drop the update. The server walk, which decides what a patch carries, steps over the proxy in the same way, so the two walks reach the same importers. The client rows link the importer to the real module whether or not the proxy was fetched. An unfetched proxy is the stub with no `import()`, so the server walk finds the proxy by the real module's id, not by an import record.
+The client graph has no proxy node either: `registerGraph` links the importer straight to the real module. A proxy node would be the real module's only importer, and since it never runs, the boundary walk would stop at it and drop the update. The client rows link the importer to the real module whether or not the proxy was fetched. The server has no importer walk of its own: it walks only down the static imports of what the client asks for.
 
 **CommonJS interop happens in the runtime, not at the call site.** A production build rewrites `import()` of a CommonJS module into `__toESM(require_x(), isNodeMode)`, so the importer sees `default` = `module.exports`. The lazy call site cannot do the same: the importer is compiled while the importee is still a stub, so its exports kind is unknown (vitejs/vite#23558). The split is:
 
@@ -160,19 +161,19 @@ The state transition is managed by `LazyCompilationContext.mark_as_fetched()`.
 
 The dev server owns the lazy endpoint URL. The client loads a lazy chunk through `DevRuntime#loadLazyChunk(proxyModuleId)` (`runtime-extra-dev-common.js`):
 
-- The default imports `/@vite/lazy?id=...&clientId=...`.
-- A server that serves the endpoint at another URL overrides the method in its `DevRuntime` subclass.
-- Emitted code carries ids only. It never contains the URL, the `clientId`, or `encodeURIComponent` (a user binding of that name in the importer's scope cannot break the request).
+- The default imports `lazyUrl(proxyModuleId, query)`, which is `/@vite/lazy?id=<proxy id>&s=<epoch>&g=<knownGen>&e=<E>&f=<F>&n=<nonce>`. The query after `id` is `encodeHave` with an empty update set, the same have-set a patch request sends.
+- A server that serves the endpoint at another URL overrides `lazyUrl` in its `DevRuntime` subclass. A client that does not load through `import()`, such as Vite's module runner, overrides `loadLazyChunk`.
+- Emitted code carries ids only. It never contains the URL, the have-set, or `encodeURIComponent` (a user binding of that name in the importer's scope cannot break the request).
 
 The dev server handles these requests:
 
-1. Receive request with the **proxy module ID** (absolute path with `?rolldown-lazy=1`) and the client's UUID
-2. Call `DevEngine.compileEntry(moduleId, clientId)` (TS) / `DevEngine::compile_lazy_entry` (Rust)
-3. `DevEngine::compile_lazy_entry` copies that client's ship map and boot-evaluated map out of its `ClientSession` and marks the proxy as fetched
+1. Receive request with the **proxy module ID** (absolute path with `?rolldown-lazy=1`) and the client's have-set in the query
+2. Call `DevEngine.compileEntry(moduleId, query)` (TS) / `DevEngine::compile_lazy_entry` (Rust)
+3. `DevEngine::compile_lazy_entry` parses the query and checks the epoch and generation first. A bad query, another engine's epoch, or a generation the session cannot catch up gives `{ type: 'Reload', reason }` and changes nothing on the server. Otherwise it marks the proxy as fetched
 4. **Security gate**: the id is only a lookup key into the build cache — an id not already in the module graph is rejected with `Lazy entry module not found in cache` (never resolved from the filesystem, so a malicious request cannot bundle arbitrary files; analogous to Vite's `server.fs.strict`, pinned by test, #9969)
 5. Partial scan from the proxy module - plugin returns the fetched template, whose `import($MODULE_ID)` triggers compilation of the actual module. A repeat visit skips this scan (see [Repeat Visits](#6-repeat-visits)). The chunk carries `registerFactory` calls only; `requestLazy` runs the module once the chunk has evaluated
 6. Assets emitted during the compile are delivered via the `onAdditionalAssets` callback **before** the code is returned, so they are servable when the chunk executes (#9815). A compile that fails after its merge delivers them too
-7. **Return compiled JS directly** (`Content-Type: application/javascript`) - the browser loads it as an ES module; compile failures answer HTTP 500. Vite appends a `__rolldown_runtime__.payloadDelivered(filename)` line to the chunk (`payloadDeliveredAck` in `bundledDev.ts`); when the client runs it, `DevEngine::notify_payload_delivered` records the chunk's modules in that client's ship map
+7. **Return compiled JS directly** (`Content-Type: text/javascript`) - the browser loads it as an ES module; compile failures answer HTTP 500, and the user's `import()` rejects. A `Reload` is served like the one of a patch request: status 200 and a body that calls `__rolldown_runtime__.reloadNeeded(reason)`, so the page reloads and the `import()` rejects (see [hmr/design.md](../hmr/design.md), principle 6). The chunk starts with the `beginPayload(G)` prelude, and with a `catchUp` statement when the client's `g` is behind the session, as a patch does. The server records nothing about the client
 8. **Notify coordinator** - the coordinator watches the files the compile loaded. It queues no build: no page loads the route from the build output, because every lazy `import()` calls `requestLazy`. The one exception is a lost HMR update (see [Repeat Visits](#6-repeat-visits))
 
 ### 5. After Boot, Only Factories
@@ -201,7 +202,7 @@ A page that reloads loses its factories, so a visited route costs one `/@vite/la
 
 ```mermaid
 flowchart TD
-  R["/@vite/lazy?id=P&clientId=C"] --> F{"P has no resolved import() record<br/>OR P waits in pending_rescans?"}
+  R["/@vite/lazy?id=P&s=…&g=…&e=…&f=…"] --> F{"P has no resolved import() record<br/>OR P waits in pending_rescans?"}
   F -- "yes (first visit, a retry, a deleted route file)" --> Scan["partial scan of P only, merge, apply_module_side_effects_overrides"]
   F -- "no (repeat visit)" --> Sel
   Scan --> Sel["walk, render, join"]
@@ -244,4 +245,4 @@ It was rejected because about 7 ms per repeat click does not pay for that memory
 ## Related
 
 - [implementation.md](./implementation.md) — the lazy-compilation implementation
-- [hmr/design.md](../hmr/design.md) — the client-side HMR model; lazy chunk sizing reads its ship map and boot-evaluated map
+- [hmr/design.md](../hmr/design.md) — the client-side HMR model; a lazy request carries the same have-set as a patch request

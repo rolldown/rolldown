@@ -12,6 +12,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["hmr.js", "main.js"],
 	localCount: 2,
 	edges: [[], [0]],
+	nums: [0, 1],
+	epoch: 1,
 	entries: [1]
 });
 // hmr.js
@@ -34,15 +36,39 @@ process.on("beforeExit", (code) => {
 
 # HMR Step 0
 
-## Errors
+## Meta
 
-### UNHANDLEABLE_ERROR
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- hmr.js
+
+### Stale Ids
+
+- hmr.js
+
+## Pull 0
+
+- g: 1
+- update: hmr.js
+- executed: main.js
+- factories: (none)
+
+### Errors
+
+#### UNHANDLEABLE_ERROR
 
 ```text
 [UNHANDLEABLE_ERROR] Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
 simulated failure while rendering an HMR patch
 
 ```
+
+## Client
+
+- result: reload: the patch request failed
 
 ## Build Output
 
@@ -58,11 +84,6 @@ simulated failure while rendering an HMR patch
 
 # HMR Step 1
 
-## Meta
-
-- update type: full-reload
-- reason: an earlier hot update failed
-
 ## Build Output
 
 ### Assets
@@ -76,6 +97,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["hmr.js", "main.js"],
 	localCount: 2,
 	edges: [[], [0]],
+	nums: [0, 1],
+	epoch: 1,
 	entries: [1]
 });
 // hmr.js

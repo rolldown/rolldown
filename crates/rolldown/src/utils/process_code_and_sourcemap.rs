@@ -25,21 +25,6 @@ const SOURCEMAP_FILENAME_ENCODE_SET: &AsciiSet = &CONTROLS
   .add(b'{')
   .add(b'}');
 
-#[cfg(feature = "experimental")]
-pub async fn process_code_and_sourcemap(
-  options: &NormalizedBundlerOptions,
-  code: &mut String,
-  map: &mut SourceMap,
-  file_dir: &Path,
-  filename: &str,
-  debug_id: u128,
-  sourcemap_filename: Option<String>,
-) -> BuildResult<Option<OutputAsset>> {
-  prepare_sourcemap(options, map, file_dir, filename).await?;
-  let map_filename = sourcemap_filename.unwrap_or_else(|| format!("{filename}.map"));
-  emit_sourcemap(options, code, map, &map_filename, debug_id)
-}
-
 // See internal-docs/chunk-hash/implementation.md for source indices and callback handling.
 pub async fn prepare_sourcemap(
   options: &NormalizedBundlerOptions,

@@ -1,7 +1,7 @@
 use std::{
   collections::VecDeque,
   path::PathBuf,
-  sync::{Arc, Mutex as StdMutex, atomic::AtomicU32},
+  sync::{Arc, Mutex as StdMutex},
 };
 
 use anyhow::Context;
@@ -34,9 +34,6 @@ use crate::{
 pub struct BundleCoordinator {
   bundler: Arc<Mutex<Bundler>>,
   ctx: SharedDevContext,
-  /// The engine-wide patch-id counter (shared with lazy compiles) — see the
-  /// field doc on `DevEngine::next_hmr_patch_id`.
-  next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
   watcher: StdMutex<FsWatcher>,
   /// The bundler's `cwd`, which the `watch.include` / `watch.exclude` patterns are
@@ -59,12 +56,10 @@ impl BundleCoordinator {
     rx: CoordinatorReceiver,
     watcher: FsWatcher,
     cwd: PathBuf,
-    next_hmr_patch_id: Arc<AtomicU32>,
   ) -> Self {
     Self {
       bundler,
       ctx,
-      next_hmr_patch_id,
       rx,
       watcher: StdMutex::new(watcher),
       cwd,
@@ -362,12 +357,8 @@ impl BundleCoordinator {
             );
           }
 
-          let bundling_task = BundlingTask::new(
-            task_input,
-            Arc::clone(&self.bundler),
-            Arc::clone(&self.ctx),
-            Arc::clone(&self.next_hmr_patch_id),
-          );
+          let bundling_task =
+            BundlingTask::new(task_input, Arc::clone(&self.bundler), Arc::clone(&self.ctx));
           if bundling_task.input.requires_full_rebuild() {
             self.set_initial_build_state(CoordinatorState::FullBuildInProgress);
           } else {

@@ -3,6 +3,5 @@
     "experimental": {
       "devMode": {}
     }
-  },
-  "expectExecuted": false
+  }
 }

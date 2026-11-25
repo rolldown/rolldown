@@ -1,0 +1,187 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"hmr.js",
+		"shared.js",
+		"holder.js",
+		"main.js",
+		"route.js"
+	],
+	localCount: 4,
+	edges: [
+		[],
+		[],
+		[],
+		[
+			0,
+			1,
+			2
+		]
+	],
+	dynamicEdges: { 2: [4] },
+	nums: [
+		1,
+		5,
+		2,
+		3,
+		4
+	],
+	epoch: 1,
+	entries: [3]
+});
+// hmr.js
+var hmr_exports = /* @__PURE__ */ __exportAll({ value: () => "v1" });
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
+__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+hmr_hot.accept();
+// shared.js
+var shared_exports = /* @__PURE__ */ __exportAll({ shared: () => shared });
+__rolldown_runtime__.createModuleHotContext("shared.js");
+__rolldown_runtime__.registerModule("shared.js", { exports: shared_exports });
+const shared = "shared";
+// holder.js
+var holder_exports = /* @__PURE__ */ __exportAll({ load: () => load });
+__rolldown_runtime__.createModuleHotContext("holder.js");
+__rolldown_runtime__.registerModule("holder.js", { exports: holder_exports });
+function load() {
+	return import("./route.js");
+}
+// main.js
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+console.log(shared, typeof load);
+export { __exportAll as n, shared as t };
+
+```
+
+## route.js
+
+```js
+import { n as __exportAll, t as shared } from "./main.js";
+__rolldown_runtime__.registerGraph({
+	ids: [
+		"dep.js",
+		"route.js",
+		"shared.js"
+	],
+	localCount: 2,
+	edges: [[], [2, 0]],
+	nums: [
+		0,
+		4,
+		5
+	],
+	epoch: 1
+});
+// dep.js
+var dep_exports = /* @__PURE__ */ __exportAll({ dep: () => "dep" });
+__rolldown_runtime__.createModuleHotContext("dep.js");
+__rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
+// route.js
+var route_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+__rolldown_runtime__.createModuleHotContext("route.js");
+__rolldown_runtime__.registerModule("route.js", { exports: route_exports });
+const value = `route:${shared}:dep`;
+export { value };
+
+```
+
+# HMR Step 0
+
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- hmr.js
+
+### Stale Ids
+
+- hmr.js
+
+## Pull 0
+
+- g: 1
+- update: hmr.js
+- executed: holder.js, main.js, shared.js
+- factories: (none)
+
+### Code
+
+```js
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["hmr.js","route.js"],localCount:1,edges:[[]],dynamicEdges:{0:[1]},nums:[1,4]});
+//#region hmr.js
+import * as import$hmr$2ejs_0_node_assert_strict from "node:assert/strict";
+__rolldown_payload__.registerFactory("hmr.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const value = "v2";
+		__rolldown_runtime__.loadDynamic("route.js").then((mod) => {
+			import$hmr$2ejs_0_node_assert_strict.default.strictEqual(mod.value, "route:shared:dep");
+			globalThis.__dynamic_import_unloaded_chunk = true;
+		});
+		process.on("beforeExit", () => import$hmr$2ejs_0_node_assert_strict.default.ok(globalThis.__dynamic_import_unloaded_chunk));
+		hot_hmr.accept();
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Pull 1
+
+- g: 1
+- update: route.js
+- executed: hmr.js, holder.js, main.js, shared.js
+- factories: (none)
+
+### Code
+
+```js
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["dep.js","route.js","shared.js"],localCount:2,edges:[[],[2,0]],nums:[0,4,5]});
+//#region dep.js
+__rolldown_payload__.registerFactory("dep.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ dep: () => dep });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		const hot_dep = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const dep = "dep";
+	} finally {}
+}));
+
+//#endregion
+//#region route.js
+__rolldown_payload__.registerFactory("route.js", (function(__rolldown_module_id__) {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
+		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
+		__rolldown_runtime__.initModule("shared.js");
+		var import_shared_0 = __rolldown_runtime__.loadExports("shared.js");
+		__rolldown_runtime__.initModule("dep.js");
+		var import_dep_1 = __rolldown_runtime__.loadExports("dep.js");
+		const hot_route = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		const value = `route:${import_shared_0.shared}:${import_dep_1.dep}`;
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Client
+
+- result: applied

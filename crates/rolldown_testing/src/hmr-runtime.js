@@ -53,16 +53,41 @@ class TestHotContext {
 }
 
 /**
- * Test-harness mirror of the dedicated FBM HMR client: the walk on the runtime's static
- * imports and module cache with acceptance from the live hot contexts, then remove from
- * the module cache + dep-first re-runs from the factory map. Driven per patch by
- * `__testApplyHmr(changedIds)`, the push stand-in. A full-reload update throws —
- * executed-style fixtures assert hot updates, and reload cases must not run under
- * `should_execute_output`.
+ * Test-harness mirror of the dedicated FBM HMR client. Per push, `__testHandlePush` marks the
+ * stale modules, walks the runtime's static imports and module cache with acceptance from the
+ * live hot contexts, pulls the factories the update needs (`ensureRunnable`), then removes the
+ * update from the module cache and re-runs the boundaries dep-first. A full reload that the
+ * client decides on throws: executed fixtures assert hot updates.
  */
 class TestDevRuntime extends BaseDevRuntime {
   /** @type {Map<string, TestHotContext>} */
   contexts = new Map();
+  /** @type {Set<Promise<unknown>>} */
+  pendingDynamicLoads = new Set();
+
+  /**
+   * @override
+   * @param {string} id
+   */
+  loadDynamic(id) {
+    const pending = super.loadDynamic(id);
+    this.pendingDynamicLoads.add(pending);
+    const forget = () => this.pendingDynamicLoads.delete(pending);
+    pending.then(forget, forget);
+    return pending;
+  }
+
+  /**
+   * Waits for the `import()` calls an update started, and the ones those started, so their
+   * pulls belong to the step of that update.
+   */
+  async __testSettle() {
+    for (;;) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      if (this.pendingDynamicLoads.size === 0) return;
+      await Promise.allSettled(this.pendingDynamicLoads);
+    }
+  }
 
   /**
    * @override
@@ -109,11 +134,47 @@ class TestDevRuntime extends BaseDevRuntime {
   }
 
   /**
+   * @param {{ changedIds: string[], staleIds: string[], gen: number }} push
+   * @returns {Promise<{ status: 'applied' | 'noop' | 'stale-only' | 'reload', pulls: number }>}
+   */
+  async __testHandlePush({ changedIds, staleIds, gen }) {
+    this.markStale(staleIds, gen);
+    if (gen <= this.appliedGen) return { status: 'stale-only', pulls: 0 };
+    const noncesBefore = this.requestNonce;
+    let walkFrom = changedIds;
+    for (let walks = 1; ; walks++) {
+      const { updateSet, boundaries } = this.__testWalk(walkFrom);
+      // Called for an empty update too, as in Vite: a push that skipped a generation pulls the
+      // catch-up.
+      const ready = await this.ensureRunnable(updateSet);
+      if (ready.type === 'reload') {
+        if (this.reloadReason !== undefined) {
+          return { status: 'reload', pulls: this.requestNonce - noncesBefore };
+        }
+        throw new Error(`[test-hmr] full reload: ${ready.reason}`);
+      }
+      if (ready.type === 'caught-up') {
+        if (walks === 2) throw new Error('[test-hmr] full reload: caught up twice');
+        walkFrom = [...new Set([...walkFrom, ...ready.changedIds])];
+        continue;
+      }
+      if (updateSet.size === 0) {
+        this.appliedGen = Math.max(this.appliedGen, this.knownGen);
+        return { status: 'noop', pulls: this.requestNonce - noncesBefore };
+      }
+      this.__testApply(updateSet, boundaries);
+      this.appliedGen = Math.max(this.appliedGen, this.knownGen);
+      return { status: 'applied', pulls: this.requestNonce - noncesBefore };
+    }
+  }
+
+  /**
    * @param {string[]} changedIds
    */
-  __testApplyHmr(changedIds) {
+  __testWalk(changedIds) {
     /** @type {[string, string][]} */
     const boundaries = [];
+    /** @type {Set<string>} */
     const updateSet = new Set();
     // Vite's `traversedModules`: one set for the whole update, so a module
     // reachable by multiple importer paths is walked (and its boundary recorded) once
@@ -129,11 +190,14 @@ class TestDevRuntime extends BaseDevRuntime {
       );
       if (fullReloadReason) throw new Error(`[test-hmr] full reload: ${fullReloadReason}`);
     }
-    for (const id of updateSet) {
-      if (!this.hasFactory(id)) {
-        throw new Error(`[test-hmr] full reload: no factory for ${id}`);
-      }
-    }
+    return { updateSet, boundaries };
+  }
+
+  /**
+   * @param {Set<string>} updateSet
+   * @param {[string, string][]} boundaries
+   */
+  __testApply(updateSet, boundaries) {
     // capture the old generation's callbacks before evictions wipe the contexts
     const applies = boundaries.map(([boundary, acceptedVia]) => ({
       acceptedVia,
@@ -210,6 +274,4 @@ class TestDevRuntime extends BaseDevRuntime {
   }
 }
 
-const clientId = crypto.randomUUID();
-
-/** @type {any} */ (globalThis).__rolldown_runtime__ ??= new TestDevRuntime(clientId);
+/** @type {any} */ (globalThis).__rolldown_runtime__ ??= new TestDevRuntime();

@@ -10,7 +10,9 @@ import { t as __exportAll } from "./main.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["heavy.js"],
 	localCount: 1,
-	edges: [[]]
+	edges: [[]],
+	nums: [0],
+	epoch: 1
 });
 // heavy.js
 var heavy_exports = /* @__PURE__ */ __exportAll({ heavy: () => heavy });
@@ -39,6 +41,13 @@ __rolldown_runtime__.registerGraph({
 		[0, 1]
 	],
 	dynamicEdges: { 1: [3] },
+	nums: [
+		1,
+		2,
+		3,
+		0
+	],
+	epoch: 1,
 	entries: [2]
 });
 // hmr.js
@@ -65,12 +74,33 @@ export { __exportAll as t };
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- hmr.js
+
+### Stale Ids
+
+- hmr.js
+
+## Pull 0
+
+- g: 1
+- update: hmr.js
+- executed: lazy-holder.js, main.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["heavy.js","hmr.js"],localCount:2,edges:[[],[0]],stamps:{1:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["heavy.js","hmr.js"],localCount:2,edges:[[],[0]],nums:[0,1]});
 //#region heavy.js
-__rolldown_runtime__.registerFactory("heavy.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("heavy.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ heavy: () => heavy });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -81,7 +111,7 @@ __rolldown_runtime__.registerFactory("heavy.js", (function(__rolldown_module_id_
 
 //#endregion
 //#region hmr.js
-__rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("hmr.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -92,15 +122,11 @@ __rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__)
 		console.log("hmr", value, import_heavy_0.heavy);
 		hot_hmr.accept();
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- hmr.js
+- result: applied

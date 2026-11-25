@@ -2,9 +2,11 @@ import { getDevWatchOptionsForCi } from '@rolldown/test-dev-server';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import type { InputOptions, OutputOptions, RolldownOutput } from 'rolldown';
-import type { DevEngine, DevOptions } from 'rolldown/experimental';
+import type { BindingHmrUpdate, DevEngine, DevOptions } from 'rolldown/experimental';
 import { dev as _dev } from 'rolldown/experimental';
+import type * as DevRuntimeModule from 'rolldown/experimental/runtime';
 import { sleep } from 'rolldown-tests/utils';
 import { test, vi } from 'vitest';
 
@@ -36,6 +38,62 @@ function dev(
 async function editFile(filePath: string, content: string) {
   await sleep(1000);
   fs.writeFileSync(filePath, content);
+}
+
+type ChangedUpdate = Extract<BindingHmrUpdate, { type: 'Changed' }>;
+
+function runInRuntime(code: string, runtime: DevRuntimeModule.DevRuntime): void {
+  vm.runInThisContext(`(__rolldown_runtime__) => {\n${code}\n}`)(runtime);
+}
+
+/**
+ * A client that loaded the full build in `cwd/dist`: it holds the graph rows of `main.js`, and
+ * every module of those rows ran.
+ */
+async function createClient(cwd: string): Promise<DevRuntimeModule.DevRuntime> {
+  const { DevRuntime }: typeof DevRuntimeModule = await import(
+    import.meta.resolve('rolldown/experimental/runtime')
+  );
+  const runtime = new DevRuntime();
+  runtime.hooks = { createModuleHotContext: () => ({}), onModuleCacheRemoval: () => {} };
+  const code = fs.readFileSync(path.join(cwd, 'dist', 'main.js'), 'utf8');
+  for (const graph of code.match(/__rolldown_runtime__\.registerGraph\(\{[\s\S]*?\}\);/g) ?? []) {
+    runInRuntime(graph, runtime);
+  }
+  for (const id of runtime.staticImports.keys()) {
+    runtime.registerModule(id);
+  }
+  return runtime;
+}
+
+function changedUpdates(onHmrUpdates: ReturnType<typeof vi.fn>): ChangedUpdate[] {
+  return onHmrUpdates.mock.calls.flatMap(([result]) =>
+    result instanceof Error || result.update.type !== 'Changed' ? [] : [result.update],
+  );
+}
+
+/**
+ * Handles `push` the way the client does before it walks, then pulls the patch for the update
+ * made of the modules with the given file names.
+ */
+async function pullPatch(
+  engine: DevEngine,
+  client: DevRuntimeModule.DevRuntime,
+  push: ChangedUpdate,
+  fileNames: string[],
+): Promise<string> {
+  client.markStale(push.staleIds, push.gen);
+  const updateIds = new Set(
+    [...client.staticImports.keys()].filter((id) => fileNames.includes(path.basename(id))),
+  );
+  if (updateIds.size !== fileNames.length) {
+    throw new Error(`the client has no row for some of ${fileNames.join(', ')}`);
+  }
+  const response = await engine.renderPatch(client.encodeHave(updateIds));
+  if (response.type !== 'Patch') {
+    throw new Error(`expected a patch, got a reload: ${response.reason}`);
+  }
+  return response.code;
 }
 
 test.concurrent(
@@ -214,13 +272,12 @@ test.concurrent(
   },
 );
 
-// An HMR patch's factories are re-evaluation demand: only modules the client may
-// re-run belong in it. When an edit makes a hot module import a module the entry
-// chunk already evaluated at top level, the patch must carry the edited module's
-// factory only — the new import is served by the live exports already registered
-// on the client (`initModule` is registry-gated), never by re-shipping a factory.
+// An HMR patch carries only what the client cannot run. When an edit makes a hot module
+// import a module the client already ran, the patch carries the edited module's factory
+// only: the new import is served by the live exports already registered on the client
+// (`initModule` is registry-gated).
 test.concurrent(
-  'HMR patch does not ship factories for a newly imported top-level-evaluated module',
+  'HMR patch does not carry a factory for a newly imported module the client ran',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {
     const retryCount = task.result?.retryCount ?? 0;
@@ -248,8 +305,7 @@ test.concurrent(
     });
 
     await engine.run();
-    // The hello: updates are computed per registered client.
-    await engine.registerClient('registered-client');
+    const client = await createClient(cwd);
 
     // The edit adds an import of `lib.js`, which the entry chunk already
     // evaluated at top level (`main.js` imports it statically).
@@ -258,19 +314,14 @@ test.concurrent(
       `import { value } from './lib.js';\nexport const tag = 'hot-' + value;\nimport.meta.hot.accept();\n`,
     );
 
-    const findPatch = () =>
-      onHmrUpdates.mock.calls
-        .flatMap(([result]) => (result instanceof Error ? [] : result.updates))
-        .find((u) => u.clientId === 'registered-client' && u.update.type === 'Patch');
-    await expect.poll(findPatch, { timeout: 20_000 }).toBeTruthy();
-
-    const patch = findPatch()!.update as { type: 'Patch'; code: string };
+    await expect.poll(() => changedUpdates(onHmrUpdates), { timeout: 20_000 }).not.toHaveLength(0);
+    const code = await pullPatch(engine, client, changedUpdates(onHmrUpdates)[0], ['hot.js']);
     // The edited module re-runs, so its factory ships.
-    expect(patch.code).toMatch(/registerFactory\("[^"]*hot\.js"/);
+    expect(code).toMatch(/registerFactory\("[^"]*hot\.js"/);
     // The newly imported module stays live on the client; no factory for it.
-    expect(patch.code).not.toMatch(/registerFactory\("[^"]*lib\.js"/);
+    expect(code).not.toMatch(/registerFactory\("[^"]*lib\.js"/);
     // The re-run resolves the new import through the registry instead.
-    expect(patch.code).toMatch(/initModule\("[^"]*lib\.js"\)/);
+    expect(code).toMatch(/initModule\("[^"]*lib\.js"\)/);
   },
 );
 
@@ -328,18 +379,14 @@ test.concurrent(
     });
 
     await engine.run();
-    await engine.registerClient('barrel-client');
+    // The barrel is in its own chunk, so the client did not run it.
+    const client = await createClient(cwd);
     const view = path.join(cwd, 'view.js');
     await editFile(view, fs.readFileSync(view, 'utf8').replace("'before'", "'after'"));
 
-    const findPatch = () =>
-      onHmrUpdates.mock.calls
-        .flatMap(([result]) => (result instanceof Error ? [] : result.updates))
-        .find((u) => u.clientId === 'barrel-client' && u.update.type === 'Patch');
-    await expect.poll(findPatch, { timeout: 20_000 }).toBeTruthy();
-
-    const patch = findPatch()!.update as { type: 'Patch'; code: string };
-    expect(patch.code).toMatch(/registerFactory\("[^"]*barrel\.js"/);
+    await expect.poll(() => changedUpdates(onHmrUpdates), { timeout: 20_000 }).not.toHaveLength(0);
+    const code = await pullPatch(engine, client, changedUpdates(onHmrUpdates)[0], ['view.js']);
+    expect(code).toMatch(/registerFactory\("[^"]*barrel\.js"/);
   },
 );
 
@@ -376,33 +423,25 @@ test.concurrent(
     });
 
     await engine.run();
-    await engine.registerClient('client');
+    const client = await createClient(cwd);
     const chunk = await engine.compileEntry(
       `${path.join(cwd, 'lazy.js')}?rolldown-lazy=1`,
-      'client',
+      client.encodeHave(new Set()),
     );
-    await engine.notifyPayloadDelivered(chunk.filename);
+    if (chunk.type !== 'Chunk') throw new Error(`expected a chunk: ${chunk.reason}`);
+    runInRuntime(chunk.code, client);
     await engine.ensureLatestBuildOutput();
 
-    const patchWith = (code: unknown) =>
-      expect.objectContaining({
-        updates: expect.arrayContaining([
-          expect.objectContaining({
-            clientId: 'client',
-            update: expect.objectContaining({ type: 'Patch', code }),
-          }),
-        ]),
-      });
-    const lazyFactory = expect.stringMatching(/registerFactory\("[^"]*lazy\.js"/);
-    const proxyFactory = expect.stringMatching(/registerFactory\("[^"]*\?rolldown-lazy=1"/);
+    const lazyFactory = /registerFactory\("[^"]*lazy\.js"/;
+    const proxyFactory = /registerFactory\("[^"]*\?rolldown-lazy=1"/;
 
     // ESM to CommonJS
     onHmrUpdates.mockClear();
     await editFile(path.join(cwd, 'lazy.js'), `module.exports = { value: 'cjs' };\n`);
-    await expect
-      .poll(() => onHmrUpdates, { timeout: 20_000 })
-      .toHaveBeenCalledWith(patchWith(lazyFactory));
-    expect(onHmrUpdates).not.toHaveBeenCalledWith(patchWith(proxyFactory));
+    await expect.poll(() => changedUpdates(onHmrUpdates), { timeout: 20_000 }).not.toHaveLength(0);
+    let code = await pullPatch(engine, client, changedUpdates(onHmrUpdates)[0], ['lazy.js']);
+    expect(code).toMatch(lazyFactory);
+    expect(code).not.toMatch(proxyFactory);
 
     // a new lazy `import()`, so a new proxy
     onHmrUpdates.mockClear();
@@ -410,10 +449,10 @@ test.concurrent(
       path.join(cwd, 'lazy.js'),
       `module.exports = { value: 'cjs', load: () => import('./other.js') };\n`,
     );
-    await expect
-      .poll(() => onHmrUpdates, { timeout: 20_000 })
-      .toHaveBeenCalledWith(patchWith(lazyFactory));
-    expect(onHmrUpdates).not.toHaveBeenCalledWith(patchWith(proxyFactory));
+    await expect.poll(() => changedUpdates(onHmrUpdates), { timeout: 20_000 }).not.toHaveLength(0);
+    code = await pullPatch(engine, client, changedUpdates(onHmrUpdates)[0], ['lazy.js']);
+    expect(code).toMatch(lazyFactory);
+    expect(code).not.toMatch(proxyFactory);
   },
 );
 
@@ -453,16 +492,12 @@ test.concurrent(
     });
 
     await engine.run();
-    await engine.registerClient('client');
+    const client = await createClient(cwd);
 
     const errorCalls = () =>
       onHmrUpdates.mock.calls
         .map(([result]) => result)
         .filter((result): result is Error => result instanceof Error);
-    const patches = () =>
-      onHmrUpdates.mock.calls
-        .flatMap(([result]) => (result instanceof Error ? [] : result.updates))
-        .filter((u) => u.clientId === 'client' && u.update.type === 'Patch');
 
     // Delete the imported file: the round must fail with an unresolved import,
     // exactly like a cold build of the same file state.
@@ -472,13 +507,16 @@ test.concurrent(
     await expect.poll(() => errorCalls().length, { timeout: 20_000 }).toBeGreaterThan(0);
     expect(String(errorCalls()[0])).toMatch(/child\.js/);
 
-    // Recreate the file with changed content: recovery must ship the new
-    // content to the client.
+    // Recreate the file with changed content: the patch of the recovery must carry the new
+    // content.
     onHmrUpdates.mockClear();
     await editFile(path.join(cwd, 'child.js'), `export const value = 'child2';\n`);
-    await expect.poll(() => patches().length, { timeout: 20_000 }).toBeGreaterThan(0);
-    const patch = patches()[0].update as { type: 'Patch'; code: string };
-    expect(patch.code).toContain('child2');
+    await expect.poll(() => changedUpdates(onHmrUpdates), { timeout: 20_000 }).not.toHaveLength(0);
+    const code = await pullPatch(engine, client, changedUpdates(onHmrUpdates)[0], [
+      'child.js',
+      'parent.js',
+    ]);
+    expect(code).toContain('child2');
   },
 );
 

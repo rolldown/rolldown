@@ -1,11 +1,8 @@
-use std::sync::{
-  Arc,
-  atomic::{AtomicU32, Ordering},
-};
+use std::sync::{Arc, atomic::Ordering};
 
 use arcstr::ArcStr;
 use async_lock::Mutex;
-use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrUpdate, ScanMode, WatcherChangeKind};
+use rolldown_common::{HmrUpdate, ScanMode, WatcherChangeKind};
 use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap};
 
 use rolldown::Bundler;
@@ -13,17 +10,13 @@ use rolldown::Bundler;
 use crate::{
   BundleOutput,
   dev_context::SharedDevContext,
-  types::{
-    coordinator_msg::CoordinatorMsg, error_stage::ErrorStage, pending_payload::PendingPayload,
-    task_input::TaskInput,
-  },
+  types::{coordinator_msg::CoordinatorMsg, error_stage::ErrorStage, task_input::TaskInput},
 };
 
 pub struct BundlingTask {
   pub input: TaskInput,
   pub bundler: Arc<Mutex<Bundler>>,
   pub dev_context: SharedDevContext,
-  pub next_hmr_patch_id: Arc<AtomicU32>,
   /// Set when `watch_change` hook or `generate_hmr_updates` errored.
   hmr_errored: bool,
   /// Set when `rebuild()` errored. Takes precedence over `hmr_errored`
@@ -40,13 +33,11 @@ impl BundlingTask {
     input: TaskInput,
     bundler: Arc<Mutex<Bundler>>,
     dev_context: SharedDevContext,
-    next_hmr_patch_id: Arc<AtomicU32>,
   ) -> Self {
     Self {
       input,
       bundler,
       dev_context,
-      next_hmr_patch_id,
       has_rebuild_happen: false,
       hmr_errored: false,
       rebuild_errored: false,
@@ -151,7 +142,7 @@ impl BundlingTask {
       } else if self.should_clear_resolver_cache() {
         bundler.clear_resolver_cache();
       }
-      if changed_tsconfig {
+      let reason = if changed_tsconfig {
         tracing::trace!("[BundlingTask] detects a tsconfig change, upgrading to a full rebuild");
         Some("tsconfig change")
       } else if bundler.has_lost_hmr_update() {
@@ -161,7 +152,12 @@ impl BundlingTask {
         Some("an earlier hot update failed")
       } else {
         None
+      };
+      if reason.is_some() {
+        // Before the reload goes out, so no client gets a patch for the output it leaves.
+        bundler.begin_hmr_full_reload();
       }
+      reason
     };
     if let Some(reload_reason) = reload_reason {
       if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref() {
@@ -177,14 +173,10 @@ impl BundlingTask {
         if changed_files.is_empty() {
           changed_files.push("*".to_owned());
         }
-        let updates = (self.dev_context.clients.lock().await)
-          .keys()
-          .map(|client_id| ClientHmrUpdate {
-            client_id: client_id.clone(),
-            update: HmrUpdate::FullReload { reason: reload_reason.to_owned() },
-          })
-          .collect();
-        on_hmr_updates(Ok((updates, changed_files)));
+        on_hmr_updates(Ok((
+          HmrUpdate::FullReload { reason: reload_reason.to_owned() },
+          changed_files,
+        )));
       }
       self.input = TaskInput::FullBuild;
     }
@@ -224,86 +216,15 @@ impl BundlingTask {
       .map(|(p, event)| (p.to_string_lossy().to_string(), *event))
       .collect::<FxIndexMap<_, _>>();
 
-    // Read-only per-client inputs for this push. No seq here: it is assigned after compute,
-    // only to the patches we actually deliver (see below). Snapshot the ids and per-client maps
-    // and release the clients lock before the compute await — the compute only reads the
-    // snapshot, and a delivery notification landing mid-compute is folded into the next
-    // push either way; holding the lock would block connect/disconnect and delivery
-    // notifications for the whole rebuild.
-    let client_snapshots = {
-      let client_sessions = self.dev_context.clients.lock().await;
-      client_sessions
-        .iter()
-        .map(|(client_key, client)| {
-          (client_key.clone(), client.shipped.clone(), Arc::clone(&client.top_level_evaluated))
-        })
-        .collect::<Vec<_>>()
-    };
-    let client_inputs: Vec<ClientHmrInput> = client_snapshots
-      .iter()
-      .map(|(client_id, shipped, top_level_evaluated)| ClientHmrInput {
-        client_id: client_id.as_str(),
-        shipped,
-        top_level_evaluated,
-      })
-      .collect();
-
-    // Compute HMR updates for all clients in one call. After an errored task the
-    // unchanged-output suppression is disabled, so a byte-identical recovery
-    // still reaches clients stuck on that error (a `Noop` would send nothing).
-    let mut stamp_table = self.dev_context.stamp_table.lock().await;
-    let mut hmr_result = bundler
+    // After an errored task the unchanged-output suppression is disabled, so a byte-identical
+    // recovery still reaches clients stuck on that error (a `Noop` would send nothing).
+    let hmr_result = bundler
       .compute_hmr_update_for_file_changes(
         &changed_files,
-        &client_inputs,
-        &mut stamp_table,
-        Arc::clone(&self.next_hmr_patch_id),
         self.dev_context.last_task_errored.load(Ordering::Relaxed),
         self.dev_context.options.hot_update,
       )
       .await;
-    drop(stamp_table);
-    drop(client_inputs);
-
-    // `seq` is incremented only when the client actually receives an update — i.e. an
-    // `HmrUpdate::Patch`. A `HmrUpdate::Noop` sends nothing, so it never advances the
-    // counter. The client enforces a strict `seq === lastSeq + 1`, so consuming a seq
-    // without delivering an envelope would leave a gap and trigger a spurious full reload.
-    // A client that disconnected during compute has no session here, so its patch keeps
-    // `seq: 0`. It is not filtered out: the loop below still records it as a pending
-    // payload and `on_hmr_updates` still receives it; the consumer finds no client for it.
-    if let Ok(client_updates) = &mut hmr_result {
-      let mut client_sessions = self.dev_context.clients.lock().await;
-      for update in client_updates.iter_mut() {
-        if let HmrUpdate::Patch(patch) = &mut update.update {
-          if let Some(session) = client_sessions.get_mut(&update.client_id) {
-            session.next_seq += 1;
-            patch.seq = session.next_seq;
-          }
-        }
-      }
-    }
-
-    // Record each rendered patch as pending (only if successful): the delivery
-    // notification for `patch.filename` max-merges its stamps into `shipped[C]`.
-    // `carried` is handed over instead of cloned — the binding layer drops it (it stays
-    // server-side), so the pending entry is its only consumer from here on.
-    if let Ok(client_updates) = &mut hmr_result {
-      for update in client_updates.iter_mut() {
-        if let HmrUpdate::Patch(patch) = &mut update.update {
-          self
-            .dev_context
-            .insert_pending_payload(
-              patch.filename.clone(),
-              PendingPayload {
-                client_id: update.client_id.clone(),
-                modules: std::mem::take(&mut patch.carried),
-              },
-            )
-            .await;
-        }
-      }
-    }
 
     let succeeded = hmr_result.is_ok();
     let has_callback = self.dev_context.options.on_hmr_updates.is_some();
@@ -312,10 +233,10 @@ impl BundlingTask {
       self.hmr_errored = true;
     }
 
-    // Deliver any assets emitted while generating this HMR patch (e.g. an image
-    // newly imported by the changed module) BEFORE sending the patch, so the
-    // consumer can register/serve them before the client requests them. A pure
-    // HMR patch never triggers `on_output`, so this is their only delivery path.
+    // Deliver any assets emitted while computing this update (e.g. an image newly
+    // imported by the changed module) BEFORE sending the update, so the consumer can
+    // register/serve them before the client requests them. A pure HMR update never
+    // triggers `on_output`, so this is their only delivery path.
     if succeeded {
       if let Some(on_additional_assets) = self.dev_context.options.on_additional_assets.as_ref() {
         let mut output = BundleOutput::default();
@@ -328,9 +249,9 @@ impl BundlingTask {
 
     // Call on_hmr_updates callback if provided
     if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref() {
-      on_hmr_updates(hmr_result.map(|client_updates| {
-        (client_updates, changed_files.iter().map(|(p, _)| p.clone()).collect())
-      }));
+      on_hmr_updates(
+        hmr_result.map(|update| (update, changed_files.iter().map(|(p, _)| p.clone()).collect())),
+      );
     }
 
     // Continue when HMR succeeded, or when the consumer was informed of the
@@ -371,20 +292,9 @@ impl BundlingTask {
     self.hmr_stage_watch_files =
       hmr_stage_watch_files.filter(|list| !Arc::ptr_eq(list, bundler.watch_files()));
 
-    match &build_result {
-      Err(err) => {
-        tracing::error!("[BundlingTask] rebuild failed: {:?}", err);
-        self.rebuild_errored = true;
-      }
-      Ok(output) => {
-        // The output just written is what any newly loading client evaluates; refresh
-        // the top-level-evaluated snapshot new sessions freeze in at hello (`register_client`).
-        let top_level_evaluated = {
-          let stamp_table = self.dev_context.stamp_table.lock().await;
-          bundler.compute_top_level_evaluated_modules(&stamp_table, output)
-        };
-        *self.dev_context.top_level_evaluated.lock().await = Arc::new(top_level_evaluated);
-      }
+    if let Err(err) = &build_result {
+      tracing::error!("[BundlingTask] rebuild failed: {:?}", err);
+      self.rebuild_errored = true;
     }
 
     // Call on_output callback if provided

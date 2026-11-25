@@ -1,12 +1,12 @@
 use std::path::Path;
 
 use rolldown::BundleOutput;
-use rolldown_common::HmrUpdate;
+use rolldown_common::{HmrPullResponse, HmrUpdate};
 use rolldown_error::BuildResult;
 use rolldown_testing_config::TestMeta;
-use sugar_path::SugarPath;
 
 use super::{DevRoundOutput, SnapshotSection};
+use crate::hmr_test_client::HmrClientStepRecord;
 use crate::types::build_artifacts_snapshot::BuildArtifactsSnapshot;
 use crate::utils::{snapshot as snapshot_utils, tweak_snapshot};
 
@@ -55,7 +55,8 @@ impl DevArtifactsSnapshot {
         let hmr_sections = Self::create_hmr_step_sections(
           test_meta,
           step_index,
-          step_output.hmr_updates,
+          step_output.hmr_update,
+          step_output.client,
           step_output.build_outputs,
           cwd,
         );
@@ -79,7 +80,8 @@ impl DevArtifactsSnapshot {
   fn create_hmr_step_sections(
     test_meta: &TestMeta,
     step: usize,
-    hmr_result: BuildResult<(Vec<rolldown_common::ClientHmrUpdate>, Vec<String>)>,
+    hmr_result: BuildResult<(Option<HmrUpdate>, Vec<String>)>,
+    client: Option<HmrClientStepRecord>,
     build_outputs: Vec<BuildResult<BundleOutput>>,
     cwd: &Path,
   ) -> Vec<SnapshotSection> {
@@ -87,16 +89,9 @@ impl DevArtifactsSnapshot {
 
     // 1. Render HMR updates (always)
     match hmr_result {
-      Ok((hmr_updates, _changed_files)) => {
-        for hmr_update in hmr_updates {
-          // Add HMR update details as children (Code, Meta)
-          if let Some(code_section) =
-            Self::create_hmr_code_section(test_meta, &hmr_update.update, cwd)
-          {
-            step_section.add_child(code_section);
-          }
-          let meta_section = Self::create_hmr_meta_section(&hmr_update.update, cwd);
-          step_section.add_child(meta_section);
+      Ok((hmr_update, _changed_files)) => {
+        if let Some(hmr_update) = hmr_update {
+          step_section.add_child(Self::create_hmr_meta_section(&hmr_update, cwd));
         }
       }
       Err(errs) => {
@@ -105,7 +100,47 @@ impl DevArtifactsSnapshot {
       }
     }
 
-    // 2. Render build outputs as children (if any and non-empty)
+    // 2. Render what the test client did with the push
+    if let Some(client) = client {
+      for (index, pull) in client.pulls.into_iter().enumerate() {
+        let mut pull_section = SnapshotSection::with_title(format!("Pull {index}"));
+        let ids =
+          |ids: &[String]| if ids.is_empty() { "(none)".to_owned() } else { ids.join(", ") };
+        pull_section.add_content(&format!(
+          "- g: {}\n- update: {}\n- executed: {}\n- factories: {}",
+          pull.generation,
+          ids(&pull.update),
+          ids(&pull.executed),
+          ids(&pull.factories),
+        ));
+        match pull.response {
+          Ok(HmrPullResponse::Payload(patch)) => {
+            let mut code_section = SnapshotSection::with_title("Code");
+            code_section.add_content("```js\n");
+            // The inline map is long and says little in a snapshot.
+            let code = match patch.code.split_once("\n//# sourceMappingURL=data:") {
+              Some((code, _)) => format!("{code}\n//# sourceMappingURL=data:<inline map>"),
+              None => patch.code,
+            };
+            code_section.add_content(&tweak_snapshot(&code, test_meta.hidden_runtime_module));
+            code_section.add_content("\n```");
+            pull_section.add_child(code_section);
+          }
+          Ok(HmrPullResponse::Reload { reason }) => {
+            pull_section.add_content(&format!("\n- reload: {reason}"));
+          }
+          Err(errs) => {
+            pull_section.add_child(snapshot_utils::create_error_section(errs.into_vec(), cwd));
+          }
+        }
+        step_section.add_child(pull_section);
+      }
+      let mut result_section = SnapshotSection::with_title("Client");
+      result_section.add_content(&format!("- result: {}", client.result));
+      step_section.add_child(result_section);
+    }
+
+    // 3. Render build outputs as children (if any and non-empty)
     for build_output in build_outputs {
       if let Some(section) = Self::create_build_output_section(test_meta, build_output, cwd) {
         step_section.add_child(section);
@@ -115,24 +150,6 @@ impl DevArtifactsSnapshot {
     vec![step_section]
   }
 
-  fn create_hmr_code_section(
-    test_meta: &TestMeta,
-    hmr_update: &HmrUpdate,
-    _cwd: &Path,
-  ) -> Option<SnapshotSection> {
-    match hmr_update {
-      HmrUpdate::Patch(hmr_patch) if !hmr_patch.code.is_empty() => {
-        let mut code_section = SnapshotSection::with_title("Code");
-        let file_ext = snapshot_utils::get_normalized_extension(hmr_patch.filename.as_path());
-        code_section.add_content(&format!("```{file_ext}\n"));
-        code_section.add_content(&tweak_snapshot(&hmr_patch.code, test_meta.hidden_runtime_module));
-        code_section.add_content("\n```");
-        Some(code_section)
-      }
-      _ => None,
-    }
-  }
-
   fn create_hmr_meta_section(hmr_update: &HmrUpdate, cwd: &Path) -> SnapshotSection {
     let mut meta_section = SnapshotSection::with_title("Meta");
 
@@ -140,7 +157,7 @@ impl DevArtifactsSnapshot {
     meta_section.add_content(&format!(
       "- update type: {}",
       match hmr_update {
-        HmrUpdate::Patch(_) => "patch",
+        HmrUpdate::Changed { .. } => "changed",
         HmrUpdate::FullReload { .. } => "full-reload",
         HmrUpdate::Noop => "noop",
       }
@@ -150,15 +167,15 @@ impl DevArtifactsSnapshot {
 
     // Type-specific metadata
     match hmr_update {
-      HmrUpdate::Patch(hmr_patch) => {
-        let mut changed_ids = SnapshotSection::with_title("Changed Ids");
-        let meta = hmr_patch
-          .changed_ids
-          .iter()
-          .map(|changed_id| format!("- {}", changed_id.replace(cwd_str, "$CWD")))
-          .collect::<Vec<_>>();
-        changed_ids.add_content(&meta.join("\n"));
-        meta_section.add_child(changed_ids);
+      HmrUpdate::Changed { changed_ids, stale_ids, generation } => {
+        meta_section.add_content(&format!("\n- gen: {generation}"));
+        for (title, ids) in [("Changed Ids", changed_ids), ("Stale Ids", stale_ids)] {
+          let mut section = SnapshotSection::with_title(title);
+          let meta =
+            ids.iter().map(|id| format!("- {}", id.replace(cwd_str, "$CWD"))).collect::<Vec<_>>();
+          section.add_content(&meta.join("\n"));
+          meta_section.add_child(section);
+        }
       }
       HmrUpdate::FullReload { reason } => {
         let reason = reason.replace(cwd_str, "$CWD");

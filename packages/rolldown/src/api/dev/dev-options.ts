@@ -1,4 +1,4 @@
-import type { BindingClientHmrUpdate } from '../../binding.cjs';
+import type { BindingHmrUpdate } from '../../binding.cjs';
 import type { WatcherOptions } from '../../options/input-options';
 import type { RolldownOutput } from '../../types/rolldown-output';
 
@@ -6,12 +6,22 @@ type DevOnHmrUpdates = (
   result:
     | Error
     | {
-        updates: BindingClientHmrUpdate[];
+        update: BindingHmrUpdate;
         changedFiles: string[];
       },
 ) => void | Promise<void>;
 
-type DevOnOutput = (result: Error | RolldownOutput) => void | Promise<void>;
+export interface DevOutputInfo {
+  /**
+   * The HMR generation the output is rendered at. The output code does not
+   * carry it, so that an edit and its undo give the same bytes. A page that
+   * loads this output starts at this generation: pass it to the runtime's
+   * `setOutputGeneration` before the first update arrives.
+   */
+  hmrGeneration: number;
+}
+
+type DevOnOutput = (result: Error | RolldownOutput, info?: DevOutputInfo) => void | Promise<void>;
 
 type DevOnAdditionalAssets = (output: RolldownOutput) => void | Promise<void>;
 

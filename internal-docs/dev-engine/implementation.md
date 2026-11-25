@@ -10,7 +10,8 @@
 The dev engine (`rolldown_dev` crate) is rolldown's dev-mode build
 orchestration layer in Full Bundle Mode. It sits between the file watcher
 / dev server and the core `Bundler`, deciding _what_ build to run — an HMR
-patch, an incremental rebuild, or a full build — and _when_. It is
+update, an incremental rebuild, or a full build — and _when_. It also
+answers the patch and lazy requests that clients make. It is
 structured as a `DevEngine` (the public async API surface) driving a
 single message-loop `BundleCoordinator` (a state machine plus a work
 queue) that spawns one `BundlingTask` at a time. This document is a map of
@@ -74,41 +75,37 @@ around as `SharedDevContext = Arc<DevContext>`:
 pub struct DevContext {
   pub options: NormalizedDevOptions,
   pub coordinator_tx: CoordinatorSender,   // clone to send messages in
-  pub clients: SharedClients,              // client id → ClientSession
-  pub stamp_table: Arc<Mutex<HmrStampTable>>,            // module id → rebuild stamp
-  pub pending_payloads: Arc<Mutex<FxHashMap<String, PendingPayload>>>,
-  pub top_level_evaluated: Mutex<Arc<FxHashMap<ArcStr, u32>>>,
   pub last_task_errored: AtomicBool,
 }
 ```
 
-The HMR-related fields (`dev_context.rs:30-51`):
-
-- `clients` — one `ClientSession { shipped, top_level_evaluated, next_seq }`
-  per connected client (`types/client_session.rs`). `shipped` is the
-  ship map `shipped[C]`: module stable id → rebuild stamp of the copy
-  the client holds. See [hmr/design.md](../hmr/design.md) for why the
-  server keeps this record and nothing else about the client.
-- `stamp_table` — `HmrStampTable`
-  (`crates/rolldown_common/src/hmr/hmr_stamp_table.rs`): the engine-wide
-  rebuild counter plus, per module stable id, the stamp of the rebuild
-  that last changed it.
-- `pending_payloads` — rendered payloads (patches and lazy chunks) that
-  no client has acknowledged yet, keyed by output filename. Each
-  `PendingPayload { client_id, modules }` (`types/pending_payload.rs`)
-  lists the modules and stamps the payload carries.
-  `insert_pending_payload` (`dev_context.rs:59`) keeps at most
-  `MAX_PENDING_PAYLOADS_PER_CLIENT = 8` entries per client and drops the
-  oldest beyond that; a dropped entry only means a later push re-ships
-  or full-reloads those modules.
-- `top_level_evaluated` — the boot-evaluated map of the latest written
-  bundle: the modules the entry chunk runs at top level, with their
-  stamps. Recomputed after every successful rebuild (§10) and frozen
-  into each new session at hello (§15, `register_client`).
 - `last_task_errored` — written at the end of every task
-  (`bundling_task.rs:106`); the next HMR compute reads it as
+  (`BundlingTask::run`); the next HMR compute reads it as
   `last_build_errored` to turn off unchanged-output suppression, and the
   next task reads it to clear the resolver cache (§9c).
+
+The engine keeps **no state per client**. The HMR state that all clients
+share is the **HMR session** (`HmrSession`,
+`crates/rolldown_common/src/hmr/hmr_session.rs`):
+
+- `epoch` — a random nonzero `u32` that `DevEngine::new` sets
+  (`random_epoch` in `dev_engine.rs`, through `Bundler::set_hmr_epoch`).
+  A plain `Bundler` without a dev engine has epoch 0.
+- `generation` — the number of the newest rebuild that stamped a module.
+- `latest` — module stable id → the stamp of the rebuild that last
+  changed it. A module that never changed has stamp 0.
+- `num_by_id` / `id_by_num` — the module numbers. Append-only for the
+  whole engine life.
+- the catch-up ring — the last 64 `Changed` updates, ids only.
+- `min_client_gen` — the oldest client generation the session can still
+  bring up to date. A `g` below it gets a reload.
+
+It lives in `SharedHmrSession` (an `Arc<Mutex<_>>` that recovers from a
+poisoned lock) on `BundleFactory::hmr_session`, and every `Bundle` gets a
+clone. So it survives full builds, failed builds, and cancelled builds.
+Every lock is short and taken in sync code only. A client describes
+itself in each request instead; see [hmr/design.md](../hmr/design.md)
+for why.
 
 ### Browser runtime ownership
 
@@ -561,13 +558,14 @@ in two cases, which no patch or partial scan can express:
   resolver cache and the transform tsconfig cache.
 - **An earlier HMR update was lost** (`Bundler::has_lost_hmr_update`, any
   task kind). The update merged its edit into the graph and then failed,
-  for example while rendering the patch, so no client ran it. The next
-  patch would not re-run that edit: the graph already has it, so it no
-  longer counts as changed. A `FullBuild` task needs the reload too: the
+  for example in `apply_module_side_effects_overrides`, so no client
+  heard of it. The
+  next update would not list that edit: the graph already has it, so it
+  no longer counts as changed. A `FullBuild` task needs the reload too: the
   full build that recovers from a failed full build gets no reload from
-  Vite unless one is pending. Sending the
-  lost update again would also have to carry the modules it added and
-  the imports it added, so the engine reloads instead. Such failures are
+  Vite unless one is pending. Sending the lost update again would also
+  have to carry the modules it added and the imports it added, so the
+  engine reloads instead. Such failures are
   rare (a throwing plugin callback), so one reload is cheap. A failure
   before the merge (a syntax error) is not lost: nothing merged, and
   `pending_rescans` retries the file. For the reasons behind this
@@ -575,18 +573,32 @@ in two cases, which no patch or partial scan can express:
 
 In both cases the task then:
 
-1. sends `HmrUpdate::FullReload` with the reason (`"tsconfig change"` or
+1. calls `Bundler::begin_hmr_full_reload` before anyone is told.
+   Modules can change on this path with no stamp, so the session
+   advances the generation, clears the catch-up ring, and sets
+   `min_client_gen` to the new generation. A tab that still runs the
+   older output gets `Reload` from its next request. A push does not
+   check this floor, so Vite keeps the reload pending until a build
+   succeeds (see [hmr/design.md](../hmr/design.md#failure-policy));
+2. sends `HmrUpdate::FullReload` with the reason (`"tsconfig change"` or
    `"an earlier hot update failed"`) to every connected client through
    `on_hmr_updates` — the only full reloads the engine itself
    originates. A `FullBuild` task has no changed files, so its
    `changedFiles` is `["*"]`: Vite ignores an update with an empty
    `changedFiles`. This is a workaround until Vite delivers a
    `FullReload` with no changed files;
-2. **rewrites its own input** to `TaskInput::FullBuild`
+3. **rewrites its own input** to `TaskInput::FullBuild`
    (`bundling_task.rs:200`), so the rebuild runs with `ScanMode::Full`
    (§10) and HMR generation is skipped. A successful full build clears
    the lost-update flag (see
    [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md)).
+
+Pinned by `a_lost_update_reloads_the_clients_onto_a_full_build` in
+`dev_engine.rs`: a lost update (`Bundler::lose_hmr_update_for_testing`
+stands for a step that fails after the merge), then the `FullReload`, a
+`Reload` for a request from before it, and two hot updates after the full
+build. The `tsconfig_change` and
+`reload_after_lost_full_reload` HMR fixtures cover the tsconfig case.
 
 Consequence: the `TaskInput` variant the coordinator queued is not
 necessarily the variant that runs. A coordinator-queued `Hmr` can become
@@ -622,9 +634,11 @@ triggers above:
   nothing in a failed state.
 - Vite's page-access trigger fires only when `lastErrorStage` is `Hmr`,
   so a failed upgraded build does not start it again.
-- Vite drops the pending reload when the build fails (`onOutput` error),
-  so no tab reloads onto failed output. A reload could start a new lazy
-  compile, so this also keeps the lazy-route trigger from repeating.
+- Vite keeps the pending reload when the build fails (`onOutput` error)
+  and sends it after the first successful `onOutput`, so no tab reloads
+  onto failed output. A reload could start a new lazy compile, and no
+  reload goes out after a failed build, so the lazy-route trigger does
+  not repeat either.
 
 Triggers that arrive while a full build runs are queued, and the next
 `FullBuild` absorbs them (`TaskInput::merge_with`). So there is at most
@@ -727,39 +741,21 @@ without forcing a rebuild.
 4. **Rebuild** — if `requires_rebuild()`, sets `has_rebuild_happen =
    true` and calls `rebuild()`.
 
-### `generate_hmr_updates` (`bundling_task.rs:235-356`)
+### `generate_hmr_updates` (`bundling_task.rs`)
 
 - Locks the `Bundler`.
-- Snapshots `(client_id, shipped, top_level_evaluated)` for every
-  connected client from `dev_context.clients`, then releases the clients
-  lock. The snapshots become one
-  `ClientHmrInput { client_id, shipped, top_level_evaluated }` per client
-  (`crates/rolldown_common/src/hmr/client_hmr_input.rs`). The compute
-  reads only these server records; it never sees client execution state.
-- Locks `dev_context.stamp_table` and calls
-  `bundler.compute_hmr_update_for_file_changes(...)` with the changed
-  files, the client inputs, the stamp table, `next_hmr_patch_id`,
-  `last_build_errored`, and `hot_update`.
+- Calls `bundler.compute_hmr_update_for_file_changes(...)` with the
+  changed files, `last_build_errored`, and `hot_update`.
   `last_build_errored` is `DevContext::last_task_errored`;
-  `hot_update` is the dev option (`bundling_task.rs:272-273`). The HMR
-  stage also turns the hook on when `experimental.devMode.hotUpdate` is set
-  (`hmr_stage.rs`, step 1).
-- Assigns `patch.seq` from `session.next_seq` for every
-  `HmrUpdate::Patch` (`bundling_task.rs:286-296`). A `Noop` sends
-  nothing, so it does not advance the counter; the client requires
-  `seq === lastSeq + 1`, and a skipped number would read as a gap. A
-  client that disconnected during the compute has no session, so its
-  patch keeps `seq: 0`. It is not filtered out: it is still recorded as
-  a pending payload and still passed to `on_hmr_updates`; the consumer
-  finds no client for it.
-- Records every `Patch` as a `PendingPayload` under `patch.filename`,
-  moving `patch.carried` (the modules and stamps it ships) into the
-  entry (`bundling_task.rs:302-317`). `shipped[C]` is written only when
-  the client acknowledges delivery of that filename (§15,
-  `notify_payload_delivered`).
+  `hot_update` is the dev option. The HMR stage also turns the hook on
+  when `experimental.devMode.hotUpdate` is set (`hmr_stage.rs`, step 1).
+- The result is one `HmrUpdate` for every client: `Changed`, `Noop`, or
+  an error. There is no per-client work. Vite adds its own per-connection
+  `seq` when it broadcasts the update.
 - On error, sets `self.hmr_errored = true`.
 - Drains emitted assets through `on_additional_assets` (§17), then
-  invokes the `on_hmr_updates` callback if configured.
+  invokes the `on_hmr_updates` callback if configured, with
+  `(update, changedFiles)`.
 
 ### Inside `compute_hmr_update_for_file_changes` (`hmr_stage.rs`)
 
@@ -801,84 +797,73 @@ Then, across all files of the batch:
    build (recovery must reach clients stuck on the overlay), and
    modules a `hotUpdate` hook explicitly returned (the change may live
    outside the module's own code, so identical output proves nothing).
-6. **Refetch and stamp** — one partial scan and cache merge. The
-   merge sets `Bundler::lost_hmr_update`, and the update clears it only
-   when it returns its patches (§9b). Then the stamp table starts a
-   new rebuild number and stamps every changed or newly added module
-   with it. When an edit changes a module's `exports_kind` or lazy
-   export, it also stamps and carries every importer of that module,
-   because their factories render different interop code (see
-   [hmr/design.md](../hmr/design.md), "Registration keeps the newest
-   copy").
-7. **Superset walk** — `collect_client_update_superset`
-   (`hmr_stage.rs`) walks up static and dynamic importers from the
-   changed modules, stopping at self-accepting modules and at accepting
-   importer edges. This is a prediction of what any client's walk may
-   re-run; the client makes the real decision (see
-   [hmr/design.md](../hmr/design.md)).
-8. **Per-client patch** — for each `ClientHmrInput`, the carried set is
-   `(affected ∖ shipped[C]) ∪ { m : latest[m] > shipped[C][m] }`: modules
-   the client lacks, plus every module the client holds at an older
-   stamp. The carried set also gets the part of the static closure the
-   client does not hold, walked from each carried module in the client's
-   ship map or boot-evaluated map (at any stamp) and from each static
-   import the rebuild added (`collect_unheld_sync_deps`, which reads both
-   maps; see [hmr/design.md](../hmr/design.md), principle 2).
-   `render_hmr_patch` returns `HmrUpdate::Noop` when
-   nothing is carried and no id changed; otherwise an `HmrPatch` with
-   `changed_ids`, `carried`, and `seq: 0` — the dev engine assigns the
-   real `seq` afterwards.
+   Both renders skip the sourcemap: the factory text does not depend on
+   the stamp or on the payload, so the compare needs the code only.
+6. **Refetch** — one partial scan and cache merge. The merge sets
+   `Bundler::lost_hmr_update`. The update sets it back to its earlier
+   value after the last step that can fail, right before it stamps
+   (§9b).
+7. **Stamp and record** — when an edit changes a module's
+   `exports_kind` or lazy export, every importer of that module joins
+   the stale set (`rerendered_importers`), because its factory renders
+   different interop code (see [hmr/design.md](../hmr/design.md),
+   "Registration keeps the newest copy"). When the stale set (changed
+   modules, newly added modules, re-rendered importers) is empty, the
+   result is `HmrUpdate::Noop` and the generation does not move.
+   Otherwise, under one session lock, the session starts a new
+   generation (`begin_rebuild`), stamps every stale module with it, and
+   records `{ generation, changed_ids, stale_ids }` in the catch-up
+   ring. Lazy proxies are
+   left out of both lists: they never run in the client.
+8. **Result** — `HmrUpdate::Changed { changed_ids, stale_ids, generation }`,
+   one update for every client. The server renders no code here and
+   does not walk importers: each client walks its own graph and pulls
+   the code it needs (`render_patch`, below).
 
-The superset walk (`collect_client_update_superset` in `hmr_stage.rs`)
-starts from the changed modules and follows importer edges (static and
-dynamic `import()`). It stops at a self-accepting module and at an importer
-that accepts the module as a dependency. It does not stop at an importer
-that reads only export names the module accepts through
-`import.meta.hot.acceptExports`. Only the browser makes that decision:
-Vite's bundled-dev client skips such an importer only when
-`experimental.hmrPartialAccept` is on, and it reads the accepted names from
-the call at run time. If the server skipped the importer too, a client with
-the option off would walk into an importer whose factory was never shipped,
-and it would full-reload.
+The browser makes the boundary decision on its own copy of the graph.
+Each `registerGraph` prelude (in initial chunks, patches and lazy
+chunks) carries the rows that the request and the walk need:
 
-The browser makes this decision on its own copy of the graph. Each
-`registerGraph` prelude (in initial chunks and in patches) carries, per
-static edge, the export names
-the importer reads (`bindings[i][j]`): `"*"` for a whole-namespace read
-(`import * as ns`, `export * from`, `require()`, non-JS records; the same
-sentinel Vite's `importAnalysis` uses), an empty list for a side-effect-only
-import. The field is filled only for edges into a module that calls
-`acceptExports`; a `null` or missing entry means `"*"`. `bindings` is an
-object keyed by row (`bindings:{1:[["a"]]}`), because a chunk's prelude
-lists every module of the chunk and most rows have no such edge. The key is
-left out when no row qualifies. The runtime keeps the names in
-`staticImports` and exposes them through `getImportedBindings`.
-`dynamicEdges` has the same shape (`dynamicEdges:{0:[2]}`) for the same
-reason: few modules call `import()`. A missing row means no dynamic edges.
-`edges` stays a dense array, because most modules import something and an
-empty row (`[]`) is shorter than a row key.
-`entries` lists the rows whose module is a user-defined entry
-(`user_defined_entry_modules`: configured entries and `emitFile` chunks;
-not dynamic-import or lazy entries), for example `entries:[3]`. It is left
-out when no row is an entry, and a row that is sent but not listed is not
-an entry. The runtime exposes it through `isEntry`.
+- `nums` — the session number of each id, dense, in the order of `ids`:
+  local rows and foreign edge targets (a lazy proxy target under the id
+  of the module it stands for). `loadDynamic` names an `import()` target
+  by it before any row of the target arrives. Then `epoch`. A full build
+  gives numbers to new modules in stable-id order before chunks render
+  in parallel (`DevRowsView::new` in `module_graph_delta.rs`), so the
+  same build gives the same numbers.
+- No generation and no stamps. Full-build rows (`RowsSession::Build`)
+  call `__rolldown_runtime__.registerGraph` and carry the epoch. Payload
+  rows (`RowsSession::Payload`) call `__rolldown_payload__.registerGraph`,
+  which gives them the payload's generation (`beginPayload(G)`), and
+  carry no epoch. Full-build rows carry no generation, so an edit and
+  its undo give the same output bytes. The generation of a
+  full-build output is `BundleOutput::hmr_generation` (set in
+  `Bundle::bundle_up` from `DevRowsView::generation`). The binding passes
+  it as the second argument of `onOutput`, and the page that loads the
+  output gets it through `runtime.setOutputGeneration` (see
+  [hmr/design.md](../hmr/design.md), principle 3).
+- per static edge, the export names
+  the importer reads (`bindings[i][j]`): `"*"` for a whole-namespace read
+  (`import * as ns`, `export * from`, `require()`, non-JS records; the same
+  sentinel Vite's `importAnalysis` uses), an empty list for a side-effect-only
+  import. The field is filled only for edges into a module that calls
+  `acceptExports`; a `null` or missing entry means `"*"`. `bindings` is an
+  object keyed by row (`bindings:{1:[["a"]]}`), because a chunk's prelude
+  lists every module of the chunk and most rows have no such edge. The key is
+  left out when no row qualifies. The runtime keeps the names in
+  `staticImports` and exposes them through `getImportedBindings`.
+  `dynamicEdges` has the same shape (`dynamicEdges:{0:[2]}`) for the same
+  reason: few modules call `import()`. A missing row means no dynamic edges.
+  `edges` stays a dense array, because most modules import something and an
+  empty row (`[]`) is shorter than a row key.
+  `entries` lists the rows whose module is a user-defined entry
+  (`user_defined_entry_modules`: configured entries and `emitFile` chunks;
+  not dynamic-import or lazy entries), for example `entries:[3]`. It is left
+  out when no row is an entry, and a row that is sent but not listed is not
+  an entry. The runtime exposes it through `isEntry`.
 
-Known gaps in this walk, kept on purpose for now:
+Known gap, kept on purpose for now:
 
-- **The two sides decide from different generations.** The server reads
-  the post-rebuild `hmr_info`; the browser reads the hot context of the
-  module still evaluated there. When an edit adds or widens an `accept`
-  declaration, the server skips an importer that the browser's older
-  context still walks into. If that importer has an accepting ancestor,
-  the browser needs its factory and none was shipped; otherwise the
-  browser finds no boundary. Either way that client full-reloads once,
-  then the reload loads the new generation and the two agree. Plain
-  `accept()` has had this shape since the walk was written. Follow-up:
-  keep the pre-rebuild `hmr_info` of a changed module (as the
-  unchanged-output check keeps the pre-rebuild render) and skip an
-  importer only when the old declaration already covered it. That removes the reload in the accepting-ancestor case; the
-  no-ancestor case needs the browser to learn the new declaration before
-  it walks.
 - **`"*"` is a plain string.** A module may export a name literally spelled
   `"*"` (`export { x as "*" }`). If such a module also calls
   `acceptExports(["*"])`, a namespace importer is read as covered and is
@@ -889,7 +874,58 @@ Known gaps in this walk, kept on purpose for now:
   rule. A tagged marker is possible later, but it must change on both
   sides in the same release.
 
-### `rebuild` (`bundling_task.rs:359-408`)
+### Inside `render_patch` (`hmr_stage.rs`)
+
+`DevEngine::render_patch(query)` takes the bundler lock, like
+`compile_lazy_entry`, and parses the query with the session's number
+count (`ClientHave::parse_query`,
+`crates/rolldown_common/src/hmr/client_have.rs`). A query that does not
+parse gets `HmrPullResponse::Reload`: a set that is not a `b…` bitset,
+or a number at or above the count. A pull that arrives during a rebuild
+waits for it.
+
+`HmrStage::render_patch(&have)`:
+
+1. **No module graph** (the last full build failed) → `Reload`.
+2. **Catch-up** — `HmrSession::catch_up`: another epoch, a `g` newer
+   than the session, or a `g` below `min_client_gen` → `Reload`. A `g`
+   behind the session gets a `catchUp` statement (`render_catch_up`):
+   the ring entries with a generation in `(g, gen]`, oldest first, each
+   id only under the newest entry that names it, an entry with no ids
+   left out, and an empty `changedIds` left out.
+3. **Carried set** — every module of `u` that the client does not hold
+   current (`holds_current(m) = f.has(num(m)) && latest[m] <= g`), plus
+   `collect_unheld_sync_deps` walking static deps from every module of
+   `u` on the current graph: a dep in `e` and not in `u` stops the walk;
+   a dep held current is walked through but not carried; any other dep is
+   carried and walked through. Ids of `u` that left the graph are
+   skipped.
+4. **Render** (`render_payload`) — external modules are dropped, the rest
+   sorted by id and given numbers. Under one session lock it reads the
+   generation `G` and renders the rows. The payload is the prelude
+   `const __rolldown_payload__ = __rolldown_runtime__.beginPayload(G)`,
+   the catch-up statement (when needed), the rows, then one `//#region`
+   factory per module (`__rolldown_payload__.registerFactory(id, fn)`).
+   No tail statement. The factories render in parallel, and their
+   sourcemaps are joined per response. The caller holds the bundler, so
+   no stamp or merge runs while the payload renders, and `G` names the
+   state of every factory in it (see [hmr/design.md](../hmr/design.md),
+   principle 7).
+5. **Sourcemap** (`finish_payload_sourcemap`) — no file is kept for a
+   pulled payload. With `sourcemap` `Inline`, the code ends with an
+   inline `//# sourceMappingURL=data:...`. With `File` or `Hidden`, the
+   map comes back as JSON and the code has no comment: the consumer
+   serves the map and adds the comment that points to it. The map is
+   prepared for the fixed name `__rolldown_hmr_patch.js` in the out dir.
+
+The binding returns `{ type: 'Patch', code, sourcemap? }` or
+`{ type: 'Reload', reason }` (`BindingPatchResponse`). Plugin errors are
+still thrown. Vite serves the patch at `__rolldown_hmr_patch.js` next to
+the output files. It serves a `Reload` with status 200 and a body that
+calls `__rolldown_runtime__.reloadNeeded(reason)`, so the page always
+reloads (see [hmr/design.md](../hmr/design.md), principle 6).
+
+### `rebuild` (`bundling_task.rs`)
 
 - Locks the `Bundler`.
 - If the task ran the HMR stage (`HmrRebuild`: `RebuildStrategy::Always`,
@@ -907,10 +943,6 @@ Known gaps in this walk, kept on purpose for now:
 - Calls `bundler.incremental_write(scan_mode)` if `skip_write` is
   false, else `bundler.incremental_generate(scan_mode)`.
 - On error, sets `self.rebuild_errored = true`.
-- On success, recomputes `DevContext::top_level_evaluated` from the new
-  snapshot and output (`compute_top_level_evaluated_modules` in
-  `impl_bundler_hmr.rs`). A client that connects after this rebuild
-  freezes this map into its session at hello.
 - Invokes the `on_output` callback if configured.
 
 Only `TaskInput::FullBuild` produces `ScanMode::Full`. Every other
@@ -1283,20 +1315,20 @@ barrel state. Relevant methods:
 ### HMR reads `Bundler::cache`
 
 `impl_bundler_hmr.rs` builds an `HmrStageInput` from `&mut self.cache`
-(`Bundler::cache`) at two call sites:
+(`Bundler::cache`) and a clone of the HMR session (`Bundler::hmr_stage`)
+at three call sites:
 
-- `compute_hmr_update_for_file_changes` (`:28`) — file-change-driven HMR.
-- `compile_lazy_entry` (`:121`) — lazy-compilation entry compilation.
+- `compute_hmr_update_for_file_changes` — file-change-driven HMR.
+- `render_patch` — a client's patch request.
+- `compile_lazy_entry` — lazy-compilation entry compilation.
 
 `HmrStage` then reads the cache's snapshot (e.g. `module_table()` in
 `hmr/hmr_stage.rs` calls `get_snapshot()`).
-`compute_top_level_evaluated_modules` (`:81`) reads
-`self.cache.snapshot()` directly, without an `HmrStage`.
 
-`import.meta.hot.invalidate()` never reaches the bundler: Vite's
-`BundledDevHMRClient.applyInvalidate` handles it in the browser from
-the factories the client already holds (see
-[hmr/design.md](../hmr/design.md), principle 1).
+`import.meta.hot.invalidate()` starts no rebuild: Vite's
+`BundledDevHMRClient.applyInvalidate` walks in the browser, and
+`ensureRunnable` pulls a patch through `render_patch` only when the
+client lacks code (see [hmr/design.md](../hmr/design.md), principle 1).
 
 ---
 
@@ -1305,20 +1337,18 @@ the factories the client already holds (see
 Beyond `ensure_latest_bundle_output`, the public methods on `DevEngine`
 (`dev_engine.rs`):
 
-| Method                                           | Purpose                                                                                        |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `new(config, options)`                           | builds the `Bundler`, normalizes options, creates the watcher and coordinator                  |
-| `run()`                                          | spawns the coordinator task, awaits the initial build via `ensure_latest_bundle_output`        |
-| `trigger_full_build()`                           | sends `TriggerFullBuild` (fire-and-forget, compose with `ensure_latest_bundle_output` to wait) |
-| `wait_for_close()`                               | awaits the coordinator's join handle                                                           |
-| `wait_for_ongoing_bundle()`                      | `GetState`, awaits any running future                                                          |
-| `get_bundle_state()`                             | `GetState` → `BundleState { last_build_errored, has_stale_output }`                            |
-| `register_client(client_id)`                     | hello: new `ClientSession`, empty ship map, boot-evaluated map frozen in (`dev_engine.rs:306`) |
-| `remove_client(client_id)`                       | disconnect: drops the session and its pending payloads (`dev_engine.rs:318`)                   |
-| `notify_payload_delivered(filename)`             | delivery ack: max-merges the pending payload's stamps into `shipped[C]` (`dev_engine.rs:332`)  |
-| `compile_lazy_entry(proxy_module_id, client_id)` | compiles a lazy entry, records it as a pending payload, then sends `ModuleChanged`             |
-| `close()`                                        | sends `Close`, runs `closeBundle`, awaits coordinator shutdown                                 |
-| `is_closed()` / `bundler_options()`              | accessors                                                                                      |
+| Method                                       | Purpose                                                                                        |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `new(config, options)`                       | builds the `Bundler`, normalizes options, creates the watcher and coordinator                  |
+| `run()`                                      | spawns the coordinator task, awaits the initial build via `ensure_latest_bundle_output`        |
+| `trigger_full_build()`                       | sends `TriggerFullBuild` (fire-and-forget, compose with `ensure_latest_bundle_output` to wait) |
+| `wait_for_close()`                           | awaits the coordinator's join handle                                                           |
+| `wait_for_ongoing_bundle()`                  | `GetState`, awaits any running future                                                          |
+| `get_bundle_state()`                         | `GetState` → `BundleState { last_build_errored, has_stale_output }`                            |
+| `render_patch(query)`                        | renders the patch a client asks for, or `Reload` (§10, "Inside `render_patch`")                |
+| `compile_lazy_entry(proxy_module_id, query)` | checks epoch / generation, compiles a lazy entry, then sends `ModuleChanged`                   |
+| `close()`                                    | sends `Close`, runs `closeBundle`, awaits coordinator shutdown                                 |
+| `is_closed()` / `bundler_options()`          | accessors                                                                                      |
 
 `compile_lazy_entry` sends `ModuleChanged` after a compile that returns,
 and after a compile that fails past its `merge` (the graph keeps the
@@ -1354,20 +1384,17 @@ unseen for the rest of the session. So `compile_lazy_entry` sends the
 `Arc` of list A (`Bundler::watch_files()`, read under the same lock), and
 the coordinator registers list A, whichever build is the latest by then.
 
-The three client-session methods are the engine's whole view of a
-client. Vite's server calls them from three client messages: the hello
-(`vite:client-connected`), the disconnect, and the `payloadDelivered`
-ack that Vite appends after the last `registerFactory` of every patch
-and lazy chunk. Because the ack runs after every factory registration
-in the payload, `shipped[C]` can never list a factory the client did not
-register. The reasoning is in [hmr/design.md](../hmr/design.md),
-principle 2. All three return `()` and never fail; a
-`notify_payload_delivered` for an unknown filename or client is a no-op.
+The engine has no method for client connect, disconnect, or delivery.
+`render_patch` and `compile_lazy_entry` are the engine's whole view of a
+client, and each reads the client only from its own query. The
+reasoning is in [hmr/design.md](../hmr/design.md), principle 2.
 
 The `#[cfg(feature = "testing")]` methods —
-`ensure_task_with_changed_files`, `get_watched_files`,
-`create_client_for_testing` — exist for the test harness to drive
-synthetic file changes and inspect coordinator state.
+`ensure_task_with_changed_files`, `get_watched_files`, `bundler`,
+`set_hmr_epoch_for_testing` — exist for the test harness to drive
+synthetic file changes, inspect coordinator state, decode requests
+(`bundler.hmr_session()`), and fix the epoch so snapshots stay the same
+between runs. `set_hmr_epoch_for_testing` must run before `run`.
 
 ---
 
@@ -1386,9 +1413,8 @@ audience.
   failures.
 - **Binding consumer** — the framework or tool integrating `rolldown_dev`
   (typically Vite). Owns the engine lifecycle: constructs it, calls `run`,
-  routes client connect / disconnect / delivery-ack messages into
-  `register_client` / `remove_client` / `notify_payload_delivered`, calls
-  `close` on shutdown. Sees errors when it calls the engine at the wrong
+  forwards patch and lazy requests to `render_patch` /
+  `compile_lazy_entry`, calls `close` on shutdown. Sees errors when it calls the engine at the wrong
   time (`compile_lazy_entry` after `close`, `ensure_latest_build_output`
   before `run`, etc.). They
   are responsible for sequencing correctly; we surface the misuse so they
@@ -1455,17 +1481,22 @@ and return a single result use `BindingResult<T> = Either<BindingErrors, T>`
 on the boundary, and the JS wrapper calls `unwrapBindingResult` to either
 return the success value or throw a `BundleError`.
 
-Used by: `ensureLatestBuildOutput` and `compileEntry`
-(`ensure_latest_build_output` and `compile_entry` in `binding_dev_engine.rs`,
-unwrapped in `packages/rolldown/src/api/dev/dev-engine.ts`). The other napi
+Used by: `ensureLatestBuildOutput`, `renderPatch` and `compileEntry`
+(`ensure_latest_build_output`, `render_patch` and `compile_entry` in
+`binding_dev_engine.rs`, unwrapped in
+`packages/rolldown/src/api/dev/dev-engine.ts`). A client that must reload
+is not an error: `renderPatch` and `compileEntry` answer it with a
+`{ type: 'Reload', reason }` value. The other napi
 methods that can fail (`run`, `ensureCurrentBuildFinish`, `getBundleState`,
 `close`) convert their error to a plain `napi::Error` with a reason string
 instead. The thrown error reaches whichever audience called the method:
 
 - `ensureLatestBuildOutput` is called by the consumer's dev-server
   middleware before serving a request. The consumer handles or propagates.
-- `compileEntry` is called by the consumer's lazy-compile middleware when a
-  lazy chunk is first requested. The consumer handles or propagates.
+- `renderPatch` is called by the consumer's patch route when a client
+  pulls a patch. `compileEntry` is called by the consumer's lazy-compile
+  middleware when a lazy chunk is requested. The consumer handles or
+  propagates.
 - `close`, `run`, lifecycle-shaped methods are consumer-driven by
   construction.
 
@@ -1688,6 +1719,7 @@ flowchart TD
   T1([initial load]) --> FULL["TaskInput: FullBuild"]
   T2([file edit]) --> D{"rebuild_strategy?"}
   T3([dynamic import]) --> LAZY["compileEntry (DevEngine)"]
+  T5([client pulls a patch]) --> PULL["renderPatch (DevEngine)"]
   T4([stale page load / ModuleChanged with rebuild (lost HMR update)]) --> REB["TaskInput: Rebuild"]
 
   %% ===== dispatch (handle_file_changes) =====
@@ -1697,10 +1729,11 @@ flowchart TD
   %% ===== function chains =====
   FULL --> RB
   REB --> RB["rebuild() → bundle_up:<br/>GenerateStage::generate (chunks)<br/>+ add_additional_files"]
-  HMR --> GH["generate_hmr_updates():<br/>render_hmr_patch (code)<br/>+ add_additional_files"]
+  HMR --> GH["generate_hmr_updates():<br/>compute_hmr_update_for_file_changes (ids)<br/>+ add_additional_files"]
   HR --> GH
   HR -. "then" .-> RB
   LAZY --> CL["compile_lazy_entry (code)<br/>+ add_additional_files"]
+  PULL --> RP["render_patch (code)"]
 
   %% ===== shared emitter (asset bytes converge here) =====
   FE[("FileEmitter.files<br/>emit_file writes;<br/>add_additional_files drains once<br/>(emitted_files gate)")]
@@ -1714,6 +1747,7 @@ flowchart TD
   GH --> ADD[["on_additional_assets"]]
   CL --> ADD
   CL --> RET[["compileEntry return"]]
+  RP --> PRET[["renderPatch return"]]
 
   %% ===== sinks =====
   OUT --> MEM[("Vite memoryFiles")]
@@ -1721,6 +1755,7 @@ flowchart TD
   MEM --> MW["memoryFilesMiddleware<br/>serves /assets/*"]
   HMRU --> B(["browser / client"])
   RET --> B
+  PRET --> B
   MW --> B
 ```
 
@@ -1731,8 +1766,10 @@ How to read it:
   through `on_output` (build/rebuild) or `on_additional_assets` (HMR patch /
   lazy). All converge on the consumer's `memoryFiles`.
 - **Code / patch** (path to the client): build & rebuild ship chunks via
-  `on_output`; an HMR patch ships via `on_hmr_updates`; a lazy chunk is the
-  `compileEntry` return value.
+  `on_output`; an HMR update sends ids only via `on_hmr_updates`; a patch is
+  the `renderPatch` return value and a lazy chunk the `compileEntry` return
+  value. `render_patch` loads no module, so it emits no assets: the assets
+  of an edit were emitted by the HMR update's partial scan.
 - **`HmrRebuild`** is the only fork: `generate_hmr_updates()` runs first
   (→ `on_hmr_updates` + `on_additional_assets`), _then_ `rebuild()`
   (→ `on_output`). The shared `emitted_files` gate means an asset drained in the
@@ -1742,12 +1779,12 @@ How to read it:
 
 | Callback               | Fires from                                              | Carries                                                                 |
 | ---------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `on_output`            | `rebuild()` → `bundle_up`                               | full `BundleOutput` (chunks + assets via `add_additional_files`)        |
-| `on_hmr_updates`       | `generate_hmr_updates()`                                | `Vec<ClientHmrUpdate>` — patch **code** only (`HmrPatch` has no assets) |
+| `on_output`            | `rebuild()` → `bundle_up`                               | full `BundleOutput` (chunks + assets, and `hmr_generation`)             |
+| `on_hmr_updates`       | `generate_hmr_updates()`                                | one `HmrUpdate` for every client — **ids** only, no code                |
 | `on_additional_assets` | `generate_hmr_updates()` **and** `compile_lazy_entry()` | `BundleOutput` — emitted assets + their `add_additional_files` warnings |
 
 `on_additional_assets` is the fix for the asset-not-served bug (vite#22596 and
-its HMR analog): a pure HMR patch and a lazy compile never go through
+its HMR analog): a pure HMR update and a lazy compile never go through
 `on_output`, so without this callback their emitted assets would never reach
 the consumer. It fires **before** the patch / lazy code reaches the client (in
 `generate_hmr_updates` it runs before `on_hmr_updates`; in `compile_lazy_entry`
@@ -1755,7 +1792,8 @@ before the code is returned), so a consumer that serves built files (e.g. Vite,
 which writes them to `memoryFiles`) can serve the asset by the time the browser
 requests it. It carries only what `add_additional_files` produces (emit_file'd
 assets + prebuilt chunks) — not the rendered chunks, and not assets emitted
-inside a `generateBundle` hook (that hook does not run for patches). It is a
+inside a `generateBundle` hook (that hook does not run for HMR updates or
+lazy compiles). It is a
 `BundleOutput` so `add_additional_files` warnings ride along, as on `on_output`.
 
 ---
@@ -1767,12 +1805,11 @@ inside a `generateBundle` hook (that hook does not run for patches). It is a
 | Public dev API, coordinator spawn              | `crates/rolldown_dev/src/dev_engine.rs`                         |
 | State machine, queueing, scheduling            | `crates/rolldown_dev/src/bundle_coordinator.rs`                 |
 | One unit of build work                         | `crates/rolldown_dev/src/bundling_task.rs`                      |
-| Shared context, pending-payload cap            | `crates/rolldown_dev/src/dev_context.rs`                        |
-| `ClientSession` (ship map `shipped[C]`)        | `crates/rolldown_dev/src/types/client_session.rs`               |
-| `PendingPayload` (rendered, not yet acked)     | `crates/rolldown_dev/src/types/pending_payload.rs`              |
-| `HmrStampTable` (module id → rebuild stamp)    | `crates/rolldown_common/src/hmr/hmr_stamp_table.rs`             |
-| `ClientHmrInput` (per-client compute input)    | `crates/rolldown_common/src/hmr/client_hmr_input.rs`            |
-| HMR stage (superset walk, per-client patch)    | `crates/rolldown/src/hmr/hmr_stage.rs`                          |
+| Shared context                                 | `crates/rolldown_dev/src/dev_context.rs`                        |
+| `HmrSession` (epoch, gen, stamps, numbers)     | `crates/rolldown_common/src/hmr/hmr_session.rs`                 |
+| `ClientHave` (request query, number sets)      | `crates/rolldown_common/src/hmr/client_have.rs`                 |
+| HMR stage (update compute, `render_patch`)     | `crates/rolldown/src/hmr/hmr_stage.rs`                          |
+| Graph rows (`nums`, `DevRowsView`)             | `crates/rolldown/src/hmr/module_graph_delta.rs`                 |
 | `CoordinatorState` enum                        | `crates/rolldown_dev/src/types/coordinator_state.rs`            |
 | `TaskInput` enum, merge rules                  | `crates/rolldown_dev/src/types/task_input.rs`                   |
 | `CoordinatorMsg` enum                          | `crates/rolldown_dev/src/types/coordinator_msg.rs`              |
@@ -1791,7 +1828,7 @@ inside a `generateBundle` hook (that hook does not run for patches). It is a
 - [design.md](./design.md) — the dev engine's design principles and the
   rebuild / error-flow contract this machinery realizes
 - [hmr/design.md](../hmr/design.md) — the client-side HMR model that
-  `compute_hmr_update_for_file_changes` and the ship map serve
+  `compute_hmr_update_for_file_changes` and `render_patch` serve
 - [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md) — `BundleMode`,
   `Bundle` / `BundleFactory`, and the `ScanStageCache` lifecycle the dev
   engine's incremental builds run through

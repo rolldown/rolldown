@@ -31,6 +31,13 @@ __rolldown_runtime__.registerGraph({
 		[0],
 		[1, 2]
 	],
+	nums: [
+		0,
+		1,
+		3,
+		2
+	],
+	epoch: 1,
 	entries: [3]
 });
 // dep.js
@@ -63,12 +70,35 @@ process.on("beforeExit", (code) => {
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- dep.js
+
+### Stale Ids
+
+- dep.js
+- importer.js
+- watcher.js
+
+## Pull 0
+
+- g: 1
+- update: dep.js, importer.js
+- executed: main.js, watcher.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["dep.js","importer.js","watcher.js"],localCount:3,edges:[[],[0],[0]],stamps:{0:1,1:1,2:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["dep.js","importer.js"],localCount:2,edges:[[],[0]],nums:[0,1]});
 //#region dep.js
-__rolldown_runtime__.registerFactory("dep.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("dep.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_module__ = { exports: {} };
 		var __rolldown_exports__ = __rolldown_module__.exports;
@@ -76,11 +106,11 @@ __rolldown_runtime__.registerFactory("dep.js", (function(__rolldown_module_id__)
 		const hot_dep = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		__rolldown_module__.exports = { v: 2 };
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 //#region importer.js
-__rolldown_runtime__.registerFactory("importer.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("importer.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -90,29 +120,11 @@ __rolldown_runtime__.registerFactory("importer.js", (function(__rolldown_module_
 		globalThis.__restamp_importer_value = import_dep_0.default;
 		hot_importer.accept();
 	} finally {}
-}), 1);
-
-//#endregion
-//#region watcher.js
-__rolldown_runtime__.registerFactory("watcher.js", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ initial: () => initial });
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		__rolldown_runtime__.initModule("dep.js");
-		var import_dep_0 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("dep.js"));
-		const hot_watcher = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		hot_watcher.accept("dep.js", () => {});
-		const initial = import_dep_0.default;
-	} finally {}
-}), 1);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- dep.js
+- result: applied

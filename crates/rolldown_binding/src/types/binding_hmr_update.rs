@@ -1,18 +1,16 @@
 use napi_derive::napi;
 
+/// One update for every client. The client walks its own graph from `changedIds` and pulls the
+/// code it needs with `renderPatch`.
 #[napi(discriminant = "type", object_from_js = false)]
 #[derive(Debug)]
 pub enum BindingHmrUpdate {
-  Patch {
-    code: String,
-    filename: String,
-    sourcemap: Option<String>,
-    sourcemap_filename: Option<String>,
-    /// Stable ids of the changed modules — the `changedIds` of the push envelope.
-    /// The client walks from these on its own graph.
+  Changed {
     changed_ids: Vec<String>,
-    /// Per-client envelope sequence number.
-    seq: u32,
+    /// Every module stamped at `gen`. A client drops its factory of each one.
+    stale_ids: Vec<String>,
+    #[napi(js_name = "gen")]
+    generation: u32,
   },
   FullReload {
     reason: Option<String>,
@@ -23,16 +21,9 @@ pub enum BindingHmrUpdate {
 impl From<rolldown_common::HmrUpdate> for BindingHmrUpdate {
   fn from(value: rolldown_common::HmrUpdate) -> Self {
     match value {
-      // `carried` stays server-side: it feeds the engine's pending-payload
-      // bookkeeping and is never exposed to JS.
-      rolldown_common::HmrUpdate::Patch(patch) => Self::Patch {
-        code: patch.code,
-        filename: patch.filename,
-        sourcemap: patch.sourcemap,
-        sourcemap_filename: patch.sourcemap_filename,
-        changed_ids: patch.changed_ids,
-        seq: patch.seq,
-      },
+      rolldown_common::HmrUpdate::Changed { changed_ids, stale_ids, generation } => {
+        Self::Changed { changed_ids, stale_ids, generation }
+      }
       rolldown_common::HmrUpdate::FullReload { reason } => {
         Self::FullReload { reason: Some(reason) }
       }

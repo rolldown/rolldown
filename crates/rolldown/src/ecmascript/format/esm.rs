@@ -16,6 +16,7 @@ use super::{
 };
 use crate::{
   ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
+  hmr::module_graph_delta::RowsSession,
   types::generator::GenerateContext,
   utils::chunk::render_chunk_exports::{render_chunk_exports, render_wrapped_entry_chunk},
 };
@@ -123,16 +124,14 @@ fn render_chunk_content<'code>(
   source_joiner: &mut SourceJoiner<'code>,
 ) {
   // Dev chunks register graph rows for HMR after the runtime is available and before the user modules run.
-  let mut dev_graph_prelude = if ctx.options.is_dev_mode_enabled() {
+  let mut dev_graph_prelude = ctx.dev_rows.and_then(|dev_rows| {
     crate::hmr::module_graph_delta::render_register_graph_source(
       &ctx.link_output.module_table,
       ctx.chunk.modules.iter().copied(),
       &ctx.link_output.user_defined_entry_modules,
-      None,
+      RowsSession::Build(dev_rows),
     )
-  } else {
-    None
-  };
+  });
   // The per-module runtime checks below are reached through `take_if`, so they run only
   // while a prelude is still pending — never in production, and at most until the runtime
   // module is found in dev.

@@ -11,6 +11,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["a.ts", "main.ts"],
 	localCount: 2,
 	edges: [[], [0]],
+	nums: [0, 1],
+	epoch: 1,
 	entries: [1]
 });
 // a.ts
@@ -46,6 +48,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["b.ts", "main.ts"],
 	localCount: 2,
 	edges: [[], [0]],
+	nums: [2, 1],
+	epoch: 1,
 	entries: [1]
 });
 // b.ts

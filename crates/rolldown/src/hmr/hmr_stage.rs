@@ -1,10 +1,7 @@
 use std::{
   ops::{Deref, DerefMut},
   path::Path,
-  sync::{
-    Arc,
-    atomic::{AtomicU32, Ordering},
-  },
+  sync::Arc,
   time::Instant,
 };
 
@@ -13,9 +10,9 @@ use itertools::Itertools;
 use oxc::ast::builder::AstBuilder;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
-  ClientHmrInput, ClientHmrUpdate, ExportsKind, HmrLazyChunkOutput, HmrPatch, HmrStampTable,
-  HmrUpdate, ImportKind, Module, ModuleIdx, ModuleTable, NormalModule, ScanMode, WatcherChangeKind,
-  is_lazy_proxy, lazy_proxy_target, write_lazy_proxy_id,
+  ClientHave, ExportsKind, HmrCatchUp, HmrLazyChunkOutput, HmrPatch, HmrPullResponse, HmrRingEntry,
+  HmrSession, HmrUpdate, ImportKind, Module, ModuleIdx, ModuleTable, NormalModule, ScanMode,
+  SharedHmrSession, SourceMapType, WatcherChangeKind, is_lazy_proxy, lazy_proxy_target,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
 use rolldown_error::BuildResult;
@@ -32,15 +29,22 @@ use sugar_path::SugarPath;
 
 use crate::{
   SharedOptions, SharedResolver,
-  hmr::hmr_ast_finalizer::HmrAstFinalizer,
+  hmr::{
+    hmr_ast_finalizer::HmrAstFinalizer,
+    module_graph_delta::{RowsSession, assign_payload_nums, render_register_graph_source},
+  },
   module_loader::ModuleLoader,
   type_alias::IndexEcmaAst,
   types::scan_stage_cache::ScanStageCache,
   utils::{
-    process_code_and_sourcemap::process_code_and_sourcemap,
-    render_ecma_module::collapse_module_sourcemap,
+    process_code_and_sourcemap::prepare_sourcemap, render_ecma_module::collapse_module_sourcemap,
   },
 };
+
+/// The file names the sourcemap of a pulled payload is prepared for. Patches are served next to
+/// the output files.
+const HMR_PATCH_FILENAME: &str = "__rolldown_hmr_patch.js";
+const LAZY_CHUNK_FILENAME: &str = "__rolldown_lazy_chunk.js";
 
 pub struct HmrStageInput<'a, Fs: FileSystem + Clone + 'static> {
   pub options: SharedOptions,
@@ -49,7 +53,7 @@ pub struct HmrStageInput<'a, Fs: FileSystem + Clone + 'static> {
   pub plugin_driver: SharedPluginDriver,
   pub cache: &'a mut ScanStageCache,
   pub lost_hmr_update: &'a mut bool,
-  pub next_hmr_patch_id: Arc<AtomicU32>,
+  pub session: SharedHmrSession,
 }
 
 impl<Fs: FileSystem + Clone + 'static> HmrStageInput<'_, Fs> {
@@ -99,17 +103,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
     changed_file_paths: &FxIndexMap<String, WatcherChangeKind>,
-    clients: &[ClientHmrInput<'_>],
-    stamp_table: &mut HmrStampTable,
     last_build_errored: bool,
     hot_update_hook_enabled: bool,
-  ) -> BuildResult<Vec<ClientHmrUpdate>> {
+  ) -> BuildResult<HmrUpdate> {
     tracing::trace!(
       changed_files = %changed_file_paths
         .iter()
         .map(|(path, kind)| format!("{path}:{kind}"))
         .join(", "),
-      clients = %clients.iter().map(|client| client.client_id).join(", "),
       "[HmrStage] starts computing HMR updates"
     );
     // An earlier lost update stays lost: this one does not carry its edit.
@@ -225,7 +226,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
     // Files re-queued by an earlier failed scan (`pending_rescans`) get
     // re-fetched and merged by this update as well. Treat them as changed so
-    // their recovered content reaches the clients' patches; otherwise only
+    // their recovered content reaches the clients' updates; otherwise only
     // the server-side graph would learn about their edits.
     //
     // This fold must come BEFORE the empty early-return below. A watched path
@@ -244,19 +245,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     }
 
     if changed_modules.is_empty() {
-      return Ok(
-        clients
-          .iter()
-          .map(|client| ClientHmrUpdate {
-            client_id: client.client_id.to_string(),
-            update: HmrUpdate::Noop,
-          })
-          .collect(),
-      );
+      return Ok(HmrUpdate::Noop);
     }
 
     // After an errored build (`last_build_errored`) the capture is skipped, so
-    // every changed module ships. A failed scan merges nothing, so undoing the
+    // every changed module is pushed. A failed scan merges nothing, so undoing the
     // broken edit rebuilds byte-identical output — the graph can't tell "broke,
     // then fixed" from "nothing happened", but clients are stuck on the error
     // (overlay / fallback page) and a suppressed update would leave them there.
@@ -279,7 +272,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .into_par_iter()
         .map(|render_input| {
           let module_idx = render_input.idx;
-          (module_idx, self.render_module_code(render_input, 0, false).0)
+          (module_idx, self.render_module_code(render_input, false).0)
         })
         .collect::<Vec<_>>()
         .into_iter()
@@ -287,14 +280,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     };
 
     let modules = &self.module_table().modules;
-    let pre_rebuild_static_deps = changed_modules
-      .iter()
-      .filter_map(|module_idx| {
-        let module = modules[*module_idx].as_normal()?;
-        let deps = static_deps(module).map(|dep_idx| modules[dep_idx].id().clone());
-        Some((*module_idx, deps.collect::<FxHashSet<_>>()))
-      })
-      .collect::<FxHashMap<_, _>>();
     let pre_rebuild_interop = changed_modules
       .iter()
       .filter_map(|module_idx| {
@@ -302,9 +287,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       })
       .collect::<FxHashMap<_, _>>();
 
-    // 1. Do ONE module refetch and cache merge — the update-superset walk (which
-    // selects the factories to ship) runs on the post-rebuild table; boundary
-    // decisions belong to the client's own walk.
+    // 1. Do ONE module refetch and cache merge. Boundary decisions belong to the client's own
+    // walk, and the client pulls the code it needs afterwards (`render_patch`).
     let new_added_modules = if changed_modules.is_empty() {
       FxIndexSet::default()
     } else {
@@ -364,12 +348,12 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     };
 
     // Drop the changed modules whose post-rebuild render is byte-identical to the
-    // pre-rebuild capture: their output didn't change, so stamping and shipping
+    // pre-rebuild capture: their output didn't change, so stamping and pushing
     // them would only make every client re-run code it already holds. A module
     // that can't be compared (no pre-rebuild render, or no longer normal) stays
     // in. Dep identity is part of the compared code (internal imports print as
     // `loadExports("<dep stable id>")`), so a resolution shift under an unchanged
-    // source still ships.
+    // source is still pushed.
     let recheck_inputs = changed_modules
       .iter()
       .filter(|module_idx| pre_rebuild_renders.contains_key(*module_idx))
@@ -383,7 +367,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .into_par_iter()
       .filter_map(|render_input| {
         let module_idx = render_input.idx;
-        let (code, _) = self.render_module_code(render_input, 0, false);
+        let (code, _) = self.render_module_code(render_input, false);
         (pre_rebuild_renders[&module_idx] == code).then_some(module_idx)
       })
       .collect::<Vec<_>>()
@@ -402,7 +386,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     }
 
     // An importer's factory reads its importees' interop facts, so it changes with them even
-    // when its own source did not. Stamp and carry such importers like changed modules: a
+    // when its own source did not. Stamp such importers like changed modules: a
     // stamp must name one rendered factory (see internal-docs/hmr/design.md, "Registration
     // keeps the newest copy").
     let modules = &self.module_table().modules;
@@ -436,220 +420,114 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .collect::<FxIndexSet<_>>()
     };
 
-    // 2. Stamp the rebuild: `latest[m] = rebuild_seq` for every changed, newly added or
-    // re-rendered module — the versioned ship map's staleness source.
-    let rebuild_seq = stamp_table.begin_rebuild();
-    for module_idx in
-      changed_modules.iter().chain(new_added_modules.iter()).chain(rerendered_importers.iter())
-    {
-      if let Module::Normal(module) = &self.module_table().modules[*module_idx] {
-        stamp_table.stamp(module.stable_id.as_arc_str(), rebuild_seq);
-      }
-    }
-
-    // 3. Collect the factories to ship. The client's walk may remove modules from its cache and re-run
-    // anything up the changed ids' importer chains, and a re-run without a resident
-    // factory forces a reload — so the server must ship a SUPERSET of any client's
-    // possible update set, over-approximated on static truth (it never sees runtime
-    // acceptance). The ship map below subtracts what each tab already holds.
-    let changed_ids = changed_modules
-      .iter()
-      .filter_map(|module_idx| {
-        self.module_table().modules[*module_idx]
-          .as_normal()
-          .map(|module| module.stable_id.to_string())
-      })
-      .collect::<Vec<_>>();
-
-    // A re-run importer needs a factory for each import the rebuild added.
+    // 2. Stamp the rebuild: `latest[m] = generation` for every changed, newly added or
+    // re-rendered module. These are the stale modules: a client drops its factory of each.
     let modules = &self.module_table().modules;
-    let added_static_deps = changed_modules
+    let stamped_ids = changed_modules
       .iter()
       .chain(new_added_modules.iter())
+      .chain(rerendered_importers.iter())
       .filter_map(|module_idx| modules[*module_idx].as_normal())
-      .flat_map(|module| {
-        let before = pre_rebuild_static_deps.get(&module.idx);
-        static_deps(module)
-          .filter(move |dep| before.is_none_or(|before| !before.contains(modules[*dep].id())))
-      })
+      .map(|module| module.stable_id.as_arc_str().clone())
       .collect::<FxIndexSet<_>>();
-
-    let mut affected = self.collect_client_update_superset(&changed_modules);
-    affected.extend(new_added_modules.iter().copied());
-    affected.extend(rerendered_importers.iter().copied());
-    // A new `import()` adds a new lazy proxy, which never runs in the client.
-    affected.retain(|idx| {
-      self.module_table().modules[*idx]
-        .as_normal()
-        .is_some_and(|module| lazy_proxy_target(module.stable_id.as_str()).is_none())
-    });
-
-    // Client-invariant per-module data, resolved once instead of per client:
-    // `(idx, stable id, latest stamp)` for every affected module.
-    let affected_with_stamps = affected
+    // A lazy proxy never runs in the client, so no client holds a factory of it or walks from
+    // it.
+    let stale_ids = stamped_ids
       .iter()
-      .map(|module_idx| {
-        let stable_id = self.module_table().modules[*module_idx].stable_id().as_str();
-        (*module_idx, stable_id, stamp_table.render_time_stamp(stable_id))
-      })
+      .filter(|id| lazy_proxy_target(id.as_str()).is_none())
+      .cloned()
+      .collect::<Vec<_>>();
+    let changed_ids = changed_modules
+      .iter()
+      .filter_map(|module_idx| modules[*module_idx].as_normal())
+      .map(|module| module.stable_id.as_arc_str().clone())
+      .filter(|id| lazy_proxy_target(id.as_str()).is_none())
       .collect::<Vec<_>>();
 
-    // 4. Per client: `need[C] = (affected ∖ shipped[C]) ∪ stale sweep`. The sweep
-    // covers everything the client holds, not just `affected` — a parked factory can
-    // go stale behind a skipped patch in either graph direction. It iterates the
-    // stamp table (modules ever changed this session) rather than `shipped[C]`
-    // (modules ever delivered): only stamped modules can be stale, and `latest`
-    // stays far smaller than a tab's full delivery record.
-    let mut client_updates = Vec::with_capacity(clients.len());
-    for client in clients {
-      let mut carried = FxIndexSet::default();
-      for (module_idx, stable_id, latest_stamp) in &affected_with_stamps {
-        match client.shipped.get(*stable_id) {
-          None => {
-            carried.insert(*module_idx);
-          }
-          Some(stamp) => {
-            if *latest_stamp > *stamp {
-              carried.insert(*module_idx);
-            }
-          }
-        }
-      }
-      for (stable_id, latest_stamp) in stamp_table.iter_latest() {
-        if client.shipped.get(stable_id.as_str()).is_some_and(|stamp| latest_stamp > *stamp) {
-          if let Some(module_idx) =
-            self.cache.module_idx_by_stable_id.get(stable_id.as_str()).copied()
-          {
-            if self.module_table().modules[module_idx].is_normal() {
-              carried.insert(module_idx);
-            }
-          }
-        }
-      }
+    *self.lost_hmr_update = lost_before;
+    // Every changed module rendered byte-identical (dropped above), so no client needs to do
+    // anything.
+    if stale_ids.is_empty() {
+      return Ok(HmrUpdate::Noop);
+    }
 
-      // See internal-docs/hmr/design.md, principle 2.
-      let walk_from = carried
+    let mut session = self.session.lock();
+    let generation = session.begin_rebuild();
+    for id in &stamped_ids {
+      session.stamp(id, generation);
+    }
+    session.record_update(HmrRingEntry {
+      generation,
+      changed_ids: changed_ids.clone(),
+      stale_ids: stale_ids.clone(),
+    });
+    drop(session);
+
+    Ok(HmrUpdate::Changed {
+      changed_ids: changed_ids.iter().map(ToString::to_string).collect(),
+      stale_ids: stale_ids.iter().map(ToString::to_string).collect(),
+      generation,
+    })
+  }
+
+  /// Renders the factories a client needs to run its update `U` (`have.update`). The client
+  /// describes what it holds in the request, so the server keeps no state per client.
+  ///
+  /// Carries each module of `U` the client does not hold a current factory of, and the static
+  /// deps that `collect_unheld_sync_deps` finds. When the client is behind the session, the
+  /// payload tells it about the updates it missed (`render_catch_up`).
+  pub async fn render_patch(&self, have: &ClientHave) -> BuildResult<HmrPullResponse<HmrPatch>> {
+    if !self.cache.has_snapshot() {
+      return Ok(HmrPullResponse::Reload {
+        reason: "the last full build failed, so there is no module graph".to_owned(),
+      });
+    }
+
+    let (carried, catch_up) = {
+      let session = self.session.lock();
+      let catch_up = match catch_up_statement(&session, have) {
+        Ok(catch_up) => catch_up,
+        Err(reason) => return Ok(HmrPullResponse::Reload { reason }),
+      };
+      let modules = &self.module_table().modules;
+      // An id that left the graph is skipped. The client then still cannot run its update, and
+      // it reloads.
+      let update = have
+        .update
+        .iter()
+        .filter_map(|num| session.id_of(num))
+        .filter_map(|id| self.cache.module_idx_by_stable_id.get(id.as_str()).copied())
+        .filter(|module_idx| modules[*module_idx].is_normal())
+        .collect::<Vec<_>>();
+      let client = ClientView { have, session: &session };
+      let mut carried = update
         .iter()
         .copied()
-        .filter(|module_idx| {
-          let stable_id = self.module_table().modules[*module_idx].stable_id().as_str();
-          client.shipped.contains_key(stable_id)
-            || client.top_level_evaluated.contains_key(stable_id)
-        })
-        .collect::<Vec<_>>();
-      let held = ClientHeldCopies {
-        shipped: client.shipped,
-        evaluated: client.top_level_evaluated,
-        stamp_table,
-      };
-      self.collect_unheld_sync_deps(
-        &walk_from,
-        added_static_deps.iter().copied(),
-        None,
-        &held,
-        &mut carried,
-      );
+        .filter(|module_idx| !client.holds_current(modules[*module_idx].stable_id().as_str()))
+        .collect::<FxIndexSet<_>>();
+      self.collect_unheld_sync_deps(&update, None, &client, &mut carried);
+      (carried, catch_up)
+    };
 
-      let update = self.render_hmr_patch(carried, changed_ids.clone(), stamp_table).await?;
-      client_updates.push(ClientHmrUpdate { client_id: client.client_id.to_string(), update });
-    }
-
-    *self.lost_hmr_update = lost_before;
-    Ok(client_updates)
+    let (code, sourcemap) = self.render_payload(carried, catch_up, HMR_PATCH_FILENAME).await?;
+    Ok(HmrPullResponse::Payload(HmrPatch { code, sourcemap }))
   }
 
-  /// Collect the superset of modules any client's walk may re-run for these changes:
-  /// pure reachability over the importer graph (static ∪ dynamic edges), stopping at
-  /// statically self-accepting modules and at accepting importer edges.
-  fn collect_client_update_superset(
-    &self,
-    changed_modules: &FxIndexSet<ModuleIdx>,
-  ) -> FxIndexSet<ModuleIdx> {
-    let mut affected = FxIndexSet::default();
-    let mut stack: Vec<ModuleIdx> = changed_modules.iter().copied().collect();
-    let mut proxy_id = String::new();
-    while let Some(module_idx) = stack.pop() {
-      if !affected.insert(module_idx) {
-        // Already walked via another path (also breaks cycles).
-        continue;
-      }
-
-      let Module::Normal(module) = &self.module_table().modules[module_idx] else {
-        // Non-normal modules can't be re-run; they are filtered out of the patch later.
-        continue;
-      };
-
-      if module.is_hmr_self_accepting_module() {
-        tracing::trace!(
-          "[HmrStage] module {} is self-accepting, stop propagation here",
-          module.stable_id,
-        );
-        continue;
-      }
-
-      // Static and dynamic `import()` importers are walked the same way — parity with
-      // Vite (`node.importers`) and webpack (`module.parents`), neither of which
-      // distinguishes the edge kind. Duplicate pushes are fine: the `affected.insert`
-      // check at pop time dedups them.
-      let mut visit = |importer_idx: ModuleIdx| {
-        let Module::Normal(importer) = &self.module_table().modules[importer_idx] else {
-          return;
-        };
-        if importer.can_accept_hmr_dependency_for(&module.id) {
-          // Edge boundary: the accepting importer is not re-run, so it joins no set.
-          return;
-        }
-        stack.push(importer_idx);
-      };
-      for importer_idx in importers(module) {
-        if lazy_proxy_target(self.module_table().modules[importer_idx].stable_id().as_str())
-          .is_none()
-        {
-          visit(importer_idx);
-        }
-      }
-      // A lazy proxy never runs in the client (`requestLazy` runs `module` itself), so the
-      // modules that called `import()` are the real importers. The client graph links them to
-      // `module` whether or not the proxy was fetched (`render_register_graph_source`). An
-      // unfetched proxy has no `import()` record, so find it by `module`'s id, not through
-      // `importers(module)`. This also keeps the proxy out of the patch.
-      write_lazy_proxy_id(&mut proxy_id, module.stable_id.as_str());
-      if let Some(&proxy_idx) = self.cache.module_idx_by_stable_id.get(proxy_id.as_str()) {
-        if let Module::Normal(proxy) = &self.module_table().modules[proxy_idx] {
-          importers(proxy).for_each(&mut visit);
-        }
-      }
-    }
-    // Deterministic order keeps snapshots stable: one sort of the final set replaces a
-    // per-node importer sort (an alloc plus O(deg log deg) comparisons per visit).
-    affected.sort_unstable_by(|a, b| {
-      self.module_table().modules[*a].stable_id().cmp(self.module_table().modules[*b].stable_id())
-    });
-    affected
-  }
-
-  /// Compile a lazy entry module and return compiled code plus the pending-payload
-  /// entry (`carried`) the delivery-time ship-map write consumes.
+  /// Compile a lazy entry module and render the factories the client needs to run it.
   ///
-  /// A lazy chunk is pure first-evaluation demand: nothing already evaluated ever
-  /// re-runs, so factory selection subtracts BOTH per-client records — the ship map
-  /// (`shipped[C]`, factory resident) and the top-level-evaluated map (exports live from
-  /// entry-chunk execution; `initModule` returns them without a factory). Both are
-  /// server-derived; selection never reads client-reported runtime state. Contrast
-  /// with HMR patches, whose affected set must re-run and therefore subtracts the
-  /// ship map only. The ship map itself is written only by the delivery notification
-  /// (`DevEngine::notify_payload_delivered`).
+  /// A lazy chunk is pure first-evaluation demand: nothing the client already executed runs
+  /// again, so the walk stops at every module whose exports the client keeps, and it carries
+  /// only the modules the client holds no current factory of. Both come from the client's own
+  /// request (`have`). The catch-up rule is the one of `render_patch`.
   ///
   /// `merged` becomes `true` once the compile merges a scan into the graph. It stays `true` when
   /// a later step fails, because the graph keeps the route.
   pub async fn compile_lazy_entry(
     &mut self,
     module_id: &str,
-    shipped: &FxHashMap<ArcStr, u32>,
-    evaluated: &FxHashMap<ArcStr, u32>,
-    stamp_table: &HmrStampTable,
+    have: &ClientHave,
     merged: &mut bool,
-  ) -> BuildResult<HmrLazyChunkOutput> {
+  ) -> BuildResult<HmrPullResponse<HmrLazyChunkOutput>> {
     tracing::debug!(
       target: "hmr",
       "compile_lazy_entry: module_id: {}",
@@ -674,6 +552,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .into(),
       );
     }
+
+    // A client that must reload changes nothing on the server.
+    let catch_up = catch_up_statement(&self.session.lock(), have);
+    let catch_up = match catch_up {
+      Ok(catch_up) => catch_up,
+      Err(reason) => return Ok(HmrPullResponse::Reload { reason }),
+    };
 
     // 1. Get the originative resolved_id from the cached module
     // The proxy module should already be in the cache from the initial build.
@@ -734,265 +619,163 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .cache
         .merge(module_loader_output.into(), &plugin_driver)
         .map_err(|e| vec![anyhow::anyhow!(e).into()])?;
-    }
-    let scan_time = phase_start.elapsed();
 
-    let phase_start = Instant::now();
-    if needs_scan {
       let options = Arc::clone(&self.options);
-      let plugin_driver = Arc::clone(&self.plugin_driver);
       self
         .cache
         .apply_module_side_effects_overrides(&options, &plugin_driver.module_side_effects_overrides)
         .await?;
     }
-    let side_effects_time = phase_start.elapsed();
+    let scan_time = phase_start.elapsed();
 
-    let phase_start = Instant::now();
     // The proxy is only the walk root: it never runs in the client, so the payload does not
     // carry it.
     let mut modules_to_be_updated = FxIndexSet::default();
-    self.collect_unheld_sync_deps(
-      &[entry_module_idx],
-      [],
-      Some(entry_module_idx),
-      &ClientHeldCopies { shipped, evaluated, stamp_table },
-      &mut modules_to_be_updated,
-    );
-
-    // Remove external modules - no way to "compile" them
-    modules_to_be_updated.retain(|idx| self.module_table().modules[*idx].is_normal());
-
-    // Sort for stable output
-    modules_to_be_updated
-      .sort_by_cached_key(|module_idx| self.module_table().modules[*module_idx].id());
-    let walk_time = phase_start.elapsed();
-
-    let phase_start = Instant::now();
-    let rendered = modules_to_be_updated
-      .iter()
-      .map(|&idx| {
-        let stamp =
-          stamp_table.render_time_stamp(self.module_table().modules[idx].stable_id().as_str());
-        (idx, stamp, self.module_render_input(idx))
-      })
-      .collect::<Vec<_>>()
-      .into_par_iter()
-      .map(|(idx, stamp, render_input)| {
-        let (code, map) = self.render_module_code(render_input, stamp, true);
-        (idx, stamp, code, map)
-      })
-      .collect::<Vec<_>>();
-    let render_time = phase_start.elapsed();
+    {
+      let session = self.session.lock();
+      let client = ClientView { have, session: &session };
+      self.collect_unheld_sync_deps(
+        &[entry_module_idx],
+        Some(entry_module_idx),
+        &client,
+        &mut modules_to_be_updated,
+      );
+    }
 
     // Registrations only — deliberately no execute-entry tail; `requestLazy` runs the module.
     // Executing here would run it inside the proxy's async wrapper, turning a throw from its
     // body into a floating rejection instead of one that reaches the importer.
     let phase_start = Instant::now();
-    let mut source_joiner = SourceJoiner::default();
-    // Rows first, so the client graph is in place before any factory registers.
-    if let Some(prelude) = crate::hmr::module_graph_delta::render_register_graph_source(
-      self.module_table(),
-      modules_to_be_updated.iter().copied(),
-      &self.cache.get_snapshot().user_defined_entry_modules,
-      Some(stamp_table),
-    ) {
-      source_joiner.append_source(prelude);
-    }
-    let mut carried = Vec::with_capacity(rendered.len());
-    for (idx, stamp, code, map) in rendered {
-      let Module::Normal(module) = &self.module_table().modules[idx] else {
-        unreachable!("Only normal modules should be rendered");
-      };
-      carried.push((module.stable_id.as_arc_str().clone(), stamp));
-      source_joiner.append_source(concat_string!("//#region ", module.debug_id));
-      if let Some(map) = map {
-        source_joiner.append_source(SourceMapSource::new(code, map));
-      } else {
-        source_joiner.append_source(code);
-      }
-      source_joiner.append_source("//#endregion");
-    }
-    let (mut code, mut map) = source_joiner.join();
-
-    let lazy_patch_id = self.next_hmr_patch_id.fetch_add(1, Ordering::Relaxed);
-    let filename = format!("lazy_compile_{lazy_patch_id}.js");
-
-    let file_dir = self.options.cwd.as_path().join(&self.options.out_dir);
-
-    let sourcemap_asset = if let Some(map) = map.as_mut() {
-      process_code_and_sourcemap(
-        &self.options,
-        &mut code,
-        map,
-        &file_dir,
-        filename.as_str(),
-        0,
-        None,
-      )
-      .await?
-    } else {
-      None
-    };
-    let join_time = phase_start.elapsed();
-
-    let sourcemap_filename = sourcemap_asset.as_ref().map(|asset| asset.filename.to_string());
-    let sourcemap = sourcemap_asset.map(|asset| asset.source.try_into_string()).transpose()?;
-
+    let modules = modules_to_be_updated.len();
+    let (code, sourcemap) =
+      self.render_payload(modules_to_be_updated, catch_up, LAZY_CHUNK_FILENAME).await?;
     tracing::debug!(
       target: "hmr",
       scanned = needs_scan,
-      modules = modules_to_be_updated.len(),
+      modules,
       ?scan_time,
-      ?side_effects_time,
-      ?walk_time,
-      ?render_time,
-      ?join_time,
+      render_time = ?phase_start.elapsed(),
       "compile_lazy_entry: done"
     );
-
-    Ok(HmrLazyChunkOutput { code, filename, sourcemap_filename, sourcemap, carried })
+    Ok(HmrPullResponse::Payload(HmrLazyChunkOutput { code, sourcemap }))
   }
 
-  async fn render_hmr_patch(
+  /// Renders a pulled payload:
+  ///
+  /// 1. the prelude `const __rolldown_payload__ = __rolldown_runtime__.beginPayload(G)`, where `G`
+  ///    is the session's generation. Every factory and row of the payload is as of `G`.
+  /// 2. the catch-up statement, when the client is behind
+  /// 3. the graph rows
+  /// 4. one factory registration per carried module
+  ///
+  /// No driver tail: the client walks its own graph, removes from its cache, and re-runs from
+  /// the factory map. Importing the payload commits rows and factories, nothing more.
+  ///
+  /// The caller holds the bundler, so no stamp or merge runs while this renders, and `G` names
+  /// the state of every module it renders. See internal-docs/hmr/design.md, "Gen-only wire".
+  async fn render_payload(
     &self,
     mut carried_modules: FxIndexSet<ModuleIdx>,
-    changed_ids: Vec<String>,
-    stamp_table: &HmrStampTable,
-  ) -> BuildResult<HmrUpdate> {
-    // Note: the carried set might include external modules. There's no way to "update" them, so we need to remove them.
+    catch_up: Option<String>,
+    filename: &str,
+  ) -> BuildResult<(String, Option<String>)> {
+    // External modules have no factory to send.
     carried_modules.retain(|idx| self.module_table().modules[*idx].is_normal());
-
-    // Nothing to ship and nothing for the client's walk to re-run — every changed
-    // module rendered byte-identical (dropped upstream) and the stale sweep
-    // carried nothing. Say so explicitly instead of sending an empty patch.
-    if carried_modules.is_empty() && changed_ids.is_empty() {
-      return Ok(HmrUpdate::Noop);
-    }
-
-    // Sorting `carried_modules` is not strictly necessary, but it:
-    // - Makes the snapshot more stable when we change logic that affects the order of modules.
+    // Sorting makes the snapshot more stable when we change logic that affects the order of
+    // modules.
     carried_modules
       .sort_by_cached_key(|module_idx| self.module_table().modules[*module_idx].id().as_str());
 
+    let (generation, rows) = {
+      let mut session = self.session.lock();
+      assign_payload_nums(&mut session, self.module_table(), carried_modules.iter().copied());
+      let rows = render_register_graph_source(
+        self.module_table(),
+        carried_modules.iter().copied(),
+        &self.cache.get_snapshot().user_defined_entry_modules,
+        RowsSession::Payload(&session),
+      );
+      (session.generation(), rows)
+    };
+
     let index_ecma_ast = self.index_ecma_ast();
-    let module_render_inputs = carried_modules
+    let factories = carried_modules
       .iter()
-      .copied()
-      .map(|affected_module_idx| {
-        let affected_module = &self.module_table().modules[affected_module_idx];
-        let Module::Normal(affected_module) = affected_module else {
-          unreachable!("HMR only supports normal module");
-        };
-
-        debug_assert_eq!(affected_module_idx, affected_module.idx);
+      .map(|module_idx| {
         let ecma_ast =
-          index_ecma_ast[affected_module_idx].as_ref().expect("Normal module should have an AST");
-
-        ModuleRenderInput {
-          idx: affected_module.idx,
-          ecma_ast: ecma_ast.clone_with_another_arena(),
-        }
+          index_ecma_ast[*module_idx].as_ref().expect("Normal module should have an AST");
+        ModuleRenderInput { idx: *module_idx, ecma_ast: ecma_ast.clone_with_another_arena() }
       })
+      .collect::<Vec<_>>()
+      .into_par_iter()
+      .map(|render_input| self.render_module_code(render_input, true))
       .collect::<Vec<_>>();
 
     let mut source_joiner = SourceJoiner::default();
-    // The graph-rows manifest is the first source of every payload: pure topology the
-    // client-side walk consumes, landing before any factory registers.
-    if let Some(prelude) = crate::hmr::module_graph_delta::render_register_graph_source(
-      self.module_table(),
-      carried_modules.iter().copied(),
-      &self.cache.get_snapshot().user_defined_entry_modules,
-      Some(stamp_table),
-    ) {
-      source_joiner.append_source(prelude);
+    source_joiner.append_source(concat_string!(
+      "const __rolldown_payload__ = __rolldown_runtime__.beginPayload(",
+      itoa::Buffer::new().format(generation),
+      ");"
+    ));
+    if let Some(catch_up) = catch_up {
+      source_joiner.append_source(catch_up);
     }
-    let rendered_sources = module_render_inputs
-      .into_par_iter()
-      .flat_map(|render_input| {
-        let affected_module_idx = render_input.idx;
-        let stamp = stamp_table
-          .render_time_stamp(self.module_table().modules[affected_module_idx].stable_id().as_str());
-        let (code, map) = self.render_module_code(render_input, stamp, true);
-
-        let affected_module = &self.module_table().modules[affected_module_idx];
-        let Module::Normal(affected_module) = affected_module else {
-          unreachable!("HMR only supports normal module");
-        };
-
-        let intro_comment: Box<dyn Source + Send> =
-          Box::new(concat_string!("//#region ", affected_module.debug_id));
-        let outro_comment: Box<dyn Source + Send> = Box::new(concat_string!("//#endregion"));
-
-        let code_source: Box<dyn Source + Send> = if let Some(map) = map {
-          Box::new(SourceMapSource::new(code, map))
-        } else {
-          Box::new(code)
-        };
-
-        [intro_comment, code_source, outro_comment]
-      })
-      .collect::<Vec<_>>();
-
-    for source in rendered_sources {
-      source_joiner.append_source_dyn(source);
+    if let Some(rows) = rows {
+      source_joiner.append_source(rows);
+    }
+    let modules = &self.module_table().modules;
+    for (module_idx, (code, map)) in carried_modules.iter().zip(factories) {
+      let Module::Normal(module) = &modules[*module_idx] else {
+        unreachable!("HMR only supports normal module");
+      };
+      source_joiner.append_source(concat_string!("//#region ", module.debug_id));
+      let factory: Box<dyn Source + Send> = match map {
+        Some(map) => Box::new(SourceMapSource::new(code, map)),
+        None => Box::new(code),
+      };
+      source_joiner.append_source_dyn(factory);
+      source_joiner.append_source(concat_string!("//#endregion"));
     }
 
-    // No driver tail: the client walks its own graph, removes from its cache, and re-runs from the
-    // factory map. Importing this patch commits rows and factories, nothing more.
+    let (mut code, map) = source_joiner.join();
+    let sourcemap = self.finish_payload_sourcemap(&mut code, map, filename).await?;
+    Ok((code, sourcemap))
+  }
 
-    let (mut code, mut map) = source_joiner.join();
-
-    let hmr_patch_id = self.next_hmr_patch_id.fetch_add(1, Ordering::Relaxed);
-    let filename = format!("hmr_patch_{hmr_patch_id}.js");
-
-    let file_dir = self.options.cwd.as_path().join(&self.options.out_dir);
-
-    let sourcemap_asset = if let Some(map) = map.as_mut() {
-      process_code_and_sourcemap(
-        &self.options,
-        &mut code,
-        map,
-        &file_dir,
-        filename.as_str(),
-        0,
-        None,
-      )
-      .await?
-    } else {
-      None
+  /// `Inline` appends the map to the code as a data URL. `File` and `Hidden` return the map as
+  /// JSON, and the code has no `sourceMappingURL` comment: no file is kept for a pulled payload,
+  /// so the consumer serves the map itself and adds the comment that points to it.
+  async fn finish_payload_sourcemap(
+    &self,
+    code: &mut String,
+    map: Option<SourceMap>,
+    filename: &str,
+  ) -> BuildResult<Option<String>> {
+    let Some(mut map) = map else {
+      return Ok(None);
     };
-
-    let carried = carried_modules
-      .iter()
-      .map(|module_idx| {
-        let stable_id = self.module_table().modules[*module_idx].stable_id();
-        (stable_id.as_arc_str().clone(), stamp_table.render_time_stamp(stable_id.as_str()))
-      })
-      .collect();
-
-    Ok(HmrUpdate::Patch(HmrPatch {
-      code,
-      filename,
-      sourcemap_filename: sourcemap_asset.as_ref().map(|asset| asset.filename.to_string()),
-      sourcemap: sourcemap_asset.map(|asset| asset.source.try_into_string()).transpose()?,
-      changed_ids,
-      // The envelope seq is a delivery-layer concern; the dev engine stamps it onto the
-      // patches it actually sends (see `bundling_task`), so this is only a placeholder.
-      seq: 0,
-      carried,
-    }))
+    let file_dir = self.options.cwd.as_path().join(&self.options.out_dir);
+    prepare_sourcemap(&self.options, &mut map, &file_dir, filename).await?;
+    match self.options.sourcemap {
+      Some(SourceMapType::File | SourceMapType::Hidden) => Ok(Some(map.to_json_string())),
+      Some(SourceMapType::Inline) => {
+        code.push_str("\n//# sourceMappingURL=");
+        code.push_str(&map.to_data_url());
+        Ok(None)
+      }
+      None => Ok(None),
+    }
   }
 
   /// Finalize and print one module into its HMR payload form (factory-registration
   /// snippet, without the `//#region` framing).
   ///
-  /// Two renders of the same module compare equal only when they use the same `stamp`.
-  /// `with_sourcemap: false` skips sourcemap generation even when the options ask for one.
+  /// The code depends only on the module and its importees, not on the payload it goes into.
+  /// `with_sourcemap: false` skips sourcemap generation even when the options ask for one; the
+  /// code is the same either way.
   fn render_module_code(
     &self,
     render_input: ModuleRenderInput,
-    stamp: u32,
     with_sourcemap: bool,
   ) -> (String, Option<SourceMap>) {
     let ModuleRenderInput { idx: module_idx, ecma_ast: mut ast } = render_input;
@@ -1025,7 +808,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         generated_static_import_infos: FxHashMap::default(),
         re_export_all_dependencies: FxIndexSet::default(),
         generated_static_import_stmts_from_external: FxIndexMap::default(),
-        stamp,
         named_exports: FxHashMap::default(),
       };
 
@@ -1075,11 +857,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
     (code, map)
   }
-
-  fn module_render_input(&self, idx: ModuleIdx) -> ModuleRenderInput {
-    let ecma_ast = self.index_ecma_ast()[idx].as_ref().expect("Normal module should have an AST");
-    ModuleRenderInput { idx, ecma_ast: ecma_ast.clone_with_another_arena() }
-  }
 }
 
 struct ModuleRenderInput {
@@ -1087,15 +864,24 @@ struct ModuleRenderInput {
   pub ecma_ast: EcmaAst,
 }
 
-struct ClientHeldCopies<'a> {
-  shipped: &'a FxHashMap<ArcStr, u32>,
-  evaluated: &'a FxHashMap<ArcStr, u32>,
-  stamp_table: &'a HmrStampTable,
+/// A client's have-set read against the session.
+struct ClientView<'a> {
+  have: &'a ClientHave,
+  session: &'a HmrSession,
 }
 
-impl ClientHeldCopies<'_> {
-  fn holds_current(&self, map: &FxHashMap<ArcStr, u32>, stable_id: &str) -> bool {
-    map.get(stable_id).is_some_and(|stamp| !self.stamp_table.is_stale(stable_id, *stamp))
+impl ClientView<'_> {
+  /// An executed module that the client's update does not re-run keeps its exports, so the
+  /// modules below it need nothing.
+  fn keeps_exports(&self, stable_id: &str) -> bool {
+    self
+      .session
+      .num_of(stable_id)
+      .is_some_and(|num| self.have.executed.contains(num) && !self.have.update.contains(num))
+  }
+
+  fn holds_current(&self, stable_id: &str) -> bool {
+    self.session.holds_current(self.have, stable_id)
   }
 }
 
@@ -1105,33 +891,22 @@ fn importee_interop(module: &NormalModule) -> (ExportsKind, bool) {
   (module.exports_kind, module.meta.has_lazy_export())
 }
 
-fn static_deps(module: &NormalModule) -> impl Iterator<Item = ModuleIdx> + '_ {
-  module
-    .import_records
-    .iter()
-    .filter(|rec| rec.kind.is_static())
-    .filter_map(|rec| rec.resolved_module)
-}
-
-fn importers(module: &NormalModule) -> impl Iterator<Item = ModuleIdx> + '_ {
-  module.importers_idx.iter().chain(module.dynamic_importers_idx.iter()).copied()
-}
-
 impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
-  /// Goes through shipped modules: a patch can carry a module the client never ran. See
-  /// internal-docs/hmr/design.md, principle 2. `walk_from` modules are never carried.
+  /// Adds to `out` the static deps of `walk_from` that the client cannot run without a new
+  /// factory. A dep whose exports the client keeps stops the walk. A dep the client holds a
+  /// current factory of is walked through but not carried. `walk_from` modules are never
+  /// carried. See internal-docs/hmr/design.md, principle 7.
   fn collect_unheld_sync_deps(
     &self,
     walk_from: &[ModuleIdx],
-    targets: impl IntoIterator<Item = ModuleIdx>,
     follow_dynamic_of: Option<ModuleIdx>,
-    held: &ClientHeldCopies<'_>,
+    client: &ClientView<'_>,
     out: &mut FxIndexSet<ModuleIdx>,
   ) {
     let modules = &self.module_table().modules;
     let mut visited = walk_from.iter().copied().collect::<FxHashSet<_>>();
     let mut to_walk = walk_from.to_vec();
-    let mut to_sort = targets.into_iter().collect::<Vec<_>>();
+    let mut to_sort = Vec::new();
 
     loop {
       while let Some(module_idx) = to_sort.pop() {
@@ -1142,10 +917,10 @@ impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
           continue;
         };
         let stable_id = module.stable_id.as_str();
-        if held.holds_current(held.evaluated, stable_id) {
+        if client.keeps_exports(stable_id) {
           continue;
         }
-        if !held.holds_current(held.shipped, stable_id) {
+        if !client.holds_current(stable_id) {
           out.insert(module_idx);
         }
         to_walk.push(module_idx);
@@ -1169,9 +944,55 @@ impl<Fs: FileSystem + Clone + 'static> HmrStage<'_, Fs> {
   }
 }
 
+/// The catch-up statement for the client `have`: `None` when it is up to date, and the reload
+/// reason when the session cannot serve it.
+fn catch_up_statement(session: &HmrSession, have: &ClientHave) -> Result<Option<String>, String> {
+  match session.catch_up(have) {
+    HmrCatchUp::Reload { reason } => Err(reason),
+    HmrCatchUp::UpToDate => Ok(None),
+    HmrCatchUp::Behind { missed } => Ok(Some(render_catch_up(&missed))),
+  }
+}
+
+/// The statement that tells a client behind the session about the updates it missed, oldest
+/// first. Each entry acts like the push the client did not get:
+/// `__rolldown_payload__.catchUp([{gen:4,changedIds:["a.js"],staleIds:["a.js","x.js"]}]);`.
+/// `changedIds` is left out when it is empty.
+fn render_catch_up(missed: &[HmrRingEntry]) -> String {
+  let push_ids = |source: &mut String, ids: &[ArcStr]| {
+    source.push('[');
+    for (i, id) in ids.iter().enumerate() {
+      if i > 0 {
+        source.push(',');
+      }
+      source.push_str(&json_escape_simd::escape(id));
+    }
+    source.push(']');
+  };
+  let mut source = String::from("__rolldown_payload__.catchUp([");
+  for (i, entry) in missed.iter().enumerate() {
+    if i > 0 {
+      source.push(',');
+    }
+    source.push_str("{gen:");
+    source.push_str(itoa::Buffer::new().format(entry.generation));
+    if !entry.changed_ids.is_empty() {
+      source.push_str(",changedIds:");
+      push_ids(&mut source, &entry.changed_ids);
+    }
+    source.push_str(",staleIds:");
+    push_ids(&mut source, &entry.stale_ids);
+    source.push('}');
+  }
+  source.push_str("]);");
+  source
+}
+
 #[cfg(test)]
 mod tests {
-  use super::is_hidden_from_hot_update_hook;
+  use rolldown_common::HmrRingEntry;
+
+  use super::{is_hidden_from_hot_update_hook, render_catch_up};
 
   #[test]
   fn hidden_ids_cover_runtime_and_lazy_proxy_modules() {
@@ -1179,5 +1000,21 @@ mod tests {
     assert!(is_hidden_from_hot_update_hook("/app/main.js?rolldown-lazy=1"));
     assert!(!is_hidden_from_hot_update_hook("/app/main.js"));
     assert!(!is_hidden_from_hot_update_hook("\0virtual:team"));
+  }
+
+  #[test]
+  fn catch_up_leaves_out_empty_changed_ids() {
+    let missed = [
+      HmrRingEntry { generation: 4, changed_ids: vec![], stale_ids: vec!["x.js".into()] },
+      HmrRingEntry {
+        generation: 5,
+        changed_ids: vec!["b.js".into()],
+        stale_ids: vec!["b.js".into(), "a.js".into()],
+      },
+    ];
+    assert_eq!(
+      render_catch_up(&missed),
+      r#"__rolldown_payload__.catchUp([{gen:4,staleIds:["x.js"]},{gen:5,changedIds:["b.js"],staleIds:["b.js","a.js"]}]);"#
+    );
   }
 }

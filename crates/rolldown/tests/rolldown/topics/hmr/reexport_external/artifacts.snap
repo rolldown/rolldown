@@ -25,6 +25,14 @@ __rolldown_runtime__.registerGraph({
 		[1, 2],
 		[3]
 	],
+	nums: [
+		0,
+		3,
+		4,
+		1,
+		2
+	],
+	epoch: 1,
 	entries: [4]
 });
 // dep.js
@@ -74,12 +82,33 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- dep.js
+
+### Stale Ids
+
+- dep.js
+
+## Pull 0
+
+- g: 1
+- update: dep.js, hmr.js, reexport.js, shadow.js
+- executed: main.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["dep.js","hmr.js","reexport.js","shadow.js"],localCount:4,edges:[[],[2,3],[0],[0]],stamps:{0:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["dep.js","hmr.js","reexport.js","shadow.js"],localCount:4,edges:[[],[2,3],[0],[0]],nums:[0,1,3,4]});
 //#region dep.js
-__rolldown_runtime__.registerFactory("dep.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("dep.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -87,12 +116,12 @@ __rolldown_runtime__.registerFactory("dep.js", (function(__rolldown_module_id__)
 		const value = "from-dep";
 		console.log("dep updated");
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 //#region hmr.js
 import * as import$hmr$2ejs_0_node_assert from "node:assert";
-__rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("hmr.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -116,7 +145,7 @@ __rolldown_runtime__.registerFactory("hmr.js", (function(__rolldown_module_id__)
 //#region reexport.js
 import * as import$reexport$2ejs_1_node_assert from "node:assert";
 import * as import$reexport$2ejs_4_node_util from "node:util";
-__rolldown_runtime__.registerFactory("reexport.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("reexport.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			assertOk: () => import$reexport$2ejs_1_node_assert.ok,
@@ -134,7 +163,7 @@ __rolldown_runtime__.registerFactory("reexport.js", (function(__rolldown_module_
 //#endregion
 //#region shadow.js
 import * as import$shadow$2ejs_0_node_assert from "node:assert";
-__rolldown_runtime__.registerFactory("shadow.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("shadow.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ shadowWorks: () => shadowWorks }, 2);
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -149,10 +178,6 @@ __rolldown_runtime__.registerFactory("shadow.js", (function(__rolldown_module_id
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- dep.js
+- result: applied

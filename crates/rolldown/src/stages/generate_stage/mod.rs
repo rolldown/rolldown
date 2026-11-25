@@ -105,6 +105,7 @@ fn ensure_devtools_package_info<'a>(
 use crate::{
   BundleOutput, SharedOptions,
   chunk_graph::ChunkGraph,
+  hmr::module_graph_delta::DevRowsView,
   stages::{
     generate_stage::compute_cross_chunk_links::FinalEsmInitMetadataAvailability,
     link_stage::LinkStageOutput,
@@ -166,6 +167,8 @@ pub struct GenerateStage<'a> {
   /// moved out when the files are instantiated.
   inline_renders: FxHashMap<ChunkIdx, Vec<CarriedRender>>,
   hoisted_keep_names: FxHashMap<ModuleIdx, Vec<(CompactStr, CompactStr)>>,
+  /// `Some` in dev mode.
+  dev_rows: Option<&'a DevRowsView>,
 }
 
 impl<'a> GenerateStage<'a> {
@@ -174,6 +177,7 @@ impl<'a> GenerateStage<'a> {
     ast_table: IndexEcmaAst,
     options: &'a SharedOptions,
     plugin_driver: &'a SharedPluginDriver,
+    dev_rows: Option<&'a DevRowsView>,
   ) -> Self {
     Self {
       link_output,
@@ -184,6 +188,7 @@ impl<'a> GenerateStage<'a> {
       inline_state: InlineCommonChunksState::default(),
       inline_renders: FxHashMap::default(),
       hoisted_keep_names: FxHashMap::default(),
+      dev_rows,
     }
   }
 
@@ -661,6 +666,7 @@ impl<'a> GenerateStage<'a> {
           inline_state: &self.inline_state,
           carried_renders: vec![],
           hoisted_keep_names: &self.hoisted_keep_names,
+          dev_rows: self.dev_rows,
         },
         entry_module,
         &export_names,

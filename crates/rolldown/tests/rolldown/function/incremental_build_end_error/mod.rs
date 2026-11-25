@@ -3,13 +3,13 @@ use std::{
   path::PathBuf,
   sync::{
     Arc, Mutex,
-    atomic::{AtomicBool, AtomicU32, Ordering},
+    atomic::{AtomicBool, Ordering},
   },
 };
 
 use arcstr::ArcStr;
 use rolldown::{Bundler, BundlerOptions, DevModeOptions, ExperimentalOptions, InputItem};
-use rolldown_common::{HmrStampTable, Output, ScanMode, WatcherChangeKind};
+use rolldown_common::{Output, ScanMode, WatcherChangeKind};
 use rolldown_error::{BatchedBuildDiagnostic, BuildResult};
 use rolldown_plugin::{
   HookBuildEndArgs, HookBuildStartArgs, HookLoadArgs, HookLoadOutput, HookLoadReturn,
@@ -156,17 +156,7 @@ impl Project {
   /// The HMR update the dev engine computes for an edit before it rebuilds.
   async fn hot_update(&mut self, id: &ArcStr) -> BuildResult<()> {
     let changed = FxIndexMap::from_iter([(id.to_string(), WatcherChangeKind::Update)]);
-    self
-      .bundler
-      .compute_hmr_update_for_file_changes(
-        &changed,
-        &[],
-        &mut HmrStampTable::default(),
-        Arc::new(AtomicU32::new(0)),
-        true,
-        false,
-      )
-      .await?;
+    self.bundler.compute_hmr_update_for_file_changes(&changed, true, false).await?;
     Ok(())
   }
 

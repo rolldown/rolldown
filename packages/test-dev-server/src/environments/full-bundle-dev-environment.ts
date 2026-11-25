@@ -1,7 +1,4 @@
-import nodeFs from 'node:fs';
-import nodePath from 'node:path';
-import nodeUrl from 'node:url';
-import type { BindingClientHmrUpdate, DevEngine } from 'rolldown/experimental';
+import type { BindingHmrUpdate, DevEngine } from 'rolldown/experimental';
 import { dev } from 'rolldown/experimental';
 import type { WebSocket } from 'ws';
 import { Clients } from '../clients.js';
@@ -12,8 +9,6 @@ import { getDevWatchOptionsForCi } from '../utils/get-dev-watch-options-for-ci.j
 import { withResolvers } from '../utils/with-resolvers.js';
 
 type ServerMessage = HmrUpdateMessage | ConnectedMessage;
-
-let seed = 0;
 
 export interface FullBundleDevEnvironmentOptions {
   inputOptions: Parameters<typeof dev>[0];
@@ -28,8 +23,8 @@ export interface FullBundleDevEnvironmentOptions {
  * child process by the fixture harness. Build errors surface through the
  * server logs (`Build error:` / `HMR update error:`), which is what the node
  * fixtures assert on.
- * HMR patches are written to `dist/` as numbered files and imported by the
- * artifact via `file://` URLs.
+ * HMR updates are pushed to every client, and the harness restarts the artifact:
+ * the default runtime has no boundary walk, so it never pulls a patch.
  *
  * Browser configs run on Vite's own full bundle mode instead (see
  * `../vite-server.ts`). Vite's bundled dev is client-environment-only, so the
@@ -111,38 +106,34 @@ export class FullBundleDevEnvironment {
   connectClient(ws: WebSocket, clientId: string): ClientSession {
     const client = new ClientSession(ws, clientId);
     this.#clients.setupIfNeeded(client);
-    // create the server-side session (fresh `shipped[C]` ship map) used to select the
-    // factories each patch ships to this client; fire-and-forget on purpose — the ack
-    // below does not depend on it
-    void this.#devEngine.registerClient(clientId);
-
     this.#send(ws, { type: 'connected' });
     return client;
   }
 
-  async disconnectClient(clientId: string): Promise<void> {
+  disconnectClient(clientId: string): void {
     this.#clients.delete(clientId);
-    await this.#devEngine.removeClient(clientId);
   }
 
   // --- Dev engine callbacks --------------------------------------------------
 
-  #onHmrUpdates(
-    result: Error | { updates: BindingClientHmrUpdate[]; changedFiles: string[] },
-  ): void {
+  #onHmrUpdates(result: Error | { update: BindingHmrUpdate; changedFiles: string[] }): void {
     if (result instanceof Error) {
       this.logger.error('HMR update error:', result);
       this.#buildSeq++;
       return;
     }
-    const { updates, changedFiles } = result;
-    // Skip client-facing work for empty / all-noop batches.
-    if (changedFiles.length > 0 && !updates.every((u) => u.update.type === 'Noop')) {
-      this.#handleHmrUpdates(updates);
-      // This platform is restart-based: patches carry no applier (there is no
-      // browser walk on the node side), so refresh the on-disk dist and let the
-      // harness restart the artifact. The engine leaves the bundle output stale
-      // after a patch-only task; this is the pull that regenerates it.
+    const { update, changedFiles } = result;
+    if (changedFiles.length > 0 && update.type === 'Changed') {
+      for (const client of this.#clients.getAll()) {
+        this.#send(client.ws, {
+          type: 'hmr:update',
+          changedIds: update.changedIds,
+          staleIds: update.staleIds,
+          gen: update.gen,
+        });
+      }
+      // This platform is restart-based: the harness restarts the artifact, so refresh the
+      // on-disk dist. The engine leaves the bundle output stale after an HMR update.
       this.#devEngine.ensureLatestBuildOutput();
     }
     this.#buildSeq++;
@@ -159,55 +150,6 @@ export class FullBundleDevEnvironment {
     // harness restarts the artifact itself, so no client-facing reload
     // signal is needed here.
     this.#buildSeq++;
-  }
-
-  // --- HMR fan-out -----------------------------------------------------------
-
-  #handleHmrUpdates(updates: BindingClientHmrUpdate[]): void {
-    for (const clientUpdate of updates) {
-      const update = clientUpdate.update;
-      switch (update.type) {
-        case 'Patch': {
-          const client = this.#clients.get(clientUpdate.clientId);
-          if (!client) {
-            this.logger.warn(`Client ${clientUpdate.clientId} not found`);
-            continue;
-          }
-          this.#sendPatch(client.ws, update);
-          break;
-        }
-        case 'Noop':
-          this.logger.warn(`Client ${clientUpdate.clientId} received noop update`);
-          break;
-        default:
-          throw new Error(`Unknown update type: ${JSON.stringify(update)}`);
-      }
-    }
-  }
-
-  #sendPatch(socket: WebSocket, output: BindingClientHmrUpdate['update']): void {
-    if (output.type !== 'Patch') {
-      return;
-    }
-    if (!output.code) {
-      this.logger.debug('Failed to send update to client: patch has no code');
-      return;
-    }
-    this.logger.info('Patching...');
-
-    // Write the patch to disk; the artifact imports it via a file:// URL.
-    const path = `${seed}.js`;
-    seed++;
-    nodeFs.writeFileSync(nodePath.join(process.cwd(), 'dist', path), output.code);
-    const patchUriForBrowser = `/${path}`;
-    const patchUriForFile = nodeUrl
-      .pathToFileURL(nodePath.join(process.cwd(), 'dist', path))
-      .toString();
-    this.#send(socket, {
-      type: 'hmr:update',
-      url: patchUriForBrowser,
-      path: patchUriForFile,
-    });
   }
 
   // --- Messaging -------------------------------------------------------------

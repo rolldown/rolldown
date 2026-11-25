@@ -2,6 +2,7 @@ use crate::bundle::bundle_handle::BundleHandle;
 
 use super::super::{
   SharedOptions, SharedResolver,
+  hmr::module_graph_delta::DevRowsView,
   module_loader::module_side_effects_overrides::apply_module_side_effects_overrides,
   stages::{
     generate_stage::GenerateStage,
@@ -14,7 +15,8 @@ use super::super::{
 use anyhow::Context;
 use arcstr::ArcStr;
 use rolldown_common::{
-  GetLocalDbMut, Module, Output, ResolvedId, ScanMode, SharedFileEmitter, SymbolRefDb,
+  GetLocalDbMut, Module, Output, ResolvedId, ScanMode, SharedFileEmitter, SharedHmrSession,
+  SymbolRefDb,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Severity};
@@ -41,6 +43,7 @@ pub struct Bundle<Fs: FileSystem + Clone + 'static = OsFileSystem> {
   pub(crate) bundle_span: tracing::Span,
   pub(crate) _activity: crate::utils::build_activity::BuildActivity,
   pub(crate) close_hooks_completed: bool,
+  pub(crate) hmr_session: SharedHmrSession,
 }
 
 impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
@@ -444,10 +447,20 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       LinkStage::new(scan_stage_output, &self.options).link();
     self.plugin_driver.build_timings.record_link_stage(link_start);
 
-    let bundle_output =
-      GenerateStage::new(&mut link_stage_output, ast_table, &self.options, &self.plugin_driver)
-        .generate(used_symbol_refs_builder)
-        .await; // Notice we don't use `?` to break the control flow here.
+    // Numbers are given out here, before chunks render in parallel and only read them.
+    let dev_rows = self
+      .options
+      .is_dev_mode_enabled()
+      .then(|| DevRowsView::new(&mut self.hmr_session.lock(), &link_stage_output.module_table));
+    let bundle_output = GenerateStage::new(
+      &mut link_stage_output,
+      ast_table,
+      &self.options,
+      &self.plugin_driver,
+      dev_rows.as_ref(),
+    )
+    .generate(used_symbol_refs_builder)
+    .await; // Notice we don't use `?` to break the control flow here.
 
     // `create_output`/`make_copy` strip symbol-table scoping from the cache for
     // performance; reinstate it here, before the fallible steps below, so the
@@ -464,6 +477,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       Ok(output) => output,
       Err(errors) => return Err(self.handle_render_error(errors).await),
     };
+    output.hmr_generation = dev_rows.as_ref().map(DevRowsView::generation);
 
     // Add additional files from build plugins.
     self.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);

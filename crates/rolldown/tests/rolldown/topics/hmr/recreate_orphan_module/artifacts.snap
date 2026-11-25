@@ -19,6 +19,12 @@ __rolldown_runtime__.registerGraph({
 		[0],
 		[1]
 	],
+	nums: [
+		0,
+		2,
+		1
+	],
+	epoch: 1,
 	entries: [2]
 });
 // child.js
@@ -50,12 +56,33 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- parent.js
+
+### Stale Ids
+
+- parent.js
+
+## Pull 0
+
+- g: 1
+- update: parent.js
+- executed: child.js, main.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["parent.js"],localCount:1,edges:[[]],stamps:{0:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["parent.js"],localCount:1,edges:[[]],nums:[2]});
 //#region parent.js
-__rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("parent.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			childValue: () => childValue,
@@ -71,18 +98,14 @@ __rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id
 			assert.strictEqual(childValue, "not-child");
 		});
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- parent.js
+- result: not run: the fixture runs no client, so the harness made this pull
 
 # HMR Step 1
 
@@ -98,35 +121,33 @@ __rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id
 
 # HMR Step 3
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 2
+
+### Changed Ids
+
+- parent.js
+
+### Stale Ids
+
+- parent.js
+
+## Pull 0
+
+- g: 2
+- update: parent.js
+- executed: child.js, main.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["child.js","main.js","parent.js"],localCount:3,edges:[[],[2],[0]],stamps:{2:3},entries:[1]});
-//#region child.js
-__rolldown_runtime__.registerFactory("child.js", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		const hot_child = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		const value = "child";
-	} finally {}
-}));
-
-//#endregion
-//#region main.js
-__rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		__rolldown_runtime__.initModule("parent.js");
-		var import_parent_0 = __rolldown_runtime__.loadExports("parent.js");
-		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-	} finally {}
-}));
-
-//#endregion
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(2);
+__rolldown_payload__.registerGraph({ids:["parent.js","child.js"],localCount:1,edges:[[1]],nums:[2,0]});
 //#region parent.js
-__rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("parent.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			parentValue: () => parentValue,
@@ -140,15 +161,11 @@ __rolldown_runtime__.registerFactory("parent.js", (function(__rolldown_module_id
 		assert.strictEqual(parentValue, "parent");
 		assert.strictEqual(import_child_0.value, "child");
 	} finally {}
-}), 3);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- parent.js
+- result: not run: the fixture runs no client, so the harness made this pull

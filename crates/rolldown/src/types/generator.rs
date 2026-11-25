@@ -11,6 +11,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{
   chunk_graph::ChunkGraph,
+  hmr::module_graph_delta::DevRowsView,
   stages::{
     generate_stage::{
       CarriedRender, InlineCommonChunksState, InlineReader,
@@ -48,6 +49,8 @@ pub struct GenerateContext<'a> {
   /// The records this file carries, each finalized and printed for this file, dependencies first.
   pub carried_renders: Vec<CarriedRender>,
   pub hoisted_keep_names: &'a FxHashMap<ModuleIdx, Vec<(CompactStr, CompactStr)>>,
+  /// `Some` in dev mode.
+  pub dev_rows: Option<&'a DevRowsView>,
 }
 
 impl GenerateContext<'_> {

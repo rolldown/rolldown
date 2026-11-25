@@ -12,6 +12,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["lib.js", "main.js"],
 	localCount: 2,
 	edges: [[], [0]],
+	nums: [0, 1],
+	epoch: 0,
 	entries: [1]
 });
 // lib.js

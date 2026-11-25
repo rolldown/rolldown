@@ -2240,6 +2240,16 @@
             "minimum": 0
           },
           "default": []
+        },
+        "lostPushSteps": {
+          "description": "The test client does not get the update of each listed HMR step (0-based), as when its\nconnection drops for a moment. It keeps running and handles the push of a later step, so\nit learns about the lost update from the server. A lost `FullReload` does not reload it.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0
+          },
+          "default": []
         }
       },
       "additionalProperties": false

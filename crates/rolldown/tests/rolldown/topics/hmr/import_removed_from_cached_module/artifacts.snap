@@ -21,6 +21,13 @@ __rolldown_runtime__.registerGraph({
 		[0],
 		[1, 2]
 	],
+	nums: [
+		2,
+		0,
+		1,
+		3
+	],
+	epoch: 1,
 	entries: [3]
 });
 // lib.js
@@ -48,12 +55,33 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- dropper.js
+
+### Stale Ids
+
+- dropper.js
+
+## Pull 0
+
+- g: 1
+- update: dropper.js
+- executed: accepter.js, lib.js, main.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["dropper.js"],localCount:1,edges:[[]],stamps:{0:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["dropper.js"],localCount:1,edges:[[]],nums:[1]});
 //#region dropper.js
-__rolldown_runtime__.registerFactory("dropper.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("dropper.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ tag: () => tag });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -61,27 +89,44 @@ __rolldown_runtime__.registerFactory("dropper.js", (function(__rolldown_module_i
 		const tag = "dropper";
 		hot_dropper.accept();
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- dropper.js
+- result: applied
 
 # HMR Step 1
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 2
+
+### Changed Ids
+
+- lib.js
+
+### Stale Ids
+
+- lib.js
+
+## Pull 0
+
+- g: 2
+- update: accepter.js, lib.js
+- executed: dropper.js, main.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["accepter.js","lib.js"],localCount:2,edges:[[1],[]],stamps:{1:2}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(2);
+__rolldown_payload__.registerGraph({ids:["accepter.js","lib.js"],localCount:2,edges:[[1],[]],nums:[0,2]});
 //#region accepter.js
-__rolldown_runtime__.registerFactory("accepter.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("accepter.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ read: () => read });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -95,22 +140,18 @@ __rolldown_runtime__.registerFactory("accepter.js", (function(__rolldown_module_
 
 //#endregion
 //#region lib.js
-__rolldown_runtime__.registerFactory("lib.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("lib.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		const hot_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const value = "lib-edited";
 	} finally {}
-}), 2);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- lib.js
+- result: applied

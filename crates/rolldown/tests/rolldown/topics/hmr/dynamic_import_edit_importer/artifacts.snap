@@ -10,7 +10,9 @@ import { t as __exportAll } from "./main.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["foo.js"],
 	localCount: 1,
-	edges: [[]]
+	edges: [[]],
+	nums: [1],
+	epoch: 1
 });
 // foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
@@ -34,6 +36,12 @@ __rolldown_runtime__.registerGraph({
 	localCount: 2,
 	edges: [[], [0]],
 	dynamicEdges: { 0: [2] },
+	nums: [
+		0,
+		2,
+		1
+	],
+	epoch: 1,
 	entries: [1]
 });
 // app.js
@@ -54,29 +62,46 @@ export { __exportAll as t };
 
 # HMR Step 0
 
-## Code
-
-```js
-__rolldown_runtime__.registerGraph({ids:["app.js","foo.js"],localCount:1,edges:[[]],dynamicEdges:{0:[1]},stamps:{0:1}});
-//#region app.js
-__rolldown_runtime__.registerFactory("app.js", (function(__rolldown_module_id__) {
-	try {
-		__rolldown_runtime__.registerModule(__rolldown_module_id__);
-		const hot_app = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		hot_app.accept();
-		(__rolldown_runtime__.initModule("foo.js"), Promise.resolve().then(() => __rolldown_runtime__.loadExports("foo.js"))).then((mod) => {
-			console.log(".app-edited", mod.value);
-		});
-	} finally {}
-}), 1);
-
-//#endregion
-```
-
 ## Meta
 
-- update type: patch
+- update type: changed
+- gen: 1
 
 ### Changed Ids
 
 - app.js
+
+### Stale Ids
+
+- app.js
+
+## Pull 0
+
+- g: 1
+- update: app.js
+- executed: foo.js, main.js
+- factories: (none)
+
+### Code
+
+```js
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["app.js","foo.js"],localCount:1,edges:[[]],dynamicEdges:{0:[1]},nums:[0,1]});
+//#region app.js
+__rolldown_payload__.registerFactory("app.js", (function(__rolldown_module_id__) {
+	try {
+		__rolldown_runtime__.registerModule(__rolldown_module_id__);
+		const hot_app = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
+		hot_app.accept();
+		__rolldown_runtime__.loadDynamic("foo.js").then((mod) => {
+			console.log(".app-edited", mod.value);
+		});
+	} finally {}
+}));
+
+//#endregion
+```
+
+## Client
+
+- result: applied

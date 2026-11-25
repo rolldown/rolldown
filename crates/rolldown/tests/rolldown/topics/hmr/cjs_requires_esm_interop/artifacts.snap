@@ -31,6 +31,13 @@ __rolldown_runtime__.registerGraph({
 		[0, 1],
 		[2]
 	],
+	nums: [
+		0,
+		1,
+		3,
+		2
+	],
+	epoch: 1,
 	entries: [3]
 });
 // data.json
@@ -81,13 +88,34 @@ process.on("beforeExit", (code) => {
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- shim.js
+
+### Stale Ids
+
+- shim.js
+
+## Pull 0
+
+- g: 1
+- update: shim.js
+- executed: data.json, esm.js, main.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["shim.js","data.json","esm.js"],localCount:1,edges:[[1,2]],stamps:{0:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["shim.js","data.json","esm.js"],localCount:1,edges:[[1,2]],nums:[3,0,1]});
 //#region shim.js
 import * as import$shim$2ejs_0_node_assert from "node:assert";
-__rolldown_runtime__.registerFactory("shim.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("shim.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -104,15 +132,11 @@ __rolldown_runtime__.registerFactory("shim.js", (function(__rolldown_module_id__
 		import$shim$2ejs_0_node_assert.default.strictEqual(fromEsm.__esModule, true);
 		globalThis.__cjs_requires_esm_interop_patch_ran = true;
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- shim.js
+- result: applied

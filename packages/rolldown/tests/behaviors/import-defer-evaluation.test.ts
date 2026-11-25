@@ -10,7 +10,7 @@ async function bundle(
   files: Record<string, string>,
   output: OutputOptions = {},
   entries = ['main'],
-  fallback = false,
+  fallback: boolean | string = false,
 ) {
   const cwd = await mkdtemp(path.join(tmpdir(), 'rolldown-import-defer-'));
   onTestFinished(() => rm(cwd, { recursive: true, force: true }));
@@ -40,7 +40,8 @@ async function bundle(
   }
   if (fallback) {
     expect(warnings.length).toBeGreaterThan(0);
-    for (const message of warnings) expect(message).toContain('would wait for them in sequence');
+    const reason = typeof fallback === 'string' ? fallback : 'would wait for them in sequence';
+    for (const message of warnings) expect(message).toContain(reason);
   } else {
     expect(warnings).toEqual([]);
   }
@@ -53,6 +54,9 @@ async function bundle(
       .trim()
       .split(/\r?\n/);
 }
+
+const waitsForRelease =
+  "console.log('a start'); await new Promise(r => globalThis.release = r); console.log('a end');";
 
 test.each([false, true])('grouped eager order, transitive import %s', async (transitive) => {
   const run = await bundle(
@@ -68,6 +72,111 @@ test.each([false, true])('grouped eager order, transitive import %s', async (tra
   );
   expect(run()).toEqual(transitive ? ['last', 'a', 'b', 'main object'] : ['last', 'main object']);
   expect(run('other')).toEqual(transitive ? ['last', 'other'] : ['last', 'a', 'other']);
+});
+
+test('entries evaluate members of the same manual group in their own order', async () => {
+  const run = await bundle(
+    {
+      'main.mjs': "import defer * as a from './a.mjs'; import './last.mjs'; console.log(typeof a);",
+      'first.mjs': "import './a.mjs'; import './last.mjs';",
+      'other.mjs': "import './last.mjs'; import './a.mjs';",
+      'a.mjs': "console.log('a'); export const x = 1;",
+      'last.mjs': "console.log('last');",
+    },
+    { codeSplitting: { groups: [{ name: 'deps', test: /[\\/](a|last)\.mjs$/ }] } },
+    ['main', 'other', 'first'],
+  );
+  expect(run()).toEqual(['last', 'object']);
+  expect(run('other')).toEqual(['last', 'a']);
+  expect(run('first')).toEqual(['a', 'last']);
+});
+
+test('an import between grouped dependencies keeps its position through re-exports', async () => {
+  const run = await bundle(
+    {
+      'main.mjs':
+        "import defer * as a from './a.mjs'; import './outside.mjs'; import './last.mjs'; console.log(typeof a);",
+      'first.mjs': "import './barrel.mjs'; import './outside.mjs'; import './last.mjs';",
+      'other.mjs': "import './last.mjs'; import './outside.mjs'; import './barrel.mjs';",
+      'barrel.mjs': "export * from './a.mjs';",
+      'a.mjs': "console.log('a'); export const x = 1;",
+      'last.mjs': "console.log('last');",
+      'outside.mjs': "console.log('outside');",
+    },
+    { codeSplitting: { groups: [{ name: 'deps', test: /[\\/](a|last)\.mjs$/ }] } },
+    ['main', 'other', 'first'],
+  );
+  expect(run()).toEqual(['outside', 'last', 'object']);
+  expect(run('other')).toEqual(['last', 'outside', 'a']);
+  expect(run('first')).toEqual(['a', 'outside', 'last']);
+});
+
+test('a grouped sibling keeps independent dynamic imports on the native loader', async () => {
+  const run = await bundle(
+    {
+      'main.mjs':
+        "import defer * as a from './a.mjs'; import { load } from './last.mjs'; console.log(typeof a); await load();",
+      'first.mjs': "import './a.mjs'; import './last.mjs';",
+      'a.mjs': "console.log('a'); export const x = 1;",
+      'last.mjs': "console.log('last'); export const load = () => import('./async.mjs');",
+      'async.mjs': "import './wait.mjs'; import './release.mjs'; console.log('async');",
+      'wait.mjs': waitsForRelease,
+      'release.mjs': "console.log('release'); globalThis.release();",
+    },
+    {
+      codeSplitting: {
+        groups: [
+          { name: 'deps', test: /[\\/](a|last)\.mjs$/ },
+          { name: 'wait', test: /[\\/]wait\.mjs$/ },
+          { name: 'release', test: /[\\/]release\.mjs$/ },
+        ],
+      },
+    },
+    ['main', 'first'],
+  );
+  expect(run()).toEqual(['last', 'object', 'a start', 'release', 'a end', 'async']);
+  expect(run('first')).toEqual(['a', 'last']);
+});
+
+test('a fourth entry can load an independent member of a conflicting group', async () => {
+  const run = await bundle(
+    {
+      'main.mjs': "import defer * as a from './a.mjs'; import './last.mjs'; console.log(typeof a);",
+      'first.mjs': "import './a.mjs'; import './last.mjs';",
+      'other.mjs': "import './last.mjs'; import './a.mjs';",
+      'fourth.mjs': "import './third.mjs';",
+      'a.mjs': "console.log('a'); export const x = 1;",
+      'last.mjs': "console.log('last');",
+      'third.mjs': "console.log('third');",
+    },
+    { codeSplitting: { groups: [{ name: 'deps', test: /[\\/](a|last|third)\.mjs$/ }] } },
+    ['main', 'other', 'first', 'fourth'],
+    'separate chunks',
+  );
+  expect(run()).toEqual(['last', 'object']);
+  expect(run('other')).toEqual(['last', 'a']);
+  expect(run('first')).toEqual(['a', 'last']);
+  expect(run('fourth')).toEqual(['third']);
+});
+
+test('the loader starts independent siblings of an async grouped module', async () => {
+  const run = await bundle(
+    {
+      'main.mjs': "import defer * as a from './a.mjs'; import './last.mjs'; console.log(typeof a);",
+      'first.mjs': "import './a.mjs'; import './last.mjs';",
+      'other.mjs': "import './last.mjs'; import './a.mjs';",
+      'a.mjs': "console.log('a'); export const x = 1;",
+      'last.mjs': "import './wait.mjs'; import './release.mjs'; console.log('last');",
+      'wait.mjs': waitsForRelease,
+      'release.mjs': "console.log('release'); globalThis.release();",
+    },
+    { codeSplitting: { groups: [{ name: 'deps', test: /[\\/](a|last)\.mjs$/ }] } },
+    ['main', 'other', 'first'],
+    'separate chunks',
+  );
+  expect(run()).toEqual(['a start', 'release', 'a end', 'last', 'object']);
+  expect(run('first')).toEqual(['a', 'a start', 'release', 'a end', 'last']);
+  expect(run('other')).toEqual(['a start', 'release', 'a', 'a end', 'last']);
 });
 
 test('a cyclic reader sees the deferred namespace before its importer evaluates', async () => {
@@ -157,8 +266,21 @@ test.each([false, true])(
   },
 );
 
-const waitsForRelease =
-  "console.log('a start'); await new Promise(r => globalThis.release = r); console.log('a end');";
+test('an unrelated entry keeps concurrent preparation of siblings in one chunk', async () => {
+  const run = await bundle(
+    {
+      'main.mjs': "import defer * as ns from './target.mjs'; console.log(ns.x);",
+      'target.mjs': "import './a.mjs'; import defer * as b from './b.mjs'; export const x = 1;",
+      'a.mjs': waitsForRelease,
+      'b.mjs': "console.log('b start'); globalThis.release(); await 0; console.log('b end');",
+      'unrelated.mjs': "console.log('unrelated');",
+    },
+    {},
+    ['main', 'unrelated'],
+  );
+  expect(run()).toEqual(['a start', 'b start', 'a end', 'b end', '1']);
+  expect(run('unrelated')).toEqual(['unrelated']);
+});
 
 test.each([
   ['separate', 'split'],
@@ -168,8 +290,10 @@ test.each([
   ['eager', 'preserve'],
   ['parent', 'split'],
   ['parent', 'preserve'],
+  ['relay', 'split'],
+  ['relay', 'preserve'],
 ])('independent imports start before the wait (%s, %s)', async (shape, layout) => {
-  const parent = shape === 'parent';
+  const parent = shape === 'parent' || shape === 'relay';
   const files = {
     'main.mjs': parent
       ? "import defer * as ns from './target.mjs'; console.log('main', ns.x);"
@@ -178,8 +302,8 @@ test.each([
     'b.mjs': "console.log('b start'); globalThis.release(); await 0; console.log('b end');",
     'use-a.mjs': "import './a.mjs';",
     'use-b.mjs': "import './b.mjs';",
-    'target.mjs': "import './parent.mjs'; export const x = 1;",
-    'parent.mjs': "import './a.mjs'; import './release.mjs'; await 0; console.log('parent');",
+    'target.mjs': `import './parent.mjs'; ${shape === 'relay' ? 'await 0;' : ''} export const x = 1;`,
+    'parent.mjs': `import './a.mjs'; import './release.mjs'; ${shape === 'relay' ? '' : 'await 0;'} console.log('parent');`,
     'release.mjs': "console.log('release'); globalThis.release();",
   };
   const output: OutputOptions =

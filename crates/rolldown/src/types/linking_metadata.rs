@@ -107,7 +107,7 @@ pub struct LinkingMetadata {
   /// Results of the `'key' in ns` checks (see `EcmaView::namespace_in_checks`) that are known at
   /// link time.
   pub folded_namespace_in_checks: FxHashMap<NodeId, bool>,
-  /// Set on each target of `import defer` and on each module of its static dependency closure.
+  /// Set on the static closures of defer targets and of their order-sensitive eager siblings.
   /// The ESM wrapper of such a module is a hoisted function, so that a call that runs before the
   /// declaration works.
   pub wrapped_by_import_defer: bool,

@@ -3,7 +3,7 @@ use std::hash::Hash;
 use arcstr::ArcStr;
 use oxc::semantic::NodeId;
 
-use crate::{ImportRecordIdx, ModuleIdx, StmtInfoIdx};
+use crate::{ImportRecordIdx, IndexModules, ModuleIdx, StmtInfoIdx};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct EntryPoint {
@@ -14,6 +14,17 @@ pub struct EntryPoint {
   pub file_name: Option<ArcStr>,
   /// which stmts create this entry point
   pub related_stmt_infos: Vec<(ModuleIdx, StmtInfoIdx, NodeId, ImportRecordIdx)>,
+}
+
+impl EntryPoint {
+  /// User entries, emitted entries and ordinary dynamic imports request evaluation. A dynamic
+  /// entry reached exclusively through `import.defer()` requests async preparation.
+  pub fn is_eagerly_requested(&self, modules: &IndexModules) -> bool {
+    self.kind.is_user_defined()
+      || self.related_stmt_infos.iter().any(|&(importer, _, _, record)| {
+        !modules[importer].import_records()[record].is_defer_phase()
+      })
+  }
 }
 
 #[derive(Debug, Eq, Clone, Copy, PartialOrd, Ord)]

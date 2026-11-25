@@ -379,6 +379,7 @@ fn unsupported_async_import_order(
   if queue.is_empty() {
     return None;
   }
+  let mut eager_roots = queue.clone();
   let mut importers = IndexVec::<ModuleIdx, Vec<ModuleIdx>>::from_vec(vec![vec![]; modules.len()]);
   for module in normal_modules() {
     for rec in &module.import_records {
@@ -386,6 +387,11 @@ fn unsupported_async_import_order(
         && let Some(dependency) = rec.resolved_module
       {
         importers[dependency].push(module.idx);
+      } else if matches!(rec.kind, ImportKind::DynamicImport | ImportKind::Require)
+        && !rec.is_defer_phase()
+        && let Some(target) = rec.resolved_module
+      {
+        eager_roots.push(target);
       }
     }
   }
@@ -400,10 +406,29 @@ fn unsupported_async_import_order(
       }
     }
   }
+  // Preparation starts modules with their own TLA and follows their eager imports. User
+  // entries and ordinary dynamic imports can also start a closure without preparing it.
+  // All other wrapped bodies run after preparation has finished their async dependencies.
+  eager_roots
+    .extend(output.entry_points.iter().filter(|e| e.kind.is_user_defined()).map(|e| e.idx));
+  let mut eager = IndexBitSet::new(modules.len());
+  while let Some(idx) = eager_roots.pop() {
+    if reaches_tla.has_bit(idx) && eager.set_bit(idx) {
+      eager_roots.extend(
+        modules[idx]
+          .import_records()
+          .iter()
+          .filter(|rec| rec.kind == ImportKind::Import && !rec.is_defer_phase())
+          .filter_map(|rec| rec.resolved_module),
+      );
+    }
+  }
   let mut import_cycles = None;
   normal_modules().find_map(|module| {
     let wrapped = closures.has_bit(module.idx);
-    let own_tla = module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait);
+    if !eager.has_bit(module.idx) {
+      return None;
+    }
     let mut after_async_import = false;
     let mut after_async_deferred_import = false;
     let mut evaluation = None;
@@ -424,11 +449,11 @@ fn unsupported_async_import_order(
       }
       // Native module loading starts siblings before waiting for their async evaluations.
       // A deferred preparation in the importer body cannot start while an earlier import
-      // waits. An own-TLA wrapper likewise awaits an eager dependency before its next init.
+      // waits. An async wrapper likewise awaits an eager dependency before its next init.
       let later_init = if rec.is_defer_phase() {
         is_async
       } else {
-        wrapped && own_tla && modules[target].side_effects().has_side_effects()
+        wrapped && modules[target].side_effects().has_side_effects()
       };
       if multiple_chunks && after_async_import && later_init {
         // Only expand the requests once we encounter a possible serial wait.

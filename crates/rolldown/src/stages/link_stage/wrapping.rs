@@ -1,3 +1,4 @@
+use oxc_index::index_vec;
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
   ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
@@ -97,11 +98,12 @@ impl LinkStage<'_> {
   pub(super) fn wrap_modules(&mut self) -> Vec<ModuleIdx> {
     let mut visited_modules_for_wrapping = IndexBitSet::new(self.module_table.modules.len());
     determine_has_dynamic_exports(&self.module_table.modules, &mut self.metas);
-    let deferred_esm_targets = if self.options.experimental.is_import_defer_enabled() {
-      self.wrap_import_defer_closures()
-    } else {
-      vec![]
-    };
+    let (deferred_esm_targets, mut deferred_closure) =
+      if self.options.experimental.is_import_defer_enabled() {
+        self.wrap_import_defer_closures()
+      } else {
+        Default::default()
+      };
 
     for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
       let module_id = module.idx;
@@ -166,6 +168,16 @@ impl LinkStage<'_> {
       }
     }
 
+    if !deferred_esm_targets.is_empty()
+      && self.options.has_manual_code_splitting_groups()
+      && !self.options.is_strict_execution_order_enabled()
+      && !self.options.preserve_modules
+    {
+      // Add only static dependencies here. Ordinary dynamic imports from these modules
+      // still start their own evaluation, including concurrent top-level await.
+      self.wrap_grouped_eager_siblings(&mut deferred_closure);
+    }
+
     for m in &self.module_table.modules {
       let Some(ecma_module) = m.as_normal() else { continue };
       let idx = ecma_module.idx;
@@ -193,13 +205,13 @@ impl LinkStage<'_> {
   /// Wraps each target of `import defer` and the modules of its static dependency closure. A
   /// deferred access can evaluate a module of the closure before its eager position, so each one
   /// needs a lazy wrapper. The loop in `wrap_modules` then wraps the rest of their graph as for
-  /// any wrapped module. Returns the ESM targets, sorted, which get a deferred namespace.
+  /// any wrapped module. Returns the sorted ESM namespace targets and the wrapped closure.
   ///
   /// An external module is not part of a closure. `apply_import_defer_support` keeps the
   /// deferral only when the output format does not evaluate an external module of a closure
   /// before the first access (`deferred_closures`). See
   /// internal-docs/import-defer/implementation.md.
-  fn wrap_import_defer_closures(&mut self) -> Vec<ModuleIdx> {
+  fn wrap_import_defer_closures(&mut self) -> (Vec<ModuleIdx>, IndexBitSet<ModuleIdx>) {
     let runtime_idx = self.runtime.id();
     let mut stack = vec![];
     let mut esm_targets = vec![];
@@ -256,11 +268,22 @@ impl LinkStage<'_> {
     }
 
     let mut visited = IndexBitSet::new(self.module_table.modules.len());
+    self.wrap_defer_dependencies(stack, &mut visited);
+    self.track_import_defer_modules(&visited, &esm_targets);
+    (esm_targets, visited)
+  }
+
+  fn wrap_defer_dependencies(
+    &mut self,
+    mut stack: Vec<ModuleIdx>,
+    visited: &mut IndexBitSet<ModuleIdx>,
+  ) {
+    let runtime_idx = self.runtime.id();
     while let Some(module_idx) = stack.pop() {
+      let Module::Normal(module) = &self.module_table.modules[module_idx] else { continue };
       if module_idx == runtime_idx || !visited.set_bit(module_idx) {
         continue;
       }
-      let Module::Normal(module) = &self.module_table.modules[module_idx] else { continue };
       let meta = &mut self.metas[module_idx];
       meta.wrapped_by_import_defer = true;
       if meta.wrap_kind().is_none() {
@@ -277,8 +300,62 @@ impl LinkStage<'_> {
           .filter_map(|rec| rec.resolved_module),
       );
     }
-    self.track_import_defer_modules(&visited, &esm_targets);
-    esm_targets
+  }
+
+  /// A shared manual chunk cannot run its members at load in two different orders.
+  /// If an eager request evaluates a deferred module, keep the synchronous dependencies of
+  /// later requests callable too. Each entry can then initialize the group in its own order.
+  /// See internal-docs/import-defer/implementation.md.
+  fn wrap_grouped_eager_siblings(&mut self, wrapped: &mut IndexBitSet<ModuleIdx>) {
+    fn eager_dependencies(module: &NormalModule) -> impl Iterator<Item = ModuleIdx> + '_ {
+      module
+        .import_records
+        .iter()
+        .filter(|rec| rec.kind == ImportKind::Import && !rec.is_defer_phase())
+        .filter_map(|rec| rec.resolved_module)
+    }
+    let modules = &self.module_table.modules;
+    if self
+      .entries
+      .values()
+      .filter(|entries| entries.iter().any(|entry| entry.is_eagerly_requested(modules)))
+      .nth(1)
+      .is_none()
+    {
+      return;
+    }
+    let mut importers = index_vec![Vec::new(); modules.len()];
+    for module in modules.iter().filter_map(Module::as_normal) {
+      for target in eager_dependencies(module) {
+        importers[target].push(module.idx);
+      }
+    }
+    // An eager request through a barrel has the same ordering constraint as a direct one.
+    let mut reaches_wrapped = wrapped.clone();
+    let mut stack: Vec<_> = wrapped.index_of_one().collect();
+    while let Some(idx) = stack.pop() {
+      for &importer in &importers[idx] {
+        if reaches_wrapped.set_bit(importer) {
+          stack.push(importer);
+        }
+      }
+    }
+    for module in modules.iter().filter_map(Module::as_normal) {
+      if wrapped.has_bit(module.idx) || !reaches_wrapped.has_bit(module.idx) {
+        continue;
+      }
+      let mut follows_wrapped = false;
+      for target in eager_dependencies(module) {
+        if follows_wrapped
+          && !wrapped.has_bit(target)
+          && !self.metas[target].is_tla_or_contains_tla_dependency
+        {
+          stack.push(target);
+        }
+        follows_wrapped |= reaches_wrapped.has_bit(target);
+      }
+    }
+    self.wrap_defer_dependencies(stack, wrapped);
   }
 
   /// Marks the modules that need the state records of `__esmState`, in the graph of the requested

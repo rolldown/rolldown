@@ -1,2 +1,2 @@
-import './z.js'
-import './c.js'
+import './z.js';
+import './c.js';

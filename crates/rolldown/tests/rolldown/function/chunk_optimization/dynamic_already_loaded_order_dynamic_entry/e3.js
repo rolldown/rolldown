@@ -1,1 +1,1 @@
-import './c.js'
+import './c.js';

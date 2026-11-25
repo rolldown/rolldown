@@ -1,2 +1,2 @@
-globalThis.orderDynamicEntryLog.push('z')
-globalThis.loadA = () => import('./a.js')
+globalThis.orderDynamicEntryLog.push('z');
+globalThis.loadA = () => import('./a.js');

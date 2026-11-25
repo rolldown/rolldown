@@ -139,14 +139,15 @@ export var __esmGather = (d, importer) => {
       // is pending. Await supplies intrinsic resolving functions when it calls the thenable
       // on the next microtask. A sibling may have already finished by then.
       var pending = g.length, failure, finish;
-      g.forEach(async (m) => {
+      var start = async (m) => {
         try {
           await m.f(importer);
         } catch (e) {
           if (!failure) failure = [e];
         }
         if ((--pending === 0 || failure) && finish) finish();
-      });
+      };
+      for (var sibling of g) start(sibling);
       await {
         then(resolve, reject) {
           finish = () => failure ? reject(failure[0]) : resolve();

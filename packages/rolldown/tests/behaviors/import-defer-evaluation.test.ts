@@ -130,7 +130,7 @@ test.each(['group size', 'global size', 'entries-aware merge'])(
 );
 
 test.each([false, true])(
-  'async preparation with a replaced global Promise, minify %s',
+  'async preparation with replaced Promise and Array.prototype.forEach, minify %s',
   async (minify) => {
     const run = await bundle(
       {
@@ -139,7 +139,10 @@ test.each([false, true])(
           "import './a.mjs'; import './b.mjs'; console.log('target'); export const x = 1;",
         'a.mjs': "console.log('a start'); await 0; console.log('a end');",
         'b.mjs': "console.log('b start'); await 0; console.log('b end');",
-        'setup.mjs': "globalThis.Promise = function () { throw Error('Global Promise called'); };",
+        'setup.mjs': `
+          globalThis.Promise = function () { throw Error('Global Promise called'); };
+          Array.prototype.forEach = () => { throw Error('forEach called'); };
+        `,
       },
       { preserveModules: true, minify },
     );
@@ -217,3 +220,89 @@ test.each([true, false])(
     expect(run()).toEqual(['async', 'object']);
   },
 );
+
+test.each(['async', 'sync', 'relay'])(
+  'a later eager import of %s shares the prepared dependency',
+  async (target) => {
+    const first = target === 'async' ? 'async' : 'relay';
+    const run = await bundle(
+      {
+        'main.mjs': "import defer * as ns from './outer.mjs'; console.log('main', typeof ns);",
+        'outer.mjs': "import './parent.mjs'; console.log('outer');",
+        'parent.mjs': `import defer * as ns from './${first}.mjs'; import './${target}.mjs'; await 0; console.log('parent');`,
+        'relay.mjs': "import './async.mjs'; console.log('relay');",
+        'async.mjs': "import './sync.mjs'; await 0; console.log('async');",
+        'sync.mjs': "console.log('sync');",
+      },
+      { preserveModules: true },
+    );
+    expect(run()).toEqual([
+      'sync',
+      'async',
+      ...(target === 'relay' ? ['relay'] : []),
+      'parent',
+      'main object',
+    ]);
+  },
+);
+
+test('a sync dependency reached only during preparation still needs to start', async () => {
+  const run = await bundle(
+    {
+      'main.mjs': "import defer * as ns from './parent.mjs'; console.log('main', typeof ns);",
+      'parent.mjs':
+        "import defer * as ns from './relay.mjs'; import './release.mjs'; await 0; console.log('parent');",
+      'relay.mjs': "import './async.mjs'; import './release.mjs';",
+      'async.mjs': waitsForRelease,
+      'release.mjs': "console.log('release'); globalThis.release();",
+    },
+    { preserveModules: true },
+    ['main'],
+    true,
+  );
+  expect(run()).toEqual(['a start', 'release', 'a end', 'parent', 'main object']);
+});
+
+test.each([false, true])(
+  'repeated async prerequisite, independent dependency %s',
+  async (release) => {
+    const run = await bundle(
+      {
+        'main.mjs': "import defer * as ns from './outer.mjs'; console.log('main', typeof ns);",
+        'outer.mjs': "import './parent.mjs'; console.log('outer');",
+        'parent.mjs':
+          "import defer * as ns from './relay.mjs'; import './nested.mjs'; await 0; console.log('parent');",
+        'nested.mjs': `import defer * as ns from './relay.mjs'; ${release ? "import './release.mjs';" : ''} await 0; console.log('nested');`,
+        'relay.mjs': "import './async.mjs'; console.log('relay');",
+        'async.mjs': release ? waitsForRelease : "await 0; console.log('async');",
+        'release.mjs': "console.log('release'); globalThis.release();",
+      },
+      { preserveModules: true },
+      ['main'],
+      release,
+    );
+    expect(run()).toEqual(
+      release
+        ? ['a start', 'release', 'a end', 'relay', 'nested', 'parent', 'outer', 'main object']
+        : ['async', 'nested', 'parent', 'main object'],
+    );
+  },
+);
+
+test('a sibling that waits for just one of two async dependencies can release the other', async () => {
+  const run = await bundle(
+    {
+      'main.mjs': "import defer * as ns from './parent.mjs'; console.log('main', typeof ns);",
+      'parent.mjs':
+        "import defer * as ns from './both.mjs'; import './release.mjs'; await 0; console.log('parent');",
+      'both.mjs': "import './blocked.mjs'; import './ready.mjs';",
+      'blocked.mjs': waitsForRelease,
+      'ready.mjs': "await 0; console.log('ready');",
+      'release.mjs': "import './ready.mjs'; console.log('release'); globalThis.release();",
+    },
+    { preserveModules: true },
+    ['main'],
+    true,
+  );
+  expect(run()).toEqual(['a start', 'ready', 'release', 'a end', 'parent', 'main object']);
+});

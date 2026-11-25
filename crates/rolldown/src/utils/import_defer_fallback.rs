@@ -10,6 +10,7 @@ use rolldown_common::{
 };
 use rolldown_error::{BuildDiagnostic, EventKind};
 use rolldown_utils::{IndexBitSet, node_builtin::is_node_like_builtin};
+use rustc_hash::FxHashSet;
 
 use crate::{
   stages::scan_stage::NormalizedScanStageOutput,
@@ -399,11 +400,14 @@ fn unsupported_async_import_order(
       }
     }
   }
+  let mut import_cycles = None;
   normal_modules().find_map(|module| {
     let wrapped = closures.has_bit(module.idx);
     let own_tla = module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait);
     let mut after_async_import = false;
     let mut after_async_deferred_import = false;
+    let mut evaluation = None;
+    let mut checked = 0;
     for (index, rec) in module.import_records.iter().enumerate() {
       let Some(target) = rec.resolved_module else { continue };
       if rec.kind != ImportKind::Import || target == output.runtime.id() {
@@ -426,18 +430,24 @@ fn unsupported_async_import_order(
       } else {
         wrapped && own_tla && modules[target].side_effects().has_side_effects()
       };
-      if multiple_chunks
-        && after_async_import
-        && later_init
-        && needs_new_evaluation(
-          module.import_records.iter().take(index),
-          target,
-          rec.is_defer_phase(),
+      if multiple_chunks && after_async_import && later_init {
+        // Only expand the requests once we encounter a possible serial wait.
+        let earlier_requests = evaluation.get_or_insert_with(EarlierRequests::default);
+        for request in &module.import_records.as_raw_slice()[checked..index] {
+          earlier_requests.visit(request, modules, module.idx, &reaches_tla);
+        }
+        let earlier_tlas = earlier_requests.tla.len();
+        earlier_requests.visit(rec, modules, module.idx, &reaches_tla);
+        checked = index + 1;
+        if earlier_requests.needs_concurrent_start(
+          earlier_tlas,
           modules,
-          module.idx,
-        )
-      {
-        return Some(UnsupportedReason::SerialAsyncImports(module.idx));
+          &importers,
+          &reaches_tla,
+          &mut import_cycles,
+        ) {
+          return Some(UnsupportedReason::SerialAsyncImports(module.idx));
+        }
       }
       after_async_import |= is_async;
       after_async_deferred_import |= rec.is_defer_phase() && is_async;
@@ -446,47 +456,105 @@ fn unsupported_async_import_order(
   })
 }
 
-/// An eager import needs its target's body. A deferred import only needs the modules with
-/// their own top-level await in its static closure. An earlier request, eager or deferred,
-/// already starts the async modules it reaches. Stop paths back through the importer so its
-/// later requests cannot count as earlier ones.
-fn needs_new_evaluation<'a>(
-  earlier: impl Iterator<Item = &'a ResolvedImportRecord>,
-  target: ModuleIdx,
-  deferred: bool,
-  modules: &IndexModules,
-  importer: ModuleIdx,
-) -> bool {
-  let dependency = |rec: &ResolvedImportRecord| {
-    if rec.kind == ImportKind::Import && (deferred || !rec.is_defer_phase()) {
-      rec.resolved_module
-    } else {
-      None
+/// An eager request evaluates its target. A deferred request only prepares it until it
+/// reaches a module with its own top-level await, which evaluates its eager dependencies.
+#[derive(Default)]
+struct EarlierRequests {
+  prepared: FxHashSet<ModuleIdx>,
+  evaluated: FxHashSet<ModuleIdx>,
+  stack: Vec<(ModuleIdx, bool)>,
+  new_bodies: Vec<ModuleIdx>,
+  tla: Vec<ModuleIdx>,
+  checked_tla: usize,
+  waits_for_all: FxHashSet<ModuleIdx>,
+}
+
+impl EarlierRequests {
+  /// Record this request and the bodies it starts for the first time. Each module's
+  /// imports are visited at most twice per importer, once in each phase.
+  fn visit(
+    &mut self,
+    request: &ResolvedImportRecord,
+    modules: &IndexModules,
+    importer: ModuleIdx,
+    reaches_tla: &IndexBitSet<ModuleIdx>,
+  ) {
+    self.new_bodies.clear();
+    let Some(target) = request.resolved_module else { return };
+    if request.kind != ImportKind::Import {
+      return;
     }
-  };
-  let mut stack: Vec<_> = earlier.filter_map(dependency).collect();
-  let mut visited = rustc_hash::FxHashSet::default();
-  visited.insert(importer);
-  while let Some(idx) = stack.pop() {
-    if visited.insert(idx) {
-      stack.extend(modules[idx].import_records().iter().filter_map(dependency));
+    self.stack.push((target, request.is_defer_phase()));
+    while let Some((idx, deferred)) = self.stack.pop() {
+      // A path back through the importer cannot start its later requests.
+      if idx == importer || self.evaluated.contains(&idx) {
+        continue;
+      }
+      let own_tla = modules[idx]
+        .as_normal()
+        .is_some_and(|module| module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait));
+      let prepare_only = deferred && !own_tla;
+      if prepare_only {
+        if !reaches_tla.has_bit(idx) || !self.prepared.insert(idx) {
+          continue;
+        }
+      } else {
+        self.evaluated.insert(idx);
+        self.new_bodies.push(idx);
+        if own_tla {
+          self.tla.push(idx);
+        }
+      }
+      self.stack.extend(modules[idx].import_records().iter().filter_map(|rec| {
+        if rec.kind != ImportKind::Import {
+          return None;
+        }
+        Some((rec.resolved_module?, prepare_only || rec.is_defer_phase()))
+      }));
     }
   }
-  if !deferred {
-    return !visited.contains(&target);
-  }
-  stack.push(target);
-  while let Some(idx) = stack.pop() {
-    if !visited.insert(idx) {
-      continue;
+
+  /// Both phases wait for top-level await in the static closure. A new body can be
+  /// delayed if it must already wait for every earlier async module. Intersect their
+  /// dependents, visiting each earlier async module's reverse closure once per importer.
+  fn needs_concurrent_start(
+    &mut self,
+    earlier_tlas: usize,
+    modules: &IndexModules,
+    importers: &IndexVec<ModuleIdx, Vec<ModuleIdx>>,
+    reaches_tla: &IndexBitSet<ModuleIdx>,
+    import_cycles: &mut Option<FxHashSet<ModuleIdx>>,
+  ) -> bool {
+    if self.new_bodies.is_empty() {
+      return false;
     }
-    let Some(module) = modules[idx].as_normal() else { continue };
-    if module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait) {
+    if earlier_tlas == 0 || self.new_bodies.iter().any(|&idx| !reaches_tla.has_bit(idx)) {
       return true;
     }
-    stack.extend(module.import_records.iter().filter_map(dependency));
+    // A back edge can bypass the wait for an evaluating ancestor.
+    let cyclic = import_cycles.get_or_insert_with(|| {
+      crate::utils::synchronous_cycle_modules(modules, |_, rec| rec.kind == ImportKind::Import)
+    });
+    while self.checked_tla < earlier_tlas {
+      let mut stack = vec![self.tla[self.checked_tla]];
+      let mut dependents = FxHashSet::default();
+      while let Some(idx) = stack.pop() {
+        if !cyclic.contains(&idx) && dependents.insert(idx) {
+          stack.extend(&importers[idx]);
+        }
+      }
+      if self.checked_tla == 0 {
+        self.waits_for_all = dependents;
+      } else {
+        self.waits_for_all.retain(|idx| dependents.contains(idx));
+      }
+      self.checked_tla += 1;
+      if self.new_bodies.iter().any(|idx| !self.waits_for_all.contains(idx)) {
+        return true;
+      }
+    }
+    self.new_bodies.iter().any(|idx| !self.waits_for_all.contains(idx))
   }
-  false
 }
 
 /// The first CommonJS module of the deferred closures whose output file runs the module at load.

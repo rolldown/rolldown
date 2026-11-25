@@ -1,7 +1,4 @@
 import type { BindingChunkingContext } from '../binding.cjs';
-import type { LogHandler } from '../log/log-handler';
-import { LOG_LEVEL_WARN } from '../log/logging';
-import { logModuleSideEffectsWriteAfterBuildEnd } from '../log/logs';
 import type { PluginContextData } from '../plugin/plugin-context-data';
 import { transformModuleInfo } from '../utils/transform-module-info';
 import type { ModuleInfo } from './module-info';
@@ -12,12 +9,7 @@ export class ChunkingContextImpl {
   constructor(
     private context: BindingChunkingContext,
     private pluginContextData: PluginContextData,
-    private onLog: LogHandler,
   ) {}
-
-  private warnWriteAfterBuildEnd = (moduleId: string): void => {
-    this.onLog(LOG_LEVEL_WARN, logModuleSideEffectsWriteAfterBuildEnd(moduleId));
-  };
 
   clearModuleInfoCache(): void {
     this.moduleInfoCache = undefined;
@@ -36,7 +28,7 @@ export class ChunkingContextImpl {
         option,
         this.context,
         this.pluginContextData.moduleSideEffectsOption,
-        this.warnWriteAfterBuildEnd,
+        (id) => this.pluginContextData.warnWriteAfterBuildEnd(id),
       );
       this.moduleInfoCache?.set(moduleId, info);
       return info;

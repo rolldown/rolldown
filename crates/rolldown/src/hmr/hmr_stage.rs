@@ -49,8 +49,9 @@ use crate::{
 /// the output files.
 const HMR_PATCH_FILENAME: &str = "__rolldown_hmr_patch.js";
 /// Up to this many changed modules, the unchanged-output check renders them with their
-/// sourcemaps and caches the factories, so the first pull does not render them again. A larger
-/// change set (a branch switch) would build many maps that no pull needs before the push.
+/// sourcemaps and caches the factories, so the first pull does not render them again. For a
+/// larger change set (a branch switch), it would build many maps before the push, and no pull needs
+/// most of them.
 const MAX_CACHED_RECHECK_RENDERS: usize = 32;
 
 pub struct HmrStageInput<'a, Fs: FileSystem + Clone + 'static> {
@@ -655,10 +656,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .filter_map(|proxy| self.module_table().modules[*proxy].as_normal())
       .map(|proxy| proxy.originative_resolved_id.clone())
       .collect::<Vec<_>>();
-    // A proxy changes from the stub to the fetched template without a stamp.
-    let input = &mut self.input;
-    input.render_cache.forget(input.cache, proxies.iter().copied());
-
     let newly_fetched = lazy_ctx.map_or_else(Vec::new, |lazy_ctx| {
       resolved_ids
         .iter()

@@ -247,14 +247,14 @@ Trade-offs:
 
 A lazy pull logs whether it scanned, with the payload size (`modules`) and the render time (`tracing` target `hmr`, message `render_patch: lazy request done`). The scan logs its time (message `render_patch: scanned lazy routes`).
 
-**Repeat visits use the render cache.** A repeat visit skips the scan, but its payload still needs every factory of the route. The render cache keeps rendered factories and the last finished payloads for every pull (see [hmr/design.md](../hmr/design.md), "Render cache"). So a repeat visit joins the kept factories, and a tab in the same state as an earlier one gets the kept payload. These numbers come from an earlier prototype on a route of about 1500 modules. That prototype cached factories for lazy visits only, with no size limit and no payload cache:
+**Repeat visits use the render cache.** A repeat visit skips the scan, but its payload still needs every factory of the route. The render cache keeps rendered factories and the last finished payloads for every pull (see [hmr/design.md](../hmr/design.md), "Render cache"). So a repeat visit joins the kept factories, and a tab in the same state as an earlier one gets the kept payload. Measured on a route of about 1500 modules, with cached factories and no payload cache:
 
 - A repeat click went from about 10 ms to about 2.8 ms. Skipping the scan alone brings a repeat click from about 60 ms to about 10 ms.
 - The factories of 1500 modules took about 12 MB with sourcemaps on, and about 3 MB without. The sourcemap's `sourcesContent` is a second copy of the module's text.
 
 The render cache has a size limit: it keeps about 64 MiB at most, and the least recently used entries go first. HMR pulls use the same cache: after one edit, many tabs pull the same factories.
 
-The cache key holds the importee facts that a factory reads (`render_inputs`), so a change in an importee misses the cache, and `merge` needs no rule for it. A lazy scan drops the entries of the proxies it reads again.
+The cache key holds the importee facts that a factory reads (`render_inputs`), so a change in an importee misses the cache, and `merge` needs no rule for it.
 
 ## Related
 

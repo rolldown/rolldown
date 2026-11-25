@@ -828,7 +828,8 @@ Then, across all files of the batch:
    under the new stamp.
 6. **Refetch** — one partial scan and cache merge. Before the scan, the
    render cache drops the factories of the modules it reads again
-   (`HmrRenderCache::forget_rescanned`). The merge sets
+   (`HmrRenderCache::forget` on `changed_modules`, which include the
+   queued rescans). The merge sets
    `Bundler::lost_hmr_update`. The update sets it back to its earlier
    value after the last step that can fail, right before it stamps
    (§9b).
@@ -929,8 +930,7 @@ some time (see "Pulls before the rebuild" under `rebuild`).
    each number to its target and its proxy in the module table; neither
    in the graph is an error. `scan_lazy_routes` scans a proxy whose
    target is not in the graph, or whose own entry waits in
-   `pending_rescans`. It drops the render cache entries of the proxies
-   it scans, marks the proxy as fetched, scans with
+   `pending_rescans`. It marks the proxy as fetched, scans with
    `retry_pending_rescans: false`, undoes the mark when the scan fails,
    and sets `merged` just before `merge`. See
    [lazy-compilation/design.md](../lazy-compilation/design.md) ("Repeat

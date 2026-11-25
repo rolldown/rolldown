@@ -779,9 +779,6 @@ So:
   the scan reads again:
   - the HMR stage: its changed modules, which include the files in
     `pending_rescans`
-  - a lazy scan: its proxies. They are the only modules already in the
-    graph that it reads again, because it does not retry the queue
-    (`retry_pending_rescans: false`).
   - a partial build: its changed paths, `pending_rescans` and
     `pending_build_rescans`
 - These clear the whole cache:

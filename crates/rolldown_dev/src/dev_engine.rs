@@ -2274,6 +2274,43 @@ __rolldown_payload__.catchUp([{gen:2,changedIds:["utils.js"],staleIds:["utils.js
     assert!(after_next.code.contains("v3"), "{}", after_next.code);
   }
 
+  /// A build that reads `dep.js` again with no stamp turns it into CommonJS. `lazy.js` is not
+  /// read again and keeps its stamp, but its factory must now wrap `dep.js` in `__toESM`.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn an_importee_that_changes_its_kind_misses_the_cached_factory() {
+    use rolldown_common::ScanMode;
+
+    let (dir, engine) = lazy_fixture_with_files(
+      "render-cache-importee-kind",
+      &[
+        ("main.js", "import('./lazy.js');\n"),
+        ("lazy.js", "import { dep } from './dep.js';\nexport const value = dep;\n"),
+        ("dep.js", "export const dep = 1;\n"),
+      ],
+    );
+    engine.run().await.unwrap();
+    let first = visit(&engine, "lazy.js").await.unwrap();
+    // Changed with no watch event: only the build reads it again.
+    std::fs::write(dir.join("dep.js"), "module.exports = { dep: 1 };\n").unwrap();
+    let path = dir.join("dep.js").to_string_lossy().into_owned();
+    let build =
+      engine.bundler.lock().await.incremental_generate(ScanMode::Partial(vec![path.into()])).await;
+    let after_build = visit(&engine, "lazy.js").await.unwrap();
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    let dep_import = |code: &str| {
+      code.lines().find(|line| line.contains("loadExports(\"dep.js\")")).map(str::to_owned)
+    };
+    let before = dep_import(&first.code).unwrap_or_else(|| panic!("{}", first.code));
+    assert!(!before.contains("__toESM"), "{before}");
+    build.unwrap();
+    let after = dep_import(&after_build.code).unwrap_or_else(|| panic!("{}", after_build.code));
+    assert!(after.contains("__toESM"), "{after}");
+  }
+
   /// A full build reads every file again and stamps nothing, so it drops every cached factory.
   #[cfg(feature = "testing")]
   #[tokio::test]

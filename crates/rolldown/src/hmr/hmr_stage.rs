@@ -364,8 +364,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       *self.lost_hmr_update = true;
       let plugin_driver = Arc::clone(&self.plugin_driver);
       self.cache.merge(module_loader_output.into(), &plugin_driver)?;
+      // A new module counts too: when its file is in `changed_file_paths`, the rebuild finds it
+      // in the graph now and reads it again.
       let modules = &self.input.cache.get_snapshot().module_table.modules;
-      for module in changed_modules.iter().filter_map(|module_idx| modules[*module_idx].as_normal())
+      for module in changed_modules
+        .iter()
+        .chain(new_added_modules.iter())
+        .filter_map(|module_idx| modules[*module_idx].as_normal())
       {
         let id = module.id.as_arc_str();
         self.input.resend_module_ids.remove(id);

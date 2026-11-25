@@ -959,8 +959,13 @@ next Hmr task: 3 vs 3              3                3   -> must still send 3
 
 So the HMR stage records the ids of the modules it merged
 (`HmrStageInput::merged_module_ids`, filled right after `cache.merge`
-in `hmr_stage.rs`). `Bundler::compute_hmr_update_for_file_changes`
-(`impl_bundler_hmr.rs`) clears that list when it starts and when it
+in `hmr_stage.rs`). This includes the modules that its partial scan
+added to the graph. Example: one task edits `main.js` to import a new
+`c.js` and creates `c.js`. When the task starts, `c.js` is not in the
+graph, so it is not a changed module. The HMR stage adds it, so the
+rebuild finds `c.js` in the graph and reads it again.
+`Bundler::compute_hmr_update_for_file_changes` (`impl_bundler_hmr.rs`)
+clears that list when it starts and when it
 fails. Before the build, `rebuild` calls
 `Bundler::mark_hmr_merged_modules_read_again`, which moves the list
 into `Bundler::hmr_resend_module_ids`. The next HMR stage that changes
@@ -970,7 +975,8 @@ set after the merge. If no save landed in between, the next change to
 such a module ships it even when its output did not change; the clients
 then run the same code again.
 The test is `a_save_after_the_hmr_stage_is_the_next_update`
-(`dev_engine.rs`).
+(`dev_engine.rs`), with one case for a changed module and one for a new
+module.
 
 ---
 

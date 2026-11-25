@@ -777,6 +777,46 @@ mod tests {
   #[cfg(feature = "testing")]
   #[tokio::test]
   async fn a_save_after_the_hmr_stage_is_the_next_update() {
+    use rolldown_common::WatcherChangeKind;
+
+    save_after_the_hmr_stage(
+      "changed-module",
+      &[(
+        "main.js",
+        "export const value = 2;\nimport.meta.hot.accept();\n",
+        WatcherChangeKind::Update,
+      )],
+      ("main.js", "export const value = 3;\nimport.meta.hot.accept();\n"),
+      ["value = 2", "value = 3"],
+    )
+    .await;
+    // `c.js` is not in the graph when the task starts. The HMR stage adds it, so the rebuild
+    // finds it in the graph and reads it again.
+    save_after_the_hmr_stage(
+      "new-module",
+      &[
+        (
+          "main.js",
+          "import './c.js';\nexport const value = 1;\nimport.meta.hot.accept();\n",
+          WatcherChangeKind::Update,
+        ),
+        ("c.js", "export const c = 2;\nimport.meta.hot.accept();\n", WatcherChangeKind::Create),
+      ],
+      ("c.js", "export const c = 3;\nimport.meta.hot.accept();\n"),
+      ["c = 2", "c = 3"],
+    )
+    .await;
+  }
+
+  /// Runs one task with `first_task`, saves `save` in its `on_hmr_updates` callback, then runs a
+  /// task that updates the saved file. Checks that the two patches contain `expected`.
+  #[cfg(feature = "testing")]
+  async fn save_after_the_hmr_stage(
+    name: &str,
+    first_task: &[(&str, &str, rolldown_common::WatcherChangeKind)],
+    save: (&str, &'static str),
+    expected: [&str; 2],
+  ) {
     use std::sync::{Arc, Mutex};
 
     use rolldown::{DevModeOptions, ExperimentalOptions};
@@ -784,19 +824,21 @@ mod tests {
     use rolldown_utils::indexmap::FxIndexMap;
 
     let dir = std::env::temp_dir()
-      .join(format!("rolldown-dev-save-after-hmr-stage-{}", std::process::id()));
+      .join(format!("rolldown-dev-save-after-hmr-stage-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     // The resolver returns real paths, and the temp dir can sit behind a symlink.
     let dir = dunce::canonicalize(&dir).unwrap();
-    let main = dir.join("main.js");
-    std::fs::write(&main, "export const value = 1;\nimport.meta.hot.accept();\n").unwrap();
+    std::fs::write(dir.join("main.js"), "export const value = 1;\nimport.meta.hot.accept();\n")
+      .unwrap();
+    let saved = dir.join(save.0);
 
     // One entry per `on_hmr_updates` call: the code of each patch, or `None` for any other update.
     let updates = Arc::new(Mutex::new(Vec::<Vec<Option<String>>>::new()));
     let on_hmr_updates = {
       let updates = Arc::clone(&updates);
-      let main = main.clone();
+      let saved = saved.clone();
+      let content = save.1;
       Arc::new(move |result: rolldown_error::BuildResult<(Vec<_>, Vec<String>)>| {
         let (client_updates, _) = result.unwrap();
         let mut updates = updates.lock().unwrap();
@@ -810,7 +852,7 @@ mod tests {
             .collect(),
         );
         if updates.len() == 1 {
-          std::fs::write(&main, "export const value = 3;\nimport.meta.hot.accept();\n").unwrap();
+          std::fs::write(&saved, content).unwrap();
         }
       })
     };
@@ -843,22 +885,24 @@ mod tests {
     engine.run().await.unwrap();
     engine.create_client_for_testing().await;
 
-    let changed_main = || FxIndexMap::from_iter([(main.clone(), WatcherChangeKind::Update)]);
-    std::fs::write(&main, "export const value = 2;\nimport.meta.hot.accept();\n").unwrap();
-    engine.ensure_task_with_changed_files(changed_main()).await;
-    engine.ensure_task_with_changed_files(changed_main()).await;
+    let mut changed = FxIndexMap::default();
+    for (file, content, kind) in first_task {
+      std::fs::write(dir.join(file), content).unwrap();
+      changed.insert(dir.join(file), *kind);
+    }
+    engine.ensure_task_with_changed_files(changed).await;
+    engine
+      .ensure_task_with_changed_files(FxIndexMap::from_iter([(saved, WatcherChangeKind::Update)]))
+      .await;
 
     engine.close().await.unwrap();
     std::fs::remove_dir_all(&dir).unwrap();
 
     let updates = updates.lock().unwrap();
     assert_eq!(updates.len(), 2, "{updates:#?}");
-    let has_value = |update: &[Option<String>], value: &str| {
-      let expected = format!("value = {value}");
-      matches!(update, [Some(code)] if code.contains(&expected))
-    };
-    assert!(has_value(&updates[0], "2"), "{updates:#?}");
-    assert!(has_value(&updates[1], "3"), "{updates:#?}");
+    let has = |update: &[Option<String>], expected: &str| matches!(update, [Some(code)] if code.contains(expected));
+    assert!(has(&updates[0], expected[0]), "{updates:#?}");
+    assert!(has(&updates[1], expected[1]), "{updates:#?}");
   }
 
   #[cfg(feature = "testing")]

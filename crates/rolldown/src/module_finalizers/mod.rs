@@ -448,6 +448,63 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     true
   }
 
+  /// Node reads the named exports of a CommonJS module when an `import` first loads the module, so
+  /// the exports synthesized for a star export of it read their values right after `require`:
+  /// `var import_foo = require_foo(), a = __hasOwnProp.call(import_foo, "a") ? import_foo.a : void 0;`
+  fn declare_cjs_star_named_exports(
+    &self,
+    stmt: &mut Statement<'ast>,
+    rec_idx: ImportRecordIdx,
+    namespace_name: &str,
+  ) {
+    let Statement::VariableDeclaration(decl) = stmt else { unreachable!() };
+    for import in self.ctx.module.named_imports.values() {
+      let Specifier::Literal(name) = &import.imported else { continue };
+      if import.record_idx != rec_idx {
+        continue;
+      }
+      let namespace = || Expression::new_id_ref_expr(SPAN, namespace_name, self);
+      let has_own_prop_call = Expression::new_static_member_expression(
+        SPAN,
+        self.finalized_expr_for_runtime_symbol("__hasOwnProp"),
+        IdentifierName::new_id_name(SPAN, "call", self),
+        false,
+        self,
+      );
+      let key = Expression::new_string_literal(SPAN, ast::Str::from_str_in(name, self), None, self);
+      let has_own = Expression::new_call_expression(
+        SPAN,
+        has_own_prop_call,
+        None,
+        allocator::Vec::from_iter_in([namespace().into(), key.into()], self),
+        false,
+        self,
+      );
+      let value = Expression::new_member_expr_or_ident_ref(
+        namespace(),
+        &[MemberExprProp { name: name.clone(), span: SPAN, optional: false }],
+        SPAN,
+        self,
+      );
+      let init = Expression::new_conditional_expression(
+        SPAN,
+        has_own,
+        value,
+        Expression::new_void_0(SPAN, self),
+        self,
+      );
+      let binding = ast::Str::from_str_in(self.canonical_name_for(import.imported_as), self);
+      decl.declarations.push(ast::VariableDeclarator::new(
+        SPAN,
+        ast::BindingPattern::new_binding_identifier(SPAN, binding, self),
+        None,
+        Some(init),
+        false,
+        self,
+      ));
+    }
+  }
+
   fn wrapped_esm_init_stmt_for_import_record(
     &mut self,
     rec_idx: ImportRecordIdx,
@@ -670,6 +727,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // `import_foo`
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
         *stmt = Statement::new_var_decl(binding_name_for_wrapper_call_ret, init_expr, self);
+        if rec.meta.contains(ImportRecordMeta::CjsStarNamedExports) {
+          self.declare_cjs_star_named_exports(stmt, rec_idx, binding_name_for_wrapper_call_ret);
+        }
 
         return self.transfer_import_stmt(rec_idx, stmt);
       }
@@ -2327,13 +2387,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           }
         } else if let Some(export_all_decl) = top_stmt.as_export_all_declaration() {
           let rec_idx = self.ctx.module.imports[&export_all_decl.node_id()];
-          // "export * as ns from 'path'"
-          if let Some(_alias) = &export_all_decl.exported {
+          if export_all_decl.exported.is_some()
+            || self.ctx.module.import_records[rec_idx]
+              .meta
+              .contains(ImportRecordMeta::CjsStarNamedExports)
+          {
             if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
               return;
             }
           } else {
-            // "export * from 'path'"
             if self.ctx.order_wrap_state.is_consumer_local_reexport_route(self.ctx.idx) {
               return;
             }

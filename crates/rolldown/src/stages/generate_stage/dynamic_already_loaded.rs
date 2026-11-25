@@ -195,6 +195,7 @@ impl GenerateStage<'_> {
           &self.link_output.module_table,
           &flattened_entry_modules,
           &order_sensitive,
+          &module_to_atom_idx,
         ),
       );
     }
@@ -309,7 +310,9 @@ impl GenerateStage<'_> {
           idxs.iter().for_each(|&idx| moved[idx] = true);
           continue;
         }
-        for (&idx, &atom_idx) in idxs.iter().zip(&atom_idxs) {
+        // Last first: an atom that would run late against a later atom that has not moved yet can
+        // move once that one has, so a chain of them moves in one round instead of one per round.
+        for (&idx, &atom_idx) in idxs.iter().zip(&atom_idxs).rev() {
           moved[idx] = reduced_chunk_graph.try_move(atom_idx, bits);
         }
       }

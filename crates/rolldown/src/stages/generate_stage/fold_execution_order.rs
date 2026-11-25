@@ -15,6 +15,7 @@ pub(super) struct EntryOrders<'a> {
   module_table: &'a ModuleTable,
   entry_module_by_bit: &'a [ModuleIdx],
   order_sensitive: &'a IndexVec<ModuleIdx, bool>,
+  module_to_atom_idx: &'a IndexVec<ModuleIdx, Option<usize>>,
   by_entry_bit: FxHashMap<usize, EntryOrder>,
 }
 
@@ -24,6 +25,10 @@ pub(super) struct EntryOrder {
   /// The modules whose position matters (see `GenerateStage::order_sensitive_modules`), with
   /// their positions, sorted by position.
   pub(super) order_sensitive: Vec<(u32, ModuleIdx)>,
+  /// Whether the entry runs two modules of one atom that matter against their `exec_order`. An
+  /// atom stays in one chunk, which runs them in `exec_order`, so no move can keep the order of
+  /// such an entry.
+  pub(super) runs_an_atom_out_of_order: bool,
 }
 
 impl<'a> EntryOrders<'a> {
@@ -31,16 +36,34 @@ impl<'a> EntryOrders<'a> {
     module_table: &'a ModuleTable,
     entry_module_by_bit: &'a [ModuleIdx],
     order_sensitive: &'a IndexVec<ModuleIdx, bool>,
+    module_to_atom_idx: &'a IndexVec<ModuleIdx, Option<usize>>,
   ) -> Self {
-    Self { module_table, entry_module_by_bit, order_sensitive, by_entry_bit: FxHashMap::default() }
+    Self {
+      module_table,
+      entry_module_by_bit,
+      order_sensitive,
+      module_to_atom_idx,
+      by_entry_bit: FxHashMap::default(),
+    }
   }
 
   /// The orders of the entries of `entry_bits`, in that order.
   pub(super) fn walk(&mut self, entry_bits: &[usize]) -> Vec<&EntryOrder> {
-    let Self { module_table, entry_module_by_bit, order_sensitive, by_entry_bit } = self;
+    let Self {
+      module_table,
+      entry_module_by_bit,
+      order_sensitive,
+      module_to_atom_idx,
+      by_entry_bit,
+    } = self;
     for &entry_bit in entry_bits {
       by_entry_bit.entry(entry_bit).or_insert_with(|| {
-        walk_entry(module_table, entry_module_by_bit[entry_bit], order_sensitive)
+        walk_entry(
+          module_table,
+          entry_module_by_bit[entry_bit],
+          order_sensitive,
+          module_to_atom_idx,
+        )
       });
     }
     entry_bits.iter().map(|entry_bit| &by_entry_bit[entry_bit]).collect()
@@ -51,6 +74,7 @@ fn walk_entry(
   module_table: &ModuleTable,
   entry_module: ModuleIdx,
   order_sensitive: &IndexVec<ModuleIdx, bool>,
+  module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
 ) -> EntryOrder {
   enum Step {
     Enter(ModuleIdx),
@@ -88,7 +112,15 @@ fn walk_entry(
     .map(|(&module_idx, &position)| (position, module_idx))
     .collect();
   order_sensitive.sort_unstable();
-  EntryOrder { position, order_sensitive }
+  let mut last_exec_order_by_atom = FxHashMap::default();
+  let runs_an_atom_out_of_order = order_sensitive.iter().any(|&(_, module_idx)| {
+    let Some(atom_idx) = module_to_atom_idx[module_idx] else {
+      return false;
+    };
+    let exec_order = module_table[module_idx].exec_order();
+    last_exec_order_by_atom.insert(atom_idx, exec_order).is_some_and(|last| last > exec_order)
+  });
+  EntryOrder { position, order_sensitive, runs_an_atom_out_of_order }
 }
 
 /// The externals whose position matters that `modules` import statically. An external import is

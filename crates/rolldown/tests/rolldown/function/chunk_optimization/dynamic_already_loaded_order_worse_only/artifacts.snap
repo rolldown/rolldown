@@ -1,0 +1,46 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a5.js
+
+```js
+// a1.js
+globalThis.orderWorseLog.push("a1");
+// a2.js
+globalThis.orderWorseLog.push("a2");
+// a5.js
+globalThis.orderWorseLog.push("a5");
+
+```
+
+## e.js
+
+```js
+import "./a5.js";
+
+```
+
+## f.js
+
+```js
+import "./a5.js";
+
+```
+
+## m.js
+
+```js
+import "./a5.js";
+// m.js
+globalThis.loadR = () => import("./r.js");
+
+```
+
+## r.js
+
+```js
+import "./a5.js";
+
+```

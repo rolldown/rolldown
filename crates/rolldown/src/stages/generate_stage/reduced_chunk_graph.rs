@@ -70,33 +70,72 @@ struct LoadedBefore {
   externals: FxHashSet<ModuleIdx>,
 }
 
-/// Whether a moved atom, now in the body of the receiving node, runs after a module or an external
-/// that the node imports, directly or not, and that an entry runs after the atom. One that the atom
-/// is certain to import ran before it already. That is decided per atom, not per chunk: a chunk
-/// the atom imports can hold atoms that other moves put there, and those ran after it.
+/// Whether an atom in the body of the receiving node runs after a module or an external that the
+/// node imports, directly or not, and that an entry runs after the atom. One that the atom is
+/// certain to import ran before it already. That is decided per atom, not per chunk: a chunk the
+/// atom imports can hold atoms that other moves put there, and those ran after it. The checked
+/// atoms are the moved ones against everything the node imports, and the ones that were there
+/// before against what the move adds to the imports.
 struct LateImportCheck<'c, 'a> {
   orders: &'c AtomExecutionOrders<'a>,
   entries: &'c [&'c EntryOrder],
-  moved: &'c [usize],
-  /// Per moved atom and entry, the first position of the atom's modules that matter.
+  checked: &'c [usize],
+  /// Per checked atom and entry, the first position of the atom's modules that matter.
   earliest: Vec<Vec<Option<u32>>>,
-  loaded_before: &'c mut [Option<LoadedBefore>],
+  loaded_before: Vec<Option<LoadedBefore>>,
+  /// Externals that the node imported before the move, which add nothing.
+  imported_externals: FxHashSet<ModuleIdx>,
 }
 
-impl LateImportCheck<'_, '_> {
-  /// Checks the atoms of `node`: their externals, and their modules when `modules` is set.
-  fn runs_after(&mut self, graph: &ReducedChunkGraph<'_>, node: usize, modules: bool) -> bool {
+impl<'c, 'a> LateImportCheck<'c, 'a> {
+  fn new(
+    orders: &'c AtomExecutionOrders<'a>,
+    entries: &'c [&'c EntryOrder],
+    checked: &'c [usize],
+  ) -> Self {
+    let earliest = checked
+      .iter()
+      .map(|&atom_idx| {
+        entries
+          .iter()
+          .map(|entry| {
+            orders.order_sensitive[atom_idx]
+              .iter()
+              .filter_map(|module_idx| entry.position.get(module_idx).copied())
+              .min()
+          })
+          .collect()
+      })
+      .collect();
+    let loaded_before = checked.iter().map(|_| None).collect();
+    Self {
+      orders,
+      entries,
+      checked,
+      earliest,
+      loaded_before,
+      imported_externals: FxHashSet::default(),
+    }
+  }
+
+  /// Checks `members`: their externals, and their modules when `modules` is set.
+  fn runs_after(
+    &mut self,
+    graph: &ReducedChunkGraph<'_>,
+    members: &[usize],
+    modules: bool,
+  ) -> bool {
     let orders = self.orders;
-    for (moved_idx, &atom_idx) in self.moved.iter().enumerate() {
-      for (entry, &earliest) in self.entries.iter().zip(&self.earliest[moved_idx]) {
+    for (checked_idx, &atom_idx) in self.checked.iter().enumerate() {
+      for (entry, &earliest) in self.entries.iter().zip(&self.earliest[checked_idx]) {
         let Some(earliest) = earliest else {
           continue;
         };
         let runs_later = |module_idx: &ModuleIdx| {
           entry.position.get(module_idx).is_some_and(|&position| position > earliest)
         };
-        let loaded_before = &mut self.loaded_before[moved_idx];
-        for &member in &graph.atoms_by_node[node] {
+        let loaded_before = &mut self.loaded_before[checked_idx];
+        for &member in members {
           if modules
             && orders.order_sensitive[member].iter().any(runs_later)
             && !loaded_before
@@ -107,7 +146,8 @@ impl LateImportCheck<'_, '_> {
             return true;
           }
           if orders.externals[member].iter().any(|external| {
-            runs_later(external)
+            !self.imported_externals.contains(external)
+              && runs_later(external)
               && !loaded_before
                 .get_or_insert_with(|| graph.certainly_loaded_before(orders, atom_idx))
                 .externals
@@ -269,32 +309,20 @@ impl<'a> ReducedChunkGraph<'a> {
     };
     let entry_bits: Vec<usize> =
       self.bits_by_node[node].index_of_one().map(|bit| bit as usize).collect();
-    let entries = entries.walk(&entry_bits);
-    // The first position, per entry, of the modules that matter of each moved atom.
-    let earliest: Vec<Vec<Option<u32>>> = moved
-      .iter()
-      .map(|&atom_idx| {
-        entries
-          .iter()
-          .map(|entry| {
-            orders.order_sensitive[atom_idx]
-              .iter()
-              .filter_map(|module_idx| entry.position.get(module_idx).copied())
-              .min()
-          })
-          .collect()
-      })
+    // An entry that runs two modules of one atom against their `exec_order` runs out of order with
+    // or without the move, since an atom stays in one chunk. Its order only counts when the move
+    // can keep it.
+    let entries: Vec<&EntryOrder> = entries
+      .walk(&entry_bits)
+      .into_iter()
+      .filter(|entry| !entry.runs_an_atom_out_of_order)
       .collect();
-    let mut loaded_before: Vec<Option<LoadedBefore>> = moved.iter().map(|_| None).collect();
-    let mut late = LateImportCheck {
-      orders,
-      entries: &entries,
-      moved,
-      earliest,
-      loaded_before: &mut loaded_before,
-    };
+    if entries.is_empty() {
+      return false;
+    }
+    let mut late = LateImportCheck::new(orders, &entries, moved);
     // The externals that the node imports run before its body too.
-    if late.runs_after(self, node, false) {
+    if late.runs_after(self, &self.atoms_by_node[node], false) {
       return true;
     }
     let mut imported = FxHashSet::default();
@@ -303,7 +331,7 @@ impl<'a> ReducedChunkGraph<'a> {
       if next == node || !imported.insert(next) {
         continue;
       }
-      if late.runs_after(self, next, true) {
+      if late.runs_after(self, &self.atoms_by_node[next], true) {
         return true;
       }
       stack.extend(self.edges.dependencies[next].keys().copied());
@@ -313,6 +341,9 @@ impl<'a> ReducedChunkGraph<'a> {
       .copied()
       .filter(|atom_idx| !moved.contains(atom_idx))
       .collect();
+    if self.staying_run_after_added_imports(orders, &entries, moved, &staying, node, &imported) {
+      return true;
+    }
     // A node with one bit is the chunk of that entry, which no importer runs.
     let is_imported_by_entry = self.bits_by_node[node].bit_count() > 1;
     entries.iter().any(|&entry| {
@@ -320,6 +351,45 @@ impl<'a> ReducedChunkGraph<'a> {
       self.body_reorders(orders, &view)
         || (is_imported_by_entry && self.evaluation_point_crosses(orders, &view))
     })
+  }
+
+  /// Whether an atom that was in the node before the move now runs after a module or an external
+  /// that only the moved atoms make the node import. In
+  /// `chunk_optimization/dynamic_already_loaded_order_runtime`, `m3.js` moves first, and then
+  /// `m4.js` and `m2.js`, whose `export *` makes the chunk import the chunk of `m0.js`, which the
+  /// entry runs after `m3.js`.
+  fn staying_run_after_added_imports(
+    &self,
+    orders: &AtomExecutionOrders<'_>,
+    entries: &[&EntryOrder],
+    moved: &[usize],
+    staying: &[usize],
+    node: usize,
+    imported: &FxHashSet<usize>,
+  ) -> bool {
+    if staying.is_empty() {
+      return false;
+    }
+    let mut imported_before = FxHashSet::default();
+    let mut stack: Vec<usize> = staying
+      .iter()
+      .flat_map(|&atom_idx| &self.atom_dependencies[atom_idx])
+      .map(|&dependency| self.node_by_atom[dependency])
+      .collect();
+    while let Some(next) = stack.pop() {
+      if next == node || !imported_before.insert(next) {
+        continue;
+      }
+      stack.extend(self.edges.dependencies[next].keys().copied());
+    }
+    let mut late = LateImportCheck::new(orders, entries, staying);
+    late.imported_externals =
+      staying.iter().flat_map(|&atom_idx| &orders.externals[atom_idx]).copied().collect();
+    late.runs_after(self, moved, false)
+      || imported
+        .iter()
+        .filter(|next| !imported_before.contains(next))
+        .any(|&next| late.runs_after(self, &self.atoms_by_node[next], true))
   }
 
   fn certainly_loaded_before(

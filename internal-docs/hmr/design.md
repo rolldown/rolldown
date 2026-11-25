@@ -137,8 +137,9 @@ The client builds this query right before the GET, after `markStale`
 can land between "the client reported" and "the server rendered", because
 the report and the request are the same message. The POST path is the one
 exception: the report is the POST and the request is the GET after it.
-A push can land in between, and `ensureRunnable` covers that case
-(principle 6, "Request size").
+A push can land in between. `ensureRunnable` (patch) and `requestLazy`
+(lazy load) check again after the payload and make a second request if
+needed (principle 5 and principle 6, "Request size").
 
 The server reads the request with `holds_current` and
 `collect_unheld_sync_deps` (principle 7) and carries exactly the code
@@ -567,8 +568,9 @@ the 1 MiB limit applies to that body too.
 
 The query is built before the POST, so it describes the client one round
 trip before the GET. A push that lands in between is the same case as a
-push that lands while a GET is on the way: `ensureRunnable` checks again
-after the pull and makes the second pull if needed (principle 5).
+push that lands while a GET is on the way. `ensureRunnable` (patch) and
+`requestLazy` (lazy load) check again after the payload and make a second
+request if needed (principle 5).
 
 Rejected: **a POST for every request**. It adds a round trip to every
 pull, and most queries are short (below). Rejected: **the payload as the

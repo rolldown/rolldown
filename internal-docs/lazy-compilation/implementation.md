@@ -28,7 +28,7 @@ Data shared across all connected browser tabs:
 
 ### Client State
 
-The server keeps nothing per tab. The runtime (`DevRuntime` in `runtime-extra-dev-common.js`) keeps what the request needs, and `encodeHave` writes it into the query of every lazy request:
+The server keeps nothing per tab. The runtime (`DevRuntime` in `runtime-extra-dev-common.js`) keeps what the request needs, and `encodeHave` writes it into every lazy request: in the query, or, when the query is longer than `maxQueryLength`, in a POST body first (`requestQuery`, see "The Have-Set Query" below):
 
 | Query key | Runtime data       | Meaning                                                                                                                                         |
 | --------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |

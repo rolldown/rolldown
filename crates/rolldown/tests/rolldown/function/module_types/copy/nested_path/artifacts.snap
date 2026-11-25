@@ -30,13 +30,13 @@ console.log(shallow, deep, shallowReq, deepReq);
 ```
 - ../../../main.js
 (2:0) "const " --> (9:0) "const "
-(2:6) "shallowReq = require(" --> (9:6) "shallowReq = "
-(2:6) "shallowReq = require(" --> (9:19) "__require("
+(2:6) "shallowReq = " --> (9:6) "shallowReq = "
+(2:19) "require(" --> (9:19) "__require("
 (2:27) "'./root.txt'" --> (9:29) "\"../../deep/assets/root-DcToKNib.txt\""
 (2:39) ");\n" --> (9:66) ");\n"
 (3:0) "const " --> (10:0) "const "
-(3:6) "deepReq = require(" --> (10:6) "deepReq = "
-(3:6) "deepReq = require(" --> (10:16) "__require("
+(3:6) "deepReq = " --> (10:6) "deepReq = "
+(3:16) "require(" --> (10:16) "__require("
 (3:24) "'./a/b/c/deep.txt'" --> (10:26) "\"../../deep/assets/deep-DYZ8IeH_.txt\""
 (3:42) ");\n" --> (10:63) ");\n"
 (4:0) "console." --> (11:0) "console."

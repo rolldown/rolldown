@@ -20,9 +20,9 @@ var Foo = class {
 };
 __decorate([dec(1)], Foo.prototype, "prop1", void 0);
 __decorate([dec(2)], Foo.prototype, "prop2_", void 0);
-__decorate([dec(3)], Foo.prototype, null, void 0);
-__decorate([dec(4)], Foo.prototype, null, void 0);
-__decorate([dec(5)], Foo.prototype, null, void 0);
-__decorate([dec(6)], Foo.prototype, null, void 0);
+__decorate([dec(3)], Foo.prototype, "prop3", void 0);
+__decorate([dec(4)], Foo.prototype, "prop4_", void 0);
+__decorate([dec(5)], Foo.prototype, "prop5", void 0);
+__decorate([dec(6)], Foo.prototype, "prop6_", void 0);
 
 ```

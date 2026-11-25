@@ -9,6 +9,14 @@ pub struct DecoratorOptions {
   /// @default false
   pub legacy: Option<bool>,
 
+  /// Lower standard decorators and auto-accessors.
+  ///
+  /// When omitted, lowering follows the target: a concrete target lowers them, and `esnext`
+  /// or no target preserves them. `legacy: true` takes precedence over this option.
+  ///
+  /// @default undefined
+  pub lower: Option<bool>,
+
   /// Enables emitting decorator metadata.
   ///
   /// This option the same as [emitDecoratorMetadata](https://www.typescriptlang.org/tsconfig/#emitDecoratorMetadata)
@@ -38,6 +46,7 @@ impl From<DecoratorOptions> for oxc::transformer::DecoratorOptions {
   fn from(options: DecoratorOptions) -> Self {
     Self {
       legacy: options.legacy.unwrap_or_default(),
+      lower: options.lower,
       emit_decorator_metadata: options.emit_decorator_metadata.unwrap_or_default(),
       // Oxc defaults `strict_null_checks` to `true` (preserving strict tsc semantics),
       // so mirror that default when the option is not explicitly set.

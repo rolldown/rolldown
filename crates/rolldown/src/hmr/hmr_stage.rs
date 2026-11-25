@@ -639,12 +639,16 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
   /// with HMR patches, whose affected set must re-run and therefore subtracts the
   /// ship map only. The ship map itself is written only by the delivery notification
   /// (`DevEngine::notify_payload_delivered`).
+  ///
+  /// `merged` becomes `true` once the compile merges a scan into the graph. It stays `true` when
+  /// a later step fails, because the graph keeps the route.
   pub async fn compile_lazy_entry(
     &mut self,
     module_id: &str,
     shipped: &FxHashMap<ArcStr, u32>,
     evaluated: &FxHashMap<ArcStr, u32>,
     stamp_table: &HmrStampTable,
+    merged: &mut bool,
   ) -> BuildResult<HmrLazyChunkOutput> {
     tracing::debug!(
       target: "hmr",
@@ -690,26 +694,23 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         vec![anyhow::anyhow!("Lazy entry module not found in cache. module_id={module_id}").into()]
       })?;
 
-    // 2. Scan the route into the graph, unless this is a repeat visit.
-    // Only the fetched template has an `import()`, and a failed scan never reaches `merge`. So a
-    // resolved `import()` on the proxy means an earlier compile already merged the route, and a
-    // retry after a failed scan still scans. A compile that failed after its `merge` queued no
-    // Rebuild, so the next compile scans again to queue it. Queued rescans need a scan to retry
-    // the broken files. A lost update needs the Rebuild that follows a scan: it becomes a full
-    // build that reloads every client.
+    // 2. Scan the route into the graph, unless the graph holds it already. Only the fetched
+    // template has an `import()`, and a failed scan never reaches `merge`, so a resolved
+    // `import()` on the proxy means an earlier compile merged the route. A route whose own proxy
+    // waits for a rescan scans again, so a deleted route file reports its error.
     // See internal-docs/lazy-compilation/design.md ("Repeat Visits").
-    let is_repeat_visit = !*self.lost_hmr_update
-      && !self.cache.unfinished_lazy_merge
-      && self.cache.pending_rescans.is_empty()
-      && self.module_table().modules[entry_module_idx].as_normal().is_some_and(|proxy| {
+    let route_merged =
+      self.module_table().modules[entry_module_idx].as_normal().is_some_and(|proxy| {
         proxy
           .import_records
           .iter()
           .any(|rec| rec.kind == ImportKind::DynamicImport && rec.resolved_module.is_some())
       });
+    let needs_scan =
+      !route_merged || self.cache.pending_rescans.iter().any(|queued| queued.id == resolved_id.id);
 
     let phase_start = Instant::now();
-    if !is_repeat_visit {
+    if needs_scan {
       let fetch_mode = ScanMode::Partial(vec![resolved_id]);
 
       let mut module_loader = ModuleLoader::new(
@@ -721,21 +722,22 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         fetch_mode.is_full(),
         None,
       )?;
+      module_loader.set_retry_pending_rescans(false);
 
       let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
       drop(module_loader);
 
+      *merged = true;
       let plugin_driver = Arc::clone(&self.plugin_driver);
       self
         .cache
         .merge(module_loader_output.into(), &plugin_driver)
         .map_err(|e| vec![anyhow::anyhow!(e).into()])?;
-      self.cache.unfinished_lazy_merge = true;
     }
     let scan_time = phase_start.elapsed();
 
     let phase_start = Instant::now();
-    if !is_repeat_visit {
+    if needs_scan {
       let options = Arc::clone(&self.options);
       let plugin_driver = Arc::clone(&self.plugin_driver);
       self
@@ -835,12 +837,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
     let sourcemap_filename = sourcemap_asset.as_ref().map(|asset| asset.filename.to_string());
     let sourcemap = sourcemap_asset.map(|asset| asset.source.try_into_string()).transpose()?;
-    self.cache.unfinished_lazy_merge = false;
 
-    let scanned = !is_repeat_visit;
     tracing::debug!(
       target: "hmr",
-      scanned,
+      scanned = needs_scan,
       modules = modules_to_be_updated.len(),
       ?scan_time,
       ?side_effects_time,
@@ -850,7 +850,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       "compile_lazy_entry: done"
     );
 
-    Ok(HmrLazyChunkOutput { code, filename, sourcemap_filename, sourcemap, carried, scanned })
+    Ok(HmrLazyChunkOutput { code, filename, sourcemap_filename, sourcemap, carried })
   }
 
   async fn render_hmr_patch(

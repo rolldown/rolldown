@@ -156,7 +156,9 @@ impl BundleCoordinator {
           // and no later build loads these cached modules again.
           let _ = self.register_watch_files([&*watch_files]);
 
-          // A compile that did not scan left the graph as it was, so the output is current.
+          // Only a lost HMR update asks for a build: the task upgrades it to the full build
+          // that reloads every client. A lazy route needs none, because no page loads it
+          // from the build output.
           if rebuild {
             let mut changed_files = FxIndexMap::default();
             changed_files.insert(PathBuf::from(&module_id), WatcherChangeKind::Update);

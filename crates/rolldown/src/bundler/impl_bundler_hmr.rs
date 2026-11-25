@@ -154,6 +154,9 @@ impl Bundler {
   /// This is called when a dynamically imported module is first requested at runtime.
   /// The module was previously stubbed with a proxy, and now we need to compile the
   /// actual module and its dependencies.
+  ///
+  /// `merged` becomes `true` once the compile merges a scan into the graph, also when a later
+  /// step fails. See `HmrStage::compile_lazy_entry`.
   pub async fn compile_lazy_entry(
     &mut self,
     module_id: String,
@@ -161,6 +164,7 @@ impl Bundler {
     evaluated: &FxHashMap<ArcStr, u32>,
     stamp_table: &HmrStampTable,
     next_hmr_patch_id: Arc<AtomicU32>,
+    merged: &mut bool,
   ) -> BuildResult<HmrLazyChunkOutput> {
     // HMR partial scans use the shared rayon pool without passing through
     // `BundleFactory::build_bundle`; wait for any deferred drops here too.
@@ -179,6 +183,6 @@ impl Bundler {
       lost_hmr_update: &mut self.lost_hmr_update,
       next_hmr_patch_id,
     });
-    hmr_stage.compile_lazy_entry(&module_id, shipped, evaluated, stamp_table).await
+    hmr_stage.compile_lazy_entry(&module_id, shipped, evaluated, stamp_table, merged).await
   }
 }

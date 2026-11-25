@@ -49,7 +49,7 @@ function init_d() {
 }
 // main.js
 init_log();
-const promise = (async () => (await 0, __esmGather(init_d) || await __esmGather(), d_deferred))();
+const promise = (async () => (await 0, __esmGatherDynamic(init_d) || await __esmGatherDynamic(), d_deferred))();
 log.push("after call");
 const ns = await promise;
 log.push("after import");

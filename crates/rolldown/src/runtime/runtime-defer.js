@@ -114,14 +114,13 @@ export var __esmDepDone = (p, dep, caller, m, x) => {
   }
   return __esmComplete(m);
 };
-// `__esmGather(init_d, init_importer) || await __esmGather()`: the preparation of a deferred
-// import of d whose closure has a module with top-level await (spec
-// `GatherAsynchronousTransitiveDependencies`). The first call walks the records from d. It returns
-// true when nothing is pending. Else it keeps the lists, and the second call returns a promise
-// that waits for them: first each module with top-level await (an error rejects the importer),
-// then each started module that waits (its error waits for the access).
-export var __esmGather = (d, importer) => {
-  if (!d) return (d = __esmStack.w), (__esmStack.w = 0), d();
+// Wait for an evaluation whose error is already recorded on the module.
+var __esmSettled = async (p) => { try { await p; } catch {} };
+// The two import forms share discovery and the wait. Only their root evaluation differs.
+// Publish the wait only after all roots have started. Nested preparations can then use the
+// same slot. The caller takes it immediately, or skips the await entirely for an empty gather.
+var __esmPrepare = (d, importer, evaluate) => {
+  if (!d) return (d = __esmStack.w), (__esmStack.w = 0), d;
   var from = importer && importer(__esmState),
     seen = new Set(),
     g = [],
@@ -142,42 +141,49 @@ export var __esmGather = (d, importer) => {
     for (i = 0; i < d.length; i++) walk(d[i]);
   }
   if (!g.length && !started.length) return true;
-  __esmStack.w = () => {
-    var pending = g.length, failure, finish, p;
-    var observe = async (p) => {
-      try {
-        await p;
-      } catch (e) {
-        if (!failure) failure = [e];
-      }
-      if ((--pending === 0 || failure) && finish) finish();
-    };
-    for (var sibling of g) {
-      p = sibling.f(importer);
-      // A synchronous dependency failure stops this evaluation walk, including a
-      // gather nested in another module's import list. Observe every started promise.
-      if (g.length !== 1 || sibling.s === 3) observe(p);
-      if (sibling.s === 3) throw sibling.e;
+  var pending = g.length, failure, finish, p;
+  var observe = async (p) => {
+    try {
+      await p;
+    } catch (e) {
+      if (!failure) failure = [e];
     }
-    return (async () => {
-      if (g.length === 1) await p;
-      else if (g.length) {
-        // Await supplies intrinsic resolving functions on the next microtask.
-        await {
-          then(resolve, reject) {
-            finish = () => failure ? reject(failure[0]) : resolve();
-            if (!pending || failure) finish();
-          },
-        };
-      }
-      for (var m of started) await m.f().then(
-        () => {},
-        () => {},
-      );
-    })();
+    if ((--pending === 0 || failure) && finish) finish();
   };
+  for (var sibling of g) {
+    p = evaluate(sibling, importer);
+    if (g.length !== 1) observe(p);
+  }
+  __esmStack.w = (async () => {
+    if (g.length === 1) await p;
+    else if (g.length) {
+      // Await supplies intrinsic resolving functions on the next microtask.
+      await {
+        then(resolve, reject) {
+          finish = () => failure ? reject(failure[0]) : resolve();
+          if (!pending || failure) finish();
+        },
+      };
+    }
+    for (var m of started) await __esmSettled(m.f());
+  })();
   return false;
 };
+// InnerModuleEvaluation visits all static requests in one walk. Propagate an abrupt
+// completion immediately, after observing the rejection of the generated async wrapper.
+var __esmEvaluateDependency = (m, importer) => {
+  var p = m.f(importer);
+  if (m.s === 3) {
+    __esmSettled(p);
+    throw m.e;
+  }
+  return p;
+};
+export var __esmGather = (d, importer) => __esmPrepare(d, importer, __esmEvaluateDependency);
+// ContinueDynamicImport calls Evaluate() separately for each gathered root. Each TLA
+// wrapper returns its evaluation promise, including when a synchronous dependency threw.
+var __esmEvaluateRoot = (m) => m.f();
+export var __esmGatherDynamic = (d) => __esmPrepare(d, void 0, __esmEvaluateRoot);
 // `__esmDefer` is a deferred access to a module with a `__esmState` record (spec
 // `EnsureDeferredNamespaceEvaluation`). It throws a `TypeError`, and evaluates nothing, when the
 // module or a module that it requests is evaluating (spec `ReadyForSyncExecution`). Else it

@@ -377,10 +377,10 @@ impl LinkStage<'_> {
                       && importee_linking_info.is_tla_or_contains_tla_dependency
                     {
                       // `import.defer()` first waits for the top-level await that a deferred
-                      // access to `foo` can evaluate: `__esmGather(init_foo) || await __esmGather()`.
+                      // access to `foo` can evaluate: `__esmGatherDynamic(init_foo) || await __esmGatherDynamic()`.
                       stmt_info
                         .referenced_symbols
-                        .push(self.runtime.resolve_symbol("__esmGather").into());
+                        .push(self.runtime.resolve_symbol("__esmGatherDynamic").into());
                     }
                     if self.options.code_splitting.is_disabled() {
                       match importee_linking_info.wrap_kind() {

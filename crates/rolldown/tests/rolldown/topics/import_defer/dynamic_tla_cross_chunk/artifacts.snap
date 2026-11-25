@@ -57,17 +57,17 @@ function init_log() {
 		log = [];
 	})))();
 }
-export { __esmDepDone as a, __esmGather as c, __esmDefer as i, __esmState as l, log as n, __esmEnd as o, __deferNs as r, __esmFail as s, init_log as t, __exportAll as u };
+export { __esmDepDone as a, __esmGatherDynamic as c, __esmDefer as i, __esmState as l, log as n, __esmEnd as o, __deferNs as r, __esmFail as s, init_log as t, __exportAll as u };
 
 ```
 
 ## main.js
 
 ```js
-import { c as __esmGather, n as log, t as init_log } from "./log.js";
+import { c as __esmGatherDynamic, n as log, t as init_log } from "./log.js";
 // main.js
 init_log();
-const promise = (async (n) => (n = await import("./d.js"), __esmGather(n.r) || await __esmGather(), n.t))();
+const promise = (async (n) => (n = await import("./d.js"), __esmGatherDynamic(n.r) || await __esmGatherDynamic(), n.t))();
 log.push("after call");
 const ns = await promise;
 log.push("after import");
@@ -142,14 +142,14 @@ export { log as n, init_log as t };
 ### main.js
 
 ```js
-import { o as __esmGather, s as __esmMin } from "./rolldown-runtime.js";
+import { o as __esmGatherDynamic, s as __esmMin } from "./rolldown-runtime.js";
 import { n as log, t as init_log } from "./log.js";
 // main.js
 var promise, ns, value;
 function init_main() {
 	return (init_main = __esmMin((async () => {
 		init_log();
-		promise = (async (n) => (n = await import("./d.js"), __esmGather(n.r) || await __esmGather(), n.t))();
+		promise = (async (n) => (n = await import("./d.js"), __esmGatherDynamic(n.r) || await __esmGatherDynamic(), n.t))();
 		log.push("after call");
 		ns = await promise;
 		log.push("after import");
@@ -165,6 +165,6 @@ export { log, value };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __esmFail as a, __esmState as c, __esmEnd as i, __exportAll as l, __esmDefer as n, __esmGather as o, __esmDepDone as r, __esmMin as s, __deferNs as t };
+export { __esmFail as a, __esmState as c, __esmEnd as i, __exportAll as l, __esmDefer as n, __esmGatherDynamic as o, __esmDepDone as r, __esmMin as s, __deferNs as t };
 
 ```

@@ -302,6 +302,43 @@ test.each([
   );
 });
 
+test.each([false, true])(
+  'dynamic defer evaluates the gathered roots independently, code splitting %s',
+  async (codeSplitting) => {
+    for (const ownAwait of [false, true]) {
+      const run = await bundle(
+        {
+          'main.mjs':
+            "try { await import.defer('./target.mjs'); } catch (e) { console.log('caught', e.message); }",
+          'target.mjs': ownAwait
+            ? "import './bad.mjs'; import './b.mjs'; await 0; export const x = 1;"
+            : "import './a.mjs'; import './b.mjs'; export const x = 1;",
+          'a.mjs': "import './bad.mjs'; await 0;",
+          'bad.mjs': "console.log('bad'); throw new Error('boom');",
+          'b.mjs': "console.log('b'); await 0;",
+        },
+        { codeSplitting },
+      );
+      expect(run()).toEqual(ownAwait ? ['bad', 'caught boom'] : ['bad', 'b', 'caught boom']);
+    }
+  },
+);
+
+test('a pending dynamic root lets later roots start and reject independently', async () => {
+  const run = await bundle({
+    'main.mjs': `
+      globalThis.failure = {};
+      try { await import.defer('./target.mjs'); } catch (e) { console.log(e === globalThis.failure); }
+    `,
+    'target.mjs': "import './pending.mjs'; import './a.mjs'; import './b.mjs';",
+    'pending.mjs': "console.log('pending'); await new Promise(() => {});",
+    'a.mjs': "import './bad.mjs'; await 0;",
+    'bad.mjs': "console.log('bad'); throw globalThis.failure;",
+    'b.mjs': "console.log('b'); await 0; throw new Error('later');",
+  });
+  expect(run('main', ['--unhandled-rejections=strict'])).toEqual(['pending', 'bad', 'b', 'true']);
+});
+
 test('a synchronous failure stops the walk while an earlier request is pending', async () => {
   const run = await bundle({
     'main.mjs': `

@@ -60,6 +60,12 @@ use crate::utils::external_import_interop::import_record_needs_interop;
 mod hmr;
 mod rename;
 
+#[derive(Clone, Copy)]
+enum DeferredRequest {
+  Static,
+  Dynamic,
+}
+
 /// Helper enum for `try_rewrite_cjs_member_expr_assignment_target` to handle both static and computed member properties.
 enum CjsMemberProperty<'a, 'ast> {
   Static(&'a str),
@@ -584,21 +590,25 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     };
     Some(Statement::new_expression_statement(
       SPAN,
-      self.esm_gather_expr(init, self.tracked_caller_expr()),
+      self.esm_gather_expr(init, DeferredRequest::Static),
       self,
     ))
   }
 
-  /// `__esmGather(<init>, <caller>) || await __esmGather()`. `<caller>` is absent when the
-  /// importer is not tracked.
+  /// Both forms skip the await for an empty gather. Static requests continue the importer’s
+  /// evaluation walk. A dynamic request independently evaluates each gathered root.
   fn esm_gather_expr(
     &self,
     init_expr: Expression<'ast>,
-    caller_expr: Option<Expression<'ast>>,
+    request: DeferredRequest,
   ) -> Expression<'ast> {
+    let (helper, caller_expr) = match request {
+      DeferredRequest::Static => ("__esmGather", self.tracked_caller_expr()),
+      DeferredRequest::Dynamic => ("__esmGatherDynamic", None),
+    };
     let mut gather = ast::CallExpression::new(
       SPAN,
-      self.finalized_expr_for_runtime_symbol("__esmGather"),
+      self.finalized_expr_for_runtime_symbol(helper),
       None,
       [],
       false,
@@ -610,7 +620,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
     let wait = ast::Expression::new_call_expression(
       SPAN,
-      self.finalized_expr_for_runtime_symbol("__esmGather"),
+      self.finalized_expr_for_runtime_symbol(helper),
       None,
       [],
       false,
@@ -686,7 +696,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// `import('./foo')` when the chunk that holds `foo` does not evaluate it at load
   /// (`ChunkGraph::lazy_dynamic_defer_host`) or when `foo` is an `import.defer()` target with no
   /// wrapper. Each form calls `init_foo` itself.
-  /// `<prep>` is `__esmGather(init_foo) || await __esmGather()`, only when a deferred access to
+  /// `<prep>` is `__esmGatherDynamic(init_foo) || await __esmGatherDynamic()`, only when a deferred access to
   /// `foo` can evaluate top-level await.
   /// - `import.defer('./foo')`, same chunk: `(async () => foo_deferred)()`, or
   ///   `(async () => (await 0, <prep>, foo_deferred))()`. `await 0` keeps the walk out of the
@@ -742,7 +752,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             Expression::new_number_0(SPAN, self),
             self,
           ));
-          expressions.push(self.esm_gather_expr(init_expr, None));
+          expressions.push(self.esm_gather_expr(init_expr, DeferredRequest::Dynamic));
           expressions.push(deferred);
           Expression::new_parenthesized_expression(
             SPAN,
@@ -864,7 +874,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ));
     if let Some(deferred_name) = deferred_name {
       if let Some(init_name) = init_name.filter(|_| needs_preparation) {
-        expressions.push(self.esm_gather_expr(Self::chunk_namespace_member(init_name, self), None));
+        expressions.push(self.esm_gather_expr(
+          Self::chunk_namespace_member(init_name, self),
+          DeferredRequest::Dynamic,
+        ));
       }
       expressions.push(Self::chunk_namespace_member(deferred_name, self));
     } else {

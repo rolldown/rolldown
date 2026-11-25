@@ -57,17 +57,17 @@ function init_log() {
 		log = [];
 	})))();
 }
-export { __esmDepDone as a, __esmGather as c, __esmDefer as i, __esmState as l, log as n, __esmEnd as o, __deferNs as r, __esmFail as s, init_log as t, __exportAll as u };
+export { __esmDepDone as a, __esmGatherDynamic as c, __esmDefer as i, __esmState as l, log as n, __esmEnd as o, __deferNs as r, __esmFail as s, init_log as t, __exportAll as u };
 
 ```
 
 ## main.js
 
 ```js
-import { c as __esmGather, n as log, t as init_log } from "./log.js";
+import { c as __esmGatherDynamic, n as log, t as init_log } from "./log.js";
 // main.js
 init_log();
-const loadDeferred = () => (async (n) => (n = await import("./d.js"), __esmGather(n.r) || await __esmGather(), n.t))();
+const loadDeferred = () => (async (n) => (n = await import("./d.js"), __esmGatherDynamic(n.r) || await __esmGatherDynamic(), n.t))();
 const ns = await (async (n) => (n = await import("./d.js"), await n.r(), n.n))();
 log.push("after import");
 const value = ns.value;

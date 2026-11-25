@@ -203,11 +203,13 @@ mod imp {
     let blocking_reached =
       reclaim_blocking_threads(&reclaimer.tokio, reclaimer.max_blocking_threads, THREAD_DEADLINE);
     rayon::broadcast(|_| release_thread_pages());
+    purge_arenas();
+    // mimalloc skips a purge while another thread purges. Each JS thread purges its own pages, so it
+    // is called only after this purge ends.
     JS_THREADS
       .lock()
       .unwrap_or_else(PoisonError::into_inner)
       .retain(|callback| callback.call((), ThreadsafeFunctionCallMode::NonBlocking) == Status::Ok);
-    purge_arenas();
     workers_reached && blocking_reached
   }
 

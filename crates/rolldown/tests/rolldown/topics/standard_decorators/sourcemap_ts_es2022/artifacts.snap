@@ -122,4 +122,8 @@ export { Greeter };
 (8:2) "@bound\n" --> (262:36) "_greet_dec, "
 (8:2) "@bound\n" --> (262:48) "Greeter"
 (11:2) "}\n" --> (262:55) ");\n"
+(6:7) "class Greeter {\n" --> (263:0) "_decoratorMetadata("
+(6:7) "class Greeter {\n" --> (263:19) "_init, "
+(6:7) "class Greeter {\n" --> (263:26) "Greeter"
+(13:0) "}\n" --> (263:33) ");\n"
 ```

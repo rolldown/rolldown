@@ -23,8 +23,8 @@ console.log(foo);
 ```
 - ../main.js
 (2:0) "const " --> (25:0) "const "
-(2:6) "foo = mod.version.startsWith('1');\n" --> (25:6) "foo = ("
-(2:6) "foo = mod.version.startsWith('1');\n" --> (25:13) "/* @__PURE__ */ "
+(2:6) "foo = " --> (25:6) "foo = ("
+(2:12) "mod.version.startsWith('1');\n" --> (25:13) "/* @__PURE__ */ "
 - ../cjs.js
 (0:0) "exports." --> (26:1) "exports."
 (0:8) "version = " --> (26:9) "version = "
@@ -45,8 +45,8 @@ console.log(foo);
 (5:0) "}" --> (29:3) "}"
 (5:1) ");\n" --> (29:4) ");\n"
 - ../main.js
-(2:6) "foo = mod." --> (30:6) "))"
-(2:6) "foo = mod." --> (30:8) "."
+(2:12) "mod." --> (30:6) "))"
+(2:12) "mod." --> (30:8) "."
 (2:16) "version." --> (30:9) "version."
 (2:24) "startsWith(" --> (30:17) "startsWith("
 (2:35) "'1'" --> (30:28) "\"1\""

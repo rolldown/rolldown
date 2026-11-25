@@ -76,6 +76,9 @@ pub struct DevContext {
   pub options: NormalizedDevOptions,
   pub coordinator_tx: CoordinatorSender,   // clone to send messages in
   pub last_task_errored: AtomicBool,
+  pub pull_requests: AtomicU64,
+  is_closed: AtomicBool,                   // with `close_event`, read through
+  close_event: event_listener::Event,      // `is_closed()` and `closed()`
 }
 ```
 
@@ -83,6 +86,12 @@ pub struct DevContext {
   (`BundlingTask::run`); the next HMR compute reads it as
   `last_build_errored` to turn off unchanged-output suppression, and the
   next task reads it to clear the resolver cache (§9c).
+- `pull_requests` — counts the patch and lazy requests (§10, "Pulls
+  before the rebuild").
+- The closed state — `DevEngine::close` sets it (`mark_closed`), and
+  `DevEngine::is_closed` reads it. A running task reads it too, so its
+  wait for pulls ends and its rebuild skips on close (§10, "Pulls before
+  the rebuild").
 
 The engine keeps **no state per client**. The HMR state that all clients
 share is the **HMR session** (`HmrSession`,
@@ -739,7 +748,9 @@ without forcing a rebuild.
    input to `FullBuild`. The same block clears the resolver cache per §9c.
 3. **HMR generation** — if `require_generate_hmr_update()`, calls
    `generate_hmr_updates`.
-4. **Rebuild** — if `requires_rebuild()`, sets `has_rebuild_happen =
+4. **Rebuild** — if `requires_rebuild()`: when step 3 pushed a
+   `Changed` update, first waits for the consumer and for the pulls
+   ("Pulls before the rebuild" below). Then sets `has_rebuild_happen =
    true` and calls `rebuild()`.
 
 ### `generate_hmr_updates` (`bundling_task.rs`)
@@ -756,7 +767,9 @@ without forcing a rebuild.
 - On error, sets `self.hmr_errored = true`.
 - Drains emitted assets through `on_additional_assets` (§17), then
   invokes the `on_hmr_updates` callback if configured, with
-  `(update, changedFiles)`.
+  `(update, changedFiles)`. The callback returns `HmrUpdatesHandled`, a
+  future that ends when the consumer handled the update. For a
+  `Changed` update the task keeps it for the wait before the rebuild.
 
 ### Inside `compute_hmr_update_for_file_changes` (`hmr_stage.rs`)
 
@@ -883,7 +896,10 @@ count (`ClientHave::parse_query`,
 `crates/rolldown_common/src/hmr/client_have.rs`). A query that does not
 parse gets `HmrPullResponse::Reload`: a set that is neither a `b…`
 bitset nor a `d…` gap list, or a number at or above the count. A pull
-that arrives during a rebuild waits for it.
+that arrives during a rebuild waits for it. Both methods count each
+request (`DevContext::pull_requests`) before they take the lock, so the
+rebuild of a task that pushed an update can first give the pulls of
+that push some time (see "Pulls before the rebuild" under `rebuild`).
 
 `HmrStage::render_patch(&have)`:
 
@@ -969,6 +985,90 @@ sends BundleCompleted { hmr_stage_watch_files: A }
 `dep.js` is never watched and later edits to it produce nothing. An
 `Hmr`-only task has no such gap: no build replaces its list before the
 coordinator registers it (§11).
+
+#### Pulls before the rebuild
+
+In an `HmrRebuild` task (`RebuildStrategy::Always`, or the recovery
+from a `Rebuild`-stage failure, §7) the push goes out at the end of the
+HMR stage, and the rebuild comes next. Each client answers the push with
+a pull, and a pull needs the bundler lock. The rebuild holds that lock
+for the whole build. A pull needs a network round trip, so without a
+wait the rebuild takes the lock first, and every hot update waits for a
+whole build.
+
+So when the task pushed a `Changed` update, `run_inner` waits before
+`rebuild`:
+
+1. It waits for the consumer. `on_hmr_updates` returns
+   `HmrUpdatesHandled`, and the binding ends it when the JS callback
+   returned, or when the promise it returned settled
+   (`await_call_eager_on` in `rolldown_binding/src/types/js_callback.rs`).
+   The binding queues the JS call before the HMR stage releases the
+   lock, so the push still goes out before any later output. Because
+   the binding waits for the promise, a rejection would be handled and
+   lost there. So the TS wrapper in `packages/rolldown/src/api/dev/dev-engine.ts`
+   catches it and reports it again as an unhandled rejection. A throw
+   goes to Node as an uncaught exception.
+2. `wait_for_pulls` waits until `DevContext::pull_requests` did not
+   change for `PULL_QUIET_PERIOD` (50 ms), and at most `PULL_WAIT_LIMIT`
+   (500 ms).
+
+```
+task:    [lock: HMR stage + push] [consumer] [wait ......] [lock: rebuild]
+client:                    push --> GET --> [lock: render_patch]
+```
+
+The wait starts only after step 1, so a JS thread that is busy when the
+push is queued (a GC, serving a large chunk, or async work of the
+consumer) does not use up the quiet period. A pull that arrived during
+the wait and still waits for the lock also runs before the rebuild:
+`async_lock::Mutex` gives the lock to a waiter that waited longer than
+0.5 ms before a new caller.
+
+`DevEngine::close` waits for the running task, so both steps also end
+when the engine closes (`DevContext::closed`). `rebuild` checks
+`DevContext::is_closed` after it takes the bundler lock and then skips
+the build. `close` marks the engine closed before it takes that lock to
+close the bundler, so no build runs on a closed bundler.
+
+Costs and gaps:
+
+- An `Always` rebuild after a `Changed` push starts at least 50 ms
+  later, also when no client is connected, and the next task waits
+  behind it. With `Never` (Vite's normal updates) the task has no
+  rebuild and does not wait.
+- A consumer whose `HmrUpdatesHandled` never ends stops this task and
+  every task after it, until the engine closes.
+- A `Rebuild` task that a lazy compile queued has no push and does not
+  wait, so a pull during that build still waits for it.
+- A save during the wait is lost for the clients. The partial scan of
+  the rebuild reads the changed files again and merges the save. The
+  task of that save then finds the module unchanged and sends `Noop`:
+
+  ```
+  HmrRebuild task                    file dep.js   graph dep.js
+  HMR stage: reads, merges, pushes   2             2
+  save during the wait               3
+  rebuild:   reads dep.js again      3             3   <- no client got 3
+  next task: 3 vs 3                  3             3   -> Noop
+  ```
+
+  The same save can land between the HMR stage and the rebuild without
+  the wait; the wait makes that window at least 50 ms long.
+
+Pinned by these tests:
+
+- In `dev_engine.rs`: `a_pull_after_the_push_runs_before_the_rebuild`,
+  `the_pull_wait_starts_when_the_consumer_handled_the_push`,
+  `each_patch_request_delays_the_rebuild`,
+  `each_lazy_request_delays_the_rebuild`,
+  `close_ends_the_wait_for_the_consumer` and
+  `close_during_the_pull_wait_skips_the_rebuild`.
+- The `wait_until_quiet` tests in `bundling_task.rs`.
+- In `packages/rolldown/tests/dev/dev-watch.test.ts`: "with
+  rebuildStrategy always, the rebuild waits for the promise of
+  onHmrUpdates" and "a rejection of the onHmrUpdates promise is
+  reported as an unhandled rejection".
 
 ---
 

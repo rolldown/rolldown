@@ -1,4 +1,10 @@
-use std::sync::{Arc, atomic::Ordering};
+use std::{
+  sync::{
+    Arc,
+    atomic::{AtomicU64, Ordering},
+  },
+  time::{Duration, Instant},
+};
 
 use arcstr::ArcStr;
 use async_lock::Mutex;
@@ -8,10 +14,22 @@ use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap};
 use rolldown::Bundler;
 
 use crate::{
-  BundleOutput,
+  BundleOutput, HmrUpdatesHandled,
   dev_context::SharedDevContext,
   types::{coordinator_msg::CoordinatorMsg, error_stage::ErrorStage, task_input::TaskInput},
 };
+
+/// After the consumer handled a push, the rebuild of the same task waits until no pull arrived
+/// for this long.
+const PULL_QUIET_PERIOD: Duration = Duration::from_millis(50);
+/// The rebuild starts at most this long after the consumer handled the push.
+const PULL_WAIT_LIMIT: Duration = Duration::from_millis(500);
+
+struct HmrStageOutcome {
+  may_continue: bool,
+  /// Set for a pushed `Changed` update, whose code clients pull.
+  push_handled: Option<HmrUpdatesHandled>,
+}
 
 pub struct BundlingTask {
   pub input: TaskInput,
@@ -173,24 +191,27 @@ impl BundlingTask {
         if changed_files.is_empty() {
           changed_files.push("*".to_owned());
         }
-        on_hmr_updates(Ok((
+        // Nothing pulls after a reload, so the task does not wait for the consumer.
+        drop(on_hmr_updates(Ok((
           HmrUpdate::FullReload { reason: reload_reason.to_owned() },
           changed_files,
-        )));
+        ))));
       }
       self.input = TaskInput::FullBuild;
     }
 
+    let mut push_handled = None;
     if self.input.require_generate_hmr_update() {
       tracing::trace!("[BundlingTask] starts to generate HMR updates");
-      let may_continue = self.generate_hmr_updates().await;
+      let outcome = self.generate_hmr_updates().await;
       tracing::trace!("[BundlingTask] completed generating HMR updates");
       // Stop only when HMR errored AND no callback was registered to receive
       // the error — preserving the pre-refactor `?` short-circuit. When the
       // consumer was informed via callback, the rebuild still runs.
-      if !may_continue {
+      if !outcome.may_continue {
         return;
       }
+      push_handled = outcome.push_handled;
     }
 
     // No eager rebuild for reload-bound updates: the server no longer decides reloads.
@@ -199,15 +220,31 @@ impl BundlingTask {
     // reload onto fresh output).
 
     if self.input.requires_rebuild() {
-      self.has_rebuild_happen = true;
+      if let Some(push_handled) = push_handled {
+        self.wait_for_pulls(push_handled).await;
+      }
       self.rebuild().await;
     }
   }
 
-  /// Returns `true` if subsequent build stages may continue.
-  /// Callers should skip subsequent build stages on `false`.
+  /// Clients pull the code of an update after its push, and a pull needs the bundler lock. The
+  /// rebuild holds that lock for the whole build. So after the consumer handled the push, the
+  /// rebuild first waits until no pull arrived for `PULL_QUIET_PERIOD`, and at most
+  /// `PULL_WAIT_LIMIT`. A pull that still waits for the lock then also runs first, because
+  /// `async_lock::Mutex` serves a waiter that waited longer than 0.5 ms before a new caller.
+  /// The wait ends when the engine closes, because `DevEngine::close` waits for this task.
+  /// See internal-docs/dev-engine/implementation.md ("Pulls before the rebuild").
+  async fn wait_for_pulls(&self, push_handled: HmrUpdatesHandled) {
+    let wait = async {
+      push_handled.await;
+      wait_until_quiet(&self.dev_context.pull_requests, PULL_QUIET_PERIOD, PULL_WAIT_LIMIT).await;
+    };
+    futures::future::select(std::pin::pin!(wait), std::pin::pin!(self.dev_context.closed())).await;
+  }
+
+  /// Callers should skip subsequent build stages when `may_continue` is `false`.
   #[tracing::instrument(level = "trace", skip(self))]
-  pub async fn generate_hmr_updates(&mut self) -> bool {
+  async fn generate_hmr_updates(&mut self) -> HmrStageOutcome {
     let mut bundler = self.bundler.lock().await;
     let changed_files = self
       .input
@@ -248,20 +285,28 @@ impl BundlingTask {
     }
 
     // Call on_hmr_updates callback if provided
+    let mut push_handled = None;
     if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref() {
-      on_hmr_updates(
+      let pushed_changed_update = matches!(hmr_result, Ok(HmrUpdate::Changed { .. }));
+      let handled = on_hmr_updates(
         hmr_result.map(|update| (update, changed_files.iter().map(|(p, _)| p.clone()).collect())),
       );
+      push_handled = pushed_changed_update.then_some(handled);
     }
 
     // Continue when HMR succeeded, or when the consumer was informed of the
     // failure via the callback. Stop only on an undeliverable error.
-    succeeded || has_callback
+    HmrStageOutcome { may_continue: succeeded || has_callback, push_handled }
   }
 
   #[tracing::instrument(level = "trace", skip_all)]
   async fn rebuild(&mut self) {
     let mut bundler = self.bundler.lock().await;
+    // `DevEngine::close` marks the engine closed before it takes the lock to close the bundler.
+    if self.dev_context.is_closed() {
+      return;
+    }
+    self.has_rebuild_happen = true;
 
     // The HMR stage of this task added the files it loaded to the latest build's watch list.
     // The build below starts a new, empty list and does not load those cached modules again,
@@ -301,5 +346,88 @@ impl BundlingTask {
     if let Some(on_output) = self.dev_context.options.on_output.as_ref() {
       on_output(build_result);
     }
+  }
+}
+
+/// Returns when `counter` did not change for `quiet`, or when `limit` passed.
+async fn wait_until_quiet(counter: &AtomicU64, quiet: Duration, limit: Duration) {
+  let deadline = Instant::now() + limit;
+  let mut seen = counter.load(Ordering::Relaxed);
+  loop {
+    let now = Instant::now();
+    if now >= deadline {
+      return;
+    }
+    rolldown_utils::time::sleep_until(now + quiet.min(deadline - now)).await;
+    let current = counter.load(Ordering::Relaxed);
+    if current == seen {
+      return;
+    }
+    seen = current;
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::{
+    sync::{
+      Arc,
+      atomic::{AtomicU64, Ordering},
+    },
+    time::{Duration, Instant},
+  };
+
+  use super::wait_until_quiet;
+
+  #[tokio::test]
+  async fn the_wait_ends_after_a_quiet_period() {
+    let counter = AtomicU64::new(0);
+    let start = Instant::now();
+    wait_until_quiet(&counter, Duration::from_millis(20), Duration::from_secs(10)).await;
+    let waited = start.elapsed();
+    assert!(waited >= Duration::from_millis(20));
+    assert!(waited < Duration::from_secs(5), "waited {waited:?}");
+  }
+
+  #[tokio::test]
+  async fn each_pull_starts_the_quiet_period_again() {
+    let counter = Arc::new(AtomicU64::new(0));
+    let pulls = {
+      let counter = Arc::clone(&counter);
+      tokio::spawn(async move {
+        for _ in 0..3 {
+          tokio::time::sleep(Duration::from_millis(20)).await;
+          counter.fetch_add(1, Ordering::Relaxed);
+        }
+      })
+    };
+    let start = Instant::now();
+    wait_until_quiet(&counter, Duration::from_millis(100), Duration::from_secs(10)).await;
+    // The pulls end after about 60 ms. The first check at 100 ms sees them, so the wait checks
+    // again 100 ms later.
+    assert!(start.elapsed() >= Duration::from_millis(200));
+    assert_eq!(counter.load(Ordering::Relaxed), 3);
+    pulls.await.unwrap();
+  }
+
+  #[tokio::test]
+  async fn the_limit_ends_a_wait_that_never_gets_quiet() {
+    let counter = Arc::new(AtomicU64::new(0));
+    let pulls = {
+      let counter = Arc::clone(&counter);
+      tokio::spawn(async move {
+        for _ in 0..1000 {
+          tokio::time::sleep(Duration::from_millis(5)).await;
+          counter.fetch_add(1, Ordering::Relaxed);
+        }
+      })
+    };
+    let start = Instant::now();
+    wait_until_quiet(&counter, Duration::from_millis(40), Duration::from_millis(150)).await;
+    let waited = start.elapsed();
+    assert!(waited >= Duration::from_millis(150));
+    // Without the limit, the wait would last as long as the pulls: 5 seconds.
+    assert!(waited < Duration::from_secs(2), "waited {waited:?}");
+    pulls.abort();
   }
 }

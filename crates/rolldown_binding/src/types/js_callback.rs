@@ -226,6 +226,43 @@ where
   }
 }
 
+/// Queues the call before it returns, as [`invoke_eager_on`] does. The future waits for the
+/// result, and for the `Promise` when the JS function returns one. A throw of the JS function goes
+/// to Node as an uncaught exception, as it does for a `call` that does not read the result.
+pub(crate) fn await_call_eager_on<Args, Ret>(
+  callback: &MaybeAsyncJsCallback<Args, Ret>,
+  args: Args,
+) -> impl Future<Output = Result<Ret, napi::Error>> + Send + 'static + use<Args, Ret>
+where
+  Args: 'static + Send + JsValuesTupleIntoVec,
+  Ret: 'static + Send + FromNapiValue,
+{
+  let (sender, receiver) = futures::channel::oneshot::channel();
+  let status = callback.call_with_return_value(
+    args,
+    ThreadsafeFunctionCallMode::NonBlocking,
+    move |ret, _| {
+      // napi reports an error returned here as an uncaught exception.
+      let ret = ret?;
+      // If the receiver is dropped, the send fails. Ignore that error, as `call_async_catch` does.
+      let _ = sender.send(ret);
+      Ok(())
+    },
+  );
+  async move {
+    if status != Status::Ok {
+      return Err(napi::Error::from_status(status));
+    }
+    let ret = receiver.await.map_err(|_| {
+      napi::Error::new(Status::GenericFailure, "The JS function threw or was not called")
+    })?;
+    match ret {
+      MaybePromise::Promise(promise) => promise.await,
+      MaybePromise::Value(ret) => Ok(ret),
+    }
+  }
+}
+
 /// Extension trait for attaching a human-readable name (e.g. the option or hook
 /// name) to errors returned by [`JsCallbackExt::invoke_async`] /
 /// [`MaybeAsyncJsCallbackExt::await_call`].

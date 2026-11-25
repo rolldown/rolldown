@@ -2,7 +2,7 @@ use derive_more::Debug;
 use rolldown_common::HmrUpdate;
 use rolldown_error::BuildResult;
 use rolldown_utils::pattern_filter::StringOrRegex;
-use std::sync::Arc;
+use std::{future::Future, pin::Pin, sync::Arc};
 
 #[cfg(feature = "deserialize_dev_options")]
 use schemars::JsonSchema;
@@ -13,8 +13,11 @@ use super::bundle_output::BundleOutput;
 use super::dev_watch_options::DevWatchOptions;
 use super::rebuild_strategy::RebuildStrategy;
 
+/// Ends when the consumer has handled an update, for example sent it to the clients.
+pub type HmrUpdatesHandled = Pin<Box<dyn Future<Output = ()> + Send>>;
 /// Receives one update for every client, with the changed files.
-pub type OnHmrUpdatesCallback = Arc<dyn Fn(BuildResult<(HmrUpdate, Vec<String>)>) + Send + Sync>;
+pub type OnHmrUpdatesCallback =
+  Arc<dyn Fn(BuildResult<(HmrUpdate, Vec<String>)>) -> HmrUpdatesHandled + Send + Sync>;
 pub type OnOutputCallback = Arc<dyn Fn(BuildResult<BundleOutput>) + Send + Sync>;
 /// Assets emitted while generating an HMR patch or compiling a lazy entry (e.g.
 /// an image newly imported by the changed/lazy module). A pure HMR patch and a

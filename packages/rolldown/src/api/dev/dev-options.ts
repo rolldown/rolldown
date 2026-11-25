@@ -42,6 +42,12 @@ export interface DevWatchOptions extends Pick<
 }
 
 export interface DevOptions {
+  /**
+   * Called with each HMR update. When it returns a promise, a rebuild that
+   * follows a `Changed` update waits until the promise settles (see
+   * {@link rebuildStrategy}). A rejection of the promise is reported as an
+   * unhandled rejection, and a throw as an uncaught exception.
+   */
   onHmrUpdates?: DevOnHmrUpdates;
   onOutput?: DevOnOutput;
   /**
@@ -55,7 +61,11 @@ export interface DevOptions {
   onAdditionalAssets?: DevOnAdditionalAssets;
   /**
    * Strategy for triggering rebuilds after HMR updates.
-   * - `'always'`: Always trigger a rebuild after HMR updates
+   * - `'always'`: Always trigger a rebuild after HMR updates. After an update
+   *   that clients pull code for, the rebuild first waits until no patch or
+   *   lazy request came for 50 ms (at most 500 ms), so those requests are
+   *   served before the build. That rebuild starts at least 50 ms later, also
+   *   when no client is connected.
    * - `'never'`: Never trigger rebuild after HMR updates. The server no longer
    *   decides full reloads, so there is no `'auto'` upgrade anymore; pull fresh
    *   bundle output explicitly (e.g. `ensureLatestBuildOutput`) when needed.

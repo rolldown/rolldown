@@ -203,6 +203,7 @@ impl IntegrationTest {
                 .last_mut()
                 .expect("Expected a vec to collect HMR outputs for current step")
                 .push(result);
+              Box::pin(std::future::ready(())) as rolldown_dev::HmrUpdatesHandled
             }))
           },
           on_output: {

@@ -6,7 +6,7 @@ use crate::types::binding_string_or_regex::{
   BindingStringOrRegex, bindingify_string_or_regex_array,
 };
 use crate::types::error::BindingResult;
-use crate::types::js_callback::JsCallback;
+use crate::types::js_callback::{JsCallback, MaybeAsyncJsCallback};
 use napi::bindgen_prelude::FnArgs;
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -32,11 +32,13 @@ impl From<BindingDevWatchOptions> for rolldown_dev::DevWatchOptions {
 
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingDevOptions {
+  /// When the function returns a `Promise`, a rebuild that follows the update in the same task
+  /// waits for it.
   #[napi(
     ts_type = "undefined | ((result: BindingResult<[BindingHmrUpdate, string[]]>) => void | Promise<void>)"
   )]
   pub on_hmr_updates:
-    Option<JsCallback<FnArgs<(BindingResult<(BindingHmrUpdate, Vec<String>)>,)>, ()>>,
+    Option<MaybeAsyncJsCallback<FnArgs<(BindingResult<(BindingHmrUpdate, Vec<String>)>,)>, ()>>,
   /// `hmrGeneration` is the HMR generation the output is rendered at, when the build succeeded.
   /// The output code does not carry it, so the consumer passes it to the page that loads this
   /// output (the runtime's `setOutputGeneration`).

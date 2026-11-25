@@ -340,6 +340,123 @@ test.concurrent(
 );
 
 test.concurrent(
+  'with rebuildStrategy always, the rebuild waits for the promise of onHmrUpdates',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir: cwd } = createTestWithMultiFiles('dev-async-on-hmr-updates', retryCount, {
+      'main.js': `import './hot.js';\n`,
+      'hot.js': `export const value = 1;\nimport.meta.hot.accept();\n`,
+    });
+
+    const events: string[] = [];
+    let sendPush!: (update: ChangedUpdate) => void;
+    const pushed = new Promise<ChangedUpdate>((resolve) => {
+      sendPush = resolve;
+    });
+    const engine = await dev(
+      {
+        cwd,
+        input: './main.js',
+        experimental: { devMode: true },
+      },
+      { dir: path.join(cwd, 'dist') },
+      {
+        rebuildStrategy: 'always',
+        onOutput: (result) => {
+          if (!(result instanceof Error)) events.push('output');
+        },
+        // The consumer sends the push after async work that lasts longer than the time in
+        // which the engine waits for pulls.
+        onHmrUpdates: async (result) => {
+          if (result instanceof Error || result.update.type !== 'Changed') return;
+          await sleep(300);
+          sendPush(result.update);
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    expect(events).toEqual(['output']);
+    const client = await createClient(cwd);
+
+    await editFile(
+      path.join(cwd, 'hot.js'),
+      `export const value = 2;\nimport.meta.hot.accept();\n`,
+    );
+    const push = await pushed;
+    await pullPatch(engine, client, push, ['hot.js']);
+    events.push('pull');
+    await expect.poll(() => events, { timeout: 20_000 }).toHaveLength(3);
+    expect(events).toEqual(['output', 'pull', 'output']);
+  },
+);
+
+// Not concurrent: it takes the `unhandledRejection` listeners of the process for its run.
+test(
+  'a rejection of the onHmrUpdates promise is reported as an unhandled rejection',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { dir: cwd } = createTestWithMultiFiles('dev-on-hmr-updates-rejects', retryCount, {
+      'main.js': `import './hot.js';\n`,
+      'hot.js': `export const value = 1;\nimport.meta.hot.accept();\n`,
+    });
+
+    const failure = new Error('onHmrUpdates failed');
+    let reported: unknown;
+    const others = process.listeners('unhandledRejection');
+    process.removeAllListeners('unhandledRejection');
+    const listener: NodeJS.UnhandledRejectionListener = (reason, promise) => {
+      if (reason === failure) {
+        reported = reason;
+        return;
+      }
+      for (const other of others) other.call(process, reason, promise);
+    };
+    process.on('unhandledRejection', listener);
+    onTestFinished(() => {
+      process.off('unhandledRejection', listener);
+      for (const other of others) process.on('unhandledRejection', other);
+    });
+
+    const engine = await dev(
+      {
+        cwd,
+        input: './main.js',
+        experimental: { devMode: true },
+      },
+      { dir: path.join(cwd, 'dist') },
+      {
+        onHmrUpdates: async (result) => {
+          if (result instanceof Error || result.update.type !== 'Changed') return;
+          throw failure;
+        },
+      },
+    );
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(cwd, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await editFile(
+      path.join(cwd, 'hot.js'),
+      `export const value = 2;\nimport.meta.hot.accept();\n`,
+    );
+    await expect.poll(() => reported, { timeout: 20_000 }).toBe(failure);
+  },
+);
+
+test.concurrent(
   'HMR patch includes a factory for an initially unloaded barrel',
   { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
   async ({ task, expect, onTestFinished }) => {

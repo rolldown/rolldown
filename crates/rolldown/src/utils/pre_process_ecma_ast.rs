@@ -107,6 +107,9 @@ impl PreProcessEcmaAst {
 
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
+    // Read before later steps replace `scoping`. None of them adds decorators.
+    let has_decorator_syntax =
+      scoping.as_ref().is_some_and(oxc::semantic::Scoping::has_decorators_or_auto_accessors);
     self.clear_no_side_effects_replaceable_by_eval(&mut ast, &mut scoping);
 
     // Extract enum member values before the transformer converts enums.
@@ -177,6 +180,9 @@ impl PreProcessEcmaAst {
     let mut preserve_jsx = false;
     if is_not_js
       || bundle_options.transform_options.should_transform_js
+      // No engine ships standard decorators, so only pay for the pass when the
+      // module has decorators or auto-accessors.
+      || (bundle_options.transform_options.lower_decorators_in_js && has_decorator_syntax)
       // Run transformer on JS files containing `</script` to handle tagged template literals.
       || contains_script_closing_tag(ast.source().as_bytes())
     {

@@ -78,7 +78,7 @@ pub struct EmittedPrebuiltChunk {
 #[derive(Debug)]
 struct EmittedOutputAsset {
   asset: OutputAsset,
-  /// The plugin set or read this asset's filename.
+  /// This flag is true if the asset has an explicit filename or if `get_file_name` returns its filename.
   filename_is_fixed: AtomicBool,
 }
 
@@ -88,9 +88,9 @@ pub struct FileEmitter {
   source_hash_to_reference_id: FxDashMap<ArcStr, ArcStr>,
   names: FxDashMap<ArcStr, u32>,
   files: FxDashMap<ArcStr, EmittedOutputAsset>,
-  /// Filenames that change when a group takes an emitted entry's filename.
+  /// The emitter checks these filenames for path conflicts before the build writes files.
   protected_filenames: FxDashSet<ArcStr>,
-  /// Reservations to release at the start of the next build.
+  /// The emitter releases these reservations when the next build starts.
   output_reservations: FxDashSet<ArcStr>,
   chunks: FxDashMap<ArcStr, Arc<EmittedChunk>>,
   prebuilt_chunks: FxDashMap<ArcStr, Arc<EmittedPrebuiltChunk>>,
@@ -414,7 +414,8 @@ impl FileEmitter {
     preliminary_maps: impl IntoIterator<Item = ArcStr>,
     occupied: impl IntoIterator<Item = ArcStr>,
   ) {
-    // Protect only real files in the final check. A preliminary map might never be emitted.
+    // Reserve preliminary sourcemap paths for asset naming.
+    // The final check uses a sourcemap path only if the renderer emits the sourcemap file.
     let paths = paths.into_iter().map(|path| {
       let path = normalize_filename(&path);
       self.protected_filenames.insert(path.to_ascii_lowercase().into());
@@ -451,7 +452,7 @@ impl FileEmitter {
       if !file.filename_is_fixed.load(Ordering::Relaxed)
         && !self.emitted_files.contains(&reference_id)
       {
-        // The old asset name now belongs to this output pass.
+        // Keep the old filename reserved until the next build starts.
         self.output_reservations.insert(file.asset.filename.clone());
         file.asset.filename = make_unique_name(&name, &self.names);
         self.protected_filenames.insert(file.asset.filename.to_ascii_lowercase().into());

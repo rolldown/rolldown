@@ -1225,7 +1225,7 @@ impl GenerateStage<'_> {
         });
       }
     }
-    // An entry that absorbs a group keeps its own filename.
+    // Keep each facade with an explicit filename if its group merges into an entry chunk.
     for merge in &common_chunk_merges {
       if let Some(emitted_chunks) = emitted_chunk_groups.get_mut(&merge.from_chunk_idx) {
         emitted_chunks.retain(|&idx| chunk_graph.chunk_table[idx].file_name.is_none());
@@ -1234,8 +1234,9 @@ impl GenerateStage<'_> {
     (facade_eliminations, common_chunk_merges, emitted_chunk_groups)
   }
 
-  /// This method checks for conflicts among emitted entries in each group.
-  /// The optimizer keeps the facade if its export names or explicit filename conflict.
+  /// This method checks the export names and explicit filenames of emitted entries in each group.
+  /// The optimizer keeps a facade if the group uses the same export name for a different symbol.
+  /// It also keeps a facade if the entry and the group have different explicit filenames.
   fn resolve_emitted_chunk_group_conflicts(
     &self,
     chunk_graph: &ChunkGraph,

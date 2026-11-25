@@ -326,7 +326,7 @@ impl<'a> GenerateStage<'a> {
     &self,
     chunk_graph: &mut ChunkGraph,
   ) -> BuildResult<ChunkNamingResult> {
-    // The output chunk uses the explicit filename of a removed facade.
+    // Use the explicit filename of a removed facade for the chunk that provides its exports.
     // See the `ChunkGraph` section in `internal-docs/code-splitting/implementation.md`.
     let mut renamed_chunks = FxHashSet::default();
     for &chunk_idx in chunk_graph.chunk_idx_to_reference_ids.keys() {
@@ -601,8 +601,8 @@ impl<'a> GenerateStage<'a> {
     let implicit_maps = map_files && self.options.sourcemap_filenames.is_none();
     let map_name = |name: &ArcStr| ArcStr::from(format!("{name}.map"));
     let preliminary_names = |idx, chunk: &Chunk| {
+      // Keep the preliminary filename for `getFileName()` if the optimizer removes the chunk.
       let filename = chunk.preliminary_filename.as_deref();
-      // `getFileName` can still return a removed chunk's preliminary filename.
       let map = if map_files && !removed.contains_key(&idx) {
         chunk
           .preliminary_sourcemap_filename
@@ -612,16 +612,14 @@ impl<'a> GenerateStage<'a> {
       } else {
         None
       };
-      (filename.cloned(), map)
+      [filename.cloned(), map]
     };
     let occupied_paths = |graph: &ChunkGraph| {
       graph
         .chunk_table
         .iter_enumerated()
-        .flat_map(|(idx, chunk)| {
-          let (filename, map) = preliminary_names(idx, chunk);
-          [filename, map].into_iter().flatten()
-        })
+        .flat_map(|(idx, chunk)| preliminary_names(idx, chunk))
+        .flatten()
         .collect::<Vec<_>>()
     };
     let mut reserved_names = None;
@@ -664,7 +662,7 @@ impl<'a> GenerateStage<'a> {
       let mut maps = Vec::new();
       for &idx in renamed_chunks {
         let chunk = &chunk_graph.chunk_table[idx];
-        let (filename, map) = preliminary_names(idx, chunk);
+        let [filename, map] = preliminary_names(idx, chunk);
         paths.extend(filename);
         if let Some(map) = map {
           let mut modules = chunk.modules.iter().chain(
@@ -684,9 +682,9 @@ impl<'a> GenerateStage<'a> {
         }
       }
       self.plugin_driver.file_emitter.reserve_merged_chunk_paths(
-        paths.into_iter(),
-        maps.into_iter(),
-        occupied_paths(chunk_graph).into_iter(),
+        paths,
+        maps,
+        occupied_paths(chunk_graph),
       );
     }
   }

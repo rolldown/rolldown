@@ -118,7 +118,8 @@ mod imp {
 
   #[cfg(any(windows, target_os = "linux"))]
   fn set_allocator_options(version: c_int) {
-    // The Rust bindings have no option numbers, so they come from `mimalloc.h`.
+    // The option numbers in the Rust bindings are the 2.x ones, which do not match 3.x, so these
+    // come from `mimalloc.h`.
     #[cfg(windows)]
     const PAGE_COMMIT_ON_DEMAND: c_int = 40;
     #[cfg(target_os = "linux")]

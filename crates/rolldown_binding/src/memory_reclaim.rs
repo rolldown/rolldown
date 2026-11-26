@@ -13,7 +13,7 @@ mod imp {
     time::{Duration, Instant},
   };
 
-  use std::ffi::{c_int, c_long, c_void};
+  use std::ffi::{c_int, c_void};
 
   use napi::{
     Env, Status,
@@ -32,7 +32,8 @@ mod imp {
     fn mi_theap_quiescent_abandon(theap: *mut c_void);
     fn mi_arenas_purge();
     fn mi_version() -> c_int;
-    fn mi_option_set_default(option: c_int, value: c_long);
+    #[cfg(any(windows, target_os = "linux"))]
+    fn mi_option_set_default(option: c_int, value: std::ffi::c_long);
   }
 
   /// The mimalloc whose `mimalloc.h` the declarations above and the option numbers below match.
@@ -101,6 +102,7 @@ mod imp {
       Err(_) => DEFAULT_DELAY,
     };
     let _ = DELAY.set(delay);
+    #[cfg(any(windows, target_os = "linux"))]
     set_allocator_options(version);
     true
   }
@@ -114,8 +116,10 @@ mod imp {
     rolldown::set_memory_released_hook(notify);
   }
 
+  #[cfg(any(windows, target_os = "linux"))]
   fn set_allocator_options(version: c_int) {
     // The Rust bindings have no option numbers, so they come from `mimalloc.h`.
+    #[cfg(windows)]
     const PAGE_COMMIT_ON_DEMAND: c_int = 40;
     #[cfg(target_os = "linux")]
     const ARENA_PURGE_MIN_SIZE: c_int = 44;
@@ -125,9 +129,9 @@ mod imp {
     // A default does not replace a value set through a `MIMALLOC_*` environment variable.
     // SAFETY: plain calls with option numbers from `mimalloc.h`.
     unsafe {
-      // Without overcommit, as on Windows, the OS charges commit for every page a thread claims,
-      // even untouched ones. 2 commits pages on demand only on such systems.
-      mi_option_set_default(PAGE_COMMIT_ON_DEMAND, 2);
+      // Windows charges commit for every page a thread claims, even untouched ones.
+      #[cfg(windows)]
+      mi_option_set_default(PAGE_COMMIT_ON_DEMAND, 1);
       // With transparent huge pages, mimalloc purges in 2 MiB units, which skips most ranges.
       #[cfg(target_os = "linux")]
       mi_option_set_default(ARENA_PURGE_MIN_SIZE, 64);

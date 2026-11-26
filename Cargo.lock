@@ -2647,6 +2647,7 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_plugin_bundle_analyzer",
  "rolldown_plugin_esm_external_require",
+ "rolldown_plugin_inject",
  "rolldown_plugin_isolated_declaration",
  "rolldown_plugin_oxc_runtime",
  "rolldown_plugin_replace",
@@ -2961,6 +2962,21 @@ version = "1.3.3"
 dependencies = [
  "rolldown_common",
  "rolldown_plugin",
+]
+
+[[package]]
+name = "rolldown_plugin_inject"
+version = "1.3.3"
+dependencies = [
+ "oxc",
+ "rolldown",
+ "rolldown_common",
+ "rolldown_ecmascript",
+ "rolldown_plugin",
+ "rolldown_testing",
+ "rolldown_utils",
+ "rustc-hash",
+ "tokio",
 ]
 
 [[package]]

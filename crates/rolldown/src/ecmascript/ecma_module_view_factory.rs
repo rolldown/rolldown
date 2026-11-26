@@ -4,8 +4,8 @@ use oxc::span::Span;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, FlatOptions, ImportRecordIdx, ModuleId,
-  ModuleSideEffectsOverrides, RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions,
-  SideEffectsWithoutHook, StmtEvalFlags,
+  ModuleSideEffectsOverrides, ModuleType, RawImportRecord, ResolvedId,
+  SharedNormalizedBundlerOptions, SideEffectsWithoutHook, StmtEvalFlags,
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_error::BuildResult;
@@ -33,6 +33,8 @@ pub async fn create_ecma_view(
 ) -> BuildResult<CreateEcmaViewReturn> {
   let CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects, declared_module_size } =
     args;
+  let json_source_len =
+    matches!(ctx.module_type, ModuleType::Json).then(|| source.as_bytes().len());
   let ParseToEcmaAstResult {
     mut ast,
     scoping,
@@ -128,7 +130,7 @@ pub async fn create_ecma_view(
   // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
   let ecma_view = EcmaView {
     source: ast.source().clone(),
-    declared_module_size,
+    pre_render_size: declared_module_size.or(json_source_len).unwrap_or(ast.source().len()),
     named_imports,
     named_exports,
     cjs_literal_export_names,

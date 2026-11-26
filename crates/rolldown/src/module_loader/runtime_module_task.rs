@@ -169,8 +169,8 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       module_type,
 
       ecma_view: EcmaView {
+        pre_render_size: source.len(),
         source,
-        declared_module_size: None,
         cjs_literal_export_names: FxIndexSet::default(),
 
         import_records: IndexVec::default(),

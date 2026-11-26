@@ -1,0 +1,18 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "early",
+        "import": "./early.js"
+      },
+      {
+        "name": "later",
+        "import": "./later.js"
+      },
+      {
+        "name": "index",
+        "import": "./lib/index.js"
+      }
+    ]
+  }
+}

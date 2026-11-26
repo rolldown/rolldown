@@ -350,3 +350,32 @@ strip = "none"
 
 [patch.crates-io]
 parking_lot_core = { git = "https://github.com/napi-rs/parking_lot", rev = "eb33ab62f79d27d1c7880b60e06187be1cbd21f4" }
+# Do not merge: oxc `crates_v0.160.0` + `Allocator::with_capacity_in_parent` (oxc-project/oxc#29903).
+# Remove after rolldown updates to an oxc release that has `Allocator::with_capacity_in_parent`.
+oxc = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_allocator = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_ast = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_ast_macros = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_ast_visit = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_codegen = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_compat = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_data_structures = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_diagnostics = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_ecmascript = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_estree = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_isolated_declarations = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_mangler = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_minifier = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_minify_napi = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_napi = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_parser = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_parser_napi = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_regular_expression = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_semantic = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_span = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_str = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_syntax = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_transform_napi = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_transformer = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_transformer_plugins = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }
+oxc_traverse = { git = "https://github.com/magurotuna/oxc.git", branch = "feat/allocator-chunk-alloc-on-0.160" }

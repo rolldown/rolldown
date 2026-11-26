@@ -53,7 +53,7 @@ mod imp {
   /// Set by `notify`, cleared by the reclaim thread when a quiet window starts.
   static NOTIFIED: AtomicBool = AtomicBool::new(false);
 
-  /// One per JS thread: the main thread and each worker thread that loaded rolldown.
+  /// One per JS thread that created a bundler, a watcher or a dev engine.
   static JS_THREADS: Mutex<Vec<ThreadsafeFunction<(), (), (), Status, false, true>>> =
     Mutex::new(Vec::new());
 

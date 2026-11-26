@@ -247,6 +247,43 @@ test('resolveId handles Node builtins when called directly in build mode', async
   });
 });
 
+test('build does not externalize a dependency whose importer resolves a different copy', async () => {
+  const root = await mkdtemp(nodePath.join(tmpdir(), 'rolldown-vite-resolve-'));
+  try {
+    const writePackage = async (dir: string, version: string) => {
+      await mkdir(dir, { recursive: true });
+      await Promise.all([
+        writeFile(nodePath.join(dir, 'index.js'), `module.exports = ${JSON.stringify(version)};`),
+        writeFile(
+          nodePath.join(dir, 'package.json'),
+          JSON.stringify({ name: 'dep', version, main: 'index.js' }),
+        ),
+      ]);
+    };
+    const hoisted = nodePath.join(root, 'node_modules/dep');
+    const nested = nodePath.join(root, 'node_modules/lib/node_modules/dep');
+    await writePackage(hoisted, '5.0.0');
+    await writePackage(nested, '6.0.0');
+    await writeFile(nodePath.join(root, 'node_modules/lib/index.js'), '');
+    const resolveId = createResolveIdHook({ isBuild: true, root, noExternal: [] });
+
+    // `lib` has its own copy, so the output could not load the right one from the root.
+    const fromLib = await resolveId('dep', nodePath.join(root, 'node_modules/lib/index.js'), {
+      kind: 'import-statement',
+    });
+    expect(fromLib?.external).toBeFalsy();
+    expect(fromLib?.id).toBe(nodePath.join(nested, 'index.js').split(nodePath.sep).join('/'));
+
+    // An importer that resolves the same copy as the root still externalizes it.
+    const fromRoot = await resolveId('dep', nodePath.join(root, 'main.js'), {
+      kind: 'import-statement',
+    });
+    expect(fromRoot?.external).toBeTruthy();
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('an `update` watch event clears a cached miss', async () => {
   const root = await mkdtemp(nodePath.join(tmpdir(), 'rolldown-vite-resolve-'));
   try {

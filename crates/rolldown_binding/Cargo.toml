@@ -43,6 +43,7 @@ rolldown-notify-napi = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_plugin_bundle_analyzer = { workspace = true }
 rolldown_plugin_esm_external_require = { workspace = true }
+rolldown_plugin_inject = { workspace = true }
 rolldown_plugin_isolated_declaration = { workspace = true }
 rolldown_plugin_oxc_runtime = { workspace = true }
 rolldown_plugin_replace = { workspace = true }

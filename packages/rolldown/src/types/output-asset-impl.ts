@@ -18,6 +18,11 @@ export class OutputAssetImpl extends PlainObjectLike implements OutputAsset {
   }
 
   @lazyProp
+  get immutable(): boolean {
+    return this.bindingAsset.getImmutable();
+  }
+
+  @lazyProp
   get originalFileName(): string | null {
     return this.bindingAsset.getOriginalFileName() || null;
   }

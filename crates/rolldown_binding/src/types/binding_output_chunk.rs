@@ -91,6 +91,11 @@ impl BindingOutputChunk {
 
   // OutputChunk
   #[napi]
+  pub fn get_immutable(&self) -> bool {
+    self.inner.immutable
+  }
+
+  #[napi]
   pub fn get_code(&self) -> &str {
     &self.inner.code
   }
@@ -156,6 +161,7 @@ pub fn update_output_chunk(
   let dynamic_imports =
     js_chunk.dynamic_imports.map(|imports| imports.into_iter().map(Into::into).collect());
   let filename = js_chunk.filename.into();
+  let immutable = chunk.immutable && chunk.filename == filename;
 
   if let Some(chunk) = Arc::get_mut(chunk) {
     if let Some(code) = js_chunk.code {
@@ -172,6 +178,7 @@ pub fn update_output_chunk(
     }
     chunk.is_entry = js_chunk.is_entry; // used by nuxt
     chunk.filename = filename;
+    chunk.immutable = immutable;
   } else {
     let old_chunk = Arc::as_ref(chunk);
     *chunk = Arc::new(rolldown_common::OutputChunk {
@@ -182,6 +189,7 @@ pub fn update_output_chunk(
       module_ids: old_chunk.module_ids.clone(),
       exports: old_chunk.exports.clone(),
       filename,
+      immutable,
       modules: old_chunk.modules.clone(),
       imports: imports.unwrap_or_else(|| old_chunk.imports.clone()),
       dynamic_imports: dynamic_imports.unwrap_or_else(|| old_chunk.dynamic_imports.clone()),

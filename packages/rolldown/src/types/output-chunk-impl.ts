@@ -18,6 +18,11 @@ export class OutputChunkImpl extends PlainObjectLike implements OutputChunk {
   }
 
   @lazyProp
+  get immutable(): boolean {
+    return this.bindingChunk.getImmutable();
+  }
+
+  @lazyProp
   get name(): string {
     return this.bindingChunk.getName();
   }

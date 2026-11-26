@@ -5,6 +5,7 @@ use super::binding_asset_source::BindingAssetSource;
 pub struct BindingEmittedAsset {
   pub name: Option<String>,
   pub file_name: Option<String>,
+  pub immutable: Option<bool>,
   pub original_file_name: Option<String>,
   pub source: BindingAssetSource,
 }
@@ -14,6 +15,7 @@ impl From<BindingEmittedAsset> for rolldown_common::EmittedAsset {
     Self {
       name: value.name,
       file_name: value.file_name.map(Into::into),
+      immutable: value.immutable.unwrap_or_default(),
       source: value.source.into(),
       original_file_name: value.original_file_name,
     }

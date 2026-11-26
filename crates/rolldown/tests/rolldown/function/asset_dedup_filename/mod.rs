@@ -53,6 +53,7 @@ impl Emit {
       original_file_name: self.original_file_name.clone(),
       file_name: self.file_name.clone().map(ArcStr::from),
       source: self.source.clone().into(),
+      ..Default::default()
     }
   }
 }

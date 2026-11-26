@@ -47,6 +47,11 @@ impl BindingOutputAsset {
   }
 
   #[napi]
+  pub fn get_immutable(&self) -> bool {
+    self.inner.immutable
+  }
+
+  #[napi]
   pub fn get_original_file_name(&self) -> Option<&str> {
     self.inner.original_file_names.first().map(AsRef::as_ref)
   }
@@ -87,17 +92,6 @@ pub struct JsOutputAsset {
   pub original_file_names: Vec<String>,
   pub filename: String,
   pub source: BindingAssetSource,
-}
-
-impl From<JsOutputAsset> for rolldown_common::OutputAsset {
-  fn from(asset: JsOutputAsset) -> Self {
-    Self {
-      names: asset.names,
-      original_file_names: asset.original_file_names,
-      filename: asset.filename.into(),
-      source: asset.source.into(),
-    }
-  }
 }
 
 impl ObjectFinalize for BindingOutputAsset {

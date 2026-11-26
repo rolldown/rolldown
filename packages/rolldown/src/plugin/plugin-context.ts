@@ -58,6 +58,18 @@ export interface EmittedAsset {
   name?: string;
   fileName?: string;
   /**
+   * Whether {@linkcode fileName} contains a content hash, so the file can be cached long-term.
+   *
+   * Pass `true` when the plugin writes a hashed {@linkcode fileName} itself.
+   * Without it, the output asset reports `immutable: false`.
+   *
+   * Only used with {@linkcode fileName}.
+   * For an asset named by `assetFileNames`, the output asset is `true` when the template expands `[hash]`.
+   *
+   * @default false
+   */
+  immutable?: boolean;
+  /**
    * An absolute path to the original file if this asset corresponds to a file on disk.
    *
    * This property will be passed on to subsequent plugin hooks that receive a
@@ -112,6 +124,15 @@ export interface EmittedChunk {
 export interface EmittedPrebuiltChunk {
   type: 'prebuilt-chunk';
   fileName: string;
+  /**
+   * Whether {@linkcode fileName} contains a content hash, so the file can be cached long-term.
+   *
+   * Pass `true` when the plugin writes a hashed {@linkcode fileName} itself.
+   * Without it, the output chunk reports `immutable: false`.
+   *
+   * @default false
+   */
+  immutable?: boolean;
   /**
    * A semantic name for the chunk. If not provided, `fileName` will be used.
    */
@@ -446,6 +467,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       }
       return this.context.emitPrebuiltChunk({
         fileName: file.fileName,
+        immutable: file.immutable,
         name: file.name,
         code: file.code,
         exports: file.exports,

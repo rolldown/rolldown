@@ -28,6 +28,7 @@ impl Plugin for EmitAsset {
         original_file_name: None,
         file_name: None,
         source: "asset".to_string().into(),
+        ..Default::default()
       },
       None,
       None,

@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // define-false/index.ts
 var Foo = class {
 	static {
-		c, d, C, D;
+		c, C;
 	}
 };
 (() => new Foo())();

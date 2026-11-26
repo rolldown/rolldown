@@ -60,19 +60,22 @@ Foo$1 = _Foo = __decorate([
 var all_default = Foo$1;
 // all_computed.ts
 var _ref;
-var _mDecl;
 var _ref2;
-var _mDecl2;
 let _mUndef;
 let _mDef;
+let _mDecl;
 let _xDef;
 let _yDef;
 let _sUndef;
 let _sDef;
+let _mDecl2;
 var Foo = class Foo {
 	constructor() {
 		this[_mDef] = 1;
 		this[_xDef] = 2;
+	}
+	static {
+		_mDecl2 = mDecl();
 	}
 	[_ref = (_mUndef = mUndef(), _mDef = mDef(), method())](arg0, arg1) {
 		return new Foo();
@@ -83,7 +86,7 @@ var Foo = class Foo {
 	static {
 		this[_sDef] = new Foo();
 	}
-	static [_ref2 = (xUndef(), _xDef = xDef(), yUndef(), _yDef = yDef(), _sUndef = sUndef(), _sDef = sDef(), sMethod())](arg0, arg1) {
+	static [_ref2 = (_mDecl = mDecl(), xUndef(), _xDef = xDef(), yUndef(), _yDef = yDef(), _sUndef = sUndef(), _sDef = sDef(), sMethod())](arg0, arg1) {
 		return new Foo();
 	}
 };

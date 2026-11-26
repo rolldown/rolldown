@@ -1,4 +1,155 @@
 
+## [1.3.4] - 2026-11-26
+
+### 🚀 Features
+
+- add builtin `injectPlugin` with `include`/`exclude` (#11290) by @onmax
+- magic-string: support explicit sourcemap locations (#11884) by @IWANABETHATGUY
+- introduce `declaredModuleSize` to allow plugins to declare a module's real size (#11844) by @hyfdev
+- binding: add dropInner() to 12 binding classes and extract release_arc helper (#11855) by @Brooooooklyn
+- inline-common-chunks: add `maxDuplicatedSize` to keep widely copied chunks as files (#11845) by @mattlewis92
+- cli: report when a watch round finishes (#11820) by @hyfdev
+- rolldown_plugin_vite_build_import_analysis: avoid stripping import attributes when `experimental.importAttributes` is enabled (#11802) by @sapphi-red
+- import-attributes: warn when a non-ESM output drops the import attributes of an external (#11797) by @shulaoda
+- warn when the `watch` option is passed to `build()` (#11781) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- keep_names: restore hoisted function names before the chunk's modules run (#11962) by @hyfdev
+- external: don't drop `_/` from relative external imports (#11968) by @hyfdev
+- external: don't panic on empty output filename with relative externals (#11963) by @hyfdev
+- use the same path as direct imports for externals re-exported with `export *` (#11964) by @hyfdev
+- sourcemap: don't panic on empty output filename (#11966) by @hyfdev
+- sourcemap: treat empty `sourcemapFileNames` as unset (#11967) by @hyfdev
+- rename clashing names in execution order with `chunkModulesOrder: 'module-id'` (#11943) by @hyfdev
+- code-splitting: stop counting JSON modules as 0 bytes (#11939) by @hyfdev
+- fetch changed modules from their creating resolution in incremental rebuilds (#11837) by @h-a-n-a
+- code-splitting: keep import order through entry re-exports (#11906) by @hyfdev
+- cjs: keep CommonJS named exports in `export *` of a dynamically imported module (#11835) by @hyfdev
+- plugin: remove internal keys from plugin and code splitting group contexts (#11914) by @hyfdev
+- remove the leftover `watch.notify` from the option validator (#11918) by @shulaoda
+- return the group chunk file from `getFileName()` for a merged emitted entry (#11858) by @IWANABETHATGUY
+- dev: let `this.load` of an unchanged module finish during a rebuild (#11911) by @hyfdev
+- code-splitting: avoid an extra shared chunk when an entry only re-exports another entry (#11847) by @hyfdev
+- treeshake: remove unused objects containing identity function calls (#11852) by @hyfdev
+- cjs: avoid `ReferenceError` when re-exporting from an external `export *` in another chunk (#11848) by @hyfdev
+- binding: remove stale WASI workaround in to_binding_error (#11890) by @Brooooooklyn
+- inline-const: respect `inlineConst` options for default exports (#11851) by @hyfdev
+- magic-string: keep trailing lines in decoded maps (#11882) by @IWANABETHATGUY
+- magic-string: preserve column mappings through trim (#11881) by @IWANABETHATGUY
+- magic-string: map each line of multiline replacements (#11880) by @IWANABETHATGUY
+- follow Rollup for module meta and moduleSideEffects set by plugins (#11792) by @h-a-n-a
+- code-splitting: import the bindings a CommonJS entry re-exports from an ES module (#11839) by @hyfdev
+- cjs: stop overwriting `module.exports` of a CommonJS entry that re-exports an ES module (#11846) by @hyfdev
+- sourcemap: accept undefined source entries from plugins (#11850) by @fengmk2
+- code-splitting: unblock top-level awaited dynamic imports in manual groups (#11819) by @hyfdev
+- runtime: resolve `require()` from the calling chunk in Node ESM output (#11834) by @hyfdev
+- plugin: throw instead of panicking when a saved transform context calls `getCombinedSourcemap` (#11838) by @hyfdev
+- code-splitting: only code-less entries keep side-effect-free static import edges (#11199) by @mattlewis92
+- make `getCombinedSourcemap` work with `experimental.nativeMagicString` (#11107) by @IWANABETHATGUY
+- plugin: avoid hangs when resolveId awaits this.load() (#11824) by @shulaoda
+- keep template chunk names from overwriting explicit file names (#11831) by @hyfdev
+- code-splitting: skip redundant re-export chunks (#11817) by @hyfdev
+- preserve build errors when `buildEnd` fails (#11828) by @sapphi-red
+- preserve top-level using with topLevelVar (#11804) by @akshathayadav378-boop
+- treeshake: keep array destructuring that calls an unknown iterator (#11812) by @IWANABETHATGUY
+- preserve `export` names starting with `*` in ModuleInfo.exports (#11825) by @sapphi-red
+- treeshake: keep calls to functions that direct `eval` can replace (#11811) by @IWANABETHATGUY
+- keep each source's content in a multi-source transform sourcemap (#11246) by @IWANABETHATGUY
+- treeshake: keep calls to empty functions with a rest parameter default (#11810) by @IWANABETHATGUY
+- plugin: allow this.load() while resolving entries (#11816) by @hyfdev
+- cli: avoid a WASI hang when watch mode exits normally (#11815) by @shulaoda
+- report effective moduleSideEffects in getModuleInfo and this.resolve (#11422) by @cestercian
+- code-splitting: avoid an import cycle through an entry's re-exports (#11803) by @hyfdev
+- treeshake: apply @__NO_SIDE_EFFECTS__ to functions exported after declaration (#11222) by @araishi
+- code-splitting: keep unused entry re-exports from loading lazy chunks (#11753) by @hyfdev
+- code-splitting: keep re-exported bindings out of dynamic import namespaces (#11799) by @hyfdev
+- perf-kit: Node mode times out under the inspector with `--ready exit` or an anchored `stdout:` pattern (#11416) by @IWANABETHATGUY
+- treeshaking: drop dead dynamic imports that form a cycle (#11768) by @hyfdev
+- binding: release the WASI runtime when a callable builtin plugin hook rejects (#11786) by @shulaoda
+- perf-kit: print real imports in the why chain (#11500) by @IWANABETHATGUY
+- chunk: name emitted chunks before shared chunks (#11790) by @hyfdev
+- cjs: forward exports from duplicate CommonJS entries (#11756) by @hyfdev
+- code-splitting: keep chained emitted entries from becoming empty facades (#11090) by @Huzaifa-Asif
+
+### 💼 Other
+
+- wasi: bundle self-contained WASI loaders, staging script, and reactor checks (#11843) by @Brooooooklyn
+
+### 🚜 Refactor
+
+- scan: remove an unreachable branch when collecting dynamic import entries (#11919) by @shulaoda
+- cli: replace the unreachable prototype pollution guard with a test (#11925) by @shulaoda
+- remove the unused `DeterminedSideEffects::to_module_side_effects` (#11926) by @shulaoda
+- remove more unused types, functions and re-exports (#11922) by @shulaoda
+- link_stage: handle required modules only in the pre-pass (#11920) by @shulaoda
+- cli: remove the leftover `inject` from the CLI options type (#11924) by @shulaoda
+- rolldown_plugin_vite_build_import_analysis: remove the unused `optimizeModulePreloadRelativePaths` option (#11923) by @shulaoda
+- remove experimental `freeExternalMemory` (#11886) by @shulaoda
+- rust: drop direct tokio dependencies from core library crates (#11841) by @Brooooooklyn
+- rolldown_plugin: move `normalize_transform_sourcemap` to utils (#11247) by @IWANABETHATGUY
+- remove the unused `plugins_are_slow` method (#11800) by @shulaoda
+- remove parallel plugin support (#11789) by @h-a-n-a
+- remove the unused `is_css` sourcemap flag (#11782) by @shulaoda
+
+### 📚 Documentation
+
+- rename javascript to JavaScript (#11958) by @mdong1909
+- say that resolveId fails the build when the same id is external and not external (#11910) by @h-a-n-a
+- explain which resolution sets meta and moduleSideEffects in resolveId (#11907) by @h-a-n-a
+- resolve the import in the `moduleSideEffects` plugin example (#11860) by @hyfdev
+- clarify side-effect-free module behavior (#11856) by @IWANABETHATGUY
+- clarify the behavior when `buildEnd` / `renderError` itself errors (#11829) by @sapphi-red
+- add docs for `code` / `plugin` / `pluginCode` of `RolldownLog` (#11827) by @sapphi-red
+- explain that a module in an entry chunk runs after the common chunks it imports (#11822) by @hyfdev
+- magic-string: document `generateDecodedMap` and the segments of `hires: false` maps (#11791) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- binding: return memory to the OS once rolldown is idle (#11655) by @shulaoda
+- scan: reserve symbol capacity for each module's facade symbols (#11854) by @magurotuna
+- runtime: stop using bound functions as `__copyProps` getters (#11826) by @magurotuna
+- replace `IndexVec<ModuleIdx, bool>` with `IndexBitSet` (#11805) by @IWANABETHATGUY
+- rolldown_plugin_vite_manifest: look up chunk names by file name once per build (#11697) by @Boshen
+- drop module sourcemaps after the chunk is joined (#11773) by @shulaoda
+
+### 🧪 Testing
+
+- magic-string: re-enable two passing compatibility tests (#11879) by @IWANABETHATGUY
+- node: add standalone runtime/proxy/retained-context tests and vitest binding staging (#11842) by @Brooooooklyn
+- cli: stop watch CLI tests from hanging on Windows (#11821) by @shulaoda
+
+### ⚙️ Miscellaneous Tasks
+
+- delete cancelled pkg.pr.new runs on main and debounce for 15 mins (#11928) by @shulaoda
+- remove the unused `serde` features of rolldown, rolldown_plugin and rolldown_common (#11927) by @shulaoda
+- deps: update vite-plus to v1.8.0 in the workspace and CI (#11896) by @camc314
+- deps: update rollup submodule for tests to v4.68.8 (#11901) by @rolldown-guard[bot]
+- deps: update test262 submodule for tests (#11902) by @rolldown-guard[bot]
+- remove the graphite merge-when-ready label check (#11904) by @shulaoda
+- deps: pin walkdir to 2.5.0 (#11897) by @hyfdev
+- deps: remove remove-unused-vars (#11895) by @camc314
+- deps: update rust crate testing_macros to v3 (#11876) by @renovate[bot]
+- deps: update rust crates (#11873) by @renovate[bot]
+- deps: update npm packages (#11872) by @renovate[bot]
+- deps: upgrade oxc to 0.160.0 (#11885) by @camc314
+- deps: update github actions (#11874) by @renovate[bot]
+- rust: standalone runtime prep (devtools sync writer, TestDir, 1ms debounce, Wasm sourcemap inline, parking_lot_core patch) (#11840) by @Brooooooklyn
+- run setup steps one by one on Windows (#11849) by @shulaoda
+
+### ◀️ Revert
+
+- "feat(binding): add dropInner() to 12 binding classes and extract release_arc helper (#11855)" (#11898) by @shulaoda
+- "fix(code-splitting): keep chained emitted entries from becoming empty facades (#11090)" (#11891) by @hyfdev
+
+### ❤️ New Contributors
+
+* @fengmk2 made their first contribution in [#11850](https://github.com/rolldown/rolldown/pull/11850)
+* @akshathayadav378-boop made their first contribution in [#11804](https://github.com/rolldown/rolldown/pull/11804)
+* @araishi made their first contribution in [#11222](https://github.com/rolldown/rolldown/pull/11222)
+* @Huzaifa-Asif made their first contribution in [#11090](https://github.com/rolldown/rolldown/pull/11090)
+
+
 ## [1.3.3] - 2026-11-18
 
 ### 🚀 Features

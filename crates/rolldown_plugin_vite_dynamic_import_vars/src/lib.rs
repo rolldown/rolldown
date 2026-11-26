@@ -8,7 +8,7 @@ use oxc::ast_visit::VisitJs;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin,
-  PluginContext, SharedLoadPluginContext,
+  PluginContext, PluginHookMeta, SharedLoadPluginContext,
 };
 use rolldown_plugin_utils::parse_program;
 use rolldown_std_utils::relative_path_as_js_specifier;
@@ -50,11 +50,19 @@ impl Plugin for ViteDynamicImportVarsPlugin {
     }))
   }
 
+  fn resolve_id_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
+  }
+
   async fn load(&self, _ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     Ok((args.id == DYNAMIC_IMPORT_HELPER).then_some(HookLoadOutput {
       code: arcstr::literal!(include_str!("dynamic-import-helper.js")),
       ..Default::default()
     }))
+  }
+
+  fn load_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
   }
 
   async fn transform(
@@ -88,6 +96,8 @@ impl Plugin for ViteDynamicImportVarsPlugin {
       if !visitor.async_imports.is_empty()
         && let Some(resolver) = &self.resolver
       {
+        // Rolldown cannot see what the resolver reads.
+        ctx.mark_not_cacheable(|| format!("`{}` called its `resolver` callback", self.name()));
         let importer = args.id.as_path().parent().unwrap();
         for import in std::mem::take(&mut visitor.async_imports) {
           if let Some(id) = resolver(import.glob, args.id.to_string()).await.ok().flatten() {
@@ -130,5 +140,9 @@ impl Plugin for ViteDynamicImportVarsPlugin {
       }
     }
     Ok(None)
+  }
+
+  fn transform_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
   }
 }

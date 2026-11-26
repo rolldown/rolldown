@@ -16,19 +16,23 @@ use arcstr::ArcStr;
 use dashmap::DashMap;
 use event_listener::Event;
 use rolldown_common::{
-  ModuleId, ModuleIdx, ModuleInfo, ModuleInfoSideEffects, ModuleLoaderMsg, PluginIdx,
-  SharedFileEmitter, SharedModuleInfoDashMap, SharedModuleSideEffectsOverrides, WatchPath,
+  ModuleId, ModuleIdx, ModuleInfo, ModuleInfoSideEffects, ModuleLoaderMsg,
+  NormalizedBundlerOptions, PluginIdx, SharedFileEmitter, SharedModuleInfoDashMap,
+  SharedModuleSideEffectsOverrides, WatchPath,
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_devtools::trace_action_enabled;
-use rolldown_utils::dashmap::FxDashSet;
+use rolldown_utils::{IndexBitSet, dashmap::FxDashSet};
 
 use crate::{
   __inner::SharedPluginable,
-  HookFilterArgs, PluginContext, Pluginable,
+  HookFilterArgs, PluginContext, PluginHookMeta, Pluginable,
   plugin_driver::hook_orders::PluginHookOrders,
   type_aliases::{IndexPluginContext, IndexPluginable},
-  types::build_timings::BuildTimings,
+  types::{
+    build_timings::BuildTimings, module_cache_recorder::RecordedAction,
+    module_meta_store::SharedModuleMetaStore,
+  },
 };
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
@@ -70,6 +74,51 @@ pub struct PluginDriver {
   pub build_timings: Arc<BuildTimings>,
   /// Pending `onLog` callback tasks spawned by `PluginContext::{info,warn,debug}`.
   pub(crate) log_hook_tasks: SharedLogHookTasks,
+  pub(crate) cacheable_hooks: CacheableHooks,
+  /// The meta of Rust plugins. `BundleFactory` owns it, so it lives across builds.
+  pub(crate) module_meta: SharedModuleMetaStore,
+  /// The number of this build in `module_meta`.
+  pub(crate) module_meta_build: u64,
+}
+
+/// For each hook, the plugins whose result the persistent cache may reuse.
+#[derive(Debug)]
+pub struct CacheableHooks {
+  pub resolve_id: IndexBitSet<PluginIdx>,
+  pub resolve_dynamic_import: IndexBitSet<PluginIdx>,
+  pub load: IndexBitSet<PluginIdx>,
+  pub transform: IndexBitSet<PluginIdx>,
+}
+
+impl CacheableHooks {
+  pub fn new(plugins: &IndexPluginable, options: &NormalizedBundlerOptions) -> Self {
+    let assumed = options
+      .experimental
+      .cache
+      .as_ref()
+      .and_then(|cache| cache.assume_cacheable_hooks)
+      .unwrap_or_default();
+    let collect = |meta_of: &dyn Fn(&SharedPluginable) -> Option<PluginHookMeta>,
+                   assumed: Option<bool>| {
+      let mut set = IndexBitSet::new(plugins.len());
+      for (idx, plugin) in plugins.iter_enumerated() {
+        let cache = meta_of(plugin).and_then(|meta| meta.cache);
+        if cache.unwrap_or(assumed.unwrap_or(false)) {
+          set.set_bit(idx);
+        }
+      }
+      set
+    };
+    Self {
+      resolve_id: collect(&|p| p.call_resolve_id_meta(), assumed.resolve_id),
+      resolve_dynamic_import: collect(
+        &|p| p.call_resolve_dynamic_import_meta(),
+        assumed.resolve_id,
+      ),
+      load: collect(&|p| p.call_load_meta(), assumed.load),
+      transform: collect(&|p| p.call_transform_meta(), assumed.transform),
+    }
+  }
 }
 
 impl PluginDriver {
@@ -79,6 +128,7 @@ impl PluginDriver {
     self.module_side_effects_overrides.clear();
     // Note: transform_dependencies is NOT cleared here - it's preserved across incremental builds
     // by BundleFactory which manages its lifecycle (reset on full builds only)
+    // `module_meta` is not cleared either: it lives as long as the bundler.
     self.context_load_completion_manager.clear();
     self.file_emitter.clear();
     // A task left over from the previous build must not fail the next one.
@@ -187,6 +237,68 @@ impl PluginDriver {
 
   pub fn plugins(&self) -> &IndexPluginable {
     &self.plugins
+  }
+
+  /// Does the actions that the persistent cache recorded for a module again, when it reuses the
+  /// saved result of the module instead of running its hooks.
+  pub async fn replay_cache_actions(
+    &self,
+    module_idx: ModuleIdx,
+    actions: Vec<RecordedAction>,
+  ) -> anyhow::Result<()> {
+    // Recorded actions come from plugin contexts, so a plugin exists. Which one does not matter:
+    // the recorded values already hold everything that depends on the plugin.
+    let Some(PluginContext::Native(ctx)) = self.contexts.iter().next() else {
+      return Ok(());
+    };
+    for action in actions {
+      match action {
+        RecordedAction::WatchFile(path) => {
+          self.watch_files.insert(path);
+        }
+        RecordedAction::TransformDependency(path) => {
+          self
+            .add_transform_dependency(module_idx, WatchPath::new(path.as_str(), &ctx.options.cwd));
+        }
+        RecordedAction::EmitFile { file, fn_asset_filename, fn_sanitized_file_name } => {
+          ctx.emit_file(file, fn_asset_filename, fn_sanitized_file_name)?;
+        }
+        RecordedAction::EmitFileAsync(file) => {
+          ctx.emit_file_async(file).await?;
+        }
+        RecordedAction::EmitChunk(chunk) => {
+          ctx.emit_chunk(chunk)?;
+        }
+        RecordedAction::EmitPrebuiltChunk(chunk) => {
+          ctx.emit_prebuilt_chunk(chunk);
+        }
+        RecordedAction::AssociateModuleWithFileRef { module_id, reference_id } => {
+          ctx.associate_module_with_file_ref(&module_id, &reference_id);
+        }
+        RecordedAction::Log { level, log } => {
+          // As in `NativePluginContextImpl::log`: the build awaits the result at a barrier.
+          if let Some(on_log) = &ctx.options.on_log {
+            let handle = rolldown_utils::futures::spawn(on_log.call(level, log));
+            self
+              .log_hook_tasks
+              .lock()
+              .unwrap_or_else(std::sync::PoisonError::into_inner)
+              .push(handle);
+          }
+        }
+        RecordedAction::JsLog { level, json } => {
+          if let Some(on_log) = &ctx.options.on_log {
+            on_log
+              .call(level, rolldown_common::Log { js_log_json: Some(json), ..Default::default() })
+              .await?;
+          }
+        }
+        RecordedAction::RustModuleMeta { module_id, key, value } => {
+          self.module_meta.set(&module_id, &key, value, self.module_meta_build);
+        }
+      }
+    }
+    Ok(())
   }
 
   pub fn add_transform_dependency(&self, module_idx: ModuleIdx, dependency: WatchPath) {

@@ -4,6 +4,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use super::attach_debug_info::AttachDebugInfo;
+use super::cache_options::CacheOptions;
 use super::chunk_import_map::ChunkImportMap;
 use super::chunk_modules_order::ChunkModulesOrderBy;
 use super::dev_mode_options::DevModeOptions;
@@ -81,6 +82,7 @@ pub struct ExperimentalOptions {
   pub chunk_optimization: Option<ChunkOptimizationOption>,
   pub lazy_barrel: Option<bool>,
   pub import_attributes: Option<bool>,
+  pub cache: Option<CacheOptions>,
 }
 
 impl ExperimentalOptions {

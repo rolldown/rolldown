@@ -51,7 +51,7 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
   async fn run_inner(&self) -> BuildResult<()> {
     let resolved_id = &self.resolved_id;
     if self.create_js_module_options {
-      self.ctx.create_js_module_options(resolved_id).await?;
+      self.ctx.create_js_module_options(resolved_id, None).await?;
     }
     let overrides = &self.ctx.plugin_driver.module_side_effects_overrides;
     let external_module_side_effects = normalize_side_effects(

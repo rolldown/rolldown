@@ -76,7 +76,13 @@ export function bindingifyInputOptions(
     platform: inputOptions.platform,
     shimMissingExports: inputOptions.shimMissingExports,
     logLevel: bindingifyLogLevel(logLevel),
-    onLog,
+    onLog: (level, log) => {
+      if (log.jsLogJson != null) {
+        onLog(level, JSON.parse(log.jsLogJson));
+      } else {
+        onLog(level, log);
+      }
+    },
     // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned
     // Because it is hard to represent Enum in napi, ref: https://github.com/napi-rs/napi-rs/issues/507
     // So we use `undefined | NormalizedTreeshakingOptions` (or Option<NormalizedTreeshakingOptions> in Rust side), to represent `false | NormalizedTreeshakingOptions`
@@ -84,7 +90,7 @@ export function bindingifyInputOptions(
     moduleTypes: inputOptions.moduleTypes,
     define: normalizedTransform.define,
     inject: bindingifyInject(normalizedTransform.inject),
-    experimental: bindingifyExperimental(inputOptions.experimental),
+    experimental: bindingifyExperimental(inputOptions.experimental, watchMode),
     profilerNames: outputOptions.generatedCode?.profilerNames,
     transform: normalizedTransform.oxcTransformOptions,
     watch: bindingifyWatch(inputOptions.watch),
@@ -157,6 +163,7 @@ function bindingifyExternal(
 
 function bindingifyExperimental(
   experimental: InputOptions['experimental'],
+  watchMode: boolean,
 ): BindingInputOptions['experimental'] {
   let chunkModulesOrder = BindingChunkModuleOrderBy.ExecOrder;
   if (experimental?.chunkModulesOrder) {
@@ -188,6 +195,31 @@ function bindingifyExperimental(
     chunkOptimization: experimental?.chunkOptimization,
     lazyBarrel: experimental?.lazyBarrel,
     importAttributes: experimental?.importAttributes,
+    cache: bindingifyExperimentalCache(experimental?.cache, watchMode),
+  };
+}
+
+function bindingifyExperimentalCache(
+  cache: NonNullable<InputOptions['experimental']>['cache'],
+  watchMode: boolean,
+): BindingExperimentalOptions['cache'] {
+  if (cache === undefined || cache === false) {
+    return undefined;
+  }
+  if (typeof cache !== 'object' || cache === null) {
+    throw new Error(
+      `Invalid \`experimental.cache\` option: expected \`false\` or an object with a \`dir\` property, but received ${JSON.stringify(cache)}. Rolldown has no default cache directory.`,
+    );
+  }
+  return {
+    dir: cache.dir,
+    maxAge: cache.maxAge,
+    cacheKey: cache.cacheKey,
+    buildDependencies: cache.buildDependencies,
+    assumeUnchanged: normalizedStringOrRegex(cache.assumeUnchanged),
+    assumeCacheableHooks: cache.assumeCacheableHooks,
+    // Plugins can read it as `this.meta.watchMode`, so it is an input of the saved results.
+    watchMode,
   };
 }
 
@@ -219,7 +251,9 @@ function bindingifyResolve(resolve: InputOptions['resolve']): BindingInputOption
   }
 }
 
-function bindingifyLogLevel(logLevel: InputOptions['logLevel']): BindingInputOptions['logLevel'] {
+export function bindingifyLogLevel(
+  logLevel: InputOptions['logLevel'],
+): BindingInputOptions['logLevel'] {
   switch (logLevel) {
     case 'silent':
       return BindingLogLevel.Silent;

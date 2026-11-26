@@ -36,6 +36,7 @@ impl From<BindingViteReporterPluginConfig> for ViteReporterPlugin {
       report_compressed_size: config.report_compressed_size,
       chunk_count: AtomicU32::new(0),
       transformed_count: AtomicU32::new(0),
+      reported_in_transform: rolldown_utils::dashmap::FxDashSet::default(),
       latest_checkpoint: Arc::new(RwLock::new(Instant::now())),
       log_info: config.log_info.map(|log_info| -> Arc<LogInfoFn> {
         Arc::new(move |msg: String| {

@@ -19,7 +19,7 @@ and will drift; treat them as starting points.
 
 ## Cache inventory
 
-Counting types literally named `*Cache`, there are 13. Grouped by purpose:
+Counting types literally named `*Cache`, there are 14. Grouped by purpose:
 
 ### 1. Incremental-build cache
 
@@ -115,6 +115,9 @@ not change the module.
   external modules. JS starts the module from those options, with a copy of `meta`, and keeps
   them in `resolvedModuleOptionMap` for the reset above. In a full scan, a module without a
   receipt skips the call, because the full-scan reset already left it with no options.
+  With the persistent cache, a reused resolution has no receipt. It carries its saved `meta`
+  (`ResolvedId::js_meta`) instead, and the call passes that. See
+  [`../persistent-cache/implementation.md`](../persistent-cache/implementation.md#module-meta-and-modulesideeffects-of-javascript-plugins).
 - `this.resolve` returns the `meta` under its own receipt and removes it, and the
   `moduleSideEffects` of its own Rust result: the hook value, else the value from
   `reported_module_side_effects`, which is the same default value as a `getModuleInfo` read. It
@@ -285,6 +288,10 @@ Future work for these costs (not implemented):
 The `notify` crate's `RecommendedCache` is held inside the debouncer in
 `crates/rolldown_fs_watcher/src/` and tracks filesystem metadata for event
 debouncing.
+
+### 7. Persistent scan cache (on disk)
+
+With `experimental.cache`, `PersistentScanCache` (`crates/rolldown/src/persistent_cache/mod.rs`) saves the result of the scan hooks of each module to disk and reuses it after a restart. It is separate from `ScanStageCache`. See [`../persistent-cache/implementation.md`](../persistent-cache/implementation.md).
 
 ---
 

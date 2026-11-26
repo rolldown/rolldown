@@ -36,6 +36,7 @@ pub async fn load_entry_module<Fs: FileSystem>(
     &ImportAttributes::default(),
     importer_raw_id,
     &importer_attributes,
+    None,
   )
   .await?;
 

@@ -5,6 +5,7 @@ import type {
   BindingHookLoadOutput,
   BindingHookResolveIdOutput,
   BindingHookTransformOutput,
+  BindingPluginContext,
   BindingPluginOptions,
   BindingTransformPluginContext,
 } from '../binding.cjs';
@@ -23,6 +24,7 @@ import {
 import type { BindingifyPluginArgs } from './bindingify-plugin';
 import { bindingifyHook, type PluginHookWithBindingExt } from './bindingify-plugin-hook-meta';
 import type {
+  CustomPluginOptions,
   LoadResult,
   PluginHooks,
   ResolveIdResult,
@@ -100,9 +102,11 @@ export function bindingifyResolveId(
         importerAttributes: extraOptions.importerAttributes ?? {},
       });
       if (isPromiseLike(ret)) {
-        return Promise.resolve(ret).then((ret) => bindingifyResolveIdResult(args, ret, specifier));
+        return Promise.resolve(ret).then((ret) =>
+          bindingifyResolveIdResult(args, ret, ctx, specifier),
+        );
       }
-      return bindingifyResolveIdResult(args, ret, specifier);
+      return bindingifyResolveIdResult(args, ret, ctx, specifier);
     },
     filter: bindingifyResolveIdFilter(options.filter),
   }));
@@ -111,6 +115,7 @@ export function bindingifyResolveId(
 function bindingifyResolveIdResult(
   args: BindingifyPluginArgs,
   ret: ResolveIdResult,
+  ctx: BindingPluginContext,
   specifier: string,
 ): BindingHookResolveIdOutput | undefined {
   if (ret == null) {
@@ -135,6 +140,7 @@ function bindingifyResolveIdResult(
     packageJsonPath: ret.packageJsonPath,
     attributes: ret.attributes,
     moduleOptionsReceipt: args.pluginContextData.saveResolutionOptions({ meta: ret.meta || {} }),
+    metaEntries: args.pluginContextData.metaToSave(ctx, args.plugin.name, 'resolveId', ret.meta),
   };
 }
 
@@ -151,10 +157,10 @@ export function bindingifyResolveDynamicImport(
       });
       if (isPromiseLike(ret)) {
         return Promise.resolve(ret).then((ret) =>
-          bindingifyResolveDynamicImportResult(args, ret, specifier),
+          bindingifyResolveDynamicImportResult(args, ret, ctx, specifier),
         );
       }
-      return bindingifyResolveDynamicImportResult(args, ret, specifier);
+      return bindingifyResolveDynamicImportResult(args, ret, ctx, specifier);
     },
   }));
 }
@@ -162,6 +168,7 @@ export function bindingifyResolveDynamicImport(
 function bindingifyResolveDynamicImportResult(
   args: BindingifyPluginArgs,
   ret: ResolveIdResult,
+  ctx: BindingPluginContext,
   specifier: string,
 ): BindingHookResolveIdOutput | undefined {
   if (ret == null) {
@@ -185,6 +192,12 @@ function bindingifyResolveDynamicImportResult(
     packageJsonPath: ret.packageJsonPath,
     attributes: ret.attributes,
     moduleOptionsReceipt: args.pluginContextData.saveResolutionOptions({ meta: ret.meta || {} }),
+    metaEntries: args.pluginContextData.metaToSave(
+      ctx,
+      args.plugin.name,
+      'resolveDynamicImport',
+      ret.meta,
+    ),
   };
 
   if (ret.moduleSideEffects !== null) {
@@ -239,9 +252,10 @@ export function bindingifyTransform(
           },
         },
       });
+      const inner = ctx.inner();
       const transformCtx = new TransformPluginContextImpl(
         args.outputOptions,
-        ctx.inner(),
+        inner,
         args.plugin,
         args.pluginContextData,
         ctx,
@@ -254,9 +268,11 @@ export function bindingifyTransform(
       const ret = handler.call(transformCtx, code, id, meta);
 
       if (isPromiseLike(ret)) {
-        return Promise.resolve(ret).then((ret) => bindingifyTransformResult(args, ret, ctx, id));
+        return Promise.resolve(ret).then((ret) =>
+          bindingifyTransformResult(args, ret, ctx, inner, id),
+        );
       }
-      return bindingifyTransformResult(args, ret, ctx, id);
+      return bindingifyTransformResult(args, ret, ctx, inner, id);
     },
     filter: bindingifyTransformFilter(options.filter),
   }));
@@ -266,6 +282,7 @@ function bindingifyTransformResult(
   args: BindingifyPluginArgs,
   ret: TransformResult,
   ctx: BindingTransformPluginContext,
+  inner: BindingPluginContext,
   id: string,
 ): BindingHookTransformOutput | undefined {
   if (ret == null) {
@@ -276,6 +293,7 @@ function bindingifyTransformResult(
     return { code: ret };
   }
 
+  recordModuleMeta(args, inner, 'transform', ret.meta);
   args.pluginContextData.updateModuleMeta(id, ret.meta ?? {});
 
   let normalizedCode: string | undefined = undefined;
@@ -315,10 +333,11 @@ export function bindingifyLoad(
   return bindingifyHook(args.plugin.load, ({ handler, options }) => ({
     plugin: (ctx, id, bindingExtraOptions) => {
       const extraOptions = bindingExtraOptions ?? { rawId: id, attributes: {} };
+      const inner = ctx.inner();
       const ret = handler.call(
         new LoadPluginContextImpl(
           args.outputOptions,
-          ctx.inner(),
+          inner,
           args.plugin,
           args.pluginContextData,
           ctx,
@@ -333,10 +352,10 @@ export function bindingifyLoad(
 
       if (isPromiseLike(ret)) {
         return Promise.resolve(ret).then((ret) =>
-          bindingifyLoadResult(args, ret, id, extraOptions.rawId),
+          bindingifyLoadResult(args, ret, inner, id, extraOptions.rawId),
         );
       }
-      return bindingifyLoadResult(args, ret, id, extraOptions.rawId);
+      return bindingifyLoadResult(args, ret, inner, id, extraOptions.rawId);
     },
     filter: bindingifyLoadFilter(options.filter),
   }));
@@ -345,6 +364,7 @@ export function bindingifyLoad(
 function bindingifyLoadResult(
   args: BindingifyPluginArgs,
   ret: LoadResult,
+  ctx: BindingPluginContext,
   id: string,
   rawId: string,
 ): BindingHookLoadOutput | undefined {
@@ -356,6 +376,7 @@ function bindingifyLoadResult(
     return { code: ret };
   }
 
+  recordModuleMeta(args, ctx, 'load', ret.meta);
   args.pluginContextData.updateModuleMeta(id, ret.meta || {});
 
   let map = preProcessSourceMap(ret, rawId);
@@ -367,6 +388,22 @@ function bindingifyLoadResult(
     moduleSideEffects: ret.moduleSideEffects ?? undefined,
     declaredModuleSize: ret.declaredModuleSize,
   };
+}
+
+/**
+ * `meta` lives only on the JavaScript side, so the persistent cache saves it with the result of
+ * the module.
+ */
+function recordModuleMeta(
+  args: BindingifyPluginArgs,
+  context: BindingPluginContext,
+  hookName: string,
+  meta: CustomPluginOptions | null | undefined,
+): void {
+  const entries = args.pluginContextData.metaToSave(context, args.plugin.name, hookName, meta);
+  if (entries) {
+    context.recordModuleMeta(entries);
+  }
 }
 
 function preProcessSourceMap(

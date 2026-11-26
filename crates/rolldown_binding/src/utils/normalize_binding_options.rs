@@ -376,16 +376,18 @@ fn normalize_reset_js_module_options_option(
 }
 
 fn normalize_create_js_module_options_option(
-  create_js_module_options: Option<UntrackedJsCallback<FnArgs<(String, Option<u32>)>, ()>>,
+  create_js_module_options: Option<
+    UntrackedJsCallback<FnArgs<(String, Option<u32>, Option<String>, Option<String>)>, ()>,
+  >,
   callbacks: &JsCallbackRelease,
 ) -> Option<rolldown::CreateJsModuleOptions> {
   create_js_module_options.map(|ts_fn| {
     let ts_fn = callbacks.track(ts_fn);
-    rolldown::CreateJsModuleOptions::new(Arc::new(move |module_id, receipt| {
+    rolldown::CreateJsModuleOptions::new(Arc::new(move |module_id, receipt, meta, own_meta| {
       let ts_fn = ts_fn.clone();
       Box::pin(async move {
         ts_fn
-          .invoke_async(FnArgs { data: (module_id, receipt) })
+          .invoke_async(FnArgs { data: (module_id, receipt, meta, own_meta) })
           .await
           .context("createJsModuleOptions option")
           .map_err(anyhow::Error::from)

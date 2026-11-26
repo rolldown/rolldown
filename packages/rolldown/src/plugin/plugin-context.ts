@@ -21,7 +21,10 @@ import type { SourceMap } from '../types/rolldown-output';
 import { bindingifySourcemap } from '../types/sourcemap';
 import type { PartialNull } from '../types/utils';
 import { type AssetSource, bindingAssetSource } from '../utils/asset-source';
-import { bindingifyPreserveEntrySignatures } from '../utils/bindingify-input-options';
+import {
+  bindingifyLogLevel,
+  bindingifyPreserveEntrySignatures,
+} from '../utils/bindingify-input-options';
 import { isPathFragment, unreachable } from '../utils/misc';
 import {
   normalizeUniqueModuleId,
@@ -40,6 +43,7 @@ import type { PreRenderedAsset } from '../options/output-options';
 import type { OutputAsset } from '../types/rolldown-output';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { ResolveIdExtraOptions } from '../index';
+import { isSavableAsJson } from './savable-meta';
 
 /**
  * Either a {@linkcode name} or a {@linkcode fileName} can be supplied.
@@ -251,6 +255,45 @@ export interface PluginContext extends MinimalPluginContext {
     id: string,
   ): void;
   /**
+   * Tells the persistent cache
+   * ({@linkcode InputOptions.experimental | experimental.cache}) to save no result for the
+   * module of the current hook call. The hooks of that module then run again in the next
+   * build. The other modules still get saved results.
+   *
+   * Use it in a `resolveId`, `resolveDynamicImport`, `load` or `transform` hook that has
+   * `cache: true`, when one call does something that Rolldown cannot do again without running
+   * the hook. An example is a call that changes a variable of the plugin.
+   *
+   * It does nothing when the cache is off, and in a hook call that the cache does not record.
+   *
+   * This is an internal and experimental API for the persistent cache. The hook keeps the cache
+   * on, and the call tells Rolldown not to save a result for the module of this call. The API
+   * can change or be removed when the design of the cache changes.
+   *
+   * @example
+   * ```js
+   * transform: {
+   *   cache: true,
+   *   handler(code, id) {
+   *     if (code.includes('__BUILD_TIME__')) {
+   *       // The result is different in every build.
+   *       this.markNotCacheable('uses the build time');
+   *       return code.replaceAll('__BUILD_TIME__', String(Date.now()));
+   *     }
+   *   },
+   * }
+   * ```
+   *
+   * @internal
+   * @experimental
+   */
+  markNotCacheable(
+    /**
+     * A short text that says why. Rolldown keeps it for debugging.
+     */
+    reason?: string,
+  ): void;
+  /**
    * Loads and parses the module corresponding to the given id, attaching additional
    * meta information to the module if provided. This will trigger the same
    * {@linkcode Plugin.load | load}, {@linkcode Plugin.transform | transform} and
@@ -308,17 +351,22 @@ export interface PluginContext extends MinimalPluginContext {
 export class PluginContextImpl extends MinimalPluginContextImpl {
   fs: RolldownFsModule = fsModule;
   getModuleInfo: GetModuleInfo;
+  private onLog: LogHandler;
   constructor(
     private outputOptions: OutputOptions,
     private context: BindingPluginContext,
     plugin: Plugin,
     private data: PluginContextData,
-    private onLog: LogHandler,
+    onLog: LogHandler,
     logLevel: LogLevelOption,
     watchMode: boolean,
     private currentLoadingModule?: string,
   ) {
+    if (data.persistentCache) {
+      onLog = recordLogs(onLog, context);
+    }
     super(onLog, logLevel, plugin.name!, watchMode);
+    this.onLog = onLog;
     this.getModuleInfo = (id: string) =>
       this.data.getModuleInfo(id, context, (moduleId) =>
         this.data.warnWriteAfterBuildEnd(moduleId, this.pluginName),
@@ -331,6 +379,11 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       resolveDependencies?: boolean;
     } & Partial<PartialNull<ModuleOptions>>,
   ): Promise<ModuleInfo> {
+    // The loaded module is an input of this hook call that the persistent cache does not track.
+    this.data.markNotCacheable(
+      this.context,
+      () => `plugin \`${this.pluginName}\` called \`this.load\``,
+    );
     const { rawId, attributes } = normalizeUniqueModuleId(options.id);
     const id = this.data.toModuleId(rawId, attributes);
     if (id === this.currentLoadingModule) {
@@ -511,9 +564,34 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     this.context.addWatchFile(id);
   }
 
+  public markNotCacheable(reason?: string): void {
+    this.data.markNotCacheable(this.context, () =>
+      typeof reason === 'string'
+        ? reason
+        : `plugin \`${this.pluginName}\` called \`this.markNotCacheable\``,
+    );
+  }
+
   public parse(input: string, options?: ParserOptions | null): Program {
     return parseAst(input, options);
   }
+}
+
+/**
+ * Also gives each log to the persistent cache, which sends it to `onLog` again when it reuses
+ * the result of this hook call.
+ */
+function recordLogs(onLog: LogHandler, context: BindingPluginContext): LogHandler {
+  return (level, log) => {
+    // A reuse sends the log again from its JSON text, so the log must be the same after a JSON
+    // round trip. An `Error` in it, for example, would lose its `message`.
+    if (isSavableAsJson(log)) {
+      context.recordLog(bindingifyLogLevel(level), JSON.stringify(log));
+    } else {
+      context.markNotCacheable(`a log of a plugin changes when it is saved as JSON`);
+    }
+    onLog(level, log);
+  };
 }
 
 export function createPluginContext(

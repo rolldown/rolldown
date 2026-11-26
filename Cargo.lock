@@ -2501,6 +2501,7 @@ dependencies = [
  "petgraph",
  "rayon",
  "regex",
+ "rolldown_cache_store",
  "rolldown_common",
  "rolldown_dev_common",
  "rolldown_devtools",
@@ -2680,6 +2681,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_cache_store"
+version = "1.3.3"
+dependencies = [
+ "rustc-hash",
+ "tempfile",
+ "xxhash-rust",
+]
+
+[[package]]
 name = "rolldown_common"
 version = "1.3.3"
 dependencies = [
@@ -2716,6 +2726,7 @@ dependencies = [
  "smallvec",
  "string_wizard",
  "sugar_path",
+ "xxhash-rust",
 ]
 
 [[package]]
@@ -3189,6 +3200,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_std_utils",
+ "rolldown_utils",
  "rustc-hash",
  "sugar_path",
  "supports-color",
@@ -3300,8 +3312,20 @@ dependencies = [
  "rolldown_common",
  "rolldown_dev",
  "rolldown_error",
+ "rolldown_plugin_vite_alias",
+ "rolldown_plugin_vite_build_import_analysis",
+ "rolldown_plugin_vite_dynamic_import_vars",
+ "rolldown_plugin_vite_import_glob",
+ "rolldown_plugin_vite_json",
+ "rolldown_plugin_vite_load_fallback",
+ "rolldown_plugin_vite_module_preload_polyfill",
+ "rolldown_plugin_vite_react_refresh_wrapper",
+ "rolldown_plugin_vite_reporter",
+ "rolldown_plugin_vite_resolve",
+ "rolldown_plugin_vite_transform",
  "rolldown_sourcemap",
  "rolldown_testing_config",
+ "rolldown_utils",
  "rolldown_workspace",
  "rustc-hash",
  "schemars",

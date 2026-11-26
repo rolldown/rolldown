@@ -40,7 +40,7 @@ use tracing::Instrument;
 use crate::module_loader::module_task::ModuleTaskOwner;
 use crate::types::scan_stage_cache::ScanStageCache;
 use crate::utils::load_entry_module::load_entry_module;
-use crate::{SharedOptions, SharedResolver};
+use crate::{SharedOptions, SharedResolver, persistent_cache::ScanCacheSession};
 
 use super::external_module_task::ExternalModuleTask;
 use super::module_task::ModuleTask;
@@ -254,6 +254,7 @@ impl<Fs: FileSystem + Clone> Drop for ModuleLoader<'_, Fs> {
 }
 
 impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
+  #[expect(clippy::too_many_arguments)]
   pub fn new(
     fs: Fs,
     options: SharedOptions,
@@ -262,6 +263,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     cache: &'a mut ScanStageCache,
     is_full_scan: bool,
     magic_string_tx: Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
+    persistent_cache: Option<Arc<ScanCacheSession>>,
   ) -> BuildResult<Self> {
     plugin_driver.module_side_effects_overrides.start_scan();
     if is_full_scan {
@@ -300,6 +302,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       plugin_driver,
       meta,
       late_entries: FxDashSet::default(),
+      persistent_cache,
     });
 
     let importers = std::mem::take(&mut cache.importers);
@@ -487,9 +490,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       self.request_all_exports_for_entry(idx);
     }
     // A full scan starts with no JS module options, so JS needs the call only for a module that a
-    // JS resolution created. A partial scan may still hold options for the id.
-    let create_js_module_options =
-      is_new_module && (resolved_id.module_options_receipt.is_some() || !self.is_full_scan);
+    // JS resolution created, live or reused. A partial scan may still hold options for the id.
+    let create_js_module_options = is_new_module
+      && (resolved_id.module_options_receipt.is_some()
+        || resolved_id.js_meta.is_some()
+        || !self.is_full_scan);
     let ctx = Arc::clone(&self.shared_context);
     let tx = self.shared_context.tx.clone();
     let plugin_driver = Arc::clone(&self.shared_context.plugin_driver);
@@ -1458,6 +1463,7 @@ mod tests {
       plugin_driver: bundle.plugin_driver,
       meta: TaskContextMeta { replace_global_define_config: None },
       late_entries: FxDashSet::default(),
+      persistent_cache: None,
     });
 
     let normal = ResolvedId { id: ModuleId::new_empty("empty"), ..Default::default() };

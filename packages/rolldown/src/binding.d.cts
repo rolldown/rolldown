@@ -1868,7 +1868,7 @@ export declare class BindingPluginContext {
    * Records a log that a JavaScript plugin sent to `onLog` during this hook call, so the
    * persistent cache can send it again when it reuses the result. `log` is its JSON.
    */
-  recordLog(level: string, log: string): void
+  recordLog(level: BindingLogLevel, log: string): void
   /**
    * @internal Whether the persistent cache records this hook call, and its module task can
    * still get a saved result.

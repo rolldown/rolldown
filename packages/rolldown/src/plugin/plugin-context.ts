@@ -21,7 +21,10 @@ import type { SourceMap } from '../types/rolldown-output';
 import { bindingifySourcemap } from '../types/sourcemap';
 import type { PartialNull } from '../types/utils';
 import { type AssetSource, bindingAssetSource } from '../utils/asset-source';
-import { bindingifyPreserveEntrySignatures } from '../utils/bindingify-input-options';
+import {
+  bindingifyLogLevel,
+  bindingifyPreserveEntrySignatures,
+} from '../utils/bindingify-input-options';
 import { isPathFragment, unreachable } from '../utils/misc';
 import {
   normalizeUniqueModuleId,
@@ -583,7 +586,7 @@ function recordLogs(onLog: LogHandler, context: BindingPluginContext): LogHandle
     // A reuse sends the log again from its JSON text, so the log must be the same after a JSON
     // round trip. An `Error` in it, for example, would lose its `message`.
     if (isSavableAsJson(log)) {
-      context.recordLog(level, JSON.stringify(log));
+      context.recordLog(bindingifyLogLevel(level), JSON.stringify(log));
     } else {
       context.markNotCacheable(`a log of a plugin changes when it is saved as JSON`);
     }

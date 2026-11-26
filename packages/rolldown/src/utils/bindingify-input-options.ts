@@ -251,7 +251,9 @@ function bindingifyResolve(resolve: InputOptions['resolve']): BindingInputOption
   }
 }
 
-function bindingifyLogLevel(logLevel: InputOptions['logLevel']): BindingInputOptions['logLevel'] {
+export function bindingifyLogLevel(
+  logLevel: InputOptions['logLevel'],
+): BindingInputOptions['logLevel'] {
   switch (logLevel) {
     case 'silent':
       return BindingLogLevel.Silent;

@@ -14,7 +14,10 @@ import type {
 import { type BindingNormalizedOptions } from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN } from '../log/logging';
-import { logModuleSideEffectsWriteAfterBuildEnd, logPersistentCacheUnsavableMeta } from '../log/logs';
+import {
+  logModuleSideEffectsWriteAfterBuildEnd,
+  logPersistentCacheUnsavableMeta,
+} from '../log/logs';
 import { NormalizedInputOptionsImpl } from '../options/normalized-input-options';
 import { NormalizedOutputOptionsImpl } from '../options/normalized-output-options';
 import type { ModuleInfo } from '../types/module-info';

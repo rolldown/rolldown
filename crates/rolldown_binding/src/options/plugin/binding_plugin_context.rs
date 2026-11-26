@@ -23,9 +23,12 @@ use super::types::{
 };
 
 use crate::{
-  types::binding_module_info::{
-    BindingModuleInfo, BindingModuleSideEffectsOptionFn, call_module_side_effects_option,
-    to_binding_module_side_effects,
+  types::{
+    binding_log_level::BindingLogLevel,
+    binding_module_info::{
+      BindingModuleInfo, BindingModuleSideEffectsOptionFn, call_module_side_effects_option,
+      to_binding_module_side_effects,
+    },
   },
   utils::{napi_error, spawn_boxed_future},
 };
@@ -47,8 +50,8 @@ impl BindingPluginContext {
   /// Records a log that a JavaScript plugin sent to `onLog` during this hook call, so the
   /// persistent cache can send it again when it reuses the result. `log` is its JSON.
   #[napi]
-  pub fn record_log(&self, level: String, log: String) {
-    self.inner.record_js_log(rolldown_common::LogLevel::from(level), log);
+  pub fn record_log(&self, level: BindingLogLevel, log: String) {
+    self.inner.record_js_log(level.into(), log);
   }
 
   /// @internal Whether the persistent cache records this hook call, and its module task can

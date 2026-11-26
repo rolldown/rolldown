@@ -1,7 +1,7 @@
 use itertools::Itertools;
-use rolldown_common::ExternalModule;
+use rolldown_common::{ExternalModule, OutputFormat};
 use rolldown_sourcemap::SourceJoiner;
-use rolldown_utils::ecmascript::escape_non_ascii;
+use rolldown_utils::ecmascript::{escape_non_ascii, to_ecma_string_literal};
 
 use crate::{
   ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
@@ -131,6 +131,29 @@ pub fn render_chunk_external_imports<'a>(
   (import_code, externals)
 }
 
+pub fn render_hoisted_keep_names(ctx: &GenerateContext<'_>, source: &mut SourceJoiner<'_>) {
+  if ctx.hoisted_keep_names.is_empty() {
+    return;
+  }
+  let mut names =
+    ctx.chunk.modules.iter().filter_map(|id| ctx.hoisted_keep_names.get(id)).flatten().peekable();
+  if names.peek().is_none() {
+    return;
+  }
+  let helper = ctx.link_output.runtime.resolve_symbol("__name");
+  let helper =
+    ctx.finalized_string_pattern_for_symbol_ref(helper, ctx.chunk_idx, &ctx.chunk.canonical_names);
+  let ascii = ctx.options.charset.is_ascii();
+  let indent =
+    if matches!(ctx.options.format, OutputFormat::Iife | OutputFormat::Umd) { "\t" } else { "" };
+  let helper = escape_non_ascii(&helper, ascii);
+  for (original, renamed) in names {
+    let renamed = escape_non_ascii(renamed, ascii);
+    let original = to_ecma_string_literal(original, ascii);
+    source.append_source(format!("{indent}{helper}({renamed}, {original});"));
+  }
+}
+
 pub fn render_modules_with_peek_runtime_module_at_first<'a>(
   ctx: &GenerateContext<'_>,
   source_joiner: &mut SourceJoiner<'a>,
@@ -158,6 +181,7 @@ pub fn render_modules_with_peek_runtime_module_at_first<'a>(
   if !import_code.is_empty() {
     source_joiner.append_source(import_code);
   }
+  render_hoisted_keep_names(ctx, source_joiner);
 
   // chunk content
   module_sources_peekable.for_each(

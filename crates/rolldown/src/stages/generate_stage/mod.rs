@@ -165,6 +165,7 @@ pub struct GenerateStage<'a> {
   /// Carrier -> the records it prints, finalized and rendered for it (`finalize_inline_copies`);
   /// moved out when the files are instantiated.
   inline_renders: FxHashMap<ChunkIdx, Vec<CarriedRender>>,
+  hoisted_keep_names: FxHashMap<ModuleIdx, Vec<(CompactStr, CompactStr)>>,
 }
 
 impl<'a> GenerateStage<'a> {
@@ -182,6 +183,7 @@ impl<'a> GenerateStage<'a> {
       resolved_paths: None,
       inline_state: InlineCommonChunksState::default(),
       inline_renders: FxHashMap::default(),
+      hoisted_keep_names: FxHashMap::default(),
     }
   }
 
@@ -658,6 +660,7 @@ impl<'a> GenerateStage<'a> {
           resolved_paths: self.resolved_paths.as_ref(),
           inline_state: &self.inline_state,
           carried_renders: vec![],
+          hoisted_keep_names: &self.hoisted_keep_names,
         },
         entry_module,
         &export_names,

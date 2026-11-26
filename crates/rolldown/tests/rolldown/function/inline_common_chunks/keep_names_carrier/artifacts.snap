@@ -1,0 +1,75 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { a as __share_require, i as __share_export, n as __name, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+__name(Object$1, "Object");
+__share("shared-ZmCA4nrZ", ((exports) => {
+	// shared.js
+	function Object$2() {}
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			__name(Object$2, "Object");
+		})))();
+	}
+	__share_export(exports, {
+		n: () => init_shared,
+		t: () => Object$2
+	});
+}));
+var share_shared = __share_require("shared-ZmCA4nrZ");
+// a.js
+function Object$1() {}
+var early;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		share_shared.n();
+		early = Object$1.name;
+		globalThis.Object.freeze(Object$1);
+		console.log(early, share_shared.t.name);
+	})))();
+}
+init_a();
+
+```
+
+## b.js
+
+```js
+import { a as __share_require, i as __share_export, n as __name, r as __share, t as __esmMin } from "./rolldown-runtime.js";
+__share("shared-ZmCA4nrZ", ((exports) => {
+	// shared.js
+	function Object$1() {}
+	function init_shared() {
+		return (init_shared = __esmMin((() => {
+			__name(Object$1, "Object");
+		})))();
+	}
+	__share_export(exports, {
+		n: () => init_shared,
+		t: () => Object$1
+	});
+}));
+var share_shared = __share_require("shared-ZmCA4nrZ");
+// b.js
+function init_b() {
+	return (init_b = __esmMin((() => {
+		share_shared.n();
+		console.log(share_shared.t.name);
+	})))();
+}
+init_b();
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __share_require as a, __share_export as i, __name as n, __share as r, __esmMin as t };
+
+```

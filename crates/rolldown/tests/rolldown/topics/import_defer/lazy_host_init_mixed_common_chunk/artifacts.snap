@@ -24,12 +24,12 @@ init_a2();
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 function init_a() {
-	return (init_a = __esmMin((() => {
+	return (init_a = __esmSync((() => {
 		globalThis.__initLog.push("a");
 	})))();
 }
 function init_a2() {
-	return (init_a2 = __esmMin((() => {
+	return (init_a2 = __esmSync((() => {
 		globalThis.__initLog.push("a2");
 	})))();
 }
@@ -71,7 +71,7 @@ export { access };
 import "./w.js";
 import { n as init_a, t as init_a2 } from "./a2.js";
 // r.js
-const read = () => (init_a(), "a") + (init_a2(), "a2");
+const read = () => (init_a(true), "a") + (init_a2(true), "a2");
 export { read };
 
 ```
@@ -105,12 +105,12 @@ export { yLog };
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 function init_a() {
-	return (init_a = __esmMin((() => {
+	return (init_a = __esmSync((() => {
 		globalThis.__initLog.push("a");
 	})))();
 }
 function init_a2() {
-	return (init_a2 = __esmMin((() => {
+	return (init_a2 = __esmSync((() => {
 		globalThis.__initLog.push("a2");
 	})))();
 }
@@ -164,7 +164,7 @@ exports.access = access;
 require("./w.js");
 const require_a2 = require("./a2.js");
 // r.js
-const read = () => (require_a2.init_a(), "a") + (require_a2.init_a2(), "a2");
+const read = () => (require_a2.init_a(true), "a") + (require_a2.init_a2(true), "a2");
 exports.read = read;
 
 ```

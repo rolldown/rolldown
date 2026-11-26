@@ -190,7 +190,7 @@ export var __esmGatherDynamic = (d) => __esmPrepare(d, void 0, __esmEvaluateRoot
 // evaluates the module synchronously, or throws its stored error.
 export var __esmDefer = (init) => {
   var m = init(__esmState),
-    seen = new Set(),
+    seen,
     ready = (m) =>
       seen.has(m) ||
       (seen.add(m),
@@ -199,6 +199,7 @@ export var __esmDefer = (init) => {
     p,
     x;
   if (!__esmComplete(m)) {
+    seen = new Set();
     if (!ready(m)) throw new TypeError('A deferred module or a module that it imports is evaluating');
     p = m.f();
   }
@@ -263,10 +264,9 @@ export var __deferNs = (init, ns) => {
     setPrototypeOf: (t, proto) => proto === null,
   });
 };
-// `__toESM` with one result for each external module and interop mode. In CommonJS output, a
-// module of a deferred closure (`import defer`) loads an external lazily, and each chunk can also
-// load it eagerly. All these loads must give one namespace object. `key` names the external module
-// with the same text in all chunks.
+// Share a CommonJS namespace across chunks by module and interop mode. An external key is
+// its filename. For a bundled module with repeated deferred imports, the key is its numeric
+// execution order. Both keys are independent of the importer and the value of module.exports.
 // See internal-docs/runtime-helpers/implementation.md.
 var __toESMCache = [];
 export var __toESMCached = (key, mod, isNodeMode, cache, ns) => {
@@ -274,7 +274,7 @@ export var __toESMCached = (key, mod, isNodeMode, cache, ns) => {
   if (!(ns = cache.get(key))) cache.set(key, (ns = __toESM(mod, isNodeMode)));
   return ns;
 };
-// `__deferNs` with one result for each external module and interop mode, as `__toESMCached`.
+// Share the deferred object before the first evaluation, with the same key as `__toESMCached`.
 // In CommonJS output, each deferred import of an external (`import defer * as ns from 'ext'`
 // and `import.defer('ext')`) gets its deferred namespace here, also in another chunk or in a
 // wrapper. `init` returns the result of `__toESMCached` with the same key and mode.
@@ -283,4 +283,25 @@ export var __deferNsCached = (key, init, isNodeMode, cache, ns) => {
   cache = __deferNsCache[isNodeMode ? 1 : 0] || (__deferNsCache[isNodeMode ? 1 : 0] = new Map());
   if (!(ns = cache.get(key))) cache.set(key, (ns = __deferNs(init)));
   return ns;
+};
+
+// A synchronous deferred target with only private dependencies. Eager back-edges can
+// reuse a running wrapper, but a deferred read during evaluation must throw.
+export var __esmSync = (body, result, error) => (deferred) => {
+  if (error) throw error[0];
+  if (body) {
+    var run = body;
+    body = 0;
+    try {
+      result = run();
+    } catch (e) {
+      error = [e];
+      throw e;
+    } finally {
+      body = void 0;
+    }
+  } else if (deferred && body === 0) {
+    throw new TypeError('A deferred module is evaluating');
+  }
+  return result;
 };

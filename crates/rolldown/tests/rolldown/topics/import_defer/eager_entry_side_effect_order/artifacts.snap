@@ -17,9 +17,9 @@ init_a();
 // HIDDEN [\0rolldown/runtime.js]
 // a.js
 var a_exports = /* @__PURE__ */ __exportAll({ x: () => 1 });
-var a_deferred = /* @__PURE__ */ __deferNs(() => (init_a(), a_exports), a_exports);
+var a_deferred = /* @__PURE__ */ __deferNs(() => (init_a(true), a_exports), a_exports);
 function init_a() {
-	return (init_a = __esmMin((() => {
+	return (init_a = __esmSync((() => {
 		console.log("a");
 	})))();
 }

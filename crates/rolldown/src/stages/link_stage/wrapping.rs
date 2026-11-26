@@ -217,6 +217,7 @@ impl LinkStage<'_> {
     let mut stack = vec![];
     let mut esm_targets = vec![];
     let mut dynamic_targets = vec![];
+    let mut cjs_targets = FxHashSet::default();
     for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
       for (local_ref, named_import) in &module.named_imports {
         let rec = &module.import_records[named_import.record_idx];
@@ -239,6 +240,9 @@ impl LinkStage<'_> {
         }
         stack.push(target);
         if matches!(target_module.exports_kind, ExportsKind::CommonJs) {
+          if !cjs_targets.insert(target) {
+            self.metas[target].shared_deferred_cjs_target = true;
+          }
           self.metas[module.idx]
             .deferred_cjs_namespace_imports
             .insert(*local_ref, named_import.record_idx);
@@ -270,7 +274,9 @@ impl LinkStage<'_> {
 
     let mut visited = IndexBitSet::new(self.module_table.modules.len());
     self.wrap_defer_dependencies(stack, &mut visited, false);
-    self.track_import_defer_modules(&visited, &esm_targets);
+    if !esm_targets.is_empty() {
+      self.track_import_defer_modules(&visited, &esm_targets);
+    }
     (esm_targets, visited)
   }
 
@@ -375,16 +381,11 @@ impl LinkStage<'_> {
     self.wrap_defer_dependencies(stack, wrapped, true);
   }
 
-  /// Marks the modules that need the state records of `__esmState`, in the graph of the requested
-  /// modules of all phases (`import`, `import defer`, `import.defer()`) between the ESM modules of
-  /// the deferred closures:
-  /// - each module of a strongly connected component that contains a defer target. Only these
-  ///   modules can be evaluating at a deferred access to the target.
-  /// - each module with top-level await or a dependency with top-level await
-  ///   (`is_tla_or_contains_tla_dependency`), and the other modules of its component. A deferred
-  ///   import waits for these modules first (spec `GatherAsynchronousTransitiveDependencies`).
-  ///
-  /// The dependency list of a tracked module has its tracked requested modules, in source order.
+  /// A namespace read can re-enter via arbitrary user code, including without an import cycle.
+  /// Track each independent entry into the static request graph and the paths to those entries.
+  /// A private synchronous dependency that only its eager parent can start runs while that
+  /// parent is evaluating. It needs no separate observation and may still join a deferred group.
+  /// See internal-docs/import-defer/design.md.
   fn track_import_defer_modules(
     &mut self,
     closure: &IndexBitSet<ModuleIdx>,
@@ -394,10 +395,7 @@ impl LinkStage<'_> {
       let mut deps = module
         .import_records
         .iter()
-        .filter(|rec| {
-          matches!(rec.kind, ImportKind::Import)
-            || (matches!(rec.kind, ImportKind::DynamicImport) && rec.is_defer_phase())
-        })
+        .filter(|rec| rec.kind == ImportKind::Import)
         .filter_map(|rec| rec.resolved_module)
         .filter(|&dep| {
           closure.has_bit(dep)
@@ -420,20 +418,51 @@ impl LinkStage<'_> {
         graph.add_edge(module.idx, dep, ());
       }
     }
-    let targets = targets.iter().copied().collect::<FxHashSet<_>>();
-    let mut tracked = FxHashSet::default();
-    for component in petgraph::algo::tarjan_scc(&graph) {
-      let is_cycle = component.len() > 1 || graph.contains_edge(component[0], component[0]);
-      let has_target = is_cycle && component.iter().any(|idx| targets.contains(idx));
-      if has_target
-        || component.iter().any(|&idx| self.metas[idx].is_tla_or_contains_tla_dependency)
+    let mut work = targets.to_vec();
+    // A require, entry, or another importer can start a dependency before the deferred root.
+    // In particular, this includes a dependency that user code enters through another chunk.
+    for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
+      if graph.contains_node(module.idx)
+        && (self.entries.contains_key(&module.idx)
+          || self.metas[module.idx].is_tla_or_contains_tla_dependency
+          || module.importers_idx.len() > 1
+          || self.options.preserve_modules)
       {
-        tracked.extend(component);
+        work.push(module.idx);
+      }
+      for rec in &module.import_records {
+        if let Some(dep) = rec.resolved_module
+          && graph.contains_node(dep)
+          && (rec.kind != ImportKind::Import || !graph.contains_node(module.idx))
+        {
+          work.push(dep);
+        }
       }
     }
+    let mut tracked = FxHashSet::default();
+    while let Some(idx) = work.pop() {
+      if graph.contains_node(idx) && tracked.insert(idx) {
+        work.extend(graph.neighbors_directed(idx, petgraph::Direction::Incoming));
+      }
+    }
+    let targets: FxHashSet<_> = targets.iter().copied().collect();
     for &idx in &tracked {
       let Module::Normal(module) = &self.module_table.modules[idx] else { continue };
-      let deps = requested(module).into_iter().filter(|dep| tracked.contains(dep)).collect();
+      let deps: Vec<_> =
+        requested(module).into_iter().filter(|dep| tracked.contains(dep)).collect();
+      // No tracked requester can query this module, and its private dependencies can run only
+      // inside this evaluation. One sentinel in the ordinary wrapper covers re-entrant reads.
+      if targets.contains(&idx)
+        && deps.is_empty()
+        && !self.options.profiler_names
+        && !self.metas[idx].is_tla_or_contains_tla_dependency
+        && !graph
+          .neighbors_directed(idx, petgraph::Direction::Incoming)
+          .any(|p| tracked.contains(&p))
+      {
+        self.metas[idx].deferred_self_check = true;
+        continue;
+      }
       self.metas[idx].import_defer_tracked_deps = Some(deps);
     }
   }
@@ -481,7 +510,8 @@ impl LinkStage<'_> {
   /// Only an escape (`f(ns)`, `export { ns }`) reads the object. An access through the local
   /// binding reads `import_x` directly. An external module in CommonJS output gets its object
   /// from `__deferNsCached`, with `require("ext")` in place of `require_x()`: one object for each
-  /// external module and interop mode, in all chunks.
+  /// external module and interop mode, in all chunks. Repeated imports of a bundled CommonJS
+  /// module use the same two caches with a numeric module key.
   fn create_deferred_cjs_namespaces(&mut self) {
     let defer_ns_ref = self.runtime.resolve_symbol("__deferNs");
     let defer_ns_cached_ref = self.runtime.resolve_symbol("__deferNsCached");
@@ -503,7 +533,12 @@ impl LinkStage<'_> {
         let name = match &self.module_table.modules[target] {
           Module::Normal(target_module) => {
             let Some(wrapper_ref) = self.metas[target].wrapper_ref else { continue };
-            referenced_symbols.extend([defer_ns_ref.into(), wrapper_ref.into()]);
+            let helper = if self.metas[target].shared_deferred_cjs_target {
+              defer_ns_cached_ref
+            } else {
+              defer_ns_ref
+            };
+            referenced_symbols.extend([helper.into(), wrapper_ref.into()]);
             target_module.repr_name.as_str()
           }
           // The import statement declares `import_ext` and references `__toESMCached`.
@@ -531,7 +566,12 @@ impl LinkStage<'_> {
         // statement does not keep `__toESM` for a deferred record.
         // See internal-docs/import-defer/implementation.md.
         if matches!(self.module_table.modules[target], Module::Normal(_)) {
-          self.depended_runtime_helper[importer_idx].push(RuntimeHelper::ToEsm, stmt_info_idx);
+          let helper = if self.metas[target].shared_deferred_cjs_target {
+            RuntimeHelper::ToEsmCached
+          } else {
+            RuntimeHelper::ToEsm
+          };
+          self.depended_runtime_helper[importer_idx].push(helper, stmt_info_idx);
         }
         self.metas[importer_idx]
           .deferred_cjs_namespaces
@@ -609,7 +649,9 @@ fn create_wrapper(
 
       let stmt_info = StmtInfo {
         declared_symbols: smallvec![TaggedSymbolRef::normal(wrapper_ref)],
-        referenced_symbols: if linking_info.import_defer_tracked_deps.is_none() {
+        referenced_symbols: if linking_info.deferred_self_check {
+          vec![runtime.resolve_symbol("__esmSync").into()]
+        } else if linking_info.import_defer_tracked_deps.is_none() {
           vec![if options.profiler_names {
             runtime.resolve_symbol("__esm").into()
           } else {

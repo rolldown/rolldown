@@ -557,14 +557,19 @@ describe('import defer fallback', () => {
     { name: 'esm output', output: { format: 'esm' } as OutputOptions },
     { name: 'cjs output', output: { format: 'cjs' } as OutputOptions },
   ])('a build with one chunk keeps the deferral: $name', async ({ output }) => {
-    const c: Case = { name: 'supported', files: { 'main.js': MAIN_JS }, output };
+    const c: Case = {
+      name: 'supported',
+      files: { 'main.js': LOGGED_MAIN('./x.js') },
+      output: { ...output, entryFileNames: output.format === 'cjs' ? '[name].cjs' : '[name].mjs' },
+    };
     const root = writeFiles(c.files);
     const off = await build(root, c, false);
     const on = await build(root, c, true);
     expect(on.warnings).toStrictEqual([]);
     expect(off.warnings.map((log) => log.code)).toStrictEqual(['UNSUPPORTED_FEATURE']);
     expect(on.output).not.toStrictEqual(off.output);
-    expect(on.output[0].content).toContain('(init_x(), 1)');
+    expect(on.output).toHaveLength(1);
+    expect(run(root, on.output, ['read'])).toStrictEqual({ before: [], steps: [[1, ['x']]] });
   });
 
   // IIFE and UMD output make one chunk. The output sets the global `lib`.

@@ -19,7 +19,7 @@ init_a();
 var a_exports = /* @__PURE__ */ __exportAll({ a: () => "a" });
 var a;
 function init_a() {
-	return (init_a = __esmMin((() => {
+	return (init_a = __esmSync((() => {
 		globalThis.__initLog.push("a");
 		a = "a";
 	})))();
@@ -79,7 +79,7 @@ export { v };
 ```js
 import { n as init_a } from "./a.js";
 // r.js
-const read = () => (init_a(), "a");
+const read = () => (init_a(true), "a");
 export { read };
 
 ```

@@ -10,43 +10,49 @@ source: crates/rolldown_testing/src/integration_test.rs
 // log.js
 var log;
 function init_log() {
-	return (init_log = __esmMin((() => {
+	return (init_log = __esmState((() => {
 		log = [];
-	})))();
+	}), () => []))(arguments[0]);
 }
 // shared.js
 function init_shared() {
-	return (init_shared = __esmMin((() => {
-		init_log();
+	return (init_shared = __esmState((() => {
+		init_log(init_shared);
 		log.push("shared");
-	})))();
+	}), () => [init_log]))(arguments[0]);
+}
+// member.js
+function init_member() {
+	return (init_member = __esmState((() => {
+		init_log(init_member);
+		log.push("member");
+	}), () => [init_log]))(arguments[0]);
 }
 function init_first() {
-	return (init_first = __esmMin((() => {
-		init_log();
-		init_shared();
-		// member.js
-		init_log();
-		log.push("member");
-		// first.js
-		init_log();
-		init_shared();
+	return (init_first = __esmState((() => {
+		init_log(init_first);
+		init_shared(init_first);
+		init_member(init_first);
 		log.push("first");
-	})))();
+	}), () => [
+		init_log,
+		init_shared,
+		init_member
+	]))(arguments[0]);
 }
 function init_second() {
-	return (init_second = __esmMin((() => {
-		init_log();
-		init_shared();
+	return (init_second = __esmState((() => {
+		init_log(init_second);
+		init_shared(init_second);
 		log.push("second");
-	})))();
+	}), () => [init_log, init_shared]))(arguments[0]);
 }
 // main.js
 init_log();
 function run() {
 	return [
-		(init_first(), 1),
-		(init_second(), 2),
+		(__esmDefer(init_first), 1),
+		(__esmDefer(init_second), 2),
 		...log
 	];
 }

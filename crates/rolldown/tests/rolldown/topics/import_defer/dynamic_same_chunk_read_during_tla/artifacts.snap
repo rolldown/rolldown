@@ -30,10 +30,10 @@ function init_dep() {
 }
 // d.js
 var d_exports = /* @__PURE__ */ __exportAll({ keys: () => keys });
-var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(), d_exports), d_exports);
+var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(true), d_exports), d_exports);
 var keys;
 function init_d() {
-	return (init_d = __esmMin((() => {
+	return (init_d = __esmSync((() => {
 		init_dep();
 		keys = Object.keys(dep_exports);
 	})))();

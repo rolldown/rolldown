@@ -13,7 +13,7 @@ function read() {
 }
 var import_a, import_b;
 function init_route() {
-	return (init_route = __esmMin((() => {
+	return (init_route = __esmSync((() => {
 		// a.cjs
 		var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			globalThis.__events.push("a");
@@ -35,7 +35,7 @@ globalThis.__events = [];
 function run() {
 	return {
 		before: [...globalThis.__events],
-		value: (init_route(), read)(),
+		value: (init_route(true), read)(),
 		events: globalThis.__events
 	};
 }

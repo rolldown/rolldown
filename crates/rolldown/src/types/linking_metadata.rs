@@ -121,6 +121,8 @@ pub struct LinkingMetadata {
   /// reads `x_exports`, and also `init_x` when `strictExecutionOrder` gives the module an
   /// execution-order wrapper (`rewrite_dynamic_import_of_defer_target`).
   pub dynamic_defer_target: bool,
+  /// Multiple deferred records need the same bundled CommonJS namespace across wrappers/chunks.
+  pub shared_deferred_cjs_target: bool,
   /// Set on each external module that a module of a deferred closure loads lazily in CommonJS
   /// output, with an included import that needs `__toESMCached` (`lazy_external_import_stmt`).
   /// Each chunk then renders its own binding of the external with `__toESMCached` too, so that
@@ -132,13 +134,12 @@ pub struct LinkingMetadata {
   pub deferred_namespace_ref: Option<SymbolRef>,
   /// The facade statement that declares `deferred_namespace_ref`.
   pub deferred_namespace_stmt_info: Option<StmtInfoIdx>,
-  /// Set when a deferred access must observe this module: the module has top-level await or a
-  /// dependency with top-level await, in the graph of the requested modules of the deferred
-  /// closures (`track_import_defer_modules`). The wrapper is then `__esmState`, which keeps a
-  /// record of the evaluation state, and a deferred access checks the records first
-  /// (`__esmDefer`). The list has the tracked modules that this module requests, in source order,
-  /// for the ready check.
+  /// Static requests whose evaluation can be observed independently by a deferred read, in
+  /// source order. A tracked wrapper (`__esmState`) exposes its state and these dependencies
+  /// for the `__esmDefer` readiness walk. See internal-docs/import-defer/implementation.md.
   pub import_defer_tracked_deps: Option<Vec<ModuleIdx>>,
+  /// Only this synchronous wrapper can be active at a read; no graph record is necessary.
+  pub deferred_self_check: bool,
   /// The local bindings of `import defer * as ns from './x'` in this module where `./x` is a
   /// CommonJS module, mapped to the import record of `./x`. An access through the local binding
   /// reads `import_x` directly (`DeferredAccess::Cjs`).

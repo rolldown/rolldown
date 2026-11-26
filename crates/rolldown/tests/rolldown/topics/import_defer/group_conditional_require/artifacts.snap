@@ -10,16 +10,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 // lazy.js
 var lazy_exports = /* @__PURE__ */ __exportAll({ x: () => 42 });
 function init_lazy() {
-	return (init_lazy = __esmMin((() => {
+	return (init_lazy = __esmState((() => {
 		globalThis.__deferPlanEvents.push("lazy");
-	})))();
+	}), () => []))(arguments[0]);
 }
 // route.js
 function read(flag) {
 	return flag ? (init_lazy(), __toCommonJS(lazy_exports)).x + 0 : 0;
 }
 function init_route() {
-	return (init_route = __esmMin((() => {
+	return (init_route = __esmSync((() => {
 		// helper.js
 		globalThis.__deferPlanEvents.push("helper");
 	})))();
@@ -28,9 +28,9 @@ function init_route() {
 globalThis.__deferPlanEvents = [];
 function run() {
 	return {
-		a: (init_route(), read)(false),
+		a: (init_route(true), read)(false),
 		before: [...globalThis.__deferPlanEvents],
-		b: (init_route(), read)(true),
+		b: (init_route(true), read)(true),
 		after: globalThis.__deferPlanEvents
 	};
 }

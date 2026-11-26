@@ -10,24 +10,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 // log.js
 var log;
 function init_log() {
-	return (init_log = __esmMin((() => {
+	return (init_log = __esmState((() => {
 		log = [];
-	})))();
+	}), () => []))(arguments[0]);
 }
 function init_x() {
-	return (init_x = __esmMin((() => {
-		init_log();
+	return (init_x = __esmState((() => {
+		init_log(init_x);
 		log.push("x");
-	})))();
+	}), () => [init_log]))(arguments[0]);
 }
 // y.js
 var obj;
 function init_y() {
-	return (init_y = __esmMin((() => {
-		init_log();
+	return (init_y = __esmState((() => {
+		init_log(init_y);
 		log.push("y");
 		obj = { inner: "inner" };
-	})))();
+	}), () => [init_log]))(arguments[0]);
 }
 // main.js
 init_log();
@@ -35,13 +35,13 @@ const before = [...log];
 const thenValue = void 0;
 const thenIn = false;
 const afterThen = [...log];
-init_x();
+__esmDefer(init_x);
 const afterRead = [...log];
-const fooIn = (init_x(), true);
-const value = (init_x(), 1) + (init_x(), 2);
+const fooIn = (__esmDefer(init_x), true);
+const value = (__esmDefer(init_x), 1) + (__esmDefer(init_x), 2);
 const plainThen = void 0;
 const afterPlainThen = [...log];
-const inner = (init_y(), obj.inner);
+const inner = (__esmDefer(init_y), obj.inner);
 const afterInner = [...log];
 export { afterInner, afterPlainThen, afterRead, afterThen, before, fooIn, inner, plainThen, thenIn, thenValue, value };
 

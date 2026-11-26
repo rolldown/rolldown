@@ -20,14 +20,14 @@ __rolldown_deferred_group_body__;
 	];
 }
 function init_d() {
-	return (init_d = __esmMin((() => {
+	return (init_d = __esmSync((() => {
 		// member.js
 		value = 40 + (globalThis.__two ?? 2);
 	})))();
 }
 // main.js
 function run() {
-	return (init_d(), read)();
+	return (init_d(true), read)();
 }
 export { run };
 

@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 function init_root() {
-	return (init_root = __esmMin((() => {
+	return (init_root = __esmSync((() => {
 		// member.js
 		globalThis.__memberRuns = (globalThis.__memberRuns ?? 0) + 1;
 		throw new Error("member failed");
@@ -17,7 +17,7 @@ function init_root() {
 // main.js
 function read() {
 	try {
-		init_root();
+		init_root(true);
 		return;
 	} catch (error) {
 		return error;

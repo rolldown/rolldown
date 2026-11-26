@@ -10,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // lazy.js
 var value$1;
 function init_lazy() {
-	return (init_lazy = __esmMin((() => {
+	return (init_lazy = __esmSync((() => {
 		globalThis.events.push("lazy");
 		value$1 = "lazy";
 	})))();
@@ -24,7 +24,7 @@ var init_required = __esmMin(() => {
 });
 // main.js
 function run() {
-	return [(init_lazy(), value$1), (init_required(), __toCommonJS(required_exports)).value];
+	return [(init_lazy(true), value$1), (init_required(), __toCommonJS(required_exports)).value];
 }
 export { run };
 
@@ -41,7 +41,7 @@ export { run };
 // lazy.js
 var value$1;
 function init_lazy() {
-	return (init_lazy = __esmMin(() => {
+	return (init_lazy = __esmSync(() => {
 		globalThis.events.push("lazy");
 		value$1 = "lazy";
 	}))();
@@ -55,7 +55,7 @@ var init_required = __esmMin(() => {
 });
 // main.js
 function run() {
-	return [(init_lazy(), value$1), (init_required(), __toCommonJS(required_exports)).value];
+	return [(init_lazy(true), value$1), (init_required(), __toCommonJS(required_exports)).value];
 }
 export { run };
 

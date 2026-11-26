@@ -811,3 +811,68 @@ test('a sibling that waits for just one of two async dependencies can release th
   );
   expect(run()).toEqual(['a start', 'ready', 'release', 'a end', 'parent', 'main object']);
 });
+
+test.each(['then', 'other'])('dynamic imports of a target exporting %s', async (name) => {
+  const sources: Record<string, string> = {
+    'main.mjs':
+      "export const load = () => import.defer('target.mjs'); export const eager = () => import('target.mjs'); export const extra = () => import('extra.mjs');",
+    'second.mjs': "export const load = () => import.defer('target.mjs');",
+    'extra.mjs': 'export const extraValue = 1;',
+    'target.mjs': `export function ${name}() {}`,
+  };
+  const build = await rolldown({
+    input: ['main.mjs', 'second.mjs'],
+    experimental: { importDefer: true },
+    plugins: [
+      {
+        name: 'sources',
+        resolveId: (id) => (id in sources ? id : null),
+        load: (id) => sources[id],
+      },
+    ],
+  });
+  try {
+    const { output } = await build.generate({});
+    const chunks = output.filter((item) => item.type === 'chunk');
+    const entries = chunks.filter((chunk) => chunk.isEntry);
+    const target = chunks.find((chunk) => chunk.exports.includes(name))!;
+    const main = entries.find((entry) => entry.exports.includes('eager'))!;
+    const second = entries.find((entry) => entry !== main)!;
+    const destination = chunks.find((chunk) => chunk.fileName === second.dynamicImports[0])!;
+    const extra = chunks.find((chunk) => chunk.exports.includes('extraValue'))!;
+    expect(second.dynamicImports).toEqual([destination.fileName]);
+    expect(main.dynamicImports).toEqual([destination.fileName, extra.fileName]);
+    for (const entry of entries) expect(entry.code).toContain(`./${destination.fileName}`);
+    if (name === 'then') {
+      expect(chunks).toHaveLength(5);
+      expect(destination.imports).toEqual([target.fileName]);
+      expect(destination.exports).not.toContain('then');
+    } else {
+      expect(chunks).toHaveLength(4);
+      expect(destination).toBe(target);
+    }
+  } finally {
+    await build.close();
+  }
+});
+
+test.each([false, true])(
+  'profilerNames preserves the deferred body name, minify %s',
+  async (minify) => {
+    const run = await bundle(
+      {
+        'main.mjs': "import defer * as ns from './target.mjs'; console.log(ns.frame);",
+        'target.mjs': "import { caller } from './stack.mjs'; export const frame = caller();",
+        'stack.mjs': `export function caller() {
+        const previous = Error.prepareStackTrace;
+        try {
+          Error.prepareStackTrace = (_, frames) => frames[1].getFunctionName();
+          return new Error().stack;
+        } finally { Error.prepareStackTrace = previous; }
+      }`,
+      },
+      { generatedCode: { profilerNames: true }, minify },
+    );
+    expect(run().map((name) => path.basename(name))).toEqual(['target.mjs']);
+  },
+);

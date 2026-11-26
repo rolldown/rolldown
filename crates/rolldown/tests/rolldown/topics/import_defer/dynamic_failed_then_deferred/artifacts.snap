@@ -36,9 +36,9 @@ export { result };
 // HIDDEN [\0rolldown/runtime.js]
 // throws.js
 var throws_exports = /* @__PURE__ */ __exportAll({});
-var throws_deferred = /* @__PURE__ */ __deferNs(() => (init_throws(), throws_exports), throws_exports);
+var throws_deferred = /* @__PURE__ */ __deferNs(() => (init_throws(true), throws_exports), throws_exports);
 function init_throws() {
-	return (init_throws = __esmMin((() => {
+	return (init_throws = __esmSync((() => {
 		throw { someError: "the error from throws" };
 	})))();
 }

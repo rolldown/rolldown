@@ -18,9 +18,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // target.js
 var target_exports = /* @__PURE__ */ __exportAll({ x: () => 1 });
-var target_deferred = /* @__PURE__ */ __deferNs(() => (init_target(), target_exports), target_exports);
+var target_deferred = /* @__PURE__ */ __deferNs(() => (init_target(true), target_exports), target_exports);
 function init_target() {
-	return (init_target = __esmMin((() => {
+	return (init_target = __esmSync((() => {
 		console.log("target");
 	})))();
 }

@@ -9,10 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // d.js
 var d_exports = /* @__PURE__ */ __exportAll({ x: () => x });
-var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(), d_exports), d_exports);
+var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(true), d_exports), d_exports);
 var import_ext_dyn, x;
 function init_d() {
-	return (init_d = __esmMin((() => {
+	return (init_d = __esmSync((() => {
 		import_ext_dyn = require("ext-dyn");
 		x = import_ext_dyn.value;
 	})))();

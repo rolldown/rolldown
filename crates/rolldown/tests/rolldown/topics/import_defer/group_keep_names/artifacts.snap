@@ -16,7 +16,7 @@ function r_default() {
 }
 var import_c;
 function init_r() {
-	return (init_r = __esmMin((() => {
+	return (init_r = __esmSync((() => {
 		import_c = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 			module.exports = { value: 41 };
 		})))());
@@ -26,7 +26,7 @@ function init_r() {
 }
 // main.js
 function run() {
-	return [(init_r(), r_default.name), (init_r(), r_default)()];
+	return [(init_r(true), r_default.name), (init_r(true), r_default)()];
 }
 export { run };
 

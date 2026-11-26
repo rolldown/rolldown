@@ -948,7 +948,26 @@ pub trait StatementFactoryExt<'ast> {
         )],
         builder,
       );
-      esm_call_expr.arguments.push(Argument::ObjectExpression(obj_expr));
+      // Ordinary profiled wrappers accept the object. A state wrapper takes a callable,
+      // so extract the arrow after the property initializer gives it the module's name.
+      let arg = if has_state {
+        Expression::new_computed_member_expression(
+          SPAN,
+          Expression::ObjectExpression(obj_expr),
+          Expression::new_string_literal(
+            SPAN,
+            oxc::ast::ast::Str::from_str_in(stable_id, builder),
+            None,
+            builder,
+          ),
+          false,
+          builder,
+        )
+        .into()
+      } else {
+        Argument::ObjectExpression(obj_expr)
+      };
+      esm_call_expr.arguments.push(arg);
     } else {
       esm_call_expr.arguments.push(Argument::ArrowFunctionExpression(arrow_expr));
     }

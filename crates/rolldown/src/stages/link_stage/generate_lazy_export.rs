@@ -342,5 +342,7 @@ fn unwrap_json_module(link_staged: &mut LinkStage, module_idx: ModuleIdx) {
     *link_staged.stmt_infos[module_idx].get_mut(wrapper_stmt_idx) = StmtInfo::default();
   }
   meta.wrapper_ref = None;
+  meta.import_defer_tracked_deps = None;
+  meta.deferred_self_check = false;
   meta.set_wrap_kind(WrapKind::None);
 }

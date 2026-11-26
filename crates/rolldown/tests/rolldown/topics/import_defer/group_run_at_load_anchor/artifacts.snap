@@ -15,23 +15,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## all.js
 
 ```js
-// HIDDEN [\0rolldown/runtime.js]
+import { a as __esmSync, i as __esmState, n as __esmDefer, o as __exportAll, r as __esmMin, t as __deferNs } from "./rolldown-runtime.js";
 // l.js
 function init_l() {
-	return (init_l = __esmMin((() => {
+	return (init_l = __esmState((() => {
 		globalThis.log.push("l");
-	})))();
+	}), () => []))(arguments[0]);
 }
 // d.js
 var d_exports = /* @__PURE__ */ __exportAll({ d: () => d });
-var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(), d_exports), d_exports);
+var d_deferred = /* @__PURE__ */ __deferNs(() => (__esmDefer(init_d), d_exports), d_exports);
 var d;
 function init_d() {
-	return (init_d = __esmMin((() => {
-		init_l();
+	return (init_d = __esmState((() => {
+		init_l(init_d);
 		globalThis.log.push("d");
 		d = "dl";
-	})))();
+	}), () => [init_l]))(arguments[0]);
 }
 // c.js
 const p = (async () => d_deferred)();
@@ -44,7 +44,7 @@ function init_m() {
 // r.js
 var r;
 function init_r() {
-	return (init_r = __esmMin((() => {
+	return (init_r = __esmSync((() => {
 		init_m();
 		globalThis.log.push("r");
 		r = "rm";
@@ -60,13 +60,22 @@ export { r as a, init_r as i, init_d as n, p as o, init_l as r, d as t };
 ## main.js
 
 ```js
+import { n as __esmDefer } from "./rolldown-runtime.js";
 import { a as r, i as init_r, n as init_d, o as p, r as init_l, t as d } from "./all.js";
 // e.js
-const readR = () => (init_r(), r);
-const readD = () => (init_d(), d);
+const readR = () => (init_r(true), r);
+const readD = () => (__esmDefer(init_d), d);
 // b.js
 init_l();
 globalThis.log.push("b");
 export { p, readD, readR };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmSync as a, __esmState as i, __esmDefer as n, __exportAll as o, __esmMin as r, __deferNs as t };
 
 ```

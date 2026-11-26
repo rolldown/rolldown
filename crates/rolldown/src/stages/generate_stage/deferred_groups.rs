@@ -90,7 +90,7 @@ impl GenerateStage<'_> {
           && matches!(meta.wrap_kind(), WrapKind::Esm)
           && meta.wrapper_ref.is_some()
           && !meta.is_tla_or_contains_tla_dependency
-          && meta.import_defer_tracked_deps.is_none()
+          && (meta.import_defer_tracked_deps.is_none() || keeps_wrapper.contains(&idx))
           && !meta.dynamic_defer_target
           && !chunk_graph.deferred_modules_run_at_load.contains(&idx)
           && !anchors.contains(&idx)

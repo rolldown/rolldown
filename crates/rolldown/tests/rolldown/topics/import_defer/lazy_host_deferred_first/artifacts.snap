@@ -6,16 +6,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## d.js
 
 ```js
-import { a as __exportAll, i as __esmMin, n as log, r as __deferNs, t as init_log } from "./log.js";
+import { a as __esmState, i as __esmDefer, n as log, o as __exportAll, r as __deferNs, t as init_log } from "./log.js";
 // d.js
 var d_exports = /* @__PURE__ */ __exportAll({});
-var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(), d_exports), d_exports);
+var d_deferred = /* @__PURE__ */ __deferNs(() => (__esmDefer(init_d), d_exports), d_exports);
 function init_d() {
-	return (init_d = __esmMin((() => {
-		init_log();
+	return (init_d = __esmState((() => {
+		init_log(init_d);
 		log.push("d");
 		throw new Error("d failed");
-	})))();
+	}), () => [init_log]))(arguments[0]);
 }
 export { d_exports as n, init_d as r, d_deferred as t };
 
@@ -35,11 +35,11 @@ export { t as ns } from "./d.js";
 // log.js
 var log;
 function init_log() {
-	return (init_log = __esmMin((() => {
+	return (init_log = __esmState((() => {
 		log = [];
-	})))();
+	}), () => []))(arguments[0]);
 }
-export { __exportAll as a, __esmMin as i, log as n, __deferNs as r, init_log as t };
+export { __esmState as a, __esmDefer as i, log as n, __exportAll as o, __deferNs as r, init_log as t };
 
 ```
 
@@ -74,17 +74,17 @@ export { log, result };
 ### d.js
 
 ```js
-import { n as __esmMin, r as __exportAll, t as __deferNs } from "./rolldown-runtime.js";
+import { a as __exportAll, i as __esmState, n as __esmDefer, t as __deferNs } from "./rolldown-runtime.js";
 import { n as log, t as init_log } from "./log.js";
 // d.js
 var d_exports = /* @__PURE__ */ __exportAll({});
-var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(), d_exports), d_exports);
+var d_deferred = /* @__PURE__ */ __deferNs(() => (__esmDefer(init_d), d_exports), d_exports);
 function init_d() {
-	return (init_d = __esmMin((() => {
-		init_log();
+	return (init_d = __esmState((() => {
+		init_log(init_d);
 		log.push("d");
 		throw new Error("d failed");
-	})))();
+	}), () => [init_log]))(arguments[0]);
 }
 export { d_exports as n, init_d as r, d_deferred as t };
 
@@ -93,7 +93,7 @@ export { d_exports as n, init_d as r, d_deferred as t };
 ### importer.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
+import { r as __esmMin } from "./rolldown-runtime.js";
 export { t as ns } from "./d.js";
 // importer.js
 function init_importer() {
@@ -106,13 +106,13 @@ init_importer();
 ### log.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
+import { i as __esmState } from "./rolldown-runtime.js";
 // log.js
 var log;
 function init_log() {
-	return (init_log = __esmMin((() => {
+	return (init_log = __esmState((() => {
 		log = [];
-	})))();
+	}), () => []))(arguments[0]);
 }
 export { log as n, init_log as t };
 
@@ -121,7 +121,7 @@ export { log as n, init_log as t };
 ### main.js
 
 ```js
-import { n as __esmMin } from "./rolldown-runtime.js";
+import { r as __esmMin } from "./rolldown-runtime.js";
 import { n as log, t as init_log } from "./log.js";
 // main.js
 var result;
@@ -153,6 +153,6 @@ export { log, result };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as n, __exportAll as r, __deferNs as t };
+export { __exportAll as a, __esmState as i, __esmDefer as n, __esmMin as r, __deferNs as t };
 
 ```

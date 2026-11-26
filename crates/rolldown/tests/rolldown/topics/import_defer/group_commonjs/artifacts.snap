@@ -34,7 +34,7 @@ function read() {
 }
 var import_shared$1, import_c;
 function init_route() {
-	return (init_route = __esmMin((() => {
+	return (init_route = __esmSync((() => {
 		// e.cjs
 		var require_e = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			globalThis.__events.push("e");
@@ -63,11 +63,11 @@ function init_route() {
 // main.js
 var import_shared = /* @__PURE__ */ __toESM(require_shared());
 function run() {
-	const value = (init_route(), read)();
+	const value = (init_route(true), read)();
 	return {
 		shared: import_shared.default,
 		value,
-		lazy: (init_route(), lazy)(),
+		lazy: (init_route(true), lazy)(),
 		events: globalThis.__events
 	};
 }

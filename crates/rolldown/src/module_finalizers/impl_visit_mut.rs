@@ -1017,7 +1017,11 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
         binding_name: wrap_ref_name,
         esm_fn_expr: esm_ref_expr,
         statements,
-        profiler_name: self.esm_wrapper_profiler_name(),
+        profiler_name: self
+          .ctx
+          .options
+          .profiler_names
+          .then_some(self.ctx.module.stable_id.as_str()),
         call_kind: if self.ctx.options.optimization.is_pife_for_module_wrappers_enabled()
           || (self.ctx.linking_info.wrapped_by_import_defer
             && self.ctx.options.optimization.is_pife_for_deferred_module_wrappers_enabled())
@@ -1049,9 +1053,8 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     wrapper_mode: ModuleWrapperMode,
   ) -> (String, String) {
     debug_assert!(
-      !self.ctx.linking_info.is_tla_or_contains_tla_dependency
-        && self.ctx.linking_info.import_defer_tracked_deps.is_none(),
-      "the root of a deferred group has a sync wrapper with no state record"
+      !self.ctx.linking_info.is_tla_or_contains_tla_dependency,
+      "the root of a deferred group has a synchronous wrapper"
     );
     self.push_esm_wrapper_stmt(program, wrapper_ref, allocator::Vec::new_in(self), 0, wrapper_mode);
     let wrapper = program.body.pop().expect("`push_esm_wrapper_stmt` pushes one statement");
@@ -1080,22 +1083,18 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     }
   }
 
-  /// `__esmState` for a module that a deferred access observes, else `__esm` with profiler names
-  /// and `__esmMin` without.
+  /// Choose the readiness check for a deferred observation. Other wrappers use the ordinary
+  /// helper for the configured profiler mode.
   fn esm_wrapper_runtime_ref(&self) -> SymbolRef {
-    if self.ctx.linking_info.import_defer_tracked_deps.is_some() {
+    if self.ctx.linking_info.deferred_self_check {
+      self.canonical_ref_for_runtime("__esmSync")
+    } else if self.ctx.linking_info.import_defer_tracked_deps.is_some() {
       self.canonical_ref_for_runtime("__esmState")
     } else if self.ctx.options.profiler_names {
       self.canonical_ref_for_runtime("__esm")
     } else {
       self.canonical_ref_for_runtime("__esmMin")
     }
-  }
-
-  /// The `__esmState` wrapper takes the body as a plain arrow, so it has no profiler name.
-  fn esm_wrapper_profiler_name(&self) -> Option<&str> {
-    (self.ctx.options.profiler_names && self.ctx.linking_info.import_defer_tracked_deps.is_none())
-      .then_some(self.ctx.module.stable_id.as_str())
   }
 
   /// The `__esmState` wrapper of a tracked module (`import defer`): its dependency list

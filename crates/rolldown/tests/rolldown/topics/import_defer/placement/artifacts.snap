@@ -10,20 +10,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 // log.js
 var log;
 function init_log() {
-	return (init_log = __esmMin((() => {
+	return (init_log = __esmState((() => {
 		log = [];
-	})))();
+	}), () => []))(arguments[0]);
 }
 function init_d() {
-	return (init_d = __esmMin((() => {
-		init_log();
+	return (init_d = __esmState((() => {
+		init_log(init_d);
 		log.push("d");
-	})))();
+	}), () => [init_log]))(arguments[0]);
 }
 // a.js
 init_log();
 function read() {
-	return init_d(), "d";
+	return __esmDefer(init_d), "d";
 }
 // main.js
 init_d();

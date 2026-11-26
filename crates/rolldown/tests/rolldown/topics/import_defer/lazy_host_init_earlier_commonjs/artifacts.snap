@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __commonJSMin, __esmMin, __toESM };
+export { __commonJSMin, __esmSync, __toESM };
 
 ```
 
@@ -22,9 +22,9 @@ init_a();
 ## a.js
 
 ```js
-import { __esmMin } from "./_virtual/_rolldown/runtime.js";
+import { __esmSync } from "./_virtual/_rolldown/runtime.js";
 function init_a() {
-	return (init_a = __esmMin((() => {
+	return (init_a = __esmSync((() => {
 		globalThis.__initLog.push("a");
 	})))();
 }
@@ -51,7 +51,7 @@ globalThis.__initLog.push("b:1");
 import "./b.js";
 import { init_a } from "./a.js";
 // main.js
-const read = () => (init_a(), "a");
+const read = () => (init_a(true), "a");
 export { read };
 
 ```
@@ -87,7 +87,7 @@ globalThis.__ySawA = globalThis.__initLog.includes("a");
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 exports.__commonJSMin = __commonJSMin;
-exports.__esmMin = __esmMin;
+exports.__esmSync = __esmSync;
 exports.__toESM = __toESM;
 
 ```
@@ -97,7 +97,7 @@ exports.__toESM = __toESM;
 ```js
 const require_runtime = require("./_virtual/_rolldown/runtime.js");
 function init_a() {
-	return (init_a = require_runtime.__esmMin((() => {
+	return (init_a = require_runtime.__esmSync((() => {
 		globalThis.__initLog.push("a");
 	})))();
 }
@@ -129,7 +129,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 require("./b.js");
 const require_a = require("./a.js");
 // main.js
-const read = () => (require_a.init_a(), "a");
+const read = () => (require_a.init_a(true), "a");
 exports.read = read;
 
 ```

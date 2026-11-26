@@ -784,7 +784,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // `inline_common_chunk_module_bailout` keeps the chunk of an `import.defer()` target a file,
     // and a lazy host is an entry chunk. Thus the chunk has exports.
     debug_assert!(self.ctx.inline_state.record(host).is_none());
-    let host_chunk = &self.ctx.chunk_graph.chunk_table[host];
+    let load_chunk =
+      self.ctx.chunk_graph.deferred_import_facades.get(&host).copied().unwrap_or(host);
+    let host_chunk = &self.ctx.chunk_graph.chunk_table[load_chunk];
     let name_of = |symbol_ref: SymbolRef| {
       host_chunk.exports_to_other_chunks.get(&symbol_ref).and_then(|names| names.first())
     };
@@ -908,9 +910,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ))
   }
 
-  /// `__esmDefer(init_foo)` for a deferred access to a tracked module, else `init_foo()`.
+  /// A deferred read checks the tracked request graph or the isolated wrapper’s running sentinel.
   fn deferred_init_call_expr(&self, target: ModuleIdx) -> ast::Expression<'ast> {
     let target_info = &self.ctx.linking_infos[target];
+    if target_info.deferred_self_check
+      && let Some(wrapper) = target_info.wrapper_ref
+    {
+      return Expression::new_call_with_arg(
+        self.finalized_expr_for_symbol_ref(wrapper, false, false).0,
+        Expression::new_boolean_literal(SPAN, true, self),
+        false,
+        self,
+      );
+    }
     if target_info.import_defer_tracked_deps.is_some()
       && let Some(wrapper_ref) = target_info.wrapper_ref
     {
@@ -1301,6 +1313,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // linker keeps `__toESM` by the same rule. `cjs_import_init_expr` keeps the interop mode of
     // the importer. See internal-docs/import-defer/implementation.md.
     let init_expr = match &self.ctx.modules[target] {
+      Module::Normal(module) if self.ctx.linking_infos[target].shared_deferred_cjs_target => self
+        .to_esm_cached_call(
+          self.bundled_cjs_cache_key(module.exec_order),
+          self.cjs_import_init_expr(target, false),
+          self.ctx.module.should_consider_node_esm_spec_for_static_import(),
+        ),
       Module::Normal(_) => self.cjs_import_init_expr(target, true),
       Module::External(external) => self.external_require_expr(external, true),
     };
@@ -1349,30 +1367,39 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return require_call;
     }
     self.to_esm_cached_call(
-      &file_name,
+      self.external_cjs_cache_key(&file_name),
       require_call,
       self.ctx.module.should_consider_node_esm_spec_for_static_import(),
     )
   }
 
+  fn external_cjs_cache_key(&self, file_name: &str) -> ast::Argument<'ast> {
+    ast::Argument::new_string_literal(
+      SPAN,
+      oxc::ast::ast::Str::from_str_in(file_name, self),
+      None,
+      self,
+    )
+  }
+
+  fn bundled_cjs_cache_key(&self, exec_order: u32) -> ast::Argument<'ast> {
+    ast::Argument::new_numeric_literal(SPAN, exec_order.into(), None, self)
+  }
+
   /// `__toESMCached("ext", <exports>)`, or `__toESMCached("ext", <exports>, 1)` in Node mode. The
-  /// helper keeps one namespace object for each key and interop mode. The key is the file name of
+  /// helper keeps one namespace object for each key and interop mode. A bundled key is the numeric
+  /// execution order of the module. An external key is the file name of
   /// the external module (`ExternalModule::get_file_name`), which is the same in all chunks. The
   /// `require()` path is not: it is relative to the folder of the chunk. The exports object is not
   /// a correct key either: a primitive cannot be a key, and two externals can export one object.
   fn to_esm_cached_call(
     &self,
-    file_name: &str,
+    key: ast::Argument<'ast>,
     exports_expr: Expression<'ast>,
     node_mode: bool,
   ) -> Expression<'ast> {
     let mut args = oxc::allocator::Vec::with_capacity_in(3, self);
-    args.push(ast::Argument::new_string_literal(
-      SPAN,
-      oxc::ast::ast::Str::from_str_in(file_name, self),
-      None,
-      self,
-    ));
+    args.push(key);
     args.push(ast::Argument::from(exports_expr));
     if node_mode {
       args.push(ast::Argument::new_numeric_literal(SPAN, 1.0, None, self));
@@ -1394,17 +1421,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// external gets the same object, also in another chunk, in a wrapper or from `import.defer()`.
   fn deferred_ns_cached_call(
     &self,
-    file_name: &str,
+    key: ast::Argument<'ast>,
     namespace: Expression<'ast>,
     node_mode: bool,
   ) -> Expression<'ast> {
     let mut args = oxc::allocator::Vec::with_capacity_in(3, self);
-    args.push(ast::Argument::new_string_literal(
-      SPAN,
-      oxc::ast::ast::Str::from_str_in(file_name, self),
-      None,
-      self,
-    ));
+    args.push(key);
     args.push(Expression::new_arrow_returning(namespace, self).into());
     if node_mode {
       args.push(ast::Argument::new_numeric_literal(SPAN, 1.0, None, self));
@@ -1506,11 +1528,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return decl;
     }
     let Some(init_body) = self.cjs_deferred_namespace_expr(rec_idx) else { return decl };
-    let deferred_ns = if let Some(Module::External(external)) =
-      rec.resolved_module.map(|target| &self.ctx.modules[target])
-    {
+    let target = rec.resolved_module?;
+    let key = match &self.ctx.modules[target] {
+      Module::External(external) => {
+        Some(self.external_cjs_cache_key(&external.get_file_name(self.ctx.resolved_paths)))
+      }
+      Module::Normal(module) => self.ctx.linking_infos[target]
+        .shared_deferred_cjs_target
+        .then(|| self.bundled_cjs_cache_key(module.exec_order)),
+    };
+    let deferred_ns = if let Some(key) = key {
       self.deferred_ns_cached_call(
-        &external.get_file_name(self.ctx.resolved_paths),
+        key,
         init_body,
         self.ctx.module.should_consider_node_esm_spec_for_static_import(),
       )
@@ -4491,11 +4520,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // `strictExecutionOrder` gives it an execution-order wrapper.
         let is_defer = rec.is_defer_phase();
         let importee_info = &self.ctx.linking_infos[importee_idx];
-        if ((importee_info.dynamic_defer_target
-          && (is_defer || importee_info.wrapper_ref.is_none()))
-          || self.ctx.chunk_graph.lazy_dynamic_defer_host(importee_idx, importee_info).is_some())
-          && let Some(new_expr) =
-            self.rewrite_dynamic_import_of_defer_target(Some(&mut **expr), importee_idx, is_defer)
+        if self.ctx.chunk_graph.dynamic_import_reads_defer_bindings(
+          importee_idx,
+          importee_info,
+          is_defer,
+        ) && let Some(new_expr) =
+          self.rewrite_dynamic_import_of_defer_target(Some(&mut **expr), importee_idx, is_defer)
         {
           *node = new_expr;
           return true;
@@ -4663,8 +4693,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               false,
               self,
             );
-            let namespace = self.to_esm_cached_call(&file_name, require_call, node_mode);
-            let deferred_ns = self.deferred_ns_cached_call(&file_name, namespace, node_mode);
+            let namespace = self.to_esm_cached_call(
+              self.external_cjs_cache_key(&file_name),
+              require_call,
+              node_mode,
+            );
+            let deferred_ns = self.deferred_ns_cached_call(
+              self.external_cjs_cache_key(&file_name),
+              namespace,
+              node_mode,
+            );
             self.async_arrow_iife(None, deferred_ns)
           });
           return true;

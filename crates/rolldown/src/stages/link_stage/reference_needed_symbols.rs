@@ -68,7 +68,7 @@ impl LinkStage<'_> {
           // namespace that nothing reads adds no helper.
           // See internal-docs/import-defer/implementation.md.
           if !deferred_access_targets.is_empty() {
-            let mut needs_deferred_to_esm = false;
+            let mut interop_helpers = RuntimeHelper::empty();
             let mut targets = stmt_info
               .referenced_symbols
               .iter()
@@ -82,13 +82,19 @@ impl LinkStage<'_> {
                 DeferredAccess::Esm(target) => Some(target),
                 DeferredAccess::Cjs(rec_idx) => {
                   let target = importer.import_records[rec_idx].resolved_module?;
-                  needs_deferred_to_esm |= matches!(self.module_table[target], Module::Normal(_));
+                  if matches!(self.module_table[target], Module::Normal(_)) {
+                    interop_helpers |= if self.metas[target].shared_deferred_cjs_target {
+                      RuntimeHelper::ToEsmCached
+                    } else {
+                      RuntimeHelper::ToEsm
+                    };
+                  }
                   Some(target)
                 }
               })
               .collect::<Vec<_>>();
-            if needs_deferred_to_esm {
-              depended_runtime_helper_map.push(RuntimeHelper::ToEsm, stmt_info_idx);
+            for helper in interop_helpers {
+              depended_runtime_helper_map.push(helper, stmt_info_idx);
             }
             targets.sort_unstable();
             targets.dedup();

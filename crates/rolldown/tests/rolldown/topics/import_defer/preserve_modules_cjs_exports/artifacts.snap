@@ -7,7 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-exports.__esmMin = __esmMin;
+exports.__esmDefer = __esmDefer;
+exports.__esmState = __esmState;
 
 ```
 
@@ -22,14 +23,14 @@ function read() {
 }
 var make, value, count, Klass;
 function init_a() {
-	return (init_a = require_runtime.__esmMin((() => {
-		require_log.init_log();
+	return (init_a = require_runtime.__esmState((() => {
+		require_log.init_log(init_a);
 		make = (v) => v;
 		require_log.log.push("a");
 		value = make("a");
 		count = make(1);
 		Klass = class {};
-	})))();
+	}), () => [require_log.init_log]))(arguments[0]);
 }
 Object.defineProperty(exports, "Klass", {
 	enumerable: true,
@@ -71,9 +72,9 @@ const require_runtime = require("./_virtual/_rolldown/runtime.js");
 // log.js
 var log;
 function init_log() {
-	return (init_log = require_runtime.__esmMin((() => {
+	return (init_log = require_runtime.__esmState((() => {
 		log = [];
-	})))();
+	}), () => []))(arguments[0]);
 }
 Object.defineProperty(exports, "init_log", {
 	enumerable: true,
@@ -94,6 +95,7 @@ Object.defineProperty(exports, "log", {
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_runtime = require("./_virtual/_rolldown/runtime.js");
 const require_log = require("./log.js");
 const require_a = require("./a.js");
 // main.js
@@ -101,10 +103,10 @@ require_log.init_log();
 require_log.log.push("main");
 const before = require_log.log.slice();
 const values = [
-	(require_a.init_a(), require_a.value),
-	(require_a.init_a(), require_a.count),
-	typeof (require_a.init_a(), require_a.Klass),
-	(require_a.init_a(), require_a.read)()
+	(require_runtime.__esmDefer(require_a.init_a), require_a.value),
+	(require_runtime.__esmDefer(require_a.init_a), require_a.count),
+	typeof (require_runtime.__esmDefer(require_a.init_a), require_a.Klass),
+	(require_runtime.__esmDefer(require_a.init_a), require_a.read)()
 ];
 exports.before = before;
 exports.log = require_log.log;

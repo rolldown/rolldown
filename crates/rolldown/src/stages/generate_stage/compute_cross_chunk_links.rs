@@ -1093,7 +1093,21 @@ impl GenerateStage<'_> {
         || self.link_output.metas[importer_idx].wrapped_by_import_defer)
   }
 
-  fn collect_dynamic_chunk_import(
+  pub(super) fn is_live_dynamic_import(
+    &self,
+    importer: ModuleIdx,
+    record: &ResolvedImportRecord,
+    target: ModuleIdx,
+  ) -> bool {
+    record.kind == ImportKind::DynamicImport
+      && self.link_output.metas[target].is_included
+      && !record.meta.contains(ImportRecordMeta::DeadDynamicImport)
+      && record.dynamic_import_expr_info.as_ref().is_none_or(|info| {
+        self.link_output.metas[importer].stmt_info_included.has_bit(info.stmt_info_idx)
+      })
+  }
+
+  pub(super) fn collect_dynamic_chunk_import(
     &self,
     chunk_graph: &ChunkGraph,
     importer_idx: ModuleIdx,
@@ -1101,13 +1115,20 @@ impl GenerateStage<'_> {
     importee_module_idx: ModuleIdx,
     cross_chunk_dynamic_imports: &mut FxIndexSet<ChunkIdx>,
   ) {
-    if !self.link_output.metas[importee_module_idx].is_included
-      || !matches!(import_record.kind, ImportKind::DynamicImport)
-      || import_record.meta.contains(ImportRecordMeta::DeadDynamicImport)
-      || import_record.dynamic_import_expr_info.as_ref().is_some_and(|info| {
-        !self.link_output.metas[importer_idx].stmt_info_included.has_bit(info.stmt_info_idx)
-      })
+    if !self.is_live_dynamic_import(importer_idx, import_record, importee_module_idx) {
+      return;
+    }
+    if let Some(host) = chunk_graph.module_to_chunk[importee_module_idx]
+      && let Some(&facade) = chunk_graph.deferred_import_facades.get(&host)
+      && chunk_graph.dynamic_import_reads_defer_bindings(
+        importee_module_idx,
+        &self.link_output.metas[importee_module_idx],
+        import_record.is_defer_phase(),
+      )
     {
+      if chunk_graph.module_to_chunk[importer_idx] != Some(host) {
+        cross_chunk_dynamic_imports.insert(facade);
+      }
       return;
     }
     // The finalizer rewrites `import()` specifiers through `entry_module_to_entry_chunk`, which

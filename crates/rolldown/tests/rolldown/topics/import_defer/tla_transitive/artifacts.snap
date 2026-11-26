@@ -10,15 +10,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 // log.js
 var log;
 function init_log() {
-	return (init_log = __esmMin((() => {
+	return (init_log = __esmState((() => {
 		log = [];
-	})))();
+	}), () => []))(arguments[0]);
 }
 // tla.js
 function init_tla() {
 	return (init_tla = __esmState((async () => {
 		try {
-			init_log();
+			init_log(init_tla);
 		} catch (e) {
 			throw __esmFail(init_tla, e, true);
 		}
@@ -30,19 +30,19 @@ function init_tla() {
 			throw __esmFail(init_tla, e);
 		}
 		__esmEnd(init_tla);
-	}), () => [], 3))(arguments[0]);
+	}), () => [init_log], 3))(arguments[0]);
 }
 function init_imports_tla() {
 	return (init_imports_tla = __esmState((async () => {
 		try {
-			init_log();
+			init_log(init_imports_tla);
 			__esmDepDone(init_tla(init_imports_tla), init_tla, init_imports_tla) || await init_tla(init_imports_tla);
 			log.push("imports-tla");
 		} catch (e) {
 			throw __esmFail(init_imports_tla, e);
 		}
 		__esmEnd(init_imports_tla);
-	}), () => [init_tla], 1))(arguments[0]);
+	}), () => [init_log, init_tla], 1))(arguments[0]);
 }
 // main.js
 init_log();

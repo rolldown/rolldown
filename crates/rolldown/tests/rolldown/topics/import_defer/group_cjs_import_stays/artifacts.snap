@@ -9,41 +9,45 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // x.js
 function init_x() {
-	return (init_x = __esmMin((() => {
+	return (init_x = __esmState((() => {
 		globalThis.__log.push("x");
-	})))();
+	}), () => []))(arguments[0]);
 }
+// c.cjs
+var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
+	globalThis.__log.push("c");
+	exports.value = 1 + (globalThis.__zero ?? 0);
+}));
 // m.js
 var import_c, value;
+function init_m() {
+	return (init_m = __esmState((() => {
+		init_x(init_m);
+		import_c = /* @__PURE__ */ __toESM(require_c());
+		value = import_c.value;
+	}), () => [init_x]))(arguments[0]);
+}
 // r.js
 function read() {
 	return [value, globalThis.__log];
 }
 function init_r() {
-	return (init_r = __esmMin((() => {
-		// c.cjs
-		var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
-			globalThis.__log.push("c");
-			exports.value = 1 + (globalThis.__zero ?? 0);
-		}));
-		// m.js
-		init_x();
-		import_c = /* @__PURE__ */ __toESM(require_c());
-		value = import_c.value;
-	})))();
+	return (init_r = __esmState((() => {
+		init_m(init_r);
+	}), () => [init_m]))(arguments[0]);
 }
 function init_s() {
-	return (init_s = __esmMin((() => {
-		init_x();
-	})))();
+	return (init_s = __esmState((() => {
+		init_x(init_s);
+	}), () => [init_x]))(arguments[0]);
 }
 // main.js
 globalThis.__log = [];
 function run() {
-	return (init_r(), read)();
+	return (__esmDefer(init_r), read)();
 }
 function runS() {
-	return init_s(), 1;
+	return __esmDefer(init_s), 1;
 }
 export { run, runS };
 

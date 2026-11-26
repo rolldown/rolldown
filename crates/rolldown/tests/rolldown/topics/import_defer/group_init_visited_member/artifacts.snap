@@ -7,52 +7,73 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// m1.js
+function init_m1() {
+	return (init_m1 = __esmState((() => {
+		globalThis.__log.push("m1");
+	}), () => []))(arguments[0]);
+}
+// c1.cjs
+var require_c1 = /* @__PURE__ */ __commonJSMin(((exports) => {
+	globalThis.__log.push("c1");
+	exports.value = 1 + (globalThis.__zero ?? 0);
+}));
 // p1.js
 function read$1() {
 	return import_c1.value;
 }
 var import_c1;
+function init_p1() {
+	return (init_p1 = __esmState((() => {
+		import_c1 = /* @__PURE__ */ __toESM(require_c1());
+		init_m1(init_p1);
+		globalThis.__log.push("p1");
+	}), () => [init_m1]))(arguments[0]);
+}
 // r1.js
 function init_r1() {
-	return (init_r1 = __esmMin((() => {
-		// c1.cjs
-		var require_c1 = /* @__PURE__ */ __commonJSMin(((exports) => {
-			globalThis.__log.push("c1");
-			exports.value = 1 + (globalThis.__zero ?? 0);
-		}));
-		// m1.js
-		globalThis.__log.push("m1");
-		// p1.js
-		import_c1 = /* @__PURE__ */ __toESM(require_c1());
-		globalThis.__log.push("p1");
-	})))();
+	return (init_r1 = __esmState((() => {
+		init_m1(init_r1);
+		init_p1(init_r1);
+	}), () => [init_m1, init_p1]))(arguments[0]);
 }
+// c2.cjs
+var require_c2 = /* @__PURE__ */ __commonJSMin(((exports) => {
+	globalThis.__log.push("c2");
+	exports.value = 2 + (globalThis.__zero ?? 0);
+}));
 // p2.js
 var import_c2, value;
+function init_p2() {
+	return (init_p2 = __esmState((() => {
+		import_c2 = /* @__PURE__ */ __toESM(require_c2());
+		init_q2(init_p2);
+		globalThis.__log.push("p2");
+		value = import_c2.value;
+	}), () => [init_q2]))(arguments[0]);
+}
 // q2.js
 function read() {
 	return value;
 }
+function init_q2() {
+	return (init_q2 = __esmState((() => {
+		init_p2(init_q2);
+		globalThis.__log.push("q2");
+	}), () => [init_p2]))(arguments[0]);
+}
 // r2.js
 function init_r2() {
-	return (init_r2 = __esmMin((() => {
-		// p2.js
-		import_c2 = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports) => {
-			globalThis.__log.push("c2");
-			exports.value = 2 + (globalThis.__zero ?? 0);
-		})))());
-		globalThis.__log.push("p2");
-		value = import_c2.value;
-		// q2.js
-		globalThis.__log.push("q2");
-	})))();
+	return (init_r2 = __esmState((() => {
+		init_q2(init_r2);
+	}), () => [init_q2]))(arguments[0]);
 }
 // main.js
 globalThis.__log = [];
 function run() {
 	return [
-		(init_r1(), read$1)(),
-		(init_r2(), read)(),
+		(__esmDefer(init_r1), read$1)(),
+		(__esmDefer(init_r2), read)(),
 		globalThis.__log
 	];
 }

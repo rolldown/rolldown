@@ -15,6 +15,8 @@ use crate::{
 #[derive(Debug)]
 pub struct ChunkGraph {
   pub chunk_table: ChunkTable,
+  /// ESM loading facades for deferred targets in chunks with a potentially callable `then`.
+  pub deferred_import_facades: FxHashMap<ChunkIdx, ChunkIdx>,
   pub sorted_chunk_idx_vec: Vec<ChunkIdx>,
   /// Module to chunk that contains the module
   pub module_to_chunk: IndexVec<ModuleIdx, Option<ChunkIdx>>,
@@ -139,6 +141,7 @@ impl ChunkGraph {
   pub fn new(modules_len: usize) -> Self {
     Self {
       chunk_table: ChunkTable::default(),
+      deferred_import_facades: FxHashMap::default(),
       module_to_chunk: index_vec![None; modules_len],
       sorted_chunk_idx_vec: Vec::new(),
       entry_module_to_entry_chunk: FxHashMap::default(),
@@ -218,6 +221,18 @@ impl ChunkGraph {
       }
       _ => None,
     }
+  }
+
+  /// Whether this import loads internal bindings (init and namespace) from the module's
+  /// physical chunk. Both the import expression and its chunk metadata must take the same path.
+  pub fn dynamic_import_reads_defer_bindings(
+    &self,
+    module: ModuleIdx,
+    meta: &LinkingMetadata,
+    is_defer: bool,
+  ) -> bool {
+    (meta.dynamic_defer_target && (is_defer || meta.wrapper_ref.is_none()))
+      || self.lazy_dynamic_defer_host(module, meta).is_some()
   }
 
   /// For an ESM module of a deferred closure, the chunk that holds the code of the module and does

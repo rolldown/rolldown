@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __esmMin };
+export { __esmSync };
 
 ```
 
@@ -22,9 +22,9 @@ init_a();
 ## a.js
 
 ```js
-import { __esmMin } from "./_virtual/_rolldown/runtime.js";
+import { __esmSync } from "./_virtual/_rolldown/runtime.js";
 function init_a() {
-	return (init_a = __esmMin((() => {
+	return (init_a = __esmSync((() => {
 		globalThis.__initLog.push("a");
 	})))();
 }
@@ -49,7 +49,7 @@ globalThis.__initLog.push("b");
 import "./b.js";
 import { init_a } from "./a.js";
 // main.js
-const read = () => (init_a(), "a");
+const read = () => (init_a(true), "a");
 export { read };
 
 ```
@@ -70,7 +70,7 @@ globalThis.__initLog.push("y");
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-exports.__esmMin = __esmMin;
+exports.__esmSync = __esmSync;
 
 ```
 
@@ -79,7 +79,7 @@ exports.__esmMin = __esmMin;
 ```js
 const require_runtime = require("./_virtual/_rolldown/runtime.js");
 function init_a() {
-	return (init_a = require_runtime.__esmMin((() => {
+	return (init_a = require_runtime.__esmSync((() => {
 		globalThis.__initLog.push("a");
 	})))();
 }
@@ -109,7 +109,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 require("./b.js");
 const require_a = require("./a.js");
 // main.js
-const read = () => (require_a.init_a(), "a");
+const read = () => (require_a.init_a(true), "a");
 exports.read = read;
 
 ```

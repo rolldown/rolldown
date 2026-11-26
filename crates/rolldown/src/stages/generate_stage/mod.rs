@@ -126,6 +126,7 @@ mod code_splitting;
 mod compute_cross_chunk_links;
 mod compute_wrapped_esm_init_metadata;
 mod deferred_groups;
+mod deferred_import_facades;
 mod detect_ineffective_dynamic_imports;
 mod dynamic_already_loaded;
 mod dynamic_entry_namespace;
@@ -260,6 +261,7 @@ impl<'a> GenerateStage<'a> {
       &final_esm_init_metadata,
     );
     if import_defer {
+      self.add_deferred_import_facades(&mut chunk_graph, &order_state);
       self.trace_action_chunks_infos(&chunk_graph);
     }
 

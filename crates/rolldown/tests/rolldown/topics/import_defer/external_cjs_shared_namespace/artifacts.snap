@@ -25,7 +25,7 @@ const getM = () => ext_shared_deferred$1;
 // wrapped.js
 var import_ext_shared, ext_shared_deferred, getW;
 function init_wrapped() {
-	return (init_wrapped = require_rolldown_runtime.__esmMin((() => {
+	return (init_wrapped = require_rolldown_runtime.__esmSync((() => {
 		ext_shared_deferred = /* @__PURE__ */ require_rolldown_runtime.__deferNsCached("ext-shared", () => import_ext_shared || (import_ext_shared = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-shared", require("ext-shared"))));
 		getW = () => ext_shared_deferred;
 	})))();
@@ -39,7 +39,7 @@ const results = async () => {
 	return {
 		twoFiles: getA() === getB(),
 		oneFile: one === two && one === getA(),
-		wrapper: (init_wrapped(), getW)() === getA(),
+		wrapper: (init_wrapped(true), getW)() === getA(),
 		dynamic: dynamic === getA(),
 		foo: fooA(),
 		defaultTypes: [typeof getA().default, typeof getM().default],
@@ -74,10 +74,10 @@ Object.defineProperty(exports, "__deferNsCached", {
 		return __deferNsCached;
 	}
 });
-Object.defineProperty(exports, "__esmMin", {
+Object.defineProperty(exports, "__esmSync", {
 	enumerable: true,
 	get: function() {
-		return __esmMin;
+		return __esmSync;
 	}
 });
 Object.defineProperty(exports, "__toESMCached", {

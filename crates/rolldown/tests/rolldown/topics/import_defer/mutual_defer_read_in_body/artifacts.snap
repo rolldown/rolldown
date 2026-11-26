@@ -33,22 +33,22 @@ function read(access) {
 }
 var log;
 function init_log() {
-	return (init_log = __esmMin((() => {
+	return (init_log = __esmState((() => {
 		log = [];
-	})))();
+	}), () => []))(arguments[0]);
 }
 function init_b() {
 	return (init_b = __esmState((() => {
-		init_log();
+		init_log(init_b);
 		log.push("b runs");
-	}), () => [init_a]))(arguments[0]);
+	}), () => [init_a, init_log]))(arguments[0]);
 }
 // a.js
 function init_a() {
 	return (init_a = __esmState((() => {
-		init_log();
+		init_log(init_a);
 		log.push("a reads b: " + read(() => (__esmDefer(init_b), 1)));
-	}), () => [init_b]))(arguments[0]);
+	}), () => [init_b, init_log]))(arguments[0]);
 }
 // main.js
 init_log();

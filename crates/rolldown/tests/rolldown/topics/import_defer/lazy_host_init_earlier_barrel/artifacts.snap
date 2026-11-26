@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __esmMin };
+export { __esmSync };
 
 ```
 
@@ -30,9 +30,9 @@ init_z();
 ## a.js
 
 ```js
-import { __esmMin } from "./_virtual/_rolldown/runtime.js";
+import { __esmSync } from "./_virtual/_rolldown/runtime.js";
 function init_a() {
-	return (init_a = __esmMin((() => {
+	return (init_a = __esmSync((() => {
 		globalThis.__initLog.push("a");
 	})))();
 }
@@ -60,8 +60,8 @@ import "./b.js";
 import { init_a } from "./a.js";
 import { init_z } from "./z.js";
 // main.js
-const read = () => (init_a(), "a");
-const readZ = () => (init_z(), 1);
+const read = () => (init_a(true), "a");
+const readZ = () => (init_z(true), 1);
 export { read, readZ };
 
 ```
@@ -77,9 +77,9 @@ globalThis.__yRan = true;
 ## z.js
 
 ```js
-import { __esmMin } from "./_virtual/_rolldown/runtime.js";
+import { __esmSync } from "./_virtual/_rolldown/runtime.js";
 function init_z() {
-	return (init_z = __esmMin((() => {
+	return (init_z = __esmSync((() => {
 		globalThis.__initLog.push("z");
 	})))();
 }

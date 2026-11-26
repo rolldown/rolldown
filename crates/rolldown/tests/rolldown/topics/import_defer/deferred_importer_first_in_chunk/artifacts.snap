@@ -9,24 +9,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0rolldown/runtime.js]
 // w.js
 function init_w() {
-	return (init_w = __esmMin((() => {
+	return (init_w = __esmState((() => {
 		globalThis.order.push("w");
-	})))();
+	}), () => []))(arguments[0]);
 }
 // d.js
 var value;
 function init_d() {
-	return (init_d = __esmMin((() => {
-		init_w();
+	return (init_d = __esmState((() => {
+		init_w(init_d);
 		globalThis.order.push("d");
 		value = String("d");
-	})))();
+	}), () => [init_w]))(arguments[0]);
 }
 // a.js
 init_w();
 globalThis.order.push("a");
 function read() {
-	return init_d(), value;
+	return __esmDefer(init_d), value;
 }
 // main.js
 init_d();

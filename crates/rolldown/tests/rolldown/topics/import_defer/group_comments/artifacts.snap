@@ -26,7 +26,7 @@ function read() {
 	return [describe(), made.made];
 }
 function init_r() {
-	return (init_r = __esmMin((() => {
+	return (init_r = __esmSync((() => {
 		// helper.js
 		globalThis.__helper = true;
 		// m.js
@@ -37,7 +37,7 @@ function init_r() {
 }
 // main.js
 function run() {
-	return (init_r(), read)();
+	return (init_r(true), read)();
 }
 export { run };
 

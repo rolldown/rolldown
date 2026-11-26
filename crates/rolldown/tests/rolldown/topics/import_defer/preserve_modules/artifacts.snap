@@ -7,20 +7,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __deferNs, __esmMin, __exportAll };
+export { __deferNs, __esmDefer, __esmState, __exportAll };
 
 ```
 
 ## d.js
 
 ```js
-import { __esmMin } from "./_virtual/_rolldown/runtime.js";
+import { __esmState } from "./_virtual/_rolldown/runtime.js";
 import { init_log, log } from "./log.js";
 function init_d() {
-	return (init_d = __esmMin((() => {
-		init_log();
+	return (init_d = __esmState((() => {
+		init_log(init_d);
 		log.push("d");
-	})))();
+	}), () => [init_log]))(arguments[0]);
 }
 export { init_d };
 
@@ -29,18 +29,18 @@ export { init_d };
 ## e.js
 
 ```js
-import { __deferNs, __esmMin, __exportAll } from "./_virtual/_rolldown/runtime.js";
+import { __deferNs, __esmDefer, __esmState, __exportAll } from "./_virtual/_rolldown/runtime.js";
 import { init_log, log } from "./log.js";
 // e.js
 var e_exports = /* @__PURE__ */ __exportAll({ value: () => "e" });
-var e_deferred = /* @__PURE__ */ __deferNs(() => (init_e(), e_exports), e_exports);
+var e_deferred = /* @__PURE__ */ __deferNs(() => (__esmDefer(init_e), e_exports), e_exports);
 var value;
 function init_e() {
-	return (init_e = __esmMin((() => {
-		init_log();
+	return (init_e = __esmState((() => {
+		init_log(init_e);
 		log.push("e");
 		value = "e";
-	})))();
+	}), () => [init_log]))(arguments[0]);
 }
 export { e_deferred, e_exports, init_e, value };
 
@@ -49,13 +49,13 @@ export { e_deferred, e_exports, init_e, value };
 ## log.js
 
 ```js
-import { __esmMin } from "./_virtual/_rolldown/runtime.js";
+import { __esmState } from "./_virtual/_rolldown/runtime.js";
 // log.js
 var log;
 function init_log() {
-	return (init_log = __esmMin((() => {
+	return (init_log = __esmState((() => {
 		log = [];
-	})))();
+	}), () => []))(arguments[0]);
 }
 export { init_log, log };
 
@@ -64,6 +64,7 @@ export { init_log, log };
 ## main.js
 
 ```js
+import { __esmDefer } from "./_virtual/_rolldown/runtime.js";
 import { init_log, log } from "./log.js";
 import { init_d } from "./d.js";
 // main.js
@@ -71,7 +72,7 @@ init_log();
 log.push("main");
 const e = await (async (n) => (n = await import("./e.js"), n.e_deferred))();
 log.push("after import.defer");
-const values = [(init_d(), "d"), e.value];
+const values = [(__esmDefer(init_d), "d"), e.value];
 export { log, values };
 
 ```

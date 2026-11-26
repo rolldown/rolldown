@@ -161,7 +161,9 @@ pub fn update_output_chunk(
   let dynamic_imports =
     js_chunk.dynamic_imports.map(|imports| imports.into_iter().map(Into::into).collect());
   let filename = js_chunk.filename.into();
-  let immutable = chunk.immutable && chunk.filename == filename;
+  let immutable = chunk.immutable
+    && chunk.filename == filename
+    && js_chunk.code.as_ref().is_none_or(|code| code == &chunk.code);
 
   if let Some(chunk) = Arc::get_mut(chunk) {
     if let Some(code) = js_chunk.code {

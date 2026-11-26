@@ -173,26 +173,70 @@ test.each(['asset', 'chunk'] as const)(
   },
 );
 
-test('changing the contents of an output keeps the flag', async () => {
-  const outputs = await generate(
-    { entryFileNames: '[name]-[hash].js', chunkFileNames: '[name]-[hash].js' },
-    [asset],
-    [
+test('content changes in generateBundle clear immutable', async () => {
+  const build = (version: number) =>
+    generate(
       {
-        name: 'edit',
-        generateBundle(_options, bundle) {
-          for (const output of Object.values(bundle)) {
-            if (output.type === 'asset') output.source = 'updated';
-            else output.code += '\n// updated';
-          }
-        },
+        entryFileNames: '[name]-[hash].js',
+        chunkFileNames: '[name]-[hash].js',
+        assetFileNames: '[name]-[hash][extname]',
       },
-    ],
+      [
+        asset,
+        { ...asset, name: 'version.json', source: '{}' },
+        { ...asset, name: 'same.txt', source: 'café' },
+      ],
+      [
+        {
+          name: 'edit',
+          generateBundle(_options, bundle) {
+            for (const output of Object.values(bundle)) {
+              if (output.type === 'chunk') {
+                output.code = output.isEntry
+                  ? output.code + `\nexport const version = ${version};\n`
+                  : output.code;
+              } else if (output.names.includes('version.json')) {
+                output.source = JSON.stringify({ version });
+              } else if (output.names.includes('same.txt')) {
+                output.source = new TextEncoder().encode('café');
+              }
+            }
+          },
+        },
+      ],
+    );
+  const first = await build(1);
+  const second = await build(2);
+  expect(first.map(({ fileName }) => fileName).sort()).toEqual(
+    second.map(({ fileName }) => fileName).sort(),
   );
-  expect(outputs.map((output) => output.immutable)).toEqual([true, true, true]);
+  for (const [version, outputs] of [
+    [1, first],
+    [2, second],
+  ] as const) {
+    expect(outputs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'chunk',
+          isEntry: true,
+          code: expect.stringContaining(`export const version = ${version};`),
+          immutable: false,
+        }),
+        expect.objectContaining({ type: 'chunk', isEntry: false, immutable: true }),
+        expect.objectContaining({
+          type: 'asset',
+          names: ['version.json'],
+          source: JSON.stringify({ version }),
+          immutable: false,
+        }),
+        expect.objectContaining({ type: 'asset', names: ['data.txt'], immutable: true }),
+        expect.objectContaining({ type: 'asset', names: ['same.txt'], immutable: true }),
+      ]),
+    );
+  }
 });
 
-test('copying an output with Object.assign preserves its immutable flag', async () => {
+test('copying an output with Object.assign ignores writes to immutable', async () => {
   const outputs = await generate(
     { entryFileNames: '[name]-[hash].js', chunkFileNames: '[name]-[hash].js' },
     [asset],
@@ -201,13 +245,13 @@ test('copying an output with Object.assign preserves its immutable flag', async 
         name: 'copy-output',
         generateBundle(_options, bundle) {
           for (const output of Object.values(bundle)) {
+            Object.assign(output, { immutable: false });
+            expect(output.immutable).toBe(true);
             if (output.type === 'asset') {
               Object.assign(output, { ...output, source: 'copied' });
             } else {
               Object.assign(output, { ...output, code: output.code + '\n// copied' });
             }
-            Object.assign(output, { immutable: false });
-            expect(output.immutable).toBe(true);
           }
         },
       },
@@ -216,12 +260,12 @@ test('copying an output with Object.assign preserves its immutable flag', async 
   const editedChunk = {
     type: 'chunk',
     code: expect.stringContaining('// copied'),
-    immutable: true,
+    immutable: false,
   };
   expect(outputs).toMatchObject([
     editedChunk,
     editedChunk,
-    { type: 'asset', source: 'copied', immutable: true },
+    { type: 'asset', source: 'copied', immutable: false },
   ]);
 });
 

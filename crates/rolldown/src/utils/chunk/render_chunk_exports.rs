@@ -3,9 +3,9 @@ use std::fmt::Write as _;
 
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Chunk, ChunkKind, ExportsKind, GetLocalDb, ImportRecordMeta, IndexModules, ModuleIdx,
-  NormalizedBundlerOptions, OutputExports, OutputFormat, Platform, SymbolRef, SymbolRefDb,
-  SymbolRefFlags, WrapKind,
+  Chunk, ChunkKind, ExportsKind, ExternalModule, GetLocalDb, ImportRecordMeta, IndexModules,
+  ModuleIdx, NamespaceAlias, NormalizedBundlerOptions, OutputExports, OutputFormat, Platform,
+  SymbolRef, SymbolRefDb, SymbolRefFlags, WrapKind,
 };
 use rolldown_utils::{
   concat_string,
@@ -191,6 +191,34 @@ fn render_entry_reexported_wrapper_init_calls(
   (!rendered.is_empty()).then_some(rendered)
 }
 
+fn external_star_reexport_source<'a>(
+  ctx: &'a GenerateContext<'_>,
+  alias: &NamespaceAlias,
+  exported_name: &CompactStr,
+) -> Option<&'a ExternalModule> {
+  let link = ctx.link_output;
+  let barrel = link.module_table[alias.namespace_ref.owner].as_normal()?;
+  let entry = link.module_table[ctx.chunk.entry_module_idx()?].as_normal()?;
+  let import = entry.named_imports.get(&entry.named_exports.get(exported_name)?.referenced)?;
+  let meta = &link.metas[barrel.idx];
+  if entry.import_records[import.record_idx].resolved_module != Some(barrel.idx)
+    || alias.namespace_ref != barrel.namespace_object_ref
+    || !meta.wrap_kind().is_none()
+    || meta.resolved_exports.contains_key(&alias.property_name)
+    || ctx.chunk_graph.module_to_chunk[barrel.idx] != Some(ctx.chunk_idx)
+  {
+    return None;
+  }
+  // Count internal and unresolved stars as well as resolved external ones.
+  let mut records =
+    barrel.import_records.iter().filter(|rec| rec.meta.contains(ImportRecordMeta::IsExportStar));
+  let record = records.next()?;
+  link.module_table[record.resolved_module?].as_external().filter(|_| {
+    records.next().is_none()
+      && meta.ns_star_external_re_export_emitted(record.meta, OutputFormat::Esm)
+  })
+}
+
 #[expect(clippy::too_many_lines)] // Dispatches over every output format and export mode inline.
 pub fn render_chunk_exports(
   ctx: &GenerateContext<'_>,
@@ -221,10 +249,16 @@ pub fn render_chunk_exports(
       if export_items.is_empty() && !matches!(ctx.options.platform, Platform::Node) {
         return None;
       }
+      let graph = ctx.chunk_graph;
+      let forward_stars = graph.chunk_table.len()
+        == graph.post_chunk_optimization_operations.len() + 1
+        && chunk.entry_module_idx().is_some_and(|id| link_output.metas[id].wrap_kind().is_none())
+        && !ctx.order_wrap_state.has_order_wrappers();
+      let mut forward_chunk = None;
       let mut s = String::new();
       let rendered_items = export_items
         .into_iter()
-        .map(|(exported_name, export_ref)| {
+        .filter_map(|(exported_name, export_ref)| {
           let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
           let symbol = link_output.symbol_db.get(canonical_ref);
           // An ESM export needs a binding of this file; a symbol an inline common chunk record
@@ -253,6 +287,32 @@ pub fn render_chunk_exports(
           if let Some(ns_alias) = &symbol.namespace_alias
             && !declared_by_finalizer()
           {
+            if forward_stars
+              && let Some(external) = external_star_reexport_source(ctx, ns_alias, &exported_name)
+              && *forward_chunk.get_or_insert_with(|| {
+                !chunk.modules.iter().any(|&id| link_output.module_table[id].as_normal().unwrap().meta.has_eval())
+                  && !chunk.exports_to_other_chunks.keys().any(|&reference| {
+                    let db = &link_output.symbol_db;
+                    let symbol = db.get(db.canonical_ref_for(reference));
+                    matches!(&symbol.namespace_alias, Some(alias) if alias.property_name == "default")
+                  })
+              })
+            {
+              let imported = &ns_alias.property_name;
+              let mut spec = to_module_import_export_name_with_ascii(imported, ascii_only);
+              if imported != &exported_name {
+                let name = to_module_import_export_name_with_ascii(&exported_name, ascii_only);
+                write!(spec, " as {name}").unwrap();
+              }
+              let path = external.get_import_path(chunk, ctx.resolved_paths);
+              let path = to_ecma_string_literal(&path, ascii_only);
+              write!(s, "export {{ {spec} }} from {path}").unwrap();
+              if let Some(attributes) = external.attributes.to_with_clause(ascii_only) {
+                write!(s, " {attributes}").unwrap();
+              }
+              s.push_str(";\n");
+              return None;
+            }
             let canonical_ns_name = link_output
               .symbol_db
               .canonical_name_for_or_original(ns_alias.namespace_ref, &chunk.canonical_names);
@@ -268,7 +328,7 @@ pub fn render_chunk_exports(
             s.push_str(";\n");
           }
 
-          if canonical_name == exported_name {
+          Some(if canonical_name == exported_name {
             rendered_canonical_name
           } else {
             Cow::Owned(concat_string!(
@@ -276,9 +336,12 @@ pub fn render_chunk_exports(
               " as ",
               to_module_import_export_name_with_ascii(&exported_name, ascii_only)
             ))
-          }
+          })
         })
         .collect::<Vec<_>>();
+      if rendered_items.is_empty() && !s.is_empty() {
+        return Some(s);
+      }
       s.push_str("export { ");
       for (i, item) in rendered_items.iter().enumerate() {
         if i > 0 {

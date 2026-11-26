@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
+// main.js
+const actual = [];
+if (process.argv.length > 0) {
+	var [Object$1 = /* @__PURE__ */ __name(() => {}, "Object")] = [];
+	actual.push(Object$1.name);
+	var { Object: Object$1 = /* @__PURE__ */ __name(() => {}, "Object") } = {};
+	actual.push(Object$1.name);
+	var { missing: Object$1 = /* @__PURE__ */ __name(function() {}, "Object") } = {};
+	actual.push(Object$1.name);
+}
+assert.deepEqual(actual, [
+	"Object",
+	"Object",
+	"Object"
+]);
+
+```

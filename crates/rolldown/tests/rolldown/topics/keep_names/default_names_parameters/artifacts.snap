@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
+// dep.js
+function Capture() {
+	return "outside";
+}
+// main.js
+function simple(Capture$1 = /* @__PURE__ */ __name(() => {}, "Capture")) {
+	return [Capture(), Capture$1.name];
+}
+function destructured({ Capture: Capture$2 = /* @__PURE__ */ __name(() => {}, "Capture") } = {}) {
+	return [Capture(), Capture$2.name];
+}
+assert.deepEqual([simple(), destructured()], [["outside", "Capture"], ["outside", "Capture"]]);
+
+```

@@ -3,7 +3,7 @@ use oxc::span::GetSpanMut;
 use rolldown_common::SymbolRef;
 use rolldown_ecmascript_utils::{ExpressionExt, MemberExpressionFactoryExt as _};
 
-use super::ScopeHoistingFinalizer;
+use super::{KeepNameId, ScopeHoistingFinalizer};
 
 fn finalized_reference_expr_mut<'a, 'ast>(
   expr: &'a mut Expression<'ast>,
@@ -183,10 +183,13 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
         // Ensure `const { a = 1 } = ...;` will be rewritten to `const { a: a = 1 } = ...` instead of `const { a = 1 } = ...`
         // Ensure `function foo({ a = 1 }) {}` will be rewritten to `function foo({ a: a = 1 }) {}` instead of `function foo({ a = 1 }) {}`
         ast::BindingPattern::AssignmentPattern(assign_pat) if prop.shorthand => {
+          let assign_pat = &mut **assign_pat;
           let ast::BindingPattern::BindingIdentifier(ident) = &mut assign_pat.left else {
             continue;
           };
           if let Some(symbol_id) = ident.symbol_id.get() {
+            let name = KeepNameId::SymbolId(symbol_id);
+            self.process_keep_name_for_expression(Some(name), &mut assign_pat.right);
             let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
             if ident.name != canonical_name {
               ident.name = oxc::ast::ast::Str::from_str_in(canonical_name, self).into();

@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
+// main.js
+const actual = {};
+var [Object$1 = /* @__PURE__ */ __name(() => {}, "Object")] = [];
+actual.arrayDeclaration = Object$1.name;
+var { Object: Object$1 = /* @__PURE__ */ __name(() => {}, "Object") } = {};
+actual.objectDeclaration = Object$1.name;
+var { missing: Object$1 = /* @__PURE__ */ __name(function() {}, "Object") } = {};
+actual.aliasedDeclaration = Object$1.name;
+[Object$1 = /* @__PURE__ */ __name(() => {}, "Object")] = [];
+actual.arrayAssignment = Object$1.name;
+({Object: Object$1 = /* @__PURE__ */ __name(() => {}, "Object")} = {});
+actual.objectAssignment = Object$1.name;
+({missing: Object$1 = /* @__PURE__ */ __name(() => {}, "Object")} = {});
+actual.aliasedAssignment = Object$1.name;
+for (var Object$1 = /* @__PURE__ */ __name(() => {}, "Object");;) {
+	actual.forInitializer = Object$1.name;
+	break;
+}
+for (var [, Object$1 = /* @__PURE__ */ __name(() => {}, "Object")] in { x: 0 }) actual.forIn = Object$1.name;
+for (var { Object: Object$1 = /* @__PURE__ */ __name(() => {}, "Object") } of [{}]) actual.forOf = Object$1.name;
+for ([Object$1 = /* @__PURE__ */ __name(() => {}, "Object")] of [[]]) actual.forOfAssignment = Object$1.name;
+assert.deepEqual(actual, {
+	arrayDeclaration: "Object",
+	objectDeclaration: "Object",
+	aliasedDeclaration: "Object",
+	arrayAssignment: "Object",
+	objectAssignment: "Object",
+	aliasedAssignment: "Object",
+	forInitializer: "Object",
+	forIn: "Object",
+	forOf: "Object",
+	forOfAssignment: "Object"
+});
+
+```

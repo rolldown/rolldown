@@ -489,13 +489,24 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     if matches!(it, Expression::ImportMeta(_)) {
       self.current_stmt_info.meta.insert(StmtInfoMeta::ImportMeta);
     }
-    if self.is_root_scope()
-      && matches!(
-        it,
-        Expression::ArrowFunctionExpression(_)
-          | Expression::FunctionExpression(_)
-          | Expression::ClassExpression(_)
-      )
+    if matches!(
+      it,
+      Expression::ArrowFunctionExpression(_)
+        | Expression::FunctionExpression(_)
+        | Expression::ClassExpression(_)
+    ) && (self.is_root_scope()
+      || self.immutable_ctx.options.keep_names
+        && it.is_anonymous_function_definition()
+        && match self.visit_path.as_slice() {
+          [.., AstKind::AssignmentPattern(pattern)] => pattern.left.is_binding_identifier(),
+          [.., AstKind::AssignmentTargetWithDefault(target)] => {
+            matches!(target.binding, ast::AssignmentTarget::AssignmentTargetIdentifier(_))
+          }
+          [.., AstKind::AssignmentTargetPropertyIdentifier(_)] => true,
+          [.., AstKind::FormalParameter(param)] => param.pattern.is_binding_identifier(),
+          [.., AstKind::VariableDeclarator(decl)] => decl.id.is_binding_identifier(),
+          _ => false,
+        })
     {
       self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
     }

@@ -1316,7 +1316,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               false,
             );
             let rec = &self.ctx.module.import_records[idx];
-            let importee = rec.resolved_module.map(|module_idx| &self.ctx.modules[module_idx])?;
+            let importee = self.ctx.modules[rec.resolved_module?].as_external()?;
+            let import_path = importee.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
 
             let re_export_call_expr = CallExpression::new_re_export_call(
               // Insert `__reExport(importer_exports, require('ext'))`
@@ -1326,7 +1327,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 ast::Expression::new_identifier(SPAN, "require", self),
                 ast::Expression::new_string_literal(
                   SPAN,
-                  oxc::ast::ast::Str::from_str_in(importee.id().raw_id(), self),
+                  oxc::ast::ast::Str::from_str_in(&import_path, self),
                   None,
                   self,
                 ),

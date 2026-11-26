@@ -7,5 +7,7 @@ pub struct HookLoadOutput {
   pub code: ArcStr,
   pub map: Option<SourceMap>,
   pub side_effects: Option<HookSideEffects>,
+  /// The module's size, used instead of the length of its code.
+  pub declared_module_size: Option<usize>,
   pub module_type: Option<ModuleType>,
 }

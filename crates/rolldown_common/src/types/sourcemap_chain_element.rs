@@ -49,7 +49,7 @@ impl PendingSourcemap {
   pub fn get(&self) -> &SourceMap {
     self.map.get_or_init(|| {
       // Only this initializer locks it, and only one initializer runs at a time.
-      let magic_string = self
+      let mut magic_string = self
         .magic_string
         .lock()
         .unwrap_or_else(PoisonError::into_inner)

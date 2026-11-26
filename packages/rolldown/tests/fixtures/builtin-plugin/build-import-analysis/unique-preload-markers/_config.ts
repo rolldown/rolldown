@@ -12,7 +12,6 @@ export default defineTest({
       viteBuildImportAnalysisPlugin({
         preloadCode: `export const __vitePreload = (v) => { return v() };`,
         insertPreload: true,
-        optimizeModulePreloadRelativePaths: false,
         renderBuiltUrl: false,
         isRelativeBase: false,
       }),

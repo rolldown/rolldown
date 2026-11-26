@@ -1,0 +1,15 @@
+{
+  "configName": "cjs",
+  "expectExecuted": false,
+  "config": {
+    "format": "cjs",
+    "name": "bundle",
+    "entryFilenames": "main.cjs",
+    "external": ["node:url"],
+    "paths": { "node:url": "node:path" }
+  },
+  "configVariants": [
+    { "_configName": "iife", "format": "iife" },
+    { "_configName": "umd", "format": "umd" }
+  ]
+}

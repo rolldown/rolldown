@@ -88,13 +88,15 @@ impl ExternalModule {
       .to_string();
     while target.starts_with("../") {
       target = &target[3..];
-      importer = concat_string!("_/", importer);
+      // A NUL segment cannot match a real directory name.
+      importer = concat_string!("\0/", importer);
     }
     relative_path_as_js_specifier(
       target,
       Path::new(&importer)
         .parent()
-        .expect("the importer chunk preliminary filename should have a parent directory"),
+        // Output validation rejects a filename without a parent, such as an empty one.
+        .unwrap_or(Path::new("")),
     )
     .into()
   }

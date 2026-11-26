@@ -355,23 +355,7 @@ pub fn prepare_build_context(
     raw_options
       .inject
       .as_ref()
-      .map(|raw_injects| {
-        raw_injects
-          .iter()
-          .map(|raw| match raw {
-            InjectImport::Named { imported, alias, from } => {
-              oxc::transformer_plugins::InjectImport::named_specifier(
-                from,
-                Some(imported),
-                alias.as_deref().unwrap_or(imported),
-              )
-            }
-            InjectImport::Namespace { alias, from } => {
-              oxc::transformer_plugins::InjectImport::namespace_specifier(from, alias)
-            }
-          })
-          .collect()
-      })
+      .map(|raw_injects| raw_injects.iter().map(InjectImport::to_oxc).collect())
       .unwrap_or_default(),
   );
 

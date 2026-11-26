@@ -436,7 +436,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     walk_js_mut::walk_program(self, program);
     self.preserve_renamed_catch_vars(program);
 
-    // Insert keep_name statements for top-level declarations
+    // Insert the remaining anonymous default function name restorations at their declarations.
     self.insert_keep_name_statements(&mut program.body);
     self.keep_name_statement_to_insert.clear();
 

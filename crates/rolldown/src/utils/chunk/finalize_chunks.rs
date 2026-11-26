@@ -195,7 +195,9 @@ pub async fn finalize_assets(
         let file_path = options.cwd.join(&options.out_dir).join(filename.as_str());
         ecma_meta.file_dir =
           file_path.parent().expect("chunk file name should have a parent").to_path_buf();
-        map.set_file(Path::new(filename.as_str()).file_name().unwrap().to_str().unwrap());
+        // An empty filename has no basename; output validation rejects it later.
+        let filename_path = Path::new(filename.as_str());
+        map.set_file(filename_path.file_name().map_or(filename.as_str(), |n| n.to_str().unwrap()));
         replace_sourcemap_source_placeholders(map, &chunk_hashes_by_placeholder);
       }
       if let StrOrBytes::Str(content) = &mut instantiated_chunk.content {

@@ -302,18 +302,27 @@ It is used for an HMR update, and for a rebuild with
 `experimental.incrementalBuild`.
 
 Before the hooks run, each changed module goes back to the values that its
-creating resolution gave. Rolldown kept these values when it created the
-module. It does not use the result of a new `resolveId` call for them. For
-an HMR update, it does not call `resolveId` for the changed module. For an
-incremental rebuild, it calls `resolveId` again for the id of the changed
-module, without an importer, but it does not use the `meta` or
-`moduleSideEffects` of that call. So:
+creating resolution gave. Rolldown kept this resolution when it created the
+module, and fetches the module again from it. It does not call `resolveId`
+for the changed module: a `resolveId` hook gets a specifier, and the id of
+a module, such as the id of a virtual module, can resolve to another
+module. So:
 
 - `meta` becomes a new copy of the `meta` of the creating resolution. Keys
   that hooks wrote, and keys that the last `load` and `transform` results
-  added, are gone.
+  added, are gone. The copy is shallow, as in Rollup: a hook that changed a
+  nested object of `meta` in place also changed the copy that Rolldown
+  keeps, so that change stays.
 - `moduleSideEffects` becomes the value of the creating resolution again,
-  and a value that a hook wrote is dropped.
+  and a value that a hook wrote is dropped. Without a value from the
+  resolution, it falls back to `package.json` as usual. An incremental
+  rebuild reads `package.json` again when it fetches the module, so
+  `buildStart` still sees the fallback from the last fetch.
+
+For an incremental rebuild, this happens before `buildStart`, so
+`getModuleInfo` in `buildStart` shows these values. It happens again
+after `buildStart`, so a change that `buildStart` made to a changed module
+is also gone.
 
 Then the `load` and `transform` hooks of the module run again and apply
 their results, as [Hook results](#hook-results) says. The modules that did

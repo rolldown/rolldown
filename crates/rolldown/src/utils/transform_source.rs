@@ -18,6 +18,7 @@ pub async fn transform_source(
   source: String,
   sourcemap_chain: &mut Vec<SourcemapChainElement>,
   side_effects: &mut Option<HookSideEffects>,
+  declared_module_size: &mut Option<usize>,
   module_type: &mut ModuleType,
   magic_string_tx: Option<Sender<SourceMapGenMsg>>,
 ) -> Result<String> {
@@ -29,6 +30,7 @@ pub async fn transform_source(
       source,
       sourcemap_chain,
       side_effects,
+      declared_module_size,
       module_type,
       magic_string_tx,
       &mut None,

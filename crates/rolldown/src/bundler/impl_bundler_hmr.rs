@@ -37,6 +37,7 @@ impl Bundler {
     // HMR partial scans use the shared rayon pool without passing through
     // `BundleFactory::build_bundle`; wait for any deferred drops here too.
     crate::utils::defer_drop::drain();
+    let _activity = crate::utils::build_activity::BuildActivity::enter();
 
     let Some(plugin_driver) = self.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver) else {
       return Err(anyhow::format_err!(
@@ -164,6 +165,7 @@ impl Bundler {
     // HMR partial scans use the shared rayon pool without passing through
     // `BundleFactory::build_bundle`; wait for any deferred drops here too.
     crate::utils::defer_drop::drain();
+    let _activity = crate::utils::build_activity::BuildActivity::enter();
 
     let Some(plugin_driver) = self.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver) else {
       panic!("Lazy compilation requires at least one bundle to be built first");

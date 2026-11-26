@@ -2,6 +2,7 @@ use napi::{Unknown, bindgen_prelude::FromNapiValue};
 use rolldown_plugin::{__inner::SharedPluginable, Plugin};
 use rolldown_plugin_bundle_analyzer::BundleAnalyzerPlugin;
 use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
+use rolldown_plugin_inject::{InjectPlugin, InjectPluginOptions};
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
 use rolldown_plugin_oxc_runtime::OxcRuntimePlugin;
 use rolldown_plugin_replace::ReplacePlugin;
@@ -26,7 +27,7 @@ use crate::options::plugin::config::{
 
 use super::{
   config::{
-    BindingIsolatedDeclarationPluginConfig, BindingReplacePluginConfig,
+    BindingInjectPluginConfig, BindingIsolatedDeclarationPluginConfig, BindingReplacePluginConfig,
     BindingViteAliasPluginConfig, BindingViteBuildImportAnalysisPluginConfig,
     BindingViteDynamicImportVarsPluginConfig, BindingViteImportGlobPluginConfig,
     BindingViteJsonPluginConfig, BindingViteManifestPluginConfig, BindingViteReporterPluginConfig,
@@ -70,6 +71,14 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for SharedPluginable {
           BindingEsmExternalRequirePluginConfig::from_unknown(options)?.into()
         } else {
           EsmExternalRequirePlugin::default()
+        };
+        Plugin::new_shared(plugin)
+      }
+      BindingBuiltinPluginName::Inject => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingInjectPluginConfig::from_unknown(options)?.into()
+        } else {
+          InjectPlugin::new(InjectPluginOptions::default())
         };
         Plugin::new_shared(plugin)
       }

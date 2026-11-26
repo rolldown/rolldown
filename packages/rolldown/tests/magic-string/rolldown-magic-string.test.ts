@@ -2,11 +2,6 @@ import assert from 'node:assert';
 import { decodedMappings, TraceMap } from '@jridgewell/trace-mapping';
 import { RolldownMagicString as MagicString } from 'rolldown';
 import { describe, it } from 'vitest';
-import type {
-  BindingDecodedMap,
-  BindingMagicString,
-  BindingSourceMap,
-} from '../../src/binding.cjs';
 
 /**
  * Hand-written tests for rolldown-specific BindingMagicString behaviour.
@@ -20,6 +15,52 @@ import type {
  * only exists on the binding boundary. The rest of the string_wizard crate
  * tests stay in Rust.
  */
+
+describe('sourcemap locations', () => {
+  it('keeps original UTF-16 positions, including inside a surrogate pair', () => {
+    const s = new MagicString('a😀b\ncd', { offset: 3 });
+    s.addSourcemapLocation(6);
+    s.addSourcemapLocation(4);
+    s.addSourcemapLocation(2);
+    s.addSourcemapLocation(2);
+
+    assert.deepStrictEqual(s.sourcemapLocations, [2, 4, 6]);
+    assert.deepStrictEqual(s.generateDecodedMap().mappings, [
+      [
+        [0, 0, 0, 0],
+        [2, 0, 0, 2],
+      ],
+      [
+        [0, 0, 1, 0],
+        [1, 0, 1, 1],
+      ],
+    ]);
+
+    const clone = s.clone();
+    clone.addSourcemapLocation(3);
+    assert.deepStrictEqual(clone.sourcemapLocations, [2, 3, 4, 6]);
+    assert.deepStrictEqual(s.sourcemapLocations, [2, 4, 6]);
+  });
+
+  it('maps locations registered after generating a map', () => {
+    const s = new MagicString('abcdef');
+    s.addSourcemapLocation(4);
+    s.addSourcemapLocation(2);
+    assert.deepStrictEqual(
+      s.generateDecodedMap().mappings[0]!.map(([column]) => column),
+      [0, 2, 4],
+    );
+
+    s.addSourcemapLocation(3);
+    s.addSourcemapLocation(2);
+    s.addSourcemapLocation(5);
+    assert.deepStrictEqual(
+      s.generateDecodedMap().mappings[0]!.map(([column]) => column),
+      [0, 2, 3, 4, 5],
+    );
+    assert.deepStrictEqual(s.sourcemapLocations, [2, 3, 4, 5]);
+  });
+});
 
 describe('length', () => {
   // `MagicString::len()` sums UTF-8 byte lengths, but JS measures string length in UTF-16
@@ -727,63 +768,5 @@ describe('x_google_ignoreList', () => {
     const s = new MagicString('var answer = 42;', { ignoreList: true });
     assert.deepStrictEqual(s.generateMap().x_google_ignoreList, [0]);
     assert.deepStrictEqual(s.generateDecodedMap().x_google_ignoreList, [0]);
-  });
-});
-
-describe('dropInner', () => {
-  it('omits dropInner from the public types while keeping it callable internally', () => {
-    const s = new MagicString('var answer = 42;');
-    assert.strictEqual(Object.keys(s).includes('dropInner'), false);
-
-    // @ts-expect-error dropInner is internal and omitted from public RolldownMagicString types
-    void s.dropInner;
-    // @ts-expect-error chained methods keep the public RolldownMagicString type
-    void s.append('').dropInner;
-    // @ts-expect-error clone() keeps the public RolldownMagicString type
-    void s.clone().dropInner;
-    // @ts-expect-error snip() keeps the public RolldownMagicString type
-    void s.snip(0, 3).dropInner;
-
-    const nativeS = s as unknown as BindingMagicString;
-    assert.deepStrictEqual(nativeS.dropInner(), { freed: true });
-    assert.deepStrictEqual(nativeS.dropInner(), {
-      freed: false,
-      reason: 'Memory has already been freed',
-    });
-    assert.throws(() => s.toString(), /no longer usable/);
-    assert.throws(() => s.append(';'), /no longer usable/);
-  });
-
-  it('releases BindingSourceMap and BindingDecodedMap payloads and rejects subsequent reads', () => {
-    const s = new MagicString('var answer = 42;');
-    const map = s.generateMap();
-    const decoded = s.generateDecodedMap();
-
-    assert.strictEqual(Object.keys(map).includes('dropInner'), false);
-    assert.strictEqual(Object.keys(decoded).includes('dropInner'), false);
-
-    // @ts-expect-error dropInner is omitted from generateMap() return type
-    void map.dropInner;
-    // @ts-expect-error dropInner is omitted from generateDecodedMap() return type
-    void decoded.dropInner;
-
-    const nativeMap = map as unknown as BindingSourceMap;
-    assert.deepStrictEqual(nativeMap.dropInner(), { freed: true });
-    assert.deepStrictEqual(nativeMap.dropInner(), {
-      freed: false,
-      reason: 'Memory has already been freed',
-    });
-    assert.strictEqual(map.version, 3);
-    assert.throws(() => map.mappings, /Memory has been freed/);
-    assert.throws(() => map.toString(), /Memory has been freed/);
-
-    const nativeDecoded = decoded as unknown as BindingDecodedMap;
-    assert.deepStrictEqual(nativeDecoded.dropInner(), { freed: true });
-    assert.deepStrictEqual(nativeDecoded.dropInner(), {
-      freed: false,
-      reason: 'Memory has already been freed',
-    });
-    assert.strictEqual(decoded.version, 3);
-    assert.throws(() => decoded.mappings, /Memory has been freed/);
   });
 });

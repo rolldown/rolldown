@@ -1607,7 +1607,6 @@ export declare class BindingCallableBuiltinPlugin {
 }
 
 export declare class BindingChunkingContext {
-  dropInner(): ExternalMemoryStatus
   getModuleInfo(moduleId: string): BindingModuleInfo | null
   /**
    * `getModuleInfo(moduleId)?.moduleSideEffects`, without copying the rest of the info. See
@@ -1625,7 +1624,6 @@ export declare class BindingChunkingContext {
 
 /** A decoded source map with mappings as an array of arrays instead of VLQ-encoded string. */
 export declare class BindingDecodedMap {
-  dropInner(): ExternalMemoryStatus
   /** The source map version (always 3). */
   get version(): number
   /** The generated file name. */
@@ -1690,18 +1688,12 @@ export declare class BindingDevEngine {
 }
 
 export declare class BindingLoadPluginContext {
-  dropInner(): ExternalMemoryStatus
   inner(): BindingPluginContext
   addWatchFile(file: string): void
 }
 
 export declare class BindingMagicString {
   constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
-  /**
-   * Releases the source text and its UTF-16 mapping table — together about nine
-   * times the source bytes — without waiting for a finalizer.
-   */
-  dropInner(): ExternalMemoryStatus
   get original(): string
   get filename(): string | null
   get indentExclusionRanges(): Array<Array<number>> | Array<number> | null
@@ -1778,6 +1770,18 @@ export declare class BindingMagicString {
    */
   slice(start?: number | undefined | null, end?: number | undefined | null): string
   /**
+   * Returns the UTF-16 indices in the original source that `addSourcemapLocation()` registers.
+   * Each index appears once. The indices are in ascending order.
+   */
+  get sourcemapLocations(): Array<number>
+  /**
+   * Registers a UTF-16 index in the original source for maps with `hires: false`.
+   * If the index falls within a non-newline character in an unedited piece,
+   * the map includes a segment for that index.
+   * The `offset` option does not change this index.
+   */
+  addSourcemapLocation(index: number): void
+  /**
    * Generates a source map for the transformations applied to this MagicString.
    * Returns a BindingSourceMap object with version, file, sources, sourcesContent, names, mappings.
    */
@@ -1798,12 +1802,10 @@ export declare class BindingModuleInfo {
   exports: Array<string>
   isEntry: boolean
   inputFormat: 'es' | 'cjs' | 'unknown'
-  dropInner(): ExternalMemoryStatus
   get code(): string | null
 }
 
 export declare class BindingNormalizedOptions {
-  dropInner(): ExternalMemoryStatus
   get input(): Array<string> | Record<string, string>
   get cwd(): string
   get platform(): 'node' | 'browser' | 'neutral'
@@ -1848,8 +1850,10 @@ export declare class BindingNormalizedOptions {
 }
 
 export declare class BindingOutputAsset {
-  dropInner(): ExternalMemoryStatus
+  /** V8 cannot see this memory, so without this it feels no pressure to collect this object. */
+  trackExternalMemory(): void
   getFileName(): string
+  getImmutable(): boolean
   getOriginalFileName(): string | null
   getOriginalFileNames(): Array<string>
   getSource(): BindingAssetSource
@@ -1858,7 +1862,8 @@ export declare class BindingOutputAsset {
 }
 
 export declare class BindingOutputChunk {
-  dropInner(): ExternalMemoryStatus
+  /** V8 cannot see this memory, so without this it feels no pressure to collect this object. */
+  trackExternalMemory(): void
   getIsEntry(): boolean
   getIsDynamicEntry(): boolean
   getFacadeModuleId(): string | null
@@ -1868,6 +1873,7 @@ export declare class BindingOutputChunk {
   getModules(): BindingModules
   getImports(): Array<string>
   getDynamicImports(): Array<string>
+  getImmutable(): boolean
   getCode(): string
   /**
    * Identity of the shared chunk data behind this object. Two `BindingOutputChunk` objects with the same
@@ -1882,7 +1888,6 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
-  dropInner(): ExternalMemoryStatus
   load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, resolveDependencies: boolean, options?: BindingPluginContextLoadOptions): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
@@ -1909,7 +1914,6 @@ export declare class BindingPluginContext {
 }
 
 export declare class BindingRenderedChunk {
-  dropInner(): ExternalMemoryStatus
   get name(): string
   get isEntry(): boolean
   get isDynamicEntry(): boolean
@@ -1923,12 +1927,10 @@ export declare class BindingRenderedChunk {
 }
 
 export declare class BindingRenderedChunkMeta {
-  dropInner(): ExternalMemoryStatus
   get chunks(): Record<string, BindingRenderedChunk>
 }
 
 export declare class BindingRenderedModule {
-  dropInner(): ExternalMemoryStatus
   get code(): string | null
   /** `code.length` without materializing `code`. */
   get renderedLength(): number
@@ -1937,7 +1939,6 @@ export declare class BindingRenderedModule {
 
 /** A source map object with properties matching the SourceMap V3 specification. */
 export declare class BindingSourceMap {
-  dropInner(): ExternalMemoryStatus
   /** The source map version (always 3). */
   get version(): number
   /** The generated file name. */
@@ -1962,7 +1963,6 @@ export declare class BindingSourceMap {
 }
 
 export declare class BindingTransformPluginContext {
-  dropInner(): ExternalMemoryStatus
   getCombinedSourcemap(): string
   inner(): BindingPluginContext
   addWatchFile(file: string): void
@@ -2038,7 +2038,7 @@ export interface BindingBuiltinPlugin {
   options?: unknown
 }
 
-export type BindingBuiltinPluginName = 'builtin:bundle-analyzer' | 'builtin:esm-external-require' | 'builtin:isolated-declaration' | 'builtin:replace' | 'builtin:vite-alias' | 'builtin:vite-build-import-analysis' | 'builtin:vite-dynamic-import-vars' | 'builtin:vite-import-glob' | 'builtin:vite-json' | 'builtin:vite-load-fallback' | 'builtin:vite-manifest' | 'builtin:vite-module-preload-polyfill' | 'builtin:vite-react-refresh-wrapper' | 'builtin:vite-reporter' | 'builtin:vite-resolve' | 'builtin:vite-transform' | 'builtin:vite-web-worker-post' | 'builtin:oxc-runtime'
+export type BindingBuiltinPluginName = 'builtin:bundle-analyzer' | 'builtin:esm-external-require' | 'builtin:inject' | 'builtin:isolated-declaration' | 'builtin:replace' | 'builtin:vite-alias' | 'builtin:vite-build-import-analysis' | 'builtin:vite-dynamic-import-vars' | 'builtin:vite-import-glob' | 'builtin:vite-json' | 'builtin:vite-load-fallback' | 'builtin:vite-manifest' | 'builtin:vite-module-preload-polyfill' | 'builtin:vite-react-refresh-wrapper' | 'builtin:vite-reporter' | 'builtin:vite-resolve' | 'builtin:vite-transform' | 'builtin:vite-web-worker-post' | 'builtin:oxc-runtime'
 
 export interface BindingBundleAnalyzerPluginConfig {
   /** Output filename for the bundle analysis data (default: "analyze-data.json") */
@@ -2182,6 +2182,7 @@ export interface BindingDevWatchOptions {
 export interface BindingEmittedAsset {
   name?: string
   fileName?: string
+  immutable?: boolean
   originalFileName?: string
   source: BindingAssetSource
 }
@@ -2196,6 +2197,7 @@ export interface BindingEmittedChunk {
 
 export interface BindingEmittedPrebuiltChunk {
   fileName: string
+  immutable?: boolean
   name?: string
   code: string
   exports?: Array<string>
@@ -2438,6 +2440,7 @@ export interface BindingHookLoadExtraArgs {
 export interface BindingHookLoadOutput {
   code: string
   moduleSideEffects?: boolean | 'no-treeshake'
+  declaredModuleSize?: number
   map?: BindingSourcemap
   moduleType?: string
 }
@@ -2527,6 +2530,7 @@ export type BindingHookSideEffects = boolean | string
 export interface BindingHookTransformOutput {
   code?: string
   moduleSideEffects?: BindingHookSideEffects
+  declaredModuleSize?: number
   /**
    * A sourcemap, or `null` to explicitly signal "no sourcemap" (distinct from
    * omitting the field, which mirrors Rollup's "possibly broken" semantics).
@@ -2560,6 +2564,13 @@ export interface BindingInjectImportNamespace {
   tagNamespace: true
   alias: string
   from: string
+}
+
+export interface BindingInjectPluginConfig {
+  values: Array<BindingInjectImport>
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  cwd?: string
 }
 
 /**
@@ -3116,7 +3127,6 @@ export interface BindingViteAliasPluginConfig {
 export interface BindingViteBuildImportAnalysisPluginConfig {
   preloadCode: string
   insertPreload: boolean
-  optimizeModulePreloadRelativePaths: boolean
   renderBuiltUrl: boolean
   isRelativeBase: boolean
 }
@@ -3256,11 +3266,6 @@ export declare function enhancedTransformSync(filename: string, sourceText: stri
 export interface ExtensionAliasItem {
   target: string
   replacements: Array<string>
-}
-
-export interface ExternalMemoryStatus {
-  freed: boolean
-  reason?: string
 }
 
 export type FilterTokenKind = 'Id' | 'ImporterId' | 'Code' | 'ModuleType' | 'And' | 'Or' | 'Not' | 'Include' | 'Exclude' | 'CleanUrl' | 'QueryKey' | 'QueryValue'

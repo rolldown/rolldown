@@ -1,8 +1,8 @@
-import type { BindingOutputChunk, ExternalMemoryStatus } from '../binding.cjs';
+import type { BindingOutputChunk } from '../binding.cjs';
 import { lazyProp } from '../decorators/lazy';
 import { transformChunkModules } from '../utils/transform-rendered-chunk';
 import { transformToRollupSourceMap } from '../utils/transform-to-rollup-output';
-import { getLazyFields, PlainObjectLike } from './plain-object-like';
+import { PlainObjectLike } from './plain-object-like';
 import type { OutputChunk, RenderedModule, SourceMap } from './rolldown-output';
 
 export class OutputChunkImpl extends PlainObjectLike implements OutputChunk {
@@ -15,6 +15,11 @@ export class OutputChunkImpl extends PlainObjectLike implements OutputChunk {
   @lazyProp
   get fileName(): string {
     return this.bindingChunk.getFileName();
+  }
+
+  @lazyProp
+  get immutable(): boolean {
+    return this.bindingChunk.getImmutable();
   }
 
   @lazyProp
@@ -81,19 +86,5 @@ export class OutputChunkImpl extends PlainObjectLike implements OutputChunk {
   get map(): SourceMap | null {
     const mapString = this.bindingChunk.getMap();
     return mapString ? transformToRollupSourceMap(mapString) : null;
-  }
-
-  __rolldown_external_memory_handle__(keepDataAlive?: boolean): ExternalMemoryStatus {
-    if (keepDataAlive) {
-      this.#evaluateAllLazyFields();
-    }
-    return this.bindingChunk.dropInner();
-  }
-
-  #evaluateAllLazyFields(): void {
-    for (const field of getLazyFields(this)) {
-      // Accessing the property triggers lazy evaluation via the @lazyProp decorator.
-      const _value = (this as any)[field];
-    }
   }
 }

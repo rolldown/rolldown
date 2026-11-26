@@ -23,6 +23,7 @@ pub struct EmittedAsset {
   pub name: Option<String>,
   pub original_file_name: Option<String>,
   pub file_name: Option<ArcStr>,
+  pub immutable: bool,
   pub source: StrOrBytes,
 }
 
@@ -62,6 +63,7 @@ pub struct EmittedChunkInfo {
 #[derive(Debug, Clone)]
 pub struct EmittedPrebuiltChunk {
   pub file_name: ArcStr,
+  pub immutable: bool,
   pub name: Option<ArcStr>,
   pub code: String,
   pub exports: Vec<String>,
@@ -221,6 +223,7 @@ impl FileEmitter {
                 Some(&output.filename),
               )?;
               output.filename = file.file_name.clone().unwrap();
+              output.immutable = file.immutable;
             }
             if let Some(name) = file.name {
               output.names.push(name);
@@ -317,14 +320,17 @@ impl FileEmitter {
       });
       let filename_template =
         filename_template.expect("should has filename template without filename");
-
+      let mut immutable = false;
       let mut filename = filename_template
         .render(
           name.as_deref(),
           None,
           Some(extension.unwrap_or_default()),
           None,
-          Some(|len: Option<usize>| Ok(&hash[..len.map_or(8, |len| len.clamp(1, 21))])),
+          Some(|len: Option<usize>| {
+            immutable = true;
+            Ok(&hash[..len.map_or(8, |len| len.clamp(1, 21))])
+          }),
         )?
         .into();
 
@@ -338,6 +344,7 @@ impl FileEmitter {
       filename = make_unique_name(&filename, &self.names);
 
       file.file_name = Some(filename);
+      file.immutable = immutable;
     }
     Ok(())
   }
@@ -365,6 +372,7 @@ impl FileEmitter {
       reference_id,
       OutputAsset {
         filename: file.file_name.clone().unwrap(),
+        immutable: file.immutable,
         source: std::mem::take(&mut file.source),
         names: std::mem::take(&mut file.name).map_or(vec![], |name| vec![name]),
         original_file_names: std::mem::take(&mut file.original_file_name)
@@ -417,6 +425,7 @@ impl FileEmitter {
       original_file_names.sort_unstable();
       additional_assets.push(Output::Asset(Arc::new(OutputAsset {
         filename: value.filename.clone(),
+        immutable: value.immutable,
         names,
         original_file_names,
         source: std::mem::take(&mut value.source),
@@ -450,6 +459,7 @@ impl FileEmitter {
         module_ids: vec![],
         exports: value.exports.iter().map(|s| s.as_str().into()).collect(),
         filename: value.file_name.clone(),
+        immutable: value.immutable,
         modules: Modules { keys: vec![], values: vec![] },
         imports: vec![],
         dynamic_imports: vec![],

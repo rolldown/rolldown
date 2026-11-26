@@ -5,7 +5,6 @@ import type {
   BindingHookLoadOutput,
   BindingHookResolveIdOutput,
   BindingHookTransformOutput,
-  BindingMagicString,
   BindingPluginOptions,
   BindingTransformPluginContext,
 } from '../binding.cjs';
@@ -294,7 +293,7 @@ function bindingifyTransformResult(
       // Rust returns it here unless `experimental.nativeMagicString` and
       // sourcemaps are both enabled. Then it is generated natively and the
       // Rust side already knows about it.
-      map = ctx.sendMagicString(magicString as unknown as BindingMagicString) ?? undefined;
+      map = ctx.sendMagicString(magicString) ?? undefined;
     }
   }
 
@@ -305,6 +304,7 @@ function bindingifyTransformResult(
       bindingifySourcemap(prepareTransformHookSourcemap(map)) ??
       (ret.map === null ? null : undefined),
     moduleSideEffects: ret.moduleSideEffects ?? undefined,
+    declaredModuleSize: ret.declaredModuleSize,
     moduleType: ret.moduleType,
   };
 }
@@ -365,6 +365,7 @@ function bindingifyLoadResult(
     map: bindingifySourcemap(map),
     moduleType: ret.moduleType,
     moduleSideEffects: ret.moduleSideEffects ?? undefined,
+    declaredModuleSize: ret.declaredModuleSize,
   };
 }
 
@@ -406,7 +407,8 @@ export function bindingifyModuleParsed(
             args.pluginContextData.getModuleOption(moduleInfo.id),
             ctx,
             args.pluginContextData.moduleSideEffectsOption,
-            pluginContext.warnWriteAfterBuildEnd,
+            (moduleId) =>
+              args.pluginContextData.warnWriteAfterBuildEnd(moduleId, pluginContext.pluginName),
           ),
         ),
       );

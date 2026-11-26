@@ -56,6 +56,18 @@ Set these variables before starting the process. The native runtime uses the fir
 
 Prefer running the build on the builder's native architecture when possible. A successful build with reduced concurrency does not by itself identify the cause of a hang; include the exact dependency versions, container image, emulator version, CPU limits, and reproduction when reporting one.
 
+#### Memory after a build
+
+When Rolldown is idle, it gives the memory it no longer uses back to the operating system. This happens 0.5 seconds after the last build ends or the last output is collected, and never starts while a build runs. The next build takes that memory back from the operating system, which costs some CPU time.
+
+`ROLLDOWN_MEMORY_RECLAIM_DELAY` changes this. A number sets the idle time in milliseconds, 500 by default. `off` turns the cleanup off.
+
+```sh
+ROLLDOWN_MEMORY_RECLAIM_DELAY=off npm run build
+```
+
+Set it before starting the process. It only works on Linux, macOS, Windows, FreeBSD and Android.
+
 ### Plugins
 
 Plugins extend Rolldown's functionality, but can also introduce performance overhead. To see plugin timings for `resolveId`, `load`, `transform` and `renderChunk`, turn on the [build report](/in-depth/build-report) and read its `timing.md`.

@@ -35,7 +35,12 @@ pub struct BindingDevEngine {
 #[napi]
 impl BindingDevEngine {
   #[napi(constructor)]
-  pub fn new(options: BindingBundlerOptions, dev_options: BindingDevOptions) -> napi::Result<Self> {
+  pub fn new(
+    env: Env,
+    options: BindingBundlerOptions,
+    dev_options: BindingDevOptions,
+  ) -> napi::Result<Self> {
+    crate::memory_reclaim::register_js_thread(&env);
     let session_id = rolldown_devtools::generate_session_id();
     let session = rolldown_devtools::Session::dummy();
 

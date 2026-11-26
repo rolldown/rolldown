@@ -16,7 +16,10 @@ import { PluginDriver } from '../../plugin/plugin-driver';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { normalizeBindingResult, unwrapBindingResult } from '../../utils/error';
 import { normalizedStringOrRegex } from '../../utils/normalize-string-or-regex';
-import { transformToRollupOutput } from '../../utils/transform-to-rollup-output';
+import {
+  trackOutputExternalMemory,
+  transformToRollupOutput,
+} from '../../utils/transform-to-rollup-output';
 import type { DevOptions } from './dev-options';
 
 /**
@@ -27,7 +30,7 @@ import type { DevOptions } from './dev-options';
  * there would pull the whole binding type chain into the public surface.
  */
 interface ModuleGraphSource {
-  getModuleInfo(moduleId: string): Omit<BindingModuleInfo, 'dropInner'> | null;
+  getModuleInfo(moduleId: string): BindingModuleInfo | null;
   getModuleIds(): Array<string>;
 }
 
@@ -44,7 +47,7 @@ export class DevEngineModuleGraph {
    *
    * @returns Module information for that module. `null` if the module could not be found.
    */
-  getModuleInfo(moduleId: string): Omit<BindingModuleInfo, 'dropInner'> | null {
+  getModuleInfo(moduleId: string): BindingModuleInfo | null {
     return this.#inner.getModuleInfo(moduleId) ?? null;
   }
 
@@ -97,6 +100,7 @@ export class DevEngine {
             userOnOutput(result);
             return;
           }
+          trackOutputExternalMemory(result);
           userOnOutput(transformToRollupOutput(result));
         }
       : undefined;
@@ -105,6 +109,7 @@ export class DevEngine {
     const bindingOnAdditionalAssets: BindingDevOptions['onAdditionalAssets'] =
       userOnAdditionalAssets
         ? function (output) {
+            trackOutputExternalMemory(output);
             userOnAdditionalAssets(transformToRollupOutput(output));
           }
         : undefined;

@@ -11,9 +11,12 @@ use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosableArcstr, DiagnosticOptions, EventKind,
 };
 use rolldown_fs::FileSystem;
-use rolldown_plugin::{__inner::resolve_id_check_external, PluginDriver, SharedPluginDriver};
+use rolldown_plugin::{
+  __inner::{infer_module_def_format, resolve_id_check_external},
+  PluginDriver, SharedPluginDriver,
+};
 use rolldown_resolver::{ResolveError, Resolver};
-use rolldown_utils::ecmascript;
+use rolldown_utils::{ecmascript, url::clean_url};
 use rustc_hash::FxHashMap;
 
 use crate::{SharedOptions, SharedResolver};
@@ -53,6 +56,43 @@ pub async fn resolve_id<Fs: FileSystem>(
     &importer.attributes,
   )
   .await
+}
+
+/// Reads the `package.json` of a reused resolution again, and the module format that its `type`
+/// field gives. The resolution keeps what its hooks decided, but the file can change after it. A
+/// `package.json` that no longer exists gives `None`. A `package.json` that cannot be read or
+/// parsed keeps the data of the last read. See internal-docs/cache/implementation.md.
+pub fn refresh_package_json<Fs: FileSystem>(
+  resolved_id: &mut ResolvedId,
+  resolver: &Resolver<Fs>,
+  fs: &Fs,
+) {
+  let Some(old) = resolved_id.package_json.clone() else {
+    return;
+  };
+  // `metadata` also sees a file inside a Yarn PnP zip archive.
+  let package_json = if matches!(fs.metadata(old.realpath()), Ok(metadata) if metadata.is_file()) {
+    let Ok(package_json) = resolver.try_get_package_json_or_create(old.realpath()) else {
+      return;
+    };
+    Some(package_json)
+  } else {
+    None
+  };
+  // A `resolveId` hook gives a format inferred from the whole id, and Rolldown's resolver gives
+  // one inferred from the id without `?query` and `#fragment`. Infer it again the same way. A
+  // format that neither gives, such as the one of the runtime module, stays. When both give it,
+  // the whole id is used. So an id with a query from Rolldown's resolver that started as
+  // `Unknown` stays `Unknown` after a `type` field is added.
+  let raw_id = resolved_id.id.raw_id();
+  let format = resolved_id.module_def_format;
+  if infer_module_def_format(raw_id, Some(&old)) == format {
+    resolved_id.module_def_format = infer_module_def_format(raw_id, package_json.as_ref());
+  } else if infer_module_def_format(clean_url(raw_id), Some(&old)) == format {
+    resolved_id.module_def_format =
+      infer_module_def_format(clean_url(raw_id), package_json.as_ref());
+  }
+  resolved_id.package_json = package_json;
 }
 
 pub async fn resolve_dependencies<Fs: FileSystem>(

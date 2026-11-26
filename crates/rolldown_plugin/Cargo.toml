@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_plugin"
-version = "1.3.3"
+version = "1.3.4"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
@@ -13,10 +13,6 @@ readme = "../../README.md"
 
 [lib]
 doctest = false
-
-[features]
-default = ["serde"]
-serde = ["dep:serde", "oxc_index/serde"]
 
 [lints]
 workspace = true
@@ -40,7 +36,6 @@ rolldown_resolver = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
-serde = { workspace = true, optional = true }
 serde_json = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
@@ -49,4 +44,4 @@ typedmap = { workspace = true }
 
 [package.metadata.cargo-shear]
 # `serde_json` is used in `trace_action` macro.
-ignored = ["serde", "serde_json"]
+ignored = ["serde_json"]

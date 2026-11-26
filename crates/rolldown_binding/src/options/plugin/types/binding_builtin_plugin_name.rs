@@ -7,6 +7,8 @@ pub enum BindingBuiltinPluginName {
   BundleAnalyzer,
   #[napi(value = "builtin:esm-external-require")]
   EsmExternalRequire,
+  #[napi(value = "builtin:inject")]
+  Inject,
   #[napi(value = "builtin:isolated-declaration")]
   IsolatedDeclaration,
   #[napi(value = "builtin:replace")]

@@ -21,8 +21,6 @@ use rolldown_error::BuildResult;
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_sourcemap::{Source, SourceJoiner, SourceMap, SourceMapSource};
-#[cfg(not(target_family = "wasm"))]
-use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   concat_string,
   indexmap::{FxIndexMap, FxIndexSet},
@@ -280,7 +278,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .into_par_iter()
         .map(|render_input| {
           let module_idx = render_input.idx;
-          (module_idx, self.render_module_code(render_input, 0, 0, false).0)
+          (module_idx, self.render_module_code(render_input, 0, false).0)
         })
         .collect::<Vec<_>>()
         .into_iter()
@@ -384,7 +382,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .into_par_iter()
       .filter_map(|render_input| {
         let module_idx = render_input.idx;
-        let (code, _) = self.render_module_code(render_input, 0, 0, false);
+        let (code, _) = self.render_module_code(render_input, 0, false);
         (pre_rebuild_renders[&module_idx] == code).then_some(module_idx)
       })
       .collect::<Vec<_>>()
@@ -772,12 +770,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     }
     let rendered_sources = module_render_inputs
       .into_par_iter()
-      .enumerate()
-      .flat_map(|(index, render_input)| {
+      .flat_map(|render_input| {
         let affected_module_idx = render_input.idx;
         let stamp = stamp_table
           .render_time_stamp(self.module_table().modules[affected_module_idx].stable_id().as_str());
-        let (code, map) = self.render_module_code(render_input, index, stamp, true);
+        let (code, map) = self.render_module_code(render_input, stamp, true);
 
         let affected_module = &self.module_table().modules[affected_module_idx];
         let Module::Normal(affected_module) = affected_module else {
@@ -899,12 +896,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     }
     let rendered_sources = module_render_inputs
       .into_par_iter()
-      .enumerate()
-      .flat_map(|(index, render_input)| {
+      .flat_map(|render_input| {
         let affected_module_idx = render_input.idx;
         let stamp = stamp_table
           .render_time_stamp(self.module_table().modules[affected_module_idx].stable_id().as_str());
-        let (code, map) = self.render_module_code(render_input, index, stamp, true);
+        let (code, map) = self.render_module_code(render_input, stamp, true);
 
         let affected_module = &self.module_table().modules[affected_module_idx];
         let Module::Normal(affected_module) = affected_module else {
@@ -978,14 +974,11 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
   /// Finalize and print one module into its HMR payload form (factory-registration
   /// snippet, without the `//#region` framing).
   ///
-  /// `unique_index` seeds the payload-position-dependent binding suffixes, so two
-  /// renders of the same module compare equal only when they pin it to the same
-  /// value, and likewise the same `stamp`. `with_sourcemap: false` skips sourcemap
-  /// generation even when the options ask for one.
+  /// Two renders of the same module compare equal only when they use the same `stamp`.
+  /// `with_sourcemap: false` skips sourcemap generation even when the options ask for one.
   fn render_module_code(
     &self,
     render_input: ModuleRenderInput,
-    unique_index: usize,
     stamp: u32,
     with_sourcemap: bool,
   ) -> (String, Option<SourceMap>) {
@@ -1019,7 +1012,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         generated_static_import_infos: FxHashMap::default(),
         re_export_all_dependencies: FxIndexSet::default(),
         generated_static_import_stmts_from_external: FxIndexMap::default(),
-        unique_index,
         stamp,
         named_exports: FxHashMap::default(),
       };

@@ -73,6 +73,9 @@ function transformToMutableRollupOutputChunk(
       return code;
     },
     fileName,
+    get immutable() {
+      return bindingChunk.getImmutable();
+    },
     // Metadata is read lazily: the bundle is rebuilt for every JS `generateBundle`/`writeBundle`
     // hook, and most hooks read only a few fields of a few outputs. Each read crosses NAPI, and
     // the Proxy below caches the first read, so a field is still fetched at most once per hook.
@@ -126,6 +129,11 @@ function transformToMutableRollupOutputChunk(
       return value;
     },
     set(_target, p, newValue): boolean {
+      if (p === 'immutable') return true;
+      if (p === 'fileName') {
+        if (newValue === fileName) delete cache.immutable;
+        else cache.immutable = false;
+      }
       cache[p] = newValue;
       if (!assigned) {
         const names = new Set<string | symbol>();
@@ -237,9 +245,13 @@ function transformToMutableRollupOutputAsset(
   bindingAsset: BindingOutputAsset,
   changed: ChangedOutputs,
 ): OutputAsset {
+  const fileName = bindingAsset.getFileName();
   const asset = {
     type: 'asset',
-    fileName: bindingAsset.getFileName(),
+    fileName,
+    get immutable() {
+      return bindingAsset.getImmutable();
+    },
     // Lazy for the same reason as chunk metadata above.
     get originalFileName() {
       return bindingAsset.getOriginalFileName() || null;
@@ -268,11 +280,25 @@ function transformToMutableRollupOutputAsset(
       return value;
     },
     set(_target, p, newValue): boolean {
+      if (p === 'immutable') return true;
+      if (p === 'fileName') {
+        if (newValue === fileName) delete cache.immutable;
+        else cache.immutable = false;
+      }
       cache[p] = newValue;
       changed.updated.set(asset.fileName, undefined);
       return true;
     },
   });
+}
+
+/**
+ * The native side of an output is only freed when V8 collects its JS wrapper. Telling V8 how much
+ * memory that is keeps it from waiting forever on an almost empty JS heap.
+ */
+export function trackOutputExternalMemory(output: BindingOutputs): void {
+  for (const chunk of output.chunks) chunk.trackExternalMemory();
+  for (const asset of output.assets) asset.trackExternalMemory();
 }
 
 export function transformToRollupOutput(output: BindingOutputs): RolldownOutput {

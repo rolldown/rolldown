@@ -1,0 +1,12 @@
+{
+  "config": {
+    "moduleTypes": {
+      ".js": "jsx"
+    },
+    "transform": {
+      "jsx": "preserve"
+    }
+  },
+  "_comment": "The ESM output retains the arrow's lexical this and both properties of ui.",
+  "expectExecuted": false
+}

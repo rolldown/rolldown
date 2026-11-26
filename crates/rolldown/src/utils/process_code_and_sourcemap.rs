@@ -203,6 +203,7 @@ pub fn emit_sourcemap(
         }
         return Ok(Some(OutputAsset {
           filename: map_filename.into(),
+          immutable: false,
           source: source.into(),
           original_file_names: vec![],
           names: vec![],

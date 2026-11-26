@@ -108,8 +108,10 @@ impl PreProcessEcmaAst {
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
     // Read before later steps replace `scoping`. None of them adds decorators.
-    let has_decorator_syntax =
-      scoping.as_ref().is_some_and(oxc::semantic::Scoping::has_decorators_or_auto_accessors);
+    let js_transforms_decorators = matches!(parsed_type, OxcParseType::Js)
+      && scoping
+        .as_ref()
+        .is_some_and(|scoping| bundle_options.transform_options.js_transforms_decorators(scoping));
     self.clear_no_side_effects_replaceable_by_eval(&mut ast, &mut scoping);
 
     // Extract enum member values before the transformer converts enums.
@@ -174,15 +176,15 @@ impl PreProcessEcmaAst {
     // Step 3: Transform TypeScript and jsx.
     // Note: Currently, the newest syntax oxc_transform can lower is ES2026
     // explicit resource management (`using`); the ES2025 regexp features are
-    // not transformed. `LOWERABLE_ES_FEATURES` in `rolldown_common` holds the
-    // full list `should_transform_js` is decided from.
+    // not transformed. `should_transform_js` comes from oxc's
+    // `EnvOptions::lowers_syntax`.
     let is_not_js = !matches!(parsed_type, OxcParseType::Js);
     let mut preserve_jsx = false;
     if is_not_js
       || bundle_options.transform_options.should_transform_js
       // No engine ships standard decorators, so only pay for the pass when the
-      // module has decorators or auto-accessors.
-      || (bundle_options.transform_options.lower_decorators_in_js && has_decorator_syntax)
+      // module has decorators or auto-accessors to lower.
+      || js_transforms_decorators
       // Run transformer on JS files containing `</script` to handle tagged template literals.
       || contains_script_closing_tag(ast.source().as_bytes())
     {

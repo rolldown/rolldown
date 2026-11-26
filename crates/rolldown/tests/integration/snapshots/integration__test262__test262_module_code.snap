@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration/test262.rs
 expression: snapshot
 ---
-Summary: 550 passed, 49 failed, 599 total
+Summary: 552 passed, 47 failed, 599 total
 
 ---
 
@@ -1011,13 +1011,9 @@ Runtime error: Failed to import test module: Test262Error {
 ---
 
 # language/module-code/instn-named-bndng-dflt-fun-anon.js
-Result: FAIL
-Reason: keepNames feature in Rolldown does not work for accesses requiring the function to be hoisted
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: Test262Error {
-  message: 'correct name is assigned Expected SameValue(«"instn_named_bndng_dflt_fun_anon_default"», «"default"») to be true'
-}
+Actual: Runtime execution succeeded
 ---
 
 # language/module-code/instn-named-bndng-dflt-fun-named.js
@@ -1027,13 +1023,9 @@ Actual: Runtime execution succeeded
 ---
 
 # language/module-code/instn-named-bndng-dflt-gen-anon.js
-Result: FAIL
-Reason: keepNames feature in Rolldown does not work for accesses requiring the function to be hoisted
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: Test262Error {
-  message: 'correct name is assigned Expected SameValue(«"instn_named_bndng_dflt_gen_anon_default"», «"default"») to be true'
-}
+Actual: Runtime execution succeeded
 ---
 
 # language/module-code/instn-named-bndng-dflt-gen-named.js

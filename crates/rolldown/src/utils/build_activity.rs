@@ -36,3 +36,12 @@ impl Drop for BuildActivity {
     }
   }
 }
+
+/// Dropped with the last holder of a build's data, the plugin driver or a plugin context JS keeps.
+pub struct BuildData;
+
+impl Drop for BuildData {
+  fn drop(&mut self) {
+    notify_memory_released();
+  }
+}

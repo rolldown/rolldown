@@ -9,11 +9,12 @@ Rolldown keeps long-lived worker threads and uses mimalloc. Freed memory stays r
 - `crates/rolldown/src/utils/build_activity.rs`: a process-wide count of running builds and a hook. `Bundle` and the HMR entries in `impl_bundler_hmr.rs` hold a `BuildActivity`, so `rolldown()`, watch and dev are all covered by one counter. Core knows nothing about mimalloc.
 - `crates/rolldown_binding/src/memory_reclaim.rs`: owns the `rolldown-reclaim` thread, created on the first notification, never at import. Each JS thread that creates a bundler, watcher or dev engine registers a weak threadsafe function, so a round reaches that JS thread too.
 - `BindingOutputChunk` and `BindingOutputAsset`: report their size to V8 through `napi_adjust_external_memory` and notify when finalized.
+- `BuildData` in `build_activity.rs`: one per build, notifies when dropped. `BundleFactory::create_bundle` puts it in the `PluginContextMeta` that every plugin context of the build shares. The plugin driver and its contexts hold the build's data, such as every module's code, so it drops with the last of them. JS can keep a context past `close()`, for example the `this` of a `closeBundle` call, or an error thrown there whose stack is not formatted yet. Rollup keeps that data readable after `close()` too, so `close()` does not clear it.
 - `ClassicBundler::close` and `BundleHandle::close` notify once they drop the build's plugin driver.
 
 ## Data flow
 
-1. The last `BuildActivity` drops, or a finalizer or `close()` releases build data. Each one calls `notify_memory_released`.
+1. The last `BuildActivity` drops, a `BuildData` drops, or a finalizer or `close()` releases build data. Each one calls `notify_memory_released`.
 2. `rolldown-reclaim` waits for a quiet window (`ROLLDOWN_MEMORY_RECLAIM_DELAY`, 500 ms by default, `off` disables) with no active build. While a build runs, it sleeps until the next notification, since the last build to end always sends one.
 3. Every tokio worker, blocking thread and rayon worker calls `mi_theap_quiescent_abandon` on its own theap. It settles the frees other threads queued on its pages, returns its empty pages, and gives up the pages that still hold live data. Then `mi_arenas_purge` returns the free memory to the OS. After that, each registered JS thread does the same on its own theap and purges again. Module sources are read on blocking threads, so skipping them leaves much of a build resident.
 4. When JS frees the output later, the free that empties a given-up page returns it to the arena on the freeing thread, so the thread that made the data is not needed again. The finalizers notify, and the next round's purge returns that memory to the OS.
@@ -33,7 +34,7 @@ Rolldown keeps long-lived worker threads and uses mimalloc. Freed memory stays r
 
 ## Gaps
 
-libuv threads (`enhancedTransform`) are not settled. A wrapper type that does not notify delays the purge until the next round, it does not leak. A thread that stays busy through every retry keeps its pages until the next round.
+libuv threads (`enhancedTransform`) are not settled. A wrapper type that does not notify delays the purge until the next round, it does not leak. A thread that stays busy through every retry keeps its pages until the next round. A plugin context that JS keeps holds the build's data until V8 collects it. V8 does not see that native memory, so in an idle process that can be late.
 
 ## Measuring
 

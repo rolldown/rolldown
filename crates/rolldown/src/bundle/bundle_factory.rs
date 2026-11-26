@@ -193,6 +193,13 @@ impl BundleFactory {
       module_side_effects_overrides,
       transform_dependencies,
     );
+    // Every plugin context of the build shares this meta, also one that JS keeps after `close()`.
+    // Without a plugin, no context outlives the driver.
+    if let Some(idx) = plugin_driver.plugins().indices().next()
+      && let Some((_, _, ctx)) = plugin_driver.iter_plugin_with_context_by_order(&[idx]).next()
+    {
+      ctx.meta().insert(Arc::new(crate::utils::build_activity::BuildData));
+    }
     let bundle = Bundle {
       fs,
       options: Arc::clone(&self.options),

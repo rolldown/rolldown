@@ -30,7 +30,7 @@ Rolldown keeps long-lived worker threads and uses mimalloc. Freed memory stays r
 - mimalloc options are written once at load, before the async runtime starts its threads. They are written as defaults, so a `MIMALLOC_*` environment variable still wins. Only options mimalloc reads at use time can be set this way: `page_reclaim_on_free` is copied into the main heap at process start, so setting it at load does nothing.
 - `page_commit_on_demand = 1` is set on Windows only. Other systems commit pages eagerly, as by default. The value 2 is not used. It would also turn on for Linux with `vm.overcommit_memory=2`, which is not measured, and for FreeBSD by default. mimalloc reads FreeBSD's default `vm.overcommit=0` as no overcommit, though that value allows overcommit.
 - Do not notify when nothing was built. A round runs `rayon::broadcast`, which creates rayon's global pool if no build has used it, one thread per core that never exits. So `ClassicBundler::close` notifies only when it has a bundle to close.
-- Never start threads from `module_init`. On Linux it runs under the loader lock, and a new thread that touches dynamic TLS waits for that lock (this deadlocked with `rayon::ThreadPoolBuilder::build_global`).
+- Never wait for a new thread in `module_init`. On Linux it runs under the loader lock, and a new thread that touches dynamic TLS waits for that lock. The tokio runtime's threads start there too, which is fine since nothing waits for them. `rayon::ThreadPoolBuilder::build_global` waits until its threads start, and that deadlocked.
 - Memory JS still holds cannot be reclaimed yet. Its finalizer triggers another round.
 
 ## Gaps

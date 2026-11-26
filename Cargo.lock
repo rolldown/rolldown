@@ -2965,7 +2965,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_inject"
-version = "1.3.2"
+version = "1.3.3"
 dependencies = [
  "oxc",
  "rolldown",

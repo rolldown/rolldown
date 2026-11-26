@@ -385,7 +385,7 @@ export interface ExportImportName {
   end: number | null
 }
 
-export type ExportImportNameKind = 'Name' | 'All' | 'AllButDefault' | 'None'
+export type ExportImportNameKind = 'Name' | 'All' | 'AllButDefault' | 'None' | 'Source'
 
 export interface ExportLocalName {
   kind: ExportLocalNameKind
@@ -403,7 +403,7 @@ export interface ImportName {
   end: number | null
 }
 
-export type ImportNameKind = 'Name' | 'NamespaceObject' | 'Default'
+export type ImportNameKind = 'Name' | 'NamespaceObject' | 'Default' | 'Source'
 
 /**
  * Parse JS/TS source asynchronously on a separate thread.

@@ -85,6 +85,7 @@ impl Plugin for IsolatedDeclarationPlugin {
           // TODO make sure to the .d.ts file relative to the output entry file
           file_name: Some(emit_dts_path.to_slash_lossy().into()),
           source: codegen_ret.code.into(),
+          ..Default::default()
         },
         None,
         None,

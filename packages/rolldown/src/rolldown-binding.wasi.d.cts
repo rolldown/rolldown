@@ -1825,6 +1825,7 @@ export declare class BindingOutputAsset {
   /** V8 cannot see this memory, so without this it feels no pressure to collect this object. */
   trackExternalMemory(): void
   getFileName(): string
+  getImmutable(): boolean
   getOriginalFileName(): string | null
   getOriginalFileNames(): Array<string>
   getSource(): BindingAssetSource
@@ -1844,6 +1845,7 @@ export declare class BindingOutputChunk {
   getModules(): BindingModules
   getImports(): Array<string>
   getDynamicImports(): Array<string>
+  getImmutable(): boolean
   getCode(): string
   /**
    * Identity of the shared chunk data behind this object. Two `BindingOutputChunk` objects with the same
@@ -2152,6 +2154,7 @@ export interface BindingDevWatchOptions {
 export interface BindingEmittedAsset {
   name?: string
   fileName?: string
+  immutable?: boolean
   originalFileName?: string
   source: BindingAssetSource
 }
@@ -2166,6 +2169,7 @@ export interface BindingEmittedChunk {
 
 export interface BindingEmittedPrebuiltChunk {
   fileName: string
+  immutable?: boolean
   name?: string
   code: string
   exports?: Array<string>

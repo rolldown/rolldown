@@ -111,6 +111,10 @@ impl GenerateStage<'_> {
           output.push(Output::Chunk(Arc::new(OutputChunk {
             name: rendered_chunk.name.clone(),
             filename,
+            immutable: ecma_meta
+              .preliminary_filename
+              .hash_placeholder()
+              .is_some_and(|placeholders| !placeholders.is_empty()),
             code,
             is_entry: rendered_chunk.is_entry,
             is_dynamic_entry: rendered_chunk.is_dynamic_entry,
@@ -128,6 +132,7 @@ impl GenerateStage<'_> {
         InstantiationKind::Sourcemap(sourcemap_meta) => {
           output.push(Output::Asset(Arc::new(OutputAsset {
             filename,
+            immutable: false,
             source: code,
             original_file_names: sourcemap_meta.original_file_names,
             names: sourcemap_meta.names,

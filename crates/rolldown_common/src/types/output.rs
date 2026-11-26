@@ -9,6 +9,10 @@ pub struct OutputAsset {
   pub names: Vec<String>,
   pub original_file_names: Vec<String>,
   pub filename: ArcStr,
+  /// True when `assetFileNames` expands `[hash]` for the filename or the emitter marks an explicit filename immutable.
+  /// Rolldown sets this to `false` on the sourcemaps it generates.
+  /// Clear this flag when changing `filename` or the bytes of `source`.
+  pub immutable: bool,
   pub source: StrOrBytes,
 }
 

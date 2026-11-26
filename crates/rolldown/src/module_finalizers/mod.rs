@@ -137,6 +137,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub top_level_var_bindings: FxIndexSet<Ident<'ast>>,
   pub cur_stmt_index: usize,
   pub keep_name_statement_to_insert: Vec<(usize, CompactStr, CompactStr)>,
+  pub hoisted_keep_names: Vec<(CompactStr, CompactStr)>,
   pub needs_hosted_top_level_binding: bool,
   pub module_namespace_included: bool,
   /// Finalized init statements this module donates to another module of its chunk
@@ -2952,10 +2953,21 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// Inserts `__name()` call statements for keeping function/class names.
   /// This method processes the pending keep_name insertions in reverse order.
   fn insert_keep_name_statements(
-    &self,
+    &mut self,
     statements: &mut allocator::Vec<'ast, ast::Statement<'ast>>,
+    default_exports: bool,
   ) {
     for (stmt_index, original_name, new_name) in self.keep_name_statement_to_insert.iter().rev() {
+      if (default_exports
+        || (self.state.contains(TraverseState::IsRootLevel)
+          && matches!(statements[*stmt_index - 1], Statement::FunctionDeclaration(_))))
+        && !matches!(self.ctx.wrapper_mode(), ModuleWrapperMode::InteropCjs(_))
+        && !self.ctx.module.ast_usage.contains(rolldown_common::EcmaModuleAstUsage::TopLevelReturn)
+        && self.ctx.inline_state.carried_by(self.ctx.file_idx).is_empty()
+      {
+        self.hoisted_keep_names.push((original_name.clone(), new_name.clone()));
+        continue;
+      }
       let name_ref = self.canonical_ref_for_runtime("__name");
       let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
       let target = Expression::new_id_ref_expr(SPAN, new_name, self);

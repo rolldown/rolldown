@@ -12,7 +12,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{
   share_factory::render_inline_records,
-  utils::{is_use_strict_directive, render_chunk_directives},
+  utils::{is_use_strict_directive, render_chunk_directives, render_hoisted_keep_names},
 };
 use crate::{
   ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
@@ -56,6 +56,9 @@ pub fn render_esm<'code>(
 
   if let Some(imports) = render_esm_chunk_imports(ctx) {
     source_joiner.append_source(imports);
+  }
+  if module_sources.first().is_none_or(|m| m.module_idx != ctx.link_output.runtime.id()) {
+    render_hoisted_keep_names(ctx, &mut source_joiner);
   }
 
   if let Some((_, factory)) = ctx.chunk.node_require_import() {
@@ -156,6 +159,9 @@ fn render_chunk_content<'code>(
       }
       if let Some(prelude) = dev_graph_prelude.take_if(|_| is_runtime_module(*module_idx)) {
         source_joiner.append_source(prelude);
+      }
+      if !ctx.hoisted_keep_names.is_empty() && *module_idx == ctx.link_output.runtime.id() {
+        render_hoisted_keep_names(ctx, source_joiner);
       }
     },
   );

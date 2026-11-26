@@ -7,6 +7,7 @@ use rolldown_common::{
 pub type FinalizerMutableFields = (
   Vec<(ImportRecordIdx, EcmaAst)>, // transferred_import_record
   Vec<BuildDiagnostic>,            // diagnostics
+  Vec<(oxc_str::CompactStr, oxc_str::CompactStr)>,
 );
 
 use oxc::ast::builder::AstBuilder;
@@ -142,6 +143,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         state: TraverseState::empty(),
         cur_stmt_index: 0,
         keep_name_statement_to_insert: vec![],
+        hoisted_keep_names: vec![],
         needs_hosted_top_level_binding: false,
         module_namespace_included,
         transferred_import_record: Vec::new(),
@@ -219,7 +221,8 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         )
       }));
 
-      (finalizer.transferred_import_record, diagnostics)
+      finalizer.hoisted_keep_names.reverse();
+      (finalizer.transferred_import_record, diagnostics, finalizer.hoisted_keep_names)
     })
   }
 }

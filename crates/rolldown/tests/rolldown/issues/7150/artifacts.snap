@@ -8,11 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { t as __name } from "./rolldown-runtime.js";
 import assert from "node:assert";
+__name(dep_default, "default");
 // dep.js
 function dep_default() {
 	return "anonymous default function";
 }
-__name(dep_default, "default");
 // dep-class.js
 var dep_class_default = class {
 	static {
@@ -41,10 +41,10 @@ export { main_default as default };
 ```js
 import { t as __name } from "./rolldown-runtime.js";
 import assert from "node:assert";
+__name(main2_default, "default");
 // main2.js
 var count = 100;
 function main2_default() {}
-__name(main2_default, "default");
 assert.strictEqual(count, 100);
 export { main2_default as default };
 

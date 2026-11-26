@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+__name(x$1, "x");
+// a.js
+const earlyName = x$1.name;
+Object.freeze(x$1);
+function x$1() {
+	return "a";
+}
+// b.js
+function x() {
+	return "b";
+}
+// main.js
+const result = [
+	earlyName,
+	x$1(),
+	x()
+];
+export { result };
+
+```

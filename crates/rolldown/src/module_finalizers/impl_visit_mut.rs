@@ -437,7 +437,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     self.preserve_renamed_catch_vars(program);
 
     // Insert keep_name statements for top-level declarations
-    self.insert_keep_name_statements(&mut program.body);
+    self.insert_keep_name_statements(&mut program.body, true);
     self.keep_name_statement_to_insert.clear();
 
     match wrapper_mode {
@@ -642,7 +642,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       self.visit_statement(stmt);
     }
 
-    self.insert_keep_name_statements(it);
+    self.insert_keep_name_statements(it, false);
     self.cur_stmt_index = previous_stmt_index;
     self.keep_name_statement_to_insert = previous_keep_name_statement;
   }

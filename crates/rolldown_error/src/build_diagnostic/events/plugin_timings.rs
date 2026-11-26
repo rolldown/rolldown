@@ -71,7 +71,7 @@ impl PluginTimings {
   /// Select and order what is worth showing, or `None` when nothing is.
   ///
   /// Whether the build was plugin-bound at all is a separate question, answered before this
-  /// by `BuildTimings::plugins_are_slow` — the clocks for it live on the Rust side.
+  /// by `BuildTimings::is_plugin_bound` — the clocks for it live on the Rust side.
   pub fn new(build_ms: f64, measurement: PluginTimingsMeasurement) -> Option<Self> {
     let (rankable, overlapped): (Vec<_>, Vec<_>) =
       measurement.rows.into_iter().partition(|row| row.rankable);

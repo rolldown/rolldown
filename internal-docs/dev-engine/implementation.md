@@ -1267,8 +1267,8 @@ barrel state. Relevant methods:
 - `get_snapshot_mut()` — mutable borrow (panics if unset).
 - `merge(...)` — fold an incremental scan output into the snapshot;
   first-time populates it.
-- `update_defer_sync_data(...)` — take the snapshot, run the
-  `defer_sync_scan_data` work, set it back.
+- `apply_module_side_effects_overrides(...)` — take the snapshot, apply
+  the plugin writes to `moduleSideEffects`, set it back.
 
 ### HMR reads `Bundler::cache`
 

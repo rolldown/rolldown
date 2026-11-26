@@ -300,7 +300,6 @@ const WatcherOptionsSchema = v.strictObject({
   exclude: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
   include: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
   watcher: v.optional(WatcherFileWatcherOptionsSchema),
-  notify: v.optional(WatcherFileWatcherOptionsSchema),
   skipWrite: v.pipe(v.optional(v.boolean()), v.description('Skip the bundle.write() step')),
   buildDelay: v.pipe(v.optional(v.number()), v.description('Throttle watch rebuilds')),
   clearScreen: v.pipe(
@@ -463,6 +462,12 @@ const ChecksOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description(
       'Whether to emit warnings when the options of a dynamic import are not statically analyzable while `experimental.importAttributes` is on',
+    ),
+  ),
+  droppedImportAttribute: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when the import attributes of an external module are dropped because the output format is not ESM',
     ),
   ),
 });
@@ -705,6 +710,7 @@ const InputOptionsSchema = v.strictObject({
           v.object({
             baseUrl: v.optional(v.string()),
             fileName: v.optional(v.string()),
+            include: v.optional(v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)])),
           }),
         ]),
       ),
@@ -897,6 +903,7 @@ const InlineCommonChunksExcludeItemSchema = v.union([
 
 const ExperimentalInlineCommonChunksSchema = v.strictObject({
   maxSize: v.optional(v.number()),
+  maxDuplicatedSize: v.optional(v.number()),
   exclude: v.optional(
     v.union([InlineCommonChunksExcludeItemSchema, v.array(InlineCommonChunksExcludeItemSchema)]),
   ),

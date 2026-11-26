@@ -38,6 +38,9 @@ fn pure_esm_js_oxc_source_type(module_def_format: ModuleDefFormat) -> OxcSourceT
 pub struct ParseToEcmaAstResult {
   pub ast: EcmaAst,
   pub scoping: Scoping,
+  /// The extra symbol capacity that the final semantic build requested for facade symbols. See
+  /// [`crate::ast_scanner::facade_symbol_reserve`].
+  pub facade_symbol_reserve: u32,
   pub has_lazy_export: bool,
   pub warnings: Vec<BuildDiagnostic>,
   /// Whether JSX syntax should be preserved in the output, determined per-module

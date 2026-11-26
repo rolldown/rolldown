@@ -63,7 +63,10 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
     let guard = TaskMessageGuard::new(&self.ctx, RUNTIME_MODULE_ID);
     if let Err(errs) = self.run_inner().await {
       // If the main thread is dead, nothing we can do to handle these send failures.
-      let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
+      let _ = self
+        .ctx
+        .tx
+        .unbounded_send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
     guard.mark_sent();
   }
@@ -93,6 +96,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
         source,
         &mut sourcemap_chain,
         &mut side_effects,
+        &mut None,
         &mut module_type,
         None,
         &mut code_changed_by_plugins,
@@ -165,7 +169,9 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       module_type,
 
       ecma_view: EcmaView {
+        pre_render_size: source.len(),
         source,
+        cjs_literal_export_names: FxIndexSet::default(),
 
         import_records: IndexVec::default(),
         sourcemap_chain: Arc::new(sourcemap_chain),
@@ -222,7 +228,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
     }));
 
     // If the main thread is dead, nothing we can do to handle these send failures.
-    let _ = self.ctx.tx.send(result);
+    let _ = self.ctx.tx.unbounded_send(result);
 
     Ok(())
   }
@@ -247,6 +253,7 @@ impl<Fs: FileSystem + Clone + 'static> RuntimeModuleTask<Fs> {
       let scanner = AstScanner::new(
         self.module_idx,
         scoping,
+        0,
         "rolldown_runtime",
         ModuleDefFormat::EsmMjs,
         source,

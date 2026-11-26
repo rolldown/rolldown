@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 /// represent the side-effects of module is derived from `side effect hook`, package.json or analyzed from source file
 pub enum DeterminedSideEffects {
   /// Including the side effects from package.json and hook side effects
@@ -57,9 +57,21 @@ pub(crate) fn glob_match_with_normalized_pattern(pattern: &str, path: &str) -> b
   fast_glob::glob_match(&normalized_glob, path.trim_start_matches("./"))
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HookSideEffects {
   True,
   False,
   NoTreeshake,
+}
+
+impl HookSideEffects {
+  /// The value `getModuleInfo().moduleSideEffects` shows for this hook value. Tree shaking reads
+  /// `true` differently: it still analyzes the statements.
+  pub fn declared(self) -> DeterminedSideEffects {
+    match self {
+      HookSideEffects::True => DeterminedSideEffects::UserDefined(true),
+      HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
+      HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
+    }
+  }
 }

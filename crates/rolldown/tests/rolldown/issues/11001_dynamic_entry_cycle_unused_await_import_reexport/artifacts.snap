@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import "./z.js";
+export {};
+
+```
+
+## entry.js
+
+```js
+import { n as setMarker } from "./state.js";
+// entry.mjs
+await import("./a.js");
+setMarker(2);
+const { value } = await import("./z.js");
+console.log(value);
+export {};
+
+```
+
+## state.js
+
+```js
+// state.mjs
+let marker = 1;
+function setMarker(value) {
+	marker = value;
+}
+export { setMarker as n, marker as t };
+
+```
+
+## z.js
+
+```js
+import { t as marker } from "./state.js";
+// s.mjs
+const value = marker;
+export { value };
+
+```

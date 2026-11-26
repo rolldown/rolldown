@@ -578,7 +578,7 @@ export interface InputOptions {
      *
      * Available options:
      * - `exec-order`: Almost equivalent to the topological order of the module graph, but specially handling when module graph has cycle.
-     * - `module-id`: This is more friendly for gzip compression, especially for some javascript static asset lib (e.g. icon library)
+     * - `module-id`: This is more friendly for gzip compression, especially for some JavaScript static asset lib (e.g. icon library)
      *
      * > [!NOTE]
      * > Try to sort the modules by their module id if possible (Since rolldown scope hoist all modules in the chunk, we only try to sort those modules by module id if we could ensure runtime behavior is correct after sorting).
@@ -609,6 +609,10 @@ export interface InputOptions {
      * affect that file's key.
      * Keeping these keys independent of content hashes reduces cascading cache invalidation when
      * a dependency changes.
+     *
+     * Set `include` to map only the chunks whose name matches, which keeps the map small in a
+     * large app. A string has to equal the chunk name. A regular expression is tested against
+     * it. Chunks outside the map are imported by their content-hashed filename as usual.
      *
      * The output defaults to `importmap.json` unless overridden via `fileName`. A base URL prefix
      * (default `"/"`) can be applied to all paths. The resulting JSON is a valid import map and can be
@@ -651,7 +655,9 @@ export interface InputOptions {
      *
      * @default false
      */
-    chunkImportMap?: boolean | { baseUrl?: string; fileName?: string };
+    chunkImportMap?:
+      | boolean
+      | { baseUrl?: string; fileName?: string; include?: StringOrRegExp | StringOrRegExp[] };
 
     /**
      * Under `output.strictExecutionOrder`, derive a conservative wrapping plan from predicted
@@ -857,7 +863,6 @@ export interface InputOptions {
 
 interface OverwriteInputOptionsForCli {
   external?: string[];
-  inject?: Record<string, string>;
   treeshake?: boolean;
 }
 

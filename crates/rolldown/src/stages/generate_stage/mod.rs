@@ -7,7 +7,7 @@ use oxc_str::CompactStr;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ModuleIdx, NormalModule, OutputExports, PackageJson,
-  PathsOutputOption, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
+  PathsOutputOption, StaticImport, UsedSymbolRefs, UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -250,6 +250,10 @@ impl<'a> GenerateStage<'a> {
     // A file names its carried records' modules together with its own.
     // See internal-docs/inline-common-chunks/implementation.md ("Deconflicting").
     let inline_naming_inputs = self.inline_naming_inputs(&chunk_graph);
+    let node_require_ref = self
+      .options
+      .polyfill_require_for_esm_format_with_node_platform()
+      .then(|| self.link_output.runtime.resolve_symbol("__require"));
     debug_span!("deconflict_chunk_symbols").in_scope(|| {
       // Borrow the chunk table mutably alongside the assignment tables it does not touch, so
       // deconflicting can attribute recorded external interop to the chunk it belongs to.
@@ -267,6 +271,7 @@ impl<'a> GenerateStage<'a> {
             self.link_output,
             &order_state,
             self.options.format,
+            node_require_ref,
             &index_chunk_id_to_name,
             chunk_assignments,
             inline_naming_inputs.get(&chunk_idx),
@@ -300,6 +305,16 @@ impl<'a> GenerateStage<'a> {
       &order_state,
       &final_esm_init_metadata,
     )?;
+    if node_require_ref.is_some() {
+      for chunk in chunk_graph.chunk_table.iter_mut() {
+        if let Some((module, _)) = chunk.node_require_import() {
+          let import = StaticImport::External(module);
+          if !chunk.static_imports.contains(&import) {
+            chunk.static_imports.push(import);
+          }
+        }
+      }
+    }
     self.detect_ineffective_dynamic_imports(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs, &order_state).await
   }
@@ -466,8 +481,6 @@ impl<'a> GenerateStage<'a> {
 
     for chunk_id in &chunk_graph.sorted_chunk_idx_vec {
       let chunk = &mut chunk_graph.chunk_table[*chunk_id];
-      // `preliminary_filename` is the single source of truth for "already generated": it is
-      // written only here, together with `preliminary_sourcemap_filename`.
       if chunk.preliminary_filename.is_some() {
         continue;
       }
@@ -528,7 +541,80 @@ impl<'a> GenerateStage<'a> {
       chunk.preliminary_sourcemap_filename = preliminary_sourcemap_filename;
       chunk.pre_rendered_chunk = Some(pre_rendered_chunk);
     }
+    if self.options.file.is_none() {
+      self.deconflict_template_filenames(chunk_graph, &output_dir);
+    }
     Ok((index_chunk_id_to_representative_name, record_ids))
+  }
+
+  fn deconflict_template_filenames(&self, chunk_graph: &mut ChunkGraph, output_dir: &Path) {
+    use rolldown_common::{PreliminaryFilename, SourceMapType};
+    use rolldown_std_utils::PathExt as _;
+    use rolldown_utils::make_unique_name::{
+      make_unique_name, release_unique_name, try_reserve_unique_name,
+    };
+
+    let normalize = |path: &Path| path.normalize().expect_to_slash();
+    let removed = &chunk_graph.post_chunk_optimization_operations;
+    let explicit_names: FxHashSet<_> = chunk_graph
+      .chunk_idx_to_reference_ids
+      .keys()
+      .filter(|idx| !removed.contains_key(idx))
+      .filter_map(|&idx| chunk_graph.chunk_table[idx].file_name.as_ref())
+      .map(|name| normalize(name.as_path()))
+      .collect();
+    if explicit_names.is_empty() {
+      return;
+    }
+    let map_files =
+      matches!(self.options.sourcemap, Some(SourceMapType::File | SourceMapType::Hidden));
+    let implicit_maps = map_files && self.options.sourcemap_filenames.is_none();
+    let map_name = |name: &ArcStr| ArcStr::from(format!("{name}.map"));
+    let mut reserved_names = None;
+    for idx in &chunk_graph.sorted_chunk_idx_vec {
+      let chunk = &chunk_graph.chunk_table[*idx];
+      if let Some(name) = chunk.preliminary_filename.as_ref()
+        && chunk.file_name.is_none()
+        && name.hash_placeholder().is_none()
+        && !removed.contains_key(idx)
+      {
+        let name = normalize(name.as_path());
+        if !explicit_names.contains(&name) {
+          continue;
+        }
+        let reserved = reserved_names.get_or_insert_with(|| {
+          let reserved = FxDashMap::default();
+          let chunk_names = chunk_graph.chunk_table.iter_enumerated().flat_map(|(idx, chunk)| {
+            let filename = chunk.preliminary_filename.as_deref();
+            // `getFileName` can still return a removed chunk's preliminary filename.
+            if removed.contains_key(&idx) {
+              return [filename.cloned(), None];
+            }
+            let map = chunk.preliminary_sourcemap_filename.as_deref().filter(|_| map_files);
+            let map = map.cloned().or_else(|| filename.filter(|_| implicit_maps).map(map_name));
+            [filename.cloned(), map]
+          });
+          let emitted_names = self.plugin_driver.file_emitter.asset_and_prebuilt_chunk_filenames();
+          for name in chunk_names.flatten().chain(emitted_names) {
+            for path in name.as_path().ancestors().filter(|path| !path.as_os_str().is_empty()) {
+              try_reserve_unique_name(&normalize(path).into(), &reserved);
+            }
+          }
+          reserved
+        });
+        let name = ArcStr::from(name);
+        let mut candidate = make_unique_name(&name, reserved);
+        while implicit_maps && !try_reserve_unique_name(&map_name(&candidate), reserved) {
+          release_unique_name(&candidate, reserved);
+          candidate = make_unique_name(&name, reserved);
+        }
+        let name = PreliminaryFilename::new(candidate, None);
+        let chunk = &mut chunk_graph.chunk_table[*idx];
+        chunk.absolute_preliminary_filename =
+          Some(name.absolutize_with(output_dir).into_owned().expect_into_string());
+        chunk.preliminary_filename = Some(name);
+      }
+    }
   }
 
   fn compute_chunk_output_exports(

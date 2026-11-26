@@ -8,7 +8,6 @@ import type { OutputOptions } from '../options/output-options';
 import type { Plugin, RolldownOutputPlugin, RolldownPlugin } from '../plugin';
 import { INTERNAL_PLUGIN_HOOK_NAMES } from '../plugin/internal-hooks';
 import { asyncFlatten } from './async-flatten';
-import { getParallelPluginInfo } from './parallel-plugin';
 
 export const normalizePluginOption: {
   (plugins: OutputOptions['plugins']): Promise<RolldownOutputPlugin[]>;
@@ -38,9 +37,6 @@ export function normalizePlugins<T extends RolldownPlugin>(
   anonymousPrefix: string,
 ): T[] {
   for (const [index, plugin] of plugins.entries()) {
-    if (getParallelPluginInfo(plugin)) {
-      continue;
-    }
     if (plugin instanceof BuiltinPlugin) {
       continue;
     }

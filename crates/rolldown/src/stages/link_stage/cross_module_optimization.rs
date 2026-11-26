@@ -4,14 +4,16 @@ use oxc::{
   ast::{
     AstKind,
     ast::{
-      BindingIdentifier, BindingPattern, Declaration, ExportDeclaration, ExportDefaultDeclaration,
-      ExportDefaultDeclarationKind, Expression,
+      Argument, ArrowFunctionExpression, BindingIdentifier, BindingPattern, CallExpression,
+      Declaration, ExportDeclaration, ExportDefaultDeclaration, ExportDefaultDeclarationKind,
+      Expression, Function, IdentifierReference, MemberExpression, Statement,
     },
     builder::AstBuilder,
   },
   ast_visit::{VisitJs, walk_js},
-  semantic::{NodeId, SymbolId},
+  semantic::{NodeId, ScopeFlags, SymbolId},
 };
+use oxc_ecmascript::ToBoolean;
 use rolldown_common::{
   AstScopes, ConstExportMeta, EcmaViewMeta, ExportsKind, FlatOptions, GetLocalDb, IndexModules,
   MemberExprRefResolutionMap, ModuleIdx, SharedNormalizedBundlerOptions, Specifier, StmtEvalFlags,
@@ -24,7 +26,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   ast_scanner::{
     const_eval::{ConstEvalCtx, eval_can_assign, try_extract_const_literal},
-    stmt_eval_analyzer::StmtEvalAnalyzer,
+    stmt_eval_analyzer::{StmtEvalAnalyzer, chain_root_ident},
   },
   type_alias::IndexStmtInfos,
 };
@@ -102,18 +104,18 @@ impl LinkStage<'_> {
     // collect all modules that has dynamic import record
     // two dimension map module_idx -> stmt_idx -> dynamic_import_expression_node_id
     let mut module_idx_and_stmt_idx_to_dynamic_import_expr_node_id_map = FxHashMap::default();
-    self.entries.values().flatten().for_each(|entry| {
-      entry.related_stmt_infos.iter().for_each(
-        |(module_idx, stmt_idx, node_id, _import_record_idx)| {
+    if self.options.treeshake.is_some() {
+      for entry in self.entries.values().flatten() {
+        for &(module_idx, stmt_idx, node_id, _) in &entry.related_stmt_infos {
           module_idx_and_stmt_idx_to_dynamic_import_expr_node_id_map
-            .entry(*module_idx)
+            .entry(module_idx)
             .or_insert_with(FxHashMap::default)
-            .entry(*stmt_idx)
+            .entry(stmt_idx)
             .or_insert_with(FxHashSet::default)
-            .insert(*node_id);
-        },
-      );
-    });
+            .insert(node_id);
+        }
+      }
+    }
     // Track modules to process in subsequent passes. None means process all modules (first pass).
     let mut modules_to_process: Option<FxHashSet<ModuleIdx>> = None;
     while ctx.config.pass > 0 && ctx.changed {
@@ -295,6 +297,9 @@ impl LinkStage<'_> {
             local_constant_symbol_map: FxHashMap::default(),
             tree_shaking_flags_mutations: FxHashMap::default(),
             side_effect_free_call_expr_node_ids: FxHashSet::default(),
+            pure_callee_node_ids: FxHashSet::default(),
+            parameter_return_calls: Vec::new(),
+            has_separately_exported_call: false,
             immutable_ctx: CrossModuleOptimizationImmutableCtx {
               eval_ctx: &eval_ctx,
               export_default_symbol: module.default_export_ref,
@@ -394,6 +399,10 @@ struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
   local_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   tree_shaking_flags_mutations: FxHashMap<StmtInfoIdx, StmtEvalFlags>,
   side_effect_free_call_expr_node_ids: FxHashSet<NodeId>,
+  pure_callee_node_ids: FxHashSet<NodeId>,
+  /// The call and callee node IDs of parameter-returning calls in the current top-level statement.
+  parameter_return_calls: Vec<(NodeId, NodeId)>,
+  has_separately_exported_call: bool,
   immutable_ctx: CrossModuleOptimizationImmutableCtx<'a, 'ast>,
   /// Shared with the constant lookup of `eval_ctx`.
   toplevel_stmt_idx: &'a Cell<StmtInfoIdx>,
@@ -413,6 +422,22 @@ impl<'a, 'ast: 'a> std::ops::Deref for CrossModuleOptimizationRunnerContext<'a, 
 }
 
 impl<'ast> CrossModuleOptimizationRunnerContext<'_, 'ast> {
+  fn local_symbol(&self, ident: &IdentifierReference) -> Option<SymbolRef> {
+    let ref_id = ident.reference_id.get()?;
+    let symbol_id = self.eval_ctx.scope.get_reference(ref_id).symbol_id()?;
+    Some((self.immutable_ctx.module_idx, symbol_id).into())
+  }
+
+  fn resolve_member_binding(&self, member_expr: &MemberExpression) -> Option<SymbolRef> {
+    let resolution = self.resolved_member_expr_refs.get(&member_expr.node_id())?;
+    // The whole member must resolve to the binding. Trailing properties like `ns.fn.bar`
+    // can read a getter or call a different function.
+    if !resolution.prop_and_related_span_list.is_empty() {
+      return None;
+    }
+    Some(self.symbols.canonical_ref_for(resolution.resolved?))
+  }
+
   /// Resolve a call expression's callee to the canonical declaration symbol it targets, if it is
   /// a reference we can statically reason about:
   /// - a bare identifier callee (`fn()`), or
@@ -424,25 +449,65 @@ impl<'ast> CrossModuleOptimizationRunnerContext<'_, 'ast> {
   /// side-effect detection has run).
   fn resolve_callee_canonical_symbol(&self, callee: &Expression<'ast>) -> Option<SymbolRef> {
     if let Some(ident) = callee.as_identifier() {
-      let ref_id = ident.reference_id.get()?;
-      let symbol_id = self.immutable_ctx.eval_ctx.scope.get_reference(ref_id).symbol_id()?;
-      return Some(
-        self
-          .immutable_ctx
-          .symbols
-          .canonical_ref_for((self.immutable_ctx.module_idx, symbol_id).into()),
-      );
+      return Some(self.symbols.canonical_ref_for(self.local_symbol(ident)?));
     }
+    self.resolve_member_binding(callee.as_member_expression()?)
+  }
 
-    let member_expr = callee.as_member_expression()?;
-    let resolution = self.immutable_ctx.resolved_member_expr_refs.get(&member_expr.node_id())?;
-    // Only treat it as a direct call to the resolved binding when the whole member expression
-    // resolves to it (e.g. `ns.fn`). If trailing properties remain (e.g. `ns.fn.bar`), the call
-    // targets something else.
-    if !resolution.prop_and_related_span_list.is_empty() {
-      return None;
+  /// Whether the statement analyzer already treats `call` as pure through a `/* @__PURE__ */`
+  /// comment or `treeshake.manualPureFunctions`, without the parameter-return proof.
+  fn call_is_already_pure(&self, call: &CallExpression<'ast>) -> bool {
+    (call.pure && !self.immutable_ctx.flat_options.ignore_annotations())
+      || self.immutable_ctx.options.treeshake.manual_pure_functions().is_some_and(|names| {
+        chain_root_ident(&call.callee).is_some_and(|root| names.contains(root))
+      })
+  }
+
+  /// Whether an argument reads a global variable when the call runs. Reading a global can run a
+  /// getter on `globalThis` or throw a `ReferenceError`. Function bodies do not run at the call.
+  fn arguments_read_global(&self, call: &CallExpression<'ast>) -> bool {
+    let mut finder = GlobalReadFinder { ctx: self, found: false };
+    for argument in &call.arguments {
+      finder.visit_argument(argument);
     }
-    Some(self.immutable_ctx.symbols.canonical_ref_for(resolution.resolved?))
+    finder.found
+  }
+
+  /// Whether a canonical binding has its initialized value when the current statement runs.
+  /// See `internal-docs/linking/module-execution-order/implementation.md`.
+  fn binding_is_initialized(&self, symbol_ref: SymbolRef) -> bool {
+    if symbol_ref.is_declared_by_function(self.symbols) {
+      return true;
+    }
+    let module_idx = self.immutable_ctx.module_idx;
+    if symbol_ref.owner == module_idx {
+      let declaring_stmts = self.stmt_infos[module_idx].declared_stmts_by_symbol(&symbol_ref);
+      !declaring_stmts.is_empty()
+        && declaring_stmts
+          .iter()
+          .all(|&declaring_stmt| declaring_stmt < self.toplevel_stmt_idx.get())
+    } else {
+      self.modules[symbol_ref.owner].exec_order() < self.modules[module_idx].exec_order()
+        && self.import_cycles.imports_finish_before_evaluation(self.modules, module_idx)
+    }
+  }
+
+  fn binding_read_is_safe(&self, canonical_ref: SymbolRef) -> bool {
+    let Some(owner) = self.modules[canonical_ref.owner].as_normal() else { return false };
+    // Import lowering can turn an identifier read into a CommonJS or external property read.
+    // See `internal-docs/linking/reference-needed-symbols/implementation.md`.
+    if self.symbols.get(canonical_ref).namespace_alias.is_some() {
+      return false;
+    }
+    if canonical_ref.owner != self.immutable_ctx.module_idx {
+      return owner.exports_kind != ExportsKind::CommonJs
+        && self.binding_is_initialized(canonical_ref);
+    }
+    // A local root-scope `var` already has the value `undefined` before its declaration.
+    let flags = self.eval_ctx.scope.symbol_flags(canonical_ref.symbol);
+    (flags.is_function_scoped_declaration()
+      && canonical_ref.is_declared_in_root_scope(self.symbols))
+      || self.binding_is_initialized(canonical_ref)
   }
 }
 
@@ -460,6 +525,17 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
     for (idx, stmt) in program.body.iter().enumerate() {
       let pre_node_id_len = self.side_effect_free_call_expr_node_ids.len();
       self.visit_statement(stmt);
+      let has_separately_exported_call = std::mem::take(&mut self.has_separately_exported_call);
+      let parameter_return_calls = std::mem::take(&mut self.parameter_return_calls);
+      let mut has_parameter_return = !parameter_return_calls.is_empty();
+      if has_parameter_return && !StatementRemovalGuard::can_remove(self, stmt, true) {
+        // The parameter-return proof does not cover this statement, so analyze it without the proof.
+        for (call, callee) in &parameter_return_calls {
+          self.side_effect_free_call_expr_node_ids.remove(call);
+          self.pure_callee_node_ids.remove(callee);
+        }
+        has_parameter_return = false;
+      }
       if pre_node_id_len != self.side_effect_free_call_expr_node_ids.len() {
         let stmt_info_idx = StmtInfoIdx::new(idx + 1);
         let constants = LinkedConstantLookup {
@@ -471,7 +547,7 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
           stmt_infos: self.immutable_ctx.stmt_infos,
           constants: self.immutable_ctx.constant_symbol_map,
         };
-        let stmt_eval_facts = StmtEvalAnalyzer::new(
+        let flags = StmtEvalAnalyzer::new(
           self.immutable_ctx.ast_scope,
           self.immutable_ctx.flat_options,
           self.immutable_ctx.options,
@@ -479,17 +555,27 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
           Some(self.immutable_ctx.namespace_object_symbol_ids),
           Some(&constants),
         )
+        .with_pure_callees(&self.pure_callee_node_ids)
         .with_top_level_return_ends_module(
           !self.immutable_ctx.modules[self.immutable_ctx.module_idx]
             .as_normal()
             .is_some_and(|module| matches!(module.exports_kind, ExportsKind::Esm)),
         )
-        .analyze_stmt(stmt);
+        .analyze_stmt(stmt)
+        .tree_shaking_flags();
         // Cross-module optimization only refreshes tree-shaking flags. Module-level
         // execution-order sensitivity is recorded during AST scanning.
-        self
-          .tree_shaking_flags_mutations
-          .insert(stmt_info_idx, stmt_eval_facts.tree_shaking_flags());
+        let drops_effects = (has_separately_exported_call || has_parameter_return)
+          && !flags.contains(StmtEvalFlags::UnknownSideEffect)
+          && self.stmt_infos[self.immutable_ctx.module_idx][stmt_info_idx]
+            .eval_flags
+            .contains(StmtEvalFlags::UnknownSideEffect);
+        if !drops_effects
+          || has_parameter_return
+          || StatementRemovalGuard::can_remove(self, stmt, false)
+        {
+          self.tree_shaking_flags_mutations.insert(stmt_info_idx, flags);
+        }
       }
       self.toplevel_stmt_idx.set(self.toplevel_stmt_idx.get() + 1);
     }
@@ -518,44 +604,40 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
     walk_js::walk_import_expression(self, it);
   }
 
-  fn visit_call_expression(&mut self, it: &oxc::ast::ast::CallExpression<'ast>) {
-    let mut pre_node_id = None;
-    let (is_side_effects_free_function, is_pure_annotation_only) = self
-      .resolve_callee_canonical_symbol(&it.callee)
-      .map(|symbol_ref| {
-        // The binding must also be guaranteed unassigned: a `@__NO_SIDE_EFFECTS__` function
-        // whose export binding is later reassigned would, at the call site, invoke the
-        // replacement (which may have side effects), so the call must not be dropped. This
-        // mirrors what finalization checks for identifier callees.
-        let is_free = symbol_ref
-          .is_side_effect_free_function(self.immutable_ctx.symbols, self.immutable_ctx.modules)
-          && symbol_ref.is_not_reassigned(self.immutable_ctx.symbols);
-        let is_annotation_only = is_free
-          && self
-            .immutable_ctx
-            .symbols
-            .local_db(symbol_ref.owner)
-            .flags
-            .get(&symbol_ref.symbol)
-            .is_some_and(|f| f.contains(SymbolRefFlags::PureAnnotationOnly));
-        (is_free, is_annotation_only)
-      })
-      .unwrap_or((false, false));
-
-    if is_side_effects_free_function {
-      self.side_effect_free_call_expr_node_ids.insert(it.node_id());
-      // Only track as latest side-effect-free call for unreachable import detection
-      // when the function is truly empty (not just annotated with @__NO_SIDE_EFFECTS__).
-      // Annotated functions may still use their arguments, so dynamic imports in
-      // callback arguments should not be treated as unreachable.
-      if !is_pure_annotation_only {
-        pre_node_id = self.latest_side_effect_free_call_expr_node_id.replace(it.node_id());
+  fn visit_call_expression(&mut self, it: &CallExpression<'ast>) {
+    let previous_lazy_call = self.latest_side_effect_free_call_expr_node_id;
+    if let Some(symbol_ref) = self.resolve_callee_canonical_symbol(&it.callee)
+      && symbol_ref.is_side_effect_free_function(self.symbols, self.modules)
+      && symbol_ref.is_not_reassigned(self.symbols)
+    {
+      let flags = symbol_ref.flags(self.symbols).copied().unwrap_or_default();
+      let exported_separately = flags.contains(SymbolRefFlags::ExportedSeparately);
+      let returns_parameter = flags.contains(SymbolRefFlags::ReturnsParameter);
+      if (!exported_separately
+        || (self.binding_is_initialized(symbol_ref) && call_result_runs_no_code(&self.visit_path)))
+        && (!returns_parameter
+          || (it.callee.as_identifier().is_some()
+            && !it.arguments.iter().any(Argument::is_spread)
+            && !self.arguments_read_global(it)
+            && !self.call_is_already_pure(it)
+            && !has_function_or_class_ancestor(&self.visit_path)))
+      {
+        self.side_effect_free_call_expr_node_ids.insert(it.node_id());
+        self.has_separately_exported_call |= exported_separately;
+        if returns_parameter {
+          self.pure_callee_node_ids.insert(it.callee.node_id());
+          self.parameter_return_calls.push((it.node_id(), it.callee.node_id()));
+        }
+        // A truly empty function cannot invoke its callback arguments.
+        if !flags.intersects(SymbolRefFlags::PureAnnotationOnly | SymbolRefFlags::ReturnsParameter)
+          && !self.stmt_idx_to_dynamic_import_expr_node_ids.is_empty()
+        {
+          self.latest_side_effect_free_call_expr_node_id = Some(it.node_id());
+        }
       }
     }
     walk_js::walk_call_expression(self, it);
-    if let Some(node_id) = pre_node_id {
-      self.latest_side_effect_free_call_expr_node_id = Some(node_id);
-    }
+    self.latest_side_effect_free_call_expr_node_id = previous_lazy_call;
   }
 
   fn visit_export_declaration(&mut self, it: &ExportDeclaration<'ast>) {
@@ -598,6 +680,9 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
       return;
     }
     walk_js::walk_export_default_declaration(self, it);
+    if !self.immutable_ctx.config.inline_const_optimization {
+      return;
+    }
     let Some(expr) = it.declaration.as_expression() else {
       return;
     };
@@ -621,6 +706,183 @@ impl<'a, 'ast: 'a> VisitJs<'ast> for CrossModuleOptimizationRunnerContext<'a, 'a
       }
     }
   }
+}
+
+/// Checks effects that the general statement analyzer does not model. Run this when a
+/// separately exported or parameter-returning call would relax a statement's flags. Check the whole
+/// statement because other expressions in it can also read bindings or fail to terminate.
+struct StatementRemovalGuard<'ctx, 'a, 'ast> {
+  ctx: &'ctx CrossModuleOptimizationRunnerContext<'a, 'ast>,
+  can_remove: bool,
+  only_plain_values: bool,
+}
+
+impl<'ast> StatementRemovalGuard<'_, '_, 'ast> {
+  fn can_remove(
+    ctx: &CrossModuleOptimizationRunnerContext<'_, 'ast>,
+    stmt: &Statement<'ast>,
+    only_plain_values: bool,
+  ) -> bool {
+    if only_plain_values {
+      // The proof covers values stored or discarded without any operation on the result.
+      let declaration = match stmt {
+        Statement::VariableDeclaration(decl) => Some(decl.as_ref()),
+        Statement::ExportDeclaration(export)
+          if let Declaration::VariableDeclaration(decl) = &export.declaration =>
+        {
+          Some(decl.as_ref())
+        }
+        Statement::ExpressionStatement(_) => None,
+        _ => return false,
+      };
+      if declaration.is_some_and(|decl| {
+        decl.kind.is_using()
+          || decl.declarations.iter().any(|item| !item.id.is_binding_identifier())
+      }) {
+        return false;
+      }
+    }
+    let mut guard = StatementRemovalGuard { ctx, can_remove: true, only_plain_values };
+    guard.visit_statement(stmt);
+    guard.can_remove
+  }
+}
+
+impl<'ast> VisitJs<'ast> for StatementRemovalGuard<'_, '_, 'ast> {
+  fn visit_expression(&mut self, expr: &Expression<'ast>) {
+    if self.only_plain_values {
+      self.can_remove &= match expr.get_inner_expression() {
+        // Creating a function does not evaluate its body or parameters.
+        Expression::ArrowFunctionExpression(_) | Expression::FunctionExpression(_) => return,
+        Expression::ObjectExpression(obj) => obj
+          .properties
+          .iter()
+          .all(|prop| prop.as_property().is_some_and(|property| !property.key.is_computed())),
+        Expression::ArrayExpression(array) => array
+          .elements
+          .iter()
+          .all(|elem| !matches!(elem, oxc::ast::ast::ArrayExpressionElement::SpreadElement(_))),
+        Expression::CallExpression(call) => {
+          self.ctx.pure_callee_node_ids.contains(&call.callee.node_id())
+        }
+        expr => expr.as_identifier().is_some() || expr.is_literal(),
+      };
+    }
+    if self.can_remove {
+      walk_js::walk_expression(self, expr);
+    }
+  }
+
+  fn visit_statement(&mut self, stmt: &Statement<'ast>) {
+    let loop_test = match stmt {
+      Statement::WhileStatement(stmt) => Some(&stmt.test),
+      Statement::DoWhileStatement(stmt) => Some(&stmt.test),
+      _ => None,
+    };
+    self.can_remove &= loop_test
+      .is_none_or(|test| test.get_inner_expression().to_boolean(self.ctx.eval_ctx) == Some(false));
+    if self.can_remove {
+      walk_js::walk_statement(self, stmt);
+    }
+  }
+
+  fn visit_identifier_reference(&mut self, ident: &IdentifierReference<'ast>) {
+    if self.can_remove
+      && let Some(local_ref) = self.ctx.local_symbol(ident)
+    {
+      self.can_remove =
+        self.ctx.binding_read_is_safe(self.ctx.symbols.canonical_ref_for(local_ref));
+    }
+  }
+
+  fn visit_member_expression(&mut self, member: &MemberExpression<'ast>) {
+    // The statement analyzer assumes a namespace read only evaluates the key. Require a
+    // resolved binding here, since CommonJS getters and ESM TDZ reads can both have effects.
+    if self.can_remove
+      && let Some(ident) = member.object().as_identifier()
+      && let Some(local_ref) = self.ctx.local_symbol(ident)
+      && self.ctx.namespace_object_symbol_ids.contains(&local_ref.symbol)
+    {
+      self.can_remove = self
+        .ctx
+        .resolve_member_binding(member)
+        .is_some_and(|symbol_ref| self.ctx.binding_read_is_safe(symbol_ref));
+    }
+    if self.can_remove {
+      walk_js::walk_member_expression(self, member);
+    }
+  }
+
+  fn visit_call_expression(&mut self, call: &CallExpression<'ast>) {
+    if !self.can_remove {
+      return;
+    }
+    if self.ctx.side_effect_free_call_expr_node_ids.contains(&call.node_id()) {
+      self.visit_expression(&call.callee);
+      for arg in &call.arguments {
+        if arg.as_expression().is_some_and(|expr| {
+          matches!(
+            expr.get_inner_expression(),
+            Expression::ArrowFunctionExpression(_) | Expression::FunctionExpression(_)
+          )
+        }) {
+          // Creating a callback does not evaluate its body or parameters. The pure call
+          // contract covers any effects of invoking it.
+          continue;
+        }
+        self.visit_argument(arg);
+      }
+    } else {
+      walk_js::walk_call_expression(self, call);
+    }
+  }
+}
+
+struct GlobalReadFinder<'ctx, 'a, 'ast> {
+  ctx: &'ctx CrossModuleOptimizationRunnerContext<'a, 'ast>,
+  found: bool,
+}
+
+impl<'ast> VisitJs<'ast> for GlobalReadFinder<'_, '_, 'ast> {
+  fn visit_identifier_reference(&mut self, it: &IdentifierReference<'ast>) {
+    self.found |= self.ctx.local_symbol(it).is_none();
+  }
+
+  fn visit_function(&mut self, _it: &Function<'ast>, _flags: ScopeFlags) {}
+
+  fn visit_arrow_function_expression(&mut self, _it: &ArrowFunctionExpression<'ast>) {}
+}
+
+/// Whether `visit_path` contains a function, arrow function or class. The parameter-return proof
+/// skips calls inside them, including static class members that run when the class is defined.
+fn has_function_or_class_ancestor(visit_path: &[AstKind]) -> bool {
+  visit_path.iter().any(|kind| {
+    matches!(kind, AstKind::Function(_) | AstKind::ArrowFunctionExpression(_) | AstKind::Class(_))
+  })
+}
+
+/// Whether the call whose ancestors are `visit_path` runs no code on its result. The result can be
+/// discarded, bound to a plain name, exported as default, or tested by `if` or `switch`.
+/// Destructuring, coercion and passing the result to another call can run code on the result.
+fn call_result_runs_no_code(visit_path: &[AstKind]) -> bool {
+  let mut ancestors = visit_path.iter().rev();
+  while let Some(kind) = ancestors.next() {
+    match kind {
+      AstKind::ChainExpression(_) | AstKind::ParenthesizedExpression(_) => {}
+      AstKind::ExpressionStatement(_)
+      | AstKind::ExportDefaultDeclaration(_)
+      | AstKind::IfStatement(_)
+      | AstKind::SwitchStatement(_)
+      | AstKind::SwitchCase(_) => return true,
+      AstKind::VariableDeclarator(declarator) => {
+        let Some(AstKind::VariableDeclaration(decl)) = ancestors.next() else { return false };
+        return !decl.kind.is_using()
+          && matches!(declarator.id, BindingPattern::BindingIdentifier(_));
+      }
+      _ => return false,
+    }
+  }
+  false
 }
 
 /// If ast path from first lazy node to the terminal node are all lazy.

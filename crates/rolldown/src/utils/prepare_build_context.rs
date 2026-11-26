@@ -182,6 +182,15 @@ fn verify_inline_common_chunks_options(
   options: &InlineCommonChunksOptions,
   errors: &mut Vec<BuildDiagnostic>,
 ) {
+  if let Some(max_duplicated_size) = options.max_duplicated_size
+    && !inline_common_chunks_max_size_is_valid(max_duplicated_size)
+  {
+    errors.push(BuildDiagnostic::invalid_option(
+      InvalidOptionType::InlineCommonChunksInvalidMaxDuplicatedSize(
+        max_duplicated_size.to_string(),
+      ),
+    ));
+  }
   let max_size = match options.max_size {
     None => return,
     Some(max_size) => {
@@ -254,8 +263,8 @@ pub fn prepare_build_context(
   };
 
   // `verify_raw_options` already rejected an invalid `maxSize` and every unmet precondition, so
-  // cast below only sees a non-negative safe integer or positive infinity, which saturates to
-  // `usize::MAX` (unlimited). `maxSize: 0` normalizes to `None`.
+  // casts below only see a non-negative safe integer or positive infinity, which saturates to
+  // `usize::MAX` or `u64::MAX` (unlimited). `maxSize: 0` normalizes to `None`.
   #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
   let inline_common_chunks = manual_code_splitting
     .as_ref()
@@ -263,6 +272,7 @@ pub fn prepare_build_context(
     .filter(|options| options.max_size.unwrap_or(0.0) > 0.0)
     .map(|options| NormalizedInlineCommonChunksOptions {
       max_size: options.max_size.unwrap_or(0.0) as usize,
+      max_duplicated_size: options.max_duplicated_size.map_or(u64::MAX, |size| size as u64),
       exclude: options.exclude.clone().unwrap_or_default(),
     });
   // `experimentalInlineCommonChunks` needs wrap-all strict execution order, so it turns the option
@@ -528,13 +538,14 @@ pub fn prepare_build_context(
     drop_labels: FxHashSet::from_iter(raw_options.drop_labels.unwrap_or_default()),
     keep_names: raw_options.keep_names.unwrap_or_default(),
     polyfill_require: raw_options.polyfill_require.unwrap_or(true),
-    defer_sync_scan_data: raw_options.defer_sync_scan_data,
     plugin_timings: raw_options.plugin_timings,
     transform_options,
     make_absolute_externals_relative: raw_options
       .make_absolute_externals_relative
       .unwrap_or_default(),
     invalidate_js_side_cache: raw_options.invalidate_js_side_cache,
+    reset_js_module_options: raw_options.reset_js_module_options,
+    create_js_module_options: raw_options.create_js_module_options,
     log_level: raw_options.log_level,
     on_log: raw_options.on_log,
     preserve_modules: raw_options.preserve_modules.unwrap_or_default(),

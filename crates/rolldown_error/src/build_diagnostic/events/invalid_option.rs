@@ -3,7 +3,6 @@ use crate::{types::diagnostic_options::DiagnosticOptions, types::event_kind::Eve
 
 #[derive(Debug)]
 pub enum InvalidOptionType {
-  UnsupportedInlineDynamicFormat(String),
   UnsupportedCodeSplittingFormat(String),
   UnsupportedDevModeFormat(String),
   InvalidOutputFile,
@@ -24,6 +23,7 @@ pub enum InvalidOptionType {
   InvalidEmittedFileName(String),
   NulByteInFilename { pattern_name: String },
   InlineCommonChunksInvalidMaxSize(String),
+  InlineCommonChunksInvalidMaxDuplicatedSize(String),
   InlineCommonChunksRequirement(&'static str),
 }
 
@@ -39,9 +39,6 @@ impl BuildEvent for InvalidOption {
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     match &self.invalid_option_type {
-        InvalidOptionType::UnsupportedInlineDynamicFormat(format) => {
-          format!("Invalid value \"{format}\" for option \"output.format\" - UMD and IIFE are not supported for code-splitting builds. You may set `output.codeSplitting` to `false` when using dynamic imports.")
-        }
         InvalidOptionType::UnsupportedCodeSplittingFormat(format) => {
           format!("Invalid value \"{format}\" for option \"output.format\" - UMD and IIFE are not supported for code-splitting builds. For single entry builds, you can set `output.codeSplitting` to `false` to disable code-splitting.")
         }
@@ -118,6 +115,9 @@ impl BuildEvent for InvalidOption {
         }
         InvalidOptionType::InlineCommonChunksInvalidMaxSize(value) => {
           format!("Invalid value {value} for option \"output.codeSplitting.experimentalInlineCommonChunks.maxSize\" - it must be a non-negative safe integer or `Infinity` (`0` disables the feature).")
+        }
+        InvalidOptionType::InlineCommonChunksInvalidMaxDuplicatedSize(value) => {
+          format!("Invalid value {value} for option \"output.codeSplitting.experimentalInlineCommonChunks.maxDuplicatedSize\" - it must be a non-negative safe integer or `Infinity`.")
         }
         InvalidOptionType::InlineCommonChunksRequirement(requirement) => {
           format!("Invalid option combination for \"output.codeSplitting.experimentalInlineCommonChunks\" - a `maxSize` greater than 0 requires {requirement}.")

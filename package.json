@@ -25,10 +25,9 @@
     "knip": "^6.45.0",
     "playwright-chromium": "^1.63.0",
     "publint": "^0.3.21",
-    "remove-unused-vars": "^0.0.16",
     "rolldown": "workspace:*",
     "typescript": "catalog:",
-    "vite-plus": "^1.0.0"
+    "vite-plus": "^1.8.0"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

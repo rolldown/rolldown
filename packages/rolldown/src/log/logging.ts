@@ -10,6 +10,9 @@ export interface RolldownLog {
   cause?: unknown;
   /**
    * The log code for this log object.
+   *
+   * For errors / warnings / logs from plugins, it is always `PLUGIN_ERROR` / `PLUGIN_WARNING` / `PLUGIN_LOG`. If a plugin sets a `code` to identify a specific warning, Rolldown copies that code to `pluginCode`.
+   *
    * @example 'PLUGIN_ERROR'
    */
   code?: string;
@@ -30,7 +33,15 @@ export interface RolldownLog {
   message: string;
   meta?: any;
   names?: string[];
+  /**
+   * The name of the plugin that caused this log.
+   *
+   * This is set by Rolldown automatically when a plugin causes a log.
+   */
   plugin?: string;
+  /**
+   * The code set by the plugin that caused this log.
+   */
   pluginCode?: unknown;
   pos?: number;
   reexporter?: string;

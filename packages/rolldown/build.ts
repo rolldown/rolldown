@@ -56,6 +56,13 @@ const buildMeta = (function makeBuildMeta() {
 const bindingFile = nodePath.resolve('src/binding.cjs');
 const bindingFileWasi = nodePath.resolve('src/rolldown-binding.wasi.cjs');
 const bindingFileWasiBrowser = nodePath.resolve('src/rolldown-binding.wasi-browser.js');
+const threadedWasiLoaderArtifactDir = nodePath.resolve('artifacts/threaded-wasi-loaders');
+const threadedWasiFiles = {
+  binding: nodePath.resolve('src/rolldown-binding.wasi.cjs'),
+  browserBinding: nodePath.resolve('src/rolldown-binding.wasi-browser.js'),
+  worker: nodePath.resolve('src/wasi-worker.mjs'),
+  browserWorker: nodePath.resolve('src/wasi-worker-browser.mjs'),
+};
 const commonRuntimeInputFile = nodePath.resolve(
   __dirname,
   '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js',
@@ -108,6 +115,10 @@ if (buildMeta.target === 'browser-pkg') {
   for (const config of configs) {
     await build(config);
   }
+  if (buildMeta.target === 'browser-pkg') {
+    await bundleBrowserWasiLoaders();
+    await bundleThreadedWasiLoaders();
+  }
   await buildRuntimeEntry();
   generateRuntimeTypes();
 })();
@@ -126,8 +137,6 @@ function withShared({
         ? {
             cli: './src/cli/index',
             config: './src/config',
-            'parallel-plugin': './src/parallel-plugin',
-            'parallel-plugin-worker': './src/parallel-plugin-worker',
             'filter-index': './src/filter-index',
             'parse-ast-index': './src/parse-ast-index',
             'get-log-filter': './src/get-log-filter',
@@ -163,6 +172,128 @@ function withShared({
       define: {
         'import.meta.browserBuild': String(isBrowserBuild),
         __RUNTIME_STRING__: JSON.stringify(readDefaultDevRuntimeSource()),
+      },
+    },
+  };
+}
+
+// Published consumers do not inherit the workspace `overrides` pin, so bundle
+// the generated loaders last: every package-root condition must embed the exact
+// emnapi runtime the release was built with.
+async function bundleBrowserWasiLoaders() {
+  await build({
+    input: bindingFileWasiBrowser,
+    platform: 'browser',
+    output: {
+      file: nodePath.join(buildMeta.buildOutputDir, nodePath.basename(bindingFileWasiBrowser)),
+      format: 'esm',
+      codeSplitting: false,
+    },
+    transform: {
+      target: 'node22',
+    },
+  });
+
+  await build({
+    input: bindingFileWasi,
+    platform: 'node',
+    external: [/^node:/, /^@rolldown\/binding-wasm32-wasi(?:\/|$)/],
+    output: {
+      file: nodePath.join(buildMeta.buildOutputDir, nodePath.basename(bindingFileWasi)),
+      format: 'cjs',
+      codeSplitting: false,
+    },
+    transform: {
+      target: 'node22',
+    },
+  });
+}
+
+async function bundleThreadedWasiLoaders() {
+  fs.rmSync(threadedWasiLoaderArtifactDir, { recursive: true, force: true });
+  fs.mkdirSync(threadedWasiLoaderArtifactDir, { recursive: true });
+
+  const loaders: Array<{
+    input: string;
+    platform: 'browser' | 'node';
+    format: 'cjs' | 'esm';
+    plugins?: Plugin[];
+  }> = [
+    {
+      input: threadedWasiFiles.binding,
+      platform: 'node',
+      format: 'cjs',
+    },
+    {
+      input: threadedWasiFiles.browserBinding,
+      platform: 'browser',
+      format: 'esm',
+    },
+    {
+      input: threadedWasiFiles.worker,
+      platform: 'node',
+      format: 'esm',
+      plugins: [bundleThreadedNodeWorkerRuntime()],
+    },
+    {
+      input: threadedWasiFiles.browserWorker,
+      platform: 'browser',
+      format: 'esm',
+    },
+  ];
+
+  for (const { input, platform, format, plugins } of loaders) {
+    await build({
+      input,
+      platform,
+      external: platform === 'node' ? [/^node:/, /^@rolldown\/binding-wasm32-wasi(?:\/|$)/] : [],
+      output: {
+        file: nodePath.join(threadedWasiLoaderArtifactDir, nodePath.basename(input)),
+        format,
+        codeSplitting: false,
+      },
+      plugins,
+      transform: {
+        target: 'node22',
+      },
+    });
+  }
+}
+
+function bundleThreadedNodeWorkerRuntime(): Plugin {
+  return {
+    name: 'bundle-threaded-node-worker-runtime',
+    transform: {
+      filter: { id: threadedWasiFiles.worker },
+      handler(code) {
+        // The cli worker template destructures the two emnapi plugins next to
+        // the runtime helpers and passes them to `instantiateNapiModuleSync`,
+        // so the hoisted import binds all five names. The threaded wasm links
+        // the full emnapi archive and imports no async-work or
+        // threadsafe-function functions; the plugin names are bound only
+        // because the template uses them.
+        const runtimeRequire =
+          /const\s*\{\s*instantiateNapiModuleSync,\s*MessageHandler,\s*getDefaultContext,\s*emnapiAsyncWorkPlugin,\s*emnapiTSFNPlugin,?\s*\}\s*=\s*require\(["']@napi-rs\/wasm-runtime["']\);?/;
+        if (!runtimeRequire.test(code)) {
+          throw new Error('Could not locate the threaded WASI worker runtime require');
+        }
+        // The template makes this require inside a `try` block (a failure
+        // there must raise the crash flags), where an `import` cannot go.
+        // Hoist the import to the top level and bind the same names in place.
+        const names = [
+          'instantiateNapiModuleSync',
+          'MessageHandler',
+          'getDefaultContext',
+          'emnapiAsyncWorkPlugin',
+          'emnapiTSFNPlugin',
+        ];
+        const runtimeImport = `import { ${names
+          .map((name) => `${name} as __wasmRuntime_${name}`)
+          .join(', ')} } from '@napi-rs/wasm-runtime';\n`;
+        const runtimeBindings = `const ${names
+          .map((name) => `${name} = __wasmRuntime_${name}`)
+          .join(', ')};`;
+        return runtimeImport + code.replace(runtimeRequire, runtimeBindings);
       },
     },
   };
@@ -236,7 +367,13 @@ function patchBindingJs(): Plugin {
 if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
   try {
     nativeBinding = require('./webcontainer-fallback.cjs');
-    __napiLoadedBindingTarget = 'wasm32-wasi';
+    // The fallback loads a generated WASI loader, which reports its own
+    // flavor; adopt it the same way upstream's NAPI_RS_NATIVE_LIBRARY_PATH
+    // branch does, or this loader would misreport the artifact as native.
+    __napiLoadedBindingTarget =
+      typeof nativeBinding.__napiBindingTarget === 'string'
+        ? nativeBinding.__napiBindingTarget
+        : 'native';
   } catch (err) {
     loadErrors.push(err)
   }

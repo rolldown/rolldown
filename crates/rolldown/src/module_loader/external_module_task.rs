@@ -2,16 +2,18 @@ use std::{path::Path, sync::Arc};
 
 use arcstr::ArcStr;
 use rolldown_common::{
-  ExportsKind, ExternalModuleTaskResult, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ResolvedExternal,
-  ResolvedId,
+  ExternalModuleTaskResult, ModuleIdx, ModuleInfo, ModuleInfoSideEffects, ModuleLoaderMsg,
+  ResolvedExternal, ResolvedId, side_effects::HookSideEffects,
 };
 use rolldown_error::BuildResult;
-use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
+use rolldown_utils::ecmascript::legitimize_identifier_name;
 use sugar_path::SugarPath;
 
 use rolldown_fs::FileSystem;
 
-use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
+use crate::ecmascript::ecma_module_view_factory::{
+  declared_side_effects_without_hook, external_side_effects, normalize_side_effects,
+};
 
 use super::task_context::{TaskContext, TaskMessageGuard};
 
@@ -19,12 +21,17 @@ pub struct ExternalModuleTask<Fs: FileSystem> {
   ctx: Arc<TaskContext<Fs>>,
   module_idx: ModuleIdx,
   resolved_id: ResolvedId,
-  // The module is asserted to be this specific module type.
+  create_js_module_options: bool,
 }
 
 impl<Fs: FileSystem> ExternalModuleTask<Fs> {
-  pub fn new(ctx: Arc<TaskContext<Fs>>, idx: ModuleIdx, resolved_id: ResolvedId) -> Self {
-    Self { ctx, module_idx: idx, resolved_id }
+  pub fn new(
+    ctx: Arc<TaskContext<Fs>>,
+    idx: ModuleIdx,
+    resolved_id: ResolvedId,
+    create_js_module_options: bool,
+  ) -> Self {
+    Self { ctx, module_idx: idx, resolved_id, create_js_module_options }
   }
 
   #[tracing::instrument(name="ExternalModuleTask::run", level = "trace", skip_all, fields(module_id = %self.resolved_id.id))]
@@ -33,30 +40,39 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
     if let Err(errs) = self.run_inner().await {
       // The send fails only when the build was dropped before this task finished.
       // Then nothing reads the result, so ignore the error.
-      let _ = self.ctx.tx.send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
+      let _ = self
+        .ctx
+        .tx
+        .unbounded_send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()));
     }
     guard.mark_sent();
   }
 
   async fn run_inner(&self) -> BuildResult<()> {
     let resolved_id = &self.resolved_id;
-    let external_module_side_effects =
-      normalize_side_effects(&self.ctx.options, resolved_id, None, resolved_id.side_effects)
-        .await?;
+    if self.create_js_module_options {
+      self.ctx.create_js_module_options(resolved_id).await?;
+    }
+    let overrides = &self.ctx.plugin_driver.module_side_effects_overrides;
+    let external_module_side_effects = normalize_side_effects(
+      &self.ctx.options,
+      overrides,
+      resolved_id,
+      None,
+      resolved_id.side_effects,
+    )
+    .await?;
     let id = resolved_id.id.clone();
     self.ctx.plugin_driver.set_module_info(
       &id.clone(),
-      Arc::new(ModuleInfo {
-        code: None,
+      Arc::new(ModuleInfo::placeholder(
         id,
-        is_entry: false,
-        importers: FxIndexSet::default(),
-        dynamic_importers: FxIndexSet::default(),
-        imported_ids: FxIndexSet::default(),
-        dynamically_imported_ids: FxIndexSet::default(),
-        exports: vec![],
-        input_format: ExportsKind::None,
-      }),
+        false,
+        Some(ModuleInfoSideEffects {
+          decided: resolved_id.side_effects.map(HookSideEffects::declared),
+          without_hook: declared_side_effects_without_hook(&self.ctx.options, resolved_id),
+        }),
+      )),
     );
 
     let need_renormalize_render_path =
@@ -77,12 +93,13 @@ impl<Fs: FileSystem> ExternalModuleTask<Fs> {
       name: raw_id.into(),
       identifier_name: legitimized_identifier_name.into(),
       side_effects: external_module_side_effects,
+      side_effects_without_option: external_side_effects(resolved_id),
       need_renormalize_render_path,
       attributes: resolved_id.attributes.clone(),
     }));
     // The send fails only when the build was dropped before this task finished.
     // Then nothing reads the result, so ignore the error.
-    let _ = self.ctx.tx.send(msg);
+    let _ = self.ctx.tx.unbounded_send(msg);
     Ok(())
   }
 }

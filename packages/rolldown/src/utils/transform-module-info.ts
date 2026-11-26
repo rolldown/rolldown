@@ -1,9 +1,29 @@
-import type { ModuleOptions } from '..';
-import type { BindingModuleInfo } from '../binding.cjs';
+import type { BindingModuleInfo, BindingPluginContext } from '../binding.cjs';
+import type { JsModuleOptions } from '../plugin/plugin-context-data';
 import type { ModuleInfo } from '../types/module-info';
 import { unsupported } from './misc';
 
-export function transformModuleInfo(info: BindingModuleInfo, option: ModuleOptions): ModuleInfo {
+/**
+ * The binding calls behind `ModuleInfo.moduleSideEffects`. Only Rust keeps the value.
+ * `setModuleSideEffects` ignores a write after `buildEnd`, and returns `true` for the first one
+ * in a build.
+ */
+export type ModuleSideEffectsAccess = Pick<
+  BindingPluginContext,
+  'getModuleSideEffects' | 'setModuleSideEffects'
+>;
+
+/** `treeshake.moduleSideEffects` when it is a function. */
+export type ModuleSideEffectsOptionFn = (id: string, external: boolean) => boolean | undefined;
+
+export function transformModuleInfo(
+  info: BindingModuleInfo,
+  option: JsModuleOptions,
+  access: ModuleSideEffectsAccess,
+  callOption: ModuleSideEffectsOptionFn | undefined,
+  warnWriteAfterBuildEnd: (moduleId: string) => void,
+): ModuleInfo {
+  const id = info.id;
   return {
     get ast() {
       return unsupported('ModuleInfo#ast');
@@ -11,7 +31,7 @@ export function transformModuleInfo(info: BindingModuleInfo, option: ModuleOptio
     get code() {
       return info.code;
     },
-    id: info.id,
+    id,
     importers: info.importers,
     dynamicImporters: info.dynamicImporters,
     importedIds: info.importedIds,
@@ -19,6 +39,16 @@ export function transformModuleInfo(info: BindingModuleInfo, option: ModuleOptio
     exports: info.exports,
     isEntry: info.isEntry,
     inputFormat: info.inputFormat,
-    ...option,
+    meta: option.meta,
+    // Each read asks Rust, so an info object that a plugin keeps stays current.
+    get moduleSideEffects() {
+      return access.getModuleSideEffects(id, callOption);
+    },
+    set moduleSideEffects(value: ModuleInfo['moduleSideEffects']) {
+      // Tree shaking has used the values after `buildEnd`, so Rust ignores a later write.
+      if (access.setModuleSideEffects(id, value, callOption)) {
+        warnWriteAfterBuildEnd(id);
+      }
+    },
   };
 }

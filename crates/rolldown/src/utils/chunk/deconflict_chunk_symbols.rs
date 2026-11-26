@@ -1,3 +1,5 @@
+use std::sync::OnceLock;
+
 use oxc_str::CompactStr;
 
 use crate::{
@@ -52,6 +54,7 @@ pub fn deconflict_chunk_symbols(
   link_output: &LinkStageOutput,
   order_wrap_state: &OrderWrapState,
   format: OutputFormat,
+  node_require_ref: Option<SymbolRef>,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
   chunk_assignments: ChunkAssignments<'_>,
   inline: Option<&InlineNamingInput>,
@@ -107,8 +110,9 @@ pub fn deconflict_chunk_symbols(
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
         |(symbol_ref, came_from_cjs)| {
           if !came_from_cjs {
+            let canonical_ref = link_output.symbol_db.canonical_ref_for(*symbol_ref);
             renamer
-              .add_symbol_in_root_scope(*symbol_ref, root_binding_kind(link_output, *symbol_ref));
+              .add_symbol_in_root_scope(*symbol_ref, root_binding_kind(link_output, canonical_ref));
           }
         },
       );
@@ -215,10 +219,8 @@ pub fn deconflict_chunk_symbols(
       });
     });
   }
-  chunk.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {
-    renamer
-      .add_symbol_in_root_scope(item.import_ref, root_binding_kind(link_output, item.import_ref));
-  });
+  let imports_node_require =
+    name_cross_chunk_imports(chunk, link_output, node_require_ref, &mut renamer);
 
   chunk.require_binding_names_for_other_chunks = chunk
     .imports_from_other_chunks
@@ -293,8 +295,28 @@ pub fn deconflict_chunk_symbols(
 
   rename_shadowing_symbols_in_nested_scopes(modules, link_output, format, &mut renamer);
 
+  if imports_node_require {
+    chunk.node_require_factory =
+      Some((renamer.create_conflictless_name("__createRequire"), OnceLock::new()));
+  }
   chunk.canonical_names = renamer.into_canonical_names();
   inline_names
+}
+
+fn name_cross_chunk_imports(
+  chunk: &Chunk,
+  link_output: &LinkStageOutput,
+  node_require_ref: Option<SymbolRef>,
+  renamer: &mut Renamer<'_>,
+) -> bool {
+  let mut imports_node_require = false;
+  for item in chunk.imports_from_other_chunks.values().flatten() {
+    let canonical_ref = link_output.symbol_db.canonical_ref_for(item.import_ref);
+    renamer
+      .add_symbol_in_root_scope(item.import_ref, root_binding_kind(link_output, canonical_ref));
+    imports_node_require |= node_require_ref == Some(canonical_ref);
+  }
+  imports_node_require
 }
 
 /// Reserve the names that no top-level binding can take:
@@ -369,8 +391,7 @@ fn is_external_import_declaration(
 /// these facades, and `rename_shadowing_symbols_in_nested_scopes` checks those references at their
 /// locations. The facades of an external module are also authored, because their names come from
 /// the source that imports them.
-fn root_binding_kind(link_output: &LinkStageOutput, symbol_ref: SymbolRef) -> RootBindingKind {
-  let canonical_ref = link_output.symbol_db.canonical_ref_for(symbol_ref);
+fn root_binding_kind(link_output: &LinkStageOutput, canonical_ref: SymbolRef) -> RootBindingKind {
   if canonical_ref.owner == link_output.runtime.id() {
     return RootBindingKind::Synthesized;
   }

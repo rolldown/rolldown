@@ -357,7 +357,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       self.cache.merge(module_loader_output.into(), &plugin_driver)?;
 
       let options = Arc::clone(&self.options);
-      self.cache.update_defer_sync_data(&options).await?;
+      self
+        .cache
+        .apply_module_side_effects_overrides(&options, &plugin_driver.module_side_effects_overrides)
+        .await?;
       new_added_modules
     };
 
@@ -711,7 +714,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       .map_err(|e| vec![anyhow::anyhow!(e).into()])?;
 
     let options = Arc::clone(&self.options);
-    self.cache.update_defer_sync_data(&options).await?;
+    self
+      .cache
+      .apply_module_side_effects_overrides(&options, &plugin_driver.module_side_effects_overrides)
+      .await?;
 
     // The proxy is only the walk root: it never runs in the client, so the payload does not
     // carry it.
@@ -814,7 +820,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         &file_dir,
         filename.as_str(),
         0,
-        /*is_css*/ false,
         None,
       )
       .await?
@@ -942,7 +947,6 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         &file_dir,
         filename.as_str(),
         0,
-        /*is_css*/ false,
         None,
       )
       .await?

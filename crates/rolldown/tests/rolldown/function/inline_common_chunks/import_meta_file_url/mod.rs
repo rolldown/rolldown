@@ -86,6 +86,7 @@ async fn import_meta_file_url() {
         code_splitting: Some(CodeSplittingMode::Advanced(ManualCodeSplittingOptions {
           experimental_inline_common_chunks: Some(InlineCommonChunksOptions {
             max_size: Some(4096.0),
+            max_duplicated_size: None,
             exclude: None,
           }),
           ..Default::default()

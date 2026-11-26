@@ -112,7 +112,7 @@ impl Module {
 
   pub fn size(&self) -> usize {
     match self {
-      Module::Normal(v) => v.source.len(),
+      Module::Normal(v) => v.pre_render_size,
       Module::External(_) => 0,
     }
   }

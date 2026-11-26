@@ -1,7 +1,5 @@
 import path from 'node:path';
-import { Worker } from 'node:worker_threads';
 import { build, rolldown } from 'rolldown';
-import { defineParallelPlugin } from 'rolldown/experimental';
 import { esmExternalRequirePlugin } from 'rolldown/plugins';
 import { expect, test, vi } from 'vitest';
 
@@ -20,6 +18,19 @@ test('native plugin context logs enqueue onLog at emission time', async () => {
   });
   expect(logs).toHaveLength(1);
   expect(logs[0]).toContain('warn:Found 1 duplicate external: `ext`.');
+});
+
+test('warns when the `watch` option is passed to `build()`', async () => {
+  const consoleSpy = vi.spyOn(console, 'warn');
+  await build({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    write: false,
+    watch: {},
+  });
+  expect(consoleSpy).toHaveBeenCalledWith(
+    '`watch` option is ignored because `build()` does not support watch mode. Please use the `watch()` API instead.',
+  );
 });
 
 test('rolldown write twice', async () => {
@@ -169,48 +180,6 @@ test('concurrent close() calls run the native close once and settle together', a
   expect(bundle.closed).toBe(true);
 });
 
-test('a failed worker shutdown still closes the native bundler', async () => {
-  let closeBundleCalls = 0;
-  const parallelNoopPlugin = defineParallelPlugin<void>(
-    path.join(import.meta.dirname, 'parallel-noop-plugin-impl.js'),
-  );
-  const bundle = await rolldown({
-    input: './main.js',
-    cwd: import.meta.dirname,
-    plugins: [
-      parallelNoopPlugin(),
-      {
-        name: 'test',
-        closeBundle() {
-          closeBundleCalls++;
-        },
-      },
-    ],
-  });
-  await bundle.generate();
-  // Stop the worker for real, then report a failure, so no thread outlives the test.
-  const terminate: (this: Worker) => Promise<number> = Object.getOwnPropertyDescriptor(
-    Worker.prototype,
-    'terminate',
-  )!.value;
-  const terminateSpy = vi
-    .spyOn(Worker.prototype, 'terminate')
-    .mockImplementationOnce(async function (this: Worker) {
-      await terminate.call(this);
-      throw new Error('terminate failed');
-    });
-  try {
-    await expect(bundle.close()).rejects.toThrow('terminate failed');
-    expect(terminateSpy).toHaveBeenCalled();
-    expect(bundle.closed).toBe(true);
-    expect(closeBundleCalls).toBe(1);
-    await expect(bundle.close()).resolves.toBeUndefined();
-    expect(closeBundleCalls).toBe(1);
-  } finally {
-    terminateSpy.mockRestore();
-  }
-});
-
 test('closeBundle hook is not called if closed directly', async () => {
   const task = async () => {
     const bundle = await rolldown({
@@ -275,4 +244,51 @@ test('plugins are accessible in buildStart hook', async () => {
   expect(names).toContain('plugin-a');
   expect(names).toContain('plugin-b');
   expect(names).not.toContain('plugin-c');
+});
+
+test('options and output facades stay readable through a Proxy', async () => {
+  const reads: Record<string, unknown> = {};
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+    plugins: [
+      {
+        name: 'proxied-reads',
+        buildStart(inputOptions) {
+          const proxy = new Proxy(inputOptions, {});
+          reads.input = proxy.input;
+          reads.cwd = proxy.cwd;
+          this.emitFile({ type: 'asset', name: 'asset.txt', source: 'asset' });
+        },
+        renderStart(outputOptions, inputOptions) {
+          const output = new Proxy(outputOptions, {});
+          reads.format = output.format;
+          reads.entryFileNames = output.entryFileNames;
+          reads.globals = output.globals;
+          reads.platform = new Proxy(inputOptions, {}).platform;
+        },
+      },
+    ],
+  });
+  const result = await bundle.generate({ format: 'esm', sourcemap: true });
+  await bundle.close();
+
+  expect(reads).toEqual({
+    input: ['./main.js'],
+    cwd: import.meta.dirname,
+    format: 'es',
+    entryFileNames: '[name].js',
+    globals: {},
+    platform: 'browser',
+  });
+  const chunk = result.output.find((item) => item.type === 'chunk')!;
+  const proxiedChunk = new Proxy(chunk, {});
+  expect(proxiedChunk.code).toContain('console.log(1)');
+  expect(Object.keys(proxiedChunk.modules)).toHaveLength(1);
+  expect(proxiedChunk.map?.mappings).toBeTypeOf('string');
+  const asset = result.output.find(
+    (item) => item.type === 'asset' && item.fileName.startsWith('assets/asset'),
+  )!;
+  const proxiedAsset = new Proxy(asset, {});
+  expect(proxiedAsset.type === 'asset' && proxiedAsset.source).toBe('asset');
 });

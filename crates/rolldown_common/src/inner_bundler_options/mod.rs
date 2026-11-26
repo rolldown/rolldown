@@ -3,6 +3,7 @@ use rustc_hash::FxHashMap;
 use std::{fmt::Debug, path::PathBuf};
 use types::code_splitting_mode::CodeSplittingMode;
 use types::comments::CommentsOptions;
+use types::create_js_module_options::CreateJsModuleOptions;
 use types::devtools_options::DevtoolsOptions;
 use types::generated_code_options::GeneratedCodeOptions;
 use types::inject_import::InjectImport;
@@ -16,6 +17,7 @@ use types::optimization::OptimizationOption;
 use types::output_option::{
   AssetFilenamesOutputOption, GlobalsOutputOption, PathsOutputOption, PreserveEntrySignatures,
 };
+use types::reset_js_module_options::ResetJsModuleOptions;
 use types::sanitize_filename::SanitizeFilename;
 use types::watch_option::WatchOption;
 
@@ -31,12 +33,12 @@ use types::minify_options::SimpleMinifyOptions;
 
 use self::types::treeshake::TreeshakeOptions;
 use self::types::{
-  defer_sync_scan_data_option::DeferSyncScanDataOption, es_module_flag::EsModuleFlag,
-  hash_characters::HashCharacters, input_item::InputItem, is_external::IsExternal,
-  output_charset::OutputCharset, output_exports::OutputExports, output_format::OutputFormat,
-  output_option::AddonOutputOption, platform::Platform, plugin_timings_option::PluginTimingsOption,
-  resolve_options::ResolveOptions, source_map_type::SourceMapType,
-  sourcemap_path_transform::SourceMapPathTransform, strict_mode::StrictMode, tsconfig::TsConfig,
+  es_module_flag::EsModuleFlag, hash_characters::HashCharacters, input_item::InputItem,
+  is_external::IsExternal, output_charset::OutputCharset, output_exports::OutputExports,
+  output_format::OutputFormat, output_option::AddonOutputOption, platform::Platform,
+  plugin_timings_option::PluginTimingsOption, resolve_options::ResolveOptions,
+  source_map_type::SourceMapType, sourcemap_path_transform::SourceMapPathTransform,
+  strict_mode::StrictMode, tsconfig::TsConfig,
 };
 
 use crate::{
@@ -217,12 +219,6 @@ pub struct BundlerOptions {
     serde(default, skip_deserializing),
     schemars(skip)
   )]
-  pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
-  #[cfg_attr(
-    feature = "deserialize_bundler_options",
-    serde(default, skip_deserializing),
-    schemars(skip)
-  )]
   pub plugin_timings: Option<PluginTimingsOption>,
   pub make_absolute_externals_relative: Option<MakeAbsoluteExternalsRelative>,
   pub devtools: Option<DevtoolsOptions>,
@@ -232,6 +228,18 @@ pub struct BundlerOptions {
     schemars(skip)
   )]
   pub invalidate_js_side_cache: Option<InvalidateJsSideCache>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, skip_deserializing),
+    schemars(skip)
+  )]
+  pub reset_js_module_options: Option<ResetJsModuleOptions>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, skip_deserializing),
+    schemars(skip)
+  )]
+  pub create_js_module_options: Option<CreateJsModuleOptions>,
   pub log_level: Option<LogLevel>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",

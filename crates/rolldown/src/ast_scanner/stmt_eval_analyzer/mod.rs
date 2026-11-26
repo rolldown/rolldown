@@ -155,6 +155,7 @@ pub struct StmtEvalAnalyzer<'a> {
   flat_options: FlatOptions,
   /// Cross-module optimization: node IDs of call expressions to known-pure functions.
   side_effect_free_call_expr_node_ids: Option<&'a FxHashSet<NodeId>>,
+  pure_callee_node_ids: Option<&'a FxHashSet<NodeId>>,
   /// Symbol IDs of namespace imports (`import * as ns from '...'`).
   /// Property reads on ES module namespace objects are guaranteed side-effect-free
   /// because namespace objects are frozen/sealed by spec with no getters.
@@ -184,6 +185,7 @@ impl<'a> StmtEvalAnalyzer<'a> {
       options,
       flat_options,
       side_effect_free_call_expr_node_ids,
+      pure_callee_node_ids: None,
       namespace_object_symbol_ids,
       constant_symbols,
       read_constant: Cell::new(false),
@@ -195,6 +197,12 @@ impl<'a> StmtEvalAnalyzer<'a> {
   #[must_use]
   pub fn with_top_level_return_ends_module(mut self, value: bool) -> Self {
     self.top_level_return_ends_module = value;
+    self
+  }
+
+  #[must_use]
+  pub fn with_pure_callees(mut self, node_ids: &'a FxHashSet<NodeId>) -> Self {
+    self.pure_callee_node_ids = Some(node_ids);
     self
   }
 
@@ -500,15 +508,11 @@ impl<'a> StmtEvalAnalyzer<'a> {
       // See rolldown/rolldown#9425.
       Expression::ObjectExpression(obj) => self.fold_compound(
         expr,
-        // `p.computed == true` => `p.key` is always an Expression variant
-        // (oxc's parser only emits Static/PrivateIdentifier for `key:` syntax).
         obj
           .properties
           .iter()
           .flat_map(|prop| match prop {
-            ast::ObjectPropertyKind::ObjectProperty(p) => {
-              [p.computed.then(|| p.key.to_expression()), Some(&p.value)]
-            }
+            ast::ObjectPropertyKind::ObjectProperty(p) => [p.key.as_expression(), Some(&p.value)],
             ast::ObjectPropertyKind::SpreadProperty(s) => [Some(&s.argument), None],
           })
           .flatten(),
@@ -601,7 +605,14 @@ impl<'a> StmtEvalAnalyzer<'a> {
             BindingPattern::ArrayPattern(pat)
               if pat.elements.iter().any(|p| {
                 p.as_ref().is_some_and(|pat| !matches!(pat, BindingPattern::BindingIdentifier(_)))
-              }) =>
+              }) || pat
+                .rest
+                .as_ref()
+                .is_some_and(|rest| !matches!(rest.argument, BindingPattern::BindingIdentifier(_)))
+                // Destructuring calls the iterator of the value, which can be any code. Only the
+                // iterator of an array literal is known to be side-effect free.
+                || (self.flat_options.property_read_side_effects()
+                  && !matches!(declarator.init, Some(Expression::ArrayExpression(_)))) =>
             {
               StmtEvalFacts::from_unknown_side_effect()
             }
@@ -973,8 +984,8 @@ impl<'analyzer, 'ctx> EagerEvaluationOrderReasonCollector<'analyzer, 'ctx> {
           for decorator in &method.decorators {
             self.visit_expression(&decorator.expression);
           }
-          if method.computed {
-            self.visit_expression(method.key.to_expression());
+          if let Some(key) = method.key.as_expression() {
+            self.visit_expression(key);
           }
           // Method/getter/setter bodies run when invoked, not at definition time.
         }
@@ -982,8 +993,8 @@ impl<'analyzer, 'ctx> EagerEvaluationOrderReasonCollector<'analyzer, 'ctx> {
           for decorator in &property.decorators {
             self.visit_expression(&decorator.expression);
           }
-          if property.computed {
-            self.visit_expression(property.key.to_expression());
+          if let Some(key) = property.key.as_expression() {
+            self.visit_expression(key);
           }
           // Instance initializers run during construction; static initializers run now.
           if property.r#static
@@ -996,8 +1007,8 @@ impl<'analyzer, 'ctx> EagerEvaluationOrderReasonCollector<'analyzer, 'ctx> {
           for decorator in &accessor.decorators {
             self.visit_expression(&decorator.expression);
           }
-          if accessor.computed {
-            self.visit_expression(accessor.key.to_expression());
+          if let Some(key) = accessor.key.as_expression() {
+            self.visit_expression(key);
           }
           if accessor.r#static
             && let Some(value) = &accessor.value
@@ -1257,9 +1268,9 @@ impl<'ast> VisitJs<'ast> for ConstantTrustFinder<'_, '_> {
 }
 
 /// The leftmost identifier a member-expression-like chain reads from (`a` in `a.b().c[d]`), or
-/// `None` when the chain doesn't bottom out in a plain identifier. Used by
-/// `StmtEvalAnalyzer::is_expr_manual_pure_functions` and `StmtEvalAnalyzer::manual_pure_functions`.
-fn chain_root_ident<'a>(expr: &'a Expression) -> Option<&'a str> {
+/// `None` when the chain doesn't bottom out in a plain identifier. `treeshake.manualPureFunctions`
+/// matches calls by this identifier.
+pub fn chain_root_ident<'a>(expr: &'a Expression) -> Option<&'a str> {
   chain_root_visiting_eager_children(expr, |_| {})
 }
 
@@ -1296,8 +1307,12 @@ impl<'ast> MayHaveSideEffectsContext<'ast> for StmtEvalAnalyzer<'ast> {
   }
 
   fn manual_pure_functions(&self, callee: &Expression) -> bool {
-    self.is_expr_manual_pure_functions(callee)
-      && !self.analyze_eager_chain_children(callee).has_side_effect_for_tree_shaking()
+    // Match by callee node id so only calls the linker proved pure are affected;
+    // Oxc also calls this hook for non-call forms.
+    (self.annotations()
+      && self.pure_callee_node_ids.is_some_and(|ids| ids.contains(&callee.node_id())))
+      || (self.is_expr_manual_pure_functions(callee)
+        && !self.analyze_eager_chain_children(callee).has_side_effect_for_tree_shaking())
   }
 
   fn property_read_side_effects(&self) -> PropertyReadSideEffects {

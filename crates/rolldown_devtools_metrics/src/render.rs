@@ -121,7 +121,8 @@ impl MetricsAggregator {
     if let Some(analysis) = self.graph_analysis() {
       let file = ModuleGraphFile {
         schema_version: 1,
-        entry_modules: analysis.entry_modules.iter().map(|id| self.stabilize(id)).collect(),
+        entry_modules: analysis.entry_ids().map(|id| self.stabilize(id)).collect(),
+        entry_module_indices: analysis.entry_indices,
         note: "imports entries are [targetIndex, isDynamic]; retainedBytes = bytes removed \
                from the initial load if this module's import edge were deferred (its \
                dominator subtree); idom = index of the immediate dominator (absent = hangs \
@@ -171,6 +172,8 @@ struct ModuleGraphFile {
   schema_version: u32,
   note: &'static str,
   entry_modules: Vec<String>,
+  // See internal-docs/devtools/implementation.md for module identity within this sidecar.
+  entry_module_indices: Vec<usize>,
   modules: Vec<ModuleGraphFileNode>,
 }
 
@@ -801,7 +804,7 @@ don't load the whole file into context.
 | `modules.md` | Module graph: import kinds, most-imported, shared-across-entries. |
 | `packages.md` | Dependency bloat: largest packages, duplicate versions. |
 | `graph.md` | Per-entry chunk graph, initial-load bytes, and the retained-size (dominator) top list. |
-| `module-graph.json` | Full module graph with dominator annotations: per module `bytes`, `retainedBytes` (what deferring its import edge removes from the initial load), `idom` (the single import chain in), `dynamicOnly`, and `imports` edges. The substrate for what-if queries — filter it, never load it whole. |
+| `module-graph.json` | Full module graph with dominator annotations: `entryModuleIndices` identifies roots in the `modules` array. Each module has `bytes`, `retainedBytes` (what deferring its import edge removes from the initial load), `idom` (the immediate dominator), `dynamicOnly`, and `imports` edges. The substrate for what-if queries — filter it, never load it whole. |
 | `chunk-graph.json` | Full output chunk graph: final `fileName`, `name`, `bytes`, `isEntry`, `facadeModuleId`, static `imports`, and `dynamicImports`. Join filenames to browser request timings to check late discovery. This file has no top-N limit. |
 | `delta.md` | This build vs the previous one — and vs the pinned baseline, if any. |
 | `history.jsonl` | One JSON line per build: `{schemaVersion, tsMs, build, metrics, entries}`. |

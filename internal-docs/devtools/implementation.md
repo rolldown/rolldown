@@ -35,7 +35,7 @@ In the default `full` mode, rolldown writes JSON-lines files to:
   logs.json    # All other actions, one JSON object per line
 ```
 
-The formatter emits paths relative to `node_modules/`, and the writer thread joins them onto the session `cwd` it received from `DebugTracer::init` — `InputOptions#cwd`, which defaults to the working directory the build ran from. The process working directory is not a usable fallback: the wasm binding runs on `wasm32-wasip1-threads`, where there is no process `cwd` and a relative path resolves against the `/` preopen instead of the project.
+The formatter emits paths relative to `node_modules/`, and the writer thread joins them onto the session `cwd` it received from `DebugTracer::init` — `InputOptions#cwd`, which defaults to the working directory the build ran from. The process working directory is not a usable fallback: the wasm bindings run on `wasm32-wasip1-threads` and `wasm32-wasip1`, where there is no process `cwd` and a relative path resolves against the `/` preopen instead of the project.
 
 Events with no session span in scope fall back to the `unknown-session` id (`DEFAULT_SESSION_ID` in `crates/rolldown_devtools/src/static_data.rs`), which never receives a `cwd`. Their paths stay relative, so they follow the process working directory natively and the writer warns instead of writing them on wasm. This is the same process-global activation caveat that [design.md](./design.md) tracks under per-build scoping: once any build turns devtools on, later builds in that process keep emitting under `unknown-session`.
 
@@ -71,6 +71,15 @@ app get two folders. `report_dir_is_one_folder_per_output` in
 `crates/rolldown_devtools_metrics/src/tests.rs` pins the mapping. The two modes are
 exclusive today: a report build writes no event log.
 
+In `module-graph.json`, `entryModuleIndices`, import targets, and `idom` refer to
+positions in the `modules` array. `entryModules` and each module's `id` are display
+labels. A project file and a dependency file can have the same label after path
+normalization. For older reports, perf-kit uses the entry labels and prefers
+statically reachable matches without an immediate dominator. When a shared module
+also has no immediate dominator, perf-kit prefers candidates whose static importers
+all lie in their own dominator subtree. Those importers can only reach the candidate
+after it has already been reached. Ties that remain use the last matching rows.
+
 With `devtools: { mode: 'report' }`, the metrics sink also writes
 `chunk-graph.json` beside `metrics.json`. The graph contains every emitted chunk,
 including its final filename, size, facade module, static imports, and dynamic
@@ -103,7 +112,7 @@ and LCP against the pinned baseline.
 
 ### Read-after-close contract
 
-`meta.json` and `logs.json` are only guaranteed to be complete and readable **after `await bundle.close()` resolves**. Internally, events flow through a channel to a background writer thread and are buffered via `BufWriter`, so reading the files immediately after `generate()`/`write()` may return empty or truncated content. `bundle.close()` sends a `CloseSession` command with an ack channel and awaits the writer thread's signal, establishing the happens-before edge consumers depend on.
+`meta.json` and `logs.json` are only guaranteed to be complete and readable **after `await bundle.close()` resolves**. Internally, events flow through a channel to a background writer thread and are buffered via `BufWriter`, so reading the files immediately after `generate()`/`write()` may return empty or truncated content. `bundle.close()` sends a `CloseSession` command with an ack channel and awaits the writer thread's signal, establishing the happens-before edge consumers depend on. The threadless `wasm32-wasip1` build cannot create OS threads, so its writer handles each command inline under a mutex and sends the ack before `flush_session` returns.
 
 ### Large String Deduplication
 
@@ -198,8 +207,6 @@ Each hook call pair gets a unique `call_id` (UUID v4) via its enclosing span.
 
 A call that the plugin's own hook filter skips logs no events. In devtools mode the driver asks `Pluginable::call_hook_filter_matches` and skips the call, so the log and the report hold only calls whose handler ran. Every `transform` call emits a `HookTransformCallEnd`; a result without `code` ends with the unchanged code.
 
-A parallel plugin has one plugin per worker, and each worker can build a different filter from `threadNumber`. The driver asks before `run_single` selects a worker, so `ParallelJsPlugin::hook_filter_matches` passes when the filter of any worker accepts the call. A check of one worker only could skip a call that another worker runs, and the build output would then change in devtools mode. The selected worker checks its own filter again, so a call that it rejects can still appear as a no-op.
-
 ## Action Catalog
 
 | Action                       | When Emitted                              | Key Fields                                                                                                                     |
@@ -235,7 +242,7 @@ Run: `pnpm --filter @rolldown/debug run gen-action-types`
 
 ## Static Data Management
 
-File handles, session directories, and hash caches live in `WriterState`, owned by the background writer thread, so no locking is needed:
+File handles, session directories, and hash caches live in `WriterState`, owned by the background writer thread, so no locking is needed (on threadless `wasm32-wasip1` the same state sits behind a mutex and is used inline):
 
 - `files` — one buffered file handle per output file path, preventing duplicate writes
 - `files_by_session` — tracks which files belong to which session (for cleanup)

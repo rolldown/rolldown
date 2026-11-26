@@ -13,9 +13,12 @@ on:
     paths:
       - 'crates/**'
       - 'packages/**'
+      - 'scripts/wasi/bare-runtime-imports.mjs'
+      - 'scripts/wasi/stage-wasi-packages.mjs'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
       - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - '.github/workflows/publish-to-pkg.pr.new.yml'
 
 # Cancell all previous workflows on main.
@@ -26,6 +29,8 @@ concurrency:
 jobs:
   debounce:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write # for delete-cancelled-runs
     steps:
       # Remove ❌ from main branch.
       - uses: MercuryTechnologies/delete-cancelled-runs@f5c9d322d9c7afbd41f779199818c1ffe381d34b # 1.0.0
@@ -33,12 +38,12 @@ jobs:
         with:
           workflow-file: 'publish-to-pkg.pr.new.yml'
 
-      - name: Debounce for 20 mins
+      - name: Debounce for 15 mins
         if: github.repository == 'rolldown/rolldown' && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        # sleep for 20mins, which should be 1.5 times larger than time for https://github.com/rolldown/rolldown/queue/main.
+        # Merges on main usually land 5 to 15 mins apart, so one batch publishes once.
         run: |
           echo "Start debounce wait: $(date)"
-          sleep 1200
+          sleep 900
           echo "End debounce wait: $(date)"
 
   build:
@@ -70,11 +75,21 @@ jobs:
 
       - uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
         with:
-          version: '1.7.0'
+          version: '1.8.0'
           cache: true
 
       - name: Git Reset Hard
         run: git reset --hard # fix pnpm install add new line for package.json
+
+      - name: Download `rolldown-version.txt`
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: rolldown-version
+
+      - name: Canary/Nightly Versioning
+        run: |
+          ROLLDOWN_VERSION=$(cat rolldown-version.txt)
+          node --import @oxc-node/core/register ./scripts/misc/bump-version.js "${ROLLDOWN_VERSION}"
 
       - name: Download Binding Artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -95,9 +110,6 @@ jobs:
         run: ls -R ./packages/rolldown/npm
         shell: bash
 
-      - name: Check wasm32-wasi binding deps match @rolldown/browser
-        run: node scripts/misc/check-wasi-binding-deps.mjs
-
       - name: Download Node Artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -110,22 +122,23 @@ jobs:
           path: packages/browser/dist
           name: browser-artifact
 
+      - name: Download bundled threaded WASI loaders
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: packages/rolldown/artifacts/threaded-wasi-loaders
+          name: threaded-wasi-loader-artifact
+
+      - name: Vendor WASI runtimes
+        run: node scripts/wasi/stage-wasi-packages.mjs
+
       - name: Download `@rolldown/debug` Artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: packages/debug/dist
           name: debug-artifact
 
-      - name: Download `rolldown-version.txt`
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: rolldown-version
-
-      - name: Canary/Nightly Versioning
-        run: |
-          ROLLDOWN_VERSION=$(cat rolldown-version.txt)
-          node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
-          vp run --filter rolldown prepublishOnly --skip-optional-publish
+      - name: Prepare Release Packages
+        run: vp run --filter rolldown prepublishOnly --skip-optional-publish
 
       - name: Copy Licenses
         run: |

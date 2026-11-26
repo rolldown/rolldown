@@ -200,10 +200,10 @@ impl GenerateStage<'_> {
   /// provisional call in `generate_chunks` runs before the post-chunking
   /// `sweep_unused_runtime_module`, so a still-live chunk the sweep later strips the runtime out of
   /// would otherwise keep an `exec_order` derived from a module it no longer contains — sorting
-  /// ahead of chunks it should follow. `finalize_chunk_plan` therefore re-runs this after such a
-  /// sweep, restoring the ordering the pre-#10104 pipeline produced by sweeping *before* assignment.
+  /// ahead of chunks it should follow. When the runtime sweep removes the runtime,
+  /// `finalize_chunk_plan` recomputes live chunk order from the current layout.
   ///
-  /// Composition with the strict path: `renumber_live_chunks` (strict-only, after order-wrap
+  /// `renumber_live_chunks` (after order-wrap
   /// lowering) merely *compacts* existing `exec_order` values to close tombstone gaps; it never
   /// re-derives them from `modules[0]`. The two compose by last-writer-wins: the re-run happens after
   /// lowering, so when the sweep removes the runtime it re-derives every live chunk's order from its
@@ -1098,27 +1098,31 @@ impl GenerateStage<'_> {
 
     if allow_merge_common_chunks {
       temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas);
+      // Empty entry facades also import the owners of their exported bindings.
+      // See internal-docs/code-splitting/implementation.md#common-module-merging-try_insert_common_module_to_exist_chunk.
+      for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+        if let Some(entry_module_idx) = chunk.entry_module_idx() {
+          let mut targets = vec![];
+          self.entry_export_service_targets(
+            entry_module_idx,
+            used_symbol_refs_builder.view(),
+            true,
+            &mut targets,
+          );
+          temp_chunk_graph.add_entry_export_dependencies(chunk_idx, &targets);
+        }
+      }
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,
         bits_to_chunk,
         input_base,
         &mut temp_chunk_graph,
         &mut dynamic_entry_merge_targets,
+        used_symbol_refs_builder.view(),
       );
     }
 
-    // The plain merges of the already-loaded analysis and of
-    // `try_insert_common_module_to_exist_chunk` can move modules of other entries into a pure
-    // dynamic entry chunk. One check finds the chunks that add keys to the namespace of `import()`.
-    // The check runs after module assignment and before runtime placement, also when the merge of
-    // common chunks is off (`issues/11397_merge_common_chunks_off`). See
-    // internal-docs/code-splitting/implementation.md#dynamic-entry-namespaces.
-    let namespace_extractions = self.find_leaking_dynamic_entry_namespaces(
-      chunk_graph,
-      &dynamic_entry_merge_targets,
-      used_symbol_refs_builder,
-    );
-    if allow_merge_common_chunks {
+    let facade_runtime_consumers = if allow_merge_common_chunks {
       self.optimize_facade_entry_chunks(
         chunk_graph,
         index_splitting_info,
@@ -1126,9 +1130,16 @@ impl GenerateStage<'_> {
         &mut module_is_assigned,
         &temp_chunk_graph,
         used_symbol_refs_builder,
-        &namespace_extractions,
-      );
-    } else if !namespace_extractions.is_empty() {
+      )
+    } else {
+      None
+    };
+    let namespace_extractions = self.find_leaking_dynamic_entry_namespaces(
+      chunk_graph,
+      &mut dynamic_entry_merge_targets,
+      used_symbol_refs_builder,
+    );
+    if !namespace_extractions.is_empty() {
       self.apply_dynamic_entry_namespace_extractions(
         chunk_graph,
         &namespace_extractions,
@@ -1144,12 +1155,14 @@ impl GenerateStage<'_> {
       );
     }
 
-    self.try_merge_runtime_chunk(
-      chunk_graph,
-      None,
-      RuntimeMergeCascade::Full,
-      used_symbol_refs_builder,
-    );
+    for consumers in facade_runtime_consumers.iter().map(Some).chain([None]) {
+      self.try_merge_runtime_chunk(
+        chunk_graph,
+        consumers,
+        RuntimeMergeCascade::Full,
+        used_symbol_refs_builder,
+      );
+    }
 
     Ok(())
   }

@@ -22,9 +22,6 @@ import { dev } from 'rolldown/experimental';
 assert(globalThis.gc, 'Run with --expose-gc');
 
 const input = path.join(import.meta.dirname, 'main.js');
-// With the WASI binding, the close of the dev engine stops the shared async runtime.
-// See https://github.com/rolldown/rolldown/issues/10639.
-const isWasi = process.env.ROLLDOWN_WASI_TEST === '1';
 
 async function collect() {
   for (let i = 0; i < 12; i++) {
@@ -151,10 +148,6 @@ const cases = {
     await assert.rejects(classic({ plugins: [plugin] }), /closeBundle failed/);
   },
   async 'close while a build still runs'(marker) {
-    // With the WASI binding, the close of the last open bundle stops the shared async runtime.
-    // It does this also while a build is pending. This bundle stays open, so that the pending
-    // build can end.
-    const runtimeKeeper = await rolldown({ input, logLevel: 'silent' });
     let buildStarted;
     const started = new Promise((resolve) => (buildStarted = resolve));
     let releaseBuild;
@@ -177,7 +170,6 @@ const cases = {
     await bundle.close();
     releaseBuild();
     await pending;
-    await runtimeKeeper.close();
   },
   async 'watch mode'(marker) {
     const watcher = watch({
@@ -200,9 +192,6 @@ const cases = {
     await watcher.close();
   },
   async 'watch mode, watcher closes while an event result close runs'(marker) {
-    // With the WASI binding, `watcher.close()` stops the shared async runtime when no other owner
-    // keeps it. It does this also while an event result close is pending. This bundle keeps it.
-    const runtimeKeeper = await rolldown({ input, logLevel: 'silent' });
     let hookStarted;
     const started = new Promise((resolve) => (hookStarted = resolve));
     let releaseHook;
@@ -231,10 +220,8 @@ const cases = {
     await watcher.close();
     releaseHook();
     await resultClosed;
-    await runtimeKeeper.close();
   },
   async 'dev engine'(marker) {
-    if (isWasi) return;
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-close-gc-'));
     try {
       const engine = await dev(
@@ -255,7 +242,6 @@ const cases = {
     }
   },
   async 'dev engine, closeBundle awaits engine.close()'(marker) {
-    if (isWasi) return;
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rolldown-close-gc-'));
     try {
       const plugin = keepContext('buildStart', marker);

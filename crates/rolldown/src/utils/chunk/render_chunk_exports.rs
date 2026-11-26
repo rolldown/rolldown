@@ -3,8 +3,9 @@ use std::fmt::Write as _;
 
 use oxc_str::CompactStr;
 use rolldown_common::{
-  Chunk, ChunkKind, ExportsKind, GetLocalDb, IndexModules, ModuleIdx, NormalizedBundlerOptions,
-  OutputExports, OutputFormat, Platform, SymbolRef, SymbolRefDb, SymbolRefFlags, WrapKind,
+  Chunk, ChunkKind, ExportsKind, GetLocalDb, ImportRecordMeta, IndexModules, ModuleIdx,
+  NormalizedBundlerOptions, OutputExports, OutputFormat, Platform, SymbolRef, SymbolRefDb,
+  SymbolRefFlags, WrapKind,
 };
 use rolldown_utils::{
   concat_string,
@@ -27,6 +28,14 @@ pub fn render_wrapped_entry_chunk(
   if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     let entry_meta = &ctx.link_output.metas[entry_id];
     if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
+      if matches!(ctx.options.format, OutputFormat::Cjs)
+        && let Some(host_idx) = ctx.chunk_graph.module_to_chunk[entry_id]
+        && host_idx != ctx.chunk_idx
+        && ctx.chunk_graph.chunk_table[host_idx].entry_module_idx() == Some(entry_id)
+      {
+        let require_binding = &ctx.chunk.require_binding_names_for_other_chunks[&host_idx];
+        return Some(concat_string!("module.exports = ", require_binding, ";\n"));
+      }
       let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
 
       let wrapper_ref_name = ctx.finalized_string_pattern_for_symbol_ref(
@@ -233,7 +242,17 @@ pub fn render_chunk_exports(
             .symbol_db
             .canonical_name_for_or_original(canonical_ref, &chunk.canonical_names);
           let rendered_canonical_name = escape_non_ascii(canonical_name, ascii_only);
-          if let Some(ns_alias) = &symbol.namespace_alias {
+          // The finalizer declares the exports synthesized for a CommonJS star export.
+          let declared_by_finalizer = || {
+            let owner = link_output.module_table[canonical_ref.owner].as_normal().unwrap();
+            owner.named_imports.get(&canonical_ref).is_some_and(|import| {
+              let record = &owner.import_records[import.record_idx];
+              record.meta.contains(ImportRecordMeta::CjsStarNamedExports)
+            })
+          };
+          if let Some(ns_alias) = &symbol.namespace_alias
+            && !declared_by_finalizer()
+          {
             let canonical_ns_name = link_output
               .symbol_db
               .canonical_name_for_or_original(ns_alias.namespace_ref, &chunk.canonical_names);
@@ -282,7 +301,10 @@ pub fn render_chunk_exports(
               canonical_ref.owner != module.idx
             });
           }
-          if !export_items.is_empty() {
+          let wrapper_exports_default = matches!(options.format, OutputFormat::Cjs)
+            && matches!(export_mode, Some(OutputExports::Default))
+            && matches!(link_output.metas[module.idx].wrap_kind(), WrapKind::Cjs);
+          if !wrapper_exports_default && !export_items.is_empty() {
             let rendered_items = export_items
               .into_iter()
               .map(|(exported_name, export_ref)| {

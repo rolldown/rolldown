@@ -782,6 +782,8 @@ export interface OutputOptions {
    *
    * When enabled, Rolldown wraps ESM modules so their bodies run in source order regardless of chunk placement. Interop wrappers for CommonJS and require-of-ESM modules are unchanged, and external modules are not affected. `experimental.onDemandWrapping` replaces wrap-all with a conservative plan derived from predicted chunk execution hazards.
    *
+   * Without this option, a module in an entry chunk runs after the common chunks that the entry imports, even when the entry imports it first. See [Respecting Execution Order doesn't take precedence](https://rolldown.rs/in-depth/automatic-code-splitting#respecting-execution-order-doesn-t-take-precedence).
+   *
    * > [!WARNING]
    * > Enabling this option increases bundle size because wrapped modules need runtime init helpers.
    *
@@ -1045,8 +1047,9 @@ export type AdvancedChunksGroup = CodeSplittingGroup;
 export type ExperimentalInlineCommonChunksOptions = {
   /**
    * Inline eligible automatic common chunks whose size is strictly smaller than this value.
-   * Size is the sum of their modules' transformed source sizes in bytes, before rendering,
-   * minification and compression.
+   * Size is the sum of their modules' sizes in bytes, before rendering, minification and
+   * compression. A module's size is the `declaredModuleSize` a `load` or `transform` hook
+   * returns, or else the size of its transformed source.
    *
    * Must be a non-negative safe integer or `Infinity`. `0` disables inlining.
    * `Infinity` removes the size limit.
@@ -1054,6 +1057,15 @@ export type ExperimentalInlineCommonChunksOptions = {
    * @default 0
    */
   maxSize?: number;
+  /**
+   * Keep a common chunk as a file when its size times the number of files beyond the first that
+   * would print a copy reaches this value. Size is measured as for `maxSize`.
+   *
+   * Must be a non-negative safe integer or `Infinity`. `Infinity` removes the limit.
+   *
+   * @default Infinity
+   */
+  maxDuplicatedSize?: number;
   /**
    * A matcher for module ids, or an array of them: a string (matched as a regular expression), a
    * RegExp, or a function, each applied like {@linkcode CodeSplittingGroup.test | test}. A common

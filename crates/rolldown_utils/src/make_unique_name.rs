@@ -84,6 +84,14 @@ pub fn make_unique_name(name: &ArcStr, used_name_counts: &FxDashMap<ArcStr, u32>
   }
 }
 
+pub fn try_reserve_unique_name(name: &ArcStr, used_name_counts: &FxDashMap<ArcStr, u32>) -> bool {
+  let Entry::Vacant(entry) = used_name_counts.entry(case_insensitive_key(name)) else {
+    return false;
+  };
+  entry.insert(2);
+  true
+}
+
 /// Releases a name previously returned by [`make_unique_name`], so it can be handed out again.
 ///
 /// Only the released name's own key is removed; other names stay reserved. When the released

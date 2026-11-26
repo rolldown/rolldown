@@ -2,6 +2,7 @@ mod cjs_export_analyzer;
 pub mod const_eval;
 pub mod dynamic_import;
 mod early_var_reads;
+mod facade_reserve;
 mod hmr;
 pub mod impl_visit;
 mod import_analyzer;
@@ -9,6 +10,8 @@ mod independent_init;
 mod new_url;
 pub mod stmt_eval_analyzer;
 mod top_level_import_read;
+
+pub use facade_reserve::facade_symbol_reserve;
 
 use arcstr::ArcStr;
 use const_eval::{ConstEvalCtx, eval_can_assign, try_extract_const_literal};
@@ -44,7 +47,7 @@ use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan, EventKindSwitc
 use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
 use rolldown_utils::ecmascript::{legitimize_identifier_name, to_usv_str};
-use rolldown_utils::indexmap::FxIndexMap;
+use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::borrow::Cow;
 use sugar_path::SugarPath;
@@ -80,6 +83,7 @@ pub struct ScanResult {
   /// may not know if it is a esm at the time, a simple case would be swap the order of two export
   /// stmt).
   pub commonjs_exports: FxHashMap<CompactStr, Vec<LocalExport>>,
+  pub cjs_literal_export_names: FxIndexSet<CompactStr>,
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub default_export_ref: SymbolRef,
@@ -198,13 +202,46 @@ pub struct AstScanner<'me, 'ast> {
   root_writes: Vec<(SymbolId, StmtInfoIdx, bool)>,
   /// Literal bindings that `add_constant_symbol` rejected only because code writes them.
   mutated_constant_candidates: Vec<(SymbolId, ConstExportMeta)>,
+  /// Top-level functions that are side-effect free but not declared with `export`, keyed by
+  /// symbol. The value is `true` when only the `@__NO_SIDE_EFFECTS__` annotation makes them
+  /// side-effect free. See [`Self::collect_side_effect_free_functions`].
+  side_effect_free_functions: FxHashMap<SymbolId, bool>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
+  fn literal_cjs_export(&self, node: &ast::AssignmentExpression<'ast>) -> Option<CompactStr> {
+    let member = node.left.as_member_expression()?;
+    if node.operator != ast::AssignmentOperator::Assign
+      || node.span.start != member.object().span().start
+    {
+      return None;
+    }
+    match member {
+      ast::MemberExpression::StaticMemberExpression(member) => {
+        let name = member.property.name.as_str();
+        (member.property.span.source_text(self.immutable_ctx.source) == name).then(|| name.into())
+      }
+      ast::MemberExpression::ComputedMemberExpression(member) => {
+        let Expression::StringLiteral(name) = &member.expression else { return None };
+        let start = member.object.span().end;
+        let prefix = Span::new(start, name.span.start).source_text(self.immutable_ctx.source);
+        let comments = self.immutable_ctx.comments;
+        let direct = prefix.match_indices('(').all(|(offset, _)| {
+          let position = start + u32::try_from(offset).unwrap();
+          let next = comments.partition_point(|comment| comment.span.end <= position);
+          comments.get(next).is_some_and(|comment| comment.span.start <= position)
+        });
+        name.value.as_str().filter(|_| direct).map(CompactStr::from)
+      }
+      ast::MemberExpression::PrivateFieldExpression(_) => None,
+    }
+  }
+
   #[expect(clippy::too_many_arguments)]
   pub fn new(
     idx: ModuleIdx,
     scoping: Scoping,
+    facade_symbol_reserve: u32,
     repr_name: &'me str,
     module_type: ModuleDefFormat,
     source: &'me ArcStr,
@@ -215,7 +252,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     flat_options: FlatOptions,
   ) -> Self {
     let root_scope_id = scoping.root_scope_id();
-    let mut symbol_ref_db = SymbolRefDbForModule::new(scoping, idx, root_scope_id);
+    let mut symbol_ref_db =
+      SymbolRefDbForModule::new(scoping, idx, root_scope_id, facade_symbol_reserve);
     // This is used for converting "export default foo;" => "var default_symbol = foo;"
     let legitimized_repr_name = legitimize_identifier_name(repr_name);
     let default_export_ref = symbol_ref_db
@@ -257,6 +295,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       directive_range: vec![],
       dummy_record_set: FxHashSet::default(),
       commonjs_exports: FxHashMap::default(),
+      cjs_literal_export_names: FxIndexSet::default(),
       constant_export_map: FxHashMap::default(),
       deferred_write_constants: Vec::new(),
       ecma_view_meta: EcmaViewMeta::default(),
@@ -304,6 +343,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       mutated_root_lets: FxHashSet::default(),
       root_writes: Vec::new(),
       mutated_constant_candidates: Vec::new(),
+      side_effect_free_functions: FxHashMap::default(),
     }
   }
 
@@ -914,8 +954,80 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     decl.specifiers.iter().for_each(|spec| {
       if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {
         self.add_local_export(spec.exported.name().as_str(), local_symbol_id, spec.span);
+        self.mark_exported_side_effect_free_function(local_symbol_id);
       }
     });
+  }
+
+  /// Collects the top-level functions that are side-effect free (empty body or
+  /// `@__NO_SIDE_EFFECTS__`) but not declared with `export`, so that a later `export { fn }` or
+  /// `export default fn` can mark them the same way `export function fn` is marked.
+  fn collect_side_effect_free_functions(&mut self, program: &Program<'ast>) {
+    for stmt in &program.body {
+      match stmt {
+        ast::Statement::FunctionDeclaration(fn_decl) => {
+          if let Some(id) = &fn_decl.id
+            && let Some(is_pure_annotation_only) =
+              side_effect_free_function_kind(fn_decl.is_side_effect_free(), fn_decl.pure)
+          {
+            self.side_effect_free_functions.insert(id.symbol_id(), is_pure_annotation_only);
+          }
+        }
+        ast::Statement::VariableDeclaration(var_decl) => {
+          for decl in &var_decl.declarations {
+            let BindingPattern::BindingIdentifier(binding) = &decl.id else { continue };
+            let kind = match &decl.init {
+              Some(Expression::FunctionExpression(func)) => {
+                side_effect_free_function_kind(func.is_side_effect_free(), func.pure)
+              }
+              Some(Expression::ArrowFunctionExpression(func)) => {
+                side_effect_free_function_kind(func.is_side_effect_free(), func.pure)
+              }
+              _ => None,
+            };
+            if let Some(is_pure_annotation_only) = kind {
+              self.side_effect_free_functions.insert(binding.symbol_id(), is_pure_annotation_only);
+            }
+          }
+        }
+        _ => {}
+      }
+    }
+  }
+
+  fn mark_exported_side_effect_free_function(&mut self, symbol_id: SymbolId) {
+    let Some(&is_pure_annotation_only) = self.side_effect_free_functions.get(&symbol_id) else {
+      return;
+    };
+    // A repeated `var` declaration can replace the function without a write reference.
+    if !self.result.symbol_ref_db.scoping().symbol_redeclarations(symbol_id).is_empty() {
+      return;
+    }
+    self.mark_side_effect_free_function(
+      symbol_id,
+      is_pure_annotation_only,
+      SymbolRefFlags::ExportedSeparately,
+    );
+  }
+
+  /// Marks a top-level function binding side-effect free, with `extra_flags`. Direct `eval` can
+  /// replace a `let`, a `var` or a function declaration without a write reference, which
+  /// `IsNotReassigned` cannot see, so such a binding is not marked.
+  fn mark_side_effect_free_function(
+    &mut self,
+    symbol_id: SymbolId,
+    is_pure_annotation_only: bool,
+    extra_flags: SymbolRefFlags,
+  ) {
+    if eval_can_assign(self.result.symbol_ref_db.scoping(), symbol_id) {
+      return;
+    }
+    self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
+    let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
+    flags.insert(SymbolRefFlags::SideEffectsFreeFunction | extra_flags);
+    if is_pure_annotation_only {
+      flags.insert(SymbolRefFlags::PureAnnotationOnly);
+    }
   }
 
   fn scan_export_decl(&mut self, export_decl: &ExportDeclaration<'ast>) {
@@ -946,12 +1058,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               })
               .unwrap_or((false, false));
             if is_side_effect_free_function {
-              self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-              let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
-              flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
-              if is_pure_annotation_only {
-                flags.insert(SymbolRefFlags::PureAnnotationOnly);
-              }
+              self.mark_side_effect_free_function(
+                symbol_id,
+                is_pure_annotation_only,
+                SymbolRefFlags::empty(),
+              );
             }
           }
         });
@@ -961,13 +1072,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         let symbol_id = binding_id.symbol_id();
         self.add_local_export(binding_id.name.as_str(), symbol_id, binding_id.span);
         let empty = fn_decl.is_side_effect_free();
-        if empty || fn_decl.pure {
-          self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
-          let flags = self.result.symbol_ref_db.flags.entry(symbol_id).or_default();
-          flags.insert(SymbolRefFlags::SideEffectsFreeFunction);
-          if fn_decl.pure && !empty {
-            flags.insert(SymbolRefFlags::PureAnnotationOnly);
-          }
+        let returns_parameter = !fn_decl.pure && returns_parameter(fn_decl);
+        if empty || fn_decl.pure || returns_parameter {
+          let mut flags = SymbolRefFlags::empty();
+          flags.set(SymbolRefFlags::ReturnsParameter, returns_parameter);
+          self.mark_side_effect_free_function(symbol_id, fn_decl.pure && !empty, flags);
         }
       }
       ast::Declaration::ClassDeclaration(cls_decl) => {
@@ -1010,6 +1119,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             || scoping.get_resolved_references(symbol_id).any(Reference::is_write);
           if !cannot_reuse_symbol {
             self.result.default_export_ref.symbol = symbol_id;
+            self.mark_exported_side_effect_free_function(symbol_id);
           }
         }
         None
@@ -1437,4 +1547,27 @@ pub enum IdentifierReferenceKind {
   Root(SymbolRef),
   /// rest
   Other,
+}
+
+/// Returns `Some(is_pure_annotation_only)` when a function is side-effect free, either because its
+/// body is empty or because it carries `@__NO_SIDE_EFFECTS__`.
+fn side_effect_free_function_kind(empty: bool, pure: bool) -> Option<bool> {
+  (empty || pure).then_some(pure && !empty)
+}
+
+fn returns_parameter(func: &ast::Function) -> bool {
+  if func.r#async || func.generator {
+    return false;
+  }
+  let Some(body) = &func.body else { return false };
+  let [ast::Statement::ReturnStatement(ret)] = body.statements.as_slice() else { return false };
+  let Some(Expression::Identifier(ident)) =
+    ret.argument.as_ref().map(Expression::get_inner_expression)
+  else {
+    return false;
+  };
+  func.params.is_side_effect_free()
+    && func.params.items.iter().any(|param| {
+      matches!(&param.pattern, BindingPattern::BindingIdentifier(binding) if binding.name == ident.name)
+    })
 }

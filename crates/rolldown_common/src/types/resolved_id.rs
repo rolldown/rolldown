@@ -47,6 +47,9 @@ pub struct ResolvedId {
   pub package_json: Option<Arc<PackageJson>>,
   pub side_effects: Option<HookSideEffects>,
   pub is_external_without_side_effects: bool,
+  /// Set when a JS hook returned this resolution as an object. JS keeps the `meta` of that
+  /// result under this receipt, and a module created from this resolution starts with it.
+  pub module_options_receipt: Option<u32>,
 }
 
 impl ResolvedId {
@@ -75,6 +78,7 @@ impl ResolvedId {
       package_json: None,
       side_effects: None,
       is_external_without_side_effects: false,
+      module_options_receipt: None,
     }
   }
 
@@ -96,6 +100,19 @@ impl ResolvedId {
       None => debug_id,
     };
     escape_line_terminators(debug_id)
+  }
+
+  /// `package.json#sideEffects` for this id, relative to the package root.
+  ///
+  /// A plugin `resolveId` hook can return a non-absolute id (e.g. virtual `\0dep`)
+  /// together with a `packageJsonPath`, so `package_json` is populated even when the
+  /// id is not a `Path` kind. The raw id is still treated as a path so `sideEffects`
+  /// stays in effect for those modules.
+  pub fn package_json_side_effects(&self) -> Option<bool> {
+    let package_json = self.package_json.as_ref()?;
+    let package_root = package_json.realpath().parent()?;
+    let module_path_relative_to_package = self.id.relative_path(package_root);
+    package_json.check_side_effects_for(&module_path_relative_to_package.to_string_lossy())
   }
 }
 

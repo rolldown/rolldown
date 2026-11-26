@@ -1,34 +1,34 @@
 use std::{sync::Arc, thread};
 
 use arcstr::ArcStr;
-use futures::future::join_all;
 use oxc::span::Span;
 use oxc_index::IndexVec;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
-  EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures,
-  ResolvedId, RuntimeModuleBrief, ScanMode, SourcemapChainElement, StmtInfos, SymbolRefDb,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleId, ModuleIdx, ModuleTable,
+  PreserveEntrySignatures, ResolvedId, RuntimeModuleBrief, ScanMode, StmtInfos, SymbolRefDb,
+  dynamic_import_usage::DynamicImportExportsUsage, side_effects::HookSideEffects,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::{FxHashMap, FxHashSet};
+use sugar_path::SugarPath;
 
 use crate::{
   SharedOptions, SharedResolver,
-  module_loader::{ModuleLoader, module_loader::ModuleLoaderOutput},
+  module_loader::{
+    ModuleLoader,
+    module_loader::{ModuleLoaderOutput, VisitState},
+  },
   type_alias::{IndexEcmaAst, IndexStmtInfos},
   types::scan_stage_cache::ScanStageCache,
-  utils::load_entry_module::load_entry_module,
 };
 
-type SourcemapChannel = (
-  Option<std::sync::mpsc::Sender<SourceMapGenMsg>>,
-  Option<thread::JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>>,
-);
+type SourcemapChannel =
+  (Option<std::sync::mpsc::Sender<SourceMapGenMsg>>, Option<thread::JoinHandle<()>>);
 
 pub struct ScanStage<Fs: FileSystem + Clone + 'static> {
   options: SharedOptions,
@@ -164,7 +164,18 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     let fetch_mode = match mode {
       ScanMode::Full => ScanMode::Full,
       ScanMode::Partial(changed_ids) => {
-        ScanMode::Partial(self.resolve_absolute_path(&changed_ids).await?)
+        let resolved_ids = changed_resolved_ids(&changed_ids, cache);
+        if let Err(err) = self.reset_changed_modules(&resolved_ids, &cache.pending_rescans).await {
+          // `fetch_modules` has not taken the changed modules yet. Queue them for the next scan,
+          // as a failed fetch does (`ModuleLoader::revert_partial_scan`).
+          for resolved_id in resolved_ids {
+            if cache.pending_rescans.iter().all(|queued| queued.id != resolved_id.id) {
+              cache.pending_rescans.push(resolved_id);
+            }
+          }
+          return Err(err);
+        }
+        ScanMode::Partial(resolved_ids)
       }
     };
     let (tx_clone, handler) = self.create_sourcemap_channel();
@@ -192,10 +203,12 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
       .plugin_driver
       .set_context_load_modules_tx(Some(module_loader.shared_context.tx.clone()))?;
 
-    let mut module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
+    let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
 
     if let Some(handler) = handler {
-      self.process_sourcemap_handler(handler, &mut module_loader_output);
+      // The maps already sit in each module's sourcemap chain, in plugin
+      // order. Joining only makes sure they are all generated.
+      handler.join().expect("SourceMapGen: sourcemap worker thread panicked");
     }
 
     self.plugin_driver.file_emitter.set_context_load_modules_tx(None)?;
@@ -205,140 +218,108 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
     Ok(module_loader_output.into())
   }
 
+  /// Resets the changed modules to the module options of the resolution that created them, before
+  /// `buildStart` runs. `getModuleInfo` in `buildStart` then shows these start values, not the
+  /// ones that the last fetch set, such as in the HMR stage of the same change. `fetch_modules`
+  /// resets them again after `buildStart`.
+  /// See internal-docs/module-meta-and-side-effects/design.md.
+  async fn reset_changed_modules(
+    &self,
+    changed: &[ResolvedId],
+    pending_rescans: &[ResolvedId],
+  ) -> BuildResult<()> {
+    let resolved_ids = || changed.iter().chain(pending_rescans);
+    if resolved_ids().next().is_none() {
+      return Ok(());
+    }
+    if let Some(reset_js_module_options) = &self.options.reset_js_module_options {
+      let module_ids = resolved_ids().map(|resolved_id| resolved_id.id.to_string());
+      reset_js_module_options.call(Some(module_ids.collect())).await?;
+    }
+    for resolved_id in resolved_ids() {
+      self.plugin_driver.module_side_effects_overrides.remove(resolved_id.id.as_str());
+      self.plugin_driver.set_module_info_side_effects(
+        &resolved_id.id,
+        resolved_id.side_effects.map(HookSideEffects::declared),
+      );
+    }
+    Ok(())
+  }
+
   fn create_sourcemap_channel(&self) -> SourcemapChannel {
+    // Gated on the target, not the scheduler flavor: the drainer is an OS
+    // thread, so it cannot starve the executor that feeds it, even on
+    // `CurrentThread`. Both wasm builds generate maps inline; see
+    // `can_spawn_os_threads` for why the threaded one does too.
+    if !rolldown_utils::futures::can_spawn_os_threads() {
+      return (None, None);
+    }
+
     if self.options.experimental.is_native_magic_string_enabled()
       && self.options.is_sourcemap_enabled()
     {
       let (tx, rx) = std::sync::mpsc::channel::<SourceMapGenMsg>();
+      // Dedicated OS thread, never a runtime `spawn_blocking`: a drainer that
+      // took this consumer inline would block in `rx.recv()` forever, leaving
+      // the module tasks that feed the channel unpolled -> deadlock.
       let handler = thread::spawn(move || {
-        let mut map: FxHashMap<ModuleIdx, Vec<_>> = FxHashMap::default();
         while let Ok(msg) = rx.recv() {
           match msg {
-            SourceMapGenMsg::MagicString(v) => {
-              let (module_idx, plugin_idx, id, magic_string) = *v;
-              // A line-level map loses every column and name behind it once the chain is
-              // composed, so the default keeps the word boundaries. The `hires` option of the
-              // MagicString overrides it.
-              let generated_sourcemap = magic_string.source_map(string_wizard::SourceMapOptions {
-                source: id.as_str().into(),
-                hires: magic_string.hires().unwrap_or(string_wizard::Hires::Boundary),
-                ..Default::default()
-              });
-              map
-                .entry(module_idx)
-                .or_default()
-                .push(SourcemapChainElement::Transform((plugin_idx, generated_sourcemap)));
+            SourceMapGenMsg::MagicString(pending) => {
+              // Generates the map now, off the JS thread, so it's ready at render time.
+              pending.get();
             }
             SourceMapGenMsg::Terminate => {
               break;
             }
           }
         }
-        map
       });
       (Some(tx), Some(handler))
     } else {
       (None, None)
     }
   }
+}
 
-  fn process_sourcemap_handler(
-    &self,
-    handler: thread::JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>,
-    module_loader_output: &mut ModuleLoaderOutput,
-  ) {
-    let map: FxHashMap<ModuleIdx, Vec<_>> = handler.join().unwrap();
-    if !map.is_empty() {
-      let transform_plugin_order_map = self
-        .plugin_driver
-        .order_by_transform_meta
-        .iter()
-        .enumerate()
-        .map(|(i, plugin_idx)| (*plugin_idx, i))
-        .collect::<FxHashMap<_, _>>();
-      for (module_idx, sourcemaps) in map {
-        let Some(module) = module_loader_output.module_table.get_mut(module_idx).as_normal_mut()
-        else {
+/// The resolutions that created the changed modules. A partial scan fetches each changed module
+/// again from the resolution that created it, as an HMR update does, so no `resolveId` hook runs
+/// again. A `resolveId` hook gets a specifier, not a resolved id, so calling it with the id of the
+/// module can resolve to another module, for example for a virtual module. A changed file that
+/// is not a module, such as a file that a plugin added with `addWatchFile`, is skipped.
+///
+/// A changed external module is not fetched, because it has no hooks to run. It is marked as
+/// invalidated, so the first resolution of its id in this scan sets its kind again: a changed
+/// file that was external can become a normal module.
+fn changed_resolved_ids(changed_ids: &[ArcStr], cache: &mut ScanStageCache) -> Vec<ResolvedId> {
+  let Some(snapshot) = cache.snapshot() else {
+    return Vec::new();
+  };
+  let mut resolved_ids = Vec::with_capacity(changed_ids.len());
+  let mut external_ids = Vec::new();
+  for changed_id in changed_ids {
+    // The dev engine passes file paths for edits, and module ids for lazy compilation.
+    let module_id = ModuleId::new(changed_id.as_str());
+    let idx = match cache.module_id_to_idx.get(&module_id) {
+      Some(state) => state.idx(),
+      None => {
+        let path = std::path::Path::new(changed_id.as_str()).to_slash();
+        let Some(&idx) = cache.module_idx_by_abs_path.get(&*path) else {
           continue;
         };
-        // A freshly scanned module is the chain's only owner, so this does not copy it.
-        let sourcemap_chain = Arc::make_mut(&mut module.sourcemap_chain);
-        sourcemap_chain.extend(sourcemaps);
-        // Partition sourcemap chain into Load and Transform elements (O(n) instead of O(n log n) sort)
-        // Load elements come first, then Transform elements sorted by plugin order
-        let chain_len = sourcemap_chain.len();
-        let mut load_elements = Vec::with_capacity(chain_len);
-        let mut transform_elements = Vec::with_capacity(chain_len);
-
-        for element in sourcemap_chain.drain(..) {
-          match element {
-            SourcemapChainElement::Load(_) => load_elements.push(element),
-            SourcemapChainElement::Transform(_)
-            | SourcemapChainElement::Omitted { .. }
-            | SourcemapChainElement::Null { .. } => {
-              transform_elements.push(element);
-            }
-          }
-        }
-
-        // Sort only Transform elements by plugin order
-        transform_elements.sort_by(|a, b| {
-          let plugin_idx_of = |el: &SourcemapChainElement| match el {
-            SourcemapChainElement::Transform((plugin_idx, _))
-            | SourcemapChainElement::Omitted { plugin_idx, .. }
-            | SourcemapChainElement::Null { plugin_idx, .. } => Some(*plugin_idx),
-            SourcemapChainElement::Load(_) => None,
-          };
-          if let (Some(a_plugin_idx), Some(b_plugin_idx)) = (plugin_idx_of(a), plugin_idx_of(b)) {
-            let a_order =
-              transform_plugin_order_map.get(&a_plugin_idx).copied().unwrap_or(usize::MAX);
-            let b_order =
-              transform_plugin_order_map.get(&b_plugin_idx).copied().unwrap_or(usize::MAX);
-            a_order.cmp(&b_order)
-          } else {
-            std::cmp::Ordering::Equal
-          }
-        });
-
-        // Reconstruct: Load elements first, then sorted Transform elements
-        *sourcemap_chain = load_elements;
-        sourcemap_chain.extend(transform_elements);
+        idx
       }
+    };
+    match snapshot.module_table.modules.get(idx) {
+      Some(Module::Normal(module)) => resolved_ids.push(module.originative_resolved_id.clone()),
+      Some(Module::External(module)) => external_ids.push((module.id.clone(), idx)),
+      None => {}
     }
   }
-
-  /// Make sure the passed `ids` is all absolute path
-  async fn resolve_absolute_path(&self, ids: &[ArcStr]) -> BuildResult<Vec<ResolvedId>> {
-    let resolver = &self.resolver;
-    let plugin_driver = &self.plugin_driver;
-    let options = &self.options;
-
-    let resolved_ids = join_all(ids.iter().map(|input_item| async move {
-      // The importer is useless, since all path is absolute path
-
-      load_entry_module(options, resolver, plugin_driver, input_item, None).await
-    }))
-    .await;
-
-    let mut ret = Vec::with_capacity(ids.len());
-
-    let mut errors = vec![];
-
-    for resolve_id in resolved_ids {
-      match resolve_id {
-        Ok(item) => {
-          ret.push(item);
-        }
-        Err(e) => errors.push(e),
-      }
-    }
-
-    if !errors.is_empty() {
-      Err(errors)?;
-    }
-
-    Ok(ret)
+  for (module_id, idx) in external_ids {
+    cache.module_id_to_idx.insert(module_id, VisitState::Invalidate(idx));
   }
+  resolved_ids
 }
 
 impl From<ModuleLoaderOutput> for ScanStageOutput {

@@ -22,6 +22,7 @@ use super::events::cannot_call_namespace::CannotCallNamespace;
 use super::events::configuration_field_conflict::ConfigurationFieldConflict;
 use super::events::could_not_clean_directory::CouldNotCleanDirectory;
 use super::events::deprecated_import_assertion::DeprecatedImportAssertion;
+use super::events::dropped_import_attribute::DroppedImportAttribute;
 use super::events::duplicate_shebang::DuplicateShebang;
 use super::events::external_module_conflict::{
   ExternalModuleConflict, ExternalModuleConflictImporter,
@@ -92,6 +93,16 @@ impl BuildDiagnostic {
     kind: InvalidImportAttributeKind,
   ) -> Self {
     Self::new_inner(InvalidImportAttribute { module_id, source, span, kind })
+  }
+
+  pub fn dropped_import_attribute(
+    module_id: String,
+    source: ArcStr,
+    span: Span,
+    importee: String,
+    format: ArcStr,
+  ) -> Self {
+    Self::new_inner(DroppedImportAttribute { module_id, source, span, importee, format })
   }
 
   pub fn entry_cannot_be_external(unresolved_id: impl AsRef<Path>) -> Self {

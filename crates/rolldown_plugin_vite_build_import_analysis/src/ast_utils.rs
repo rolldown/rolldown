@@ -24,6 +24,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
     render_built_url: bool,
     is_relative_base: bool,
     is_modern: bool,
+    keep_import_attributes: bool,
     preload_marker_module_id: String,
   ) -> Self {
     Self {
@@ -32,6 +33,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
       insert_preload,
       render_built_url,
       is_relative_base,
+      keep_import_attributes,
       scope_stack: vec![],
       need_prepend_helper: false,
       has_inserted_helper: false,
@@ -79,7 +81,6 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
               PropertyKey::new_static_identifier(SPAN, key, self),
               BindingPattern::new_binding_identifier(SPAN, value, self),
               true,
-              false,
               self,
             )],
             None,

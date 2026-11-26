@@ -1,0 +1,11 @@
+{
+  "type": "module",
+  "sideEffects": [
+    "./a.js",
+    "./init.js",
+    "./one.js",
+    "./two.js",
+    "./j.js",
+    "./barrel.js"
+  ]
+}

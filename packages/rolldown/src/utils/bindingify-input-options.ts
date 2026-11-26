@@ -6,7 +6,6 @@ import {
   BindingPropertyWriteSideEffects,
 } from '../binding.cjs';
 import type {
-  BindingDeferSyncScanData,
   BindingExperimentalOptions,
   BindingInputOptions,
 } from '../binding.cjs';
@@ -23,7 +22,6 @@ import { bindingifyInject } from './bindingify-inject';
 import { arraify } from './misc';
 import { normalizedStringOrRegex } from './normalize-string-or-regex';
 import { normalizeTransformOptions } from './normalize-transform-options';
-import { getParallelPluginInfo } from './parallel-plugin';
 import { getDefaultDevRuntime } from './default-dev-runtime';
 import {
   INPUT_OPTIONS_OWNER,
@@ -45,9 +43,6 @@ export function bindingifyInputOptions(
   timings: PluginTimingsRecorder | undefined,
 ): BindingInputOptions {
   const plugins = rawPlugins.map((plugin) => {
-    if (getParallelPluginInfo(plugin)) {
-      return undefined;
-    }
     if (plugin instanceof BuiltinPlugin) {
       switch (plugin.name) {
         case 'builtin:vite-manifest':
@@ -71,6 +66,9 @@ export function bindingifyInputOptions(
 
   // Normalize transform options to extract define, inject, and oxc transform options
   const normalizedTransform = normalizeTransformOptions(inputOptions);
+  const treeshake = bindingifyTreeshakeOptions(inputOptions.treeshake, timings);
+  pluginContextData.moduleSideEffectsOption =
+    typeof treeshake?.moduleSideEffects === 'function' ? treeshake.moduleSideEffects : undefined;
 
   return {
     input: bindingifyInput(inputOptions.input),
@@ -85,7 +83,7 @@ export function bindingifyInputOptions(
     // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned
     // Because it is hard to represent Enum in napi, ref: https://github.com/napi-rs/napi-rs/issues/507
     // So we use `undefined | NormalizedTreeshakingOptions` (or Option<NormalizedTreeshakingOptions> in Rust side), to represent `false | NormalizedTreeshakingOptions`
-    treeshake: bindingifyTreeshakeOptions(inputOptions.treeshake, timings),
+    treeshake,
     moduleTypes: inputOptions.moduleTypes,
     define: normalizedTransform.define,
     inject: bindingifyInject(normalizedTransform.inject),
@@ -99,23 +97,13 @@ export function bindingifyInputOptions(
     // Pulled by the core while the build closes, so what it returns includes `closeBundle`.
     // Only registered when measuring; its absence is how Rust knows to stay quiet.
     pluginTimings: timings ? () => summarizePluginTimings(inputOptions) : undefined,
-    deferSyncScanData: () => {
-      let ret: BindingDeferSyncScanData[] = [];
-      pluginContextData.moduleOptionMap.forEach((value, key) => {
-        if (value.invalidate) {
-          ret.push({
-            id: key,
-            sideEffects: value.moduleSideEffects ?? undefined,
-          });
-        }
-      });
-      return ret;
-    },
     makeAbsoluteExternalsRelative: bindingifyMakeAbsoluteExternalsRelative(
       inputOptions.makeAbsoluteExternalsRelative,
     ),
     devtools: inputOptions.devtools,
     invalidateJsSideCache: pluginContextData.clear.bind(pluginContextData),
+    resetJsModuleOptions: pluginContextData.resetModuleOptions.bind(pluginContextData),
+    createJsModuleOptions: pluginContextData.createModuleOptions.bind(pluginContextData),
     preserveEntrySignatures: bindingifyPreserveEntrySignatures(
       inputOptions.preserveEntrySignatures,
     ),
@@ -186,13 +174,17 @@ function bindingifyExperimental(
         throw new Error(`Unexpected chunkModulesOrder: ${experimental.chunkModulesOrder}`);
     }
   }
+  const chunkImportMap = experimental?.chunkImportMap;
   return {
     viteMode: experimental?.viteMode,
     resolveNewUrlToAsset: experimental?.resolveNewUrlToAsset,
     devMode: bindingifyDevMode(experimental?.devMode),
     attachDebugInfo: bindingifyAttachDebugInfo(experimental?.attachDebugInfo),
     chunkModulesOrder,
-    chunkImportMap: experimental?.chunkImportMap,
+    chunkImportMap:
+      typeof chunkImportMap === 'object'
+        ? { ...chunkImportMap, include: normalizedStringOrRegex(chunkImportMap.include) }
+        : chunkImportMap,
     onDemandWrapping: experimental?.onDemandWrapping,
     incrementalBuild: experimental?.incrementalBuild,
     nativeMagicString: experimental?.nativeMagicString,
@@ -324,7 +316,8 @@ function bindingifyTreeshakeOptions(
       { external: false, sideEffects: true },
     ];
   } else {
-    // The function form runs once per module.
+    // The function form runs only when the value is needed, once per module task. See
+    // internal-docs/cache/implementation.md.
     normalizedConfig.moduleSideEffects = measureIfFunction(
       timings,
       INPUT_OPTIONS_OWNER,

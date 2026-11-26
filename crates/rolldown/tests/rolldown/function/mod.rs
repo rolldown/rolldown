@@ -5,5 +5,8 @@ pub mod external_chunk_imports;
 pub mod external_interop_invariants;
 pub mod incremental_build_end_error;
 pub mod inline_common_chunks;
+pub mod module_side_effects_overrides;
+pub mod partial_scan_load_cached_module;
+pub mod partial_scan_reuses_resolved_id;
 pub mod path_external_common_dir;
 pub mod strict_execution_order_invariants;

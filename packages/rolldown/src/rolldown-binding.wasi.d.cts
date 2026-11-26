@@ -1580,6 +1580,18 @@ export declare class BindingCallableBuiltinPlugin {
 
 export declare class BindingChunkingContext {
   getModuleInfo(moduleId: string): BindingModuleInfo | null
+  /**
+   * `getModuleInfo(moduleId)?.moduleSideEffects`, without copying the rest of the info. See
+   * `BindingPluginContext.getModuleSideEffects` for `callOption`.
+   */
+  getModuleSideEffects(moduleId: string, callOption?: (id: string, external: boolean) => boolean | undefined | null): boolean | 'no-treeshake' | null
+  /**
+   * A write to `getModuleInfo(moduleId).moduleSideEffects`. `null` and `undefined` mean
+   * "not decided". See `BindingPluginContext.setModuleSideEffects` for `callOption`.
+   * A write after `buildEnd` is ignored. Returns `true` for the first one in a build, so the
+   * caller can warn.
+   */
+  setModuleSideEffects(moduleId: string, sideEffects: boolean | 'no-treeshake' | null | undefined, callOption?: (id: string, external: boolean) => boolean | undefined | null): boolean
 }
 
 /** A decoded source map with mappings as an array of arrays instead of VLQ-encoded string. */
@@ -1730,6 +1742,18 @@ export declare class BindingMagicString {
    */
   slice(start?: number | undefined | null, end?: number | undefined | null): string
   /**
+   * Returns the UTF-16 indices in the original source that `addSourcemapLocation()` registers.
+   * Each index appears once. The indices are in ascending order.
+   */
+  get sourcemapLocations(): Array<number>
+  /**
+   * Registers a UTF-16 index in the original source for maps with `hires: false`.
+   * If the index falls within a non-newline character in an unedited piece,
+   * the map includes a segment for that index.
+   * The `offset` option does not change this index.
+   */
+  addSourcemapLocation(index: number): void
+  /**
    * Generates a source map for the transformations applied to this MagicString.
    * Returns a BindingSourceMap object with version, file, sources, sourcesContent, names, mappings.
    */
@@ -1798,7 +1822,6 @@ export declare class BindingNormalizedOptions {
 }
 
 export declare class BindingOutputAsset {
-  dropInner(): ExternalMemoryStatus
   getFileName(): string
   getOriginalFileName(): string | null
   getOriginalFileNames(): Array<string>
@@ -1808,7 +1831,6 @@ export declare class BindingOutputAsset {
 }
 
 export declare class BindingOutputChunk {
-  dropInner(): ExternalMemoryStatus
   getIsEntry(): boolean
   getIsDynamicEntry(): boolean
   getFacadeModuleId(): string | null
@@ -1832,13 +1854,27 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
-  load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
+  load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, resolveDependencies: boolean, options?: BindingPluginContextLoadOptions): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
   emitPrebuiltChunk(file: BindingEmittedPrebuiltChunk): string
   getFileName(referenceId: string): string
   getModuleInfo(moduleId: string): BindingModuleInfo | null
+  /**
+   * `getModuleInfo(moduleId)?.moduleSideEffects`, without copying the rest of the info.
+   * `callOption` is the `treeshake.moduleSideEffects` function, if the option is one. It runs
+   * only when the value needs it and no earlier call for the module left a result.
+   */
+  getModuleSideEffects(moduleId: string, callOption?: (id: string, external: boolean) => boolean | undefined | null): boolean | 'no-treeshake' | null
+  /**
+   * A write to `getModuleInfo(moduleId).moduleSideEffects`. `null` and `undefined` mean
+   * "not decided". After such a write, the module shows the value without hooks, so
+   * `callOption` runs here if that value needs it. Tree shaking then reuses the result.
+   * A write after `buildEnd` is ignored. Returns `true` for the first one in a build, so the
+   * caller can warn.
+   */
+  setModuleSideEffects(moduleId: string, sideEffects: boolean | 'no-treeshake' | null | undefined, callOption?: (id: string, external: boolean) => boolean | undefined | null): boolean
   getModuleIds(): Array<string>
   addWatchFile(file: string): void
 }
@@ -1931,12 +1967,6 @@ export declare class BindingWatcherEvent {
   watchChangeData(): BindingWatcherChangeData
 }
 
-export declare class ParallelJsPluginRegistry {
-  id: number
-  workerCount: number
-  constructor(workerCount: number)
-}
-
 export declare class TraceSubscriberGuard {
   close(): void
 }
@@ -1986,7 +2016,6 @@ export interface BindingBundleAnalyzerPluginConfig {
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions
   outputOptions: BindingOutputOptions
-  parallelPluginsRegistry?: ParallelJsPluginRegistry
 }
 
 export interface BindingBundleState {
@@ -2034,11 +2063,13 @@ export interface BindingChecksOptions {
   shimmedExport?: boolean
   deprecatedImportAssertion?: boolean
   invalidImportAttribute?: boolean
+  droppedImportAttribute?: boolean
 }
 
 export interface BindingChunkImportMap {
   baseUrl?: string
   fileName?: string
+  include?: Array<BindingStringOrRegex>
 }
 
 export declare enum BindingChunkModuleOrderBy {
@@ -2080,12 +2111,6 @@ export interface BindingCompilerOptions {
   module?: string
   allowJs?: boolean
   rootDirs?: Array<string>
-}
-
-export interface BindingDeferSyncScanData {
-  /** ModuleId */
-  id: string
-  sideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingDevOptions {
@@ -2379,6 +2404,7 @@ export interface BindingHookLoadExtraArgs {
 export interface BindingHookLoadOutput {
   code: string
   moduleSideEffects?: boolean | 'no-treeshake'
+  declaredModuleSize?: number
   map?: BindingSourcemap
   moduleType?: string
 }
@@ -2459,6 +2485,8 @@ export interface BindingHookResolveIdOutput {
    * `experimental.importAttributes`.
    */
   attributes?: Record<string, string>
+  /** @internal See `ResolvedId::module_options_receipt`. */
+  moduleOptionsReceipt?: number
 }
 
 export type BindingHookSideEffects = boolean | string
@@ -2466,6 +2494,7 @@ export type BindingHookSideEffects = boolean | string
 export interface BindingHookTransformOutput {
   code?: string
   moduleSideEffects?: BindingHookSideEffects
+  declaredModuleSize?: number
   /**
    * A sourcemap, or `null` to explicitly signal "no sourcemap" (distinct from
    * omitting the field, which mirrors Rollup's "possibly broken" semantics).
@@ -2514,6 +2543,7 @@ export interface BindingInjectPluginConfig {
  */
 export interface BindingInlineCommonChunksOptions {
   maxSize?: number
+  maxDuplicatedSize?: number
   exclude?: Array<string | RegExp | ((ids: Array<string>) => Uint8Array)>
 }
 
@@ -2530,7 +2560,7 @@ export interface BindingInputItem {
 export interface BindingInputOptions {
   external?: Array<string | RegExp> | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)
   input: Array<BindingInputItem>
-  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions)[]
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
@@ -2548,12 +2578,13 @@ export interface BindingInputOptions {
   watch?: BindingWatchOption
   keepNames?: boolean
   checks?: BindingChecksOptions
-  deferSyncScanData?: undefined | (() => BindingDeferSyncScanData[])
   /** Asked for while the build is closing, so what it returns includes `closeBundle`. */
   pluginTimings?: undefined | (() => BindingPluginTimingsMeasurement)
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
   devtools?: BindingDevtoolsOptions
   invalidateJsSideCache?: () => void
+  resetJsModuleOptions?: (moduleIds: string[] | null) => void
+  createJsModuleOptions?: (moduleId: string, moduleOptionsReceipt: number | null) => void
   preserveEntrySignatures?: BindingPreserveEntrySignatures
   optimization?: BindingOptimization
   context?: string
@@ -2729,7 +2760,7 @@ export interface BindingOutputOptions {
   intro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   outro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   paths?: Record<string, string> | ((id: string) => string)
-  plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
+  plugins: (BindingBuiltinPlugin | BindingPluginOptions)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sourcemapBaseUrl?: string
@@ -2768,6 +2799,16 @@ export interface BindingOverwriteOptions {
   storeName?: boolean
 }
 
+/** The options of `BindingPluginContext.load` that a call can leave out. */
+export interface BindingPluginContextLoadOptions {
+  packageJsonPath?: string
+  /**
+   * The receipt of the module options that `this.load` saved on the JS side. They apply only
+   * when this call creates the module.
+   */
+  moduleOptionsReceipt?: number
+}
+
 export interface BindingPluginContextResolvedId {
   /** The resolved id without its import attributes. */
   id: string
@@ -2775,6 +2816,8 @@ export interface BindingPluginContextResolvedId {
   packageJsonPath?: string
   external: boolean | 'absolute' | 'relative'
   moduleSideEffects?: boolean | 'no-treeshake'
+  /** @internal See `ResolvedId::module_options_receipt`. */
+  moduleOptionsReceipt?: number
 }
 
 export interface BindingPluginContextResolveOptions {
@@ -2884,11 +2927,6 @@ export interface BindingPluginTimingsMeasurement {
   /** Wall time in which any measured callback was running, counting overlap once. */
   busyMs: number
   rows: Array<BindingPluginTiming>
-}
-
-export interface BindingPluginWithIndex {
-  index: number
-  plugin: BindingPluginOptions
 }
 
 export interface BindingPreRenderedAsset {
@@ -3053,7 +3091,6 @@ export interface BindingViteAliasPluginConfig {
 export interface BindingViteBuildImportAnalysisPluginConfig {
   preloadCode: string
   insertPreload: boolean
-  optimizeModulePreloadRelativePaths: boolean
   renderBuiltUrl: boolean
   isRelativeBase: boolean
 }
@@ -3195,11 +3232,6 @@ export interface ExtensionAliasItem {
   replacements: Array<string>
 }
 
-export interface ExternalMemoryStatus {
-  freed: boolean
-  reason?: string
-}
-
 export type FilterTokenKind = 'Id' | 'ImporterId' | 'Code' | 'ModuleType' | 'And' | 'Or' | 'Not' | 'Include' | 'Exclude' | 'CleanUrl' | 'QueryKey' | 'QueryValue'
 
 /**
@@ -3275,8 +3307,6 @@ export interface PreRenderedChunk {
   /** Exported variable names from this chunk. */
   exports: Array<string>
 }
-
-export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
 
 /**
  * Starts a new measuring window: the peak restarts from the current live

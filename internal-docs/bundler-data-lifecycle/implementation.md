@@ -127,11 +127,11 @@ A build mutates the cache through several non-atomic "tear → repair" steps. An
 early `?` return landing between a tear and its repair used to leave the cache
 permanently broken:
 
-| Step       | Tear                                                                                        | Repair                                                                    |
-| ---------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Ownership  | `with_cached_bundle` `mem::take`s `Bundler::cache`, leaving `default()` (`snapshot: None`)  | moves `Bundle::cache` back into `Bundler`                                 |
-| Scoping    | `create_output` / `make_copy` clone `symbol_ref_db` _without_ scoping (a perf optimization) | `merge_immutable_fields_for_cache` reinstates scoping from the link stage |
-| Defer-sync | `ScanStageCache::update_defer_sync_data` `take`s the snapshot out                           | `set_snapshot` puts it back                                               |
+| Step               | Tear                                                                                        | Repair                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Ownership          | `with_cached_bundle` `mem::take`s `Bundler::cache`, leaving `default()` (`snapshot: None`)  | moves `Bundle::cache` back into `Bundler`                                 |
+| Scoping            | `create_output` / `make_copy` clone `symbol_ref_db` _without_ scoping (a perf optimization) | `merge_immutable_fields_for_cache` reinstates scoping from the link stage |
+| Side-effect writes | `ScanStageCache::apply_module_side_effects_overrides` `take`s the snapshot out              | `set_snapshot` puts it back                                               |
 
 Each repair therefore runs **unconditionally**:
 
@@ -139,8 +139,8 @@ Each repair therefore runs **unconditionally**:
 - `bundle_up` runs `merge_immutable_fields_for_cache` right after the link
   stage, _before_ the fallible `generate_bundle` / filename-check /
   `invalidate_js_side_cache` steps.
-- `update_defer_sync_data` restores the snapshot before propagating an error.
-- `scan_modules` runs `repair_cache_after_failed_build` when the build fails between updating the cache and `bundle_up`, in `update_defer_sync_data` or `buildEnd`. After a partial scan it moves the scan output's `symbol_ref_db`, which `create_output` took out of the cache together with the scoping, back into the snapshot. After a full scan it empties the cache, so the next build is a full one. A full build that fails in `defer_sync_scan_data` commits no snapshot in the first place.
+- `apply_module_side_effects_overrides` restores the snapshot before propagating an error.
+- `scan_modules` runs `repair_cache_after_failed_build` when the build fails between updating the cache and `bundle_up`, in `apply_module_side_effects_overrides`, in `buildEnd`, or when the writes are applied again after `buildEnd`. After a partial scan it moves the scan output's `symbol_ref_db`, which `create_output` took out of the cache together with the scoping, back into the snapshot. After a full scan it empties the cache, so the next build is a full one. A full build that fails in `apply_module_side_effects_overrides` commits no snapshot in the first place.
 
 A failed scan must also not leave the cache _out of sync_. Task results are
 applied as they arrive, so an aborted partial scan has already flipped
@@ -200,13 +200,13 @@ whole-but-slightly-stale cache is recoverable; a broken one is not. The recovery
 everything, but still relies on the cache being structurally valid to merge into.
 
 **Presence is not freshness.** Restoring the snapshot guarantees it is _present_
-and _structurally valid_ — not that every field is current. `defer_sync_scan_data`
+and _structurally valid_ — not that every field is current. `apply_module_side_effects_overrides`
 (per-module side-effect re-analysis) is deliberately **best-effort**: a module
 that fails to re-analyze is skipped — it keeps its prior `side_effects` — its
-error is collected, and the remaining modules are still synced. So a failed
+error is collected, and the remaining modules are still updated. So a failed
 build can leave a module with stale `side_effects`. That is safe _only_ because
 `side_effects` is an independent per-module field with no cross-module invariant:
-a stale value is still a valid value, and the next successful build re-syncs it.
+a stale value is still a valid value, and the next successful build updates it again.
 The general rule for a torn-window repair: restore a _structurally consistent_
 cache; where content freshness can't be guaranteed under partial failure,
 confine the staleness to fields that are safe to be stale.
@@ -246,7 +246,7 @@ This is what fixed the bug where `this.getModuleInfo()` returned nothing on the 
 
 **Rule:** the options objects that hooks get (`NormalizedInputOptionsImpl`, `NormalizedOutputOptionsImpl`) hold plain values, not the native `BindingNormalizedOptions`. Their constructors read every `@lazyProp` getter once, then set `inner` to `null` rather than delete it, so `Object.keys()` and `{...options}` keep the same keys.
 
-**Why:** `BindingNormalizedOptions` owns an `Arc<NormalizedBundlerOptions>`, and the options own the JS option functions (`onLog`, `deferSyncScanData`, `invalidateJsSideCache`, and user functions such as `external`). Each of those functions is held by a napi threadsafe function, which is a GC root. Two of them, `deferSyncScanData` and `invalidateJsSideCache`, are always passed and capture `PluginContextData`, which caches the options objects and the plugins. An options object that kept the native object would close a loop the GC cannot see:
+**Why:** `BindingNormalizedOptions` owns an `Arc<NormalizedBundlerOptions>`, and the options own the JS option functions (`onLog`, `invalidateJsSideCache`, and user functions such as `external`). Each of those functions is held by a napi threadsafe function, which is a GC root. Three of them, `invalidateJsSideCache`, `resetJsModuleOptions` and `createJsModuleOptions`, are always passed and capture `PluginContextData`, which caches the options objects and the plugins. An options object that kept the native object would close a loop the GC cannot see:
 
 ```
 GC root → option function → PluginContextData → options object → BindingNormalizedOptions → Arc<options> → GC root
@@ -274,7 +274,7 @@ Rust keeps the JS functions of the bundler options only while their owner is ope
 
 ### The problem
 
-- A JS function of the bundler options reaches Rust as a `JsCallback`. Examples are `external`, `onLog`, the file name functions, and the internal `deferSyncScanData` and `invalidateJsSideCache`. A `JsCallback` keeps a strong napi reference to its JS function. V8 treats that reference as a GC root ("Global handles" in a heap snapshot).
+- A JS function of the bundler options reaches Rust as a `JsCallback`. Examples are `external`, `onLog`, the file name functions, and the internal `invalidateJsSideCache`, `resetJsModuleOptions` and `createJsModuleOptions`. A `JsCallback` keeps a strong napi reference to its JS function. V8 treats that reference as a GC root ("Global handles" in a heap snapshot).
 - JS can keep a native object that keeps the options alive. An example is the `BindingPluginContext` of `this` in a hook. It reaches the options through `NativePluginContextImpl.options` and `FileEmitter.options`. The options objects that hooks get keep no native object (see [Normalized options objects](#normalized-options-objects)).
 - A JS function of the options can reach such a native object. Then a cycle goes through native code: root → JS function → … → JS wrapper → `Arc<NormalizedBundlerOptions>` → `JsCallback` → root. The GC cannot see the native edge, so it never frees the cycle.
 - The internal callbacks capture `pluginContextData`, which reaches every plugin of the build. So without the release, every plugin of the build stays alive when one plugin keeps `this`. Before rolldown/rolldown#11623, one empty `buildStart` hook had the same effect (rolldown/rolldown#11444).

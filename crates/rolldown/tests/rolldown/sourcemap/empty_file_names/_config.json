@@ -1,0 +1,8 @@
+{
+  "config": {
+    "sourcemap": "File",
+    "sourcemapFilenames": ""
+  },
+  "expectExecuted": false,
+  "snapshot": false
+}

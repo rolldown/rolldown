@@ -1,0 +1,8 @@
+{
+  "config": {
+    "external": ["./ext.mjs"],
+    "format": "cjs",
+    "entryFilenames": ""
+  },
+  "expectError": true
+}

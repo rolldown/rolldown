@@ -94,7 +94,8 @@ impl ExternalModule {
       target,
       Path::new(&importer)
         .parent()
-        .expect("the importer chunk preliminary filename should have a parent directory"),
+        // Output validation rejects a filename without a parent, such as an empty one.
+        .unwrap_or(Path::new("")),
     )
     .into()
   }

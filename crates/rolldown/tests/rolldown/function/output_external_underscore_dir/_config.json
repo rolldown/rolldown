@@ -1,0 +1,6 @@
+{
+  "config": {
+    "input": [{ "import": "./entry/main.js" }],
+    "external": ["../_/ext.mjs"]
+  }
+}

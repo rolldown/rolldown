@@ -88,7 +88,8 @@ impl ExternalModule {
       .to_string();
     while target.starts_with("../") {
       target = &target[3..];
-      importer = concat_string!("_/", importer);
+      // A NUL segment cannot match a real directory name.
+      importer = concat_string!("\0/", importer);
     }
     relative_path_as_js_specifier(
       target,

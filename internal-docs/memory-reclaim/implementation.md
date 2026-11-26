@@ -29,6 +29,7 @@ Rolldown keeps long-lived worker threads and uses mimalloc. Freed memory stays r
 - The JS threads are called only after the round's purge ends. `mi_arenas_purge` lets one thread purge at a time and skips the call on any other. An idle JS thread runs its callback within microseconds, while the round's purge takes milliseconds, so a callback queued before that purge would skip its own purge.
 - mimalloc options are written once at load, before the async runtime starts its threads. They are written as defaults, so a `MIMALLOC_*` environment variable still wins. Only options mimalloc reads at use time can be set this way: `page_reclaim_on_free` is copied into the main heap at process start, so setting it at load does nothing.
 - `page_commit_on_demand = 2` only changes systems without overcommit: Windows, and Linux with `vm.overcommit_memory=2`. Elsewhere mimalloc still commits pages eagerly.
+- Do not notify when nothing was built. A round runs `rayon::broadcast`, which creates rayon's global pool if no build has used it, one thread per core that never exits. So `ClassicBundler::close` notifies only when it has a bundle to close.
 - Never start threads from `module_init`. On Linux it runs under the loader lock, and a new thread that touches dynamic TLS waits for that lock (this deadlocked with `rayon::ThreadPoolBuilder::build_global`).
 - Memory JS still holds cannot be reclaimed yet. Its finalizer triggers another round.
 

@@ -58,7 +58,7 @@ Prefer running the build on the builder's native architecture when possible. A s
 
 #### Memory after a build
 
-When Rolldown is idle, it gives the memory it no longer uses back to the operating system. This happens 0.5 to 1 seconds after the last build ends or the last output is collected, and never starts while a build runs. The next build takes that memory back from the operating system, which costs some CPU time.
+When Rolldown is idle, it gives the memory it no longer uses back to the operating system. This happens 0.5 seconds after the last build ends or the last output is collected, and never starts while a build runs. The next build takes that memory back from the operating system, which costs some CPU time.
 
 `ROLLDOWN_MEMORY_RECLAIM_DELAY` changes this. A number sets the idle time in milliseconds, 500 by default. `off` turns the cleanup off.
 

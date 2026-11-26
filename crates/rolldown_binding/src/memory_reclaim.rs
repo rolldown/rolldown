@@ -8,7 +8,7 @@ mod imp {
   use std::{
     cell::Cell,
     sync::{
-      Arc, Condvar, Mutex, Once, OnceLock, PoisonError,
+      Arc, Condvar, LazyLock, Mutex, Once, OnceLock, PoisonError,
       atomic::{AtomicBool, AtomicU64, Ordering},
     },
     time::{Duration, Instant},
@@ -51,8 +51,15 @@ mod imp {
   static DELAY: OnceLock<Duration> = OnceLock::new();
   static RECLAIMER: OnceLock<Reclaimer> = OnceLock::new();
   static NEXT_ROUND: AtomicU64 = AtomicU64::new(1);
-  /// Set by `notify`, cleared by the reclaim thread when a quiet window starts.
+  /// Set by `notify`, cleared by the reclaim thread before it checks `LAST_NOTIFIED`.
   static NOTIFIED: AtomicBool = AtomicBool::new(false);
+  /// When `notify` last ran, in nanoseconds since `START`.
+  static LAST_NOTIFIED: AtomicU64 = AtomicU64::new(0);
+  static START: LazyLock<Instant> = LazyLock::new(Instant::now);
+
+  fn now() -> u64 {
+    u64::try_from(START.elapsed().as_nanos()).unwrap_or(u64::MAX)
+  }
 
   /// One per JS thread that created a bundler, a watcher or a dev engine.
   static JS_THREADS: Mutex<Vec<ThreadsafeFunction<(), (), (), Status, false, true>>> =
@@ -145,9 +152,10 @@ mod imp {
     let Some(reclaimer) = RECLAIMER.get() else {
       return;
     };
+    LAST_NOTIFIED.store(now(), Ordering::SeqCst);
     // One GC can finalize thousands of wrappers. Only the first notification since the reclaim
     // thread cleared the flag takes the lock.
-    if NOTIFIED.swap(true, Ordering::AcqRel) {
+    if NOTIFIED.swap(true, Ordering::SeqCst) {
       return;
     }
     SPAWN.call_once(|| {
@@ -183,13 +191,17 @@ mod imp {
   /// never leave a quiet window, so memory drops only after the last one.
   fn wait_until_quiet(reclaimer: &Reclaimer, quiet: Duration) {
     loop {
-      // Cleared before the window starts, so a notification in it is seen at its end.
-      NOTIFIED.store(false, Ordering::Release);
-      std::thread::sleep(quiet);
-      if rolldown::has_active_build() {
+      // Cleared before the time is read, so a notification after the read is seen below. SeqCst
+      // keeps this order, since the flag and the time are different atomics.
+      NOTIFIED.store(false, Ordering::SeqCst);
+      let since = Duration::from_nanos(now().saturating_sub(LAST_NOTIFIED.load(Ordering::SeqCst)));
+      let left = quiet.saturating_sub(since);
+      if !left.is_zero() {
+        std::thread::sleep(left);
+      } else if rolldown::has_active_build() {
         // The last build to end notifies.
         wait_for_notification(reclaimer);
-      } else if !NOTIFIED.load(Ordering::Acquire) {
+      } else if !NOTIFIED.load(Ordering::SeqCst) {
         return;
       }
     }

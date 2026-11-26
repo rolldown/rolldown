@@ -644,6 +644,16 @@ pub struct ChunkGraph {
   - If `apply_common_chunk_merges` merges that chunk into another chunk, it stores the index of the destination chunk.
   - `restore_order_wrap_entry_facades` stores the index of a restored facade.
 
+  If the optimizer removes the facade of an emitted entry with an explicit `fileName`, the group uses that filename.
+  The optimizer keeps a facade if the entry and the group have different explicit filenames.
+  If a group merges into an entry chunk, the optimizer keeps each facade with an explicit filename.
+
+  The file emitter reserves the path of the group file and the paths of its parent directories.
+  It can give a generated asset a new filename if the asset conflicts with a reserved path.
+  The emitter keeps the asset's filename after a caller reads it or the emitter adds the asset to the bundle.
+  The emitter checks the group file path for conflicts.
+  It also checks the path of each sourcemap file that the renderer emits for the group.
+
   `set_emitted_chunk_preliminary_filenames` and `set_emitted_chunk_filenames` use `emitted_chunk_reference_ids_by_file`.
   The preliminary and final filenames from `getFileName()` identify the same output chunk, even when the filename pattern contains `[hash]`.
   See the `plugin/context/emit-chunk-in-code-splitting-group` test.

@@ -54,6 +54,18 @@ impl ChunkGraph {
     }
   }
 
+  /// This method returns the index of the output chunk for an emitted entry.
+  pub fn emitted_entry_output_chunk_idx(&self, chunk_idx: ChunkIdx) -> ChunkIdx {
+    match self.chunk_table[chunk_idx].kind {
+      ChunkKind::EntryPoint { module, .. }
+        if self.post_chunk_optimization_operations.contains_key(&chunk_idx) =>
+      {
+        self.entry_module_to_entry_chunk.get(&module).copied().unwrap_or(chunk_idx)
+      }
+      ChunkKind::EntryPoint { .. } | ChunkKind::Common => chunk_idx,
+    }
+  }
+
   /// This method groups the reference IDs of emitted entries by the index of the output chunk.
   ///
   /// If the chunk optimizer removes an entry facade from the output, another chunk provides the
@@ -64,14 +76,7 @@ impl ChunkGraph {
   pub fn emitted_chunk_reference_ids_by_file(&self) -> FxHashMap<ChunkIdx, Vec<ArcStr>> {
     let mut reference_ids_by_file: FxHashMap<ChunkIdx, Vec<ArcStr>> = FxHashMap::default();
     for (&chunk_idx, reference_ids) in &self.chunk_idx_to_reference_ids {
-      let file_chunk_idx = match self.chunk_table[chunk_idx].kind {
-        ChunkKind::EntryPoint { module, .. }
-          if self.post_chunk_optimization_operations.contains_key(&chunk_idx) =>
-        {
-          self.entry_module_to_entry_chunk.get(&module).copied().unwrap_or(chunk_idx)
-        }
-        ChunkKind::EntryPoint { .. } | ChunkKind::Common => chunk_idx,
-      };
+      let file_chunk_idx = self.emitted_entry_output_chunk_idx(chunk_idx);
       reference_ids_by_file
         .entry(file_chunk_idx)
         .or_default()

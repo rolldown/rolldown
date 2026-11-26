@@ -416,9 +416,12 @@ test.concurrent(
         },
       ],
     });
+    const resultClosed = Promise.withResolvers<void>();
     watcher.on('event', async (event) => {
       if (event.code === 'ERROR') {
-        await event.result.close();
+        const closing = event.result.close();
+        resultClosed.resolve(closing);
+        await closing;
       }
     });
     onTestFinished(async () => {
@@ -428,8 +431,123 @@ test.concurrent(
       }
     });
 
-    // build error call once + result.close() call once
-    await expect.poll(() => closeBundleFn).toBeCalledTimes(2);
+    await resultClosed.promise;
+    expect(closeBundleFn).toBeCalledTimes(1);
+  },
+);
+
+test.concurrent.for(['result.close()', 'watcher.close()'] as const)(
+  'watch transform error runs closeBundle once per build with %s',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async (closeWith, { task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput(
+      'watch-transform-error-close-bundle',
+      retryCount,
+    );
+    let build = 0;
+    const closeCalls: number[] = [];
+    const watcher = watch({
+      input,
+      output: { dir: outputDir },
+      plugins: [
+        {
+          name: 'test',
+          buildStart() {
+            build++;
+          },
+          transform(_code, id) {
+            if (id === input && build === 2) throw new Error('transform failed');
+          },
+          closeBundle() {
+            closeCalls.push(build);
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const firstResultClosed = Promise.withResolvers<void>();
+    const errorHandled = Promise.withResolvers<Error>();
+    watcher.on('event', async (event) => {
+      if (event.code === 'BUNDLE_END') {
+        const closing = event.result.close();
+        firstResultClosed.resolve(closing);
+        await closing;
+      } else if (event.code === 'ERROR') {
+        const closing = closeWith === 'result.close()' ? event.result.close() : Promise.resolve();
+        errorHandled.resolve(closing.then(() => event.error));
+        await closing;
+      }
+    });
+
+    await firstResultClosed.promise;
+    await editFile(input, 'console.log(2)');
+    expect((await errorHandled.promise).message).toContain('transform failed');
+    if (closeWith === 'watcher.close()') await watcher.close();
+    expect(closeCalls).toEqual([1, 2]);
+  },
+);
+
+test.concurrent(
+  'watch ERROR result.close() runs later closeBundle hooks after a hook fails',
+  { retry: TEST_RETRY, timeout: TEST_TIMEOUT },
+  async ({ task, expect, onTestFinished }) => {
+    const retryCount = task.result?.retryCount ?? 0;
+    const { input, outputDir, dir } = createTestInputAndOutput(
+      'watch-rejecting-close-bundle',
+      retryCount,
+    );
+    const closeCalls: [string, boolean][] = [];
+    const watcher = watch({
+      input,
+      output: { dir: outputDir },
+      plugins: [
+        {
+          name: 'first',
+          transform() {
+            throw new Error('transform failed');
+          },
+          closeBundle(error) {
+            closeCalls.push(['first', Boolean(error)]);
+            if (error) throw new Error('closeBundle failed');
+          },
+        },
+        {
+          name: 'second',
+          closeBundle(error) {
+            closeCalls.push(['second', Boolean(error)]);
+          },
+        },
+      ],
+    });
+    onTestFinished(async () => {
+      await watcher.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    const resultClosed = Promise.withResolvers<void>();
+    watcher.on('event', async (event) => {
+      if (event.code === 'ERROR') {
+        const closing = event.result.close();
+        resultClosed.resolve(closing);
+        await closing;
+      }
+    });
+
+    await resultClosed.promise;
+    expect(closeCalls).toEqual([
+      ['first', true],
+      ['first', false],
+      ['second', false],
+    ]);
   },
 );
 

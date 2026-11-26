@@ -312,11 +312,14 @@ impl WatchTask {
     }
   }
 
-  /// Close the bundler (calls `closeBundle` plugin hook for the last built bundle, if any).
   #[tracing::instrument(level = "debug", skip_all)]
   pub(crate) async fn close(&self) -> anyhow::Result<()> {
     let mut bundler = self.bundler.lock().await;
-    bundler.close().await.map_err(Into::into)
+    let result = bundler.close().await;
+    if let Some(handle) = &bundler.last_bundle_handle {
+      handle.plugin_driver().clear();
+    }
+    result.map_err(Into::into)
   }
 
   fn is_watched_file(&self, path: &str) -> bool {

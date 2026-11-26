@@ -271,6 +271,7 @@ impl<'a> GenerateStage<'a> {
             self.link_output,
             &order_state,
             self.options.format,
+            self.options.experimental.chunk_modules_order.unwrap_or_default(),
             node_require_ref,
             &index_chunk_id_to_name,
             chunk_assignments,

@@ -156,7 +156,7 @@ fn render_chunk_content<'code>(
       if let Some(prelude) = dev_graph_prelude.take_if(|_| is_runtime_module(*module_idx)) {
         source_joiner.append_source(prelude);
       }
-      if !ctx.hoisted_keep_names.is_empty() && *module_idx == ctx.link_output.runtime.id() {
+      if *module_idx == ctx.link_output.runtime.id() {
         render_hoisted_keep_names(ctx, source_joiner);
       }
     },

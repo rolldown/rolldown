@@ -7,7 +7,7 @@ use rolldown_common::{
 pub type FinalizerMutableFields = (
   Vec<(ImportRecordIdx, EcmaAst)>, // transferred_import_record
   Vec<BuildDiagnostic>,            // diagnostics
-  Vec<(oxc_str::CompactStr, oxc_str::CompactStr)>,
+  Vec<(oxc_str::CompactStr, oxc_str::CompactStr)>, // hoisted_keep_names
 );
 
 use oxc::ast::builder::AstBuilder;

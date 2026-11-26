@@ -17,7 +17,9 @@ use rolldown_utils::{
 };
 use rustc_hash::FxHashMap;
 
-use super::utils::{render_chunk_directives, render_modules_with_peek_runtime_module_at_first};
+use super::utils::{
+  external_import_kind, render_chunk_directives, render_modules_with_peek_runtime_module_at_first,
+};
 
 #[expect(clippy::needless_pass_by_value)]
 pub fn render_cjs<'code>(
@@ -173,7 +175,8 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         );
         let require_path_str = concat_string!("require(", import_path, ")");
 
-        if ctx.link_output.used_external_symbols.contains(&importee.namespace_ref) {
+        let Some(kind) = external_import_kind(ctx, importee, std::iter::empty()) else { return };
+        if kind.is_used() {
           let external_module_symbol_name = ctx
             .link_output
             .symbol_db
@@ -257,7 +260,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
             );
             s.push_str(&require_external);
           }
-        } else if importee.side_effects.has_side_effects() {
+        } else {
           s.push_str(&require_path_str);
           s.push_str(";\n");
         }

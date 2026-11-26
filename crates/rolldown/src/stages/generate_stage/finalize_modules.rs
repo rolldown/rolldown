@@ -20,7 +20,7 @@ impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn finalize_modules(
     &mut self,
-    chunk_graph: &ChunkGraph,
+    chunk_graph: &mut ChunkGraph,
     ast_table: &mut IndexEcmaAst,
     resolved_file_urls: &ResolvedFileUrls,
     used_symbol_refs: &UsedSymbolRefs,
@@ -104,7 +104,7 @@ impl GenerateStage<'_> {
             inline_state: &self.inline_state,
           };
 
-          let (transferred_import_record, mut module_diagnostics, hoisted_names) =
+          let (transferred_import_record, mut module_diagnostics, hoisted_names, external_imports) =
             ctx.finalize_normal_module(ast, ast_scope);
           if let Some(callees) = bridge_callees.get(&chunk_idx) {
             module_diagnostics.extend(bare_bridge_callee(
@@ -116,14 +116,16 @@ impl GenerateStage<'_> {
 
           let payload =
             (!transferred_import_record.is_empty()).then_some((idx, transferred_import_record));
-          Some((payload, module_diagnostics, idx, hoisted_names))
+          Some((payload, module_diagnostics, idx, hoisted_names, chunk_idx, external_imports))
         })
         .collect::<Vec<_>>()
     });
 
     let mut transferred_imports = FxHashMap::default();
     let mut diagnostics = vec![];
-    for (payload, module_diagnostics, idx, hoisted_names) in finalized {
+    for (payload, module_diagnostics, idx, hoisted_names, chunk_idx, external_imports) in finalized
+    {
+      chunk_graph.chunk_table[chunk_idx].body_external_imports.extend(external_imports);
       diagnostics.extend(module_diagnostics);
       if !hoisted_names.is_empty() {
         self.hoisted_keep_names.insert(idx, hoisted_names);

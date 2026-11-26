@@ -10,7 +10,7 @@ use anyhow::Result;
 use oxc_str::CompactStr;
 use rolldown_common::{
   AddonRenderContext, ChunkIdx, EcmaAssetMeta, InstantiatedChunk, ModuleId, ModuleIdx,
-  OutputFormat, RenderedModule, StrictMode,
+  OutputFormat, RenderedModule, StaticImport, StrictMode,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookAddonArgs;
@@ -18,10 +18,10 @@ use rolldown_sourcemap::Source;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
-use rolldown_utils::{concat_string, ecmascript::escape_line_terminators};
+use rolldown_utils::{concat_string, ecmascript::escape_line_terminators, indexmap::FxIndexSet};
 use rustc_hash::FxHashMap;
 
-use super::format::utils::is_use_strict_directive;
+use super::format::utils::{external_import_kind, is_use_strict_directive};
 use super::format::{cjs::render_cjs, esm::render_esm, iife::render_iife, umd::render_umd};
 
 pub type RenderedModuleSources = Vec<RenderedModuleSource>;
@@ -140,7 +140,36 @@ impl EcmaGenerator {
       })
       .collect();
 
-    let mut rendered_chunk = Arc::new(generate_rendered_chunk(ctx, rendered_modules));
+    let chunk = ctx.chunk;
+    let indirect = &chunk.import_symbol_from_external_modules;
+    let mut emitted: FxIndexSet<_> = chunk.body_external_imports.iter().copied().collect();
+    let mut stars: FxIndexSet<_> = chunk.entry_level_external_module_idx.iter().copied().collect();
+    stars.retain(|id| ctx.options.format.is_esm() || !indirect.contains(id));
+    let emitted_id = |id: ModuleIdx, names: &[(ModuleIdx, rolldown_common::NamedImport)]| {
+      let importee = ctx.link_output.module_table[id].as_external().unwrap();
+      let kind = external_import_kind(ctx, importee, names.iter().map(|(_, i)| i.imported_as))?;
+      (!matches!(ctx.options.format, OutputFormat::Iife) || kind.is_used()).then_some(id)
+    };
+    for (id, names) in &chunk.direct_imports_from_external_modules {
+      if !ctx.options.format.is_esm() {
+        stars.swap_remove(id);
+      }
+      emitted.extend(emitted_id(*id, names));
+    }
+    if matches!(ctx.options.format, OutputFormat::Cjs) {
+      emitted.extend(indirect.iter().filter_map(|&id| emitted_id(id, &[])));
+    }
+    emitted.extend(stars);
+    emitted.extend(chunk.node_require_import().map(|(id, _)| id));
+    let mut static_imports = chunk.static_imports.clone();
+    static_imports.retain(|import| match import {
+      StaticImport::External(id) => emitted.swap_remove(id),
+      StaticImport::Chunk(_) => true,
+    });
+    emitted.sort_unstable_by_key(|&id| ctx.link_output.module_table[id].exec_order());
+    static_imports.extend(emitted.into_iter().map(StaticImport::External));
+    let mut rendered_chunk =
+      Arc::new(generate_rendered_chunk(ctx, rendered_modules, &static_imports));
 
     let hashbang = ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table).and_then(
       |normal_module| {
@@ -353,6 +382,7 @@ impl EcmaGenerator {
           rendered_chunk,
           debug_id: 0,
           imports: vec![],
+          static_imports,
           dynamic_imports: vec![],
           file_dir: file_dir.to_path_buf(),
           sourcemap_filename: None,

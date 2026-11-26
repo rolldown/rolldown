@@ -35,7 +35,9 @@ Rolldown keeps long-lived worker threads and uses mimalloc. Freed memory stays r
 
 ## Gaps
 
-libuv threads (`enhancedTransform`) and tokio blocking threads are not settled. Blocking threads read the module sources, but hold only a few MB after a build, and that stays resident until a later round, also after they exit, since mimalloc does not purge on thread exit. A wrapper type that does not notify delays the purge until the next round, it does not leak. A thread that stays busy through every retry keeps its pages until the next round. A plugin context that JS keeps holds the build's data until V8 collects it. V8 does not see that native memory, so in an idle process that can be late.
+Tokio blocking threads are not settled. Blocking threads read the module sources, but hold only a few MB after a build, and that stays resident until a later round, also after they exit, since mimalloc does not purge on thread exit. A wrapper type that does not notify delays the purge until the next round, it does not leak. A thread that stays busy through every retry keeps its pages until the next round. A plugin context that JS keeps holds the build's data until V8 collects it. V8 does not see that native memory, so in an idle process that can be late.
+
+`transform`, `minify` and `parse` from `rolldown/utils` never notify, so they never start a round. Their memory goes back only with a round that something else starts. Their async versions run on Node's libuv thread pool, which no round reaches. Their sync versions run on the calling JS thread, which a round reaches only if that thread created a bundler, a watcher or a dev engine.
 
 ## Measuring
 

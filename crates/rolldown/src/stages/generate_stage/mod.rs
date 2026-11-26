@@ -569,7 +569,6 @@ impl<'a> GenerateStage<'a> {
     }
     let map_files =
       matches!(self.options.sourcemap, Some(SourceMapType::File | SourceMapType::Hidden));
-    let implicit_maps = map_files && self.options.sourcemap_filenames.is_none();
     let map_name = |name: &ArcStr| ArcStr::from(format!("{name}.map"));
     let mut reserved_names = None;
     for idx in &chunk_graph.sorted_chunk_idx_vec {
@@ -592,7 +591,7 @@ impl<'a> GenerateStage<'a> {
               return [filename.cloned(), None];
             }
             let map = chunk.preliminary_sourcemap_filename.as_deref().filter(|_| map_files);
-            let map = map.cloned().or_else(|| filename.filter(|_| implicit_maps).map(map_name));
+            let map = map.cloned().or_else(|| filename.filter(|_| map_files).map(map_name));
             [filename.cloned(), map]
           });
           let emitted_names = self.plugin_driver.file_emitter.asset_and_prebuilt_chunk_filenames();
@@ -604,8 +603,9 @@ impl<'a> GenerateStage<'a> {
           reserved
         });
         let name = ArcStr::from(name);
+        let implicit_map = map_files && chunk.preliminary_sourcemap_filename.is_none();
         let mut candidate = make_unique_name(&name, reserved);
-        while implicit_maps && !try_reserve_unique_name(&map_name(&candidate), reserved) {
+        while implicit_map && !try_reserve_unique_name(&map_name(&candidate), reserved) {
           release_unique_name(&candidate, reserved);
           candidate = make_unique_name(&name, reserved);
         }

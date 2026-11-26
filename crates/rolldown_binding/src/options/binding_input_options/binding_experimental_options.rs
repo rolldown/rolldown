@@ -15,7 +15,6 @@ pub struct BindingExperimentalOptions {
   pub chunk_import_map: Option<Either<bool, BindingChunkImportMap>>,
   pub on_demand_wrapping: Option<bool>,
   pub incremental_build: Option<bool>,
-  pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<Either<bool, BindingChunkOptimizationOptions>>,
   pub lazy_barrel: Option<bool>,
   pub import_attributes: Option<bool>,
@@ -37,7 +36,6 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
         Either::B(v) => Some(v.into()),
       }),
       on_demand_wrapping: value.on_demand_wrapping,
-      native_magic_string: value.native_magic_string,
       chunk_optimization: value.chunk_optimization.map(|v| match v {
         Either::A(v) => rolldown_common::ChunkOptimizationOption::Bool(v),
         Either::B(v) => rolldown_common::ChunkOptimizationOption::Options(v.into()),

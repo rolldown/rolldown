@@ -19,9 +19,6 @@ function locate(code: string, text: string) {
 export default defineTest({
   config: {
     input: ['main.js'],
-    experimental: {
-      nativeMagicString: true,
-    },
     output: {
       sourcemap: true,
       minify: true,

@@ -4,9 +4,6 @@ import { expect } from 'vitest';
 export default defineTest({
   config: {
     input: ['main.js'],
-    experimental: {
-      nativeMagicString: true,
-    },
     output: {
       sourcemap: true,
     },
@@ -15,7 +12,7 @@ export default defineTest({
         name: 'test-render-chunk-magic-string',
         renderChunk(code, _chunk, _options, meta) {
           if (!meta?.magicString) {
-            throw new Error('magicString should be available when nativeMagicString is enabled');
+            throw new Error('magicString should be available');
           }
 
           meta.magicString.replaceAll('name', 'userName');

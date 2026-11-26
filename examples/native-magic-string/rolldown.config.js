@@ -3,11 +3,6 @@ import { defineConfig } from 'rolldown';
 
 export default defineConfig({
   input: './index.js',
-  experimental: {
-    // Enable native Rust implementation of MagicString
-    // This provides better performance for source map generation
-    nativeMagicString: true,
-  },
   output: {
     sourcemap: true,
   },
@@ -39,7 +34,7 @@ export default defineConfig({
               code: magicString,
             };
           } else {
-            // Put the logic here when nativeMagicString is not available(Compatible with rollup or older versions of rolldown)
+            // Put the logic here when Native MagicString is not available(Compatible with rollup or older versions of rolldown)
             return null;
           }
         },

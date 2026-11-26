@@ -82,20 +82,18 @@ export function bindingifyRenderChunk(
         chunks: args.pluginContextData.getRenderChunkMeta()!.chunks,
       };
 
-      // Add lazy-loaded magicString if nativeMagicString is enabled
+      // Add lazy-loaded magicString
       let magicStringInstance: RolldownMagicString;
-      if (args.options.experimental?.nativeMagicString) {
-        Object.defineProperty(renderChunkMeta, 'magicString', {
-          get() {
-            if (magicStringInstance) {
-              return magicStringInstance;
-            }
-            magicStringInstance = new RolldownMagicString(code);
+      Object.defineProperty(renderChunkMeta, 'magicString', {
+        get() {
+          if (magicStringInstance) {
             return magicStringInstance;
-          },
-          configurable: true,
-        });
-      }
+          }
+          magicStringInstance = new RolldownMagicString(code);
+          return magicStringInstance;
+        },
+        configurable: true,
+      });
 
       const outputOptions = args.pluginContextData.getOutputOptions(opts);
       const ret = handler.call(

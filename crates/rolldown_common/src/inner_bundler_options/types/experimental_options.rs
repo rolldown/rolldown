@@ -77,7 +77,6 @@ pub struct ExperimentalOptions {
   pub chunk_import_map: Option<ChunkImportMap>,
   pub chunk_modules_order: Option<ChunkModulesOrderBy>,
   pub on_demand_wrapping: Option<bool>,
-  pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<ChunkOptimizationOption>,
   pub lazy_barrel: Option<bool>,
   pub import_attributes: Option<bool>,
@@ -99,10 +98,6 @@ impl ExperimentalOptions {
 
   pub fn is_attach_debug_info_full(&self) -> bool {
     self.attach_debug_info.is_some_and(|info| info.is_full())
-  }
-
-  pub fn is_native_magic_string_enabled(&self) -> bool {
-    self.native_magic_string.unwrap_or(false)
   }
 
   pub fn is_merge_common_chunks_enabled(&self) -> bool {

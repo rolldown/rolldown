@@ -672,42 +672,6 @@ export interface InputOptions {
      */
     incrementalBuild?: boolean;
     /**
-     * Use native Rust implementation of MagicString for source map generation.
-     *
-     * [MagicString](https://github.com/rich-harris/magic-string) is a JavaScript library commonly used by bundlers
-     * for string manipulation and source map generation. When enabled, rolldown will use a native Rust
-     * implementation of MagicString instead of the JavaScript version, providing significantly better performance
-     * during source map generation and code transformation.
-     *
-     * **Benefits**
-     *
-     * - **Improved Performance**: The native Rust implementation is typically faster than the JavaScript version,
-     *   especially for large codebases with extensive source maps.
-     * - **Background Processing**: Source map generation is performed asynchronously in a background thread,
-     *   allowing the main bundling process to continue without blocking. This parallel processing can significantly
-     *   reduce overall build times when working with JavaScript transform hooks.
-     * - **Better Integration**: Seamless integration with rolldown's native Rust architecture.
-     *
-     * @example
-     * ```js
-     * export default {
-     *   experimental: {
-     *     nativeMagicString: true
-     *   },
-     *   output: {
-     *     sourcemap: true
-     *   }
-     * }
-     * ```
-     *
-     * > [!NOTE]
-     * > This is an experimental feature. While it aims to provide identical behavior to the JavaScript
-     * > implementation, there may be edge cases. Please report any discrepancies you encounter.
-     * > For a complete working example, see [examples/native-magic-string](https://github.com/rolldown/rolldown/tree/main/examples/native-magic-string)
-     * @default false
-     */
-    nativeMagicString?: boolean;
-    /**
      * Control chunk optimizations.
      *
      * `true` enables both common-chunk merging and redundant dynamic chunk-load avoidance.

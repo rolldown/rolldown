@@ -14,10 +14,6 @@ const inserted = '/* inserted */ ';
 export default defineTest({
   config: {
     input: ['main.js'],
-    experimental: {
-      // With `output.sourcemap`, the native sourcemap worker generates the map.
-      nativeMagicString: true,
-    },
     output: {
       sourcemap: true,
     },

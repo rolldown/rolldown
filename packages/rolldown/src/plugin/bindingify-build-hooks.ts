@@ -290,9 +290,8 @@ function bindingifyTransformResult(
     // generated map in addition to an own map would apply the edits of this step two times.
     if (ret.map === undefined) {
       // The map generated from the MagicString takes the place of `ret.map`.
-      // Rust returns it here unless `experimental.nativeMagicString` and
-      // sourcemaps are both enabled. Then it is generated natively and the
-      // Rust side already knows about it.
+      // Rust returns it here unless sourcemaps are both enabled.
+      // Then it is generated natively and the Rust side already knows about it.
       map = ctx.sendMagicString(magicString) ?? undefined;
     }
   }

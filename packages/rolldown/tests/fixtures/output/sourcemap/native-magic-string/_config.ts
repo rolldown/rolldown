@@ -5,9 +5,6 @@ export default defineTest({
   sequential: true,
   config: {
     input: ['main.js'],
-    experimental: {
-      nativeMagicString: false,
-    },
     output: {
       sourcemap: true,
     },

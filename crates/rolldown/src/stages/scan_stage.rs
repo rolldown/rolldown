@@ -255,9 +255,7 @@ impl<Fs: FileSystem + Clone + 'static> ScanStage<Fs> {
       return (None, None);
     }
 
-    if self.options.experimental.is_native_magic_string_enabled()
-      && self.options.is_sourcemap_enabled()
-    {
+    if self.options.is_sourcemap_enabled() {
       let (tx, rx) = std::sync::mpsc::channel::<SourceMapGenMsg>();
       // Dedicated OS thread, never a runtime `spawn_blocking`: a drainer that
       // took this consumer inline would block in `rx.recv()` forever, leaving

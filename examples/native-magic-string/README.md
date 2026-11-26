@@ -1,10 +1,10 @@
 # Native MagicString Example
 
-This example demonstrates the use of `experimental.nativeMagicString` in Rolldown.
+This example demonstrates the use of Native MagicString feature in Rolldown.
 
-## What is nativeMagicString?
+## What is Native MagicString?
 
-The `nativeMagicString` option enables a native Rust implementation of MagicString for source map generation and code transformation. This provides significant performance improvements over the JavaScript implementation, especially for large codebases.
+The Native MagicString feature is a native Rust implementation of MagicString for source map generation and code transformation. This provides significant performance improvements over the JavaScript implementation, especially for large codebases.
 
 ## Key Features
 
@@ -13,8 +13,6 @@ The `nativeMagicString` option enables a native Rust implementation of MagicStri
 - **Seamless Integration**: Works with existing plugins that use the MagicString API
 
 ## How It Works
-
-When `experimental.nativeMagicString` is enabled:
 
 1. Rolldown provides a `magicString` object in the `meta` parameter of transform hooks
 2. Plugins can use this object to manipulate code (replace, prepend, append, etc.)
@@ -73,9 +71,6 @@ All transformations maintain accurate source maps thanks to the native MagicStri
 
 ```js
 export default defineConfig({
-  experimental: {
-    nativeMagicString: true, // Enable native Rust implementation
-  },
   output: {
     sourcemap: true, // Enable source map generation
   },

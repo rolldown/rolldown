@@ -72,8 +72,7 @@ pub fn render_esm<'code>(
     ));
   }
 
-  // Registrations and bridges of inline common chunk records come right after the imports and
-  // before anything of this file's own runs.
+  // Register inline common chunk records and initialize their bridges before this file's module bodies run.
   render_inline_records(ctx, &mut source_joiner, carried_sources);
 
   if let Some(entry_module) = ctx.chunk.entry_module(&ctx.link_output.module_table) {
@@ -123,10 +122,7 @@ fn render_chunk_content<'code>(
   module_sources: &'code [RenderedModuleSource],
   source_joiner: &mut SourceJoiner<'code>,
 ) {
-  // Dev mode: every chunk carries a graph-rows prelude for the client-side HMR walk.
-  // It references `__rolldown_runtime__`, so in the chunk that defines the runtime it
-  // must land right after the runtime module; everywhere else it comes first (the
-  // global is guaranteed by the chunk's ESM import of the runtime-carrying chunk).
+  // Dev chunks register graph rows for HMR after the runtime is available and before the user modules run.
   let mut dev_graph_prelude = if ctx.options.is_dev_mode_enabled() {
     crate::hmr::module_graph_delta::render_register_graph_source(
       &ctx.link_output.module_table,

@@ -221,7 +221,6 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         )
       }));
 
-      finalizer.hoisted_keep_names.reverse();
       (finalizer.transferred_import_record, diagnostics, finalizer.hoisted_keep_names)
     })
   }

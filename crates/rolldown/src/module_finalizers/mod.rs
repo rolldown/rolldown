@@ -2643,7 +2643,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 ));
 
                 // When keep_names is enabled, preserve "default" as the function name
-                if self.ctx.options.keep_names {
+                if self.ctx.options.keep_names && self.can_hoist_keep_names() {
+                  let new_name = canonical_name_for_default_export_ref.into();
+                  self.hoisted_keep_names.push(("default".into(), new_name));
+                } else if self.ctx.options.keep_names {
                   // current statement will be pushed to program.body, so the insert position is program.body.len() + 1
                   let insert_position = program.body.len() + 1;
                   self.keep_name_statement_to_insert.push((
@@ -2950,24 +2953,23 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     })
   }
 
-  /// Inserts `__name()` call statements for keeping function/class names.
-  /// This method processes the pending keep_name insertions in reverse order.
+  fn can_hoist_keep_names(&self) -> bool {
+    self.ctx.file_idx == self.ctx.chunk_idx
+      && !matches!(self.ctx.wrapper_mode(), ModuleWrapperMode::InteropCjs(_))
+      && !self.ctx.module.ast_usage.contains(rolldown_common::EcmaModuleAstUsage::TopLevelReturn)
+  }
+
+  /// Queues chunk-start name restoration for eligible function declarations and inserts the remaining calls in place.
   fn insert_keep_name_statements(
     &mut self,
     statements: &mut allocator::Vec<'ast, ast::Statement<'ast>>,
-    default_exports: bool,
   ) {
+    let can_hoist = self.state.contains(TraverseState::IsRootLevel) && self.can_hoist_keep_names();
+    let hoisted = self.keep_name_statement_to_insert.extract_if(.., |(stmt_index, ..)| {
+      can_hoist && matches!(statements[*stmt_index - 1], Statement::FunctionDeclaration(_))
+    });
+    self.hoisted_keep_names.extend(hoisted.map(|(_, original, renamed)| (original, renamed)));
     for (stmt_index, original_name, new_name) in self.keep_name_statement_to_insert.iter().rev() {
-      if (default_exports
-        || (self.state.contains(TraverseState::IsRootLevel)
-          && matches!(statements[*stmt_index - 1], Statement::FunctionDeclaration(_))))
-        && !matches!(self.ctx.wrapper_mode(), ModuleWrapperMode::InteropCjs(_))
-        && !self.ctx.module.ast_usage.contains(rolldown_common::EcmaModuleAstUsage::TopLevelReturn)
-        && self.ctx.inline_state.carried_by(self.ctx.file_idx).is_empty()
-      {
-        self.hoisted_keep_names.push((original_name.clone(), new_name.clone()));
-        continue;
-      }
       let name_ref = self.canonical_ref_for_runtime("__name");
       let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
       let target = Expression::new_id_ref_expr(SPAN, new_name, self);

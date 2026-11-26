@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use napi::bindgen_prelude::ObjectFinalize;
 use napi::{
   Env,
   bindgen_prelude::{BufferSlice, JsObjectValue, Object},
@@ -8,15 +9,36 @@ use napi_derive::napi;
 
 use crate::options::plugin::types::binding_asset_source::BindingAssetSource;
 
-#[napi]
+#[napi(custom_finalize)]
 pub struct BindingOutputAsset {
   inner: Arc<rolldown_common::OutputAsset>,
+  /// What V8 was told this object keeps alive.
+  external_bytes: i64,
 }
 
 #[napi]
 impl BindingOutputAsset {
   pub fn new(inner: Arc<rolldown_common::OutputAsset>) -> Self {
-    Self { inner }
+    Self { inner, external_bytes: 0 }
+  }
+
+  /// V8 cannot see this memory, so without this it feels no pressure to collect this object.
+  #[napi(enumerable = false)]
+  pub fn track_external_memory(&mut self, env: &Env) -> napi::Result<()> {
+    if self.external_bytes == 0 {
+      let bytes = i64::try_from(self.inner.source.as_bytes().len()).unwrap_or(i64::MAX);
+      env.adjust_external_memory(bytes)?;
+      self.external_bytes = bytes;
+    }
+    Ok(())
+  }
+
+  fn untrack_external_memory(&mut self, env: &Env) -> napi::Result<()> {
+    if self.external_bytes != 0 {
+      env.adjust_external_memory(-self.external_bytes)?;
+      self.external_bytes = 0;
+    }
+    Ok(())
   }
 
   #[napi]
@@ -75,5 +97,13 @@ impl From<JsOutputAsset> for rolldown_common::OutputAsset {
       filename: asset.filename.into(),
       source: asset.source.into(),
     }
+  }
+}
+
+impl ObjectFinalize for BindingOutputAsset {
+  fn finalize(mut self, env: Env) -> napi::Result<()> {
+    self.untrack_external_memory(&env)?;
+    crate::memory_reclaim::notify();
+    Ok(())
   }
 }

@@ -1822,6 +1822,8 @@ export declare class BindingNormalizedOptions {
 }
 
 export declare class BindingOutputAsset {
+  /** V8 cannot see this memory, so without this it feels no pressure to collect this object. */
+  trackExternalMemory(): void
   getFileName(): string
   getOriginalFileName(): string | null
   getOriginalFileNames(): Array<string>
@@ -1831,6 +1833,8 @@ export declare class BindingOutputAsset {
 }
 
 export declare class BindingOutputChunk {
+  /** V8 cannot see this memory, so without this it feels no pressure to collect this object. */
+  trackExternalMemory(): void
   getIsEntry(): boolean
   getIsDynamicEntry(): boolean
   getFacadeModuleId(): string | null

@@ -1,20 +1,46 @@
 use std::sync::Arc;
 
-use napi::{Either, bindgen_prelude::Null};
+use napi::{
+  Either, Env,
+  bindgen_prelude::{Null, ObjectFinalize},
+};
 use napi_derive::napi;
 use rolldown_sourcemap::SourceMap;
 
 use super::{binding_rendered_chunk::BindingModules, binding_sourcemap::BindingSourcemap};
 
-#[napi]
+#[napi(custom_finalize)]
 pub struct BindingOutputChunk {
   inner: Arc<rolldown_common::OutputChunk>,
+  /// What V8 was told this object keeps alive.
+  external_bytes: i64,
 }
 
 #[napi]
 impl BindingOutputChunk {
   pub fn new(inner: Arc<rolldown_common::OutputChunk>) -> Self {
-    Self { inner }
+    Self { inner, external_bytes: 0 }
+  }
+
+  /// V8 cannot see this memory, so without this it feels no pressure to collect this object.
+  #[napi(enumerable = false)]
+  pub fn track_external_memory(&mut self, env: &Env) -> napi::Result<()> {
+    if self.external_bytes == 0 {
+      let bytes =
+        i64::try_from(self.inner.code.len() + self.inner.map.as_ref().map_or(0, sourcemap_bytes))
+          .unwrap_or(i64::MAX);
+      env.adjust_external_memory(bytes)?;
+      self.external_bytes = bytes;
+    }
+    Ok(())
+  }
+
+  fn untrack_external_memory(&mut self, env: &Env) -> napi::Result<()> {
+    if self.external_bytes != 0 {
+      env.adjust_external_memory(-self.external_bytes)?;
+      self.external_bytes = 0;
+    }
+    Ok(())
   }
 
   #[napi]
@@ -166,4 +192,17 @@ pub fn update_output_chunk(
     });
   }
   Ok(())
+}
+
+impl ObjectFinalize for BindingOutputChunk {
+  fn finalize(mut self, env: Env) -> napi::Result<()> {
+    self.untrack_external_memory(&env)?;
+    crate::memory_reclaim::notify();
+    Ok(())
+  }
+}
+
+fn sourcemap_bytes(map: &SourceMap) -> usize {
+  let contents: usize = map.get_source_contents().flatten().map(str::len).sum();
+  contents + map.get_tokens().len() * size_of::<oxc_sourcemap::Token>()
 }

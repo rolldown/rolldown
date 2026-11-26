@@ -229,6 +229,7 @@ Trade-offs:
 
 - **A link-stage error of a new route shows at the next build.** The lazy compile runs no link stage. So an error such as `MISSING_EXPORT` in the new route does not fail the visit. It shows when the next build links the graph, as for an HMR patch.
 - **A lazy visit is not a recovery trigger.** It queues no build, so it does not end a failed state. Only new input does (see [dev-engine/design.md](../dev-engine/design.md), principle 3).
+- **A lazy visit does not retry a file that failed in an earlier scan.** Example: an edit of `a.js` is valid, but a `transform` throws once. The HMR scan reverts, the graph keeps the last good `a.js`, and `a.js` waits in `pending_rescans`. A visit of a route that imports `a.js` gets this last good `a.js`. The open tabs run the same code, because the failed update reached no tab. The engine cannot tell a one-time error from a broken file. A retry in every visit would fail every route that imports a broken file, although the graph holds a good copy. The next change of any watched file retries the whole queue. A page reload after an HMR-stage failure also recovers, through the consumer's full build.
 
 The compile logs whether it scanned, with the payload size (`modules`) and per-phase timings (`tracing` target `hmr`, message `compile_lazy_entry: done`).
 

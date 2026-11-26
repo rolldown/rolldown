@@ -1,3 +1,4 @@
+// See internal-docs/memory-reclaim/implementation.md.
 #[cfg(all(
   not(target_family = "wasm"),
   not(feature = "default_global_allocator"),

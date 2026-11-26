@@ -3,6 +3,7 @@ use std::sync::{
   atomic::{AtomicUsize, Ordering},
 };
 
+// See internal-docs/memory-reclaim/implementation.md.
 static ACTIVE_BUILDS: AtomicUsize = AtomicUsize::new(0);
 static MEMORY_RELEASED_HOOK: OnceLock<fn()> = OnceLock::new();
 

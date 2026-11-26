@@ -416,11 +416,12 @@ test.concurrent(
         },
       ],
     });
-    const resultClosed = Promise.withResolvers<void>();
+    let resolveResultClosed!: (closing: Promise<void>) => void;
+    const resultClosed = new Promise<void>((resolve) => (resolveResultClosed = resolve));
     watcher.on('event', async (event) => {
       if (event.code === 'ERROR') {
         const closing = event.result.close();
-        resultClosed.resolve(closing);
+        resolveResultClosed(closing);
         await closing;
       }
     });
@@ -431,7 +432,7 @@ test.concurrent(
       }
     });
 
-    await resultClosed.promise;
+    await resultClosed;
     expect(closeBundleFn).toBeCalledTimes(1);
   },
 );
@@ -472,23 +473,25 @@ test.concurrent.for(['result.close()', 'watcher.close()'] as const)(
       }
     });
 
-    const firstResultClosed = Promise.withResolvers<void>();
-    const errorHandled = Promise.withResolvers<Error>();
+    let resolveFirstResultClosed!: (closing: Promise<void>) => void;
+    const firstResultClosed = new Promise<void>((resolve) => (resolveFirstResultClosed = resolve));
+    let resolveErrorHandled!: (error: Promise<Error>) => void;
+    const errorHandled = new Promise<Error>((resolve) => (resolveErrorHandled = resolve));
     watcher.on('event', async (event) => {
       if (event.code === 'BUNDLE_END') {
         const closing = event.result.close();
-        firstResultClosed.resolve(closing);
+        resolveFirstResultClosed(closing);
         await closing;
       } else if (event.code === 'ERROR') {
         const closing = closeWith === 'result.close()' ? event.result.close() : Promise.resolve();
-        errorHandled.resolve(closing.then(() => event.error));
+        resolveErrorHandled(closing.then(() => event.error));
         await closing;
       }
     });
 
-    await firstResultClosed.promise;
+    await firstResultClosed;
     await editFile(input, 'console.log(2)');
-    expect((await errorHandled.promise).message).toContain('transform failed');
+    expect((await errorHandled).message).toContain('transform failed');
     if (closeWith === 'watcher.close()') await watcher.close();
     expect(closeCalls).toEqual([1, 2]);
   },
@@ -533,16 +536,17 @@ test.concurrent(
       }
     });
 
-    const resultClosed = Promise.withResolvers<void>();
+    let resolveResultClosed!: (closing: Promise<void>) => void;
+    const resultClosed = new Promise<void>((resolve) => (resolveResultClosed = resolve));
     watcher.on('event', async (event) => {
       if (event.code === 'ERROR') {
         const closing = event.result.close();
-        resultClosed.resolve(closing);
+        resolveResultClosed(closing);
         await closing;
       }
     });
 
-    await resultClosed.promise;
+    await resultClosed;
     expect(closeCalls).toEqual([
       ['first', true],
       ['first', false],

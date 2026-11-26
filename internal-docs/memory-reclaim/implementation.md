@@ -16,9 +16,9 @@ Rolldown keeps long-lived worker threads and uses mimalloc. Freed memory stays r
 
 1. The last `BuildActivity` drops, a `BuildData` drops, or a finalizer or `close()` releases build data. Each one calls `notify_memory_released`.
 2. `rolldown-reclaim` waits for a quiet window (`ROLLDOWN_MEMORY_RECLAIM_DELAY`, 500 ms by default, `off` disables) with no active build. While a build runs, it sleeps until the next notification, since the last build to end always sends one.
-3. Every tokio worker, blocking thread and rayon worker calls `mi_theap_quiescent_abandon` on its own theap. It settles the frees other threads queued on its pages, returns its empty pages, and gives up the pages that still hold live data. Then `mi_arenas_purge` returns the free memory to the OS. After that, each registered JS thread does the same on its own theap and purges again. Module sources are read on blocking threads, so skipping them leaves much of a build resident.
+3. Every tokio worker and rayon worker calls `mi_theap_quiescent_abandon` on its own theap. It settles the frees other threads queued on its pages, returns its empty pages, and gives up the pages that still hold live data. Then `mi_arenas_purge` returns the free memory to the OS. After that, each registered JS thread does the same on its own theap and purges again. Blocking threads are skipped, see the gaps.
 4. When JS frees the output later, the free that empties a given-up page returns it to the arena on the freeing thread, so the thread that made the data is not needed again. The finalizers notify, and the next round's purge returns that memory to the OS.
-5. A round that misses a tokio or blocking thread runs again once the process has been quiet for the window plus 1, 2, 4 and 8 s.
+5. A round that misses a tokio worker runs again once the process has been quiet for the window plus 1, 2, 4 and 8 s.
 
 ## Invariants
 
@@ -34,7 +34,7 @@ Rolldown keeps long-lived worker threads and uses mimalloc. Freed memory stays r
 
 ## Gaps
 
-libuv threads (`enhancedTransform`) are not settled. A wrapper type that does not notify delays the purge until the next round, it does not leak. A thread that stays busy through every retry keeps its pages until the next round. A plugin context that JS keeps holds the build's data until V8 collects it. V8 does not see that native memory, so in an idle process that can be late.
+libuv threads (`enhancedTransform`) and tokio blocking threads are not settled. Blocking threads read the module sources, but hold only a few MB after a build, and that stays resident until a later round, also after they exit, since mimalloc does not purge on thread exit. A wrapper type that does not notify delays the purge until the next round, it does not leak. A thread that stays busy through every retry keeps its pages until the next round. A plugin context that JS keeps holds the build's data until V8 collects it. V8 does not see that native memory, so in an idle process that can be late.
 
 ## Measuring
 

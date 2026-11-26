@@ -130,7 +130,7 @@ fn init() {
       .build()
       .expect("Failed to create tokio runtime");
     if reclaim_memory {
-      crate::memory_reclaim::init(rt.handle().clone(), max_blocking_threads);
+      crate::memory_reclaim::init(rt.handle().clone());
     }
     create_custom_tokio_runtime(rt);
   }

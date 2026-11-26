@@ -44,7 +44,6 @@ mod imp {
     changed: Condvar,
     delay: Duration,
     tokio: Handle,
-    max_blocking_threads: usize,
   }
 
   static DELAY: OnceLock<Duration> = OnceLock::new();
@@ -104,17 +103,12 @@ mod imp {
     true
   }
 
-  pub fn init(tokio: Handle, max_blocking_threads: usize) {
+  pub fn init(tokio: Handle) {
     let Some(&delay) = DELAY.get() else {
       return;
     };
-    let _ = RECLAIMER.set(Reclaimer {
-      events: Mutex::new(0),
-      changed: Condvar::new(),
-      delay,
-      tokio,
-      max_blocking_threads,
-    });
+    let _ =
+      RECLAIMER.set(Reclaimer { events: Mutex::new(0), changed: Condvar::new(), delay, tokio });
     rolldown::set_memory_released_hook(notify);
   }
 
@@ -199,9 +193,8 @@ mod imp {
   }
 
   fn reclaim(reclaimer: &Reclaimer) -> bool {
+    // Blocking threads are skipped. They hold only a few MB after a build and exit when idle.
     let workers_reached = reclaim_tokio_workers(&reclaimer.tokio, THREAD_DEADLINE);
-    let blocking_reached =
-      reclaim_blocking_threads(&reclaimer.tokio, reclaimer.max_blocking_threads, THREAD_DEADLINE);
     rayon::broadcast(|_| release_thread_pages());
     purge_arenas();
     // mimalloc skips a purge while another thread purges. Each JS thread purges its own pages, so it
@@ -210,7 +203,7 @@ mod imp {
       .lock()
       .unwrap_or_else(PoisonError::into_inner)
       .retain(|callback| callback.call((), ThreadsafeFunctionCallMode::NonBlocking) == Status::Ok);
-    workers_reached && blocking_reached
+    workers_reached
   }
 
   fn purge_arenas() {
@@ -280,20 +273,6 @@ mod imp {
     }
     round.all_reached()
   }
-
-  fn reclaim_blocking_threads(tokio: &Handle, threads: usize, deadline: Duration) -> bool {
-    let round = Round::new(threads, deadline);
-    let tasks: Vec<_> = (0..threads)
-      .map(|_| {
-        let round = Arc::clone(&round);
-        tokio.spawn_blocking(move || round.settle_this_thread())
-      })
-      .collect();
-    for task in tasks {
-      let _ = tokio.block_on(task);
-    }
-    round.all_reached()
-  }
 }
 
 #[cfg(all(
@@ -329,4 +308,4 @@ pub fn configure() -> bool {
   not(target_family = "wasm"),
   any(feature = "default_global_allocator", target_env = "ohos")
 ))]
-pub fn init(_tokio: napi::tokio::runtime::Handle, _max_blocking_threads: usize) {}
+pub fn init(_tokio: napi::tokio::runtime::Handle) {}

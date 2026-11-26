@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// b.js
+const x = ["b"];
+function b() {
+	return x[0];
+}
+// a.js
+console.log("a");
+const x$1 = ["a"];
+function a() {
+	return x$1[0];
+}
+// main.js
+assert.deepStrictEqual([a(), b()], ["a", "b"]);
+
+```

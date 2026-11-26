@@ -1,4 +1,4 @@
-use std::{borrow::Cow, path::Path};
+use std::{borrow::Cow, ffi::OsStr, path::Path};
 
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
@@ -47,7 +47,8 @@ pub async fn prepare_sourcemap(
   file_dir: &Path,
   filename: &str,
 ) -> BuildResult<()> {
-  let file_base_name = Path::new(filename).file_name().expect("should have file name");
+  // An empty filename has no basename; output validation rejects it later.
+  let file_base_name = Path::new(filename).file_name().unwrap_or(OsStr::new(filename));
   map.set_file(file_base_name.to_string_lossy().as_ref());
 
   if options.sourcemap_exclude_sources {

@@ -168,6 +168,9 @@ impl GenerateStage<'_> {
     let mut index_instantiated_chunks: IndexInstantiatedChunks =
       IndexVec::with_capacity(chunk_graph.chunk_table.len());
     let chunk_index_to_codegen_rets = self.create_chunk_to_codegen_ret_map(chunk_graph, ast_table);
+    // The AST table was just dropped; return its arenas before codegen output and
+    // minification allocate. See `rolldown_utils::allocator`.
+    rolldown_utils::allocator::collect_after_bulk_free();
     let render_export_items_index_vec = &chunk_graph
       .chunk_table
       .chunks

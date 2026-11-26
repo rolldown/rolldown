@@ -1,5 +1,6 @@
 // We keep some standalone utilities here
 
+pub mod allocator;
 pub mod base64;
 mod bitset;
 pub mod dashmap;

@@ -47,6 +47,7 @@ pub struct GenerateContext<'a> {
   pub inline_state: &'a InlineCommonChunksState,
   /// The records this file carries, each finalized and printed for this file, dependencies first.
   pub carried_renders: Vec<CarriedRender>,
+  pub hoisted_keep_names: &'a FxHashMap<ModuleIdx, Vec<(CompactStr, CompactStr)>>,
 }
 
 impl GenerateContext<'_> {

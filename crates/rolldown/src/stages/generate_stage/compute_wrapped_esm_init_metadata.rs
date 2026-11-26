@@ -283,9 +283,7 @@ fn init_is_noop(meta: &LinkingMetadata, ast: Option<&EcmaAst>, keep_names: bool)
 /// the actual closure contents.
 fn contributes_no_closure_body(stmt: &Statement, keep_names: bool) -> bool {
   match stmt {
-    // With `keepNames`, a function declaration gets a `__name(fn, "...")` assignment inserted
-    // into the wrapper closure to preserve `fn.name` (see `insert_keep_name_statements`), so the
-    // init is no longer a no-op.
+    // Name restoration can put a call inside a carried module's wrapper.
     Statement::FunctionDeclaration(_) => !keep_names,
     Statement::ExportDeclaration(export) => match &export.declaration {
       Declaration::FunctionDeclaration(_) => !keep_names,

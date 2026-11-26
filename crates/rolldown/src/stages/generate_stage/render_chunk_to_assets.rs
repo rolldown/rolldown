@@ -215,6 +215,7 @@ impl GenerateStage<'_> {
               resolved_paths,
               inline_state: &self.inline_state,
               carried_renders,
+              hoisted_keep_names: &self.hoisted_keep_names,
             };
             EcmaGenerator::instantiate_chunk(&mut ecma_ctx).await
           }

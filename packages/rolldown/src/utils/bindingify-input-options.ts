@@ -5,10 +5,7 @@ import {
   BindingPropertyReadSideEffects,
   BindingPropertyWriteSideEffects,
 } from '../binding.cjs';
-import type {
-  BindingExperimentalOptions,
-  BindingInputOptions,
-} from '../binding.cjs';
+import type { BindingExperimentalOptions, BindingInputOptions } from '../binding.cjs';
 import { bindingifyManifestPlugin, BuiltinPlugin } from '../builtin-plugin/utils';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';

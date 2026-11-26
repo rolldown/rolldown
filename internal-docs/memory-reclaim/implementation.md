@@ -15,7 +15,7 @@ Rolldown keeps long-lived worker threads and uses mimalloc. Freed memory stays r
 ## Data flow
 
 1. The last `BuildActivity` drops, a `BuildData` drops, or a finalizer or `close()` releases build data. Each one calls `notify_memory_released`.
-2. `rolldown-reclaim` waits for a quiet window (`ROLLDOWN_MEMORY_RECLAIM_DELAY`, 500 ms by default, `off` disables) with no active build. While a build runs, it sleeps until the next notification, since the last build to end always sends one.
+2. `rolldown-reclaim` waits for a quiet window (`ROLLDOWN_MEMORY_RECLAIM_DELAY`, 500 ms by default, `off` disables) with no active build. A notification only sets a flag. The thread clears it, sleeps through the window, and starts over when the flag was set again. So a GC that finalizes thousands of wrappers takes the lock at most once per window. While a build runs, it sleeps until the next notification, since the last build to end always sends one.
 3. Every tokio worker and rayon worker calls `mi_theap_quiescent_abandon` on its own theap. It settles the frees other threads queued on its pages, returns its empty pages, and gives up the pages that still hold live data. Then `mi_arenas_purge` returns the free memory to the OS. After that, each registered JS thread does the same on its own theap and purges again. Blocking threads are skipped, see the gaps.
 4. When JS frees the output later, the free that empties a given-up page returns it to the arena on the freeing thread, so the thread that made the data is not needed again. The finalizers notify, and the next round's purge returns that memory to the OS.
 5. A round that misses a tokio worker runs again once the process has been quiet for the window plus 1, 2, 4 and 8 s.

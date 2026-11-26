@@ -8,7 +8,7 @@ mod imp {
     cell::Cell,
     sync::{
       Arc, Condvar, Mutex, Once, OnceLock, PoisonError,
-      atomic::{AtomicU64, Ordering},
+      atomic::{AtomicBool, AtomicU64, Ordering},
     },
     time::{Duration, Instant},
   };
@@ -40,8 +40,8 @@ mod imp {
   const CHECKED_MIMALLOC: c_int = 30700;
 
   struct Reclaimer {
-    events: Mutex<u64>,
-    changed: Condvar,
+    lock: Mutex<()>,
+    notified: Condvar,
     delay: Duration,
     tokio: Handle,
   }
@@ -49,6 +49,8 @@ mod imp {
   static DELAY: OnceLock<Duration> = OnceLock::new();
   static RECLAIMER: OnceLock<Reclaimer> = OnceLock::new();
   static NEXT_ROUND: AtomicU64 = AtomicU64::new(1);
+  /// Set by `notify`, cleared by the reclaim thread when a quiet window starts.
+  static NOTIFIED: AtomicBool = AtomicBool::new(false);
 
   /// One per JS thread: the main thread and each worker thread that loaded rolldown.
   static JS_THREADS: Mutex<Vec<ThreadsafeFunction<(), (), (), Status, false, true>>> =
@@ -108,7 +110,7 @@ mod imp {
       return;
     };
     let _ =
-      RECLAIMER.set(Reclaimer { events: Mutex::new(0), changed: Condvar::new(), delay, tokio });
+      RECLAIMER.set(Reclaimer { lock: Mutex::new(()), notified: Condvar::new(), delay, tokio });
     rolldown::set_memory_released_hook(notify);
   }
 
@@ -137,21 +139,21 @@ mod imp {
     let Some(reclaimer) = RECLAIMER.get() else {
       return;
     };
+    // One GC can finalize thousands of wrappers. Only the first notification since the reclaim
+    // thread cleared the flag takes the lock.
+    if NOTIFIED.swap(true, Ordering::AcqRel) {
+      return;
+    }
     SPAWN.call_once(|| {
       // Without the thread memory is only reclaimed later, so a failure here is not fatal.
       let _ = std::thread::Builder::new().name("rolldown-reclaim".to_string()).spawn(|| {
         let reclaimer = RECLAIMER.get().expect("set before the thread starts");
-        let mut handled = 0;
         loop {
-          let mut events = reclaimer.events.lock().unwrap_or_else(PoisonError::into_inner);
-          while *events == handled {
-            events = reclaimer.changed.wait(events).unwrap_or_else(PoisonError::into_inner);
-          }
-          drop(events);
+          wait_for_notification(reclaimer);
           for retry in 0..=RETRIES {
             let backoff =
               if retry == 0 { Duration::ZERO } else { Duration::from_secs(1 << (retry - 1)) };
-            handled = wait_until_quiet(reclaimer, handled, reclaimer.delay + backoff);
+            wait_until_quiet(reclaimer, reclaimer.delay + backoff);
             if reclaim(reclaimer) {
               break;
             }
@@ -159,35 +161,30 @@ mod imp {
         }
       });
     });
-    *reclaimer.events.lock().unwrap_or_else(PoisonError::into_inner) += 1;
-    reclaimer.changed.notify_one();
+    let _lock = reclaimer.lock.lock().unwrap_or_else(PoisonError::into_inner);
+    reclaimer.notified.notify_one();
+  }
+
+  fn wait_for_notification(reclaimer: &Reclaimer) {
+    let lock = reclaimer.lock.lock().unwrap_or_else(PoisonError::into_inner);
+    let _lock = reclaimer
+      .notified
+      .wait_while(lock, |()| !NOTIFIED.load(Ordering::Acquire))
+      .unwrap_or_else(PoisonError::into_inner);
   }
 
   /// Returns once nothing notified for `quiet` and no build runs. Builds that run back to back
   /// never leave a quiet window, so memory drops only after the last one.
-  fn wait_until_quiet(reclaimer: &Reclaimer, mut seen: u64, quiet: Duration) -> u64 {
+  fn wait_until_quiet(reclaimer: &Reclaimer, quiet: Duration) {
     loop {
-      let events = reclaimer.events.lock().unwrap_or_else(PoisonError::into_inner);
-      let (events, timed_out) = if rolldown::has_active_build() {
-        let events = reclaimer
-          .changed
-          .wait_while(events, |events| *events == seen)
-          .unwrap_or_else(PoisonError::into_inner);
-        (events, false)
-      } else {
-        let (events, wait) = reclaimer
-          .changed
-          .wait_timeout_while(events, quiet, |events| *events == seen)
-          .unwrap_or_else(PoisonError::into_inner);
-        (events, wait.timed_out())
-      };
-      seen = *events;
-      drop(events);
+      // Cleared before the window starts, so a notification in it is seen at its end.
+      NOTIFIED.store(false, Ordering::Release);
+      std::thread::sleep(quiet);
       if rolldown::has_active_build() {
-        continue;
-      }
-      if timed_out {
-        return seen;
+        // The last build to end notifies.
+        wait_for_notification(reclaimer);
+      } else if !NOTIFIED.load(Ordering::Acquire) {
+        return;
       }
     }
   }

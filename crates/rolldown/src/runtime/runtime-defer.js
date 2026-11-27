@@ -209,7 +209,7 @@ export var __esmDefer = (init) => {
   }
   if (!__esmComplete(m)) throw new TypeError('A deferred module did not finish synchronously');
 };
-var __preventExtensions = Reflect.preventExtensions;
+var __preventExtensions = Object.preventExtensions || Reflect.preventExtensions;
 // `__deferNs` creates the deferred namespace object of a module (`import defer * as ns`).
 // `init` evaluates the module and returns its namespace object. `ns` is that object when its keys
 // are known before the evaluation. Without `ns` (a CommonJS module, an external module in
@@ -224,7 +224,7 @@ var __preventExtensions = Reflect.preventExtensions;
 // namespace that is not extensible. Two limits remain until then, because a `Proxy` can report a
 // target that is not extensible only when the target has all keys: `Object.isExtensible` gives
 // `true`, and after `Object.preventExtensions`, the first `load` throws a `TypeError` when the
-// namespace has keys. A shared CommonJS factory that has already started has current keys to lock.
+// namespace has keys. Once a shared CommonJS factory starts, a lock uses only known names.
 export var __deferNs = (init, ns, lock) => {
   var makeTarget = () => __defProp(Object.setPrototypeOf({}, null), Symbol.toStringTag, {
       value: 'Deferred Module',
@@ -244,7 +244,7 @@ export var __deferNs = (init, ns, lock) => {
       } else {
         ns = init();
         // An unfinished factory can still change keys until someone locks the namespace.
-        shape = lock && !init.record.ready && !init.updateLocked ? makeTarget() : target;
+        shape = lock && !init.record.ready && !init.record.updateLocked ? makeTarget() : target;
         seal();
       }
     },
@@ -274,7 +274,7 @@ export var __deferNs = (init, ns, lock) => {
     deleteProperty: (t, key) => (deferred(key) ? (load(), !own(key)) : Reflect.deleteProperty(t, key)),
     ownKeys: () => (load(), Reflect.ownKeys(shape)),
     preventExtensions: lock && function (t) {
-      if ((!ns || shape !== t) && init.record.ready !== void 0) {
+      if ((!ns || shape !== t) && init.record.module) {
         ns = lock();
         shape = t;
         seal();
@@ -334,43 +334,70 @@ export var __esmSync = (body, result, error) => (deferred) => {
 // namespace built after the factory returns is safe to keep. See internal-docs/import-defer/implementation.md.
 var __cjsRecords = /* @__PURE__ */ __create(null);
 var __cjsRecord = (key) => __cjsRecords[key] || (__cjsRecords[key] = __create(null));
+// true identifies a wrapper-created object or a literal. For other objects, store only
+// names an actual partial read observed, separately for each target and interop mode.
+var __cjsObjectInfo = /* @__PURE__ */ (() => {
+  if (typeof WeakMap !== 'function') return;
+  var map = new WeakMap();
+  return { get: map.get.bind(map), set: map.set.bind(map) };
+})();
+export var __cjsOrdinary = (value) => (__cjsObjectInfo && __cjsObjectInfo.set(value, true), value);
 export var __commonJSShared = (cb, key) => __commonJSMin((exports, mod) => {
   var record = __cjsRecord(key);
-  record.ready = false;
+  record.module = mod;
+  __cjsOrdinary(exports);
   (typeof cb === 'function' ? cb : cb[__getOwnPropNames(cb)[0]])(exports, mod, exports);
   record.ready = true;
 });
 export var __cjsNamespace = (key, load, isNodeMode) => {
-  var record = __cjsRecord(key), mode = isNodeMode ? 1 : 0, ns;
-  if (record[mode]) return record[mode];
+  var target = __cjsRecord(key), mode = isNodeMode ? 1 : 0;
+  if (target[mode]) return target[mode];
+  // The two interop modes share the factory's module and readiness only.
+  var record = __create(target);
+  record.id = key * 2 + mode;
   var read = () => {
-    if (ns) return ns;
-    var value = __toESM(load(), isNodeMode);
-    if (read.updateLocked) value = read.updateLocked(value);
-    if (!record.ready) return value;
+    if (record.cached) return record.cached;
+    var raw = load(), value = __toESM(raw, isNodeMode);
+    if (record.updateLocked) value = record.updateLocked(value);
+    if (!record.ready) {
+      if (__cjsObjectInfo && !record.updateLocked && raw !== null && (typeof raw === 'object' || typeof raw === 'function')) {
+        var info = __cjsObjectInfo.get(raw);
+        if (info !== true) {
+          if (!info) __cjsObjectInfo.set(raw, info = __create(null));
+          info[record.id] = __getOwnPropNames(value);
+        }
+      }
+      return value;
+    }
     load = void 0;
-    return ns || (ns = value);
+    return record.cached || (record.cached = value);
   };
   read.record = record;
-  read.updateLocked = void 0;
-  return (record[mode] = read);
+  return (target[mode] = read);
 };
 export var __deferCJS = (read) => {
-  if (read.deferred) return read.deferred;
+  var record = read.record;
+  if (record.deferred) return record.deferred;
   var lock = () => {
-    var current = read();
-    if (read.record.ready) return current;
+    if (record.cached) return record.cached;
+    // The module record is ours, but module.exports can be an accessor or a revoked
+    // proxy. Only a real namespace read may invoke application code to discover keys.
+    var desc = __getOwnPropDesc(record.module, 'exports'),
+      raw = desc && __hasOwnProp.call(desc, 'value') ? desc.value : void 0,
+      info = __cjsObjectInfo && __cjsObjectInfo.get(raw),
+      names = info === true ? __getOwnPropNames(raw) : info && info[record.id],
+      current;
     // A successful lock fixes the names for escaped and static reads. Keep their
     // values live even if the factory replaces module.exports after the lock.
     var locked = __create(null);
-    for (let key of __getOwnPropNames(current)) {
-      if (key !== 'then') __defProp(locked, key, {
+    for (let key of ['default', ...(names || [])]) {
+      if (key !== 'then' && !__hasOwnProp.call(locked, key)) __defProp(locked, key, {
         get: () => __hasOwnProp.call(current, key) ? current[key] : void 0,
         enumerable: true,
       });
     }
-    read.updateLocked = (value) => (current = value, locked);
+    record.updateLocked = (value) => (current = value, locked);
     return locked;
   };
-  return (read.deferred = __deferNs(read, void 0, lock));
+  return (record.deferred = __deferNs(read, void 0, lock));
 };

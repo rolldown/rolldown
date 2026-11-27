@@ -163,6 +163,113 @@ test.each(cjsOutputs)('locking shared CommonJS exports during evaluation, %j', a
   }
 });
 
+test.each(cjsOutputs)(
+  'locking a shared CommonJS namespace never probes its exports, %j',
+  async (output) => {
+    const importer = "import defer * as ns from './target.cjs'; export { ns };";
+    const run = await bundle(
+      {
+        'a.mjs': importer,
+        'b.mjs': importer,
+        'start.cjs': "module.exports = () => require('./target.cjs');",
+        'target.cjs': `const { proxy, revoke } = Proxy.revocable({ value: 1 }, {
+      getPrototypeOf(t) { globalThis.probes++; return Reflect.getPrototypeOf(t); },
+      ownKeys(t) { globalThis.probes++; return Reflect.ownKeys(t); }
+    });
+    if (globalThis.accessor) Object.defineProperty(module, 'exports', {
+      get() { globalThis.probes++; return proxy; }
+    });
+    else module.exports = proxy;
+    globalThis.revoke = revoke;
+    if (globalThis.during) globalThis.lock();`,
+        'main.mjs': `import { ns as a } from './a.mjs';
+      import { ns as b } from './b.mjs';
+      import start from './start.cjs';
+      console.log('same', a === b);
+      globalThis.probes = 0;
+      globalThis.lock = () => {
+        if (globalThis.seen) void a.default;
+        if (globalThis.revoked) globalThis.revoke();
+        globalThis.probes = 0;
+        console.log('lock', Reflect.preventExtensions(b), Object.isExtensible(a), globalThis.probes);
+      };
+      start();
+      if (!globalThis.during) globalThis.lock();
+      try { console.log('read', Object.keys(a).join(','), b.default.value); }
+      catch (error) { console.log('read', error.name); }`,
+      },
+      output,
+    );
+    for (const during of [false, true]) {
+      for (const { result, ...flags } of [
+        { revoked: true, result: 'TypeError' },
+        { result: 'default 1' },
+        { seen: true, result: 'default,value 1' },
+        { accessor: true, result: 'default 1' },
+      ]) {
+        const setup = `data:text/javascript,Object.assign(globalThis,${JSON.stringify({ during, ...flags })})`;
+        expect(run('main', ['--import', setup])).toEqual([
+          'same true',
+          'lock true false 0',
+          `read ${result}`,
+        ]);
+      }
+    }
+  },
+);
+
+test.each(cjsOutputs)(
+  'locking an unread CommonJS literal preserves its live keys, %j',
+  async (output) => {
+    const importer = "import defer * as ns from './target.cjs'; export { ns };";
+    const run = await bundle(
+      {
+        'a.mjs': importer,
+        'b.mjs': importer,
+        'start.cjs': "module.exports = () => require('./target.cjs');",
+        'target.cjs': `module.exports = { get x() { console.log('getter'); return 1; } };`,
+        'main.mjs': `import { ns as a } from './a.mjs';
+      import { ns as b } from './b.mjs';
+      import start from './start.cjs';
+      const value = start();
+      value.beforeLock = 2;
+      console.log('lock', Reflect.preventExtensions(a));
+      value.afterLock = 3;
+      const names = Reflect.ownKeys(b).filter(key => typeof key === 'string');
+      console.log(names.join(','), b.x, b.beforeLock, b.afterLock, b.default.afterLock);`,
+      },
+      output,
+    );
+    const expected = ['lock true', 'getter', 'beforeLock,default,x 1 2 undefined 3'];
+    expect(run()).toEqual(expected);
+    expect(
+      run('main', ['--import', 'data:text/javascript,Object.preventExtensions=undefined']),
+    ).toEqual(expected);
+  },
+);
+
+test('locking a second target that exports the same proxy uses its own observations', async () => {
+  const a = "import defer * as ns from './one.cjs'; export { ns };";
+  const b = "import defer * as ns from './two.cjs'; export { ns };";
+  const run = await bundle({
+    'a.mjs': a,
+    'b.mjs': a,
+    'c.mjs': b,
+    'd.mjs': b,
+    'one.cjs': 'module.exports = globalThis.shared; globalThis.inspect();',
+    'two.cjs': 'module.exports = globalThis.shared;',
+    'start.cjs': "exports.start = () => { require('./one.cjs'); require('./two.cjs'); };",
+    'main.mjs': `import { ns as a } from './a.mjs'; import { ns as b } from './b.mjs';
+      import { ns as c } from './c.mjs'; import { ns as d } from './d.mjs';
+      import start from './start.cjs';
+      globalThis.shared = new Proxy({ x: 1 }, {});
+      globalThis.inspect = () => console.log(a === b, Object.keys(a).join(','));
+      start.start();
+      console.log(c === d, Reflect.preventExtensions(c), Object.keys(d).join(','), d.default.x);`,
+  });
+  expect(run()).toEqual(['true default,x', 'true true default 1']);
+});
+
 test.each(cjsOutputs)('lazy CommonJS reads use the captured Object.create, %j', async (output) => {
   const importer =
     "import defer * as ns from './target.cjs'; export const read = () => ns.default.value;";
@@ -180,7 +287,28 @@ test.each(cjsOutputs)('lazy CommonJS reads use the captured Object.create, %j', 
     output,
   );
   expect(run()).toEqual(['1 1']);
+  expect(run('main', ['--import', 'data:text/javascript,globalThis.WeakMap=undefined'])).toEqual([
+    '1 1',
+  ]);
 });
+
+test.each(cjsOutputs)(
+  'reading an ESM namespace without Reflect.preventExtensions, %j',
+  async (output) => {
+    const run = await bundle(
+      {
+        'main.mjs': `import defer * as ns from './target.mjs';
+      function read(object) { console.log('value', object.x); }
+      read(ns);`,
+        'target.mjs': 'export const x = 1;',
+      },
+      output,
+    );
+    expect(
+      run('main', ['--import', 'data:text/javascript,Reflect.preventExtensions=undefined']),
+    ).toEqual(['value 1']);
+  },
+);
 
 test.each([false, true])('grouped eager order, transitive import %s', async (transitive) => {
   const run = await bundle(

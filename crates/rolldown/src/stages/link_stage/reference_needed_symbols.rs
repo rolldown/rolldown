@@ -112,6 +112,11 @@ impl LinkStage<'_> {
           if stmt_info.meta.contains(StmtInfoMeta::HasDummyRecord) {
             depended_runtime_helper_map.push(RuntimeHelper::Require, stmt_info_idx);
           }
+          if stmt_info.meta.contains(StmtInfoMeta::CjsExportsLiteral)
+            && self.metas[importer.idx].shared_deferred_cjs_target
+          {
+            depended_runtime_helper_map.push(RuntimeHelper::CjsOrdinary, stmt_info_idx);
+          }
           // Handle non-static dynamic imports like `import(foo)` or `import('a' + 'b')`
           if stmt_info.meta.intersects(StmtInfoMeta::NonStaticDynamicImport)
             && matches!(self.options.format, OutputFormat::Cjs)

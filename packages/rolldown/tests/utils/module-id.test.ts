@@ -13,6 +13,10 @@ test('stringifyModuleId', () => {
   expect(stringifyModuleId('/src/icon.svg?raw', { type: 'text' })).toBe(
     '/src/icon.svg?raw&attributes=%7B%22type%22%3A%22text%22%7D',
   );
+  expect(stringifyModuleId('/src/a.js', { ['__proto__']: 'string' })).toBe('/src/a.js');
+  expect(stringifyModuleId('/src/a.json', { ['__proto__']: 'string', type: 'json' })).toBe(
+    stringifyModuleId('/src/a.json', { type: 'json' }),
+  );
 });
 
 test('parseModuleId', () => {
@@ -29,6 +33,7 @@ test('parseModuleId', () => {
     'virtual?attributes=foo',
     'a?attributes=%7B%7D',
     'a?attributes=%7B%22type%22%3A1%7D',
+    'a?attributes=%7B%22__proto__%22%3A%22string%22%7D',
     'a?attributes=%7b%22type%22%3a%22json%22%7d',
   ]) {
     expect(parseModuleId(id)).toEqual({ rawId: id, attributes: {} });

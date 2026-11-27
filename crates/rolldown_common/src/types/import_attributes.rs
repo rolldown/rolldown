@@ -37,7 +37,15 @@ impl ImportAttributes {
   {
     let mut sorted: Vec<(CompactStr, CompactStr)> = Vec::new();
     for (key, value) in entries {
-      let (key, value) = (key.into(), value.into());
+      let key = key.into();
+      if key == "__proto__" {
+        // The JS binding populates a plain object by assignment. The inherited `__proto__`
+        // setter ignores string values, so omit the key here to keep module IDs consistent
+        // with the attributes plugin hooks receive.
+        // See internal-docs/import-attributes/implementation.md.
+        continue;
+      }
+      let value = value.into();
       match sorted.binary_search_by(|(existing, _)| compare_keys(existing, &key)) {
         Ok(i) => sorted[i].1 = value,
         Err(i) => sorted.insert(i, (key, value)),

@@ -21,7 +21,8 @@ const ATTRIBUTES_MARKER_LENGTH = '&attributes='.length;
  */
 export function stringifyModuleId(rawId: string, attributes?: Record<string, string>): string {
   if (!attributes) return rawId;
-  const entries = Object.entries(attributes);
+  // Match ImportAttributes::from_entries. See internal-docs/import-attributes/implementation.md.
+  const entries = Object.entries(attributes).filter(([key]) => key !== '__proto__');
   if (entries.length === 0) return rawId;
   const sorted = Object.fromEntries(entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
   return `${rawId}${rawId.includes('?') ? '&' : '?'}attributes=${encodeURIComponent(

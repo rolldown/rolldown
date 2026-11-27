@@ -765,11 +765,11 @@ impl GlobImportVisit<'_> {
             options.case_sensitive = Some(bool.value);
           }
         }
-        "with" if !p.key.is_computed() => {
+        "with" => {
           if let Expression::ObjectExpression(attributes) = &p.value {
             options.attributes =
               ImportAttributes::from_entries(attributes.properties.iter().filter_map(|property| {
-                let ObjectPropertyKind::ObjectProperty(property) = property else { return None };
+                let property = property.as_property()?;
                 let key = property.key.literal_name()?;
                 let Expression::StringLiteral(value) = property.value.get_inner_expression() else {
                   return None;

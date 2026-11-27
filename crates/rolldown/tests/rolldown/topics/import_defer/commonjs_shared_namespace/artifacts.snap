@@ -19,7 +19,7 @@ var require_log = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = [];
 }));
 // x.cjs
-var require_x = /* @__PURE__ */ __commonJSMin(((exports) => {
+var require_x = /* @__PURE__ */ __commonJSShared(((exports) => {
 	require_log().push("x");
 	exports.__esModule = true;
 	exports.default = "d";
@@ -27,27 +27,27 @@ var require_x = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.self = function() {
 		return this;
 	};
-}));
+}), 2);
 // a.js
 var import_log = /* @__PURE__ */ __toESM(require_log());
 var import_x$2;
-const fooA = () => (import_x$2 || (import_x$2 = /* @__PURE__ */ __toESMCached(2, require_x())), "foo");
-const selfA = () => (import_x$2 || (import_x$2 = /* @__PURE__ */ __toESMCached(2, require_x()))).self();
+const fooA = () => ((import_x$2 || (import_x$2 = /* @__PURE__ */ __cjsNamespace(2, () => require_x())))(), "foo");
+const selfA = () => (import_x$2 || (import_x$2 = /* @__PURE__ */ __cjsNamespace(2, () => require_x())))().self();
 // b.js
-var x_deferred$2 = /* @__PURE__ */ __deferNsCached(2, () => import_x$2 || (import_x$2 = /* @__PURE__ */ __toESMCached(2, require_x())));
+var x_deferred$2 = /* @__PURE__ */ __deferCJS(import_x$2 || (import_x$2 = /* @__PURE__ */ __cjsNamespace(2, () => require_x())));
 const getB = () => x_deferred$2;
-const selfB = () => (import_x$2 || (import_x$2 = /* @__PURE__ */ __toESMCached(2, require_x()))).self();
+const selfB = () => (import_x$2 || (import_x$2 = /* @__PURE__ */ __cjsNamespace(2, () => require_x())))().self();
 // c.js
 const getC1 = () => x_deferred$2;
 const getC2 = () => x_deferred$2;
 // m.mjs
-var import_x$1, x_deferred$1 = /* @__PURE__ */ __deferNsCached(2, () => import_x$1 || (import_x$1 = /* @__PURE__ */ __toESMCached(2, require_x(), 1)), 1);
+var import_x$1, x_deferred$1 = /* @__PURE__ */ __deferCJS(import_x$1 || (import_x$1 = /* @__PURE__ */ __cjsNamespace(2, () => require_x(), 1)));
 const getM = () => x_deferred$1;
 // wrapped.js
 var import_x, x_deferred, getW;
 function init_wrapped() {
 	return (init_wrapped = __esmSync((() => {
-		x_deferred = /* @__PURE__ */ __deferNsCached(2, () => import_x || (import_x = /* @__PURE__ */ __toESMCached(2, require_x())));
+		x_deferred = /* @__PURE__ */ __deferCJS(import_x || (import_x = /* @__PURE__ */ __cjsNamespace(2, () => require_x())));
 		getW = () => x_deferred;
 	})))();
 }
@@ -94,13 +94,13 @@ export { after, before, getB, loadOther, x_deferred as one, results, x_deferred$
 ### main2.js
 
 ```js
-import { a as __toESM, i as __esmSync, n as __deferNsCached, o as __toESMCached, r as __esmMin, t as __commonJSMin } from "./rolldown-runtime.js";
+import { a as __esmMin, i as __deferCJS, n as __commonJSMin, o as __esmSync, r as __commonJSShared, s as __toESM, t as __cjsNamespace } from "./rolldown-runtime.js";
 // log.cjs
 var require_log = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = [];
 }));
 // x.cjs
-var require_x = /* @__PURE__ */ __commonJSMin(((exports) => {
+var require_x = /* @__PURE__ */ __commonJSShared(((exports) => {
 	require_log().push("x");
 	exports.__esModule = true;
 	exports.default = "d";
@@ -108,30 +108,30 @@ var require_x = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.self = function() {
 		return this;
 	};
-}));
+}), 2);
 // a.js
 var import_x$5, fooA, selfA;
 function init_a() {
 	return (init_a = __esmMin((() => {
-		fooA = () => (import_x$5 || (import_x$5 = /* @__PURE__ */ __toESMCached(2, require_x())), "foo");
-		selfA = () => (import_x$5 || (import_x$5 = /* @__PURE__ */ __toESMCached(2, require_x()))).self();
+		fooA = () => ((import_x$5 || (import_x$5 = /* @__PURE__ */ __cjsNamespace(2, () => require_x())))(), "foo");
+		selfA = () => (import_x$5 || (import_x$5 = /* @__PURE__ */ __cjsNamespace(2, () => require_x())))().self();
 	})))();
 }
 // b.js
 var import_x$4, x_deferred$4, getB, selfB;
 function init_b() {
 	return (init_b = __esmMin((() => {
-		x_deferred$4 = /* @__PURE__ */ __deferNsCached(2, () => import_x$4 || (import_x$4 = /* @__PURE__ */ __toESMCached(2, require_x())));
+		x_deferred$4 = /* @__PURE__ */ __deferCJS(import_x$4 || (import_x$4 = /* @__PURE__ */ __cjsNamespace(2, () => require_x())));
 		getB = () => x_deferred$4;
-		selfB = () => (import_x$4 || (import_x$4 = /* @__PURE__ */ __toESMCached(2, require_x()))).self();
+		selfB = () => (import_x$4 || (import_x$4 = /* @__PURE__ */ __cjsNamespace(2, () => require_x())))().self();
 	})))();
 }
 // c.js
 var import_x$2, x_deferred$2, import_x$3, x_deferred$3, getC1, getC2;
 function init_c() {
 	return (init_c = __esmMin((() => {
-		x_deferred$2 = /* @__PURE__ */ __deferNsCached(2, () => import_x$2 || (import_x$2 = /* @__PURE__ */ __toESMCached(2, require_x())));
-		x_deferred$3 = /* @__PURE__ */ __deferNsCached(2, () => import_x$3 || (import_x$3 = /* @__PURE__ */ __toESMCached(2, require_x())));
+		x_deferred$2 = /* @__PURE__ */ __deferCJS(import_x$2 || (import_x$2 = /* @__PURE__ */ __cjsNamespace(2, () => require_x())));
+		x_deferred$3 = /* @__PURE__ */ __deferCJS(import_x$3 || (import_x$3 = /* @__PURE__ */ __cjsNamespace(2, () => require_x())));
 		getC1 = () => x_deferred$2;
 		getC2 = () => x_deferred$3;
 	})))();
@@ -140,7 +140,7 @@ function init_c() {
 var import_x$1, x_deferred$1, getM;
 function init_m() {
 	return (init_m = __esmMin((() => {
-		x_deferred$1 = /* @__PURE__ */ __deferNsCached(2, () => import_x$1 || (import_x$1 = /* @__PURE__ */ __toESMCached(2, require_x(), 1)), 1);
+		x_deferred$1 = /* @__PURE__ */ __deferCJS(import_x$1 || (import_x$1 = /* @__PURE__ */ __cjsNamespace(2, () => require_x(), 1)));
 		getM = () => x_deferred$1;
 	})))();
 }
@@ -148,7 +148,7 @@ function init_m() {
 var import_x, x_deferred, getW;
 function init_wrapped() {
 	return (init_wrapped = __esmSync((() => {
-		x_deferred = /* @__PURE__ */ __deferNsCached(2, () => import_x || (import_x = /* @__PURE__ */ __toESMCached(2, require_x())));
+		x_deferred = /* @__PURE__ */ __deferCJS(import_x || (import_x = /* @__PURE__ */ __cjsNamespace(2, () => require_x())));
 		getW = () => x_deferred;
 	})))();
 }
@@ -181,7 +181,7 @@ export { results as a, x_deferred$3 as c, loadOther as i, getB as l, before as n
 ### other.js
 
 ```js
-import { r as __esmMin } from "./rolldown-runtime.js";
+import { a as __esmMin } from "./rolldown-runtime.js";
 import { c as x_deferred$1, r as init_main, s as x_deferred } from "./main2.js";
 // other.js
 var getOne, getTwo;
@@ -201,7 +201,7 @@ export { getOne, getTwo };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __toESM as a, __esmSync as i, __deferNsCached as n, __toESMCached as o, __esmMin as r, __commonJSMin as t };
+export { __esmMin as a, __deferCJS as i, __commonJSMin as n, __esmSync as o, __commonJSShared as r, __toESM as s, __cjsNamespace as t };
 
 ```
 
@@ -243,7 +243,7 @@ var require_log = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = [];
 }));
 // x.cjs
-var require_x = /* @__PURE__ */ __commonJSMin(((exports) => {
+var require_x = /* @__PURE__ */ __commonJSShared(((exports) => {
 	require_log().push("x");
 	exports.__esModule = true;
 	exports.default = "d";
@@ -251,27 +251,27 @@ var require_x = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.self = function() {
 		return this;
 	};
-}));
+}), 2);
 // a.js
 var import_log = /* @__PURE__ */ __toESM(require_log());
 var import_x$2;
-const fooA = () => (import_x$2 || (import_x$2 = /* @__PURE__ */ __toESMCached(2, require_x())), "foo");
-const selfA = () => (import_x$2 || (import_x$2 = /* @__PURE__ */ __toESMCached(2, require_x()))).self();
+const fooA = () => ((import_x$2 || (import_x$2 = /* @__PURE__ */ __cjsNamespace(2, () => require_x())))(), "foo");
+const selfA = () => (import_x$2 || (import_x$2 = /* @__PURE__ */ __cjsNamespace(2, () => require_x())))().self();
 // b.js
-var x_deferred$2 = /* @__PURE__ */ __deferNsCached(2, () => import_x$2 || (import_x$2 = /* @__PURE__ */ __toESMCached(2, require_x())));
+var x_deferred$2 = /* @__PURE__ */ __deferCJS(import_x$2 || (import_x$2 = /* @__PURE__ */ __cjsNamespace(2, () => require_x())));
 const getB = () => x_deferred$2;
-const selfB = () => (import_x$2 || (import_x$2 = /* @__PURE__ */ __toESMCached(2, require_x()))).self();
+const selfB = () => (import_x$2 || (import_x$2 = /* @__PURE__ */ __cjsNamespace(2, () => require_x())))().self();
 // c.js
 const getC1 = () => x_deferred$2;
 const getC2 = () => x_deferred$2;
 // m.mjs
-var import_x$1, x_deferred$1 = /* @__PURE__ */ __deferNsCached(2, () => import_x$1 || (import_x$1 = /* @__PURE__ */ __toESMCached(2, require_x(), 1)), 1);
+var import_x$1, x_deferred$1 = /* @__PURE__ */ __deferCJS(import_x$1 || (import_x$1 = /* @__PURE__ */ __cjsNamespace(2, () => require_x(), 1)));
 const getM = () => x_deferred$1;
 // wrapped.js
 var import_x, x_deferred, getW;
 function init_wrapped() {
 	return (init_wrapped = __esmSync((() => {
-		x_deferred = /* @__PURE__ */ __deferNsCached(2, () => import_x || (import_x = /* @__PURE__ */ __toESMCached(2, require_x())));
+		x_deferred = /* @__PURE__ */ __deferCJS(import_x || (import_x = /* @__PURE__ */ __cjsNamespace(2, () => require_x())));
 		getW = () => x_deferred;
 	})))();
 }

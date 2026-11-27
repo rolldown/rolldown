@@ -52,6 +52,11 @@ bitflags! {
     const DeferNsCache = 1 << 42;
     const DeferNsCached = 1 << 43;
     const EsmSync = 1 << 44;
+    const CjsRecords = 1 << 45;
+    const CjsRecord = 1 << 46;
+    const CommonJsShared = 1 << 47;
+    const CjsNamespace = 1 << 48;
+    const DeferCjs = 1 << 49;
   }
 }
 
@@ -106,7 +111,7 @@ impl DependedRuntimeHelperMap {
   }
 }
 
-pub const RUNTIME_HELPER_NAMES: [&str; 45] = [
+pub const RUNTIME_HELPER_NAMES: [&str; 50] = [
   "__create",
   "__defProp",
   "__name",
@@ -152,10 +157,15 @@ pub const RUNTIME_HELPER_NAMES: [&str; 45] = [
   "__deferNsCache",
   "__deferNsCached",
   "__esmSync",
+  "__cjsRecords",
+  "__cjsRecord",
+  "__commonJSShared",
+  "__cjsNamespace",
+  "__deferCJS",
 ];
 
 /// The helpers that the runtime module has only when `experimental.importDefer` is on.
-pub const RUNTIME_IMPORT_DEFER_HELPER_NAMES: [&str; 21] = [
+pub const RUNTIME_IMPORT_DEFER_HELPER_NAMES: [&str; 26] = [
   "__esmStack",
   "__esmState",
   "__esmEnd",
@@ -177,4 +187,9 @@ pub const RUNTIME_IMPORT_DEFER_HELPER_NAMES: [&str; 21] = [
   "__deferNsCache",
   "__deferNsCached",
   "__esmSync",
+  "__cjsRecords",
+  "__cjsRecord",
+  "__commonJSShared",
+  "__cjsNamespace",
+  "__deferCJS",
 ];

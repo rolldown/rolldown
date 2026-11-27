@@ -804,6 +804,7 @@ pub trait StatementFactoryExt<'ast> {
     commonjs_expr: Expression<'ast>,
     statements: allocator::Vec<'ast, Statement<'ast>>,
     params: &[&str],
+    shared_cjs_key: Option<u32>,
     profiler_names: bool,
     stable_id: &str,
     is_async: bool,
@@ -871,6 +872,14 @@ pub trait StatementFactoryExt<'ast> {
       commonjs_call_expr.arguments.push(Argument::ObjectExpression(obj_expr));
     } else {
       commonjs_call_expr.arguments.push(Argument::ArrowFunctionExpression(arrow_expr));
+    }
+    if let Some(key) = shared_cjs_key {
+      commonjs_call_expr.arguments.push(Argument::new_numeric_literal(
+        SPAN,
+        key.into(),
+        None,
+        builder,
+      ));
     }
     Statement::new_var_decl(
       binding_name,

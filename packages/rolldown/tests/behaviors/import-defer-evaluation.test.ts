@@ -20,6 +20,7 @@ async function bundle(
     await mkdir(path.dirname(file), { recursive: true });
     await writeFile(file, source);
   }
+  const ext = output.format === 'cjs' ? 'cjs' : 'mjs';
   const warnings: string[] = [];
   const build = await rolldown({
     cwd,
@@ -32,8 +33,8 @@ async function bundle(
   try {
     const result = await build.write({
       dir: 'out',
-      entryFileNames: '[name].mjs',
-      chunkFileNames: '[name]-[hash].mjs',
+      entryFileNames: `[name].${ext}`,
+      chunkFileNames: `[name]-[hash].${ext}`,
       ...output,
     });
     if (expectedChunks !== undefined) {
@@ -50,7 +51,7 @@ async function bundle(
     expect(warnings).toEqual([]);
   }
   return (entry = 'main', args: string[] = []) =>
-    execFileSync(process.execPath, [...args, `out/${entry}.mjs`], {
+    execFileSync(process.execPath, [...args, `out/${entry}.${ext}`], {
       cwd,
       encoding: 'utf8',
       stdio: 'pipe',
@@ -62,6 +63,50 @@ async function bundle(
 
 const waitsForRelease =
   "console.log('a start'); await new Promise(r => globalThis.release = r); console.log('a end');";
+
+test.each([
+  { format: 'esm', strictExecutionOrder: true },
+  { format: 'cjs', preserveModules: true, generatedCode: { profilerNames: true } },
+] satisfies OutputOptions[])('reentrant reads of shared CommonJS exports, %j', async (output) => {
+  const importer = `import defer * as ns from './target.cjs';
+    export { ns };
+    export const read = () => ns.default.value;
+    export const has = () => 'value' in ns;`;
+  const run = await bundle(
+    {
+      'first.mjs': importer,
+      'second.mjs': importer,
+      'target.cjs': `exports.early = true;
+      globalThis.inspect();
+      if (globalThis.replace) module.exports = {};
+      module.exports.value = 1;`,
+      'start.cjs': "exports.start = () => require('./target.cjs').value;",
+      'main.mjs': `import * as first from './first.mjs';
+      import * as second from './second.mjs';
+      import starter from './start.cjs';
+      const a = first.ns, b = second.ns;
+      console.log('same', a === b);
+      globalThis.inspect = () => {
+        console.log('inner', second.read(), second.has(), b.default.early, Object.keys(b).join(','));
+      };
+      const value = globalThis.start === 'require' ? starter.start()
+        : globalThis.start === 'proxy' ? a.default.value : first.read();
+      console.log('outer', value, second.read(), second.has(), b.default.value, Object.keys(a).join(','));
+    `,
+    },
+    output,
+  );
+  for (const start of ['read', 'proxy', 'require']) {
+    for (const replace of [false, true]) {
+      const setup = `data:text/javascript,globalThis.start = '${start}'; globalThis.replace = ${replace}`;
+      expect(run('main', ['--import', setup])).toEqual([
+        'same true',
+        'inner undefined false true default,early',
+        `outer 1 1 true 1 ${replace ? 'default,value' : 'default,early,value'}`,
+      ]);
+    }
+  }
+});
 
 test.each([false, true])('grouped eager order, transitive import %s', async (transitive) => {
   const run = await bundle(

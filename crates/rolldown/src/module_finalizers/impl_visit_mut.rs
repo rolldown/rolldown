@@ -450,11 +450,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     match wrapper_mode {
       ModuleWrapperMode::InteropCjs(wrapper_ref) => {
         let wrap_ref_name = self.canonical_name_for(wrapper_ref);
-        let commonjs_ref = if self.ctx.options.profiler_names {
-          self.canonical_ref_for_runtime("__commonJS")
-        } else {
-          self.canonical_ref_for_runtime("__commonJSMin")
-        };
+        let commonjs_ref = self.canonical_ref_for_runtime(
+          self.ctx.linking_info.commonjs_wrapper_helper(self.ctx.options.profiler_names),
+        );
 
         let (commonjs_ref_expr, _) = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
         let mut stmts_inside_closure = allocator::Vec::new_in(self);
@@ -472,6 +470,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           commonjs_ref_expr,
           stmts_inside_closure,
           &self.cjs_wrapper_params(),
+          self.ctx.linking_info.shared_deferred_cjs_target.then_some(self.ctx.module.exec_order),
           self.ctx.options.profiler_names,
           &self.ctx.module.stable_id,
           self.ctx.linking_info.is_tla_or_contains_tla_dependency,
@@ -1388,11 +1387,24 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   ///   one namespace object. The evaluation is the object of the member chain, so a call
   ///   `ns.fn()` keeps `import_x` as `this`, as the eager form `import_x.fn()` does. An access
   ///   with no such chain (`'foo' in ns`, an inlined export) uses
-  ///   `(import_x || (import_x = __toESM(require_x())), <access>)`.
+  ///   `(import_x || (import_x = __toESM(require_x())), <access>)`. For a shared bundled
+  ///   module `import_x` holds the reader, so an `in` check needs its return value as the RHS.
   fn wrap_deferred_access(&self, expr: &mut ast::Expression<'ast>, access: DeferredAccess) {
     let evaluate = match access {
       DeferredAccess::Cjs(rec_idx) => {
-        let Some(evaluate) = self.cjs_deferred_namespace_expr(rec_idx) else { return };
+        let Some((binding, shared)) = self.cjs_deferred_namespace_binding(rec_idx) else { return };
+        let evaluate = if shared {
+          let read = Expression::new_call_expression(SPAN, binding, None, [], false, self);
+          if let ast::Expression::BinaryExpression(binary) = expr
+            && binary.operator == ast::BinaryOperator::In
+          {
+            binary.right = read;
+            return;
+          }
+          read
+        } else {
+          binding
+        };
         let namespace_name =
           self.canonical_name_for(self.ctx.module.import_records[rec_idx].namespace_ref);
         if let Some(root) = member_chain_root(expr)

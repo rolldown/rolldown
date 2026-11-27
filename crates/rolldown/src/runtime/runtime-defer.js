@@ -224,19 +224,32 @@ export var __esmDefer = (init) => {
 // target that is not extensible only when the target has all keys: `Object.isExtensible` gives
 // `true`, and after `Object.preventExtensions`, the first `load` throws a `TypeError` when the
 // namespace has keys.
-export var __deferNs = (init, ns) => {
-  var target = Object.setPrototypeOf({}, null),
+export var __deferNs = (init, ns, cjs) => {
+  var makeTarget = () => __defProp(Object.setPrototypeOf({}, null), Symbol.toStringTag, {
+      value: 'Deferred Module',
+    }),
+    target = makeTarget(),
+    shape = target,
     seal = () => {
       for (var key of __getOwnPropNames(ns).sort()) {
         key === 'then' ||
-          __defProp(target, key, { value: void 0, writable: true, enumerable: true });
+          __defProp(shape, key, { value: void 0, writable: true, enumerable: true });
       }
-      Object.preventExtensions(target);
+      Object.preventExtensions(shape);
     },
-    load = () => (ns ? init() : ((ns = init()), seal()), ns),
+    load = () => {
+      if (ns && shape === target) {
+        init();
+      } else {
+        ns = init();
+        // A nested CommonJS read sees temporary keys. Keep the real proxy target
+        // extensible until the factory returns and its final keys are available.
+        shape = cjs && !cjs.ready ? makeTarget() : target;
+        seal();
+      }
+    },
     deferred = (key) => typeof key === 'string' && key !== 'then',
-    own = (key) => __hasOwnProp.call(target, key);
-  __defProp(target, Symbol.toStringTag, { value: 'Deferred Module' });
+    own = (key) => __hasOwnProp.call(shape, key);
   ns && seal();
   return new Proxy(target, {
     get: (t, key) => (deferred(key) ? (load(), own(key) ? ns[key] : void 0) : t[key]),
@@ -245,13 +258,13 @@ export var __deferNs = (init, ns) => {
       deferred(key)
         ? (load(),
           own(key)
-            ? { value: ns[key], writable: true, enumerable: true, configurable: false }
+            ? { value: ns[key], writable: true, enumerable: true, configurable: shape !== target }
             : void 0)
         : __getOwnPropDesc(t, key),
     defineProperty: (t, key, desc) =>
       deferred(key)
         ? (load(),
-          own(key) &&
+          shape === target && own(key) &&
             !desc.configurable &&
             desc.enumerable !== false &&
             !('get' in desc || 'set' in desc) &&
@@ -259,14 +272,12 @@ export var __deferNs = (init, ns) => {
             (!('value' in desc) || Object.is(desc.value, ns[key])))
         : own(key) && Reflect.defineProperty(t, key, desc),
     deleteProperty: (t, key) => (deferred(key) ? (load(), !own(key)) : Reflect.deleteProperty(t, key)),
-    ownKeys: (t) => (load(), Reflect.ownKeys(t)),
+    ownKeys: () => (load(), Reflect.ownKeys(shape)),
     set: () => false,
     setPrototypeOf: (t, proto) => proto === null,
   });
 };
-// Share a CommonJS namespace across chunks by module and interop mode. An external key is
-// its filename. For a bundled module with repeated deferred imports, the key is its numeric
-// execution order. Both keys are independent of the importer and the value of module.exports.
+// Share an external CommonJS namespace across chunks by filename and interop mode.
 // See internal-docs/runtime-helpers/implementation.md.
 var __toESMCache = [];
 export var __toESMCached = (key, mod, isNodeMode, cache, ns) => {
@@ -305,3 +316,28 @@ export var __esmSync = (body, result, error) => (deferred) => {
   }
   return result;
 };
+
+// The factory and all deferred importers share this record, including when an ordinary
+// require starts the factory. A nested require sees the current module.exports. Only the
+// namespace built after the factory returns is safe to keep. See internal-docs/import-defer/implementation.md.
+var __cjsRecords = /* @__PURE__ */ Object.create(null);
+var __cjsRecord = (key) => __cjsRecords[key] || (__cjsRecords[key] = Object.create(null));
+export var __commonJSShared = (cb, key) => __commonJSMin((exports, mod) => {
+  (typeof cb === 'function' ? cb : cb[__getOwnPropNames(cb)[0]])(exports, mod, exports);
+  __cjsRecord(key).ready = true;
+});
+export var __cjsNamespace = (key, load, isNodeMode) => {
+  var record = __cjsRecord(key), mode = isNodeMode ? 1 : 0, ns;
+  if (record[mode]) return record[mode];
+  var read = () => {
+    if (ns) return ns;
+    var value = __toESM(load(), isNodeMode);
+    if (!record.ready) return value;
+    load = void 0;
+    return ns || (ns = value);
+  };
+  read.record = record;
+  return (record[mode] = read);
+};
+export var __deferCJS = (read) =>
+  read.deferred || (read.deferred = __deferNs(read, void 0, read.record));

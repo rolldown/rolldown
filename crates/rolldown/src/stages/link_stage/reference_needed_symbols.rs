@@ -84,7 +84,7 @@ impl LinkStage<'_> {
                   let target = importer.import_records[rec_idx].resolved_module?;
                   if matches!(self.module_table[target], Module::Normal(_)) {
                     interop_helpers |= if self.metas[target].shared_deferred_cjs_target {
-                      RuntimeHelper::ToEsmCached
+                      RuntimeHelper::CjsNamespace
                     } else {
                       RuntimeHelper::ToEsm
                     };

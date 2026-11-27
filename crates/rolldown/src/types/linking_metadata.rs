@@ -184,6 +184,16 @@ pub struct LinkingMetadata {
 }
 
 impl LinkingMetadata {
+  pub fn commonjs_wrapper_helper(&self, profiler_names: bool) -> &'static str {
+    if self.shared_deferred_cjs_target {
+      "__commonJSShared"
+    } else if profiler_names {
+      "__commonJS"
+    } else {
+      "__commonJSMin"
+    }
+  }
+
   /// Whether a dependency of the module, including an external one, has side effects.
   pub fn has_side_effectful_dependency(&self, modules: &IndexModules) -> bool {
     self

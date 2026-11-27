@@ -511,10 +511,11 @@ impl LinkStage<'_> {
   /// binding reads `import_x` directly. An external module in CommonJS output gets its object
   /// from `__deferNsCached`, with `require("ext")` in place of `require_x()`: one object for each
   /// external module and interop mode, in all chunks. Repeated imports of a bundled CommonJS
-  /// module use the same two caches with a numeric module key.
+  /// module share one reader and deferred object per interop mode.
   fn create_deferred_cjs_namespaces(&mut self) {
     let defer_ns_ref = self.runtime.resolve_symbol("__deferNs");
     let defer_ns_cached_ref = self.runtime.resolve_symbol("__deferNsCached");
+    let defer_cjs_ref = self.runtime.resolve_symbol("__deferCJS");
     for importer_idx in self.metas.indices() {
       if self.metas[importer_idx].deferred_cjs_namespace_imports.is_empty() {
         continue;
@@ -534,7 +535,7 @@ impl LinkStage<'_> {
           Module::Normal(target_module) => {
             let Some(wrapper_ref) = self.metas[target].wrapper_ref else { continue };
             let helper = if self.metas[target].shared_deferred_cjs_target {
-              defer_ns_cached_ref
+              defer_cjs_ref
             } else {
               defer_ns_ref
             };
@@ -567,7 +568,7 @@ impl LinkStage<'_> {
         // See internal-docs/import-defer/implementation.md.
         if matches!(self.module_table.modules[target], Module::Normal(_)) {
           let helper = if self.metas[target].shared_deferred_cjs_target {
-            RuntimeHelper::ToEsmCached
+            RuntimeHelper::CjsNamespace
           } else {
             RuntimeHelper::ToEsm
           };
@@ -618,11 +619,11 @@ fn create_wrapper(
 
       let stmt_info = StmtInfo {
         declared_symbols: smallvec![TaggedSymbolRef::normal(wrapper_ref)],
-        referenced_symbols: vec![if options.profiler_names {
-          runtime.resolve_symbol("__commonJS").into()
-        } else {
-          runtime.resolve_symbol("__commonJSMin").into()
-        }],
+        referenced_symbols: vec![
+          runtime
+            .resolve_symbol(linking_info.commonjs_wrapper_helper(options.profiler_names))
+            .into(),
+        ],
         eval_flags: false.into(),
         import_records: Vec::new(),
         #[cfg(debug_assertions)]

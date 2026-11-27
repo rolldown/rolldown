@@ -1302,23 +1302,26 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// `import defer * as ns` targets. The first evaluation assigns `import_x`, so that all
   /// accesses of the record read one namespace object. For an external module in CommonJS
   /// output: `import_ext || (import_ext = __toESMCached("ext", require("ext")))`.
-  pub(crate) fn cjs_deferred_namespace_expr(
+  /// Shared bundled records cache a reader in the binding. Only that reader can decide
+  /// whether the current exports are complete enough to cache.
+  pub(crate) fn cjs_deferred_namespace_binding(
     &self,
     rec_idx: ImportRecordIdx,
-  ) -> Option<Expression<'ast>> {
+  ) -> Option<(Expression<'ast>, bool)> {
     let rec = &self.ctx.module.import_records[rec_idx];
     let target = rec.resolved_module?;
     let namespace_name = self.canonical_name_for(rec.namespace_ref);
     // The record is an `import defer * as ns`, and a namespace import always needs interop. The
     // linker keeps `__toESM` by the same rule. `cjs_import_init_expr` keeps the interop mode of
     // the importer. See internal-docs/import-defer/implementation.md.
+    let shared = self.ctx.linking_infos[target].shared_deferred_cjs_target;
     let init_expr = match &self.ctx.modules[target] {
-      Module::Normal(module) if self.ctx.linking_infos[target].shared_deferred_cjs_target => self
-        .to_esm_cached_call(
-          self.bundled_cjs_cache_key(module.exec_order),
-          self.cjs_import_init_expr(target, false),
-          self.ctx.module.should_consider_node_esm_spec_for_static_import(),
-        ),
+      Module::Normal(module) if shared => self.cjs_namespace_helper_call(
+        "__cjsNamespace",
+        self.bundled_cjs_cache_key(module.exec_order),
+        Expression::new_arrow_returning(self.cjs_import_init_expr(target, false), self),
+        self.ctx.module.should_consider_node_esm_spec_for_static_import(),
+      ),
       Module::Normal(_) => self.cjs_import_init_expr(target, true),
       Module::External(external) => self.external_require_expr(external, true),
     };
@@ -1333,12 +1336,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       init_expr,
       self,
     );
-    Some(Expression::new_logical_expression(
-      SPAN,
-      Expression::new_id_ref_expr(SPAN, namespace_name, self),
-      ast::LogicalOperator::Or,
-      Expression::new_parenthesized_expression(SPAN, assignment, self),
-      self,
+    Some((
+      Expression::new_logical_expression(
+        SPAN,
+        Expression::new_id_ref_expr(SPAN, namespace_name, self),
+        ast::LogicalOperator::Or,
+        Expression::new_parenthesized_expression(SPAN, assignment, self),
+        self,
+      ),
+      shared,
     ))
   }
 
@@ -1366,7 +1372,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if !needs_interop {
       return require_call;
     }
-    self.to_esm_cached_call(
+    self.cjs_namespace_helper_call(
+      "__toESMCached",
       self.external_cjs_cache_key(&file_name),
       require_call,
       self.ctx.module.should_consider_node_esm_spec_for_static_import(),
@@ -1386,14 +1393,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ast::Argument::new_numeric_literal(SPAN, exec_order.into(), None, self)
   }
 
-  /// `__toESMCached("ext", <exports>)`, or `__toESMCached("ext", <exports>, 1)` in Node mode. The
-  /// helper keeps one namespace object for each key and interop mode. A bundled key is the numeric
-  /// execution order of the module. An external key is the file name of
-  /// the external module (`ExternalModule::get_file_name`), which is the same in all chunks. The
-  /// `require()` path is not: it is relative to the folder of the chunk. The exports object is not
-  /// a correct key either: a primitive cannot be a key, and two externals can export one object.
-  fn to_esm_cached_call(
+  /// The stable key is the resolved filename for an external or the execution order for
+  /// a bundled module. The second argument is either its exports or a lazy load function.
+  fn cjs_namespace_helper_call(
     &self,
+    helper: &str,
     key: ast::Argument<'ast>,
     exports_expr: Expression<'ast>,
     node_mode: bool,
@@ -1406,7 +1410,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
     ast::Expression::new_call_expression_with_pure(
       SPAN,
-      self.finalized_expr_for_runtime_symbol("__toESMCached"),
+      self.finalized_expr_for_runtime_symbol(helper),
       None,
       args,
       false,
@@ -1415,30 +1419,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     )
   }
 
-  /// `__deferNsCached("ext", () => <namespace>)`, or with `1` in Node mode: the deferred namespace
-  /// of an external module in CommonJS output. The helper keeps one object for each key and
-  /// interop mode, with the key of `to_esm_cached_call`. Thus each deferred import of the
-  /// external gets the same object, also in another chunk, in a wrapper or from `import.defer()`.
   fn deferred_ns_cached_call(
     &self,
     key: ast::Argument<'ast>,
     namespace: Expression<'ast>,
     node_mode: bool,
   ) -> Expression<'ast> {
-    let mut args = oxc::allocator::Vec::with_capacity_in(3, self);
-    args.push(key);
-    args.push(Expression::new_arrow_returning(namespace, self).into());
-    if node_mode {
-      args.push(ast::Argument::new_numeric_literal(SPAN, 1.0, None, self));
-    }
-    ast::Expression::new_call_expression_with_pure(
-      SPAN,
-      self.finalized_expr_for_runtime_symbol("__deferNsCached"),
-      None,
-      args,
-      false,
-      true,
-      self,
+    self.cjs_namespace_helper_call(
+      "__deferNsCached",
+      key,
+      Expression::new_arrow_returning(namespace, self),
+      node_mode,
     )
   }
 
@@ -1527,19 +1518,20 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     {
       return decl;
     }
-    let Some(init_body) = self.cjs_deferred_namespace_expr(rec_idx) else { return decl };
-    let target = rec.resolved_module?;
-    let key = match &self.ctx.modules[target] {
-      Module::External(external) => {
-        Some(self.external_cjs_cache_key(&external.get_file_name(self.ctx.resolved_paths)))
-      }
-      Module::Normal(module) => self.ctx.linking_infos[target]
-        .shared_deferred_cjs_target
-        .then(|| self.bundled_cjs_cache_key(module.exec_order)),
+    let Some((init_body, shared)) = self.cjs_deferred_namespace_binding(rec_idx) else {
+      return decl;
     };
-    let deferred_ns = if let Some(key) = key {
+    let target = rec.resolved_module?;
+    let deferred_ns = if shared {
+      Expression::new_call_with_arg(
+        self.finalized_expr_for_runtime_symbol("__deferCJS"),
+        init_body,
+        true,
+        self,
+      )
+    } else if let Module::External(external) = &self.ctx.modules[target] {
       self.deferred_ns_cached_call(
-        key,
+        self.external_cjs_cache_key(&external.get_file_name(self.ctx.resolved_paths)),
         init_body,
         self.ctx.module.should_consider_node_esm_spec_for_static_import(),
       )
@@ -4693,7 +4685,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               false,
               self,
             );
-            let namespace = self.to_esm_cached_call(
+            let namespace = self.cjs_namespace_helper_call(
+              "__toESMCached",
               self.external_cjs_cache_key(&file_name),
               require_call,
               node_mode,

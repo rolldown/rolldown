@@ -109,7 +109,7 @@ With `experimental.importDefer`, CommonJS output loads an external module lazily
 
 `__deferNsCached(key, init, isNodeMode)` does the same for the deferred namespace object, with the same key. Each deferred import of the external (`import defer * as ns from 'ext'`, and `import.defer('ext')` with `dynamicImportInCjs: false`) gets one `__deferNs` result for each key and interop mode, also in another chunk or in a wrapper (fixture `external_cjs_shared_namespace`). `init` returns the result of `__toESMCached`, so all accesses read one namespace object.
 
-Repeated deferred imports of a bundled CommonJS module use both caches as well. Each module has a unique numeric execution order in the bundle, so its key is distinct from every external filename. Importers with the same interop mode can compare the deferred object before the first evaluation.
+Bundled CommonJS modules expose partial `module.exports` to recursive loads. Repeated deferred imports share a reader keyed by execution order and interop mode. The factory marks successful completion, so a recursive load can return a temporary interop namespace without publishing it to other readers or fixing the keys of their shared deferred object. See [CommonJS targets](../import-defer/implementation.md#commonjs-targets).
 
 ## The helpers of `import defer`: only with the option
 

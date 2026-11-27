@@ -19,5 +19,5 @@ export function legacyAssert(name: string) {
 }
 
 export function withAndAssert(name: string) {
-  return import(`./files/${name}.js`, { with: { type: 'text' }, assert: { type: 'json' } });
+  return import(`./files/${name}.js`, { ['with']: { type: 'text' }, assert: { type: 'json' } });
 }

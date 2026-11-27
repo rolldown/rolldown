@@ -3350,20 +3350,20 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// unless the options already have one.
   fn rename_import_options_assert_key(&self, expr: &mut ast::ImportExpression<'ast>) {
     let Some(Expression::ObjectExpression(options)) = &mut expr.options else { return };
-    let literal_key = |property: &ObjectPropertyKind<'ast>| match property {
-      ObjectPropertyKind::ObjectProperty(property) => property.key.literal_name(),
-      ObjectPropertyKind::SpreadProperty(_) => None,
-    };
-    if options.properties.iter().any(|property| literal_key(property).is_some_and(|k| k == "with"))
+    if options
+      .properties
+      .iter()
+      .filter_map(ObjectPropertyKind::as_property)
+      .any(|property| property.key.is_specific_static_name("with"))
     {
       return;
     }
-    let assert = options
-      .properties
-      .iter_mut()
-      .find(|property| literal_key(property).is_some_and(|key| key == "assert"));
-    if let Some(ObjectPropertyKind::ObjectProperty(property)) = assert {
-      property.key = ast::PropertyKey::new_static_identifier(SPAN, "with", self);
+    for property in &mut options.properties {
+      if let ObjectPropertyKind::ObjectProperty(property) = property
+        && property.key.is_specific_static_name("assert")
+      {
+        property.key = ast::PropertyKey::new_static_identifier(SPAN, "with", self);
+      }
     }
   }
 

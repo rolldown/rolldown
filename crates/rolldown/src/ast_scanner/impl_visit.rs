@@ -301,9 +301,11 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     } else {
       // No import record - either @vite-ignore or non-static dynamic import
       self.current_stmt_info.meta.insert(StmtInfoMeta::NonStaticDynamicImport);
-      // Its options still reach the output, where a legacy `assert` key becomes `with`.
-      if let Some(span) = expr.options.as_ref().and_then(assert_key_span) {
-        self.warn_deprecated_import_assertion(span);
+      if let Some(Expression::ObjectExpression(options)) = &expr.options
+        && last_import_option(options, "with").is_none()
+        && let Some(assertion) = last_import_option(options, "assert")
+      {
+        self.warn_deprecated_import_assertion(assertion.key.span());
       }
     }
     walk_js::walk_import_expression(self, expr);
@@ -966,20 +968,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       );
       return ImportAttributes::default();
     };
-    let Some((keyword, with)) = options.properties.iter().find_map(|property| {
-      let ast::ObjectPropertyKind::ObjectProperty(property) = property else { return None };
-      let name = property.key.literal_name()?;
-      (name == "with" || name == "assert").then_some((name, property))
-    }) else {
+    let attributes = last_import_option(options, "with").or_else(|| {
+      let assertion = last_import_option(options, "assert")?;
+      self.warn_deprecated_import_assertion(assertion.key.span());
+      Some(assertion)
+    });
+    let Some(attributes) = attributes else {
       return ImportAttributes::default();
     };
-    if keyword == "assert" {
-      self.warn_deprecated_import_assertion(with.key.span());
-    }
-    let Expression::ObjectExpression(with) = &with.value else {
+    let Expression::ObjectExpression(with) = &attributes.value else {
       self.warn_invalid_import_attribute(
         InvalidImportAttributeKind::DynamicImportOptions,
-        with.value.span(),
+        attributes.value.span(),
       );
       return ImportAttributes::default();
     };
@@ -1034,13 +1034,16 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 }
 
-/// The span of a legacy `assert` key in the options of `import()`.
-fn assert_key_span(options: &Expression) -> Option<Span> {
-  let Expression::ObjectExpression(options) = options else { return None };
-  options.properties.iter().find_map(|property| {
-    let ast::ObjectPropertyKind::ObjectProperty(property) = property else { return None };
-    property.key.is_specific_literal_name("assert").then(|| property.key.span())
-  })
+fn last_import_option<'a, 'ast>(
+  options: &'a ast::ObjectExpression<'ast>,
+  name: &str,
+) -> Option<&'a ast::ObjectProperty<'ast>> {
+  options
+    .properties
+    .iter()
+    .rev()
+    .filter_map(ast::ObjectPropertyKind::as_property)
+    .find(|property| property.key.is_specific_static_name(name))
 }
 
 fn is_function_or_class(kind: AstKind) -> bool {

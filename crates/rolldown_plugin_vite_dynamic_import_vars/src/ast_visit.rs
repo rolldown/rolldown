@@ -66,10 +66,11 @@ fn import_options(options: Option<&Expression<'_>>) -> ImportOptions {
       .iter()
       .rev()
       .filter_map(ObjectPropertyKind::as_property)
-      .find(|property| property.key.is_specific_literal_name(name))
+      .find(|property| property.key.is_specific_static_name(name))
   };
-  let assertion = find_property("assert");
-  let attributes = find_property("with").or(assertion);
+  let with = find_property("with");
+  let assertion = if with.is_none() { find_property("assert") } else { None };
+  let attributes = with.or(assertion);
   let attributes_span = match attributes.map(|property| property.value.get_inner_expression()) {
     Some(Expression::ObjectExpression(attributes)) => Some(attributes.span),
     _ => None,

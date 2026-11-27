@@ -70,7 +70,7 @@ impl Plugin for ViteDynamicImportVarsPlugin {
         ctx: &ctx,
         source_text: args.code,
         root: ctx.cwd(),
-        importer: args.id.as_path(),
+        id: args.id,
         need_helper: false,
         vite_ignored_starts: Vec::default(),
         async_imports: Vec::default(),
@@ -102,6 +102,7 @@ impl Plugin for ViteDynamicImportVarsPlugin {
             visitor.rewrite(
               import.span,
               import.source_span,
+              &import.options,
               import.first_quasi_len,
               &id[..index],
               &id,

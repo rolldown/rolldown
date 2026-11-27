@@ -131,9 +131,9 @@ impl BindingOutputChunk {
   }
 }
 
-/// What a `generateBundle` or `writeBundle` hook changed in an output chunk. A field that is left
-/// out is a property the plugin did not change, so the chunk keeps its value, which is never copied
-/// through JavaScript. See `collectChunkChange` in
+/// What a `generateBundle` or `writeBundle` hook changed in an output chunk. Rust fills omitted
+/// fields from the existing chunk and clears `immutable` on a rename without an explicit value.
+/// See `collectChunkChange` in
 /// `packages/rolldown/src/utils/transform-to-rollup-output.ts`.
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct JsOutputChunk {
@@ -141,6 +141,7 @@ pub struct JsOutputChunk {
   /// Always sent. Besides its value, it tells a chunk apart from a `JsOutputAsset`, which has no
   /// `isEntry`, when napi picks a side of `Either<JsOutputChunk, JsOutputAsset>`.
   pub is_entry: bool,
+  pub immutable: Option<bool>,
   pub code: Option<String>,
   /// `null` removes the map.
   pub map: Option<Either<BindingSourcemap, Null>>,
@@ -161,9 +162,8 @@ pub fn update_output_chunk(
   let dynamic_imports =
     js_chunk.dynamic_imports.map(|imports| imports.into_iter().map(Into::into).collect());
   let filename = js_chunk.filename.into();
-  let immutable = chunk.immutable
-    && chunk.filename == filename
-    && js_chunk.code.as_ref().is_none_or(|code| code == &chunk.code);
+  let immutable =
+    js_chunk.immutable.unwrap_or_else(|| chunk.immutable && chunk.filename == filename);
 
   if let Some(chunk) = Arc::get_mut(chunk) {
     if let Some(code) = js_chunk.code {

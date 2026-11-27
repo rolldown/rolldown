@@ -91,6 +91,7 @@ pub struct JsOutputAsset {
   pub names: Vec<String>,
   pub original_file_names: Vec<String>,
   pub filename: String,
+  pub immutable: Option<bool>,
   pub source: BindingAssetSource,
 }
 

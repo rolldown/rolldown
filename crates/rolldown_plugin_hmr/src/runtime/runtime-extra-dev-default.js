@@ -61,6 +61,10 @@ function reload(reason) {
   }
 }
 
+// Limit: this client never learns the generation of the output it runs, so its requests say
+// `g=0`. Once the session no longer catches up from generation 0 (after an engine full reload,
+// or after 64 updates), a pull gets Reload. It reloads on every update anyway, and dev servers
+// that serve pulls use their own client (Vite's reads the generation from the page).
 class DefaultDevRuntime extends BaseDevRuntime {
   /**
    * @type {Map<string, ModuleHotContext>}

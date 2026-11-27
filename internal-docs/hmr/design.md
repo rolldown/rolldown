@@ -615,8 +615,9 @@ instead of inlining it: it keeps the maps it served lately
 go first) and adds `//# sourceMappingURL=<base>__rolldown_payload_map_<id>.map`.
 The browser downloads a map only when devtools asks for it. The URL sits
 next to the output files, because the map names its sources relative to
-the out dir. A map that was dropped gives 404: devtools shows the code
-without its sources.
+the out dir. A map that was dropped is no longer served (Vite answers
+404, or the SPA fallback page): devtools shows the code without its
+sources.
 
 - Patches and lazy chunks have one store each (ids `p<n>` and `l<n>`).
   A lazy chunk's code runs for as long as the page uses its route, so
@@ -805,7 +806,7 @@ nothing happens until a client requests the page.
 ## Worked example
 
 Chain `app → foo → bar → baz`, `foo` self-accepts. The page loaded the
-entry chunk. Its rows gave the numbers `app=0, foo=1, bar=2, baz=3` and
+entry chunk. Its rows gave the numbers `app=0, bar=1, baz=2, foo=3` and
 epoch 7, and the server told the page that the output is at gen 0. The
 entry chunk is scope-hoisted and registers no factories, so the client
 holds none.
@@ -829,7 +830,7 @@ sequenceDiagram
   S->>B: push changedIds [baz], staleIds [baz], gen 2, seq 2
   B->>B: markStale([baz], 2) — drops the gen-1 factory of baz
   B->>B: same walk, same U — canRun fails on baz
-  B->>S: GET __rolldown_hmr_patch.js?s=7&g=2&u=bDg&e=bAQ&f=bBg&n=2
+  B->>S: GET __rolldown_hmr_patch.js?s=7&g=2&u=bDg&e=bAQ&f=bCg&n=2
   S-->>B: rows + factory for baz only
   B->>B: re-run U from the factories it holds
 ```
@@ -848,7 +849,7 @@ The first patch (factory bodies left out):
 
 ```js
 const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
-__rolldown_payload__.registerGraph({ids:["bar.js","baz.js","foo.js"],localCount:3,edges:[[1],[],[0]],nums:[2,3,1]});
+__rolldown_payload__.registerGraph({ids:["bar.js","baz.js","foo.js"],localCount:3,edges:[[1],[],[0]],nums:[1,2,3]});
 //#region bar.js
 __rolldown_payload__.registerFactory("bar.js", (function(__rolldown_module_id__) { … }));
 //#endregion
@@ -860,7 +861,7 @@ __rolldown_payload__.registerFactory("foo.js", (function(__rolldown_module_id__)
 //#endregion
 ```
 
-In the second request `f=bBg` (byte `0b0110` → `{1, 2}`): the client holds
+In the second request `f=bCg` (byte `0b1010` → `{1, 3}`): the client holds
 current factories of `foo` and `bar`. On the server both have stamp 0,
 which is at or below `g=2`, so the server does not carry them. The patch
 shrinks to the changed module.

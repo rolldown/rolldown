@@ -82,9 +82,9 @@ Entry
 ```
 
 1. **Server-side selection**: when collecting the sync deps for a lazy chunk, `collect_unheld_sync_deps` (`hmr_stage.rs`) skips modules the request says the client ran (`e`) or holds a current factory of (`f`)
-2. **Runtime module-cache gate**: every module in a chunk is a `__rolldown_runtime__.registerFactory(stableId, factory)` call, and `initModule` (`runtime-extra-dev-common.js`) runs the factory only when the id is not yet in the module cache. Registering a factory twice overwrites the map entry; the module body runs once
+2. **Runtime module-cache gate**: every module in a chunk is a `__rolldown_payload__.registerFactory(stableId, factory)` call, and `initModule` (`runtime-extra-dev-common.js`) runs the factory only when the id is not yet in the module cache. A second registration replaces the map entry unless its payload generation is older than the stored one (`factoryGens`); the module body runs once
 
-Two `/lazy` requests in quick succession, the second sent before the first chunk lands, both leave `shared.js` out of `f`, and both chunks carry it — duplicate bytes, safe: the second registration overwrites the first and the module cache gate runs the body once.
+Two `/lazy` requests in quick succession, the second sent before the first chunk lands, both leave `shared.js` out of `f`, and both chunks carry it — duplicate bytes, safe: the second registration replaces the first (both payloads have the same or a newer generation) and the module cache gate runs the body once.
 
 An HMR patch re-runs a module for a different reason: the client's apply step removes the module from the module cache first (`removeModuleCache`), so `initModule` will run the factory again. The factory shape is the same in both payload kinds (see [hmr/design.md](../hmr/design.md), principle 9).
 
@@ -179,7 +179,7 @@ When `load` is called for a proxy module:
 3. Each module is rendered by `HmrAstFinalizer` into a factory registration (`impl_traverse_for_hmr_ast_finalizer.rs`):
 
    ```js
-   __rolldown_runtime__.registerFactory('src/foo.js', function (__rolldown_module_id__) {
+   __rolldown_payload__.registerFactory('src/foo.js', function (__rolldown_module_id__) {
      try {
        // registerModule/createModuleHotContext use __rolldown_module_id__;
        // ESM exports are published as:

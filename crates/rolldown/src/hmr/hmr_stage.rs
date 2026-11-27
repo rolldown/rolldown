@@ -672,7 +672,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
   /// the factory map. Importing the payload commits rows and factories, nothing more.
   ///
   /// The caller holds the bundler, so no stamp or merge runs while this renders, and `G` names
-  /// the state of every module it renders. See internal-docs/hmr/design.md, "Gen-only wire".
+  /// the state of every module it renders. See internal-docs/hmr/design.md, principle 7 ("On the
+  /// wire every number is a generation").
   async fn render_payload(
     &self,
     mut carried_modules: FxIndexSet<ModuleIdx>,

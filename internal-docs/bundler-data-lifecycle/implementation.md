@@ -172,7 +172,11 @@ master copy everything else is recovered from:
   files something still imports on the freshest edge state. A broken file
   whose last import was removed by this very scan is dropped, otherwise its
   retry would fail every later build that a fresh build of the same tree
-  would pass.
+  would pass. A lazy compile's scan
+  (`ModuleLoader::set_retry_pending_rescans(false)`) takes from the queue
+  only the proxy it fetches, and on failure adds that proxy back next to the
+  files that were already queued (see
+  [lazy-compilation/design.md](../lazy-compilation/design.md#6-repeat-visits)).
 
 Two consumers depend on that queue's contents:
 

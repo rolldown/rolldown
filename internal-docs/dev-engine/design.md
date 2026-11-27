@@ -58,15 +58,17 @@ it takes the same path.
 ### 3. New input is the only recovery trigger
 
 After a failed build, the engine waits for new input before rebuilding.
-Inside rolldown_dev, two things count:
+Inside rolldown_dev, only **a file change** counts. Both Vite config
+edits and user-land source edits are valid triggers.
 
-- **A file change.** Both Vite config edits and user-land source edits
-  are valid triggers.
-- **A tab opening a lazy route.** Its lazy compile changes the proxy
-  module's content, and the background `Rebuild` it queues
-  (`ModuleChanged`) runs in failed states too. While a lost HMR update is
-  pending, that rebuild also reloads every tab (see
-  [Lost HMR updates](#lost-hmr-updates)).
+A tab opening a lazy route does not count. The compile merges the route
+into the graph and queues no build: no page loads a lazy route from the
+build output (see
+[Repeat Visits](../lazy-compilation/design.md#6-repeat-visits)). One
+exception: while a lost HMR update is pending, the compile queues the
+build that recovers it, and that build reloads every tab (see
+[Lost HMR updates](#lost-hmr-updates)). Any task would recover the lost
+update the same way; the visit only starts it sooner.
 
 Nothing else counts as recovery — not page refresh, not elapsed time,
 not manual UI dismissal: `ensure_latest_bundle_output` no-ops in every
@@ -84,11 +86,12 @@ from `BundleState` (§12). A `Rebuild`-stage or full-build failure gets
 no such exception — only new input recovers those. (Wired up in Vite:
 `triggerBundleRegenerationIfStale` in `bundledDev.ts`.)
 
-Realized in: `handle_file_changes` (§7) and the `ModuleChanged` handler
-(`bundle_coordinator.rs:138`) are the only producers of post-failure
-rebuild tasks. `triggerFullBuild` (§13e) is an explicit escape hatch
-for cases the watcher cannot observe (e.g. missing-import resolution;
-see Unresolved Questions).
+Realized in: `handle_file_changes` (§7) is the only producer of
+post-failure rebuild tasks, apart from the `ModuleChanged` handler
+(`bundle_coordinator.rs:150`) while a lost HMR update is pending.
+`triggerFullBuild` (§13e) is an explicit escape hatch for cases the
+watcher cannot observe (e.g. missing-import resolution; see Unresolved
+Questions).
 
 Corollary: a file change after a failed build must schedule work that
 can undo the failure. In practice this means tracking where the
@@ -133,8 +136,8 @@ flowchart LR
 - **A full build.** A failure in `apply_module_side_effects_overrides` can
   leave the cache half updated. A full scan builds it again from scratch.
 - **Principles 1 and 3 hold.** The upgrade never repeats by itself: a
-  failed full build keeps the flag until the next trigger. No trigger is
-  added, but a lazy route opened in one tab now reloads every tab. This
+  failed full build keeps the flag until the next trigger. A lazy route
+  opened in one tab starts the recovery and so reloads every tab. This
   is accepted, because tabs reload only after a successful build.
 
 ## Unresolved Questions

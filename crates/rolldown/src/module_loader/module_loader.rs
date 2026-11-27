@@ -132,6 +132,10 @@ pub struct ModuleLoader<'a, Fs: FileSystem + Clone + 'static> {
   intermediate_normal_modules: IntermediateNormalModules,
   symbol_ref_db: SymbolRefDb,
   is_full_scan: bool,
+  /// Whether a partial scan also fetches every file in `pending_rescans`. When it is off, the
+  /// scan takes from the queue only the ids it fetches, and the other files stay queued. See
+  /// [`Self::set_retry_pending_rescans`].
+  retry_pending_rescans: bool,
   new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
   /// Ids inserted into `module_id_to_idx` by this partial scan;
   /// `revert_partial_scan` removes them again on failure.
@@ -310,6 +314,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       cache,
       remaining: 0,
       is_full_scan,
+      retry_pending_rescans: true,
       shared_context,
       symbol_ref_db,
       intermediate_normal_modules,
@@ -322,6 +327,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
       external_module_idxs: FxHashSet::default(),
       errors: Vec::new(),
     })
+  }
+
+  /// A lazy compile turns this off: a broken file that waits in `pending_rescans` must not fail
+  /// the scan of an unrelated route. The HMR stage and the builds keep it on, so they retry the
+  /// whole queue. See internal-docs/lazy-compilation/design.md ("Repeat Visits").
+  pub fn set_retry_pending_rescans(&mut self, retry: bool) {
+    self.retry_pending_rescans = retry;
   }
 
   /// Restores the cache to its pre-scan state so the next build can stay
@@ -358,7 +370,15 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
     if let Some(backup) = barrel_state_backup {
       self.cache.barrel_state = backup;
     }
-    self.cache.pending_rescans = pending_rescans;
+    if self.retry_pending_rescans {
+      self.cache.pending_rescans = pending_rescans;
+    } else {
+      for resolved_id in pending_rescans {
+        if self.cache.pending_rescans.iter().all(|queued| queued.id != resolved_id.id) {
+          self.cache.pending_rescans.push(resolved_id);
+        }
+      }
+    }
   }
 
   /// Marks `idx` for importer-set re-derivation in `ScanStageCache::merge`;
@@ -601,12 +621,17 @@ impl<'a, Fs: FileSystem + Clone + 'static> ModuleLoader<'a, Fs> {
 
     // If it is in partial scan mode, we need to invalidate the changed modules
     // and re-fetch them, do nothing in full scan mode. Files re-queued by a
-    // previous aborted scan (`pending_rescans`) are retried alongside.
+    // previous aborted scan (`pending_rescans`) are retried alongside, unless
+    // `retry_pending_rescans` is off.
+    let retried_rescans = if self.retry_pending_rescans {
+      std::mem::take(&mut self.cache.pending_rescans)
+    } else {
+      self.cache.pending_rescans.retain(|queued| fetch_mode.iter().all(|id| id.id != queued.id));
+      Vec::new()
+    };
     let mut changed_resolved_ids = Vec::new();
     let mut seen_changed_ids = FxHashSet::default();
-    for resolved_id in
-      fetch_mode.iter().cloned().chain(std::mem::take(&mut self.cache.pending_rescans))
-    {
+    for resolved_id in fetch_mode.iter().cloned().chain(retried_rescans) {
       if seen_changed_ids.insert(resolved_id.id.clone()) {
         changed_resolved_ids.push(resolved_id);
       }

@@ -3,8 +3,6 @@ import { page, serverUrl, waitForBuildStable } from '~utils';
 
 // https://github.com/rolldown/rolldown/issues/11110
 describe('lazy-compilation: top-level await', () => {
-  // `retry: 0`: only the first click runs the lazy chunk. Later page loads get
-  // the module from the rebuilt bundle, which does not use the factory wrapper.
   test('a lazy module with top-level await runs', { retry: 0 }, async () => {
     await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
     await waitForBuildStable();

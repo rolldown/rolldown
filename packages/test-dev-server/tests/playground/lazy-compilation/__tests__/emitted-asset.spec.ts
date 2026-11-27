@@ -12,8 +12,8 @@ import { page, serverUrl, waitForBuildStable } from '~utils';
 // `__ROLLDOWN_ASSET__#<refId>` placeholder into the real hashed filename. So
 // the patch ships the raw placeholder, the browser requests
 // `/__ROLLDOWN_ASSET__#...`, and the image never decodes until a refresh serves
-// the fully-generated bundle. (A second, latent failure is that the asset bytes
-// are registered for serving only by the follow-up rebuild's `onOutput`.)
+// the fully-generated bundle. (The asset bytes reach the server through
+// `onAdditionalAssets`: a lazy compile runs no build, so no `onOutput`.)
 describe('lazy-compilation: emitted-asset', () => {
   test('serves a lazily-emitted asset on the first load (#vite-22596)', async () => {
     // Capture any failed asset response (a 404 on the hashed image URL).

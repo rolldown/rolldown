@@ -64,10 +64,12 @@ async function bundle(
 const waitsForRelease =
   "console.log('a start'); await new Promise(r => globalThis.release = r); console.log('a end');";
 
-test.each([
+const cjsOutputs = [
   { format: 'esm', strictExecutionOrder: true },
   { format: 'cjs', preserveModules: true, generatedCode: { profilerNames: true } },
-] satisfies OutputOptions[])('reentrant reads of shared CommonJS exports, %j', async (output) => {
+] satisfies OutputOptions[];
+
+test.each(cjsOutputs)('reentrant reads of shared CommonJS exports, %j', async (output) => {
   const importer = `import defer * as ns from './target.cjs';
     export { ns };
     export const read = () => ns.default.value;
@@ -106,6 +108,78 @@ test.each([
       ]);
     }
   }
+});
+
+test('a single deferred CommonJS namespace reads replaced exports after a callback', async () => {
+  const run = await bundle({
+    'a.mjs': "import defer * as ns from './target.cjs'; export { ns };",
+    'target.cjs': 'exports.value = 0; globalThis.observe(); module.exports = { value: 1 };',
+    'main.mjs': `import { ns } from './a.mjs';
+      globalThis.observe = () => console.log('inner', ns.default.value);
+      console.log('outer', ns.default.value);`,
+  });
+  expect(run()).toEqual(['inner 0', 'outer 1']);
+});
+
+test.each(cjsOutputs)('locking shared CommonJS exports during evaluation, %j', async (output) => {
+  const importer = `import defer * as ns from './target.cjs';
+    export { ns };
+    export const read = () => [ns.value, ns.toString, 'late' in ns];`;
+  const run = await bundle(
+    {
+      'a.mjs': importer,
+      'b.mjs': importer,
+      'target.cjs': `exports.value = 1;
+      if (globalThis.replace) exports.toString = 7;
+      globalThis.observe(exports);
+      if (globalThis.replace) module.exports = { value: 2, late: 3 };`,
+      'main.mjs': `import { ns as a, read } from './a.mjs';
+      import { ns as b } from './b.mjs';
+      globalThis.observe = (exports) => {
+        console.log('inner', globalThis.staticRead ? read()[0] : b.default.value);
+        if (globalThis.replace) exports.beforeLock = true;
+        console.log('lock', Reflect.preventExtensions(b), Object.isExtensible(a));
+      };
+      console.log('outer', a.default.value, Object.keys(b).join(','));
+      if (globalThis.replace) {
+        console.log('static', ...read());
+        console.log('proxy', a.value, a.toString, 'late' in b, a.default.late);
+        console.log('descriptor', Object.getOwnPropertyDescriptor(a, 'toString').value);
+      }`,
+    },
+    output,
+  );
+  expect(run()).toEqual(['inner 1', 'lock true false', 'outer 1 default,value']);
+  for (const staticRead of [false, true]) {
+    const setup = `data:text/javascript,globalThis.replace=true;globalThis.staticRead=${staticRead}`;
+    expect(run('main', ['--import', setup])).toEqual([
+      'inner 1',
+      'lock true false',
+      'outer 2 beforeLock,default,toString,value',
+      'static 2 undefined false',
+      'proxy 2 undefined false 3',
+      'descriptor undefined',
+    ]);
+  }
+});
+
+test.each(cjsOutputs)('lazy CommonJS reads use the captured Object.create, %j', async (output) => {
+  const importer =
+    "import defer * as ns from './target.cjs'; export const read = () => ns.default.value;";
+  const run = await bundle(
+    {
+      'a.mjs': importer,
+      'b.mjs': importer,
+      'target.cjs': 'module.exports = { value: 1 };',
+      'main.mjs': `import { read as a } from './a.mjs';
+      import { read as b } from './b.mjs';
+      const original = Object.create;
+      Object.create = () => { throw new Error('unexpected Object.create'); };
+      try { console.log(a(), b()); } finally { Object.create = original; }`,
+    },
+    output,
+  );
+  expect(run()).toEqual(['1 1']);
 });
 
 test.each([false, true])('grouped eager order, transitive import %s', async (transitive) => {

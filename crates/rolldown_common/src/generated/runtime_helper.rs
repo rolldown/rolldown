@@ -46,17 +46,18 @@ bitflags! {
     const EsmEvaluateRoot = 1 << 36;
     const EsmGatherDynamic = 1 << 37;
     const EsmDefer = 1 << 38;
-    const DeferNs = 1 << 39;
-    const ToEsmCache = 1 << 40;
-    const ToEsmCached = 1 << 41;
-    const DeferNsCache = 1 << 42;
-    const DeferNsCached = 1 << 43;
-    const EsmSync = 1 << 44;
-    const CjsRecords = 1 << 45;
-    const CjsRecord = 1 << 46;
-    const CommonJsShared = 1 << 47;
-    const CjsNamespace = 1 << 48;
-    const DeferCjs = 1 << 49;
+    const PreventExtensions = 1 << 39;
+    const DeferNs = 1 << 40;
+    const ToEsmCache = 1 << 41;
+    const ToEsmCached = 1 << 42;
+    const DeferNsCache = 1 << 43;
+    const DeferNsCached = 1 << 44;
+    const EsmSync = 1 << 45;
+    const CjsRecords = 1 << 46;
+    const CjsRecord = 1 << 47;
+    const CommonJsShared = 1 << 48;
+    const CjsNamespace = 1 << 49;
+    const DeferCjs = 1 << 50;
   }
 }
 
@@ -111,7 +112,7 @@ impl DependedRuntimeHelperMap {
   }
 }
 
-pub const RUNTIME_HELPER_NAMES: [&str; 50] = [
+pub const RUNTIME_HELPER_NAMES: [&str; 51] = [
   "__create",
   "__defProp",
   "__name",
@@ -151,6 +152,7 @@ pub const RUNTIME_HELPER_NAMES: [&str; 50] = [
   "__esmEvaluateRoot",
   "__esmGatherDynamic",
   "__esmDefer",
+  "__preventExtensions",
   "__deferNs",
   "__toESMCache",
   "__toESMCached",
@@ -165,7 +167,7 @@ pub const RUNTIME_HELPER_NAMES: [&str; 50] = [
 ];
 
 /// The helpers that the runtime module has only when `experimental.importDefer` is on.
-pub const RUNTIME_IMPORT_DEFER_HELPER_NAMES: [&str; 26] = [
+pub const RUNTIME_IMPORT_DEFER_HELPER_NAMES: [&str; 27] = [
   "__esmStack",
   "__esmState",
   "__esmEnd",
@@ -181,6 +183,7 @@ pub const RUNTIME_IMPORT_DEFER_HELPER_NAMES: [&str; 26] = [
   "__esmEvaluateRoot",
   "__esmGatherDynamic",
   "__esmDefer",
+  "__preventExtensions",
   "__deferNs",
   "__toESMCache",
   "__toESMCached",

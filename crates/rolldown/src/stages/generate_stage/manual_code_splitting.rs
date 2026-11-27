@@ -12,6 +12,7 @@ use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, EntryPoint, ManualCodeSplittingOptions, MatchGroup,
   MatchGroupName, Module, ModuleIdx, ModuleTable, ModuleTagBitSet, ModuleTagRegistry, NormalModule,
+  UsedSymbolRefsBuilder,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::SharedPluginDriver;
@@ -28,6 +29,7 @@ use super::{
   GenerateStage,
   chunk_ext::{ChunkCreationReason, ChunkDebugExt},
   code_splitting::IndexSplittingInfo,
+  dynamic_already_loaded::FoldWithoutGroups,
 };
 
 // `ModuleGroup` is a temporary representation of `Chunk`. A valid `ModuleGroup` would be converted to a `Chunk` in the end.
@@ -77,41 +79,84 @@ impl ModuleGroup {
   }
 }
 
-struct ManualSplitter<'a> {
+/// The chunks that the manual groups make, in the order they are emitted, decided before the
+/// already-loaded fold. The fold sees each chunk in its cycle graph, and
+/// `apply_manual_code_splitting` emits these chunks instead of deciding again, so the fold and the
+/// groups agree on every module. See
+/// internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
+pub struct ManualGroupPlan {
+  groups: Vec<ModuleGroup>,
+}
+
+impl ManualGroupPlan {
+  /// The index of the planned chunk that takes each module.
+  pub(super) fn chunk_by_module(&self, module_count: usize) -> IndexVec<ModuleIdx, Option<usize>> {
+    let mut chunk_by_module = oxc_index::index_vec![None; module_count];
+    for (chunk, group) in self.groups.iter().enumerate() {
+      for &module_idx in &group.modules {
+        chunk_by_module[module_idx] = Some(chunk);
+      }
+    }
+    chunk_by_module
+  }
+}
+
+/// The included normal modules that `keep` keeps, sorted by `stable_id` so that user-supplied
+/// `test` and `name` functions are invoked in a deterministic order. Without this, a stateful
+/// function would produce different chunk assignments across runs because `ModuleIdx` is assigned
+/// in module-load completion order, which varies with parallel `resolveId`/`load`.
+fn sorted_candidate_modules(
+  link_output: &LinkStageOutput,
+  keep: impl Fn(&NormalModule) -> bool,
+) -> Vec<&NormalModule> {
+  link_output
+    .module_table
+    .modules
+    .iter()
+    .filter_map(Module::as_normal)
+    .filter(|module| link_output.metas[module.idx].is_included && keep(module))
+    .sorted_unstable_by(|a, b| a.stable_id.cmp(&b.stable_id))
+    .collect_vec()
+}
+
+async fn test_group(match_group: &MatchGroup, modules: &[&NormalModule]) -> BuildResult<Vec<bool>> {
+  match &match_group.test {
+    None => Ok(vec![true; modules.len()]),
+    Some(test) => {
+      let ids = modules.iter().map(|module| module.id.as_str()).collect_vec();
+      match_module_ids(test, &ids, "a `codeSplitting` group `test` function").await
+    }
+  }
+}
+
+/// Decides which modules each group chunk takes, without creating chunks.
+struct GroupPlanner<'a> {
   link_output: &'a LinkStageOutput,
   index_splitting_info: &'a IndexSplittingInfo,
-  options: &'a SharedOptions,
   chunking_options: &'a ManualCodeSplittingOptions,
   match_groups: Vec<&'a MatchGroup>,
   /// Precomputed tag bitsets per match group (parallel to `match_groups`).
   /// `None` if the group has no `tags` filter.
   match_group_required_tags: Vec<Option<ModuleTagBitSet>>,
   plugin_driver: &'a SharedPluginDriver,
-  input_base: &'a ArcStr,
-  chunk_graph: &'a mut ChunkGraph,
-  module_to_assigned: &'a mut IndexBitSet<ModuleIdx>,
-  flattened_entries: Vec<&'a EntryPoint>,
+  /// The modules placed before the groups.
+  module_to_assigned: &'a IndexBitSet<ModuleIdx>,
 }
 
-impl ManualSplitter<'_> {
-  async fn split(&mut self) -> BuildResult<()> {
+impl GroupPlanner<'_> {
+  async fn plan(&self) -> BuildResult<ManualGroupPlan> {
     let (mut module_groups, entries_aware_groups) = self.build_module_groups().await?;
 
     if module_groups.iter().all(|group| group.modules.is_empty())
       && entries_aware_groups.iter().all(|group| group.modules.is_empty())
     {
-      return Ok(());
+      return Ok(ManualGroupPlan { groups: vec![] });
     }
 
     self.process_entries_aware_groups(entries_aware_groups, &mut module_groups);
 
     let module_groups = self.into_priority_sorted_groups(module_groups);
-    if module_groups.is_empty() {
-      return Ok(());
-    }
-
-    self.convert_groups_to_chunks(module_groups);
-    Ok(())
+    Ok(ManualGroupPlan { groups: self.select_emitted_groups(module_groups) })
   }
 
   /// Runs the checks that sit between a group's `test` call and its `name` call.
@@ -160,35 +205,21 @@ impl ManualSplitter<'_> {
   async fn build_module_groups(
     &self,
   ) -> BuildResult<(IndexVec<ModuleGroupIdx, ModuleGroup>, Vec<ModuleGroup>)> {
-    let metas = &self.link_output.metas;
     let mut module_groups: IndexVec<ModuleGroupIdx, ModuleGroup> = IndexVec::default();
     let mut group_idx_by_id: FxHashMap<ModuleGroupId, ModuleGroupIdx> = FxHashMap::default();
 
     let mut entries_aware_groups: Vec<ModuleGroup> = Vec::new();
     let mut entries_aware_idx_by_id: FxHashMap<ModuleGroupId, usize> = FxHashMap::default();
 
-    // Sort modules by `stable_id` before iterating so that user-supplied
-    // `output.codeSplitting.groups[].name` functions are invoked in a deterministic order.
-    // Without this, a stateful function would produce different chunk assignments across runs
-    // because `ModuleIdx` is assigned in module-load completion order, which varies with
-    // parallel `resolveId`/`load`.
-    let candidate_modules = self
-      .link_output
-      .module_table
-      .modules
-      .iter()
-      .filter_map(Module::as_normal)
-      .filter(|module| {
-        metas[module.idx].is_included && !self.module_to_assigned.has_bit(module.idx)
-      })
-      .sorted_unstable_by(|a, b| a.stable_id.cmp(&b.stable_id))
-      .collect_vec();
+    let candidate_modules = sorted_candidate_modules(self.link_output, |module| {
+      !self.module_to_assigned.has_bit(module.idx)
+    });
 
     // `test` and `name` are JS callbacks, so one call per module would cross the napi boundary
     // M * G times. One batched call per group replaces that.
     //
     // A group cannot narrow `candidate_modules` to what earlier groups left behind. Priority
-    // resolves the overlap later, in `emit_chunk_from_group`. If this loop dropped matched
+    // resolves the overlap later, in `select_emitted_groups`. If this loop dropped matched
     // modules, a module would go to the first group in the list, not to the group with the
     // highest priority.
     let ctx = ChunkingContext::new(
@@ -197,14 +228,7 @@ impl ManualSplitter<'_> {
     );
 
     for (match_group_index, match_group) in self.match_groups.iter().copied().enumerate() {
-      let matched = match &match_group.test {
-        None => vec![true; candidate_modules.len()],
-        Some(test) => {
-          let ids = candidate_modules.iter().map(|module| module.id.as_str()).collect_vec();
-          match_module_ids(test, &ids, "a `codeSplitting` group `test` function").await?
-        }
-      };
-
+      let matched = test_group(match_group, &candidate_modules).await?;
       let captured = candidate_modules
         .iter()
         .copied()
@@ -398,7 +422,10 @@ impl ManualSplitter<'_> {
     module_groups
   }
 
-  fn convert_groups_to_chunks(&mut self, mut module_groups: Vec<ModuleGroup>) {
+  /// Picks the groups that become chunks, in the order they are emitted. A picked group's modules
+  /// leave the groups after it, which can then fall below `minSize`.
+  fn select_emitted_groups(&self, mut module_groups: Vec<ModuleGroup>) -> Vec<ModuleGroup> {
+    let mut emitted = vec![];
     while let Some(group) = module_groups.pop() {
       if group.modules.is_empty() {
         continue;
@@ -428,8 +455,14 @@ impl ManualSplitter<'_> {
         }
       }
 
-      self.emit_chunk_from_group(&group, &mut module_groups);
+      for &module_idx in &group.modules {
+        for remaining in &mut module_groups {
+          remaining.remove_module(module_idx, &self.link_output.module_table);
+        }
+      }
+      emitted.push(group);
     }
+    emitted
   }
 
   fn try_split_oversized_group(
@@ -471,8 +504,21 @@ impl ManualSplitter<'_> {
       },
     ))
   }
+}
 
-  fn emit_chunk_from_group(&mut self, group: &ModuleGroup, remaining_groups: &mut [ModuleGroup]) {
+struct GroupEmitter<'a> {
+  link_output: &'a LinkStageOutput,
+  index_splitting_info: &'a IndexSplittingInfo,
+  options: &'a SharedOptions,
+  match_groups: &'a [&'a MatchGroup],
+  input_base: &'a ArcStr,
+  chunk_graph: &'a mut ChunkGraph,
+  module_to_assigned: &'a mut IndexBitSet<ModuleIdx>,
+  flattened_entries: Vec<&'a EntryPoint>,
+}
+
+impl GroupEmitter<'_> {
+  fn emit_chunk_from_group(&mut self, group: &ModuleGroup) {
     let first_module_bits =
       &self.index_splitting_info[group.modules.iter().next().copied().expect("must have one")].bits;
 
@@ -516,9 +562,6 @@ impl ManualSplitter<'_> {
     let chunk_idx = self.chunk_graph.add_chunk(chunk);
 
     group.modules.iter().copied().for_each(|module_idx| {
-      remaining_groups.iter_mut().for_each(|remaining| {
-        remaining.remove_module(module_idx, &self.link_output.module_table);
-      });
       self.chunk_graph.chunk_table[chunk_idx]
         .bits
         .union(&self.index_splitting_info[module_idx].bits);
@@ -533,8 +576,115 @@ impl ManualSplitter<'_> {
 }
 
 impl GenerateStage<'_> {
+  /// `extract_standalone_runtime_chunk` places the runtime module before the groups, and nothing
+  /// else.
+  fn modules_assigned_before_manual_groups(&self) -> IndexBitSet<ModuleIdx> {
+    let mut module_to_assigned = IndexBitSet::new(self.link_output.module_table.modules.len());
+    let runtime_module_idx = self.link_output.runtime.id();
+    if !self.options.code_splitting.is_disabled()
+      && self.link_output.metas[runtime_module_idx].is_included
+    {
+      module_to_assigned.set_bit(runtime_module_idx);
+    }
+    module_to_assigned
+  }
+
+  /// Plans the group chunks before the already-loaded fold, which must know which modules the
+  /// groups take. The fold has work only with dynamic entries; without them, or without groups,
+  /// this returns `None`, and `apply_manual_code_splitting` plans the chunks itself.
+  ///
+  /// The groups run after the fold, so they see the bits without the dynamic entries that the fold
+  /// drops. The plan sees the same bits: `fold_without_groups` first writes the bits that the fold
+  /// gives each module when its cycle graph has no group chunk, which is the fold that runs when
+  /// the groups are decided after it. A group then counts the shares of a module and splits
+  /// `entriesAware` chunks as it does after that fold. The fold against the plan starts from what
+  /// `fold_without_groups` returns.
+  pub(super) async fn plan_manual_groups_for_fold(
+    &self,
+    index_splitting_info: &mut IndexSplittingInfo,
+    chunk_graph: &ChunkGraph,
+    entries_len: u32,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+    tag_registry: &ModuleTagRegistry,
+  ) -> BuildResult<Option<(ManualGroupPlan, FoldWithoutGroups)>> {
+    let has_dynamic_entries = self
+      .link_output
+      .entries
+      .values()
+      .flatten()
+      .any(|entry_point| entry_point.kind.is_dynamic_import());
+    if !has_dynamic_entries {
+      return Ok(None);
+    }
+    let Some(chunking_options) = &self.options.manual_code_splitting else {
+      return Ok(None);
+    };
+    let Some(match_groups) = chunking_options
+      .groups
+      .as_ref()
+      .filter(|groups| !groups.is_empty())
+      .map(|groups| groups.iter().collect::<Vec<_>>())
+    else {
+      return Ok(None);
+    };
+    let Some(fold) = self.fold_without_groups(
+      index_splitting_info,
+      chunk_graph,
+      entries_len,
+      used_symbol_refs_builder,
+    ) else {
+      return Ok(None);
+    };
+    let module_to_assigned = self.modules_assigned_before_manual_groups();
+    let result = self
+      .plan_manual_groups(
+        chunking_options,
+        match_groups,
+        index_splitting_info,
+        &module_to_assigned,
+        tag_registry,
+      )
+      .await
+      .map(|plan| (plan, fold));
+    if result.is_err() {
+      // `apply_manual_code_splitting` does not run, so release the JS module-info cache here.
+      if let Some(invalidate_module_info_cache) =
+        &chunking_options.internal_invalidate_module_info_cache
+      {
+        invalidate_module_info_cache.call().await?;
+      }
+    }
+    result.map(Some)
+  }
+
+  async fn plan_manual_groups(
+    &self,
+    chunking_options: &ManualCodeSplittingOptions,
+    match_groups: Vec<&MatchGroup>,
+    index_splitting_info: &IndexSplittingInfo,
+    module_to_assigned: &IndexBitSet<ModuleIdx>,
+    tag_registry: &ModuleTagRegistry,
+  ) -> BuildResult<ManualGroupPlan> {
+    let match_group_required_tags: Vec<Option<ModuleTagBitSet>> = match_groups
+      .iter()
+      .map(|group| group.tags.as_ref().map(|tags| tag_registry.compile_tags_to_bit_set(tags)))
+      .collect();
+    GroupPlanner {
+      link_output: self.link_output,
+      index_splitting_info,
+      chunking_options,
+      match_groups,
+      match_group_required_tags,
+      plugin_driver: self.plugin_driver,
+      module_to_assigned,
+    }
+    .plan()
+    .await
+  }
+
   pub async fn apply_manual_code_splitting(
     &self,
+    plan: Option<ManualGroupPlan>,
     index_splitting_info: &IndexSplittingInfo,
     module_to_assigned: &mut IndexBitSet<ModuleIdx>,
     chunk_graph: &mut ChunkGraph,
@@ -555,26 +705,48 @@ impl GenerateStage<'_> {
       return Ok(());
     }
 
-    let flattened_entries: Vec<&EntryPoint> =
-      self.link_output.entries.iter().flat_map(|(_idx, entries)| entries.iter()).collect();
-    let match_group_required_tags: Vec<Option<ModuleTagBitSet>> = match_groups
-      .iter()
-      .map(|group| group.tags.as_ref().map(|tags| tag_registry.compile_tags_to_bit_set(tags)))
-      .collect();
-    let mut splitter = ManualSplitter {
-      link_output: self.link_output,
-      index_splitting_info,
-      options: self.options,
-      chunking_options,
-      match_groups,
-      match_group_required_tags,
-      plugin_driver: self.plugin_driver,
-      input_base,
-      chunk_graph,
-      module_to_assigned,
-      flattened_entries,
+    let plan = match plan {
+      Some(plan) => {
+        debug_assert!({
+          let expected = self.modules_assigned_before_manual_groups();
+          (0..self.link_output.module_table.modules.len()).map(ModuleIdx::from_usize).all(
+            |module_idx| expected.has_bit(module_idx) == module_to_assigned.has_bit(module_idx),
+          )
+        });
+        Ok(plan)
+      }
+      None => {
+        self
+          .plan_manual_groups(
+            chunking_options,
+            match_groups.clone(),
+            index_splitting_info,
+            module_to_assigned,
+            tag_registry,
+          )
+          .await
+      }
     };
-    let result = splitter.split().await;
+    let result = plan.map(|plan| {
+      let mut emitter = GroupEmitter {
+        link_output: self.link_output,
+        index_splitting_info,
+        options: self.options,
+        match_groups: &match_groups,
+        input_base,
+        chunk_graph,
+        module_to_assigned,
+        flattened_entries: self
+          .link_output
+          .entries
+          .iter()
+          .flat_map(|(_idx, entries)| entries.iter())
+          .collect(),
+      };
+      for group in &plan.groups {
+        emitter.emit_chunk_from_group(group);
+      }
+    });
     // Release the JS module-info cache on both success and failure.
     // See internal-docs/manual-code-splitting/implementation.md.
     if let Some(invalidate_module_info_cache) =

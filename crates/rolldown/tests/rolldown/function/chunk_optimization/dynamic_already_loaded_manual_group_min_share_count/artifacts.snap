@@ -1,0 +1,80 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+# Assets
+
+## a.js
+
+```js
+import "./peer.js";
+// a.js
+globalThis.minShareCountLog.push("a");
+const load = () => Promise.all([import("./lazy.js"), import("./other.js")]);
+export { load };
+
+```
+
+## b.js
+
+```js
+import "./peer.js";
+// b.js
+globalThis.minShareCountLog.push("b");
+
+```
+
+## lazy.js
+
+```js
+import { t as token } from "./shared.js";
+// lazy.js
+const value = token[0];
+export { value };
+
+```
+
+## other.js
+
+```js
+import { t as value } from "./peer.js";
+// other.js
+const other = value;
+export { other };
+
+```
+
+## peer.js
+
+```js
+import { t as token } from "./shared.js";
+// vendor.js
+const value = token[0];
+// peer.js
+globalThis.minShareCountLog.push(`peer:${value}`);
+export { value as t };
+
+```
+
+## shared.js
+
+```js
+// shared.js
+let token = ["ok"];
+export { token as t };
+
+```

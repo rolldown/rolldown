@@ -1,0 +1,16 @@
+{
+  "_comment": "`shared.js` is too small for the `vendor` group, so the group takes nothing, and the fold moves `shared.js` into `main.js` as without the group. The common chunk merge is off, so only the fold can move it.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "preserveEntrySignatures": "allow-extension",
+    "experimental": {
+      "chunkOptimization": {
+        "mergeCommonChunks": false,
+        "avoidRedundantChunkLoads": true
+      }
+    },
+    "codeSplitting": {
+      "groups": [{ "name": "vendor", "test": "shared\\.js$", "minSize": 100000 }]
+    }
+  }
+}

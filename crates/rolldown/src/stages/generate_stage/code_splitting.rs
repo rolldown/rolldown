@@ -37,7 +37,9 @@ use rolldown_utils::{
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use super::{GenerateStage, chunk_ext::ChunkCreationReason};
+use super::{
+  GenerateStage, chunk_ext::ChunkCreationReason, manual_code_splitting::ManualGroupPlan,
+};
 
 #[derive(Clone, Debug)]
 pub struct SplittingInfo {
@@ -940,6 +942,46 @@ impl GenerateStage<'_> {
     }
   }
 
+  /// Plans the manual group chunks and runs the already-loaded fold against them. Returns the plan
+  /// for `apply_manual_code_splitting`.
+  /// See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
+  async fn avoid_redundant_chunk_loads(
+    &mut self,
+    index_splitting_info: &mut IndexSplittingInfo,
+    chunk_graph: &mut ChunkGraph,
+    used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
+    dynamic_entry_merge_targets: &mut FxHashSet<ChunkIdx>,
+    tag_registry: &ModuleTagRegistry,
+  ) -> BuildResult<Option<ManualGroupPlan>> {
+    let entries_len: u32 = self
+      .link_output
+      .entries
+      .values()
+      .map(Vec::len)
+      .sum::<usize>()
+      .try_into()
+      .expect("Too many entries, u32 overflowed.");
+    let (group_plan, fold) = self
+      .plan_manual_groups_for_fold(
+        index_splitting_info,
+        chunk_graph,
+        entries_len,
+        used_symbol_refs_builder,
+        tag_registry,
+      )
+      .await?
+      .unzip();
+    self.optimize_dynamic_entry_bits(
+      index_splitting_info,
+      chunk_graph,
+      entries_len,
+      used_symbol_refs_builder,
+      dynamic_entry_merge_targets,
+      group_plan.as_ref().zip(fold),
+    );
+    Ok(group_plan)
+  }
+
   async fn split_chunks(
     &mut self,
     index_splitting_info: &mut IndexSplittingInfo,
@@ -993,24 +1035,19 @@ impl GenerateStage<'_> {
     // The pure dynamic entry chunks that a merge gives modules of other entries. See
     // `find_leaking_dynamic_entry_namespaces`.
     let mut dynamic_entry_merge_targets = FxHashSet::default();
-    // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
-    if allow_avoid_redundant_chunk_loads {
-      let entries_len: u32 = self
-        .link_output
-        .entries
-        .values()
-        .map(Vec::len)
-        .sum::<usize>()
-        .try_into()
-        .expect("Too many entries, u32 overflowed.");
-      self.optimize_dynamic_entry_bits(
-        index_splitting_info,
-        chunk_graph,
-        entries_len,
-        used_symbol_refs_builder,
-        &mut dynamic_entry_merge_targets,
-      );
-    }
+    let group_plan = if allow_avoid_redundant_chunk_loads {
+      self
+        .avoid_redundant_chunk_loads(
+          index_splitting_info,
+          chunk_graph,
+          used_symbol_refs_builder,
+          &mut dynamic_entry_merge_targets,
+          &tag_registry,
+        )
+        .await?
+    } else {
+      None
+    };
     self.extract_standalone_runtime_chunk(
       index_splitting_info,
       &mut module_is_assigned,
@@ -1020,6 +1057,7 @@ impl GenerateStage<'_> {
 
     self
       .apply_manual_code_splitting(
+        group_plan,
         index_splitting_info,
         &mut module_is_assigned,
         chunk_graph,

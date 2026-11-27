@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dynamic.js
+
+```js
+import { t as value } from "./main.js";
+// dynamic.js
+const dynamic = value;
+export { dynamic };
+
+```
+
+## main.js
+
+```js
+// shared.js
+globalThis.takesNothingLog.push("shared");
+const value = "shared";
+// main.js
+globalThis.takesNothingLog.push(`main:${value}`);
+const load = () => import("./dynamic.js");
+export { load, value as t };
+
+```

@@ -17,13 +17,16 @@ use crate::utils::chunk::normalize_preserve_entry_signature;
 
 use super::{
   GenerateStage, code_splitting::IndexSplittingInfo,
-  dynamic_entry_namespace::is_pure_dynamic_entry_chunk, reduced_chunk_graph::ReducedChunkGraph,
+  dynamic_entry_namespace::is_pure_dynamic_entry_chunk, manual_code_splitting::ManualGroupPlan,
+  reduced_chunk_graph::ReducedChunkGraph,
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
 struct ChunkAtom {
   modules: Vec<ModuleIdx>,
   dependent_entries: BitSet,
+  /// The planned manual group chunk that takes the atom's modules (see `ManualGroupPlan`).
+  manual_group: Option<usize>,
 }
 
 /// Atom-level edge graphs for the pass's two consumers. `reachability` under-approximates the
@@ -32,6 +35,26 @@ struct ChunkAtom {
 struct AtomDependencyGraphs {
   reachability: Vec<Vec<usize>>,
   cycle: Vec<Vec<usize>>,
+}
+
+/// The atoms of the fold and what it computes before its moves.
+struct PreparedFold {
+  atoms: Vec<ChunkAtom>,
+  module_to_atom_idx: IndexVec<ModuleIdx, Option<usize>>,
+  /// The `cycle` graph of `compute_atom_dependencies`.
+  atom_dependencies: Vec<Vec<usize>>,
+  /// Per atom, its bits without the dynamic entries whose importers already load it, or `None`
+  /// when the atom has no move to try.
+  reduced_bits_by_atom: Vec<Option<BitSet>>,
+  dynamic_entry_modules_by_entry: Vec<Option<ModuleIdx>>,
+}
+
+/// The fold as it runs when the manual groups are decided after it, for the fold against the
+/// planned group chunks. See `GenerateStage::fold_without_groups`.
+pub(super) struct FoldWithoutGroups {
+  prepared: PreparedFold,
+  /// Per atom, whether that fold accepts its move.
+  moved: Vec<bool>,
 }
 
 struct DynamicEntryAnalysis {
@@ -104,59 +127,50 @@ impl GenerateStage<'_> {
     entries_len: u32,
     used_symbol_refs_builder: &mut UsedSymbolRefsBuilder,
     dynamic_entry_merge_targets: &mut FxHashSet<ChunkIdx>,
+    planned: Option<(&ManualGroupPlan, FoldWithoutGroups)>,
   ) {
     let mut namespace_extractions = FxHashSet::default();
-    let DynamicEntryAnalysis {
-      dynamic_entry_indices,
-      dynamic_entry_modules_by_entry,
-      dynamic_imports_by_entry,
-      dynamically_dependent_entries_by_dynamic_entry,
-    } = self.analyze_dynamic_entries(index_splitting_info, entries_len);
-    if dynamic_entry_indices.is_empty() {
-      return;
-    }
-
-    let mut atoms = self.group_modules_by_dependent_entries(index_splitting_info);
-    if atoms.is_empty() {
-      return;
-    }
-    let module_to_atom_idx = self.compute_module_to_atom_idx(&atoms);
     let flattened_entry_modules = self.flattened_entry_modules();
-    let atom_dependencies = self.compute_atom_dependencies(
-      &atoms,
-      &module_to_atom_idx,
-      &flattened_entry_modules,
-      used_symbol_refs_builder,
-    );
+    let is_planned = planned.is_some();
+    let prepared = match planned {
+      Some((plan, fold)) => {
+        self.split_atoms_for_plan(fold, plan, &flattened_entry_modules, used_symbol_refs_builder)
+      }
+      None => {
+        let Some(prepared) = self.prepare_fold(
+          index_splitting_info,
+          entries_len,
+          &flattened_entry_modules,
+          used_symbol_refs_builder,
+        ) else {
+          return;
+        };
+        prepared
+      }
+    };
+    let PreparedFold {
+      mut atoms,
+      module_to_atom_idx,
+      atom_dependencies,
+      mut reduced_bits_by_atom,
+      dynamic_entry_modules_by_entry,
+    } = prepared;
     // Indexed by entry bit, so `ReducedChunkGraph` can pair each facade chunk with its entry
     // module's host atom.
     let host_atom_by_entry_bit: Vec<Option<usize>> =
       flattened_entry_modules.iter().map(|&module_idx| module_to_atom_idx[module_idx]).collect();
 
-    let static_dependency_atoms_by_entry = self.compute_static_dependency_atoms_by_entry(
-      entries_len as usize,
-      &atoms,
-      &atom_dependencies.reachability,
-      &module_to_atom_idx,
-    );
-    let already_loaded_atoms_by_entry = Self::compute_already_loaded_atoms_by_entry(
-      &static_dependency_atoms_by_entry,
-      dynamically_dependent_entries_by_dynamic_entry,
-      &dynamic_imports_by_entry,
-      &dynamic_entry_indices,
-      atoms.len(),
-    );
-
+    let manual_group_by_atom: Vec<Option<usize>> =
+      atoms.iter().map(|atom| atom.manual_group).collect();
     let mut reduced_chunk_graph = ReducedChunkGraph::new(
       atoms.iter().map(|atom| &atom.dependent_entries),
-      &atom_dependencies.cycle,
+      &atom_dependencies,
       &host_atom_by_entry_bit,
+      &manual_group_by_atom,
     );
     let mut changed = false;
     let mut rejected_moves = vec![];
-    // Manual code splitting places its modules after this pass, so the cycle graph does not see
-    // the chunks of its groups. A retry can then fold a dependency of a group into a chunk that
-    // imports the group (`issues/9225`).
+    // With manual groups, a rejected move is not retried (`issues/9225`).
     let retries = !self.options.has_manual_code_splitting_groups();
     // A move that can cost a facade file waits for `keep_inlinable_dynamic_entry_atoms_shared`.
     let waits_for_facade_check = |atom: &ChunkAtom| {
@@ -165,25 +179,24 @@ impl GenerateStage<'_> {
         && self.prefers_inline_with_dynamic_entries(&atom.modules)
     };
     for (atom_idx, atom) in atoms.iter_mut().enumerate() {
-      let original_dependent_entries = atom.dependent_entries.clone();
-      let dependent_entries = atom.dependent_entries.index_of_one().collect::<Vec<_>>();
-      let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
-      for entry_idx in dependent_entries {
-        if already_loaded_atoms_by_entry[entry_idx as usize].has_bit(atom_bit) {
-          atom.dependent_entries.clear_bit(entry_idx);
-        }
-      }
-      let action = if atom.dependent_entries == original_dependent_entries {
-        ReducedEntriesAction::Avoid
-      } else {
-        self.can_use_reduced_dependent_entries(
-          atom,
-          &original_dependent_entries,
-          &atom.dependent_entries,
-          chunk_graph,
-          &dynamic_entry_modules_by_entry,
-        )
+      let Some(reduced) = reduced_bits_by_atom[atom_idx].take() else {
+        continue;
       };
+      // A group takes the module wherever its bits put it, so the move changes no chunk and needs
+      // no check. The plan already counted the module with these bits.
+      if atom.manual_group.is_some() {
+        atom.dependent_entries = reduced;
+        changed = true;
+        continue;
+      }
+      let original_dependent_entries = std::mem::replace(&mut atom.dependent_entries, reduced);
+      let action = self.can_use_reduced_dependent_entries(
+        atom,
+        &original_dependent_entries,
+        &atom.dependent_entries,
+        chunk_graph,
+        &dynamic_entry_modules_by_entry,
+      );
       if matches!(action, ReducedEntriesAction::Avoid) {
         atom.dependent_entries = original_dependent_entries;
       } else if !waits_for_facade_check(atom)
@@ -218,12 +231,22 @@ impl GenerateStage<'_> {
       );
     }
 
-    if !changed {
+    // With a plan, the bits already hold the moves of `fold_without_groups`, which this fold can
+    // decide differently.
+    if !changed && !is_planned {
       debug_assert!(namespace_extractions.is_empty());
       return;
     }
 
     for atom in atoms {
+      // The modules of an atom share their bits.
+      if atom
+        .modules
+        .first()
+        .is_none_or(|&module_idx| index_splitting_info[module_idx].bits == atom.dependent_entries)
+      {
+        continue;
+      }
       let share_count = atom.dependent_entries.bit_count();
       for module_idx in atom.modules {
         index_splitting_info[module_idx].bits = atom.dependent_entries.clone();
@@ -669,66 +692,84 @@ impl GenerateStage<'_> {
     flattened_entry_modules: &[ModuleIdx],
     used_symbol_refs_builder: &UsedSymbolRefsBuilder,
   ) -> AtomDependencyGraphs {
-    let strict_execution_order = self.options.is_strict_execution_order_enabled();
-
     let mut reachability = Vec::with_capacity(atoms.len());
     let mut cycle = Vec::with_capacity(atoms.len());
     for (atom_idx, atom) in atoms.iter().enumerate() {
-      let mut reachability_deps = FxHashSet::default();
-      let mut cycle_deps = FxHashSet::default();
-      let add = |dep_module_idx: ModuleIdx, dependencies: &mut FxHashSet<usize>| {
-        if let Some(dep_atom_idx) = module_to_atom_idx[dep_module_idx]
-          && dep_atom_idx != atom_idx
-        {
-          dependencies.insert(dep_atom_idx);
-        }
-      };
-      for &module_idx in &atom.modules {
-        if strict_execution_order {
-          // Strict lowering can turn linked import records back into `init_*` imports.
-          for &dep_module_idx in &self.link_output.metas[module_idx].dependencies {
-            add(dep_module_idx, &mut reachability_deps);
-            add(dep_module_idx, &mut cycle_deps);
-          }
-          continue;
-        }
-        for dep_module_idx in self.predicted_static_import_targets(module_idx) {
+      let (reachability_deps, cycle_deps) = self.atom_dependencies_of(
+        atom_idx,
+        atom,
+        module_to_atom_idx,
+        flattened_entry_modules,
+        used_symbol_refs_builder,
+      );
+      reachability.push(reachability_deps);
+      cycle.push(cycle_deps);
+    }
+    AtomDependencyGraphs { reachability, cycle }
+  }
+
+  /// The `reachability` and `cycle` edges of one atom. See `compute_atom_dependencies`.
+  fn atom_dependencies_of(
+    &self,
+    atom_idx: usize,
+    atom: &ChunkAtom,
+    module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
+    flattened_entry_modules: &[ModuleIdx],
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+  ) -> (Vec<usize>, Vec<usize>) {
+    let strict_execution_order = self.options.is_strict_execution_order_enabled();
+    let mut reachability_deps = FxHashSet::default();
+    let mut cycle_deps = FxHashSet::default();
+    let add = |dep_module_idx: ModuleIdx, dependencies: &mut FxHashSet<usize>| {
+      if let Some(dep_atom_idx) = module_to_atom_idx[dep_module_idx]
+        && dep_atom_idx != atom_idx
+      {
+        dependencies.insert(dep_atom_idx);
+      }
+    };
+    for &module_idx in &atom.modules {
+      if strict_execution_order {
+        // Strict lowering can turn linked import records back into `init_*` imports.
+        for &dep_module_idx in &self.link_output.metas[module_idx].dependencies {
           add(dep_module_idx, &mut reachability_deps);
           add(dep_module_idx, &mut cycle_deps);
         }
+        continue;
+      }
+      for dep_module_idx in self.predicted_static_import_targets(module_idx) {
+        add(dep_module_idx, &mut reachability_deps);
+        add(dep_module_idx, &mut cycle_deps);
+      }
 
+      let mut service_targets = vec![];
+      self.entry_export_service_targets(
+        module_idx,
+        used_symbol_refs_builder.view(),
+        true,
+        &mut service_targets,
+      );
+      for dep_module_idx in service_targets {
+        add(dep_module_idx, &mut cycle_deps);
+      }
+
+      let entry_hosted_by_own_chunk = atom.dependent_entries.bit_count() == 1
+        && atom.dependent_entries.index_of_one().next().is_some_and(|entry_bit| {
+          flattened_entry_modules.get(entry_bit as usize) == Some(&module_idx)
+        });
+      if entry_hosted_by_own_chunk {
         let mut service_targets = vec![];
         self.entry_export_service_targets(
           module_idx,
           used_symbol_refs_builder.view(),
-          true,
+          false,
           &mut service_targets,
         );
         for dep_module_idx in service_targets {
-          add(dep_module_idx, &mut cycle_deps);
-        }
-
-        let entry_hosted_by_own_chunk = atom.dependent_entries.bit_count() == 1
-          && atom.dependent_entries.index_of_one().next().is_some_and(|entry_bit| {
-            flattened_entry_modules.get(entry_bit as usize) == Some(&module_idx)
-          });
-        if entry_hosted_by_own_chunk {
-          let mut service_targets = vec![];
-          self.entry_export_service_targets(
-            module_idx,
-            used_symbol_refs_builder.view(),
-            false,
-            &mut service_targets,
-          );
-          for dep_module_idx in service_targets {
-            add(dep_module_idx, &mut reachability_deps);
-          }
+          add(dep_module_idx, &mut reachability_deps);
         }
       }
-      reachability.push(reachability_deps.into_iter().collect());
-      cycle.push(cycle_deps.into_iter().collect());
     }
-    AtomDependencyGraphs { reachability, cycle }
+    (reachability_deps.into_iter().collect(), cycle_deps.into_iter().collect())
   }
 
   /// Returns the targets that `compute_cross_chunk_links` will import for this module. Transitive
@@ -1025,13 +1066,236 @@ impl GenerateStage<'_> {
         std::collections::hash_map::Entry::Occupied(occupied) => *occupied.get(),
         std::collections::hash_map::Entry::Vacant(vacant) => {
           let atom_idx = atoms.len();
-          atoms.push(ChunkAtom { modules: vec![], dependent_entries: bits.clone() });
+          atoms.push(ChunkAtom {
+            modules: vec![],
+            dependent_entries: bits.clone(),
+            manual_group: None,
+          });
           *vacant.insert(atom_idx)
         }
       };
       atoms[atom_idx].modules.push(normal_module.idx);
     }
     atoms
+  }
+
+  /// The atoms, their cycle graph and their reduced bits, as the fold computes them before its
+  /// moves. `None` when the fold has nothing to do.
+  fn prepare_fold(
+    &self,
+    index_splitting_info: &IndexSplittingInfo,
+    entries_len: u32,
+    flattened_entry_modules: &[ModuleIdx],
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+  ) -> Option<PreparedFold> {
+    let mut analysis = self.analyze_dynamic_entries(index_splitting_info, entries_len);
+    if analysis.dynamic_entry_indices.is_empty() {
+      return None;
+    }
+    let atoms = self.group_modules_by_dependent_entries(index_splitting_info);
+    if atoms.is_empty() {
+      return None;
+    }
+    let module_to_atom_idx = self.compute_module_to_atom_idx(&atoms);
+    let AtomDependencyGraphs { reachability, cycle } = self.compute_atom_dependencies(
+      &atoms,
+      &module_to_atom_idx,
+      flattened_entry_modules,
+      used_symbol_refs_builder,
+    );
+    let dynamic_entry_modules_by_entry =
+      std::mem::take(&mut analysis.dynamic_entry_modules_by_entry);
+    let reduced_bits_by_atom =
+      self.reduced_bits_by_atom(&atoms, &reachability, &module_to_atom_idx, analysis, entries_len);
+    Some(PreparedFold {
+      atoms,
+      module_to_atom_idx,
+      atom_dependencies: cycle,
+      reduced_bits_by_atom,
+      dynamic_entry_modules_by_entry,
+    })
+  }
+
+  /// Runs the fold as it runs when the manual groups are decided after it, so that the groups can
+  /// be planned on the bits it gives, and writes those bits. With groups, the fold retries no move,
+  /// so one pass in module order gives the same moves. `optimize_dynamic_entry_bits` then folds
+  /// against the planned group chunks, starting from what this computed.
+  pub(super) fn fold_without_groups(
+    &self,
+    index_splitting_info: &mut IndexSplittingInfo,
+    chunk_graph: &ChunkGraph,
+    entries_len: u32,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+  ) -> Option<FoldWithoutGroups> {
+    let flattened_entry_modules = self.flattened_entry_modules();
+    let mut prepared = self.prepare_fold(
+      index_splitting_info,
+      entries_len,
+      &flattened_entry_modules,
+      used_symbol_refs_builder,
+    )?;
+    let host_atom_by_entry_bit: Vec<Option<usize>> = flattened_entry_modules
+      .iter()
+      .map(|&module_idx| prepared.module_to_atom_idx[module_idx])
+      .collect();
+    let mut reduced_chunk_graph = ReducedChunkGraph::new(
+      prepared.atoms.iter().map(|atom| &atom.dependent_entries),
+      &prepared.atom_dependencies,
+      &host_atom_by_entry_bit,
+      &[],
+    );
+    let mut moved = vec![false; prepared.atoms.len()];
+    for (atom_idx, atom) in prepared.atoms.iter().enumerate() {
+      let Some(reduced) = &prepared.reduced_bits_by_atom[atom_idx] else {
+        continue;
+      };
+      let action = self.can_use_reduced_dependent_entries(
+        atom,
+        &atom.dependent_entries,
+        reduced,
+        chunk_graph,
+        &prepared.dynamic_entry_modules_by_entry,
+      );
+      if matches!(action, ReducedEntriesAction::Avoid) {
+        prepared.reduced_bits_by_atom[atom_idx] = None;
+        continue;
+      }
+      if reduced_chunk_graph.try_move(atom_idx, reduced) {
+        moved[atom_idx] = true;
+        let share_count = reduced.bit_count();
+        for &module_idx in &atom.modules {
+          index_splitting_info[module_idx].bits = reduced.clone();
+          index_splitting_info[module_idx].share_count = share_count;
+        }
+      }
+    }
+    Some(FoldWithoutGroups { prepared, moved })
+  }
+
+  /// Splits the atoms of `fold_without_groups` by the planned group chunks. The part of an atom
+  /// outside every group chunk keeps the place of the atom, because a move can need an earlier
+  /// move to stay acyclic. A part in a group chunk gets the bits that the plan saw, and the other
+  /// part tries the same move. Only the split atoms and the atoms that import them get new edges.
+  fn split_atoms_for_plan(
+    &self,
+    fold: FoldWithoutGroups,
+    plan: &ManualGroupPlan,
+    flattened_entry_modules: &[ModuleIdx],
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+  ) -> PreparedFold {
+    let FoldWithoutGroups { mut prepared, moved } = fold;
+    let chunk_by_module = plan.chunk_by_module(self.link_output.module_table.modules.len());
+    let atom_count = prepared.atoms.len();
+    let mut origin: Vec<usize> = (0..atom_count).collect();
+    let mut split = FxHashSet::default();
+    for atom_idx in 0..atom_count {
+      let atom = &mut prepared.atoms[atom_idx];
+      if atom.modules.iter().all(|&module_idx| chunk_by_module[module_idx].is_none()) {
+        continue;
+      }
+      let mut parts: FxIndexMap<Option<usize>, Vec<ModuleIdx>> = FxIndexMap::default();
+      for &module_idx in &atom.modules {
+        parts.entry(chunk_by_module[module_idx]).or_default().push(module_idx);
+      }
+      let (manual_group, modules) = match parts.shift_remove(&None) {
+        Some(modules) => (None, modules),
+        None => parts.shift_remove_index(0).expect("a grouped atom has a part"),
+      };
+      atom.manual_group = manual_group;
+      atom.modules = modules;
+      if parts.is_empty() {
+        continue;
+      }
+      split.insert(atom_idx);
+      let dependent_entries = atom.dependent_entries.clone();
+      for (manual_group, modules) in parts {
+        let part_idx = prepared.atoms.len();
+        for &module_idx in &modules {
+          prepared.module_to_atom_idx[module_idx] = Some(part_idx);
+        }
+        prepared.atoms.push(ChunkAtom {
+          modules,
+          dependent_entries: dependent_entries.clone(),
+          manual_group,
+        });
+        origin.push(atom_idx);
+        split.insert(part_idx);
+      }
+    }
+
+    if !split.is_empty() {
+      let mut stale: Vec<usize> = (0..atom_count)
+        .filter(|atom_idx| {
+          split.contains(atom_idx)
+            || prepared.atom_dependencies[*atom_idx]
+              .iter()
+              .any(|dependency| split.contains(dependency))
+        })
+        .collect();
+      stale.extend(atom_count..prepared.atoms.len());
+      prepared.atom_dependencies.resize_with(prepared.atoms.len(), Vec::new);
+      for atom_idx in stale {
+        prepared.atom_dependencies[atom_idx] = self
+          .atom_dependencies_of(
+            atom_idx,
+            &prepared.atoms[atom_idx],
+            &prepared.module_to_atom_idx,
+            flattened_entry_modules,
+            used_symbol_refs_builder,
+          )
+          .1;
+      }
+    }
+
+    prepared.reduced_bits_by_atom = prepared
+      .atoms
+      .iter()
+      .zip(&origin)
+      .map(|(atom, &origin)| {
+        let reduced = &prepared.reduced_bits_by_atom[origin];
+        if atom.manual_group.is_some() && !moved[origin] { None } else { reduced.clone() }
+      })
+      .collect();
+    prepared
+  }
+
+  /// Per atom, its bits without the dynamic entries whose importers already load it, or `None`
+  /// when no entry drops out.
+  fn reduced_bits_by_atom(
+    &self,
+    atoms: &[ChunkAtom],
+    reachability: &[Vec<usize>],
+    module_to_atom_idx: &IndexVec<ModuleIdx, Option<usize>>,
+    analysis: DynamicEntryAnalysis,
+    entries_len: u32,
+  ) -> Vec<Option<BitSet>> {
+    let static_dependency_atoms_by_entry = self.compute_static_dependency_atoms_by_entry(
+      entries_len as usize,
+      atoms,
+      reachability,
+      module_to_atom_idx,
+    );
+    let already_loaded_atoms_by_entry = Self::compute_already_loaded_atoms_by_entry(
+      &static_dependency_atoms_by_entry,
+      analysis.dynamically_dependent_entries_by_dynamic_entry,
+      &analysis.dynamic_imports_by_entry,
+      &analysis.dynamic_entry_indices,
+      atoms.len(),
+    );
+    atoms
+      .iter()
+      .enumerate()
+      .map(|(atom_idx, atom)| {
+        let atom_bit: u32 = atom_idx.try_into().expect("Too many atoms, u32 overflowed.");
+        let mut reduced = atom.dependent_entries.clone();
+        for entry_idx in atom.dependent_entries.index_of_one() {
+          if already_loaded_atoms_by_entry[entry_idx as usize].has_bit(atom_bit) {
+            reduced.clear_bit(entry_idx);
+          }
+        }
+        (reduced != atom.dependent_entries).then_some(reduced)
+      })
+      .collect()
   }
 
   fn compute_static_dependency_atoms_by_entry(

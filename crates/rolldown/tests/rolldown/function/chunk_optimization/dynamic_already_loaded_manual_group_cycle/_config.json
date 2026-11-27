@@ -1,0 +1,16 @@
+{
+  "_comment": "The `vendor` group takes `vendor.js`, which `main.js` imports and which imports `a.js`. A fold of `a.js` into `main.js` would make the group chunk and `main.js` import each other, and `vendor.js` would read `token` before `a.js` declares it, so `a.js` stays a file.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "vendor",
+          "test": "[\\\\/]vendor\\.js$",
+          "includeDependenciesRecursively": false
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "_comment": "`main.js` loads every module under `core/`, and each lazy route imports two of them. The fold drops the routes from the bits of the `core/` modules, so the `entriesAware` group makes one chunk for `main.js`, not one per set of routes.",
+  "config": {
+    "input": [{ "name": "main", "import": "./main.js" }],
+    "codeSplitting": {
+      "groups": [{ "name": "vendor", "test": "[\\\\/]core[\\\\/]", "entriesAware": true }]
+    }
+  }
+}

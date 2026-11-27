@@ -1046,9 +1046,11 @@ way), the patch would start with
     hooks, for the browser and for the module runner
   - `packages/vite/src/node/server/bundledDev.ts` — push broadcast with
     `seq`, reload requests, the Reload body; `renderPatch` and
-    `triggerLazyBundling` fill in `g` when the query has none
+    `triggerLazyBundling` resolve a have-set token and fill in `g` when
+    the query has none
   - `packages/vite/src/node/server/middlewares/bundledDevPayload.ts` — the
-    patch route, the payload map route and its store
-    (`PayloadMapStore`); `triggerLazyBundling.ts` — the lazy
+    have-set POST route (`bundledDevHaveMiddleware`) and its token store
+    (`HaveQueryStore`), the patch route, the payload map route and its
+    store (`PayloadMapStore`); `triggerLazyBundling.ts` — the lazy
     route; `packages/vite/src/node/ssr/fetchModule.ts` serves patches and
     lazy chunks to the module runner

@@ -182,6 +182,10 @@ export class DevEngine {
    * @param query - The query string of the client's patch request,
    * `s=<epoch>&g=<gen>&u=<set>&e=<set>&f=<set>`. Each set is `b` and a
    * base64url bitset, or `d` and base64url gap varints. Other keys are ignored.
+   * A query longer than the runtime's `maxQueryLength` reaches the dev server
+   * first as the body of `POST <haveUrl()>`, and the request then carries only
+   * `t=<token>&n=<nonce>`. The dev server stores the body and passes the stored
+   * query here, not the token.
    * @returns The patch, or `{ type: 'Reload' }` when the client must reload (it
    * belongs to another engine, its generation is too old to catch up, or the
    * query is bad). With `sourcemap: true` or `'hidden'`, `sourcemap` is the map
@@ -214,7 +218,8 @@ export class DevEngine {
    *
    * @param moduleId - The absolute file path of the module to compile
    * @param query - The query string of the client's lazy request, which
-   * describes what the client holds in the format of {@link renderPatch}
+   * describes what the client holds in the format of {@link renderPatch}. A
+   * token is resolved first, as for {@link renderPatch}
    * @returns The compiled chunk, or `{ type: 'Reload' }` when the client must
    * reload. `code` and `sourcemap` follow the rules of {@link renderPatch}.
    * @throws The plugin's own error, since a lazy compile runs the full pipeline and is

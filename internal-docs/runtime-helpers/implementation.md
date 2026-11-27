@@ -8,7 +8,7 @@ Reference: https://github.com/rolldown/rolldown/issues/9063
 
 ## `__requireESM`: shared wrappers for bundled ESM requires
 
-Used require results for bundled ES modules with a fixed export set go through this helper unless the module exports `module.exports`. Linking records the decision with the helper dependency before chunking can rewrite dynamic export flags. A runtime WeakMap uses the namespace object as its key. When WeakMap is absent, conversion creates a fresh wrapper.
+Used require results for bundled ES modules with a fixed export set go through this helper unless the module exports `module.exports`. Linking records the decision with the helper dependency before chunking can rewrite dynamic export flags. A runtime WeakMap uses the namespace object as its key.
 
 ## `__exportAll`: namespace objects with the native shape
 

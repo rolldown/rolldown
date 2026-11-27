@@ -28,6 +28,7 @@ Attributes are parsed per import record, travel through resolution as `ResolvedI
 
 ## Plugin context
 
+- `builtin:vite-dynamic-import-vars` rewrites variable dynamic imports into `import.meta.glob` calls. It forwards the selected `with` or `assert` object to the glob plugin and reports deprecation and invalid-attribute warnings using spans from the original import. The glob plugin omits invalid entries and forwards valid attributes to resolution.
 - `this.resolve(source, importer, { attributes })` — `importer` may be a composed id (parsed back for `importerRawId` / `importerAttributes`) or `{ rawId, attributes }`; the result is `{ id: rawId, attributes, ... }`.
 - `this.load({ id })` — `id` may be composed or `{ rawId, attributes }`, and is the only source of the attributes, as in Rollup 5. A `this.resolve` result passed as is loads the module without attributes, so a plugin has to pass `{ rawId: resolved.id, attributes: resolved.attributes }`. The Rust side (`NativePluginContext::load`) finalizes a `ResolvedId` the same way resolution does and waits for that id. The JS side builds the same id with `PluginContextData.toModuleId`.
 - `resolveDynamicImport` gets the same `attributes`, `importerRawId` and `importerAttributes` as `resolveId`, and the `attributes` it returns apply the same way.

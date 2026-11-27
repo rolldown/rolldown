@@ -7,7 +7,7 @@ use oxc::{
   ast_visit::{VisitJs, walk_js},
   span::{GetSpan, Span},
 };
-use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
+use rolldown_error::{BuildDiagnostic, EventKindSwitcher, InvalidImportAttributeKind};
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_plugin_utils::to_string_literal;
 use rolldown_std_utils::relative_path_as_js_specifier;
@@ -53,15 +53,24 @@ fn format_glob_options<'a, 'b: 'a>(
 pub struct ImportOptions {
   attributes_span: Option<Span>,
   assert_span: Option<Span>,
+  invalid_attributes: Vec<(Span, InvalidImportAttributeKind)>,
 }
 
-fn import_options(options: Option<&Expression<'_>>) -> ImportOptions {
-  let Some(Expression::ObjectExpression(options)) = options.map(Expression::get_inner_expression)
-  else {
-    return ImportOptions::default();
+fn import_options(options: Option<&Expression<'_>>, validate: bool) -> ImportOptions {
+  let mut result = ImportOptions::default();
+  let Some(options) = options else {
+    return result;
+  };
+  let Expression::ObjectExpression(object) = options.get_inner_expression() else {
+    if validate {
+      result
+        .invalid_attributes
+        .push((options.span(), InvalidImportAttributeKind::DynamicImportOptions));
+    }
+    return result;
   };
   let find_property = |name: &str| {
-    options
+    object
       .properties
       .iter()
       .rev()
@@ -70,12 +79,36 @@ fn import_options(options: Option<&Expression<'_>>) -> ImportOptions {
   };
   let with = find_property("with");
   let assertion = if with.is_none() { find_property("assert") } else { None };
-  let attributes = with.or(assertion);
-  let attributes_span = match attributes.map(|property| property.value.get_inner_expression()) {
-    Some(Expression::ObjectExpression(attributes)) => Some(attributes.span),
-    _ => None,
+  result.assert_span = assertion.map(|property| property.key.span());
+  let Some(attributes) = with.or(assertion) else {
+    return result;
   };
-  ImportOptions { attributes_span, assert_span: assertion.map(|property| property.key.span()) }
+  let Expression::ObjectExpression(object) = attributes.value.get_inner_expression() else {
+    if validate {
+      result
+        .invalid_attributes
+        .push((attributes.value.span(), InvalidImportAttributeKind::DynamicImportOptions));
+    }
+    return result;
+  };
+  result.attributes_span = Some(object.span);
+
+  // Validate against the glob plugin's attribute rules while the original spans are available.
+  // See internal-docs/import-attributes/implementation.md.
+  if validate {
+    for property in &object.properties {
+      let valid = property.as_property().is_some_and(|property| {
+        property.key.literal_name().is_some()
+          && matches!(property.value.get_inner_expression(), Expression::StringLiteral(_))
+      });
+      if !valid {
+        result
+          .invalid_attributes
+          .push((property.span(), InvalidImportAttributeKind::DynamicImportAttribute));
+      }
+    }
+  }
+  result
 }
 
 /// A variable dynamic import whose glob needs the resolver, copied out of the AST.
@@ -150,7 +183,11 @@ impl DynamicImportVarsVisit<'_> {
 
       // Oxc turns CRLF into LF in `raw`, so take the length from the span.
       let first_quasi_len = source.quasis[0].span.size() as usize;
-      let options = import_options(import_expr.options.as_ref());
+      let bundler_options = self.ctx.options();
+      let validate = bundler_options.on_log.is_some()
+        && bundler_options.experimental.is_import_attributes_enabled()
+        && bundler_options.checks.contains(EventKindSwitcher::InvalidImportAttribute);
+      let options = import_options(import_expr.options.as_ref(), validate);
       if glob.as_bytes()[0] != b'.' && glob.as_bytes()[0] != b'/' {
         self.async_imports.push(AsyncImport {
           glob: glob.into_owned(),
@@ -254,6 +291,16 @@ impl DynamicImportVarsVisit<'_> {
       .get_or_insert_with(|| MagicString::new(self.source_text))
       .update(span.start, span.end, replacement)
       .expect("update should not fail in dynamic import vars plugin");
+
+    self.warnings.extend(options.invalid_attributes.iter().map(|&(span, kind)| {
+      BuildDiagnostic::invalid_import_attribute(
+        self.id.to_string(),
+        self.source_text.clone(),
+        span,
+        kind,
+      )
+      .with_severity_warning()
+    }));
 
     self.need_helper = true;
   }

@@ -52,7 +52,7 @@ impl Bundler {
     Ok(())
   }
 
-  /// Close the bundler, calling the `closeBundle` plugin hook.
+  /// Close the bundler and its last bundle handle, if present.
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn close(&mut self) -> BuildResult<()> {
     if self.closed {

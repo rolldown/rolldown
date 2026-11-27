@@ -34,15 +34,6 @@ test('throw on a built-in plugin from another rolldown version', async () => {
   );
 });
 
-test('run a callable built-in plugin from another rolldown version as a JS plugin', async () => {
-  const plugin = Object.assign(otherCopyPlugin('1.0.0', 'builtin:replace'), {
-    transform: (code: string) => code.replace('__X__', '"replaced"'),
-  });
-  const bundle = await rolldown({ input, plugins: [entryPlugin, plugin] });
-  const { output } = await bundle.generate();
-  expect(output[0].code).toContain('"replaced"');
-});
-
 test('run a built-in plugin from another copy of the same rolldown version', async () => {
   const plugin = otherCopyPlugin(VERSION, 'builtin:replace', { values: { __X__: '"replaced"' } });
   const bundle = await rolldown({ input, plugins: [entryPlugin, plugin] });

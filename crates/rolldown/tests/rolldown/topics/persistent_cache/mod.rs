@@ -1229,3 +1229,99 @@ async fn builtin_plugins_keep_modules_cacheable() {
     assert_eq!(calls.take(), Vec::<String>::new(), "{name}: no hook of a saved module runs again");
   }
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_renamed_resolve_target_is_resolved_again() {
+  let project = Project::new(&[
+    ("main.js", "import { b } from './b';\nconsole.log(b);\n"),
+    ("b.js", "export const b = 'js';\n"),
+  ]);
+  build(project.options(Some(project.cache())), vec![]).await;
+  project.remove("b.js");
+  project.write("b.ts", "export const b: string = 'ts';\n");
+  // `main.js` saved `./b` as `b.js`, which no longer exists.
+  let warm = build(project.options(Some(project.cache())), vec![]).await;
+  let clean = build(project.options(None), vec![]).await;
+  assert_eq!(warm.files, clean.files);
+}
+
+/// As in watch mode: the next build of one bundler is a full scan, which reads saved results.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_renamed_resolve_target_is_resolved_again_in_the_next_build_of_one_bundler() {
+  let project = Project::new(&[
+    ("main.js", "import { b } from './b';\nconsole.log(b);\n"),
+    ("b.js", "export const b = 'js';\n"),
+  ]);
+  let mut bundler = Bundler::with_plugins(project.options(Some(project.cache())), vec![]).unwrap();
+  bundler.generate().await.unwrap();
+  project.remove("b.js");
+  project.write("b.ts", "export const b: string = 'ts';\n");
+  bundler.clear_resolver_cache();
+  let output = bundler.generate().await.expect("the build should resolve `./b` again");
+  bundler.close().await.unwrap();
+  let code: String =
+    output.assets.iter().map(|asset| String::from_utf8_lossy(asset.content_as_bytes())).collect();
+  assert!(code.contains("\"ts\""), "{code}");
+}
+
+/// Resolves `virtual-target` to a path with no file, and loads that path.
+#[derive(Debug)]
+struct PathWithoutFile {
+  path: String,
+}
+
+impl Plugin for PathWithoutFile {
+  fn name(&self) -> Cow<'static, str> {
+    "path-without-file".into()
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::ResolveId | HookUsage::Load
+  }
+
+  async fn resolve_id(
+    &self,
+    _ctx: &PluginContext,
+    args: &HookResolveIdArgs<'_>,
+  ) -> HookResolveIdReturn {
+    Ok(
+      (args.specifier == "virtual-target")
+        .then(|| HookResolveIdOutput { id: self.path.as_str().into(), ..Default::default() }),
+    )
+  }
+
+  fn resolve_id_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
+  }
+
+  async fn load(&self, _ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+    Ok((args.id == self.path).then(|| HookLoadOutput {
+      code: "export const v = 'generated';\n".into(),
+      ..Default::default()
+    }))
+  }
+
+  fn load_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
+  }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_resolve_target_that_was_never_a_file_keeps_the_saved_result() {
+  let project =
+    Project::new(&[("main.js", "import { v } from 'virtual-target';\nconsole.log(v);\n")]);
+  let (recorder, calls) = Recorder::new("p", Some(true));
+  let with_target = || {
+    let mut list = plugins(&[&recorder]);
+    list.push(PathWithoutFile::new_shared(PathWithoutFile {
+      path: project.path("generated.js").to_string_lossy().into_owned(),
+    }));
+    list
+  };
+  build(project.options(Some(project.cache())), with_target()).await;
+  calls.take();
+  build(project.options(Some(project.cache())), with_target()).await;
+  let main_calls: Vec<String> =
+    calls.take().into_iter().filter(|call| call.contains("main.js")).collect();
+  assert_eq!(main_calls, Vec::<String>::new(), "`main.js` reuses its saved result");
+}

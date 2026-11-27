@@ -414,8 +414,11 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     let saved = if cache.reads_saved_results() {
       cache.lookup(&self.ctx.fs, key).await.and_then(|mut saved| {
         // A saved result is reused as a whole or not at all.
-        let resolved =
-          restore_resolved_ids(std::mem::take(&mut saved.resolved), &self.ctx.resolver)?;
+        let resolved = restore_resolved_ids(
+          std::mem::take(&mut saved.resolved),
+          &self.ctx.resolver,
+          &self.ctx.fs,
+        )?;
         Some((saved, resolved))
       })
     } else {
@@ -463,7 +466,7 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     key: u128,
     recorder: &ModuleCacheRecorder,
     state: StateAfterTransform,
-    resolved: Vec<SavedResolve>,
+    mut resolved: Vec<SavedResolve>,
   ) {
     if !recorder.is_cacheable() {
       tracing::debug!(
@@ -493,6 +496,9 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
       .collect();
     if let Some(tsconfig_path) = self.governing_tsconfig() {
       dependencies.push(tsconfig_path.to_string_lossy().into_owned());
+    }
+    for saved in resolved.iter_mut().filter_map(|saved| saved.resolved.as_mut()) {
+      saved.is_file = saved.target_is_file(&self.ctx.fs);
     }
     let saved = SavedResult {
       source,

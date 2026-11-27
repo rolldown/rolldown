@@ -355,7 +355,9 @@ only when at least half of its data is expired.
   keys, so old data is not found. `maxAge` and segment merging in
   `CacheStore` are the only removals.
 - A saved result is reused as a whole or not at all: if a `package.json` that
-  its resolve results name cannot be read, the module runs its hooks.
+  its resolve results name cannot be read, or a resolved file that existed
+  when the result was saved is gone (`SavedResolvedId::is_file`), the module
+  runs its hooks.
 - When a build dependency changes while a bundler runs, the cache is off for
   that bundler: its options and plugins come from the old build dependency.
 - Any data that cannot be read or decoded is "not found". No cache error fails
@@ -366,7 +368,7 @@ only when at least half of its data is expired.
   result without a key for an import falls back to resolving it normally.
 - `SAVED_RESULT_FORMAT` in `saved_result.rs` grows with every change to the
   saved format, so a result in an older format is not found. Its value is
-  `3`.
+  `4`.
 
 ## Related
 

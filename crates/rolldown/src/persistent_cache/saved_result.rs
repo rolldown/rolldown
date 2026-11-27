@@ -7,6 +7,7 @@ use rolldown_common::{
   PackageJson, PluginIdx, PreserveEntrySignatures, ResolvedExternal, ResolvedId,
   SourcemapChainElement, StrOrBytes, side_effects::HookSideEffects,
 };
+use rolldown_fs::FileSystem;
 use rolldown_plugin::{__inner::infer_module_def_format, RecordedAction};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::url::clean_url;
@@ -14,7 +15,7 @@ use rolldown_utils::url::clean_url;
 use super::codec::{Decoder, Encoder};
 
 /// Bumped on every change to the encoding below. A saved result in another format is not found.
-pub const SAVED_RESULT_FORMAT: u32 = 3;
+pub const SAVED_RESULT_FORMAT: u32 = 4;
 
 /// What the persistent cache saves for a module: the state after `transform`, the resolve result
 /// of each import, and the actions of the skipped hooks that Rolldown does again on reuse.
@@ -62,6 +63,10 @@ pub struct SavedResolvedId {
   pub side_effects: Option<HookSideEffects>,
   pub is_external_without_side_effects: bool,
   pub js_meta: Option<Arc<JsModuleMeta>>,
+  /// `id` was the path of a file when the result was saved. A reuse checks that the file is
+  /// still there: without it, the import resolves to another module or to none. An id that was
+  /// not a file, such as one that a `load` hook makes, is not checked.
+  pub is_file: bool,
 }
 
 /// How to fill in `module_def_format` again, so that a change to the `type` field of
@@ -114,7 +119,15 @@ impl SavedResolvedId {
       side_effects: resolved_id.side_effects,
       is_external_without_side_effects: resolved_id.is_external_without_side_effects,
       js_meta: resolved_id.js_meta.clone(),
+      is_file: false,
     }
+  }
+
+  /// Whether the module of this resolution is loaded from a file that exists now. An external
+  /// module is not loaded, so it never counts.
+  pub fn target_is_file<Fs: FileSystem>(&self, fs: &Fs) -> bool {
+    !self.external.is_external()
+      && self.id.as_path().is_some_and(|path| matches!(fs.metadata(path), Ok(m) if m.is_file()))
   }
 }
 
@@ -398,6 +411,7 @@ fn write_saved_resolved_id(e: &mut Encoder, value: &SavedResolvedId) {
   e.opt(value.side_effects, write_hook_side_effects);
   e.bool(value.is_external_without_side_effects);
   e.opt(value.js_meta.as_deref(), write_js_meta);
+  e.bool(value.is_file);
 }
 
 fn read_saved_resolved_id(d: &mut Decoder) -> Option<SavedResolvedId> {
@@ -420,6 +434,7 @@ fn read_saved_resolved_id(d: &mut Decoder) -> Option<SavedResolvedId> {
     side_effects: d.opt(read_hook_side_effects)?,
     is_external_without_side_effects: d.bool()?,
     js_meta: d.opt(|d| read_js_meta(d).map(Arc::new))?,
+    is_file: d.bool()?,
   })
 }
 
@@ -666,6 +681,7 @@ mod tests {
           side_effects: Some(HookSideEffects::NoTreeshake),
           is_external_without_side_effects: false,
           js_meta: Some(Arc::new(resolved.clone())),
+          is_file: true,
         }),
       }],
       actions: vec![RecordedAction::RustModuleMeta {
@@ -686,6 +702,7 @@ mod tests {
     let restored = decoded.resolved[0].resolved.as_ref().expect("a resolve result");
     assert_eq!(restored.js_meta.as_deref(), Some(&resolved));
     assert_eq!(restored.side_effects, Some(HookSideEffects::NoTreeshake));
+    assert!(restored.is_file);
     assert_eq!(format!("{:?}", decoded.actions), format!("{:?}", saved.actions));
     assert_eq!(format!("{:?}", decoded.resolve_actions), format!("{:?}", saved.resolve_actions));
   }

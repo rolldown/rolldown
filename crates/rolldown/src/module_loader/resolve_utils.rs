@@ -130,16 +130,18 @@ impl<'a> DependencyCache<'a> {
 }
 
 /// Fills in the fields that saved resolve results do not hold. `None` when a `package.json` that
-/// one of them names cannot be read any more: then the whole saved result is not used.
+/// one of them names cannot be read any more, or when the file that one of them resolved to is
+/// gone: then the whole saved result is not used.
 pub fn restore_resolved_ids<Fs: FileSystem>(
   saved: Vec<SavedResolve>,
   resolver: &Resolver<Fs>,
+  fs: &Fs,
 ) -> Option<RestoredResolveMap> {
   saved
     .into_iter()
     .map(|saved| {
       let resolved_id = match saved.resolved {
-        Some(resolved) => Some(restore_resolved_id(resolved, resolver)?),
+        Some(resolved) => Some(restore_resolved_id(resolved, resolver, fs)?),
         None => None,
       };
       Some(((saved.specifier, saved.kind, saved.attributes), resolved_id))
@@ -150,7 +152,11 @@ pub fn restore_resolved_ids<Fs: FileSystem>(
 fn restore_resolved_id<Fs: FileSystem>(
   saved: SavedResolvedId,
   resolver: &Resolver<Fs>,
+  fs: &Fs,
 ) -> Option<ResolvedId> {
+  if saved.is_file && !saved.target_is_file(fs) {
+    return None;
+  }
   let package_json = match &saved.package_json_path {
     Some(path) => Some(resolver.try_get_package_json_or_create(Path::new(path)).ok()?),
     None => None,

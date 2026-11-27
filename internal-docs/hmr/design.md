@@ -763,11 +763,14 @@ number. So the keys are:
 The HMR stage fills the cache too. To drop the changed modules whose code
 did not change, it renders them again after the merge. With 32 changed
 modules or fewer, it renders them with sourcemaps and keeps the
-factories under the new stamp, so the first pull after the push renders
-nothing. A larger change set (a branch switch) would build many maps that
-no pull needs. These entries last until the task's rebuild. The rebuild
-reads the same files again and drops them, so a tab that pulls after the
-rebuild renders them once more.
+factories under the new stamp, so the first pull after the push does not
+render these modules again. Newly added modules, re-rendered importers and
+their unheld static deps still render on the first pull. A larger change
+set (a branch switch) would build many maps that no pull needs. These
+entries last until the next scan that reads the module again. With
+`rebuildStrategy: 'always'`, and in the task that recovers from a failed
+rebuild, that scan is the task's own rebuild, so a tab that pulls after it
+renders them once more.
 
 A scan that reads a module again can change it without a new stamp.
 Example: an edit adds two empty lines at the top of `a.js`. The code
@@ -781,6 +784,9 @@ So:
     `pending_rescans`
   - a partial build: its changed paths, `pending_rescans` and
     `pending_build_rescans`
+  - the lazy route scan (`scan_lazy_routes`): it reads again only the
+    proxies it lists, and drops nothing. No pull and no payload uses the
+    factory of a proxy, because `requestLazy` runs the real module.
 - These clear the whole cache:
   - a full scan, which reads every module again
   - `begin_hmr_full_reload`, which follows graph changes that no stamp

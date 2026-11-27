@@ -52,8 +52,9 @@ impl Source for CachedFactorySource {
 }
 
 /// Everything a pulled payload is made of. Two requests with the same key get the same code and
-/// sourcemap, as long as the factories they name stay in the cache. Every payload prepares its
-/// sourcemap for the same file name, so the name is not part of the key.
+/// sourcemap until a scan reads one of the named modules again (`remove`, `forget` and `clear`
+/// drop the payloads). Every payload prepares its sourcemap for the same file name, so the name is
+/// not part of the key.
 #[derive(Debug, PartialEq, Eq)]
 pub struct PayloadKey {
   /// The `G` of the payload's `beginPayload(G)` prelude.

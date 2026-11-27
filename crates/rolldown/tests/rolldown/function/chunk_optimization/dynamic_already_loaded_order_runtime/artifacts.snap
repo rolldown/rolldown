@@ -1,0 +1,67 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## e0.js
+
+```js
+import "./m4.js";
+// e0.js
+globalThis.orderRuntimeLog.push("e0");
+
+```
+
+## e2.js
+
+```js
+import "./m0.js";
+import "./m4.js";
+// e2.js
+globalThis.loadM3 = () => import("./m3.js").then((n) => n.t);
+globalThis.loadM0 = () => import("./m0.js").then((n) => n.t);
+
+```
+
+## m0.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+// m0.js
+var m0_exports = /* @__PURE__ */ __exportAll({ v: () => "m0" });
+globalThis.orderRuntimeLog.push("m0");
+globalThis.loadM4 = () => import("./m4.js").then((n) => n.t);
+export { m0_exports as t };
+
+```
+
+## m3.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+// m3.js
+var m3_exports = /* @__PURE__ */ __exportAll({ v: () => "m3" });
+globalThis.orderRuntimeLog.push("m3");
+export { m3_exports as t };
+
+```
+
+## m4.js
+
+```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+import "./m3.js";
+import "./m0.js";
+// m4.js
+var m4_exports = /* @__PURE__ */ __exportAll({ v: () => "m4" });
+export { m4_exports as t };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as t };
+
+```

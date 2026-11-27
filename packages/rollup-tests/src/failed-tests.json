@@ -29,6 +29,8 @@
   "rollup@chunking form@dynamic-import-chunking: Code splitting with dynamic import@generates es",
   "rollup@chunking form@dynamic-import-directory-name: names chunks of dynamically imported directories after the directory@generates cjs",
   "rollup@chunking form@dynamic-import-directory-name: names chunks of dynamically imported directories after the directory@generates es",
+  "rollup@chunking form@dynamic-import-inline-colouring: Handle dynamic imports that are part of a static graph@generates cjs",
+  "rollup@chunking form@dynamic-import-inline-colouring: Handle dynamic imports that are part of a static graph@generates es",
   "rollup@chunking form@dynamic-import-with-namespace: The all cases of tree-shaking for dynamic import with namespace@generates cjs",
   "rollup@chunking form@dynamic-import-with-namespace: The all cases of tree-shaking for dynamic import with namespace@generates es",
   "rollup@chunking form@dynamically-import-facaded-entry: uses existing entry facades for dynamic imports if present@generates cjs",

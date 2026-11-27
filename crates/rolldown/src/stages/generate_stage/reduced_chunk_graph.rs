@@ -1,6 +1,10 @@
+use oxc_index::IndexVec;
+use rolldown_common::{ModuleIdx, ModuleTable};
 use rolldown_utils::BitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
+
+use super::fold_execution_order::{EntryOrder, EntryOrders};
 
 /// The chunk graph that the current dependent-entry bits of the atoms produce.
 /// `optimize_dynamic_entry_bits` moves atoms to reduced bits, and the graph follows each move.
@@ -22,7 +26,8 @@ pub(super) struct ReducedChunkGraph<'a> {
   node_by_bits: FxHashMap<BitSet, usize>,
   node_by_atom: Vec<usize>,
   /// A node without atoms is not a chunk. It has no edges.
-  atom_count_by_node: Vec<usize>,
+  atoms_by_node: Vec<Vec<usize>>,
+  bits_by_node: Vec<BitSet>,
   /// The entry bit of a node whose bits hold only that bit. Such a node is that entry's chunk.
   facade_entry_bit_by_node: Vec<Option<usize>>,
   facade_node_by_entry_bit: Vec<Option<usize>>,
@@ -36,6 +41,346 @@ pub(super) struct ReducedChunkGraph<'a> {
   /// Per node, the `mark` of the last search that visited it.
   marks: Vec<u32>,
   mark: u32,
+  /// Set by `check_execution_order`.
+  execution_order: Option<AtomExecutionOrders<'a>>,
+  entry_orders: Option<EntryOrders<'a>>,
+  /// The atoms that import each external of `AtomExecutionOrders::externals`.
+  external_importers: FxHashMap<ModuleIdx, Vec<usize>>,
+  /// Per node, the externals of `AtomExecutionOrders::externals` that its atoms import, with the
+  /// number of its atoms that import each.
+  externals_by_node: Vec<FxHashMap<ModuleIdx, u32>>,
+  summaries: NodeOrderSummaries,
+  imported: NodeSet,
+}
+
+/// A set of nodes that a check fills and reads many times, kept between checks to save the
+/// allocation. `clear` costs nothing: a node is in the set when its mark is the current one.
+#[derive(Default)]
+struct NodeSet {
+  nodes: Vec<usize>,
+  marks: Vec<u32>,
+  mark: u32,
+}
+
+impl NodeSet {
+  fn clear(&mut self, node_count: usize) {
+    self.nodes.clear();
+    self.marks.resize(node_count, 0);
+    if self.mark == u32::MAX {
+      self.marks.fill(0);
+      self.mark = 0;
+    }
+    self.mark += 1;
+  }
+
+  fn insert(&mut self, node: usize) -> bool {
+    if self.marks[node] == self.mark {
+      return false;
+    }
+    self.marks[node] = self.mark;
+    self.nodes.push(node);
+    true
+  }
+
+  fn contains(&self, node: usize) -> bool {
+    self.marks.get(node).is_some_and(|&mark| mark == self.mark)
+  }
+}
+
+/// What the execution-order check reads. See `ReducedChunkGraph::check_execution_order`.
+pub(super) struct AtomExecutionOrders<'a> {
+  /// The under-approximated atom edges: imports the emitted chunks are certain to have.
+  pub(super) certain_dependencies: &'a [Vec<usize>],
+  /// The modules of each atom.
+  pub(super) modules: &'a [Vec<ModuleIdx>],
+  /// The modules of each atom whose position matters.
+  pub(super) order_sensitive: &'a [Vec<ModuleIdx>],
+  /// The externals whose position matters that each atom imports.
+  pub(super) externals: &'a [Vec<ModuleIdx>],
+  pub(super) module_to_atom_idx: &'a IndexVec<ModuleIdx, Option<usize>>,
+  pub(super) module_table: &'a ModuleTable,
+}
+
+/// What the execution-order check keeps about the atoms that a node held before the move being
+/// checked, so that a move costs about as much as its own atoms, not as all the atoms of the
+/// receiving node. The atoms of a node other than the receiving one do not change during a check,
+/// except in the nodes that the moved atoms left, whose spans and runs are dropped after each
+/// check.
+#[derive(Default)]
+struct NodeOrderSummaries {
+  /// Per node, its modules that matter, sorted by `exec_order`.
+  by_exec_order: Vec<Vec<(u32, ModuleIdx)>>,
+  /// The nodes whose body can run two modules that matter in an order that an entry does not run
+  /// them in. A group move checks each moved atom against the atoms that were there, not against
+  /// the other moved atoms. Elsewhere, the body runs the modules of `by_exec_order` in the order of
+  /// each entry, so a moved module only needs to be checked against its neighbors there.
+  unordered: FxHashSet<usize>,
+  /// Per node and entry bit, the positions of the node's modules in the entry.
+  spans: Vec<FxHashMap<usize, Span>>,
+  /// Per node and entry bit, a range of indices into `EntryOrder::order_sensitive` whose modules
+  /// all belong to the node.
+  owned_runs: FxHashMap<usize, FxHashMap<usize, (usize, usize)>>,
+}
+
+#[derive(Clone, Copy, Default)]
+struct Span {
+  /// The first position of a module.
+  first: Option<u32>,
+  /// The first and the last position of a module that matters.
+  first_order_sensitive: Option<u32>,
+  last_order_sensitive: Option<u32>,
+}
+
+impl Span {
+  fn add_atom(&mut self, orders: &AtomExecutionOrders<'_>, entry: &EntryOrder, atom_idx: usize) {
+    let positions = |modules: &[ModuleIdx]| -> Vec<u32> {
+      modules.iter().filter_map(|module_idx| entry.position.get(module_idx).copied()).collect()
+    };
+    if let Some(&first) = positions(&orders.modules[atom_idx]).iter().min() {
+      self.first = Some(self.first.map_or(first, |current| current.min(first)));
+    }
+    let order_sensitive = positions(&orders.order_sensitive[atom_idx]);
+    if let (Some(&first), Some(&last)) =
+      (order_sensitive.iter().min(), order_sensitive.iter().max())
+    {
+      self.first_order_sensitive =
+        Some(self.first_order_sensitive.map_or(first, |current| current.min(first)));
+      self.last_order_sensitive =
+        Some(self.last_order_sensitive.map_or(last, |current| current.max(last)));
+    }
+  }
+}
+
+/// An entry that runs the receiving node, with its bit.
+type CheckedEntry<'e> = (usize, &'e EntryOrder);
+
+/// What ran before an atom in its chunk before a move: the atoms it is certain to import, directly
+/// or not, and the externals that it and those atoms import.
+#[derive(Default)]
+struct LoadedBefore {
+  atoms: FxHashSet<usize>,
+  externals: FxHashSet<ModuleIdx>,
+}
+
+/// Whether an atom in the body of the receiving node runs after a module or an external that the
+/// node imports, directly or not, and that an entry runs after the atom. One that the atom is
+/// certain to import ran before it already. That is decided per atom, not per chunk: a chunk the
+/// atom imports can hold atoms that other moves put there, and those ran after it. The checked
+/// atoms are the moved ones against everything the node imports, and the ones that were there
+/// before against what the move adds to the imports.
+struct LateImportCheck<'c, 'a> {
+  orders: &'c AtomExecutionOrders<'a>,
+  entries: &'c [CheckedEntry<'c>],
+  checked: &'c [usize],
+  /// Per checked atom and entry, the first position of the atom's modules that matter.
+  earliest: Vec<Vec<Option<u32>>>,
+  loaded_before: Vec<Option<LoadedBefore>>,
+  /// Externals that the node imported before the move, which add nothing.
+  imported_externals: FxHashSet<ModuleIdx>,
+}
+
+impl<'c, 'a> LateImportCheck<'c, 'a> {
+  fn new(
+    orders: &'c AtomExecutionOrders<'a>,
+    entries: &'c [CheckedEntry<'c>],
+    checked: &'c [usize],
+  ) -> Self {
+    let earliest = checked
+      .iter()
+      .map(|&atom_idx| {
+        entries
+          .iter()
+          .map(|(_, entry)| {
+            orders.order_sensitive[atom_idx]
+              .iter()
+              .filter_map(|module_idx| entry.position.get(module_idx).copied())
+              .min()
+          })
+          .collect()
+      })
+      .collect();
+    let loaded_before = checked.iter().map(|_| None).collect();
+    Self {
+      orders,
+      entries,
+      checked,
+      earliest,
+      loaded_before,
+      imported_externals: FxHashSet::default(),
+    }
+  }
+
+  fn externals_run_after(
+    &mut self,
+    graph: &ReducedChunkGraph<'_>,
+    externals: &FxHashMap<ModuleIdx, u32>,
+  ) -> bool {
+    if externals.is_empty() {
+      return false;
+    }
+    let orders = self.orders;
+    for (checked_idx, &atom_idx) in self.checked.iter().enumerate() {
+      for ((_, entry), &earliest) in self.entries.iter().zip(&self.earliest[checked_idx]) {
+        let Some(earliest) = earliest else {
+          continue;
+        };
+        let loaded_before = &mut self.loaded_before[checked_idx];
+        if externals.keys().any(|external| {
+          !self.imported_externals.contains(external)
+            && entry.position.get(external).is_some_and(|&position| position > earliest)
+            && !loaded_before
+              .get_or_insert_with(|| graph.certainly_loaded_before(orders, atom_idx))
+              .externals
+              .contains(external)
+        }) {
+          return true;
+        }
+      }
+    }
+    false
+  }
+
+  /// Checks the modules of the atoms of `node`, which is not the receiving node.
+  fn modules_run_after(
+    &mut self,
+    graph: &ReducedChunkGraph<'_>,
+    summaries: &mut NodeOrderSummaries,
+    node: usize,
+  ) -> bool {
+    let orders = self.orders;
+    for (checked_idx, &atom_idx) in self.checked.iter().enumerate() {
+      for (&(entry_bit, entry), &earliest) in self.entries.iter().zip(&self.earliest[checked_idx]) {
+        let Some(earliest) = earliest else {
+          continue;
+        };
+        let last = summaries.span(graph, orders, node, entry_bit, entry, &[]).last_order_sensitive;
+        if last.is_none_or(|last| last <= earliest) {
+          continue;
+        }
+        let loaded_before = &mut self.loaded_before[checked_idx];
+        for &member in &graph.atoms_by_node[node] {
+          if orders.order_sensitive[member].iter().any(|module_idx| {
+            entry.position.get(module_idx).is_some_and(|&position| position > earliest)
+          }) && !loaded_before
+            .get_or_insert_with(|| graph.certainly_loaded_before(orders, atom_idx))
+            .atoms
+            .contains(&member)
+          {
+            return true;
+          }
+        }
+      }
+    }
+    false
+  }
+}
+
+impl NodeOrderSummaries {
+  /// The span of the atoms of `node` other than `moved` in the entry.
+  fn span(
+    &mut self,
+    graph: &ReducedChunkGraph<'_>,
+    orders: &AtomExecutionOrders<'_>,
+    node: usize,
+    entry_bit: usize,
+    entry: &EntryOrder,
+    moved: &[usize],
+  ) -> Span {
+    if self.spans.len() <= node {
+      self.spans.resize_with(node + 1, FxHashMap::default);
+    }
+    *self.spans[node].entry(entry_bit).or_insert_with(|| {
+      let mut span = Span::default();
+      for &atom_idx in graph.atoms_by_node[node].iter().filter(|atom_idx| !moved.contains(atom_idx))
+      {
+        span.add_atom(orders, entry, atom_idx);
+      }
+      span
+    })
+  }
+
+  fn order_sensitive_of(&self, node: usize) -> &[(u32, ModuleIdx)] {
+    self.by_exec_order.get(node).map_or(&[], Vec::as_slice)
+  }
+
+  /// Records the move of `moved` from `from_nodes` into `node` after the check accepted it.
+  fn commit(
+    &mut self,
+    orders: &AtomExecutionOrders<'_>,
+    entries: &[CheckedEntry<'_>],
+    moved: &[usize],
+    from_nodes: &[usize],
+    node: usize,
+  ) {
+    let exec_ordered = |atom_idx: usize| {
+      orders.order_sensitive[atom_idx]
+        .iter()
+        .map(|&module_idx| (orders.module_table[module_idx].exec_order(), module_idx))
+    };
+    for (&atom_idx, &from) in moved.iter().zip(from_nodes) {
+      let modules: FxHashSet<(u32, ModuleIdx)> = exec_ordered(atom_idx).collect();
+      self.by_exec_order[from].retain(|module| !modules.contains(module));
+    }
+    if self.by_exec_order.len() <= node {
+      self.by_exec_order.resize_with(node + 1, Vec::new);
+    }
+    let added: Vec<(u32, ModuleIdx)> =
+      moved.iter().flat_map(|&atom_idx| exec_ordered(atom_idx)).collect();
+    let body = &mut self.by_exec_order[node];
+    for &module in &added {
+      let index = body.partition_point(|&other| other < module);
+      body.insert(index, module);
+    }
+    if moved.len() > 1
+      && entries.iter().any(|(_, entry)| {
+        let mut positions: Vec<(u32, u32)> = added
+          .iter()
+          .filter_map(|&(exec_order, module_idx)| {
+            Some((exec_order, *entry.position.get(&module_idx)?))
+          })
+          .collect();
+        positions.sort_unstable();
+        positions.windows(2).any(|pair| pair[0].1 > pair[1].1)
+      })
+    {
+      self.unordered.insert(node);
+    }
+    if let Some(spans) = self.spans.get_mut(node).filter(|spans| !spans.is_empty()) {
+      let entry_bits: FxHashSet<usize> = entries.iter().map(|&(entry_bit, _)| entry_bit).collect();
+      for &(entry_bit, entry) in entries {
+        if let Some(span) = spans.get_mut(&entry_bit) {
+          for &atom_idx in moved {
+            span.add_atom(orders, entry, atom_idx);
+          }
+        }
+      }
+      // Spans of entries that the check skipped do not hold the moved atoms.
+      spans.retain(|entry_bit, _| entry_bits.contains(entry_bit));
+    }
+  }
+
+  /// Drops what can be stale in the nodes that the moved atoms left: a check reads them without
+  /// those atoms, and an accepted move takes the atoms out.
+  fn forget(&mut self, from_nodes: &[usize], accepted: bool) {
+    for from in from_nodes {
+      if let Some(spans) = self.spans.get_mut(*from) {
+        spans.clear();
+      }
+      if accepted {
+        self.owned_runs.remove(from);
+      }
+    }
+  }
+}
+
+/// The nodes that a move touches, seen from one entry that runs the receiving node.
+struct MoveInEntry<'m> {
+  entry_bit: usize,
+  entry: &'m EntryOrder,
+  moved: &'m [usize],
+  node: usize,
+  /// The nodes that the receiving node imports, directly or not.
+  imported: &'m NodeSet,
 }
 
 impl<'a> ReducedChunkGraph<'a> {
@@ -53,7 +398,8 @@ impl<'a> ReducedChunkGraph<'a> {
       hosted_entry_bits_by_atom: vec![SmallVec::new(); atom_count],
       node_by_bits: FxHashMap::default(),
       node_by_atom: Vec::with_capacity(atom_count),
-      atom_count_by_node: Vec::with_capacity(atom_count),
+      atoms_by_node: Vec::with_capacity(atom_count),
+      bits_by_node: Vec::with_capacity(atom_count),
       facade_entry_bit_by_node: Vec::with_capacity(atom_count),
       facade_node_by_entry_bit: vec![None; host_atom_by_entry_bit.len()],
       edges: NodeEdges::default(),
@@ -61,13 +407,19 @@ impl<'a> ReducedChunkGraph<'a> {
       cyclic_component: FxHashSet::default(),
       marks: Vec::with_capacity(atom_count),
       mark: 0,
+      execution_order: None,
+      entry_orders: None,
+      external_importers: FxHashMap::default(),
+      externals_by_node: Vec::with_capacity(atom_count),
+      summaries: NodeOrderSummaries::default(),
+      imported: NodeSet::default(),
     };
     // Each atom starts as the only atom of its own node, so node and atom indices match.
     for bits in atom_bits {
       let node = graph.add_node(bits);
       debug_assert_eq!(node, graph.node_by_atom.len(), "atoms must have different bits");
       graph.node_by_atom.push(node);
-      graph.atom_count_by_node[node] = 1;
+      graph.atoms_by_node[node].push(node);
     }
     debug_assert_eq!(graph.node_by_atom.len(), atom_count);
     for (atom_idx, dependencies) in atom_dependencies.iter().enumerate() {
@@ -91,15 +443,44 @@ impl<'a> ReducedChunkGraph<'a> {
     graph
   }
 
-  /// Moves the atom to the node of `bits` and returns true if the chunk graph stays acyclic.
-  /// Otherwise, it keeps the atom where it was and returns false.
+  /// Also rejects a move that changes the order of two modules whose position matters (see
+  /// `breaks_execution_order`).
+  pub(super) fn check_execution_order(
+    &mut self,
+    execution_order: AtomExecutionOrders<'a>,
+    entry_orders: EntryOrders<'a>,
+  ) {
+    for (atom_idx, externals) in execution_order.externals.iter().enumerate() {
+      for &external in externals {
+        self.external_importers.entry(external).or_default().push(atom_idx);
+        *self.externals_by_node[self.node_by_atom[atom_idx]].entry(external).or_default() += 1;
+      }
+    }
+    self.summaries.by_exec_order = vec![vec![]; self.atoms_by_node.len()];
+    for (atom_idx, order_sensitive) in execution_order.order_sensitive.iter().enumerate() {
+      let body = &mut self.summaries.by_exec_order[self.node_by_atom[atom_idx]];
+      body.extend(
+        order_sensitive
+          .iter()
+          .map(|&module_idx| (execution_order.module_table[module_idx].exec_order(), module_idx)),
+      );
+      body.sort_unstable();
+    }
+    self.execution_order = Some(execution_order);
+    self.entry_orders = Some(entry_orders);
+  }
+
+  /// Moves the atom to the node of `bits` and returns true if the chunk graph stays acyclic and,
+  /// when checked, the execution order holds. Otherwise, it keeps the atom where it was and returns
+  /// false.
   pub(super) fn try_move(&mut self, atom_idx: usize, bits: &BitSet) -> bool {
     self.try_move_atoms(&[atom_idx], bits)
   }
 
-  /// Moves all the atoms to the node of `bits` and returns true if the chunk graph stays acyclic.
-  /// Otherwise, it keeps every atom where it was and returns false. Atoms that depend on each other
-  /// can close a cycle when they move one by one and stay acyclic when they move together.
+  /// Moves all the atoms to the node of `bits` and returns true if the chunk graph stays acyclic and,
+  /// when checked, the execution order holds. Otherwise, it keeps every atom where it was and
+  /// returns false. Atoms that depend on each other can close a cycle when they move one by one and
+  /// stay acyclic when they move together, and atoms can each run late against the others.
   pub(super) fn try_move_atoms(&mut self, atom_idxs: &[usize], bits: &BitSet) -> bool {
     let from_nodes: SmallVec<[usize; 1]> =
       atom_idxs.iter().map(|&atom_idx| self.node_by_atom[atom_idx]).collect();
@@ -123,25 +504,403 @@ impl<'a> ReducedChunkGraph<'a> {
     // cycles through `to`. So only a full check is exact. A rejected move leaves
     // `cyclic_component` correct.
     let acyclic = if self.is_acyclic { !self.reaches_itself(to) } else { !self.has_cycle() };
-    if acyclic {
+    let accepted = acyclic && !self.breaks_execution_order(atom_idxs, &from_nodes, to);
+    if accepted {
       self.is_acyclic = true;
     } else {
       for (&atom_idx, &from) in atom_idxs.iter().zip(&from_nodes).rev() {
         self.move_atom(atom_idx, to, from);
       }
     }
-    acyclic
+    accepted
+  }
+
+  /// Whether the move of `moved` into `node` changes the order in which an entry runs two modules
+  /// whose position matters. Each entry that runs `node` is checked with its own order (see
+  /// `EntryOrders`). A chunk runs every chunk and external it imports before its body, its body runs
+  /// its modules in `exec_order`, and an importer runs it where it first needs one of its modules.
+  fn breaks_execution_order(&mut self, moved: &[usize], from_nodes: &[usize], node: usize) -> bool {
+    let (Some(mut entry_orders), Some(orders)) =
+      (self.entry_orders.take(), self.execution_order.as_ref())
+    else {
+      return false;
+    };
+    let mut summaries = std::mem::take(&mut self.summaries);
+    let mut imported = std::mem::take(&mut self.imported);
+    let entry_bits: Vec<usize> =
+      self.bits_by_node[node].index_of_one().map(|bit| bit as usize).collect();
+    // An entry that runs two modules of one atom against their `exec_order` runs out of order with
+    // or without the move, since an atom stays in one chunk. Its order only counts when the move
+    // can keep it.
+    let entries: Vec<CheckedEntry<'_>> = entry_bits
+      .iter()
+      .copied()
+      .zip(entry_orders.walk(&entry_bits))
+      .filter(|(_, entry)| !entry.runs_an_atom_out_of_order)
+      .collect();
+    let breaks = self.breaks_order(&mut summaries, &mut imported, orders, &entries, moved, node);
+    if !breaks {
+      summaries.commit(orders, &entries, moved, from_nodes, node);
+    }
+    summaries.forget(from_nodes, !breaks);
+    drop(entries);
+    self.summaries = summaries;
+    self.imported = imported;
+    self.entry_orders = Some(entry_orders);
+    breaks
+  }
+
+  fn breaks_order(
+    &self,
+    summaries: &mut NodeOrderSummaries,
+    imported: &mut NodeSet,
+    orders: &AtomExecutionOrders<'_>,
+    entries: &[CheckedEntry<'_>],
+    moved: &[usize],
+    node: usize,
+  ) -> bool {
+    if entries.is_empty() {
+      return false;
+    }
+    let mut late = LateImportCheck::new(orders, entries, moved);
+    // The externals that the node imports run before its body too.
+    if late.externals_run_after(self, &self.externals_by_node[node]) {
+      return true;
+    }
+    imported.clear(self.atoms_by_node.len());
+    let mut stack: Vec<usize> = self.edges.dependencies[node].keys().copied().collect();
+    while let Some(next) = stack.pop() {
+      if next == node || !imported.insert(next) {
+        continue;
+      }
+      if late.modules_run_after(self, summaries, next)
+        || late.externals_run_after(self, &self.externals_by_node[next])
+      {
+        return true;
+      }
+      stack.extend(self.edges.dependencies[next].keys().copied());
+    }
+    if self.staying_run_after_added_imports(summaries, orders, entries, moved, node, imported) {
+      return true;
+    }
+    // A node with one bit is the chunk of that entry, which no importer runs.
+    let is_imported_by_entry = self.bits_by_node[node].bit_count() > 1;
+    let unordered_staying = summaries.unordered.contains(&node).then(|| self.staying(moved, node));
+    entries.iter().any(|&(entry_bit, entry)| {
+      let view = MoveInEntry { entry_bit, entry, moved, node, imported };
+      let body_reorders = match &unordered_staying {
+        Some(staying) => self.body_reorders_against(orders, &view, staying),
+        None => self.body_reorders(summaries, orders, &view),
+      };
+      body_reorders
+        || (is_imported_by_entry && self.evaluation_point_crosses(summaries, orders, &view))
+    })
+  }
+
+  /// The atoms of `node` that were there before the move of `moved`.
+  fn staying(&self, moved: &[usize], node: usize) -> Vec<usize> {
+    self.atoms_by_node[node].iter().copied().filter(|atom_idx| !moved.contains(atom_idx)).collect()
+  }
+
+  /// Whether an atom that was in the node before the move now runs after a module or an external
+  /// that only the moved atoms make the node import. In
+  /// `chunk_optimization/dynamic_already_loaded_order_runtime`, `m3.js` moves first, and then
+  /// `m4.js` and `m2.js`, whose `export *` makes the chunk import the chunk of `m0.js`, which the
+  /// entry runs after `m3.js`.
+  fn staying_run_after_added_imports(
+    &self,
+    summaries: &mut NodeOrderSummaries,
+    orders: &AtomExecutionOrders<'_>,
+    entries: &[CheckedEntry<'_>],
+    moved: &[usize],
+    node: usize,
+    imported: &NodeSet,
+  ) -> bool {
+    if self.atoms_by_node[node].len() == moved.len() {
+      return false;
+    }
+    let mut moved_externals: FxHashMap<ModuleIdx, u32> = FxHashMap::default();
+    for &atom_idx in moved {
+      for &external in &orders.externals[atom_idx] {
+        *moved_externals.entry(external).or_default() += 1;
+      }
+    }
+    let staying_externals: FxHashSet<ModuleIdx> = self.externals_by_node[node]
+      .iter()
+      .filter(|&(external, &count)| moved_externals.get(external).copied().unwrap_or(0) < count)
+      .map(|(&external, _)| external)
+      .collect();
+    let added_externals: FxHashMap<ModuleIdx, u32> = moved_externals
+      .into_iter()
+      .filter(|(external, _)| !staying_externals.contains(external))
+      .collect();
+    let added_nodes: Vec<usize> = if imported.nodes.is_empty() {
+      vec![]
+    } else {
+      self.imported_by_staying(moved, node).map_or_else(Vec::new, |imported_before| {
+        imported.nodes.iter().copied().filter(|next| !imported_before.contains(next)).collect()
+      })
+    };
+    if added_externals.is_empty() && added_nodes.is_empty() {
+      return false;
+    }
+    // A staying module that matters runs at or after the first of them in each entry, so nothing
+    // that an entry runs before that can run late against one.
+    let first_staying: Vec<Option<u32>> = entries
+      .iter()
+      .map(|&(entry_bit, entry)| {
+        summaries.span(self, orders, node, entry_bit, entry, moved).first_order_sensitive
+      })
+      .collect();
+    let runs_after_first_staying = |external: &ModuleIdx| {
+      entries.iter().zip(&first_staying).any(|((_, entry), first)| {
+        first.is_some_and(|first| {
+          entry.position.get(external).is_some_and(|&position| position > first)
+        })
+      })
+    };
+    let externals_can_run_late = |externals: &FxHashMap<ModuleIdx, u32>| {
+      externals
+        .keys()
+        .any(|external| !staying_externals.contains(external) && runs_after_first_staying(external))
+    };
+    let mut candidates = vec![];
+    for &next in &added_nodes {
+      let modules_can_run_late =
+        entries.iter().zip(&first_staying).any(|(&(entry_bit, entry), first)| {
+          first.is_some_and(|first| {
+            summaries
+              .span(self, orders, next, entry_bit, entry, &[])
+              .last_order_sensitive
+              .is_some_and(|last| last > first)
+          })
+        });
+      if modules_can_run_late || externals_can_run_late(&self.externals_by_node[next]) {
+        candidates.push(next);
+      }
+    }
+    if candidates.is_empty() && !externals_can_run_late(&added_externals) {
+      return false;
+    }
+    let staying = self.staying(moved, node);
+    let mut late = LateImportCheck::new(orders, entries, &staying);
+    late.imported_externals = staying_externals;
+    late.externals_run_after(self, &added_externals)
+      || candidates.iter().any(|&next| {
+        late.modules_run_after(self, summaries, next)
+          || late.externals_run_after(self, &self.externals_by_node[next])
+      })
+  }
+
+  /// The nodes that the atoms of `node` other than `moved` import, directly or not. The edge count
+  /// of a node pair is the number of atom edges between them, plus one for a facade edge. `None`
+  /// when they import every node that `node` imports directly, so they import all it imports.
+  fn imported_by_staying(&self, moved: &[usize], node: usize) -> Option<FxHashSet<usize>> {
+    let mut moved_edges: FxHashMap<usize, u32> = FxHashMap::default();
+    for &atom_idx in moved {
+      for &dependency in &self.atom_dependencies[atom_idx] {
+        let dependency_node = self.node_by_atom[dependency];
+        if dependency_node != node {
+          *moved_edges.entry(dependency_node).or_default() += 1;
+        }
+      }
+    }
+    if let Some((facade, host)) =
+      self.facade_entry_bit_by_node[node].and_then(|entry_bit| self.facade_edge(entry_bit))
+    {
+      debug_assert_eq!(facade, node);
+      *moved_edges.entry(host).or_default() += 1;
+    }
+    let dependencies = &self.edges.dependencies[node];
+    // With the same first nodes, the search reaches the same nodes as the one for `imported`.
+    if moved_edges
+      .iter()
+      .all(|(next, &count)| dependencies.get(next).is_some_and(|&all| all > count))
+    {
+      return None;
+    }
+    let mut stack: Vec<usize> = dependencies
+      .iter()
+      .filter(|&(next, &count)| moved_edges.get(next).copied().unwrap_or(0) < count)
+      .map(|(&next, _)| next)
+      .collect();
+    let mut imported_before = FxHashSet::default();
+    while let Some(next) = stack.pop() {
+      if next == node || !imported_before.insert(next) {
+        continue;
+      }
+      stack.extend(self.edges.dependencies[next].keys().copied());
+    }
+    Some(imported_before)
+  }
+
+  fn certainly_loaded_before(
+    &self,
+    orders: &AtomExecutionOrders<'_>,
+    atom_idx: usize,
+  ) -> LoadedBefore {
+    let mut loaded = LoadedBefore::default();
+    loaded.externals.extend(&orders.externals[atom_idx]);
+    let mut stack = orders.certain_dependencies[atom_idx].clone();
+    while let Some(next) = stack.pop() {
+      if next != atom_idx && loaded.atoms.insert(next) {
+        loaded.externals.extend(&orders.externals[next]);
+        stack.extend(&orders.certain_dependencies[next]);
+      }
+    }
+    loaded
+  }
+
+  /// Whether the body of the node, which runs its modules in `exec_order`, runs a moved module and
+  /// a module that was there before in the order that the entry does not run them in. The modules
+  /// that were there run in the order of the entry (see `NodeOrderSummaries::unordered`), so each
+  /// moved module only needs to fall between its two neighbors in `exec_order`.
+  fn body_reorders(
+    &self,
+    summaries: &NodeOrderSummaries,
+    orders: &AtomExecutionOrders<'_>,
+    view: &MoveInEntry<'_>,
+  ) -> bool {
+    let body = summaries.order_sensitive_of(view.node);
+    let position = |module_idx: &ModuleIdx| view.entry.position.get(module_idx).copied();
+    view.moved.iter().flat_map(|&atom_idx| &orders.order_sensitive[atom_idx]).any(|module_idx| {
+      let Some(moved_position) = position(module_idx) else {
+        return false;
+      };
+      let index = body.partition_point(|&(exec_order, _)| {
+        exec_order < orders.module_table[*module_idx].exec_order()
+      });
+      body[..index]
+        .iter()
+        .rev()
+        .find_map(|(_, before)| position(before))
+        .is_some_and(|before| before > moved_position)
+        || body[index..]
+          .iter()
+          .find_map(|(_, after)| position(after))
+          .is_some_and(|after| after < moved_position)
+    })
+  }
+
+  /// `body_reorders` for a node whose modules may not run in the order of the entry: each moved
+  /// module against each module that was there.
+  fn body_reorders_against(
+    &self,
+    orders: &AtomExecutionOrders<'_>,
+    view: &MoveInEntry<'_>,
+    staying: &[usize],
+  ) -> bool {
+    let placed = |atoms: &[usize]| -> Vec<(u32, u32)> {
+      atoms
+        .iter()
+        .flat_map(|&atom_idx| &orders.order_sensitive[atom_idx])
+        .filter_map(|module_idx| {
+          let position = view.entry.position.get(module_idx)?;
+          Some((orders.module_table[*module_idx].exec_order(), *position))
+        })
+        .collect()
+    };
+    let staying = placed(staying);
+    placed(view.moved).iter().any(|&(moved_exec_order, moved_position)| {
+      staying.iter().any(|&(exec_order, position)| {
+        (moved_exec_order < exec_order) != (moved_position < position)
+      })
+    })
+  }
+
+  /// Whether the point at which the entry runs the node moves past a module of another chunk. The
+  /// entry runs the node where it first needs one of its modules. When the moved atoms come first,
+  /// the modules that were there before now run at the position of the moved atoms; when they come
+  /// later, the moved atoms now run at the position of the others. A module that matters between
+  /// those two positions changes sides, unless the node imports it.
+  fn evaluation_point_crosses(
+    &self,
+    summaries: &mut NodeOrderSummaries,
+    orders: &AtomExecutionOrders<'_>,
+    view: &MoveInEntry<'_>,
+  ) -> bool {
+    let mut moved_span = Span::default();
+    for &atom_idx in view.moved {
+      moved_span.add_atom(orders, view.entry, atom_idx);
+    }
+    let staying_span =
+      summaries.span(self, orders, view.node, view.entry_bit, view.entry, view.moved);
+    let (Some(moved_first), Some(staying_first)) = (moved_span.first, staying_span.first) else {
+      return false;
+    };
+    let (from, until) = if moved_first < staying_first {
+      (moved_first, staying_span.last_order_sensitive)
+    } else {
+      (staying_first, moved_span.last_order_sensitive)
+    };
+    let Some(until) = until else {
+      return false;
+    };
+    let owner = |module_idx: ModuleIdx| {
+      orders.module_to_atom_idx[module_idx].map(|atom_idx| (atom_idx, self.node_by_atom[atom_idx]))
+    };
+    let is_imported = |atom_idx: &usize| {
+      let owner = self.node_by_atom[*atom_idx];
+      owner == view.node || view.imported.contains(owner)
+    };
+    let runs_before_node = |module_idx: ModuleIdx| match orders.module_to_atom_idx[module_idx] {
+      Some(atom_idx) => is_imported(&atom_idx),
+      None => self
+        .external_importers
+        .get(&module_idx)
+        .is_some_and(|importers| importers.iter().any(is_imported)),
+    };
+    // The modules of the atoms that were in the node run before it. `owned_runs` remembers a range
+    // of them in the order of the entry, so that a later move does not walk them again.
+    let stays_in_node = |module_idx: ModuleIdx| {
+      owner(module_idx)
+        .is_some_and(|(atom_idx, node)| node == view.node && !view.moved.contains(&atom_idx))
+    };
+    let order_sensitive = &view.entry.order_sensitive;
+    let runs = summaries.owned_runs.entry(view.node).or_default();
+    let mut run = runs.get(&view.entry_bit).copied();
+    let mut index = order_sensitive.partition_point(|&(position, _)| position <= from);
+    let mut crosses = false;
+    while let Some(&(position, module_idx)) = order_sensitive.get(index) {
+      if position >= until {
+        break;
+      }
+      if let Some((first, last)) = run
+        && (first..=last).contains(&index)
+      {
+        index = last + 1;
+        continue;
+      }
+      if stays_in_node(module_idx) {
+        run = Some(match run {
+          Some((first, last)) if index == last + 1 => (first, index),
+          Some((first, last)) if index + 1 == first => (index, last),
+          Some(run) if run.1 - run.0 > 0 => run,
+          _ => (index, index),
+        });
+      } else if !runs_before_node(module_idx) {
+        crosses = true;
+        break;
+      }
+      index += 1;
+    }
+    if let Some(run) = run {
+      runs.insert(view.entry_bit, run);
+    }
+    crosses
   }
 
   fn add_node(&mut self, bits: &BitSet) -> usize {
-    let node = self.atom_count_by_node.len();
+    let node = self.atoms_by_node.len();
     self.node_by_bits.insert(bits.clone(), node);
+    self.bits_by_node.push(bits.clone());
     let facade_entry_bit =
       if bits.bit_count() == 1 { bits.index_of_one().next().map(|bit| bit as usize) } else { None };
     if let Some(entry_bit) = facade_entry_bit {
       self.facade_node_by_entry_bit[entry_bit] = Some(node);
     }
-    self.atom_count_by_node.push(0);
+    self.atoms_by_node.push(vec![]);
+    self.externals_by_node.push(FxHashMap::default());
     self.facade_entry_bit_by_node.push(facade_entry_bit);
     self.edges.add_node();
     self.marks.push(0);
@@ -159,7 +918,7 @@ impl<'a> ReducedChunkGraph<'a> {
     // If the facade node has no atoms, the entry chunk holds nothing. A facade without modules
     // declares no symbol, so nothing can depend on it, and the omitted node cannot lie on a cycle.
     let facade = self.facade_node_by_entry_bit[entry_bit]?;
-    if self.atom_count_by_node[facade] == 0 {
+    if self.atoms_by_node[facade].is_empty() {
       return None;
     }
     // A `None` host means that the entry module is external or excluded. In general, to skip an
@@ -178,10 +937,10 @@ impl<'a> ReducedChunkGraph<'a> {
     // of the entry whose chunk is `from` if `from` loses its last atom, and the edge of the entry
     // whose chunk is `to` if `to` gets its first atom.
     let mut entry_bits = self.hosted_entry_bits_by_atom[atom_idx].clone();
-    if self.atom_count_by_node[from] == 1 {
+    if self.atoms_by_node[from].len() == 1 {
       entry_bits.extend(self.facade_entry_bit_by_node[from]);
     }
-    if self.atom_count_by_node[to] == 0 {
+    if self.atoms_by_node[to].is_empty() {
       entry_bits.extend(self.facade_entry_bit_by_node[to]);
     }
     entry_bits.sort_unstable();
@@ -205,9 +964,24 @@ impl<'a> ReducedChunkGraph<'a> {
       }
     }
 
-    self.atom_count_by_node[from] -= 1;
-    self.atom_count_by_node[to] += 1;
+    let position = self.atoms_by_node[from]
+      .iter()
+      .position(|&member| member == atom_idx)
+      .expect("an atom is a member of its node");
+    self.atoms_by_node[from].swap_remove(position);
+    self.atoms_by_node[to].push(atom_idx);
     self.node_by_atom[atom_idx] = to;
+    if let Some(orders) = &self.execution_order {
+      for external in &orders.externals[atom_idx] {
+        let from_externals = &mut self.externals_by_node[from];
+        let count = from_externals.get_mut(external).expect("the node imports the external");
+        *count -= 1;
+        if *count == 0 {
+          from_externals.remove(external);
+        }
+        *self.externals_by_node[to].entry(*external).or_default() += 1;
+      }
+    }
 
     for &dependency in &self.atom_dependencies[atom_idx] {
       let node = self.node_by_atom[dependency];
@@ -263,11 +1037,11 @@ impl<'a> ReducedChunkGraph<'a> {
     const NEW: u8 = 0;
     const ON_PATH: u8 = 1;
     const DONE: u8 = 2;
-    let node_count = self.atom_count_by_node.len();
+    let node_count = self.atoms_by_node.len();
     let mut state = vec![NEW; node_count];
     let mut stack = vec![];
     for root in 0..node_count {
-      if self.atom_count_by_node[root] == 0 || state[root] != NEW {
+      if self.atoms_by_node[root].is_empty() || state[root] != NEW {
         continue;
       }
       stack.push((root, false));
@@ -297,12 +1071,12 @@ impl<'a> ReducedChunkGraph<'a> {
   /// then a search over the dependents from each node in reverse post-order. Each such search
   /// collects one component.
   fn only_cyclic_component(&self) -> FxHashSet<usize> {
-    let node_count = self.atom_count_by_node.len();
+    let node_count = self.atoms_by_node.len();
     let mut visited = vec![false; node_count];
     let mut post_order = Vec::with_capacity(node_count);
     let mut stack = vec![];
     for root in 0..node_count {
-      if self.atom_count_by_node[root] == 0 || visited[root] {
+      if self.atoms_by_node[root].is_empty() || visited[root] {
         continue;
       }
       stack.push((root, false));
@@ -392,12 +1166,14 @@ mod tests {
   impl ReducedChunkGraph<'_> {
     /// Recomputes the edges from the atoms and checks the cycle state against them.
     fn assert_consistent(&self) {
-      let node_count = self.atom_count_by_node.len();
-      let mut atom_count_by_node = vec![0; node_count];
-      for &node in &self.node_by_atom {
-        atom_count_by_node[node] += 1;
+      let node_count = self.atoms_by_node.len();
+      let mut atoms_by_node = vec![vec![]; node_count];
+      for (atom_idx, &node) in self.node_by_atom.iter().enumerate() {
+        atoms_by_node[node].push(atom_idx);
       }
-      assert_eq!(self.atom_count_by_node, atom_count_by_node);
+      let mut actual = self.atoms_by_node.clone();
+      actual.iter_mut().for_each(|atoms| atoms.sort_unstable());
+      assert_eq!(actual, atoms_by_node);
 
       let mut dependencies = vec![FxHashMap::<usize, u32>::default(); node_count];
       for (atom_idx, atom_dependencies) in self.atom_dependencies.iter().enumerate() {

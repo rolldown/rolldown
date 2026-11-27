@@ -1,0 +1,9 @@
+{
+  "_comment": "`setup.js` runs before `read.js` in `main.js`. `state.js` folds into the chunk of `read.js`, which `setup.js` imports for `set`. Importing that chunk does not mean that `read.js` ran before `setup.js`, so `setup.js` does not fold into `main.js`, below `read.js`.",
+  "config": {
+    "input": [
+      { "name": "first", "import": "./first.js" },
+      { "name": "main", "import": "./main.js" }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "_comment": "`main.js` imports `a.js`, `x.js` and `t.js` in that order. A fold of `a.js` into the chunk of `t.js` would run `t.js` where `main.js` imports `a.js`, before the chunk of `x.js`, so `a.js` stays a file.",
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "e2", "import": "./e2.js" },
+      { "name": "e3", "import": "./e3.js" }
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "_comment": "`b.js` is a dynamic entry that `c.js` imports, so `c.js` has run when `b.js` loads. The walk of `b.js` alone runs `z.js` before `c.js`, which must not hold back the fold of `b.js` into the chunk of `z.js`: without it, `e1.js` runs `z.js` before `c.js`.",
+  "config": {
+    "input": [
+      { "name": "e1", "import": "./e1.js" },
+      { "name": "e3", "import": "./e3.js" }
+    ]
+  }
+}

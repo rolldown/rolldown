@@ -1,0 +1,55 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import "./c.js";
+import { r as __exportAll } from "./b.js";
+// a.js
+var a_exports = /* @__PURE__ */ __exportAll({});
+export { a_exports as t };
+
+```
+
+## b.js
+
+```js
+import "./c.js";
+// HIDDEN [\0rolldown/runtime.js]
+// z.js
+var z_exports = /* @__PURE__ */ __exportAll({});
+globalThis.orderDynamicEntryLog.push("z");
+globalThis.loadA = () => import("./a.js").then((n) => n.t);
+// b.js
+var b_exports = /* @__PURE__ */ __exportAll({});
+export { z_exports as n, __exportAll as r, b_exports as t };
+
+```
+
+## c.js
+
+```js
+// c.js
+globalThis.orderDynamicEntryLog.push("c");
+globalThis.loadB = () => import("./b.js").then((n) => n.t);
+
+```
+
+## e1.js
+
+```js
+import "./a.js";
+// e1.js
+globalThis.loadZ = () => import("./b.js").then((n) => n.n);
+
+```
+
+## e3.js
+
+```js
+import "./c.js";
+
+```

@@ -1,0 +1,10 @@
+{
+  "_comment": "`a1.js` and `a5.js` have the same entries, so they share a chunk that runs `a1.js` first, and `f.js` runs `a5.js` first. `f.js` runs out of order with or without the fold of that chunk into the chunk of `a2.js`, so only `m.js` and `e.js` decide the fold, and they keep their order.",
+  "config": {
+    "input": [
+      { "name": "m", "import": "./m.js" },
+      { "name": "e", "import": "./e.js" },
+      { "name": "f", "import": "./f.js" }
+    ]
+  }
+}

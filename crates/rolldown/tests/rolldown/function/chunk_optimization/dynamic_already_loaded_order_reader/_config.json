@@ -1,0 +1,9 @@
+{
+  "_comment": "`read.js` has no side effect of its own, but it reads `ready`, which `setup.js` sets through `set()` before it in `main.js`. So `read.js` counts in the order check, and `setup.js` does not fold into `main.js`, below the chunk of `read.js`.",
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "other", "import": "./other.js" }
+    ]
+  }
+}

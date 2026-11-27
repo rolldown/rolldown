@@ -1,0 +1,9 @@
+{
+  "_comment": "`e0.js` runs `m3.js` before `m0.js`, and `e2.js` runs `m0.js` first. `m3.js` folds into the chunk of `m4.js` first. A later fold of `m4.js` and `m2.js` there would make that chunk import the chunk of `m0.js` (through `export *`), which would then run before `m3.js` in `e0.js`.",
+  "config": {
+    "input": [
+      { "name": "e0", "import": "./e0.js" },
+      { "name": "e2", "import": "./e2.js" }
+    ]
+  }
+}

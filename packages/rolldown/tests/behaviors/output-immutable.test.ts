@@ -173,84 +173,56 @@ test.each(['asset', 'chunk'] as const)(
   },
 );
 
-test('content changes in generateBundle clear immutable', async () => {
-  const build = (version: number) =>
-    generate(
-      {
-        entryFileNames: '[name]-[hash].js',
-        chunkFileNames: '[name]-[hash].js',
-        assetFileNames: '[name]-[hash][extname]',
-      },
-      [
-        asset,
-        { ...asset, name: 'version.json', source: '{}' },
-        { ...asset, name: 'same.txt', source: 'café' },
-      ],
+test.each([
+  { type: 'chunk', fileName: 'app.js' },
+  { type: 'asset', fileName: 'version.txt' },
+] as const)(
+  'copying a hashed $type with a new file name clears immutable',
+  async ({ type, fileName }) => {
+    const outputs = await generate(
+      { entryFileNames: '[name]-[hash].js', assetFileNames: '[name]-[hash][extname]' },
+      [asset],
       [
         {
-          name: 'edit',
+          name: 'copy-rename',
           generateBundle(_options, bundle) {
-            for (const output of Object.values(bundle)) {
-              if (output.type === 'chunk') {
-                output.code = output.isEntry
-                  ? output.code + `\nexport const version = ${version};\n`
-                  : output.code;
-              } else if (output.names.includes('version.json')) {
-                output.source = JSON.stringify({ version });
-              } else if (output.names.includes('same.txt')) {
-                output.source = new TextEncoder().encode('café');
-              }
-            }
+            const file = Object.values(bundle).find((item) => item.type === type)!;
+            expect(file.immutable).toBe(true);
+            Object.assign(file, { ...file, fileName });
+          },
+        },
+        {
+          name: 'check-copy-rename',
+          generateBundle(_options, bundle) {
+            expect(bundle[fileName].immutable).toBe(false);
           },
         },
       ],
     );
-  const first = await build(1);
-  const second = await build(2);
-  expect(first.map(({ fileName }) => fileName).sort()).toEqual(
-    second.map(({ fileName }) => fileName).sort(),
-  );
-  for (const [version, outputs] of [
-    [1, first],
-    [2, second],
-  ] as const) {
-    expect(outputs).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          type: 'chunk',
-          isEntry: true,
-          code: expect.stringContaining(`export const version = ${version};`),
-          immutable: false,
-        }),
-        expect.objectContaining({ type: 'chunk', isEntry: false, immutable: true }),
-        expect.objectContaining({
-          type: 'asset',
-          names: ['version.json'],
-          source: JSON.stringify({ version }),
-          immutable: false,
-        }),
-        expect.objectContaining({ type: 'asset', names: ['data.txt'], immutable: true }),
-        expect.objectContaining({ type: 'asset', names: ['same.txt'], immutable: true }),
-      ]),
-    );
-  }
-});
+    expect(outputs.find((output) => output.fileName === fileName)).toMatchObject({
+      type,
+      immutable: false,
+    });
+  },
+);
 
-test('copying an output with Object.assign ignores writes to immutable', async () => {
+test('content changes in generateBundle preserve immutable', async () => {
   const outputs = await generate(
-    { entryFileNames: '[name]-[hash].js', chunkFileNames: '[name]-[hash].js' },
+    {
+      entryFileNames: '[name]-[hash].js',
+      chunkFileNames: '[name]-[hash].js',
+      assetFileNames: '[name]-[hash][extname]',
+    },
     [asset],
     [
       {
-        name: 'copy-output',
+        name: 'edit',
         generateBundle(_options, bundle) {
           for (const output of Object.values(bundle)) {
-            Object.assign(output, { immutable: false });
-            expect(output.immutable).toBe(true);
             if (output.type === 'asset') {
-              Object.assign(output, { ...output, source: 'copied' });
+              output.source = 'edited';
             } else {
-              Object.assign(output, { ...output, code: output.code + '\n// copied' });
+              output.code += '\n// edited';
             }
           }
         },
@@ -259,15 +231,92 @@ test('copying an output with Object.assign ignores writes to immutable', async (
   );
   const editedChunk = {
     type: 'chunk',
-    code: expect.stringContaining('// copied'),
-    immutable: false,
+    code: expect.stringContaining('// edited'),
+    immutable: true,
   };
   expect(outputs).toMatchObject([
     editedChunk,
     editedChunk,
-    { type: 'asset', source: 'copied', immutable: false },
+    { type: 'asset', source: 'edited', immutable: true },
   ]);
 });
+
+test('generateBundle can clear immutable for later hooks and the final output', async () => {
+  const outputs = await generate(
+    {
+      entryFileNames: '[name]-[hash].js',
+      chunkFileNames: '[name]-[hash].js',
+      assetFileNames: '[name]-[hash][extname]',
+    },
+    [asset],
+    [
+      {
+        name: 'clear-immutable',
+        generateBundle(_options, bundle) {
+          for (const output of Object.values(bundle)) {
+            expect(output.immutable).toBe(true);
+            output.immutable = false;
+            expect(output.immutable).toBe(false);
+          }
+        },
+      },
+      {
+        name: 'check-immutable',
+        generateBundle(_options, bundle) {
+          expect(Object.values(bundle).map((output) => output.immutable)).toEqual([
+            false,
+            false,
+            false,
+          ]);
+        },
+      },
+    ],
+  );
+  expect(outputs.map((output) => output.immutable)).toEqual([false, false, false]);
+});
+
+test.each(['before', 'after'] as const)(
+  'renaming %s assigning immutable applies the last change',
+  async (order) => {
+    const immutable = order === 'before';
+    const outputs = await generate(
+      {
+        entryFileNames: '[name].js',
+        chunkFileNames: '[name].js',
+        assetFileNames: '[name][extname]',
+      },
+      [asset],
+      [
+        {
+          name: 'rename-and-assign',
+          generateBundle(_options, bundle) {
+            for (const output of Object.values(bundle)) {
+              const renamed = 'renamed-' + output.fileName;
+              if (order === 'before') output.fileName = renamed;
+              output.immutable = true;
+              if (order === 'after') {
+                expect(output.immutable).toBe(true);
+                output.fileName = renamed;
+              }
+              expect(output.immutable).toBe(immutable);
+            }
+          },
+        },
+        {
+          name: 'check-renamed-outputs',
+          generateBundle(_options, bundle) {
+            expect(Object.values(bundle).map((output) => output.immutable)).toEqual([
+              immutable,
+              immutable,
+              immutable,
+            ]);
+          },
+        },
+      ],
+    );
+    expect(outputs.map((output) => output.immutable)).toEqual([immutable, immutable, immutable]);
+  },
+);
 
 test.each([undefined, 'maps/[name]-[hash].map'])(
   'a generated sourcemap has immutable=false with sourcemapFileNames=%s',

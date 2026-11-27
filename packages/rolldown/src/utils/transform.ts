@@ -50,7 +50,9 @@ function normalizeBindingWarning(warning: BindingEnhancedTransformResult['warnin
 // Default `cwd` to `process.cwd()` as the bundler does. Node caches it, so it keeps working after
 // the working directory is deleted, where the binding's own `getcwd` lookup would fail.
 function withDefaultCwd(options: TransformOptions | null | undefined) {
-  if (options?.cwd != null || typeof process !== 'object') return options;
+  if (options?.cwd != null || typeof process !== 'object' || typeof process.cwd !== 'function') {
+    return options;
+  }
   return { ...options, cwd: process.cwd() };
 }
 

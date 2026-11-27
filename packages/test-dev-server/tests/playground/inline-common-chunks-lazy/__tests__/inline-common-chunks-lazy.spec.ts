@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import { editFile, page, plantReloadMarker, readReloadMarker, waitForBuildStable } from '~utils';
 
-// `experimentalInlineCommonChunks` with lazy compilation. The rebuild after the lazy compile
-// prints the routes' shared `shared.js` -> `leaf.js` into the route chunks, but the page gets
-// lazy routes as factories from pull requests and never loads those chunks (see
+// `experimentalInlineCommonChunks` with lazy compilation. A lazy pull starts no build, so a page
+// reload loads the initial output with stub proxies. The page gets lazy routes as factories from
+// pull requests and never loads a built route chunk (see
 // internal-docs/lazy-compilation/design.md). `inline-common-chunks` covers the route chunks
 // that carry the inlined modules, without lazy compilation.
 
@@ -19,7 +19,7 @@ const loadedRouteChunks = () =>
   );
 
 describe('inline-common-chunks-lazy', () => {
-  test('lazy routes that share modules run them once, also after the rebuild', async () => {
+  test('lazy routes that share modules run them once, also after a page reload', async () => {
     await waitForBuildStable();
     await expect.poll(() => page.textContent('.a')).toBe('a:leaf-v1');
     await expect.poll(() => page.textContent('.b')).toBe('b:leaf-v1');

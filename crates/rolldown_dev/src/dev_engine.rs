@@ -1499,7 +1499,7 @@ mod tests {
   }
 
   /// An HMR update fails after its merge, so it is lost. A repeat visit is served from the
-  /// graph, and its rebuild becomes the full build that reloads every client.
+  /// graph, and the build it queues becomes the full build that reloads every client.
   #[cfg(feature = "testing")]
   #[tokio::test]
   async fn lazy_visit_with_a_lost_update_reloads_every_client() {
@@ -1929,7 +1929,7 @@ __rolldown_payload__.catchUp([{gen:2,changedIds:["utils.js"],staleIds:["utils.js
   /// fetched template, and the broken route that no page loaded would fail it.
   #[cfg(feature = "testing")]
   #[tokio::test]
-  async fn a_failed_first_visit_leaves_the_proxy_a_stub() {
+  async fn a_failed_first_lazy_visit_leaves_the_proxy_a_stub() {
     let (dir, engine) = lazy_fixture_with_files(
       "lazy-failed-unmark",
       &[("main.js", "import('./lazy.js');\n"), ("lazy.js", "export const value = ;\n")],

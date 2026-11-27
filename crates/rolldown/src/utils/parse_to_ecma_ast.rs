@@ -1,7 +1,10 @@
 use std::{borrow::Cow, path::Path};
 
 use json_escape_simd::escape;
-use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
+use oxc::{
+  semantic::{Scoping, SymbolId},
+  span::SourceType as OxcSourceType,
+};
 use oxc_str::CompactStr;
 use rolldown_common::{
   ConstExportMeta, ModuleDefFormat, ModuleId, ModuleType, NormalizedBundlerOptions,
@@ -46,9 +49,9 @@ pub struct ParseToEcmaAstResult {
   /// Whether JSX syntax should be preserved in the output, determined per-module
   /// during transformation based on the resolved tsconfig.
   pub preserve_jsx: bool,
-  /// Enum member constant values, keyed by enum name → member name → value.
+  /// Enum member constant values, keyed by the symbol of a top-level enum → member name → value.
   /// Used by the finalizer to inline cross-module enum member accesses (e.g., `Direction.Up` → `0`).
-  pub enum_member_value_map: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>>,
+  pub enum_member_value_map: FxHashMap<SymbolId, FxHashMap<CompactStr, ConstExportMeta>>,
 }
 
 pub async fn parse_to_ecma_ast(

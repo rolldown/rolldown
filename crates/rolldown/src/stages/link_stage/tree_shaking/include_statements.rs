@@ -1167,8 +1167,8 @@ fn is_inlined_enum_member_access(
   let Some(Module::Normal(owner_module)) = modules.get(canonical_ref.owner) else {
     return false;
   };
-  let symbol_name = canonical_ref.name(symbols);
-  let Some(members) = owner_module.ecma_view.enum_member_value_map.get(symbol_name) else {
+  let Some(members) = owner_module.ecma_view.enum_member_value_map.get(&canonical_ref.symbol)
+  else {
     return false;
   };
   !member_expr_ref.is_write

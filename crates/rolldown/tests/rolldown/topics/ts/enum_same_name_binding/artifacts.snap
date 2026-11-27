@@ -1,0 +1,42 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// param.ts
+function check(Status) {
+	return Status.Ok;
+}
+// nested.ts
+function inner() {
+	return 5;
+}
+const Color = { Red: "red" };
+// namespace.ts
+let A;
+(function(_A) {
+	_A.E = /* @__PURE__ */ function(E) {
+		E[E["X"] = 1] = "X";
+		return E;
+	}(_A.E || {});
+})(A || (A = {}));
+let B;
+(function(_B) {
+	const E = { X: "b" };
+	_B.value = E.X;
+	_B.object = E;
+})(B || (B = {}));
+// main.ts
+assert.strictEqual(check({ Ok: "fine" }), "fine");
+assert.strictEqual(1, 1);
+assert.strictEqual(Color.Red, "red");
+assert.strictEqual(inner(), 5);
+assert.strictEqual(A.E.X, 1);
+assert.strictEqual(B.value, "b");
+assert.deepStrictEqual(B.object, { X: "b" });
+
+```

@@ -25,7 +25,7 @@ let foo;
 	let x;
 	(function(_x) {
 		console.log(y, z);
-		console.log(0, x.z);
+		console.log(x.y, x.z);
 	})(x || (x = _foo3.x || (_foo3.x = {})));
 })(foo || (foo = {}));
 export { foo };
@@ -86,7 +86,7 @@ let foo;
 	let x;
 	(function(_x) {
 		console.log(y, z);
-		console.log("a", x.z);
+		console.log(x.y, x.z);
 	})(x || (x = _foo3.x || (_foo3.x = {})));
 })(foo || (foo = {}));
 export { foo };

@@ -342,15 +342,15 @@ impl GenerateStage<'_> {
         ChunkKind::Common => None,
       })
       .collect::<FxHashMap<ModuleIdx, ChunkIdx>>();
-    for (&module_idx, _entry_points) in self
-      .link_output
-      .entries
-      .iter()
-      .filter(|(_, entries)| entries.iter().any(|e| e.kind.is_user_defined()))
-    {
-      let Some(entry_chunk_idx) = chunk_graph.module_to_chunk[module_idx] else {
+    // Key the map by the entry chunk. An entry module that another entry imports is still in a
+    // pending chunk here, so `module_to_chunk` would miss that entry.
+    for (entry_chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      let ChunkKind::EntryPoint { meta, module: module_idx, .. } = chunk.kind else {
         continue;
       };
+      if !meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk) {
+        continue;
+      }
       let mut q = VecDeque::from_iter([module_idx]);
       let mut visited = FxHashSet::default();
       while let Some(cur) = q.pop_front() {

@@ -198,6 +198,17 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
       }
     }
     self.result.directive_range = program.directives.iter().map(GetSpan::span).collect();
+    // A reference that is still here was visited before its binding was declared, e.g. in a
+    // closure above `const mod = await import('mod')`, so its usage is unknown.
+    let info = &mut self.dynamic_import_usage_info;
+    for reference_id in info.dynamic_import_binding_reference_id.drain() {
+      let symbol_id = self.result.symbol_ref_db.scoping().get_reference(reference_id).symbol_id();
+      if let Some(rec_idx) =
+        symbol_id.and_then(|id| info.dynamic_import_binding_to_import_record_idx.get(&id))
+      {
+        info.dynamic_import_exports_usage.insert(*rec_idx, DynamicImportExportsUsage::Complete);
+      }
+    }
     self.result.dynamic_import_rec_exports_usage =
       std::mem::take(&mut self.dynamic_import_usage_info.dynamic_import_exports_usage);
     if self.result.ecma_view_meta.contains(EcmaViewMeta::Eval) {

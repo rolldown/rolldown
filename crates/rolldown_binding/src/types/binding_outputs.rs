@@ -90,15 +90,14 @@ impl JsChangedOutputs {
               }
             }
             (rolldown_common::Output::Asset(previous), Either::B(asset)) => {
-              let source: rolldown_common::StrOrBytes = asset.source.into();
               *previous = Arc::new(rolldown_common::OutputAsset {
-                immutable: previous.immutable
-                  && previous.filename.as_str() == asset.filename
-                  && previous.source.as_bytes() == source.as_bytes(),
+                immutable: asset.immutable.unwrap_or_else(|| {
+                  previous.immutable && previous.filename.as_str() == asset.filename
+                }),
                 names: asset.names,
                 original_file_names: asset.original_file_names,
                 filename: asset.filename.into(),
-                source,
+                source: asset.source.into(),
               });
             }
             _ => {}

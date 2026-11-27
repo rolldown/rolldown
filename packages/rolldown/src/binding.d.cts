@@ -3293,13 +3293,14 @@ export interface JsOutputAsset {
   names: Array<string>
   originalFileNames: Array<string>
   filename: string
+  immutable?: boolean
   source: BindingAssetSource
 }
 
 /**
- * What a `generateBundle` or `writeBundle` hook changed in an output chunk. A field that is left
- * out is a property the plugin did not change, so the chunk keeps its value, which is never copied
- * through JavaScript. See `collectChunkChange` in
+ * What a `generateBundle` or `writeBundle` hook changed in an output chunk. Rust fills omitted
+ * fields from the existing chunk and clears `immutable` on a rename without an explicit value.
+ * See `collectChunkChange` in
  * `packages/rolldown/src/utils/transform-to-rollup-output.ts`.
  */
 export interface JsOutputChunk {
@@ -3309,6 +3310,7 @@ export interface JsOutputChunk {
    * `isEntry`, when napi picks a side of `Either<JsOutputChunk, JsOutputAsset>`.
    */
   isEntry: boolean
+  immutable?: boolean
   code?: string
   /** `null` removes the map. */
   map?: BindingSourcemap | null

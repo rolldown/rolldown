@@ -1191,10 +1191,11 @@ impl LinkStage<'_> {
                 // TODO: we could record if a module could potential reference a cjs symbol
                 // so that we could skip this step.
                 if cursor < member_expr_ref.prop_and_span_list.len() {
-                  let maybe_namespace = depended_refs
-                    .last()
-                    .copied()
-                    .unwrap_or(self.symbols.canonical_ref_for(member_expr_ref.object_ref));
+                  // An import bound to an ESM declaration reads that declaration, so look at the
+                  // canonical symbol.
+                  let maybe_namespace = self.symbols.canonical_ref_for(
+                    depended_refs.last().copied().unwrap_or(member_expr_ref.object_ref),
+                  );
                   let maybe_namespace_symbol = self.symbols.get(maybe_namespace);
                   let continue_resolve =
                     if let Some(ref ns) = maybe_namespace_symbol.namespace_alias {
@@ -1218,8 +1219,13 @@ impl LinkStage<'_> {
                             .get(&maybe_namespace)
                         })
                         .or_else(|| {
-                          (self.metas[maybe_namespace.owner].has_dynamic_exports)
-                            .then_some(&maybe_namespace.owner)
+                          // Only the namespace of a module with `export * from './x.cjs'` has
+                          // its CommonJS exports, not the other bindings of that module.
+                          (self.metas[maybe_namespace.owner].has_dynamic_exports
+                            && self.module_table[maybe_namespace.owner]
+                              .as_normal()
+                              .is_some_and(|m| m.namespace_object_ref == maybe_namespace))
+                          .then_some(&maybe_namespace.owner)
                         })
                         .copied()
                     })

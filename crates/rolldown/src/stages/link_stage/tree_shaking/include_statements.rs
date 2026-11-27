@@ -2,12 +2,11 @@ use itertools::Itertools;
 use oxc::semantic::NodeId;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ExportsKind, ExternalInteropUse, ImportKind,
-  ImportRecordMeta, IndexModules, MemberExprRef, Module, ModuleIdx, ModuleNamespaceIncludedReason,
-  ModuleType, NormalModule, NormalizedBundlerOptions, RUNTIME_MODULE_ID, RuntimeHelper,
-  StmtEvalFlags, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef,
-  SymbolRefDb, UsedExternalSymbols, UsedSymbolRefsBuilder, WrapKind,
-  side_effects::DeterminedSideEffects,
+  ConstExportMeta, EcmaViewMeta, ExportsKind, ExternalInteropUse, ImportKind, ImportRecordMeta,
+  IndexModules, MemberExprRef, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType,
+  NormalModule, NormalizedBundlerOptions, RUNTIME_MODULE_ID, RuntimeHelper, StmtEvalFlags,
+  StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  UsedExternalSymbols, UsedSymbolRefsBuilder, WrapKind, side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -1112,9 +1111,9 @@ fn scan_import_records_for_cjs_bailout(
     .iter()
     .filter_map(|import_record_idx| {
       let rec = &module.import_records[*import_record_idx];
-      rec.resolved_module.map(|module_idx| (rec, module_idx))
+      rec.resolved_module.map(|module_idx| (import_record_idx, rec, module_idx))
     })
-    .for_each(|(import_record, module_idx)| {
+    .for_each(|(import_record_idx, import_record, module_idx)| {
       let Some(m) = ctx.modules[module_idx].as_normal() else {
         // If the import record is not a normal module, we don't need to include it.
         return;
@@ -1135,13 +1134,11 @@ fn scan_import_records_for_cjs_bailout(
       {
         return;
       }
-      if module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
-        // When the importer has multiple CJS re-export targets (conditional re-exports),
-        // bail out to prevent tree-shaking from dropping any branch's exports.
-        if module.ecma_view.cjs_reexport_import_record_ids.len() > 1 {
-          ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
-        }
-      } else {
+      // A `require()` result is read opaquely, so its module keeps all exports. Only the target of
+      // a single `module.exports = require(...)` has its used exports linked. Several targets are
+      // conditional re-exports, and each one keeps all exports.
+      let reexports = &module.ecma_view.cjs_reexport_import_record_ids;
+      if !reexports.contains(import_record_idx) || reexports.len() > 1 {
         ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
       }
     });

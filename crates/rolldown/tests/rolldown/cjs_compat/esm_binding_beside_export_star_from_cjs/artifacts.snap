@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
+// lib.js
+const config$1 = { version: "2.0.0" };
+// lib.mjs
+const config = { version: "2.0.0" };
+// x.js
+const x = { foo: "esm" };
+// main.js
+assert.strictEqual(config$1.version, "2.0.0");
+assert.strictEqual(config.version, "2.0.0");
+assert.strictEqual(x.foo, "esm");
+
+```

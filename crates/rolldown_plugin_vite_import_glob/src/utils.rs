@@ -771,7 +771,9 @@ impl GlobImportVisit<'_> {
               ImportAttributes::from_entries(attributes.properties.iter().filter_map(|property| {
                 let ObjectPropertyKind::ObjectProperty(property) = property else { return None };
                 let key = property.key.literal_name()?;
-                let Expression::StringLiteral(value) = &property.value else { return None };
+                let Expression::StringLiteral(value) = property.value.get_inner_expression() else {
+                  return None;
+                };
                 Some((to_usv_str(key.as_js_str()).into_owned(), to_usv_str(value.value)))
               }));
           }

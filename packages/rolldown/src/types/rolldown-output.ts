@@ -28,7 +28,7 @@ export interface OutputAsset {
    *
    * A plugin that changes `source` in `generateBundle` without including the change in the hash must set `immutable` to `false`.
    */
-  immutable: boolean;
+  readonly immutable: boolean;
   /** @deprecated Use {@linkcode originalFileNames} instead. */
   originalFileName: string | null;
   /** The list of the absolute paths to the original file of this asset. */
@@ -145,7 +145,7 @@ export interface OutputChunk {
    *
    * A plugin that changes `code` in `generateBundle` without including the change in the hash must set `immutable` to `false`.
    */
-  immutable: boolean;
+  readonly immutable: boolean;
   /** Information about the modules included in this chunk. */
   modules: {
     [id: string]: RenderedModule;

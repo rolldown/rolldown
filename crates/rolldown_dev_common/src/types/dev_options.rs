@@ -13,7 +13,9 @@ use super::bundle_output::BundleOutput;
 use super::dev_watch_options::DevWatchOptions;
 use super::rebuild_strategy::RebuildStrategy;
 
-/// Ends when the consumer has handled an update, for example sent it to the clients.
+/// Ends when the consumer has handled an update, for example sent it to the clients. The callback
+/// must start the delivery before it returns: the engine may drop this future without polling it.
+/// It awaits the future only to delay the rebuild that follows a `Changed` update.
 pub type HmrUpdatesHandled = Pin<Box<dyn Future<Output = ()> + Send>>;
 /// Receives one update for every client, with the changed files.
 pub type OnHmrUpdatesCallback =

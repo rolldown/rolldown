@@ -32,8 +32,8 @@ impl From<BindingDevWatchOptions> for rolldown_dev::DevWatchOptions {
 
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingDevOptions {
-  /// When the function returns a `Promise`, a rebuild that follows the update in the same task
-  /// waits for it.
+  /// When the function returns a `Promise` for a `Changed` update, a rebuild that follows in the
+  /// same task waits for it.
   #[napi(
     ts_type = "undefined | ((result: BindingResult<[BindingHmrUpdate, string[]]>) => void | Promise<void>)"
   )]

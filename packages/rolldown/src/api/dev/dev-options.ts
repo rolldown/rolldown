@@ -44,9 +44,14 @@ export interface DevWatchOptions extends Pick<
 export interface DevOptions {
   /**
    * Called with each HMR update. When it returns a promise, a rebuild that
-   * follows a `Changed` update waits until the promise settles (see
-   * {@link rebuildStrategy}). A rejection of the promise is reported as an
-   * unhandled rejection, and a throw as an uncaught exception.
+   * follows a `Changed` update in the same task waits until the promise
+   * settles. Such a rebuild runs with `rebuildStrategy: 'always'`, and also
+   * with `'never'` in the task that recovers from a failed rebuild (see
+   * {@link rebuildStrategy}). The promise must not wait for the engine's own
+   * build (`ensureCurrentBuildFinish`, `ensureLatestBuildOutput`): that build
+   * waits for the promise, so it and every later task would wait until
+   * `close()`. A rejection of the promise is reported as an unhandled
+   * rejection, and a throw as an uncaught exception.
    */
   onHmrUpdates?: DevOnHmrUpdates;
   onOutput?: DevOnOutput;

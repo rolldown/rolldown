@@ -2147,8 +2147,8 @@ export interface BindingCompilerOptions {
 
 export interface BindingDevOptions {
   /**
-   * When the function returns a `Promise`, a rebuild that follows the update in the same task
-   * waits for it.
+   * When the function returns a `Promise` for a `Changed` update, a rebuild that follows in the
+   * same task waits for it.
    */
   onHmrUpdates?: undefined | ((result: BindingResult<[BindingHmrUpdate, string[]]>) => void | Promise<void>)
   /**

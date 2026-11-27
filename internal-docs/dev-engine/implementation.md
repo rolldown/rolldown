@@ -1639,10 +1639,12 @@ error_stage, .. }`. The coordinator uses it to transition into
 `FullBuildFailed` / `Failed { last_error_stage }` (§11) regardless of
 whether a callback was registered to receive the error itself.
 
-`generate_hmr_updates` returns `bool` — "may subsequent stages continue?" —
-preserving the pre-`BuildResult` short-circuit: rebuild is skipped only when
-an HMR error had no callback to surface it through (matching how the older
-`?` propagation behaved).
+`generate_hmr_updates` returns `HmrStageOutcome`. Its `may_continue` says
+whether later stages may continue, preserving the pre-`BuildResult`
+short-circuit: rebuild is skipped only when an HMR error had no callback to
+surface it through (matching how the older `?` propagation behaved). Its
+`push_handled` is set only for a pushed `Changed` update (§10, "Pulls before
+the rebuild").
 
 `watch_change` is short-circuiting: if a plugin's `watchChange` hook fails,
 neither HMR generation nor rebuild can proceed safely, so `run_inner` returns

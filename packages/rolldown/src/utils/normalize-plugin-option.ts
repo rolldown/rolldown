@@ -1,5 +1,8 @@
 import { getBuiltinPluginVersion, isBuiltinPlugin } from '../builtin-plugin/utils';
-import { ENUMERATED_INPUT_PLUGIN_HOOK_NAMES } from '../constants/plugin';
+import {
+  ENUMERATED_INPUT_PLUGIN_HOOK_NAMES,
+  ENUMERATED_PLUGIN_HOOK_NAMES,
+} from '../constants/plugin';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN } from '../log/logging';
 import { error, logBuiltinPluginVersionMismatch, logInputHookInOutputPlugin } from '../log/logs';
@@ -42,7 +45,10 @@ export function normalizePlugins<T extends RolldownPlugin>(
     }
     const objectPlugin = plugin as Plugin;
     const version = getBuiltinPluginVersion(plugin);
-    if (version !== undefined) {
+    if (
+      version !== undefined &&
+      !ENUMERATED_PLUGIN_HOOK_NAMES.some((hook) => hook in objectPlugin)
+    ) {
       error(logBuiltinPluginVersionMismatch(objectPlugin.name, version));
     }
     if (!objectPlugin.name) {

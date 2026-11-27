@@ -184,9 +184,10 @@ impl LinkingMetadata {
   /// the call through it, and any pass that needs to predict the emission must call it instead
   /// of re-deriving the condition. In ESM output an entry-level external star
   /// re-export is flattened to a chunk-level `export * from '<external>'` statement instead, so
-  /// no runtime call is needed — unless the namespace object is genuinely observed
-  /// ([`ModuleNamespaceIncludedReason::Unknown`]), in which case the namespace must still merge
-  /// the external's exports at runtime.
+  /// no runtime call is needed, unless the namespace object is observed as a whole
+  /// ([`ModuleNamespaceIncludedReason::Unknown`]) or `import()` reads it in place of a removed
+  /// facade ([`ModuleNamespaceIncludedReason::SimulateFacadeChunk`]). Then the namespace must still
+  /// merge the external's exports at runtime.
   pub fn ns_star_external_re_export_emitted(
     &self,
     rec_meta: ImportRecordMeta,
@@ -195,7 +196,10 @@ impl LinkingMetadata {
     match format {
       OutputFormat::Esm => {
         !rec_meta.contains(ImportRecordMeta::EntryLevelExternal)
-          || self.module_namespace_included_reason.contains(ModuleNamespaceIncludedReason::Unknown)
+          || self.module_namespace_included_reason.intersects(
+            ModuleNamespaceIncludedReason::Unknown
+              | ModuleNamespaceIncludedReason::SimulateFacadeChunk,
+          )
       }
       OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => true,
     }

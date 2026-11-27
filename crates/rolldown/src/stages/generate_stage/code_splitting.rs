@@ -1490,6 +1490,12 @@ fn propagate_has_dynamic_exports(
     return linking_infos[target].has_dynamic_exports;
   }
   visited_modules.insert(target);
+  // `import()` reads the namespace of a module with `SimulateFacadeChunk`, directly or through
+  // `export *`. That namespace merges its external stars at runtime, so the importers on the chain
+  // must keep merging it.
+  let read_by_simulated_facade = linking_infos[target]
+    .module_namespace_included_reason
+    .contains(ModuleNamespaceIncludedReason::SimulateFacadeChunk);
 
   let has_dynamic_exports = match &modules[target] {
     Module::Normal(module) => {
@@ -1505,7 +1511,7 @@ fn propagate_has_dynamic_exports(
               return false;
             }
             if rec.meta.contains(ImportRecordMeta::EntryLevelExternal) {
-              return false;
+              return read_by_simulated_facade;
             }
             propagate_has_dynamic_exports(
               module_idx,

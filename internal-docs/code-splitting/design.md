@@ -68,7 +68,7 @@ These are the main places where strict output deliberately accepts extra wrapper
   facade chunk in every format, and the module-local simulated namespace does not reproduce their
   format-specific behavior. The external-star guard is create-path-only: the restore path instead
   relies on the chunk optimizer's simulated-namespace handling, whose external-star preservation is
-  handled separately.
+  described in [implementation.md](./implementation.md#facade-elimination-optimize_facade_entry_chunks).
 - **CJS namespace merge is skipped under strict** (`determine_safely_merge_cjs_ns`): merging
   moves the surviving require call to whichever statement stays included — an intra-body
   move no wrapping can repair. Per-importer call sites cost bytes; the wrapper memoizes.

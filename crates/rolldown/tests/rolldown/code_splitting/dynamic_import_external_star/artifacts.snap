@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] lib.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// lib.js
+var lib_exports = /* @__PURE__ */ __exportAll({ x: () => 1 }, 2);
+import * as import_node_path from "node:path";
+__reExport(lib_exports, import_node_path);
+const x = 1;
+// main.js
+const loaded = Promise.resolve().then(() => lib_exports);
+export { loaded, x };
+
+```

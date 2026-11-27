@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "live", "import": "./live.js" }
+    ],
+    "external": ["node:path"]
+  },
+  "configVariants": [{ "_configName": "strict", "strictExecutionOrder": true, "_snapshot": false }]
+}

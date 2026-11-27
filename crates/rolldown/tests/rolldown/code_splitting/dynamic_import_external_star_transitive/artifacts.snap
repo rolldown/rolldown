@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] target.js is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## live.js
+
+```js
+export { t as fromX } from "./x.js";
+export * from "node:path";
+
+```
+
+## main.js
+
+```js
+import { n as __exportAll, r as __reExport } from "./x.js";
+// barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({ viaBarrel: () => viaBarrel }, 2);
+import * as import_node_path from "node:path";
+__reExport(barrel_exports, import_node_path);
+const viaBarrel = 7;
+// target.js
+var target_exports = /* @__PURE__ */ __exportAll({
+	viaBarrel: () => viaBarrel,
+	x: () => 1
+}, 2);
+__reExport(target_exports, barrel_exports);
+const x = 1;
+// main.js
+const loaded = Promise.resolve().then(() => target_exports);
+export { loaded, x };
+
+```
+
+## x.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// x.js
+const fromX = 7;
+export { __exportAll as n, __reExport as r, fromX as t };
+
+```

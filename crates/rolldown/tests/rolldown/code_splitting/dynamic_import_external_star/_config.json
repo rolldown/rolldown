@@ -1,0 +1,6 @@
+{
+  "config": {
+    "external": ["node:path"]
+  },
+  "configVariants": [{ "_configName": "strict", "strictExecutionOrder": true, "_snapshot": false }]
+}

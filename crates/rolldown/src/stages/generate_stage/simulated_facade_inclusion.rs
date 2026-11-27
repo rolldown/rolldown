@@ -1,5 +1,7 @@
+use std::collections::VecDeque;
+
 use rolldown_common::{
-  ModuleIdx, ModuleNamespaceIncludedReason, RuntimeHelper, StmtInfos, SymbolRef,
+  ImportRecordMeta, ModuleIdx, ModuleNamespaceIncludedReason, RuntimeHelper, StmtInfos, SymbolRef,
   UsedSymbolRefsBuilder, WrapKind,
 };
 use rolldown_utils::indexmap::FxIndexSet;
@@ -152,10 +154,36 @@ pub(super) fn include_simulated_facade_namespace(
   }
   if matches!(wrap_kind, WrapKind::Esm | WrapKind::None) {
     include_symbol(context, namespace_object_ref, SymbolIncludeReason::SimulatedFacadeChunk);
-    context.module_namespace_included_reason[entry_module_idx]
-      .insert(ModuleNamespaceIncludedReason::SimulateFacadeChunk);
+    mark_simulated_facade_export_star_chain(context, entry_module_idx);
     true
   } else {
     false
+  }
+}
+
+/// The namespace of the entry merges the namespace of each module with dynamic exports that it
+/// re-exports with `export *`. So `import()` reads all of these namespaces, and each one must keep
+/// its external stars.
+fn mark_simulated_facade_export_star_chain(context: &mut IncludeContext<'_>, entry: ModuleIdx) {
+  let mut queue = VecDeque::from([entry]);
+  let mut visited = FxHashSet::default();
+  while let Some(module_idx) = queue.pop_front() {
+    if !visited.insert(module_idx) {
+      continue;
+    }
+    context.module_namespace_included_reason[module_idx]
+      .insert(ModuleNamespaceIncludedReason::SimulateFacadeChunk);
+    let Some(module) = context.modules[module_idx].as_normal() else {
+      continue;
+    };
+    for rec in &module.import_records {
+      if let Some(importee_idx) = rec.resolved_module
+        && rec.meta.contains(ImportRecordMeta::IsExportStar)
+        && context.modules[importee_idx].is_normal()
+        && context.metas[importee_idx].has_dynamic_exports
+      {
+        queue.push_back(importee_idx);
+      }
+    }
   }
 }

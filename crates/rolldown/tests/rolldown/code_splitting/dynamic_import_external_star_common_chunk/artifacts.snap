@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+export { n as x } from "./lib.js";
+
+```
+
+## b.js
+
+```js
+// b.js
+const loaded = import("./lib.js").then((n) => n.t);
+export { loaded };
+
+```
+
+## lib.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// lib.js
+var lib_exports = /* @__PURE__ */ __exportAll({ x: () => 1 }, 2);
+import * as import_node_path from "node:path";
+__reExport(lib_exports, import_node_path);
+const x = 1;
+export { x as n, lib_exports as t };
+
+```

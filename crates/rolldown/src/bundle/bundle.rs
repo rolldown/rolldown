@@ -22,7 +22,11 @@ use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookCloseBundleArgs, HookRenderErrorArgs, SharedPluginDriver,
 };
-use rolldown_utils::dashmap::FxDashSet;
+use rolldown_utils::{
+  dashmap::FxDashSet,
+  rayon::{IntoParallelRefIterator, ParallelIterator},
+};
+use rustc_hash::FxHashSet;
 use std::{path::Path, sync::Arc};
 use sugar_path::SugarPath;
 
@@ -318,6 +322,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       format!("Could not create directory for output chunks: {}", dist_dir.display())
     })?;
 
+    let mut destinations = Vec::with_capacity(output.assets.len());
     for chunk in &output.assets {
       let filename = chunk.filename();
       if filename.contains('\0') {
@@ -338,19 +343,34 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
           .into(),
         );
       }
-      let dest = dist_dir.join(filename);
-      if let Some(p) = dest.parent() {
-        if !self.fs.exists(p) {
-          self.fs.create_dir_all(p).with_context(|| {
-            format!("Could not create directory for output chunks: {}", p.display())
-          })?;
-        }
-      }
-      self
-        .fs
-        .write(&dest, chunk.content_as_bytes())
-        .with_context(|| format!("Failed to write file in {}", dest.display()))?;
+      destinations.push((dist_dir.join(filename), chunk));
     }
+
+    let mut created_dirs = FxHashSet::default();
+    for (dest, _) in &destinations {
+      if let Some(p) = dest.parent()
+        && created_dirs.insert(p)
+        && !self.fs.exists(p)
+      {
+        self.fs.create_dir_all(p).with_context(|| {
+          format!("Could not create directory for output chunks: {}", p.display())
+        })?;
+      }
+    }
+
+    // Each write is an open, write and close. Run them in parallel: with thousands of chunks and
+    // sourcemaps, writing one file at a time leaves the build waiting on the disk.
+    destinations
+      .par_iter()
+      .map(|(dest, chunk)| {
+        self
+          .fs
+          .write(dest, chunk.content_as_bytes())
+          .with_context(|| format!("Failed to write file in {}", dest.display()))
+      })
+      .collect::<Vec<_>>()
+      .into_iter()
+      .collect::<anyhow::Result<()>>()?;
 
     self
       .plugin_driver

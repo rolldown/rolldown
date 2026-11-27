@@ -103,11 +103,16 @@ impl Plugin for ViteReporterPlugin {
     ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
+    let reports = self.log_info.is_some();
     if uses_persistent_cache(&ctx) {
       ctx.set_module_meta(args.id, TRANSFORMED_MARK, [1u8]);
-      self.reported_in_transform.insert(args.id.to_string());
+      if reports {
+        self.reported_in_transform.insert(args.id.to_string());
+      }
     }
-    self.report_progress(args.id);
+    if reports {
+      self.report_progress(args.id);
+    }
     Ok(None)
   }
 
@@ -408,10 +413,11 @@ impl Plugin for ViteReporterPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    let mut usage = HookUsage::empty();
+    // Also without `log_info`: with the persistent cache, `transform` sets the mark that a later
+    // build with `log_info` counts on reuse.
+    let mut usage = HookUsage::Transform;
     if self.log_info.is_some() {
       usage |= HookUsage::ModuleParsed
-        | HookUsage::Transform
         | HookUsage::BuildStart
         | HookUsage::BuildEnd
         | HookUsage::RenderChunk

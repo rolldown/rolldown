@@ -285,6 +285,8 @@ struct Setup {
   progress_count: TransformedCount,
   /// Builds without the persistent cache.
   no_cache: bool,
+  /// The reporter has no `log_info`, as with `vite build --logLevel warn`.
+  quiet_reporter: bool,
 }
 
 impl Setup {
@@ -299,6 +301,7 @@ impl Setup {
       extra_plugins: vec![],
       progress_count: TransformedCount::default(),
       no_cache: false,
+      quiet_reporter: false,
     }
   }
 
@@ -358,7 +361,13 @@ impl Setup {
         render_built_url: false,
         is_relative_base: false,
       }),
-      SharedReporter::new_shared(reporter(&root, transformed_count, &self.progress_count)),
+      SharedReporter::new_shared({
+        let mut shared = reporter(&root, transformed_count, &self.progress_count);
+        if self.quiet_reporter {
+          shared.reporter.log_info = None;
+        }
+        shared
+      }),
       ViteLoadFallbackPlugin::new_shared(ViteLoadFallbackPlugin),
     ]);
     plugins
@@ -938,4 +947,13 @@ async fn a_dev_full_scan_that_reuses_a_saved_result_drops_the_old_globs() {
     .await
     .unwrap();
   assert_eq!(update, None);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_reporter_counts_the_same_modules_after_a_build_without_log_info() {
+  let project = vite_project();
+  build(&project, &Setup { quiet_reporter: true, ..Setup::client() }).await;
+  let second = build(&project, &Setup::client()).await;
+  let clean = build(&project, &Setup { no_cache: true, ..Setup::client() }).await;
+  assert_eq!(second.transformed_count, clean.transformed_count);
 }

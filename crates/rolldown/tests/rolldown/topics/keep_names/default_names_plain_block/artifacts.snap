@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
+// dep.js
+const Capture = "outside";
+// main.js
+{
+	const Capture$1 = /* @__PURE__ */ __name(() => {}, "Capture");
+	assert.deepEqual([Capture, Capture$1.name], ["outside", "Capture"]);
+}
+
+```

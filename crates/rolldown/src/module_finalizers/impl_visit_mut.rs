@@ -1,5 +1,5 @@
 use oxc::ast::AstType;
-use oxc::ast::ast::{AssignmentTarget, JSXMemberExpression};
+use oxc::ast::ast::{AssignmentTarget, AssignmentTargetWithDefault, JSXMemberExpression};
 use oxc::{
   allocator::{self, GetAllocator, ReplaceWith, TakeIn},
   ast::{
@@ -30,6 +30,24 @@ use super::ScopeHoistingFinalizer;
 const CJS_AMBIENT_PATHS: [(&str, &str); 2] = [("__dirname", "dirname"), ("__filename", "filename")];
 
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
+  fn preserve_initializer_name(&self, pattern: &BindingPattern<'ast>, init: &mut Expression<'ast>) {
+    if self.ctx.options.keep_names
+      && let BindingPattern::BindingIdentifier(id) = pattern
+    {
+      self.process_keep_name_for_expression(id.symbol_id.get().map(KeepNameId::SymbolId), init);
+    }
+  }
+
+  fn process_keep_names_for_var_declaration(&self, decl: &mut ast::VariableDeclaration<'ast>) {
+    if self.ctx.options.keep_names {
+      for decl in &mut decl.declarations {
+        if let Some(init) = &mut decl.init {
+          self.preserve_initializer_name(&decl.id, init);
+        }
+      }
+    }
+  }
+
   /// Preserve the enclosing declaration when a catch/var name group is split to avoid an import.
   /// See internal-docs/renaming/implementation.md.
   fn preserve_renamed_catch_vars(&mut self, program: &mut ast::Program<'ast>) {
@@ -1003,11 +1021,40 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     walk_js_mut::walk_object_pattern(self, pat);
   }
 
+  fn visit_assignment_pattern(&mut self, it: &mut ast::AssignmentPattern<'ast>) {
+    self.preserve_initializer_name(&it.left, &mut it.right);
+    walk_js_mut::walk_assignment_pattern(self, it);
+  }
+
+  fn visit_formal_parameter(&mut self, it: &mut ast::FormalParameter<'ast>) {
+    if let Some(init) = &mut it.initializer {
+      self.preserve_initializer_name(&it.pattern, init);
+    }
+    walk_js_mut::walk_formal_parameter(self, it);
+  }
+
+  fn visit_assignment_target_with_default(&mut self, it: &mut AssignmentTargetWithDefault<'ast>) {
+    if self.ctx.options.keep_names
+      && let AssignmentTarget::AssignmentTargetIdentifier(id) = &it.binding
+    {
+      let name = id.reference_id.get().map(KeepNameId::ReferenceId);
+      self.process_keep_name_for_expression(name, &mut it.init);
+    }
+    walk_js_mut::walk_assignment_target_with_default(self, it);
+  }
+
   fn visit_assignment_target_property(
     &mut self,
     property: &mut ast::AssignmentTargetProperty<'ast>,
   ) {
     if let ast::AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(prop) = property {
+      let prop = &mut **prop;
+      if self.ctx.options.keep_names
+        && let Some(init) = &mut prop.init
+      {
+        let name = prop.binding.reference_id.get().map(KeepNameId::ReferenceId);
+        self.process_keep_name_for_expression(name, init);
+      }
       if let Some(target) =
         self.generate_finalized_simple_assignment_target_for_reference(&prop.binding)
       {
@@ -1052,6 +1099,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_for_statement_init(&mut self, it: &mut ast::ForStatementInit<'ast>) {
+    if let ast::ForStatementInit::VariableDeclaration(decl) = it {
+      self.process_keep_names_for_var_declaration(decl);
+    }
     walk_js_mut::walk_for_statement_init(self, it);
     if self.state.contains(TraverseState::TopLevel)
       && self.needs_hosted_top_level_binding
@@ -1086,13 +1136,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // keep_name transformation
     match it {
       ast::Declaration::VariableDeclaration(decl) => {
-        for decl in &mut decl.declarations {
-          let (BindingPattern::BindingIdentifier(id), Some(init)) = (&decl.id, decl.init.as_mut())
-          else {
-            continue;
-          };
-          self.process_keep_name_for_expression(id.symbol_id.get().map(KeepNameId::SymbolId), init);
-        }
+        self.process_keep_names_for_var_declaration(decl);
       }
       ast::Declaration::FunctionDeclaration(decl) => {
         let keep_name_id =

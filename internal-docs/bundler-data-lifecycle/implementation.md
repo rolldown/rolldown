@@ -300,7 +300,7 @@ Rust keeps the JS functions of the bundler options only while their owner is ope
 
 ### Limits
 
-- When an event result close starts after the release of its watcher, that close runs `closeBundle` with released functions. This happens only for the result of an earlier build. The watcher close already runs `closeBundle` for the last build.
+- An earlier build result can outlive its watcher's option callbacks. If closing that result runs `closeBundle`, the hooks run with those callbacks already released. Watcher shutdown closes the last build's handle.
 - Some close calls return before other work ends:
   - `bundle.close()` during a build that started before it.
   - `watcher.close()` during an event result close.

@@ -9,7 +9,7 @@ use rolldown_common::{BundleMode, ScanMode};
 #[cfg(feature = "experimental")]
 use rolldown_error::BuildResult;
 #[cfg(feature = "experimental")]
-use std::mem;
+use std::{mem, sync::atomic::Ordering};
 
 #[cfg(feature = "experimental")]
 impl Bundler {
@@ -40,7 +40,14 @@ impl Bundler {
     bundle_mode: BundleMode,
     with_fn: impl AsyncFnOnce(&mut Bundle) -> BuildResult<T>,
   ) -> BuildResult<T> {
-    self.with_cached_bundle(bundle_mode, with_fn).await
+    let (result, close_hooks_completed) = self
+      .with_cached_bundle(bundle_mode, async |bundle| {
+        Ok((with_fn(bundle).await, bundle.close_hooks_completed))
+      })
+      .await?;
+    let handle = self.last_bundle_handle.as_ref().expect("bundle was created");
+    handle.closed.fetch_or(close_hooks_completed, Ordering::SeqCst);
+    result
   }
 
   pub async fn incremental_write(

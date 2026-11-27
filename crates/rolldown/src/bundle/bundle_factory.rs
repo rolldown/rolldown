@@ -210,6 +210,7 @@ impl BundleFactory {
       bundle_span,
       cache,
       _activity: crate::utils::build_activity::BuildActivity::enter(),
+      close_hooks_completed: false,
     };
     self.last_bundle_handle = Some(bundle.context());
     bundle

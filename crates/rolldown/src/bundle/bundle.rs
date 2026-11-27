@@ -1,17 +1,9 @@
-use crate::bundle::bundle_handle::BundleHandle;
+use std::{path::Path, sync::Arc};
 
-use super::super::{
-  SharedOptions, SharedResolver,
-  module_loader::module_side_effects_overrides::apply_module_side_effects_overrides,
-  stages::{
-    generate_stage::GenerateStage,
-    link_stage::LinkStage,
-    scan_stage::{NormalizedScanStageOutput, ScanStage, ScanStageOutput},
-  },
-  types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
-  utils::fs_utils::clean_dir,
-};
 use anyhow::Context;
+use rustc_hash::FxHashSet;
+use sugar_path::SugarPath;
+
 use arcstr::ArcStr;
 use rolldown_common::{
   GetLocalDbMut, Module, Output, ResolvedId, ScanMode, SharedFileEmitter, SymbolRefDb,
@@ -26,9 +18,19 @@ use rolldown_utils::{
   dashmap::FxDashSet,
   rayon::{IntoParallelRefIterator, ParallelIterator},
 };
-use rustc_hash::FxHashSet;
-use std::{path::Path, sync::Arc};
-use sugar_path::SugarPath;
+
+use super::super::{
+  SharedOptions, SharedResolver,
+  module_loader::module_side_effects_overrides::apply_module_side_effects_overrides,
+  stages::{
+    generate_stage::GenerateStage,
+    link_stage::LinkStage,
+    scan_stage::{NormalizedScanStageOutput, ScanStage, ScanStageOutput},
+  },
+  types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
+  utils::fs_utils::clean_dir,
+};
+use crate::bundle::bundle_handle::BundleHandle;
 
 #[expect(
   clippy::struct_field_names,

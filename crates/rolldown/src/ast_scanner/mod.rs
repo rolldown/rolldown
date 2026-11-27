@@ -183,6 +183,8 @@ pub struct AstScanner<'me, 'ast> {
   /// Set when `exports` is reassigned or `module.exports` is replaced. In either
   /// case, `exports.xxx` writes may no longer target the exported object.
   has_cjs_exports_reassignment: bool,
+  /// Local values and factories used as the RHS of `module.exports = ...`.
+  cjs_export_bindings: FxHashSet<cjs_export_analyzer::CjsExportBinding>,
   /// Whether the current position is at the top level (all parent scopes are block or top-level).
   is_top_level: bool,
   current_comment_idx: usize,
@@ -340,6 +342,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         CommonjsExportSymbolUsage { read: 0, write: 0, bailout: true },
       )]),
       has_cjs_exports_reassignment: false,
+      cjs_export_bindings: FxHashSet::default(),
       is_top_level: false,
       current_comment_idx: 0,
       untranspiled_syntax: UntranspiledSyntax::empty(),
@@ -462,6 +465,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       );
     }
 
+    if exports_kind.is_commonjs() && !self.cjs_export_bindings.is_empty() {
+      self.collect_indirect_cjs_export_literals(program);
+    }
     self.result.exports_kind = exports_kind;
 
     // Resolve CJS re-export require node IDs to import record indices.

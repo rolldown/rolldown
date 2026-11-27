@@ -868,16 +868,6 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_assignment_expression(&mut self, it: &mut ast::AssignmentExpression<'ast>) {
-    // A later namespace lock can list a literal's own names without observing its
-    // properties. Never mark the result of a call, which could be a Proxy.
-    // See internal-docs/import-defer/implementation.md.
-    let mark_cjs_exports = self.ctx.linking_info.shared_deferred_cjs_target
-      && it.operator == ast::AssignmentOperator::Assign
-      && matches!(it.right, Expression::ObjectExpression(_) | Expression::ArrayExpression(_))
-      && it.left.as_member_expression().is_some_and(|member| {
-        member.static_property_name().is_some_and(|name| name == "exports")
-          && matches!(member.object(), Expression::Identifier(id) if id.name == "module" && self.is_global_identifier_reference(id))
-      });
     if let AssignmentTarget::AssignmentTargetIdentifier(id) = &mut it.left {
       self.process_keep_name_for_expression(
         id.reference_id.get().map(KeepNameId::ReferenceId),
@@ -885,14 +875,6 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       );
     }
     walk_js_mut::walk_assignment_expression(self, it);
-    if mark_cjs_exports {
-      it.right = Expression::new_call_with_arg(
-        self.finalized_expr_for_runtime_symbol("__cjsOrdinary"),
-        it.right.take_in(self),
-        false,
-        self,
-      );
-    }
   }
 
   fn visit_for_statement_init(&mut self, it: &mut ast::ForStatementInit<'ast>) {
@@ -1241,6 +1223,13 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     }
 
     match expr {
+      Expression::ObjectExpression(_) | Expression::ArrayExpression(_)
+        if self.ctx.linking_info.shared_deferred_cjs_target =>
+      {
+        walk_js_mut::walk_expression(self, expr);
+        self.mark_cjs_export_literal(expr);
+        return;
+      }
       ast::Expression::CallExpression(call_expr) => {
         self.rewrite_hot_accept_call_deps(call_expr);
         if let Some(new_expr) = self.try_rewrite_global_require_call(call_expr) {
@@ -1396,6 +1385,23 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     self.rewrite_import_meta_hot(expr);
 
     walk_js_mut::walk_expression(self, expr);
+  }
+
+  fn mark_cjs_export_literal(&self, expr: &mut Expression<'ast>) {
+    if self
+      .ctx
+      .module
+      .import_defer_scan
+      .as_ref()
+      .is_some_and(|scan| scan.cjs_export_literals.contains(&expr.node_id()))
+    {
+      *expr = Expression::new_call_with_arg(
+        self.finalized_expr_for_runtime_symbol("__cjsOrdinary"),
+        expr.take_in(self),
+        false,
+        self,
+      );
+    }
   }
 
   /// The access evaluates the deferred module `x` first.

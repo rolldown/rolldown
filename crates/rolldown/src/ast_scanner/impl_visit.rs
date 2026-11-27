@@ -357,12 +357,8 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
             self.has_cjs_exports_reassignment = true;
             if self.immutable_ctx.options.experimental.is_import_defer_enabled()
               && node.operator == ast::AssignmentOperator::Assign
-              && matches!(
-                node.right,
-                Expression::ObjectExpression(_) | Expression::ArrayExpression(_)
-              )
             {
-              self.current_stmt_info.meta.insert(StmtInfoMeta::CjsExportsLiteral);
+              self.record_cjs_export_source(&node.right);
             }
           }
           if id.name == "exports" && self.is_global_identifier_reference(id) {

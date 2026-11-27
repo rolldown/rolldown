@@ -248,6 +248,49 @@ test.each(cjsOutputs)(
   },
 );
 
+test.each(cjsOutputs)(
+  'locking an unread CommonJS export from a local binding, %j',
+  async (output) => {
+    const importer =
+      "import defer * as ns from './target.cjs'; export { ns }; export const read = () => ns.value;";
+    const run = await bundle(
+      {
+        'a.mjs': importer,
+        'b.mjs': importer,
+        'start.cjs': "module.exports = () => require('./target.cjs');",
+        'target.cjs': `const obj = { value: 1 };
+      const arrow = () => ({ value: 2 });
+      function makeExports() {
+        if (globalThis.source === 'proxy') return new Proxy(obj, {
+          ownKeys(target) { globalThis.probes++; return Reflect.ownKeys(target); }
+        });
+        return { value: 3 };
+      }
+      if (globalThis.source === 'alias') module.exports = obj;
+      else if (globalThis.source === 'arrow') module.exports = arrow();
+      else module.exports = makeExports();`,
+        'main.mjs': `import { ns as a } from './a.mjs'; import { ns as b, read } from './b.mjs';
+      import start from './start.cjs';
+      globalThis.probes = 0;
+      start();
+      console.log('lock', Reflect.preventExtensions(a), globalThis.probes);
+      console.log('read', b.value, read(), b.default.value);`,
+      },
+      output,
+    );
+    for (const [source, expected] of [
+      ['alias', '1 1 1'],
+      ['arrow', '2 2 2'],
+      ['factory', '3 3 3'],
+      ['proxy', 'undefined undefined 1'],
+    ]) {
+      expect(
+        run('main', ['--import', `data:text/javascript,globalThis.source='${source}'`]),
+      ).toEqual(['lock true 0', `read ${expected}`]);
+    }
+  },
+);
+
 test('locking a second target that exports the same proxy uses its own observations', async () => {
   const a = "import defer * as ns from './one.cjs'; export { ns };";
   const b = "import defer * as ns from './two.cjs'; export { ns };";

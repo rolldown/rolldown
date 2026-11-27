@@ -120,7 +120,12 @@ impl PreProcessEcmaAst {
     // Enums are a TypeScript-only construct, so only Ts/Tsx modules can declare
     // them. For plain JS/JSX modules, skip the full symbol-table walk and the map
     // allocation entirely (the result would always be empty).
-    let enum_member_value_map = if matches!(parsed_type, OxcParseType::Ts | OxcParseType::Tsx) {
+    //
+    // Only top-level enums are collected. The transformer inlines member accesses inside this
+    // module, and other modules can only import top-level enums. They are keyed by name here
+    // because the symbol ids change when the scoping is rebuilt. A top-level name has one
+    // binding, so the final map is keyed by that binding.
+    let enum_values_by_name = if matches!(parsed_type, OxcParseType::Ts | OxcParseType::Tsx) {
       let scoping_ref = scoping.as_mut().unwrap();
       let mut enum_values: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>> =
         FxHashMap::default();
@@ -128,7 +133,9 @@ impl PreProcessEcmaAst {
       // Walk enum declarations → body scopes → member bindings to collect values.
       for symbol_id in scoping_ref.symbol_ids() {
         let flags = scoping_ref.symbol_flags(symbol_id);
-        if !(flags.is_const_enum() || flags.contains(SymbolFlags::RegularEnum)) {
+        if !(flags.is_const_enum() || flags.contains(SymbolFlags::RegularEnum))
+          || scoping_ref.symbol_scope_id(symbol_id) != scoping_ref.root_scope_id()
+        {
           continue;
         }
         let Some(body_scopes) = scoping_ref.get_enum_body_scopes(symbol_id) else { continue };
@@ -280,6 +287,13 @@ impl PreProcessEcmaAst {
       )
       .with_severity_warning()
     }));
+
+    let enum_member_value_map = enum_values_by_name
+      .into_iter()
+      .filter_map(|(name, members)| {
+        Some((scoping.get_root_binding(name.as_str().into())?, members))
+      })
+      .collect();
 
     Ok(ParseToEcmaAstResult {
       ast,

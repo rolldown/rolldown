@@ -1131,8 +1131,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) -> Option<ast::Expression<'ast>> {
     let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
     let module = self.ctx.modules[canonical_ref.owner].as_normal()?;
-    let symbol_name = canonical_ref.name(self.ctx.symbol_db);
-    let member_map = module.ecma_view.enum_member_value_map.get(symbol_name)?;
+    let member_map = module.ecma_view.enum_member_value_map.get(&canonical_ref.symbol)?;
     let meta = member_map.get(property_name)?;
     Some(meta.value.to_expression(self.ast_builder.builder()))
   }

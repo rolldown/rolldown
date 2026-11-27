@@ -194,10 +194,10 @@ pub struct EcmaView {
   /// Exported `let`s that become constants when no code can call their writers.
   /// See internal-docs/constant-branches/implementation.md.
   pub deferred_write_constants: Vec<DeferredWriteConstant>,
-  /// Enum member constant values, keyed by enum name → member name → value.
+  /// Enum member constant values, keyed by the symbol of a top-level enum → member name → value.
   /// Used by the finalizer to inline `Direction.Up` style accesses across modules.
   /// Contains both const and regular enums.
-  pub enum_member_value_map: FxHashMap<CompactStr, FxHashMap<CompactStr, ConstExportMeta>>,
+  pub enum_member_value_map: FxHashMap<SymbolId, FxHashMap<CompactStr, ConstExportMeta>>,
   /// Use `Box` since it is rarely used also it could reduce the size of `EcmaView`, .
   pub json_module_none_self_reference_included_symbol: Option<Box<FxHashSet<SymbolRef>>>,
   /// Import record indices for `module.exports = require(...)` patterns.

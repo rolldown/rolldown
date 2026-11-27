@@ -1,8 +1,8 @@
-import { BuiltinPlugin } from '../builtin-plugin/utils';
+import { getBuiltinPluginVersion, isBuiltinPlugin } from '../builtin-plugin/utils';
 import { ENUMERATED_INPUT_PLUGIN_HOOK_NAMES } from '../constants/plugin';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN } from '../log/logging';
-import { logInputHookInOutputPlugin } from '../log/logs';
+import { error, logBuiltinPluginVersionMismatch, logInputHookInOutputPlugin } from '../log/logs';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import type { Plugin, RolldownOutputPlugin, RolldownPlugin } from '../plugin';
@@ -37,10 +37,14 @@ export function normalizePlugins<T extends RolldownPlugin>(
   anonymousPrefix: string,
 ): T[] {
   for (const [index, plugin] of plugins.entries()) {
-    if (plugin instanceof BuiltinPlugin) {
+    if (isBuiltinPlugin(plugin)) {
       continue;
     }
     const objectPlugin = plugin as Plugin;
+    const version = getBuiltinPluginVersion(plugin);
+    if (version !== undefined) {
+      error(logBuiltinPluginVersionMismatch(objectPlugin.name, version));
+    }
     if (!objectPlugin.name) {
       objectPlugin.name = `${anonymousPrefix}${index + 1}`;
     }

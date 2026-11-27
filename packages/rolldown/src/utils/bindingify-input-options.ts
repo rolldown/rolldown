@@ -6,7 +6,7 @@ import {
   BindingPropertyWriteSideEffects,
 } from '../binding.cjs';
 import type { BindingExperimentalOptions, BindingInputOptions } from '../binding.cjs';
-import { bindingifyManifestPlugin, BuiltinPlugin } from '../builtin-plugin/utils';
+import { bindingifyManifestPlugin, isBuiltinPlugin } from '../builtin-plugin/utils';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
@@ -40,7 +40,7 @@ export function bindingifyInputOptions(
   timings: PluginTimingsRecorder | undefined,
 ): BindingInputOptions {
   const plugins = rawPlugins.map((plugin) => {
-    if (plugin instanceof BuiltinPlugin) {
+    if (isBuiltinPlugin(plugin)) {
       switch (plugin.name) {
         case 'builtin:vite-manifest':
           return bindingifyManifestPlugin(plugin, pluginContextData);

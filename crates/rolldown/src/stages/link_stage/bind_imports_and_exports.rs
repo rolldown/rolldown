@@ -1253,9 +1253,9 @@ impl LinkStage<'_> {
                       is_node_esm || !importee_has_es_module_flag
                     };
 
-                    // If the current property is `default` and it represents the whole `module.exports`,
-                    // try to resolve the next property as a CJS export.
+                    // A default-import alias starts the remaining member chain at the imported value.
                     if default_is_module_exports
+                      && maybe_namespace_symbol.namespace_alias.is_none()
                       && let Some(next_prop) = member_expr_ref.prop_and_span_list.get(cursor + 1)
                     {
                       if let Some(property) = self.metas[cjs_idx]
@@ -1265,8 +1265,7 @@ impl LinkStage<'_> {
                           resolved_export.came_from_commonjs.then_some(resolved_export)
                         })
                       {
-                        let is_next_default = next_prop.name == "default";
-                        if is_next_default && maybe_namespace_symbol.namespace_alias.is_none() {
+                        if next_prop.name == "default" {
                           // import * as ns; ns.default.default — can't optimize.
                           //
                           // __toESM sets import_ns.default = module.exports and __copyProps
@@ -1282,8 +1281,7 @@ impl LinkStage<'_> {
                           // import_ns.foo = module.exports.foo.
                         } else {
                           cursor += 1;
-                          target_commonjs_exported_symbol =
-                            Some((property.symbol_ref, is_next_default));
+                          target_commonjs_exported_symbol = Some((property.symbol_ref, false));
                           depended_refs.push(property.symbol_ref);
 
                           if member_expr_ref.is_write {
@@ -1292,10 +1290,18 @@ impl LinkStage<'_> {
                         }
                       }
                     } else if default_is_module_exports {
-                      // `.default` represents the whole `module.exports` with no further
-                      // property access. Leave target_commonjs_exported_symbol as None so
-                      // that include_statements runs the CJS bailout check and keeps all
-                      // exports for this opaque usage.
+                      // An unresolved CommonJS default access stays at runtime;
+                      // include_statements keeps the CommonJS exports alive.
+                      if member_expr_ref.is_write
+                        && maybe_namespace_symbol.namespace_alias.is_some()
+                        && let Some(next_prop) = member_expr_ref.prop_and_span_list.get(cursor + 1)
+                        && let Some(property) = self.metas[cjs_idx]
+                          .resolved_exports
+                          .get(&next_prop.name)
+                          .filter(|resolved_export| resolved_export.came_from_commonjs)
+                      {
+                        written_cjs_exports.push(property.symbol_ref);
+                      }
                     } else {
                       target_commonjs_exported_symbol = Some((m.symbol_ref, is_default));
                     }

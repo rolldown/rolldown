@@ -466,6 +466,11 @@ impl<Fs: FileSystem + Clone + 'static> ModuleTask<Fs> {
     resolved: Vec<SavedResolve>,
   ) {
     if !recorder.is_cacheable() {
+      tracing::debug!(
+        module = %self.resolved_id.id,
+        reason = recorder.not_cacheable_reason().as_deref().unwrap_or_default(),
+        "the persistent cache saves no result for the module",
+      );
       return;
     }
     let StateAfterTransform {

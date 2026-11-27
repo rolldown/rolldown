@@ -129,10 +129,12 @@ impl Plugin for EsmExternalRequirePlugin {
     Ok(None)
   }
 
+  // The result depends only on the arguments, the plugin options and `format`, which is in the
+  // options hash of the persistent cache.
   fn resolve_id_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
     Some(rolldown_plugin::PluginHookMeta {
       order: Some(rolldown_plugin::PluginOrder::Pre),
-      cache: None,
+      cache: Some(true),
     })
   }
 
@@ -155,5 +157,10 @@ impl Plugin for EsmExternalRequirePlugin {
       );
       HookLoadOutput { code: code.into(), ..Default::default() }
     }))
+  }
+
+  // The hook has no filter, so it is called for every module. The result depends only on the id.
+  fn load_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    Some(rolldown_plugin::PluginHookMeta { order: None, cache: Some(true) })
   }
 }

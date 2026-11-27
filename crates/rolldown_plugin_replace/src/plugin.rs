@@ -5,6 +5,7 @@ use std::{cmp::Reverse, sync::Arc};
 use anyhow::Result;
 use rolldown_plugin::{
   HookRenderChunkOutput, HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin,
+  PluginHookMeta,
 };
 use rolldown_utils::js_regex::HybridRegex;
 use rustc_hash::FxHashMap;
@@ -225,6 +226,11 @@ impl Plugin for ReplacePlugin {
 
   fn register_hook_usage(&self) -> HookUsage {
     HookUsage::Transform | HookUsage::RenderChunk
+  }
+
+  // The result depends only on the arguments and the plugin options.
+  fn transform_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
   }
 }
 

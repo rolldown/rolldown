@@ -12,7 +12,7 @@ use rolldown_common::{InjectImport, ModuleType};
 use rolldown_ecmascript::semantic_builder_for_transform;
 use rolldown_plugin::{
   HookTransformArgs, HookTransformOutput, HookTransformReturn, HookUsage, Plugin, PluginContext,
-  SharedTransformPluginContext,
+  PluginHookMeta, SharedTransformPluginContext,
 };
 use rolldown_utils::pattern_filter::{self, StringOrRegex};
 use rustc_hash::FxHashSet;
@@ -170,5 +170,11 @@ impl Plugin for InjectPlugin {
 
   fn register_hook_usage(&self) -> HookUsage {
     HookUsage::Transform
+  }
+
+  // The result depends only on the arguments, the plugin options and `cwd`, which is in the
+  // options hash of the persistent cache.
+  fn transform_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: None, cache: Some(true) })
   }
 }

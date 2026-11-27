@@ -72,6 +72,9 @@ dunce = { workspace = true }
 insta = { workspace = true }
 regex = { workspace = true }
 rolldown_common = { workspace = true }
+rolldown_plugin_esm_external_require = { workspace = true }
+rolldown_plugin_inject = { workspace = true }
+rolldown_plugin_replace = { workspace = true }
 rolldown_testing = { workspace = true }
 rolldown_workspace = { workspace = true }
 saphyr = { workspace = true }

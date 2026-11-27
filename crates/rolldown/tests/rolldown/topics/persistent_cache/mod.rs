@@ -1178,3 +1178,48 @@ async fn the_meta_of_a_rust_plugin_stays_between_the_builds_of_one_bundler() {
     bundler.close().await.unwrap();
   }
 }
+
+/// These builtin plugins have hooks without a filter, which are called for every module.
+#[tokio::test(flavor = "multi_thread")]
+async fn builtin_plugins_keep_modules_cacheable() {
+  use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
+  use rolldown_plugin_inject::{InjectPlugin, InjectPluginOptions};
+  use rolldown_plugin_replace::ReplacePlugin;
+  use rolldown_utils::pattern_filter::StringOrRegex;
+
+  let builtin = |name: &str| -> SharedPluginable {
+    match name {
+      "replace" => ReplacePlugin::new_shared(
+        ReplacePlugin::new(std::iter::once(("__X__".to_string(), "1".to_string())).collect())
+          .unwrap(),
+      ),
+      "inject" => InjectPlugin::new_shared(InjectPlugin::new(InjectPluginOptions {
+        injects: vec![rolldown_common::InjectImport::named(
+          "x".into(),
+          Some("$x".into()),
+          "./b.js".into(),
+        )],
+        include: vec![],
+        exclude: vec![],
+        cwd: None,
+      })),
+      _ => EsmExternalRequirePlugin::new_shared(EsmExternalRequirePlugin {
+        external: vec![StringOrRegex::String("node:fs".into())],
+        skip_duplicate_check: true,
+      }),
+    }
+  };
+  for name in ["replace", "inject", "esm_external_require"] {
+    let project = basic_project();
+    let (plugin, calls) = Recorder::new("p", Some(true));
+    let with_builtin = || {
+      let mut list = plugins(&[&plugin]);
+      list.push(builtin(name));
+      list
+    };
+    build(project.options(Some(project.cache())), with_builtin()).await;
+    calls.take();
+    build(project.options(Some(project.cache())), with_builtin()).await;
+    assert_eq!(calls.take(), Vec::<String>::new(), "{name}: no hook of a saved module runs again");
+  }
+}

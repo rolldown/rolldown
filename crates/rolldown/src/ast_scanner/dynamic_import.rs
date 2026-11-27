@@ -20,7 +20,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     if !self
       .dynamic_import_usage_info
       .dynamic_import_binding_reference_id
-      .contains(&ident.reference_id())
+      .remove(&ident.reference_id())
     {
       return None;
     }

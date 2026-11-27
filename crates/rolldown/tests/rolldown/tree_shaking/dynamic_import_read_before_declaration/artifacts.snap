@@ -1,0 +1,61 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## arrow-lib.js
+
+```js
+// arrow-lib.js
+const foo = "foo";
+export { foo };
+
+```
+
+## hoisted-lib.js
+
+```js
+// hoisted-lib.js
+const foo = "foo";
+export { foo };
+
+```
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// arrow.js
+async function arrow() {
+	const read = () => mod.foo;
+	const mod = await import("./arrow-lib.js");
+	return read();
+}
+// hoisted.js
+async function hoisted() {
+	function read() {
+		return mod.foo;
+	}
+	const mod = await import("./hoisted-lib.js");
+	return read();
+}
+// top-level.js
+function getFoo() {
+	return mod.foo;
+}
+const mod = await import("./top-level-lib.js");
+// main.js
+assert.strictEqual(await arrow(), "foo");
+assert.strictEqual(await hoisted(), "foo");
+assert.strictEqual(getFoo(), "foo");
+
+```
+
+## top-level-lib.js
+
+```js
+// top-level-lib.js
+const foo = "foo";
+export { foo };
+
+```

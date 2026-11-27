@@ -150,11 +150,15 @@ impl BundleCoordinator {
           let _ = self.register_watch_files([&*watch_files]);
 
           // Only a lost HMR update asks for a build: every task kind that runs with one reloads
-          // every client. A lazy route needs none, because no page loads it from the build
-          // output.
+          // every client, so any queued task does. A lazy route needs none, because no page loads
+          // it from the build output. The task is an empty `Rebuild`, not a `FullBuild`: a task
+          // that started before this message may recover the update first, and a queued
+          // `FullBuild` would then absorb the next file changes and send no update for them.
           if recover_lost_update {
-            if !self.queued_tasks.iter().any(TaskInput::requires_full_rebuild) {
-              self.queued_tasks.push_back(TaskInput::FullBuild);
+            if self.queued_tasks.is_empty() {
+              self
+                .queued_tasks
+                .push_back(TaskInput::Rebuild { changed_files: FxIndexMap::default() });
             }
             self.has_stale_bundle_output = true;
 

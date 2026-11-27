@@ -65,7 +65,7 @@ After a lazy pull whose scan merged (also when a later step failed), or that fin
 
 1. `DevEngine::render_patch` sends `CoordinatorMsg::LazyCompiled { watch_files, recover_lost_update }`. `watch_files` is the watch list the scan wrote to, and `recover_lost_update` is `Bundler::has_lost_hmr_update()`
 2. The coordinator first registers that watch list — it holds the files the scan loaded. The latest build's list can miss them, because a build that starts before the coordinator handles the message begins with an empty list (see [dev-engine §15](../dev-engine/implementation.md)); this step is what makes later edits to the lazy module trigger updates at all
-3. Only when `recover_lost_update` is true: the coordinator queues a `FullBuild` (unless one is queued already) and marks output as stale. The task sees the lost update and sends `FullReload` to every client (see [dev-engine §9b](../dev-engine/implementation.md))
+3. Only when `recover_lost_update` is true: the coordinator queues a `Rebuild` with no changed files (unless the queue has a task already) and marks output as stale. The task sees the lost update and sends `FullReload` to every client (see [dev-engine §9b](../dev-engine/implementation.md))
 
 A pull that did not merge and sees no lost update sends nothing. A pull with no `l` never sends it.
 
@@ -228,7 +228,7 @@ The coordinator handles `LazyCompiled`:
 
 1. Register the watch list the message carries (see "Data Lifecycle → Build Output Refresh" for why)
 2. Stop here when `recover_lost_update` is false
-3. Queue a `TaskInput::FullBuild`, unless one is queued already
+3. Queue a `TaskInput::Rebuild` with no changed files, unless the queue has a task already. Any task that runs with a lost update reloads every client. Not a `FullBuild`: an earlier task can recover the update before this one runs, and a `FullBuild` would then absorb the next edits (see [dev-engine §9b](../dev-engine/implementation.md), "The lost-update window")
 4. Set `has_stale_bundle_output = true`
 5. Schedule build if stale (runs immediately only when the coordinator is Idle/Failed; otherwise waits in the queue)
 
@@ -332,7 +332,7 @@ After the first lazy pull, the real module and its sync deps are ordinary watche
 │  - Assets emitted during the scan already delivered via                 │
 │    onAdditionalAssets (#9815)                                           │
 │  - LazyCompiled sent: the coordinator watches the scan's files, and     │
-│    queues a FullBuild only for a lost HMR update                        │
+│    queues a build only for a lost HMR update                            │
 │  - Response is a single JS string; Vite links its sourcemap (inline     │
 │    only for sourcemap: 'inline')                                        │
 │  - Browser loads it as an ES module; initializers register each module  │

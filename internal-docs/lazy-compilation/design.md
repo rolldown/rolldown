@@ -235,7 +235,7 @@ Why skipping is safe: with no scan, `merge` does not run and the graph does not 
 
 **No build follows a lazy pull.** No page loads a lazy route from the build output: every lazy `import()` calls `requestLazy`, also for a route the output contains (see [After Boot, Only Factories](#5-after-boot-only-factories)). So a pull, also a first visit, leaves `has_stale_bundle_output` as it was. The graph holds the route, so the next build of any kind puts it in the output. A build per visit would cost N + 1 builds for N visits, and each build splits the shared chunks again, so most chunk hashes change (#11489).
 
-The one exception is a lost HMR update (`Bundler::has_lost_hmr_update`, see [dev-engine/design.md](../dev-engine/design.md#lost-hmr-updates)). Then `LazyCompiled` carries `recover_lost_update: true`, and the coordinator queues a `FullBuild` that reloads every client. Correctness does not depend on this: the next task of any kind reloads the clients the same way. The visit only starts the recovery sooner.
+The one exception is a lost HMR update (`Bundler::has_lost_hmr_update`, see [dev-engine/design.md](../dev-engine/design.md#lost-hmr-updates)). Then `LazyCompiled` carries `recover_lost_update: true`, and the coordinator queues a build that reloads every client. Correctness does not depend on this: the next task of any kind reloads the clients the same way. The visit only starts the recovery sooner.
 
 A pull that fails after its `merge` still sends `LazyCompiled` (the coordinator must watch the route's files) and still delivers its emitted assets. The repeat visit renders from the graph and does not scan, so it would not emit them again.
 

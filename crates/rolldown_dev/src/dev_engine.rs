@@ -1543,6 +1543,55 @@ mod tests {
     assert!(!state_after_visit.last_build_errored && !state_after_visit.has_stale_output);
   }
 
+  /// A lazy pull reads the lost-update flag under the bundler lock, so its `LazyCompiled` can
+  /// reach the coordinator after another task already recovered the update. The build it queues
+  /// must not absorb the next edit.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn a_late_lazy_recovery_does_not_absorb_the_next_edit() {
+    use rolldown_common::WatcherChangeKind;
+
+    use crate::types::coordinator_msg::CoordinatorMsg;
+    use rolldown_utils::indexmap::FxIndexMap;
+
+    let (dir, engine, reported) = lazy_fixture_reported("lazy-late-recovery", LAZY_FILES, |_| {});
+    engine.run().await.unwrap();
+    visit(&engine, "lazy.js").await.unwrap();
+
+    {
+      // Hold the lock as a pull does: the task of the first message waits for it, and the second
+      // message and the edit queue up behind that task.
+      let _bundler = engine.bundler.lock().await;
+      for _ in 0..2 {
+        let _ = engine.coordinator_sender.unbounded_send(CoordinatorMsg::LazyCompiled {
+          watch_files: Arc::default(),
+          recover_lost_update: true,
+        });
+      }
+      std::fs::write(dir.join("dep.js"), "export const dep = 2;\n").unwrap();
+      let _ = engine.coordinator_sender.unbounded_send(CoordinatorMsg::WatchEvent(vec![
+        rolldown_fs_watcher::FsEvent::new(dir.join("dep.js"), WatcherChangeKind::Update),
+      ]));
+      // The coordinator handles messages in order, so it handled the ones above when it answers.
+      engine.get_bundle_state().await.unwrap();
+    }
+    for _ in 0..3 {
+      engine.ensure_task_with_changed_files(FxIndexMap::default()).await;
+    }
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    let updates = reported.hmr_updates.lock().unwrap();
+    assert!(
+      updates.iter().any(|update| matches!(
+        update,
+        HmrUpdate::Changed { changed_ids, .. } if changed_ids.iter().any(|id| id == "dep.js")
+      )),
+      "{updates:#?}"
+    );
+  }
+
   /// Deleting a fetched route's file rescans the proxy in the HMR stage, and that scan fails
   /// to resolve the file. The proxy is then queued for a rescan, so the next compile scans and
   /// reports the missing file instead of serving the deleted module from the graph.

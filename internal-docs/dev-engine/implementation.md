@@ -217,7 +217,7 @@ pub enum CoordinatorMsg {
   GetWatchedFiles { reply: … },              // list of watched paths
   LazyCompiled {                             // a lazy pull merged a scan, or saw a lost update
     watch_files: Arc<FxDashSet<ArcStr>>,     // the lazy scan's watch list; see §15
-    recover_lost_update: bool,               // a lost HMR update is pending, so queue a FullBuild
+    recover_lost_update: bool,               // a lost HMR update is pending, so queue a build
   },
   Close,                                     // shut the coordinator down
 }
@@ -225,17 +225,17 @@ pub enum CoordinatorMsg {
 
 Routing happens in `BundleCoordinator::run` (`bundle_coordinator.rs:98-150`):
 
-| Message                    | Handler                                                                                     |
-| -------------------------- | ------------------------------------------------------------------------------------------- |
-| `WatchEvent`               | `handle_watch_event` → `handle_file_changes`                                                |
-| `BundleCompleted`          | `handle_bundle_completed`                                                                   |
-| `ScheduleBuildIfStale`     | `schedule_build_if_stale`, reply with result                                                |
-| `GetState`                 | `create_state_snapshot`, reply                                                              |
-| `EnsureLatestBundleOutput` | `ensure_latest_bundle_output`, reply                                                        |
-| `TriggerFullBuild`         | `trigger_full_build` (no reply)                                                             |
-| `GetWatchedFiles`          | reply with the watched paths of the watcher                                                 |
-| `LazyCompiled`             | watch its files; if `recover_lost_update`, queue a `FullBuild` (unless queued) and schedule |
-| `Close`                    | await running task, then `break` the loop                                                   |
+| Message                    | Handler                                                                                                        |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `WatchEvent`               | `handle_watch_event` → `handle_file_changes`                                                                   |
+| `BundleCompleted`          | `handle_bundle_completed`                                                                                      |
+| `ScheduleBuildIfStale`     | `schedule_build_if_stale`, reply with result                                                                   |
+| `GetState`                 | `create_state_snapshot`, reply                                                                                 |
+| `EnsureLatestBundleOutput` | `ensure_latest_bundle_output`, reply                                                                           |
+| `TriggerFullBuild`         | `trigger_full_build` (no reply)                                                                                |
+| `GetWatchedFiles`          | reply with the watched paths of the watcher                                                                    |
+| `LazyCompiled`             | watch its files; if `recover_lost_update`, queue an empty `Rebuild` (unless the queue has a task) and schedule |
+| `Close`                    | await running task, then `break` the loop                                                                      |
 
 The producers:
 
@@ -321,7 +321,7 @@ stateDiagram-v2
 
     %% rebuild triggers (no file change)
     Idle --> InProgress : EnsureLatestBundleOutput when stale<br/>queue empty Rebuild
-    Idle --> FullBuildInProgress : LazyCompiled with recover_lost_update<br/>queue FullBuild
+    Failed --> InProgress : LazyCompiled with recover_lost_update<br/>queue empty Rebuild
     Idle --> FullBuildInProgress : TriggerFullBuild<br/>clear queue + FullBuild
     Failed --> FullBuildInProgress : TriggerFullBuild
     FullBuildFailed --> FullBuildInProgress : TriggerFullBuild
@@ -348,13 +348,13 @@ the state mutation itself is the `schedule_build_if_stale` row above. They
 are the distinct ways a build gets initiated — a file change is only one
 of them.
 
-| Trigger                                                                              | Enqueues                       | Resulting state       | Site                                                |
-| ------------------------------------------------------------------------------------ | ------------------------------ | --------------------- | --------------------------------------------------- |
-| File change, steady state (`Idle` / `InProgress` / `Failed`)                         | `Hmr` or `HmrRebuild`          | `InProgress`          | `handle_file_changes`, `:202`                       |
-| File change, `FullBuildFailed`                                                       | `FullBuild` (clears the stash) | `FullBuildInProgress` | `handle_file_changes`, `:248`                       |
-| Browser access while stale (`EnsureLatestBundleOutput`)                              | empty-files `Rebuild`          | `InProgress`          | `ensure_latest_bundle_output`, `:401` (push `:419`) |
-| Lazy pull while an HMR update is lost (`LazyCompiled { recover_lost_update: true }`) | `FullBuild` (unless queued)    | `FullBuildInProgress` | run loop, `:145-163`                                |
-| Manual full build (`TriggerFullBuild`)                                               | clears queue, `FullBuild`      | `FullBuildInProgress` | `trigger_full_build`, `:457`                        |
+| Trigger                                                                              | Enqueues                                           | Resulting state       | Site                                                |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------- | --------------------- | --------------------------------------------------- |
+| File change, steady state (`Idle` / `InProgress` / `Failed`)                         | `Hmr` or `HmrRebuild`                              | `InProgress`          | `handle_file_changes`, `:202`                       |
+| File change, `FullBuildFailed`                                                       | `FullBuild` (clears the stash)                     | `FullBuildInProgress` | `handle_file_changes`, `:248`                       |
+| Browser access while stale (`EnsureLatestBundleOutput`)                              | empty-files `Rebuild`                              | `InProgress`          | `ensure_latest_bundle_output`, `:401` (push `:419`) |
+| Lazy pull while an HMR update is lost (`LazyCompiled { recover_lost_update: true }`) | empty-files `Rebuild`, only when nothing is queued | `InProgress`          | run loop, `:145-165`                                |
+| Manual full build (`TriggerFullBuild`)                                               | clears queue, `FullBuild`                          | `FullBuildInProgress` | `trigger_full_build`, `:457`                        |
 
 Any other lazy pull enqueues nothing (`LazyCompiled { recover_lost_update: false }`
 only registers watch files): no page loads a lazy route from the build
@@ -623,7 +623,7 @@ started it:
 | Trigger                                                                    | Task                 |
 | -------------------------------------------------------------------------- | -------------------- |
 | A file change                                                              | `Hmr` / `HmrRebuild` |
-| A lazy pull, scanned or not (`LazyCompiled { recover_lost_update: true }`) | `FullBuild`          |
+| A lazy pull, scanned or not (`LazyCompiled { recover_lost_update: true }`) | `Rebuild`            |
 | Vite page access while `Failed{Hmr}` (`triggerBundleRegenerationIfStale`)  | `FullBuild`          |
 | Manual retry (`trigger_full_build`, `bundle_coordinator.rs:427`)           | `FullBuild`          |
 
@@ -652,6 +652,15 @@ triggers above:
 Triggers that arrive while a full build runs are queued, and the next
 `FullBuild` absorbs them (`TaskInput::merge_with`). So there is at most
 one full build per trigger, often fewer.
+
+A lazy pull queues an empty `Rebuild`, not a `FullBuild`. It reads the
+flag under the bundler lock, and a task that waits for the lock behind
+it can recover the update and clear the flag before the coordinator
+runs the queued task. A queued `FullBuild` would then absorb the next
+`Hmr` task and drop its changed files: no update and no reload would go
+out for that edit. A `Rebuild` does not merge with `Hmr`, and when the
+flag is clear by the time it runs, it only builds the output again. The test is
+`a_late_lazy_recovery_does_not_absorb_the_next_edit` (`dev_engine.rs`).
 
 ### 9c. Resolver cache invalidation at run time (`bundling_task.rs:87-96`, `:162-164`)
 
@@ -1480,10 +1489,11 @@ lost update sends nothing.
 
 `LazyCompiled` handling (`bundle_coordinator.rs:145-163`): registers the
 watch files the message carries. When `recover_lost_update` is true, it
-also queues a `TaskInput::FullBuild` (unless one is queued already), sets
-`has_stale_bundle_output = true`, and schedules. Every task kind that
-runs with a lost update reloads every client (§9b), so the message
-carries no changed path. Otherwise only the watch files are registered:
+also queues a `TaskInput::Rebuild` with no changed files (unless the
+queue has a task already), sets `has_stale_bundle_output = true`, and
+schedules. Every task kind that runs with a lost update reloads every
+client (§9b), so the message carries no changed path. Why a `Rebuild`
+and not a `FullBuild` is in §9b ("The lost-update window"). Otherwise only the watch files are registered:
 no page loads a lazy route from the build output (see
 [Repeat Visits](../lazy-compilation/design.md#6-repeat-visits)).
 
@@ -1843,7 +1853,7 @@ flowchart TD
   T2([file edit]) --> D{"rebuild_strategy?"}
   T5([client pulls: update, lazy import, loadDynamic]) --> PULL["renderPatch (DevEngine)"]
   T4([stale page load]) --> REB["TaskInput: Rebuild"]
-  T6([LazyCompiled with a lost HMR update]) --> FULL
+  T6([LazyCompiled with a lost HMR update]) --> REB
 
   %% ===== dispatch (handle_file_changes) =====
   D -->|"Never (default)"| HMR["TaskInput: Hmr"]

@@ -348,9 +348,6 @@ impl BundlingTask {
     // See internal-docs/dev-engine/implementation.md §10.
     let hmr_stage_watch_files =
       self.input.require_generate_hmr_update().then(|| Arc::clone(bundler.watch_files()));
-    if self.input.require_generate_hmr_update() {
-      bundler.mark_hmr_merged_modules_read_again();
-    }
 
     // TODO: hyf0 `skip_write` in watch mode won't trigger generate stage, need to investigate why.
     let skip_write = self.dev_context.options.skip_write;
@@ -373,6 +370,9 @@ impl BundlingTask {
     };
     self.hmr_stage_watch_files =
       hmr_stage_watch_files.filter(|list| !Arc::ptr_eq(list, bundler.watch_files()));
+    if self.input.require_generate_hmr_update() {
+      bundler.mark_hmr_merged_modules_read_again();
+    }
 
     match &build_result {
       Err(err) => {

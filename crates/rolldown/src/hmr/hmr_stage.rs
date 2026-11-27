@@ -14,8 +14,8 @@ use oxc::ast::builder::AstBuilder;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
   ClientHmrInput, ClientHmrUpdate, ExportsKind, HmrLazyChunkOutput, HmrPatch, HmrStampTable,
-  HmrUpdate, ImportKind, Module, ModuleIdx, ModuleTable, NormalModule, ScanMode, WatcherChangeKind,
-  is_lazy_proxy, lazy_proxy_target, write_lazy_proxy_id,
+  HmrUpdate, ImportKind, Module, ModuleId, ModuleIdx, ModuleTable, NormalModule, ScanMode,
+  WatcherChangeKind, is_lazy_proxy, lazy_proxy_target, write_lazy_proxy_id,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintCommentsOptions, PrintOptions};
 use rolldown_error::BuildResult;
@@ -32,6 +32,7 @@ use sugar_path::SugarPath;
 
 use crate::{
   SharedOptions, SharedResolver,
+  bundler::HmrMergedModule,
   hmr::hmr_ast_finalizer::HmrAstFinalizer,
   module_loader::ModuleLoader,
   type_alias::IndexEcmaAst,
@@ -49,11 +50,12 @@ pub struct HmrStageInput<'a, Fs: FileSystem + Clone + 'static> {
   pub plugin_driver: SharedPluginDriver,
   pub cache: &'a mut ScanStageCache,
   pub lost_hmr_update: &'a mut bool,
-  /// `compute_hmr_update_for_file_changes` adds the ids of the modules it merged.
-  pub merged_module_ids: &'a mut FxHashSet<ArcStr>,
+  /// `compute_hmr_update_for_file_changes` adds the modules it merged.
+  pub merged_modules: &'a mut FxHashMap<ModuleId, HmrMergedModule>,
   /// See `Bundler::mark_hmr_merged_modules_read_again`. `compute_hmr_update_for_file_changes`
-  /// ships these modules without the unchanged-output check, and removes the ones it merged.
-  pub resend_module_ids: &'a mut FxHashSet<ArcStr>,
+  /// ships these modules without the unchanged-output check, compares their interop with the
+  /// one recorded here, and removes the ones it merged.
+  pub resend_modules: &'a mut FxHashMap<ModuleId, (ExportsKind, bool)>,
   pub next_hmr_patch_id: Arc<AtomicU32>,
 }
 
@@ -265,8 +267,8 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     // broken edit rebuilds byte-identical output — the graph can't tell "broke,
     // then fixed" from "nothing happened", but clients are stuck on the error
     // (overlay / fallback page) and a suppressed update would leave them there.
-    // The modules in `resend_module_ids` skip the capture too: the graph may already hold
-    // content that no client got.
+    // The modules in `resend_modules` skip the capture too: the graph holds content that no
+    // client got.
     let pre_rebuild_renders = if last_build_errored {
       FxHashMap::default()
     } else {
@@ -275,7 +277,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .filter(|module_idx| !hook_selected_modules.contains(*module_idx))
         .filter_map(|module_idx| {
           let module = self.module_table().modules[*module_idx].as_normal()?;
-          if self.resend_module_ids.contains(module.id.as_arc_str()) {
+          if self.resend_modules.contains_key(&module.id) {
             return None;
           }
           let ecma_ast = self.index_ecma_ast()[*module_idx].as_ref()?;
@@ -305,10 +307,15 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         Some((*module_idx, deps.collect::<FxHashSet<_>>()))
       })
       .collect::<FxHashMap<_, _>>();
+    // For a module in `resend_modules`, the graph holds content that no client got, so the
+    // interop the clients' importers were rendered against is the recorded one.
     let pre_rebuild_interop = changed_modules
       .iter()
       .filter_map(|module_idx| {
-        Some((*module_idx, importee_interop(modules[*module_idx].as_normal()?)))
+        let module = modules[*module_idx].as_normal()?;
+        let interop =
+          self.resend_modules.get(&module.id).copied().unwrap_or_else(|| importee_interop(module));
+        Some((*module_idx, interop))
       })
       .collect::<FxHashMap<_, _>>();
 
@@ -372,9 +379,14 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         .chain(new_added_modules.iter())
         .filter_map(|module_idx| modules[*module_idx].as_normal())
       {
-        let id = module.id.as_arc_str();
-        self.input.resend_module_ids.remove(id);
-        self.input.merged_module_ids.insert(id.clone());
+        self.input.resend_modules.remove(&module.id);
+        self.input.merged_modules.insert(
+          module.id.clone(),
+          HmrMergedModule {
+            source: module.ecma_view.source.clone(),
+            interop: importee_interop(module),
+          },
+        );
       }
 
       let options = Arc::clone(&self.options);

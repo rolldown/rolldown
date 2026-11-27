@@ -290,8 +290,8 @@ the seed only; the client-side decision is unchanged.
   an errored build (clients stuck on the error overlay must receive the
   recovery), modules a `hotUpdate` hook returned (the change may
   live outside the module's own code, so identical output proves
-  nothing), and modules that a rebuild read again after an HMR update
-  (the graph may hold a save that no client got).
+  nothing), and modules for which a rebuild read other content after an
+  HMR update (the graph holds a save that no client got).
 
 The rules of both steps are in
 [dev-engine/implementation.md](../dev-engine/implementation.md).

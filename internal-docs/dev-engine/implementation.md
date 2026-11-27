@@ -801,8 +801,8 @@ Then, across all files of the batch:
    build (recovery must reach clients stuck on the overlay), modules a
    `hotUpdate` hook explicitly returned (the change may live outside
    the module's own code, so identical output proves nothing), and the
-   modules in `Bundler::hmr_resend_module_ids` (a rebuild read them
-   again after an HMR update, see §10).
+   modules in `Bundler::hmr_resend_modules` (a rebuild read other
+   content for them after an HMR update, see §10).
 6. **Refetch and stamp** — one partial scan and cache merge. The
    merge sets `Bundler::lost_hmr_update`, and the update clears it only
    when it returns its patches (§9b). Then the stamp table starts a
@@ -897,9 +897,9 @@ Known gaps in this walk, kept on purpose for now:
 - If the task ran the HMR stage (`HmrRebuild`: `RebuildStrategy::Always`,
   or the recovery from a `Rebuild`-stage failure, §7), keeps an `Arc` of
   the latest build's watch list. If the build below replaces that list,
-  the task sends it as `hmr_stage_watch_files`. It also calls
-  `Bundler::mark_hmr_merged_modules_read_again` (see "Why the next HMR
-  update ships the modules this rebuild read again" below).
+  the task sends it as `hmr_stage_watch_files`. After the build it
+  calls `Bundler::mark_hmr_merged_modules_read_again` (see "Why the next
+  HMR update ships the modules this rebuild read again" below).
 - Picks the scan mode:
   ```rust
   let scan_mode = if self.input.requires_full_rebuild() {
@@ -957,26 +957,38 @@ rebuild:   reads main.js again     3                3   <- no client got 3
 next Hmr task: 3 vs 3              3                3   -> must still send 3
 ```
 
-So the HMR stage records the ids of the modules it merged
-(`HmrStageInput::merged_module_ids`, filled right after `cache.merge`
-in `hmr_stage.rs`). This includes the modules that its partial scan
-added to the graph. Example: one task edits `main.js` to import a new
-`c.js` and creates `c.js`. When the task starts, `c.js` is not in the
-graph, so it is not a changed module. The HMR stage adds it, so the
-rebuild finds `c.js` in the graph and reads it again.
+So the HMR stage records each module it merged, with its source and its
+interop (`exports_kind` and whether it has a lazy export), in
+`HmrStageInput::merged_modules`, right after `cache.merge` in
+`hmr_stage.rs`. This includes the modules that its partial scan added to
+the graph. Example: one task edits `main.js` to import a new `c.js` and
+creates `c.js`. When the task starts, `c.js` is not in the graph, so it
+is not a changed module. The HMR stage adds it, so the rebuild finds
+`c.js` in the graph and reads it again.
 `Bundler::compute_hmr_update_for_file_changes` (`impl_bundler_hmr.rs`)
-clears that list when it starts and when it
-fails. Before the build, `rebuild` calls
-`Bundler::mark_hmr_merged_modules_read_again`, which moves the list
-into `Bundler::hmr_resend_module_ids`. The next HMR stage that changes
-one of these modules skips its unchanged-output check, the same way as
-for a module that a `hotUpdate` hook selected, and removes it from the
-set after the merge. If no save landed in between, the next change to
-such a module ships it even when its output did not change; the clients
-then run the same code again.
-The test is `a_save_after_the_hmr_stage_is_the_next_update`
-(`dev_engine.rs`), with one case for a changed module and one for a new
-module.
+clears that record when it starts and when it fails.
+
+After the build, `rebuild` calls
+`Bundler::mark_hmr_merged_modules_read_again`. It compares each recorded
+source with the source in the graph. Only a module whose source differs
+goes into `Bundler::hmr_resend_modules`, with its recorded interop: the
+rebuild read a save that no client got. A rebuild that read the same
+content adds nothing, so under `rebuildStrategy: 'always'` a save with no
+effective change still sends `Noop`.
+
+The next HMR stage that changes a module in `hmr_resend_modules`:
+
+- skips its unchanged-output check, the same way as for a module that a
+  `hotUpdate` hook selected
+- takes the recorded interop as the interop before the update. The
+  clients' importers of the module were rendered against it. So when the
+  save turned the module from ESM into CommonJS, the importers are
+  rendered again and shipped (`interop_changed`).
+- removes it from the set after the merge
+
+The tests are `a_save_after_the_hmr_stage_is_the_next_update`
+(`dev_engine.rs`), with cases for a changed module, a new module and an
+interop change, and `a_rebuild_without_a_save_keeps_the_unchanged_output_check`.
 
 ---
 

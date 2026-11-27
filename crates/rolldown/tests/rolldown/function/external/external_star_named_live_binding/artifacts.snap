@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({}, 2);
+import * as import_ext_a from "ext-a";
+__reExport(barrel_exports, import_ext_a);
+export { change } from "ext-a";
+export { value } from "ext-a";
+
+```

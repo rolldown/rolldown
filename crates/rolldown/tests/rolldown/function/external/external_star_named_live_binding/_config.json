@@ -1,0 +1,6 @@
+{
+  "config": {
+    "input": [{ "name": "entry", "import": "./entry.js" }],
+    "external": ["ext-a"]
+  }
+}

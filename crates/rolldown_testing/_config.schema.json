@@ -1236,6 +1236,13 @@
             "boolean",
             "null"
           ]
+        },
+        "packageVersion": {
+          "description": "Set by the JavaScript API, not by users: the version of the `rolldown` package. A preview\nbuild has the commit in it, while the version of the Rust crates stays the one of the last\nrelease. It is an input of key 1.",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "additionalProperties": false,

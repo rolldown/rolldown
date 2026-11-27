@@ -991,8 +991,8 @@ impl CacheHash for ExperimentalOptions {
 
 impl CacheHash for CacheOptions {
   fn cache_hash(&self, h: &mut Xxh3) {
-    // `cache_key`, `build_dependencies` and `watch_mode` are separate inputs of key 1. The
-    // other fields do not change scan results.
+    // `cache_key`, `build_dependencies`, `watch_mode` and `package_version` are separate inputs
+    // of key 1. The other fields do not change scan results.
     let Self {
       dir: _,
       max_age: _,
@@ -1001,6 +1001,7 @@ impl CacheHash for CacheOptions {
       assume_unchanged: _,
       assume_cacheable_hooks,
       watch_mode: _,
+      package_version: _,
     } = self;
     assume_cacheable_hooks.cache_hash(h);
   }

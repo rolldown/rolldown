@@ -2370,6 +2370,8 @@ export interface BindingExperimentalCacheOptions {
   assumeCacheableHooks?: BindingAssumeCacheableHooks
   /** Not a user option: the JavaScript API sets it to `this.meta.watchMode`. */
   watchMode?: boolean
+  /** Not a user option: the JavaScript API sets it to the version of the `rolldown` package. */
+  packageVersion?: string
 }
 
 export interface BindingExperimentalDevModeOptions {

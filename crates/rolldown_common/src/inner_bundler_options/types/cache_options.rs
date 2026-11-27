@@ -29,6 +29,10 @@ pub struct CacheOptions {
   /// `this.meta.watchMode`. A plugin can give another result in watch mode, so it is an input
   /// of key 1.
   pub watch_mode: Option<bool>,
+  /// Set by the JavaScript API, not by users: the version of the `rolldown` package. A preview
+  /// build has the commit in it, while the version of the Rust crates stays the one of the last
+  /// release. It is an input of key 1.
+  pub package_version: Option<String>,
 }
 
 /// Treats hooks that do not set `cache` as if they set `cache: true`.

@@ -523,6 +523,12 @@ async fn options_cache_key_and_build_dependencies_change_every_key() {
   build(project.options(Some(cache_b)), plugins(&[&plugin])).await;
   assert_eq!(calls.take().len(), 8, "a changed cache key is a miss for every module");
 
+  // Another version of the `rolldown` package, as a preview build of another commit has.
+  let cache_preview =
+    CacheOptions { package_version: Some("1.3.3+commit.abc".into()), ..cache.clone() };
+  build(project.options(Some(cache_preview)), plugins(&[&plugin])).await;
+  assert_eq!(calls.take().len(), 8, "another package version is a miss for every module");
+
   // A changed build dependency.
   project.write("rolldown.config.js", "export default { changed: true }");
   build(project.options(Some(cache.clone())), plugins(&[&plugin])).await;

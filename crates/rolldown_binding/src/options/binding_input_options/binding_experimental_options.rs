@@ -35,6 +35,8 @@ pub struct BindingExperimentalCacheOptions {
   pub assume_cacheable_hooks: Option<BindingAssumeCacheableHooks>,
   /// Not a user option: the JavaScript API sets it to `this.meta.watchMode`.
   pub watch_mode: Option<bool>,
+  /// Not a user option: the JavaScript API sets it to the version of the `rolldown` package.
+  pub package_version: Option<String>,
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -54,6 +56,7 @@ impl From<BindingExperimentalCacheOptions> for rolldown_common::CacheOptions {
       build_dependencies: value.build_dependencies,
       assume_unchanged: value.assume_unchanged.map(bindingify_string_or_regex_array),
       watch_mode: value.watch_mode,
+      package_version: value.package_version,
       assume_cacheable_hooks: value.assume_cacheable_hooks.map(|hooks| {
         rolldown_common::AssumeCacheableHooks {
           resolve_id: hooks.resolve_id,

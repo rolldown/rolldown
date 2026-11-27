@@ -24,8 +24,9 @@ use xxhash_rust::xxh3::Xxh3Default;
 
 use self::saved_result::SavedResult;
 
-/// The input of every key 1. The Rolldown version stands in for a cache version: a new version
-/// can change the result of a module in ways that no other input shows.
+/// An input of every key 1, with `CacheOptions::package_version`. The Rolldown version stands in
+/// for a cache version: a new version can change the result of a module in ways that no other
+/// input shows.
 const ROLLDOWN_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub type SharedPersistentScanCache = Arc<PersistentScanCache>;
@@ -65,6 +66,7 @@ impl PersistentScanCache {
 
     let mut hasher = Xxh3Default::new();
     hash_str(&mut hasher, ROLLDOWN_VERSION);
+    hash_str(&mut hasher, cache_options.package_version.as_deref().unwrap_or_default());
     hash_str(&mut hasher, cache_options.cache_key.as_deref().unwrap_or_default());
     hasher.update(&[u8::from(cache_options.watch_mode.unwrap_or(false))]);
     hasher.update(&options_hash.to_le_bytes());

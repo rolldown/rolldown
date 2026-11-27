@@ -7,6 +7,7 @@ import {
 } from '../binding.cjs';
 import type { BindingExperimentalOptions, BindingInputOptions } from '../binding.cjs';
 import { bindingifyManifestPlugin, BuiltinPlugin } from '../builtin-plugin/utils';
+import { VERSION } from '../constants/version';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
@@ -220,6 +221,7 @@ function bindingifyExperimentalCache(
     assumeCacheableHooks: cache.assumeCacheableHooks,
     // Plugins can read it as `this.meta.watchMode`, so it is an input of the saved results.
     watchMode,
+    packageVersion: VERSION,
   };
 }
 

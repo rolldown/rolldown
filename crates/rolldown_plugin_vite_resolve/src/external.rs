@@ -91,8 +91,19 @@ impl ExternalDecider {
     Self { options, resolver, builtin_checker, processed_ids: DashMap::default() }
   }
 
+  /// In build the decision depends on the importer, because a package can have a different copy
+  /// nested under the importer's own `node_modules`. The importer's directory is enough to tell
+  /// the copies apart, so the cache is keyed by `(id, importer directory)`.
+  fn cache_key(&self, id: &str, importer: Option<&str>) -> String {
+    match importer.and_then(|importer| Path::new(importer).parent()) {
+      Some(dir) if self.options.is_build => format!("{id}\0{}", dir.to_string_lossy()),
+      _ => id.to_owned(),
+    }
+  }
+
   pub fn is_external(&self, id: &str, importer: Option<&str>) -> bool {
-    if let Some(cached) = self.processed_ids.get(id) {
+    let key = self.cache_key(id, importer);
+    if let Some(cached) = self.processed_ids.get(&key) {
       return *cached;
     }
 
@@ -101,7 +112,7 @@ impl ExternalDecider {
       is_external =
         self.builtin_checker.is_builtin(id) || self.is_configured_as_external(id, importer);
     }
-    self.processed_ids.insert(id.to_owned(), is_external);
+    self.processed_ids.insert(key, is_external);
 
     is_external
   }
@@ -140,11 +151,11 @@ impl ExternalDecider {
 
     // Skip passing importer in build to avoid externalizing non-hoisted dependencies
     // unresolvable from root (which would be unresolvable from output bundles also)
-    let importer = if self.options.is_build { None } else { importer };
+    let resolve_importer = if self.options.is_build { None } else { importer };
 
     let result = self.resolver.resolve_bare_import(
       id,
-      importer,
+      resolve_importer,
       false,
       &self.options.dedupe,
       self.options.legacy_inconsistent_cjs_interop,
@@ -158,7 +169,25 @@ impl ExternalDecider {
         if !configured_as_external && !resolved.id.as_path().is_in_node_modules() {
           return false;
         }
-        can_externalize_file(&resolved.id)
+        if !can_externalize_file(&resolved.id) {
+          return false;
+        }
+        // The output bundle loads the copy that resolves from the root. If the importer would
+        // resolve a different copy (a nested `node_modules`), externalizing would load the wrong one.
+        if self.options.is_build
+          && let Some(importer) = importer
+          && let Ok(Some(from_importer)) = self.resolver.resolve_bare_import(
+            id,
+            Some(importer),
+            false,
+            &self.options.dedupe,
+            self.options.legacy_inconsistent_cjs_interop,
+          )
+          && from_importer.id != resolved.id
+        {
+          return false;
+        }
+        true
       }
       _ => false,
     }

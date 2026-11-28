@@ -151,7 +151,7 @@ impl NormalModule {
 
   #[expect(clippy::cast_precision_loss)]
   pub fn size(&self) -> f64 {
-    self.ecma_view.pre_render_size as f64
+    self.ecma_view.declared_module_size.unwrap_or(self.ecma_view.source.len()) as f64
   }
 
   pub fn is_hmr_self_accepting_module(&self) -> bool {

@@ -123,11 +123,13 @@ impl EcmaView {
 pub struct EcmaView {
   pub dummy_record_set: FxHashSet<NodeId>,
   pub source: ArcStr,
-  /// The module size in bytes used for code splitting before rendering.
-  /// A supplied `declaredModuleSize` overrides the default.
-  /// Native JSON defaults to the length of its transformed text before parsing.
-  /// Other modules default to their code length.
-  pub pre_render_size: usize,
+  /// A declared module size that [`crate::Module::size`] uses instead of the length of the code.
+  /// It is not specific to plugins.
+  ///
+  /// It has two sources: `declaredModuleSize` returned by a `load` or `transform` hook, and Rolldown itself for native JSON, whose AST keeps no source text.
+  ///
+  /// When another kind of module cannot be measured by its code length, declare its size here too, rather than adding a field or a fallback.
+  pub declared_module_size: Option<usize>,
   pub def_format: ModuleDefFormat,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,

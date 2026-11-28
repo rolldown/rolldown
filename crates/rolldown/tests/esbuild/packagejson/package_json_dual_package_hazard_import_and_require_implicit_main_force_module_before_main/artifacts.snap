@@ -16,7 +16,7 @@ var init_module = __esmMin((() => {
 	module_default = "module";
 }));
 // src/test-index.js
-assert.deepEqual((init_module(), __toCommonJS(module_exports)), { default: "module" });
+assert.deepEqual((init_module(), __requireESM(module_exports)), { default: "module" });
 // src/test-module.js
 init_module();
 assert$1.equal(module_default, "module");

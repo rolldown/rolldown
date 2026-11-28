@@ -15,7 +15,7 @@ var init_module = __esmMin((() => {
 	module_default = "module";
 }));
 // src/test-main.js
-console.log((init_module(), __toCommonJS(module_exports)));
+console.log((init_module(), __requireESM(module_exports)));
 // src/test-module.js
 init_module();
 assert.equal(module_default, "module");

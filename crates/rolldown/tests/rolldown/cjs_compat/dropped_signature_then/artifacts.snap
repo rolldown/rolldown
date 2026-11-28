@@ -17,7 +17,7 @@ var init_leaf = __esmMin((() => {
 }));
 // e1.cjs
 var require_e1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	module.exports = (init_leaf(), __toCommonJS(leaf_exports));
+	module.exports = (init_leaf(), __requireESM(leaf_exports));
 }));
 export default require_e1();
 export { __commonJSMin as n, require_e1 as t };

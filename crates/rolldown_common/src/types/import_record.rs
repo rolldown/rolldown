@@ -80,6 +80,8 @@ bitflags::bitflags! {
     const IsReExportOnly = 1 << 10;
     /// A direct CommonJS star export lowered to named re-exports for a dynamic entry.
     const CjsStarNamedExports = 1 << 11;
+    /// Use the cached runtime conversion for this bundled ESM require.
+    const UseCachedEsmRequire = 1 << 12;
 
     const TopLevelPureDynamicImport = Self::IsTopLevel.bits() | Self::PureDynamicImport.bits();
   }

@@ -17,13 +17,13 @@ export { iconP };
 ## lab.js
 
 ```js
-import { a as __esmMin, i as __commonJSMin, o as __exportAll, s as __toCommonJS } from "./w.js";
+import { a as __esmMin, i as __commonJSMin, o as __exportAll, s as __requireESM } from "./w.js";
 // top.js
 var top_exports = /* @__PURE__ */ __exportAll({ t: () => 2 });
 var init_top = __esmMin((() => {}));
 // lab.cjs
 var require_lab = /* @__PURE__ */ __commonJSMin(((exports) => {
-	const { t } = (init_top(), __toCommonJS(top_exports));
+	const { t } = (init_top(), __requireESM(top_exports));
 	exports.t = t;
 }));
 export default require_lab();
@@ -64,6 +64,6 @@ var init_w = __esmMin((() => {
 	globalThis.__w_side_effect = "ran";
 	V = "v18";
 }));
-export { __esmMin as a, __commonJSMin as i, V as n, __exportAll as o, init_w as r, __toCommonJS as s, P as t };
+export { __esmMin as a, __commonJSMin as i, V as n, __exportAll as o, init_w as r, __requireESM as s, P as t };
 
 ```

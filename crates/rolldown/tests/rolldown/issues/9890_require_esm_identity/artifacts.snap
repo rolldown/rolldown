@@ -1,0 +1,49 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+import { createRequire } from "node:module";
+// HIDDEN [\0rolldown/runtime.js]
+// esm.mjs
+var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+var value;
+var init_esm = __esmMin((() => {
+	value = {};
+}));
+// entry.cjs
+var require_entry = /* @__PURE__ */ __commonJSMin((() => {
+	const assert = __require("node:assert/strict");
+	const a = (init_esm(), __requireESM(esm_exports));
+	const b = (init_esm(), __requireESM(esm_exports));
+	assert.strictEqual(a, b);
+}));
+export default require_entry();
+export {};
+
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### entry.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// esm.mjs
+var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
+var value;
+var init_esm = __esmMin((() => {
+	value = {};
+}));
+// entry.cjs
+const assert = require("node:assert/strict");
+const a = (init_esm(), __requireESM(esm_exports));
+const b = (init_esm(), __requireESM(esm_exports));
+assert.strictEqual(a, b);
+
+```

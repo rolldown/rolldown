@@ -1,0 +1,17 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./entry.cjs"
+      }
+    ],
+    "format": "esm",
+    "platform": "node"
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

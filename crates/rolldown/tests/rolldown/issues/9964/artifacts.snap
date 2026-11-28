@@ -24,7 +24,7 @@ var init_story = __esmMin((() => {
 }));
 // entry.cjs
 var require_entry = /* @__PURE__ */ __commonJSMin((() => {
-	const { run } = (init_story(), __toCommonJS(story_exports));
+	const { run } = (init_story(), __requireESM(story_exports));
 	if (run() !== "ok") throw new Error("REPRO FAILED: run() returned " + run());
 }));
 export default require_entry();

@@ -1880,7 +1880,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 }
               }
               _ => {
-                // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
+                // Rewrite `require(...)` to a wrapper call. Convert used ESM results with
+                // `__requireESM` or `__toCommonJS` after initialization.
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
                 // `init_xxx` or `require_xxx`
                 let (wrap_ref_expr, hint) = self.finalized_expr_for_symbol_ref(
@@ -1917,14 +1918,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
                   let is_json_module = rec.meta.contains(ImportRecordMeta::JsonModule);
 
-                  // `__toCommonJS`
-                  let to_commonjs_expr = self.finalized_expr_for_runtime_symbol("__toCommonJS");
-                  // `__toCommonJS(xxx_exports)`
-                  let to_commonjs_call_expr = ast::Expression::new_call_expression(
-                    SPAN,
-                    to_commonjs_expr,
-                    None,
-                    [ast::Argument::from(namespace_object_ref_expr)],
+                  let helper = if rec.meta.contains(ImportRecordMeta::UseCachedEsmRequire) {
+                    "__requireESM"
+                  } else {
+                    "__toCommonJS"
+                  };
+                  let to_commonjs_call_expr = Expression::new_call_with_arg(
+                    self.finalized_expr_for_runtime_symbol(helper),
+                    namespace_object_ref_expr,
                     false,
                     self,
                   );
@@ -1942,7 +1943,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     to_commonjs_call_expr
                   };
 
-                  // `(init_xxx(), __toCommonJS(xxx_exports))`
+                  // `(init_xxx(), __requireESM(xxx_exports))` or `(init_xxx(), __toCommonJS(xxx_exports))`
                   Some(Expression::new_seq_in_parens(wrap_ref_call_expr, final_expr, self))
                 }
               }

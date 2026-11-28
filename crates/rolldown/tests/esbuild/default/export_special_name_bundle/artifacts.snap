@@ -10,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // lib.mjs
 var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => 123 });
 // entry.js
-const lib = (__esmMin((() => {}))(), __toCommonJS(lib_exports));
+const lib = (__esmMin((() => {}))(), __requireESM(lib_exports));
 console.log(lib.__proto__);
 
 ```

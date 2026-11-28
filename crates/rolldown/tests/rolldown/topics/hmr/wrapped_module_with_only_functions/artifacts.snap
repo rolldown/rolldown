@@ -42,7 +42,7 @@ var init_required = __esmMin((() => {
 var main_exports = /* @__PURE__ */ __exportAll({});
 __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-const { double } = (init_required(), __toCommonJS(required_exports));
+const { double } = (init_required(), __requireESM(required_exports));
 assert.strictEqual(double(2), 4);
 assert.strictEqual(triple(2), 6);
 
@@ -98,7 +98,7 @@ function init_main() {
 		init_imported();
 		__rolldown_runtime__.createModuleHotContext("main.js");
 		__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-		({double} = (init_required(), __toCommonJS(required_exports)));
+		({double} = (init_required(), __requireESM(required_exports)));
 		assert.strictEqual(double(2), 4);
 		assert.strictEqual(triple(2), 6);
 	})))();

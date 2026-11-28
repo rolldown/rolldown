@@ -46,7 +46,7 @@ export { init_foo as a, Foo as i, bar as n, init_bar as r, init_barrel as t };
 ## entry.js
 
 ```js
-import { n as __exportAll, r as __toCommonJS, t as __esmMin } from "./rolldown-runtime.js";
+import { n as __exportAll, r as __requireESM, t as __esmMin } from "./rolldown-runtime.js";
 import { n as bar$1, t as init_barrel } from "./barrel.js";
 // req.js
 var req_exports = /* @__PURE__ */ __exportAll({ bar: () => bar$1 });
@@ -57,7 +57,7 @@ var init_req = __esmMin((() => {
 var bar, Foo;
 function init_entry() {
 	return (init_entry = __esmMin((async () => {
-		({bar} = (init_req(), __toCommonJS(req_exports)));
+		({bar} = (init_req(), __requireESM(req_exports)));
 		({Foo} = await import("./lib.js"));
 	})))();
 }
@@ -86,6 +86,6 @@ export { Foo };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __exportAll as n, __toCommonJS as r, __esmMin as t };
+export { __exportAll as n, __requireESM as r, __esmMin as t };
 
 ```

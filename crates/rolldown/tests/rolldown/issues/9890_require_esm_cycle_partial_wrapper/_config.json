@@ -1,0 +1,16 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./entry.cjs"
+      }
+    ],
+    "platform": "node"
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

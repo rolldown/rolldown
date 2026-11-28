@@ -48,6 +48,14 @@ static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
 static ALLOC: rolldown_tracking_allocator::TrackingAllocator =
   rolldown_tracking_allocator::TrackingAllocator;
 
+// The mimalloc heap for module ASTs is used in the same builds where mimalloc
+// is the global allocator (with or without `tracking_allocator`).
+#[cfg(all(
+  not(target_family = "wasm"),
+  not(feature = "default_global_allocator"),
+  not(target_env = "ohos")
+))]
+mod ast_heap;
 pub mod binding_bundler;
 pub mod binding_dev_engine;
 pub mod binding_dev_options;
@@ -109,6 +117,13 @@ pub fn start_async_runtime() {
 
 #[napi_derive::module_init]
 fn init() {
+  #[cfg(all(
+    not(target_family = "wasm"),
+    not(feature = "default_global_allocator"),
+    not(target_env = "ohos")
+  ))]
+  ast_heap::init();
+
   #[cfg(not(target_family = "wasm"))]
   {
     use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
@@ -121,6 +136,10 @@ fn init() {
       .unwrap_or(4);
     let mut builder = tokio::runtime::Builder::new_multi_thread();
     let reclaim_memory = crate::memory_reclaim::configure();
+    // Tokio runs this on worker threads and on blocking pool threads.
+    // Module tasks parse on these threads, so they allocate from the AST heap.
+    #[cfg(all(not(feature = "default_global_allocator"), not(target_env = "ohos")))]
+    builder.on_thread_stop(ast_heap::release_current_thread);
 
     let rt = builder
       .max_blocking_threads(max_blocking_threads)

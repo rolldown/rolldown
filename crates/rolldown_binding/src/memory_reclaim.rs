@@ -99,7 +99,7 @@ mod imp {
     let version = unsafe { mi_version() };
     debug_assert_eq!(
       version, CHECKED_MIMALLOC,
-      "mimalloc changed, check the declarations and option numbers in memory_reclaim.rs"
+      "mimalloc changed, check the declarations and option numbers in memory_reclaim.rs, and the declarations in ast_heap.rs"
     );
     if version < 30600 {
       return false;
@@ -229,6 +229,12 @@ mod imp {
   fn release_thread_pages() {
     // SAFETY: called on the owner thread, outside any other mimalloc call.
     unsafe { mi_theap_quiescent_abandon(mi_theap_get_default()) };
+    // Module ASTs are in their own mimalloc heap, so a thread that allocated them also has a theap
+    // of that heap.
+    if let Some(theap) = crate::ast_heap::current_thread_theap() {
+      // SAFETY: as above. `current_thread_theap` returns the calling thread's theap.
+      unsafe { mi_theap_quiescent_abandon(theap.as_ptr().cast()) };
+    }
   }
 
   struct Round {

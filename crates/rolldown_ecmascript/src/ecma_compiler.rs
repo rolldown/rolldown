@@ -24,7 +24,7 @@ pub struct EcmaCompiler;
 impl EcmaCompiler {
   pub fn parse(id: &str, source: impl Into<ArcStr>, ty: SourceType) -> BuildResult<EcmaAst> {
     let source: ArcStr = source.into();
-    let allocator = oxc::allocator::Allocator::default();
+    let allocator = crate::ast_arena::ast_allocator(0);
     let inner =
       ProgramCell::try_new(ProgramCellOwner { source: source.clone(), allocator }, |owner| {
         let parser = Parser::new(&owner.allocator, &owner.source, ty).with_options(ParseOptions {
@@ -54,7 +54,7 @@ impl EcmaCompiler {
     ty: SourceType,
   ) -> BuildResult<EcmaAst> {
     let source: ArcStr = source.into();
-    let allocator = oxc::allocator::Allocator::default();
+    let allocator = crate::ast_arena::ast_allocator(0);
     let inner =
       ProgramCell::try_new(ProgramCellOwner { source: source.clone(), allocator }, |owner| {
         let builder = AstBuilder::new(&owner.allocator);

@@ -718,11 +718,90 @@ The pulls of that push then run before the rebuild. Details are in
 [dev-engine/implementation.md](../dev-engine/implementation.md) ("Pulls
 before the rebuild").
 
-Each pull renders the factories it carries. The name that holds an
-importee's namespace in a factory depends only on the importer and the
-import record, not on the payload, so a factory's text is the same in
-every payload that carries it (see `hmr_import_binding_name` in
-`hmr_ast_finalizer.rs`).
+The name that holds an importee's namespace in a factory depends only on
+the importer and the import record, not on the payload, so a factory's
+text is the same in every payload that carries it (see
+`hmr_import_binding_name` in `hmr_ast_finalizer.rs`).
+
+**Render cache.** After one edit, many tabs pull the same modules. So
+the engine renders each factory once and keeps it, together with the
+last finished payloads (`HmrRenderCache`, `render_cache.rs`).
+
+```mermaid
+flowchart TD
+  P["pull: carried modules, G, catch-up, rows"] --> K{"payload key kept?"}
+  K -- yes --> R["return the kept code and map"]
+  K -- no --> F["look up each factory by (stable id, stamp, render_inputs)"]
+  F --> M["render the misses in parallel, keep them"]
+  M --> J["join prelude, catch-up, rows, factories; keep the payload"]
+```
+
+A factory's text depends on:
+
+- the module's own scanned AST. Its stamp covers it.
+- the module's stable id
+- for each import record, facts about the importee (`render_inputs`):
+  - normal importee: id, stable id, `repr_name`, `exports_kind`, and
+    whether it has a lazy export
+  - external importee: id, stable id, `identifier_name`
+  - an unresolved record
+- the bundler options. They are fixed for the life of a `Bundler`.
+
+The text contains no stamp, no `G`, no payload position and no session
+number. So the keys are:
+
+- **Factory key:** `(stable id, stamp, render_inputs hash)`. The cache
+  keeps one entry per stable id, up to about 64 MiB. The least recently
+  used entries go first.
+- **Payload key:** `PayloadKey { generation, catch-up text, rows text,
+  the factory keys in payload order }`. The cache keeps at most 8
+  payloads and 32 MiB. `G` is in the key because the prelude prints it:
+  two pulls with the same rows and factories at another generation get
+  different code. Every payload prepares its sourcemap for the one name
+  `__rolldown_hmr_patch.js`, so the key has no file name.
+
+The HMR stage fills the cache too. To drop the changed modules whose code
+did not change, it renders them again after the merge. With 32 changed
+modules or fewer, it renders them with sourcemaps and keeps the
+factories under the new stamp, so the first pull after the push does not
+render these modules again. Newly added modules, re-rendered importers and
+their unheld static deps still render on the first pull. A larger change
+set (a branch switch) would build many maps that no pull needs. These
+entries last until the next scan that reads the module again. With
+`rebuildStrategy: 'always'`, and in the task that recovers from a failed
+rebuild, that scan is the task's own rebuild, so a tab that pulls after it
+renders them once more.
+
+A scan that reads a module again can change it without a new stamp.
+Example: an edit adds two empty lines at the top of `a.js`. The code
+renders the same, so the HMR stage stamps nothing and pushes nothing. But
+every line of the sourcemap moved, so a kept factory of `a.js` is wrong.
+So:
+
+- Before a partial scan, the cache drops the factories of every module
+  the scan reads again:
+  - the HMR stage: its changed modules, which include the files in
+    `pending_rescans`
+  - a partial build: its changed paths, `pending_rescans` and
+    `pending_build_rescans`
+  - the lazy route scan (`scan_lazy_routes`): it reads again only the
+    proxies it lists, and drops nothing. No pull and no payload uses the
+    factory of a proxy, because `requestLazy` runs the real module.
+- These clear the whole cache:
+  - a full scan, which reads every module again
+  - `begin_hmr_full_reload`, which follows graph changes that no stamp
+    records, such as a lost update
+  - `set_hmr_epoch`, because stamps start again at 0 in a new session
+- Every module that a scan reads again drops the kept payloads too, even
+  when its factory is not in the cache: a payload can carry a factory too
+  large to keep. A factory that a pull inserts or that leaves by eviction
+  keeps them. The payload key names each factory's stamp and inputs, so
+  a kept payload stays right until a scan reads one of its modules again.
+
+In debug builds, every cache hit (a factory or a payload) is rendered
+again and compared, code and sourcemap. The test suites run in debug
+builds, so a key that misses an input fails a test, and the cache changes
+no snapshot.
 
 **Payload sourcemaps.** A payload has no file, so the
 engine returns their map as JSON (`sourcemap: true`), and Vite links it
@@ -1007,8 +1086,6 @@ way), the patch would start with
   changed files again, so a save that lands during the wait reaches the
   graph and the output, but no client. Its own task sends `Noop`
   (dev-engine "Pulls before the rebuild").
-- **One render per pull** — every tab that pulls after one edit renders
-  the factories it needs again; nothing is kept between pulls.
 - **Cold `__commonJSMin` wrappers** — a CommonJS module that a full-build
   chunk wraps in `__commonJSMin` runs only when first required. How a
   payload's code reaches such a wrapper that has not run yet is not

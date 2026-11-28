@@ -57,8 +57,10 @@ impl Bundler {
   }
 
   /// Starts a new session with `epoch`. Call it before the first build.
-  pub fn set_hmr_epoch(&self, epoch: u32) {
+  pub fn set_hmr_epoch(&mut self, epoch: u32) {
     *self.bundle_factory.hmr_session.lock() = HmrSession::new(epoch);
+    // Stamps start again at 0, so a cached factory could match a module that changed since.
+    self.hmr_render_cache.clear();
   }
 
   pub fn hmr_session(&self) -> &SharedHmrSession {
@@ -66,8 +68,15 @@ impl Bundler {
   }
 
   /// See `HmrSession::begin_full_reload`.
-  pub fn begin_hmr_full_reload(&self) {
+  pub fn begin_hmr_full_reload(&mut self) {
     self.bundle_factory.hmr_session.lock().begin_full_reload();
+    // A full reload follows a graph change that no stamp records, such as a lost update.
+    self.hmr_render_cache.clear();
+  }
+
+  #[cfg(feature = "testing")]
+  pub fn hmr_render_cache_hits_for_testing(&self) -> crate::RenderCacheHits {
+    self.hmr_render_cache.hits()
   }
 
   /// Leaves the graph as a failure after the merge of an HMR update does: with an edit that no
@@ -91,6 +100,32 @@ impl Bundler {
       cache: &mut self.cache,
       lost_hmr_update: &mut self.lost_hmr_update,
       session: self.bundle_factory.hmr_session.clone(),
+      render_cache: &mut self.hmr_render_cache,
     }))
+  }
+}
+
+#[cfg(all(test, feature = "experimental"))]
+mod tests {
+  use std::sync::Arc;
+
+  use crate::{Bundler, BundlerOptions, hmr::render_cache::RenderedFactory};
+
+  #[test]
+  fn a_new_epoch_clears_the_render_cache() {
+    let mut bundler = Bundler::new(BundlerOptions::default()).unwrap();
+    let factory = Arc::new(RenderedFactory { code: "x".to_string(), map: None });
+    bundler.hmr_render_cache.insert("a.js".into(), 1, 0, factory);
+    bundler.set_hmr_epoch(2);
+    assert!(bundler.hmr_render_cache.get("a.js", 1, 0).is_none());
+  }
+
+  #[test]
+  fn a_full_reload_clears_the_render_cache() {
+    let mut bundler = Bundler::new(BundlerOptions::default()).unwrap();
+    let factory = Arc::new(RenderedFactory { code: "x".to_string(), map: None });
+    bundler.hmr_render_cache.insert("a.js".into(), 1, 0, factory);
+    bundler.begin_hmr_full_reload();
+    assert!(bundler.hmr_render_cache.get("a.js", 1, 0).is_none());
   }
 }

@@ -62,7 +62,7 @@ impl DevEngine {
     config.options.experimental.get_or_insert_default().incremental_build = Some(true);
 
     // Build the bundler from config
-    let bundler = BundlerBuilder::default()
+    let mut bundler = BundlerBuilder::default()
       .with_options(config.options)
       .with_plugins(config.plugins)
       .build()?;
@@ -1159,6 +1159,17 @@ mod tests {
     files: &[(&str, &str)],
     configure: impl FnOnce(&mut BundlerOptions),
   ) -> (std::path::PathBuf, super::DevEngine, Arc<Reported>) {
+    lazy_fixture_with_plugins(name, files, configure, vec![])
+  }
+
+  /// Like `lazy_fixture_reported`, with `plugins` after the plugin that counts `resolveId` calls.
+  #[cfg(feature = "testing")]
+  fn lazy_fixture_with_plugins(
+    name: &str,
+    files: &[(&str, &str)],
+    configure: impl FnOnce(&mut BundlerOptions),
+    plugins: Vec<rolldown::plugin::__inner::SharedPluginable>,
+  ) -> (std::path::PathBuf, super::DevEngine, Arc<Reported>) {
     use rolldown::{DevModeOptions, ExperimentalOptions};
     use rolldown_common::SourceMapType;
 
@@ -1189,9 +1200,11 @@ mod tests {
     let engine = super::DevEngine::new(
       BundlerConfig::new(
         options,
-        vec![rolldown::plugin::Plugin::new_shared(CountResolveCalls(Arc::clone(
+        std::iter::once(rolldown::plugin::Plugin::new_shared(CountResolveCalls(Arc::clone(
           &reported.resolve_calls,
-        )))],
+        ))))
+        .chain(plugins)
+        .collect(),
       ),
       crate::DevOptions {
         on_output: Some(Arc::new(move |result| {
@@ -1923,6 +1936,401 @@ __rolldown_payload__.catchUp([{gen:2,changedIds:["utils.js"],staleIds:["utils.js
     assert!(payload.code.contains("static-target"), "{}", payload.code);
     assert_eq!(reported.resolve_calls(), resolves_before, "the visit scans");
     assert!(!fetched);
+  }
+
+  #[cfg(feature = "testing")]
+  async fn render_cache_hits(engine: &super::DevEngine) -> rolldown::RenderCacheHits {
+    engine.bundler.lock().await.hmr_render_cache_hits_for_testing()
+  }
+
+  #[cfg(feature = "testing")]
+  async fn update_of(
+    engine: &super::DevEngine,
+    dir: &std::path::Path,
+    file: &str,
+  ) -> BuildResult<HmrUpdate> {
+    engine
+      .bundler
+      .lock()
+      .await
+      .compute_hmr_update_for_file_changes(
+        &rolldown_utils::indexmap::FxIndexMap::from_iter([(
+          dir.join(file).to_string_lossy().into_owned(),
+          rolldown_common::WatcherChangeKind::Update,
+        )]),
+        false,
+        false,
+      )
+      .await
+  }
+
+  /// Tabs in the same state get the same payload, and tabs in other states share the factories.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn lazy_visits_of_other_tabs_use_the_render_cache() {
+    use rolldown_common::{ClientHave, HmrNumSet};
+
+    let (dir, engine) = lazy_fixture("lazy-render-cache");
+    engine.run().await.unwrap();
+
+    let first = visit(&engine, "lazy.js").await.unwrap();
+    let after_first = render_cache_hits(&engine).await;
+    let same_state = visit(&engine, "lazy.js").await.unwrap();
+    let after_same_state = render_cache_hits(&engine).await;
+    // This tab holds the factory of `dep.js`, so its payload carries only `lazy.js`.
+    let query = {
+      let bundler = engine.bundler.lock().await;
+      let session = bundler.hmr_session().lock();
+      ClientHave {
+        epoch: session.epoch(),
+        generation: session.generation(),
+        lazy: HmrNumSet::from_nums([session.num_of("lazy.js").unwrap()]),
+        factories: HmrNumSet::from_nums([session.num_of("dep.js").unwrap()]),
+        ..ClientHave::default()
+      }
+      .to_query()
+    };
+    let other_state = expect_payload(engine.render_patch(&query).await.unwrap());
+    let after_other_state = render_cache_hits(&engine).await;
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    assert_eq!(after_first, rolldown::RenderCacheHits::default());
+    assert_eq!((same_state.code, same_state.sourcemap), (first.code, first.sourcemap));
+    assert_eq!(after_same_state.payloads, 1);
+    assert!(!other_state.code.contains("registerFactory(\"dep.js\""), "{}", other_state.code);
+    assert_eq!(after_other_state.payloads, 1);
+    assert!(after_other_state.factories > after_same_state.factories);
+  }
+
+  /// The check for unchanged output renders the changed modules after the merge. The cache keeps
+  /// those renders, so the first pull after the push does not render them again.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn the_first_pull_after_an_update_uses_the_render_of_the_unchanged_output_check() {
+    use rolldown_common::{ClientHave, HmrNumSet};
+
+    let (dir, engine) = lazy_fixture_with_files(
+      "render-cache-recheck",
+      &[
+        ("main.js", "import './a.js';\n"),
+        ("a.js", "export const a = 1;\nimport.meta.hot.accept();\n"),
+      ],
+    );
+    engine.run().await.unwrap();
+
+    std::fs::write(dir.join("a.js"), "export const a = 2;\nimport.meta.hot.accept();\n").unwrap();
+    let update = update_of(&engine, &dir, "a.js").await.unwrap();
+    let before_pull = render_cache_hits(&engine).await;
+    let query = {
+      let bundler = engine.bundler.lock().await;
+      let session = bundler.hmr_session().lock();
+      ClientHave {
+        epoch: session.epoch(),
+        generation: session.generation(),
+        update: HmrNumSet::from_nums([session.num_of("a.js").unwrap()]),
+        executed: HmrNumSet::from_nums([session.num_of("main.js").unwrap()]),
+        ..ClientHave::default()
+      }
+      .to_query()
+    };
+    let patch = expect_payload(engine.render_patch(&query).await.unwrap());
+    let after_pull = render_cache_hits(&engine).await;
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    assert!(matches!(update, HmrUpdate::Changed { .. }), "{update:?}");
+    assert!(patch.code.contains("a = 2"), "{}", patch.code);
+    assert!(patch.sourcemap.is_some());
+    assert_eq!(after_pull.factories, before_pull.factories + 1);
+  }
+
+  /// A large change set (a branch switch) is checked without sourcemaps, and the cache keeps none
+  /// of those renders: most of them would never be pulled.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn the_unchanged_output_check_of_a_large_change_set_keeps_no_render() {
+    use std::fmt::Write as _;
+
+    use rolldown_common::{ClientHave, HmrNumSet};
+
+    const COUNT: usize = 33;
+    let names = (0..COUNT).map(|i| format!("m{i}.js")).collect::<Vec<_>>();
+    let main = names.iter().fold(String::new(), |mut main, name| {
+      writeln!(main, "import './{name}';").unwrap();
+      main
+    });
+    let source = |value: usize| format!("export const v = {value};\nimport.meta.hot.accept();\n");
+    let mut files = vec![("main.js".to_owned(), main)];
+    files.extend(names.iter().map(|name| (name.clone(), source(1))));
+    let files = files.iter().map(|(name, code)| (name.as_str(), code.as_str())).collect::<Vec<_>>();
+    let (dir, engine) = lazy_fixture_with_files("render-cache-large-recheck", &files);
+    engine.run().await.unwrap();
+
+    for name in &names {
+      std::fs::write(dir.join(name), source(2)).unwrap();
+    }
+    let changes = names
+      .iter()
+      .map(|name| {
+        (dir.join(name).to_string_lossy().into_owned(), rolldown_common::WatcherChangeKind::Update)
+      })
+      .collect::<rolldown_utils::indexmap::FxIndexMap<_, _>>();
+    let update = engine
+      .bundler
+      .lock()
+      .await
+      .compute_hmr_update_for_file_changes(&changes, false, false)
+      .await
+      .unwrap();
+    let query = {
+      let bundler = engine.bundler.lock().await;
+      let session = bundler.hmr_session().lock();
+      ClientHave {
+        epoch: session.epoch(),
+        generation: session.generation(),
+        update: HmrNumSet::from_nums(names.iter().map(|name| session.num_of(name).unwrap())),
+        executed: HmrNumSet::from_nums([session.num_of("main.js").unwrap()]),
+        ..ClientHave::default()
+      }
+      .to_query()
+    };
+    let before_pull = render_cache_hits(&engine).await;
+    let patch = expect_payload(engine.render_patch(&query).await.unwrap());
+    let after_pull = render_cache_hits(&engine).await;
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    assert!(matches!(update, HmrUpdate::Changed { .. }), "{update:?}");
+    assert_eq!(patch.code.matches("v = 2").count(), COUNT, "{}", patch.code);
+    assert_eq!(after_pull.factories, before_pull.factories);
+  }
+
+  /// An edit that only moves code down renders the same code, so the HMR stage stamps nothing.
+  /// The sourcemap changes all the same, so the cache must not keep the old factory.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn an_edit_that_renders_the_same_code_gets_a_fresh_sourcemap() {
+    use rolldown_common::{ClientHave, HmrNumSet};
+
+    let (dir, engine) = lazy_fixture_with_files(
+      "render-cache-moved-code",
+      &[
+        ("main.js", "import './a.js';\n"),
+        ("a.js", "export const a = 1;\nimport.meta.hot.accept();\n"),
+      ],
+    );
+    engine.set_hmr_epoch_for_testing(7).await;
+    engine.run().await.unwrap();
+    let query = {
+      let bundler = engine.bundler.lock().await;
+      let session = bundler.hmr_session().lock();
+      ClientHave {
+        epoch: 7,
+        update: HmrNumSet::from_nums([session.num_of("a.js").unwrap()]),
+        executed: HmrNumSet::from_nums([session.num_of("main.js").unwrap()]),
+        ..ClientHave::default()
+      }
+      .to_query()
+    };
+
+    let before = expect_payload(engine.render_patch(&query).await.unwrap());
+    std::fs::write(dir.join("a.js"), "\n\nexport const a = 1;\nimport.meta.hot.accept();\n")
+      .unwrap();
+    let update = update_of(&engine, &dir, "a.js").await.unwrap();
+    let after = expect_payload(engine.render_patch(&query).await.unwrap());
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    assert!(matches!(update, HmrUpdate::Noop), "{update:?}");
+    assert_eq!(after.code, before.code);
+    assert!(before.sourcemap.is_some());
+    assert_ne!(after.sourcemap, before.sourcemap);
+  }
+
+  /// A failed HMR scan queues its file in `pending_rescans`, and the next partial scan reads it
+  /// again. Until then a pull renders the old graph into the render cache. A build reads the
+  /// queued file again and stamps nothing, so a lazy visit after it would get the cached factory,
+  /// unless the build drops the factories of every module it reads again.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn a_lazy_visit_does_not_serve_a_cached_factory_of_a_rescanned_file() {
+    use rolldown_common::ScanMode;
+
+    let (dir, engine) = lazy_fixture_with_files(
+      "lazy-rescan-cache",
+      &[
+        ("main.js", "import('./lazy.js');\n"),
+        ("lazy.js", "import { dep } from './dep.js';\nexport const value = dep;\n"),
+        ("dep.js", "export const dep = 'before';\n"),
+      ],
+    );
+    engine.run().await.unwrap();
+    let first = visit(&engine, "lazy.js").await.unwrap();
+
+    std::fs::write(dir.join("dep.js"), "export const dep = ;\n").unwrap();
+    let broken = update_of(&engine, &dir, "dep.js").await;
+    // A visit renders `dep.js` from the graph, which still holds the code from before.
+    let while_broken = visit(&engine, "lazy.js").await.unwrap();
+
+    // Fixed with no watch event: only the queued rescan reads it again.
+    std::fs::write(dir.join("dep.js"), "export const dep = 'fixed';\n").unwrap();
+    let main = dir.join("main.js").to_string_lossy().into_owned();
+    let build =
+      engine.bundler.lock().await.incremental_generate(ScanMode::Partial(vec![main.into()])).await;
+    let after_build = visit(&engine, "lazy.js").await.unwrap();
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    assert!(first.code.contains("before"), "{}", first.code);
+    assert!(broken.is_err(), "the scan of the broken file fails: {broken:?}");
+    assert!(while_broken.code.contains("before"), "{}", while_broken.code);
+    build.unwrap();
+    assert!(
+      after_build.code.contains("fixed") && !after_build.code.contains("before"),
+      "{}",
+      after_build.code
+    );
+  }
+
+  /// Fails `buildEnd` while the flag is set.
+  #[cfg(feature = "testing")]
+  #[derive(Debug)]
+  struct FailBuildEnd(Arc<std::sync::atomic::AtomicBool>);
+
+  #[cfg(feature = "testing")]
+  impl rolldown::plugin::Plugin for FailBuildEnd {
+    fn name(&self) -> std::borrow::Cow<'static, str> {
+      "fail-build-end".into()
+    }
+
+    fn register_hook_usage(&self) -> rolldown::plugin::HookUsage {
+      rolldown::plugin::HookUsage::BuildEnd
+    }
+
+    async fn build_end(
+      &self,
+      _ctx: &rolldown::plugin::PluginContext,
+      _args: Option<&rolldown::plugin::HookBuildEndArgs<'_>>,
+    ) -> rolldown::plugin::HookNoopReturn {
+      if self.0.load(std::sync::atomic::Ordering::SeqCst) {
+        return Err(anyhow::anyhow!("buildEnd fails"));
+      }
+      Ok(())
+    }
+  }
+
+  /// A build that fails in `buildEnd` keeps its scan in the graph and queues its files in
+  /// `pending_build_rescans`. The next build reads them again and stamps nothing, so it must drop
+  /// their cached factories too.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn a_build_drops_the_cached_factories_of_an_earlier_failed_build() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    use rolldown_common::ScanMode;
+
+    let fail = Arc::new(AtomicBool::new(false));
+    let (dir, engine, _) = lazy_fixture_with_plugins(
+      "render-cache-failed-build",
+      &[
+        ("main.js", "import('./lazy.js');\n"),
+        ("lazy.js", "import { dep } from './dep.js';\nexport const value = dep;\n"),
+        ("dep.js", "export const dep = 'v1';\n"),
+      ],
+      |_| {},
+      vec![rolldown::plugin::Plugin::new_shared(FailBuildEnd(Arc::clone(&fail)))],
+    );
+    engine.run().await.unwrap();
+    // The visit puts `dep.js` in the graph.
+    visit(&engine, "lazy.js").await.unwrap();
+    let build = async |file: &str| {
+      let path = dir.join(file).to_string_lossy().into_owned();
+      engine.bundler.lock().await.incremental_generate(ScanMode::Partial(vec![path.into()])).await
+    };
+
+    fail.store(true, Ordering::SeqCst);
+    std::fs::write(dir.join("dep.js"), "export const dep = 'v2';\n").unwrap();
+    let failed = build("dep.js").await;
+    let after_failed = visit(&engine, "lazy.js").await.unwrap();
+
+    fail.store(false, Ordering::SeqCst);
+    // Changed with no watch event: only the queued rescan reads it again.
+    std::fs::write(dir.join("dep.js"), "export const dep = 'v3';\n").unwrap();
+    let next = build("main.js").await;
+    let after_next = visit(&engine, "lazy.js").await.unwrap();
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    assert!(failed.is_err(), "buildEnd fails");
+    assert!(after_failed.code.contains("v2"), "{}", after_failed.code);
+    next.unwrap();
+    assert!(after_next.code.contains("v3"), "{}", after_next.code);
+  }
+
+  /// A build that reads `dep.js` again with no stamp turns it into CommonJS. `lazy.js` is not
+  /// read again and keeps its stamp, but its factory must now wrap `dep.js` in `__toESM`.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn an_importee_that_changes_its_kind_misses_the_cached_factory() {
+    use rolldown_common::ScanMode;
+
+    let (dir, engine) = lazy_fixture_with_files(
+      "render-cache-importee-kind",
+      &[
+        ("main.js", "import('./lazy.js');\n"),
+        ("lazy.js", "import { dep } from './dep.js';\nexport const value = dep;\n"),
+        ("dep.js", "export const dep = 1;\n"),
+      ],
+    );
+    engine.run().await.unwrap();
+    let first = visit(&engine, "lazy.js").await.unwrap();
+    // Changed with no watch event: only the build reads it again.
+    std::fs::write(dir.join("dep.js"), "module.exports = { dep: 1 };\n").unwrap();
+    let path = dir.join("dep.js").to_string_lossy().into_owned();
+    let build =
+      engine.bundler.lock().await.incremental_generate(ScanMode::Partial(vec![path.into()])).await;
+    let after_build = visit(&engine, "lazy.js").await.unwrap();
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    let dep_import = |code: &str| {
+      code.lines().find(|line| line.contains("loadExports(\"dep.js\")")).map(str::to_owned)
+    };
+    let before = dep_import(&first.code).unwrap_or_else(|| panic!("{}", first.code));
+    assert!(!before.contains("__toESM"), "{before}");
+    build.unwrap();
+    let after = dep_import(&after_build.code).unwrap_or_else(|| panic!("{}", after_build.code));
+    assert!(after.contains("__toESM"), "{after}");
+  }
+
+  /// A full build reads every file again and stamps nothing, so it drops every cached factory.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn a_full_build_drops_every_cached_factory() {
+    use rolldown_common::ScanMode;
+
+    let (dir, engine) = lazy_fixture("render-cache-full-build");
+    engine.run().await.unwrap();
+    let first = visit(&engine, "lazy.js").await.unwrap();
+    // Changed with no watch event: only the full build reads it again.
+    std::fs::write(dir.join("dep.js"), "export const dep = 'full';\n").unwrap();
+    let build = engine.bundler.lock().await.incremental_generate(ScanMode::Full).await;
+    let after_build = visit(&engine, "lazy.js").await.unwrap();
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    assert!(!first.code.contains("full"), "{}", first.code);
+    build.unwrap();
+    assert!(after_build.code.contains("full"), "{}", after_build.code);
   }
 
   /// A failed first scan undoes its mark as fetched. Otherwise the next full build would load the

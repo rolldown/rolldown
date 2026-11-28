@@ -28,6 +28,8 @@ pub struct Bundler {
   /// runs a full build. A successful full build clears it. It lives outside `cache` because
   /// a full scan drops `cache`, even when the scan fails.
   pub(super) lost_hmr_update: bool,
+  #[cfg(feature = "experimental")]
+  pub(super) hmr_render_cache: crate::hmr::render_cache::HmrRenderCache,
   pub(super) closed: bool,
 }
 
@@ -52,6 +54,8 @@ impl Bundler {
       session: rolldown_devtools::Session::dummy(),
       cache: ScanStageCache::default(),
       lost_hmr_update: false,
+      #[cfg(feature = "experimental")]
+      hmr_render_cache: crate::hmr::render_cache::HmrRenderCache::default(),
       closed: false,
     })
   }

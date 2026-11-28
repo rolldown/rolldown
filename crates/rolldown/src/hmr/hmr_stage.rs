@@ -6,7 +6,7 @@ use std::{
 };
 
 use arcstr::ArcStr;
-use itertools::Itertools;
+use itertools::{Either, Itertools};
 use oxc::ast::builder::AstBuilder;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
@@ -19,7 +19,7 @@ use rolldown_error::BuildResult;
 use rolldown_fs::FileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_plugin_lazy_compilation::LazyCompilationContext;
-use rolldown_sourcemap::{Source, SourceJoiner, SourceMap, SourceMapSource};
+use rolldown_sourcemap::{SourceJoiner, SourceMap};
 use rolldown_utils::{
   concat_string,
   indexmap::{FxIndexMap, FxIndexSet},
@@ -33,6 +33,9 @@ use crate::{
   hmr::{
     hmr_ast_finalizer::HmrAstFinalizer,
     module_graph_delta::{RowsSession, assign_payload_nums, render_register_graph_source},
+    render_cache::{
+      CachedFactorySource, HmrRenderCache, PayloadKey, RenderedFactory, render_inputs,
+    },
   },
   module_loader::{ModuleLoader, module_loader::ModuleLoaderOutput},
   type_alias::IndexEcmaAst,
@@ -45,6 +48,11 @@ use crate::{
 /// The file name the sourcemap of a pulled payload is prepared for. Payloads are served next to
 /// the output files.
 const HMR_PATCH_FILENAME: &str = "__rolldown_hmr_patch.js";
+/// Up to this many changed modules, the unchanged-output check renders them with their
+/// sourcemaps and caches the factories, so the first pull does not render them again. For a
+/// larger change set (a branch switch), it would build many maps before the push, and no pull needs
+/// most of them.
+const MAX_CACHED_RECHECK_RENDERS: usize = 32;
 
 pub struct HmrStageInput<'a, Fs: FileSystem + Clone + 'static> {
   pub options: SharedOptions,
@@ -54,6 +62,7 @@ pub struct HmrStageInput<'a, Fs: FileSystem + Clone + 'static> {
   pub cache: &'a mut ScanStageCache,
   pub lost_hmr_update: &'a mut bool,
   pub session: SharedHmrSession,
+  pub render_cache: &'a mut HmrRenderCache,
 }
 
 impl<Fs: FileSystem + Clone + 'static> HmrStageInput<'_, Fs> {
@@ -306,6 +315,10 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 
       let fetch_mode = ScanMode::Partial(modules_to_be_refetched);
 
+      // `changed_modules` holds the queued rescans too.
+      let input = &mut self.input;
+      input.render_cache.forget(input.cache, changed_modules.iter().copied());
+
       let mut module_loader = ModuleLoader::new(
         self.fs.clone(),
         Arc::clone(&self.options),
@@ -363,16 +376,21 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         Some(ModuleRenderInput { idx: *module_idx, ecma_ast: ecma_ast.clone_with_another_arena() })
       })
       .collect::<Vec<_>>();
-    let output_unchanged_modules = recheck_inputs
+    let cache_renders = recheck_inputs.len() <= MAX_CACHED_RECHECK_RENDERS;
+    let (output_unchanged_modules, rerendered_factories): (FxHashSet<_>, Vec<_>) = recheck_inputs
       .into_par_iter()
-      .filter_map(|render_input| {
+      .map(|render_input| {
         let module_idx = render_input.idx;
-        let (code, _) = self.render_module_code(render_input, false);
-        (pre_rebuild_renders[&module_idx] == code).then_some(module_idx)
+        let (code, map) = self.render_module_code(render_input, cache_renders);
+        if pre_rebuild_renders[&module_idx] == code {
+          Either::Left(module_idx)
+        } else {
+          Either::Right(cache_renders.then_some((module_idx, RenderedFactory { code, map })))
+        }
       })
       .collect::<Vec<_>>()
       .into_iter()
-      .collect::<FxHashSet<_>>();
+      .partition_map(|rendered| rendered);
     if !output_unchanged_modules.is_empty() {
       tracing::debug!(
         target: "hmr",
@@ -462,6 +480,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
       stale_ids: stale_ids.clone(),
     });
     drop(session);
+
+    for (module_idx, factory) in rerendered_factories.into_iter().flatten() {
+      let Module::Normal(module) = &self.module_table().modules[module_idx] else { continue };
+      let inputs = render_inputs(&self.module_table().modules, module);
+      let stable_id = module.stable_id.as_arc_str().clone();
+      self.input.render_cache.insert(stable_id, generation, inputs, Arc::new(factory));
+    }
 
     Ok(HmrUpdate::Changed {
       changed_ids: changed_ids.iter().map(ToString::to_string).collect(),
@@ -706,7 +731,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
   /// the state of every module it renders. See internal-docs/hmr/design.md, principle 7 ("On the
   /// wire every number is a generation").
   async fn render_payload(
-    &self,
+    &mut self,
     mut carried_modules: FxIndexSet<ModuleIdx>,
     catch_up: Option<String>,
   ) -> BuildResult<(String, Option<String>)> {
@@ -717,7 +742,7 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     carried_modules
       .sort_by_cached_key(|module_idx| self.module_table().modules[*module_idx].id().as_str());
 
-    let (generation, rows) = {
+    let (generation, rows, plans) = {
       let mut session = self.session.lock();
       assign_payload_nums(&mut session, self.module_table(), carried_modules.iter().copied());
       let rows = render_register_graph_source(
@@ -726,20 +751,90 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
         &self.cache.get_snapshot().user_defined_entry_modules,
         RowsSession::Payload(&session),
       );
-      (session.generation(), rows)
+      let modules = &self.module_table().modules;
+      let plans = carried_modules
+        .iter()
+        .map(|module_idx| {
+          let module = modules[*module_idx].as_normal().expect("only normal modules are carried");
+          FactoryPlan {
+            idx: *module_idx,
+            stamp: session.render_time_stamp(module.stable_id.as_str()),
+            inputs: render_inputs(modules, module),
+          }
+        })
+        .collect::<Vec<_>>();
+      (session.generation(), rows, plans)
     };
 
-    let index_ecma_ast = self.index_ecma_ast();
-    let factories = carried_modules
+    // Many clients ask for the same modules after one edit, so a factory is rendered once and
+    // kept, and so is a finished payload. See internal-docs/hmr/design.md, "Render cache".
+    let modules = &self.input.cache.get_snapshot().module_table.modules;
+    let payload_key = PayloadKey {
+      generation,
+      catch_up: catch_up.clone(),
+      rows: rows.clone(),
+      factories: plans
+        .iter()
+        .map(|plan| (modules[plan.idx].stable_id().as_arc_str().clone(), plan.stamp, plan.inputs))
+        .collect(),
+    };
+    let cached_payload = self.input.render_cache.get_payload(&payload_key);
+    // Debug builds render the payload again and compare it below.
+    #[cfg(not(debug_assertions))]
+    if let Some(payload) = cached_payload {
+      return Ok((payload.code.clone(), payload.sourcemap.clone()));
+    }
+    let cached = plans
       .iter()
-      .map(|module_idx| {
-        let ecma_ast =
-          index_ecma_ast[*module_idx].as_ref().expect("Normal module should have an AST");
-        ModuleRenderInput { idx: *module_idx, ecma_ast: ecma_ast.clone_with_another_arena() }
+      .map(|plan| {
+        let stable_id = modules[plan.idx].stable_id().as_str();
+        self.input.render_cache.get(stable_id, plan.stamp, plan.inputs)
       })
+      .collect::<Vec<_>>();
+
+    let index_ecma_ast = self.index_ecma_ast();
+    let render_input = |module_idx: ModuleIdx| {
+      let ecma_ast = index_ecma_ast[module_idx].as_ref().expect("Normal module should have an AST");
+      ModuleRenderInput { idx: module_idx, ecma_ast: ecma_ast.clone_with_another_arena() }
+    };
+    let fresh = plans
+      .iter()
+      .zip(&cached)
+      .filter(|(_, cached)| cached.is_none())
+      .map(|(plan, _)| render_input(plan.idx))
       .collect::<Vec<_>>()
       .into_par_iter()
-      .map(|render_input| self.render_module_code(render_input, true))
+      .map(|input| {
+        let (code, map) = self.render_module_code(input, true);
+        Arc::new(RenderedFactory { code, map })
+      })
+      .collect::<Vec<_>>();
+
+    // The test suites run in debug builds, so they check that the cache keys are complete.
+    #[cfg(debug_assertions)]
+    for (plan, cached) in plans.iter().zip(&cached) {
+      let Some(cached) = cached else { continue };
+      let (code, map) = self.render_module_code(render_input(plan.idx), true);
+      debug_assert_eq!(cached.code, code, "a cached HMR factory differs from a fresh render");
+      debug_assert_eq!(
+        cached.map.as_ref().map(SourceMap::to_json_string),
+        map.as_ref().map(SourceMap::to_json_string),
+        "the sourcemap of a cached HMR factory differs from a fresh render"
+      );
+    }
+
+    let mut fresh = fresh.into_iter();
+    let factories = plans
+      .iter()
+      .zip(cached)
+      .map(|(plan, cached)| {
+        cached.unwrap_or_else(|| {
+          let factory = fresh.next().expect("one fresh render per cache miss");
+          let stable_id = modules[plan.idx].stable_id().as_arc_str().clone();
+          self.input.render_cache.insert(stable_id, plan.stamp, plan.inputs, Arc::clone(&factory));
+          factory
+        })
+      })
       .collect::<Vec<_>>();
 
     let mut source_joiner = SourceJoiner::default();
@@ -754,22 +849,27 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
     if let Some(rows) = rows {
       source_joiner.append_source(rows);
     }
-    let modules = &self.module_table().modules;
-    for (module_idx, (code, map)) in carried_modules.iter().zip(factories) {
-      let Module::Normal(module) = &modules[*module_idx] else {
+    for (plan, factory) in plans.iter().zip(factories) {
+      let Module::Normal(module) = &modules[plan.idx] else {
         unreachable!("HMR only supports normal module");
       };
       source_joiner.append_source(concat_string!("//#region ", module.debug_id));
-      let factory: Box<dyn Source + Send> = match map {
-        Some(map) => Box::new(SourceMapSource::new(code, map)),
-        None => Box::new(code),
-      };
-      source_joiner.append_source_dyn(factory);
+      source_joiner.append_source_dyn(Box::new(CachedFactorySource(factory)));
       source_joiner.append_source(concat_string!("//#endregion"));
     }
 
     let (mut code, map) = source_joiner.join();
     let sourcemap = self.finish_payload_sourcemap(&mut code, map).await?;
+    #[cfg(debug_assertions)]
+    if let Some(cached) = cached_payload {
+      debug_assert_eq!(cached.code, code, "a cached HMR payload differs from a fresh render");
+      debug_assert_eq!(
+        cached.sourcemap, sourcemap,
+        "the sourcemap of a cached HMR payload differs from a fresh render"
+      );
+      return Ok((code, sourcemap));
+    }
+    self.input.render_cache.insert_payload(payload_key, &code, sourcemap.as_deref());
     Ok((code, sourcemap))
   }
 
@@ -892,6 +992,13 @@ impl<'a, Fs: FileSystem + Clone + 'static> HmrStage<'a, Fs> {
 struct ModuleRenderInput {
   pub idx: ModuleIdx,
   pub ecma_ast: EcmaAst,
+}
+
+/// How `render_payload` renders one carried module, and its render cache key.
+struct FactoryPlan {
+  idx: ModuleIdx,
+  stamp: u32,
+  inputs: u64,
 }
 
 /// The modules behind one number of `ClientHave::lazy`. At least one of them is in the graph.

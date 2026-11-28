@@ -9,11 +9,13 @@ use rolldown_common::{
   NormalizedBundlerOptions, PathsOutputOption, SourceMapType, StaticImport, StrOrBytes,
 };
 use rolldown_error::BuildResult;
+use rolldown_utils::hash_placeholder::find_hash_placeholders;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   base64::to_url_safe_base64,
   concat_string,
+  dashmap::FxDashSet,
   hash_placeholder::{
     HASH_PLACEHOLDER_LEFT_FINDER, extract_hash_placeholders, replace_placeholder_with_hash,
     visit_with_placeholders_defaulted,
@@ -99,7 +101,7 @@ pub async fn finalize_assets(
       .into();
 
   let hash_base = hash_characters.base();
-  let index_standalone_content_hashes: IndexVec<InsChunkIdx, String> = index_instantiated_chunks
+  let mut index_standalone_content_hashes = index_instantiated_chunks
     .par_iter()
     .map(|chunk| {
       // Normalize rolldown-generated placeholders before hashing so the hash is stable across
@@ -126,6 +128,14 @@ pub async fn finalize_assets(
     })
     .collect::<BuildResult<Vec<_>>>()?
     .into();
+
+  hash_reference_order(
+    chunk_graph,
+    &index_instantiated_chunks,
+    &index_direct_dependencies,
+    &ins_chunk_idx_by_placeholder,
+    &mut index_standalone_content_hashes,
+  );
 
   let mut index_final_hashes: IndexVec<InsChunkIdx, (String, u128)> = (0
     ..index_instantiated_chunks.len())
@@ -462,6 +472,69 @@ fn get_sourcemap_hashes_by_placeholder<'a>(
       })
     })
     .flatten()
+}
+
+fn hash_reference_order(
+  chunk_graph: &ChunkGraph,
+  chunks: &IndexInstantiatedChunks,
+  dependencies: &IndexVec<InsChunkIdx, Vec<InsChunkIdx>>,
+  by_placeholder: &FxHashMap<&str, InsChunkIdx>,
+  hashes: &mut IndexVec<InsChunkIdx, String>,
+) {
+  if !dependencies.par_iter().any(|deps| deps.len() >= 2) {
+    return;
+  }
+  let seen = FxDashSet::with_capacity_and_hasher(chunks.len(), rustc_hash::FxBuildHasher);
+  let filenames = chunks
+    .par_iter()
+    .map(|chunk| {
+      let filename = &chunk_graph.chunk_table[chunk.originate_from].absolute_preliminary_filename;
+      let mut hasher = Xxh3::default();
+      visit_with_placeholders_defaulted(
+        filename.as_deref().expect("chunk should have a preliminary filename"),
+        &HASH_PLACEHOLDER_LEFT_FINDER,
+        |placeholder| by_placeholder.contains_key(placeholder),
+        |bytes| hasher.update(bytes),
+      );
+      let key = hasher.digest128();
+      seen.insert(key);
+      key
+    })
+    .collect::<Vec<_>>();
+  if seen.len() == filenames.len() {
+    return;
+  }
+  let updates = chunks
+    .par_iter()
+    .zip(dependencies.par_iter())
+    .zip(hashes.par_iter())
+    .map(|((chunk, deps), hash)| {
+      if deps.len() < 2 {
+        return None;
+      }
+      let collisions: FxHashSet<_> =
+        deps.iter().unique().map(|dep| filenames[dep.index()]).duplicates().collect();
+      if collisions.is_empty() {
+        return None;
+      }
+      let code = chunk.content.try_as_inner_str().expect("hash references are in text");
+      let mut hasher = Xxh3::default();
+      hash.hash(&mut hasher);
+      for (_, _, placeholder) in find_hash_placeholders(code, &HASH_PLACEHOLDER_LEFT_FINDER) {
+        if let Some(&dep) = by_placeholder.get(placeholder)
+          && collisions.contains(&filenames[dep.index()])
+        {
+          hashes[dep].hash(&mut hasher);
+        }
+      }
+      Some(to_url_safe_base64(hasher.digest128().to_le_bytes()))
+    })
+    .collect::<Vec<_>>();
+  hashes.par_iter_mut().zip(updates.into_par_iter()).for_each(|(hash, update)| {
+    if let Some(update) = update {
+      *hash = update;
+    }
+  });
 }
 
 #[derive(Default)]

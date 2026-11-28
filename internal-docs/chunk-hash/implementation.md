@@ -57,7 +57,7 @@ let standalone = to_url_safe_base64(hasher.digest128().to_le_bytes());
 
 `visit_with_placeholders_defaulted` (in `rolldown_utils::hash_placeholder`) walks `content` and feeds bytes through `hasher.update` in order. Each `!~{xxx}~` that rolldown itself generated (the predicate looks it up in `ins_chunk_idx_by_placeholder`) is normalized to `!~{000...}~` (same shape, all-zero index) before being fed in; literals in user source code that just happen to match the placeholder shape are hashed verbatim so changes to their bytes still flow into the hash. This matches Rollup's `replacePlaceholdersWithDefaultAndGetContainedPlaceholders`, which performs the same `placeholders.has(placeholder)` check.
 
-This is invariant #1 (stability): the chunk's own hash now depends only on its real bytes and the _shape_ of its cross-chunk references, not the transient index values.
+Placeholder normalization removes transient indices from the base standalone hash while retaining the rendered reference shape.
 
 **Streaming, not materializing.** Chunks can be megabytes. Materializing a normalized `String` per chunk would allocate roughly the bundle size's worth of throwaway buffers per build. `visit_with_placeholders_defaulted` is a visitor over `&[u8]` slices; the hasher consumes them directly. Rollup's equivalent (`replacePlaceholdersWithDefaultAndGetContainedPlaceholders`) materializes the string before hashing — rolldown deliberately doesn't.
 
@@ -66,6 +66,8 @@ This is invariant #1 (stability): the chunk's own hash now depends only on its r
 **Sourcemap comments.** `hash_sourcemap_comment` includes the comment emitted after the rendered code. External map filenames are normalized before URL encoding, using the same URL construction as emission. Inline maps contribute their prepared JSON before Base64 encoding. Normalizing after encoding would miss placeholders and make the hash depend on unrelated chunks' indices. Hidden maps contribute nothing unless debug IDs add a comment.
 
 For an external map filename containing `[hash]`, the comment's hash input uses a hash of the prepared map with chunk placeholders normalized. The emitted map's hash still uses its final JSON, including the final chunk name. This breaks the circular dependency (chunk hash → map's `file` → map hash → chunk comment) while making changes to referenced map content invalidate the chunk and its importers. Map content does not affect the chunk hash when the comment uses a fixed map filename.
+
+**References with the same normalized filename.** When a chunk references distinct targets whose filenames become identical after normalization, the normalized code can lose their order. After computing every chunk's base standalone hash, mix those targets' base hashes into the referencing chunk's standalone hash in the order of the rendered placeholders. Every target's base hash is available before the reference-order pass, including in cyclic graphs.
 
 ## Phase 2: Final Hash
 

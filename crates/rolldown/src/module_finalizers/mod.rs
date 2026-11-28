@@ -270,14 +270,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // `init_foo`
     let (wrapper_ref_expr, _) =
       self.finalized_expr_for_symbol_ref(target.wrapper_ref, false, false);
-    // `init_foo()`
+    // `init_foo()`. The call of a tracked module (`import defer`) changes its state record, so it
+    // is never pure.
     let init_call = ast::Expression::new_call_expression_with_pure(
       call_span,
       wrapper_ref_expr,
       None,
       [],
       false,
-      mark_pure_if_noop && self.ctx.final_esm_init_metadata.init_is_noop(importee_idx),
+      mark_pure_if_noop
+        && self.ctx.final_esm_init_metadata.init_is_noop(importee_idx)
+        && importee_linking_info.import_defer_tracked_deps.is_none(),
       self,
     );
     if await_if_tla && target.tla_tainted {
@@ -288,8 +291,155 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  /// `init_foo()`, the call that evaluates a deferred module before an access to its namespace.
+  /// `init_foo(init_bar)`: when the importer `bar` and the importee `foo` are both tracked
+  /// (`import defer`), the eager import passes the init function of the importer. `__esmState`
+  /// reads its record to follow the evaluation walk (spec `InnerModuleEvaluation`).
+  /// Returns true when it passed the caller.
+  fn pass_tracked_caller(
+    &self,
+    init_expr: &mut ast::Expression<'ast>,
+    importee_idx: ModuleIdx,
+  ) -> bool {
+    if self.ctx.linking_infos[importee_idx].import_defer_tracked_deps.is_none() {
+      return false;
+    }
+    let Some(caller_expr) = self.tracked_caller_expr() else { return false };
+    let ast::Expression::CallExpression(call) = init_expr else { return false };
+    call.arguments.push(caller_expr.into());
+    true
+  }
+
+  /// `init_bar`, the init function of this module, when the module is tracked (`import defer`).
+  fn tracked_caller_expr(&self) -> Option<ast::Expression<'ast>> {
+    let caller_ref = self
+      .ctx
+      .linking_info
+      .import_defer_tracked_deps
+      .as_ref()
+      .and(self.ctx.linking_info.wrapper_ref)?;
+    Some(self.finalized_expr_for_symbol_ref(caller_ref, false, false).0)
+  }
+
+  /// The init call of an eager import in the body of this module `bar`: an import statement
+  /// (`import './foo'`), an `export * from './foo'` statement, or a target of an excluded
+  /// re-export. Each of these calls must use this form, because the state record of a tracked
+  /// module follows the evaluation walk only when the importer passes its init function.
+  /// - `init_foo()`, or `await init_foo()` when `foo` is TLA-tainted. The call is
+  ///   `/* @__PURE__ */` when the init of `foo` is a no-op.
+  /// - `init_foo(init_bar)` when `bar` and `foo` are both tracked (`import defer`).
+  /// - `__esmDepDone(init_foo(init_bar), init_foo, init_bar) || await init_foo(init_bar)` when
+  ///   they are both tracked and `foo` is TLA-tainted. The import waits only when `foo` did not
+  ///   finish, so that the body of `bar` runs synchronously after a deferred import prepared it.
+  fn import_stmt_init_expr(&self, importee_idx: ModuleIdx, span: Span) -> ast::Expression<'ast> {
+    let mut init_call = self.wrapped_esm_init_call_expr(importee_idx, span, true, false);
+    let tracked = self.pass_tracked_caller(&mut init_call, importee_idx);
+    let tla_tainted = self
+      .ctx
+      .order_wrap_state
+      .esm_init_target(importee_idx, &self.ctx.linking_infos[importee_idx])
+      .is_some_and(|target| target.tla_tainted);
+    if !tla_tainted {
+      return init_call;
+    }
+    let (true, Some(caller_expr)) = (tracked, self.tracked_caller_expr()) else {
+      return ast::Expression::new_await_expression(SPAN, init_call, self);
+    };
+    let importee_init = self
+      .finalized_expr_for_symbol_ref(
+        self.ctx.linking_infos[importee_idx].wrapper_ref.expect("a tracked module is wrapped"),
+        false,
+        false,
+      )
+      .0;
+    let dep_done = ast::Expression::new_call_expression(
+      SPAN,
+      self.finalized_expr_for_runtime_symbol("__esmDepDone"),
+      None,
+      [init_call.into(), importee_init.into(), caller_expr.into()],
+      false,
+      self,
+    );
+    let mut await_call = self.wrapped_esm_init_call_expr(importee_idx, span, false, false);
+    self.pass_tracked_caller(&mut await_call, importee_idx);
+    ast::Expression::new_logical_expression(
+      SPAN,
+      dep_done,
+      ast::LogicalOperator::Or,
+      ast::Expression::new_await_expression(SPAN, await_call, self),
+      self,
+    )
+  }
+
+  /// `__esmGather(init_foo, init_bar) || await __esmGather();`: the preparation of
+  /// `import defer * as ns from './foo'` in this module `bar`, when `foo` is TLA-tainted (spec
+  /// `GatherAsynchronousTransitiveDependencies`). The importer waits for the modules with
+  /// top-level await that a deferred access to `foo` can evaluate. `init_bar` is absent when this
+  /// module is not tracked. `None` when `foo` is not TLA-tainted: the statement evaluates nothing.
+  fn deferred_import_preparation_stmt(&self, importee_idx: ModuleIdx) -> Option<Statement<'ast>> {
+    let importee_info = &self.ctx.linking_infos[importee_idx];
+    if !importee_info.is_tla_or_contains_tla_dependency
+      || importee_info.import_defer_tracked_deps.is_none()
+    {
+      return None;
+    }
+    let importee_init =
+      self.finalized_expr_for_symbol_ref(importee_info.wrapper_ref?, false, false).0;
+    Some(Statement::new_expression_statement(
+      SPAN,
+      self.esm_gather_expr(importee_init, self.tracked_caller_expr()),
+      self,
+    ))
+  }
+
+  /// `__esmGather(<init>, <caller>) || await __esmGather()`. `<caller>` is absent when the
+  /// importer is not tracked.
+  fn esm_gather_expr(
+    &self,
+    init_expr: Expression<'ast>,
+    caller_expr: Option<Expression<'ast>>,
+  ) -> Expression<'ast> {
+    let mut gather = ast::CallExpression::new(
+      SPAN,
+      self.finalized_expr_for_runtime_symbol("__esmGather"),
+      None,
+      [],
+      false,
+      self,
+    );
+    gather.arguments.push(init_expr.into());
+    if let Some(caller_expr) = caller_expr {
+      gather.arguments.push(caller_expr.into());
+    }
+    let wait = ast::Expression::new_call_expression(
+      SPAN,
+      self.finalized_expr_for_runtime_symbol("__esmGather"),
+      None,
+      [],
+      false,
+      self,
+    );
+    ast::Expression::new_logical_expression(
+      SPAN,
+      ast::Expression::CallExpression(gather.into_in(self.allocator())),
+      ast::LogicalOperator::Or,
+      ast::Expression::new_await_expression(SPAN, wait, self),
+      self,
+    )
+  }
+
+  /// `__esmDefer(init_foo)` for a deferred access to a tracked module, else `init_foo()`.
   fn deferred_init_call_expr(&self, target: ModuleIdx) -> ast::Expression<'ast> {
+    let target_info = &self.ctx.linking_infos[target];
+    if target_info.import_defer_tracked_deps.is_some()
+      && let Some(wrapper_ref) = target_info.wrapper_ref
+    {
+      return Expression::new_call_with_arg(
+        self.finalized_expr_for_runtime_symbol("__esmDefer"),
+        self.finalized_expr_for_symbol_ref(wrapper_ref, false, false).0,
+        false,
+        self,
+      );
+    }
     self.wrapped_esm_init_call_expr(target, SPAN, false, false)
   }
 
@@ -546,7 +696,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         if !self.generated_init_esm_importee_ids.insert(module_idx) {
           return None;
         }
-        Some(self.wrapped_esm_init_call_expr(module_idx, SPAN, true, true))
+        Some(self.import_stmt_init_expr(module_idx, SPAN))
       }
       WrappedEsmInitTarget::CjsCarrier(key) => {
         if !self.generated_order_cjs_carriers.insert(key) {
@@ -835,17 +985,21 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // or the importee have side effects.
       WrapKind::Esm => {
         // A deferred import evaluates nothing at its statement. Each deferred access calls the
-        // init instead.
+        // init instead. A TLA-tainted target first gets its preparation.
         if rec.is_defer_phase() {
-          return true;
+          let Some(preparation) = self.deferred_import_preparation_stmt(importee.idx) else {
+            return true;
+          };
+          *stmt = preparation;
+        } else {
+          if self.generated_init_esm_importee_ids.contains(&importee.idx) {
+            return true;
+          }
+          self.generated_init_esm_importee_ids.insert(importee.idx);
+          // `init_foo()` / `await init_foo()`
+          let init_expr = self.import_stmt_init_expr(importee.idx, stmt.span());
+          *stmt = ast::Statement::new_expression_statement(SPAN, init_expr, self);
         }
-        if self.generated_init_esm_importee_ids.contains(&importee.idx) {
-          return true;
-        }
-        self.generated_init_esm_importee_ids.insert(importee.idx);
-        // `init_foo()` / `await init_foo()`
-        let init_expr = self.wrapped_esm_init_call_expr(importee.idx, stmt.span(), true, true);
-        *stmt = ast::Statement::new_expression_statement(SPAN, init_expr, self);
 
         return self.transfer_import_stmt(rec_idx, stmt);
       }
@@ -2464,7 +2618,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   // An excluded re-export can forward to a TLA-tainted wrapper. The current
                   // module is then TLA-tainted as well, so its async init body must await the
                   // forwarded promise before later statements observe the importee's bindings.
-                  self.wrapped_esm_init_call_expr(importee_idx, SPAN, true, true)
+                  self.import_stmt_init_expr(importee_idx, SPAN)
                 }
                 WrappedEsmInitTarget::CjsCarrier(key) => {
                   if !self.generated_order_cjs_carriers.insert(key) {
@@ -2584,7 +2738,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 {
                   // Recorded so the entry prelude does not call it again ahead of this statement.
                   self.generated_init_esm_importee_ids.insert(importee.idx);
-                  let init_expr = self.wrapped_esm_init_call_expr(importee.idx, SPAN, true, true);
+                  let init_expr = self.import_stmt_init_expr(importee.idx, SPAN);
                   program
                     .body
                     .push(ast::Statement::new_expression_statement(SPAN, init_expr, self));

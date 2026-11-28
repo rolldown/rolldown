@@ -15,8 +15,8 @@ use rolldown_common::{
 };
 use rolldown_ecmascript_utils::{
   BindingPatternExt as _, EsmWrapperBodyKind, EsmWrapperCallKind, EsmWrapperDeclKind,
-  EsmWrapperStmtOptions, ExpressionFactoryExt as _, JsxExt, JsxMemberExpressionObjectExt,
-  StatementFactoryExt as _,
+  EsmWrapperState, EsmWrapperStmtOptions, ExpressionFactoryExt as _, JsxExt,
+  JsxMemberExpressionObjectExt, StatementFactoryExt as _,
 };
 use rolldown_error::EmptyImportMetaKind;
 
@@ -298,6 +298,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           },
           body_kind: EsmWrapperBodyKind::Sync,
           decl_kind: EsmWrapperDeclKind::HoistedFunction,
+          state: None,
         },
         &ast_builder,
       ));
@@ -545,12 +546,8 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           ));
         }
 
-        let esm_ref = if self.ctx.options.profiler_names {
-          self.canonical_ref_for_runtime("__esm")
-        } else {
-          self.canonical_ref_for_runtime("__esmMin")
-        };
-        let (esm_ref_expr, _) = self.finalized_expr_for_symbol_ref(esm_ref, false, false);
+        let (esm_ref_expr, _) =
+          self.finalized_expr_for_symbol_ref(self.esm_wrapper_runtime_ref(), false, false);
         let wrap_ref_name = self.canonical_name_for(target.wrapper_ref);
 
         program.body.push(Statement::new_esm_wrapper_stmt(
@@ -558,11 +555,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             binding_name: wrap_ref_name,
             esm_fn_expr: esm_ref_expr,
             statements: stmts_inside_closure,
-            profiler_name: self
-              .ctx
-              .options
-              .profiler_names
-              .then_some(self.ctx.module.stable_id.as_str()),
+            profiler_name: self.esm_wrapper_profiler_name(),
             call_kind: if self.ctx.options.optimization.is_pife_for_module_wrappers_enabled() {
               EsmWrapperCallKind::Pife
             } else {
@@ -574,6 +567,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               EsmWrapperBodyKind::Sync
             },
             decl_kind: self.esm_wrapper_decl_kind(wrapper_mode),
+            state: self.esm_wrapper_state(),
           },
           self,
         ));
@@ -979,6 +973,48 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     } else {
       EsmWrapperDeclKind::Var
     }
+  }
+
+  /// `__esmState` for a module that a deferred access observes, else `__esm` with profiler names
+  /// and `__esmMin` without.
+  fn esm_wrapper_runtime_ref(&self) -> SymbolRef {
+    if self.ctx.linking_info.import_defer_tracked_deps.is_some() {
+      self.canonical_ref_for_runtime("__esmState")
+    } else if self.ctx.options.profiler_names {
+      self.canonical_ref_for_runtime("__esm")
+    } else {
+      self.canonical_ref_for_runtime("__esmMin")
+    }
+  }
+
+  /// The `__esmState` wrapper takes the body as a plain arrow, so it has no profiler name.
+  fn esm_wrapper_profiler_name(&self) -> Option<&str> {
+    (self.ctx.options.profiler_names && self.ctx.linking_info.import_defer_tracked_deps.is_none())
+      .then_some(self.ctx.module.stable_id.as_str())
+  }
+
+  /// The `__esmState` wrapper of a tracked module (`import defer`): its dependency list
+  /// `() => [init_y, ...]` (the init functions of the tracked modules that it requests, for the
+  /// ready check of a deferred access), its own top-level await, and, for an async body,
+  /// `__esmEnd` and `__esmFail`.
+  fn esm_wrapper_state(&self) -> Option<EsmWrapperState<'ast>> {
+    let deps = self.ctx.linking_info.import_defer_tracked_deps.as_ref()?;
+    let elements = deps.iter().filter_map(|&dep| {
+      let wrapper_ref = self.ctx.linking_infos[dep].wrapper_ref?;
+      Some(self.finalized_expr_for_symbol_ref(wrapper_ref, false, false).0.into())
+    });
+    let array =
+      Expression::new_array_expression(SPAN, allocator::Vec::from_iter_in(elements, self), self);
+    Some(EsmWrapperState {
+      deps: Expression::new_arrow_returning(array, self),
+      own_tla: self.ctx.module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait),
+      end_and_fail: self.ctx.linking_info.is_tla_or_contains_tla_dependency.then(|| {
+        (
+          self.finalized_expr_for_runtime_symbol("__esmEnd"),
+          self.finalized_expr_for_runtime_symbol("__esmFail"),
+        )
+      }),
+    })
   }
 
   /// The deferred access of `expr`, if any. For `'foo' in ns` with a CommonJS module, it also

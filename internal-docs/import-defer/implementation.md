@@ -4,7 +4,7 @@
 
 ## Summary
 
-With `experimental.importDefer`, a build keeps the deferred evaluation of `import defer * as ns from './x.js'` when the build has a shape that the deferral supports (see "Whole-build fallback"). Each module of a deferred closure gets a lazy wrapper: `init_x` for an ES module, `require_x` for a CommonJS module. The first access to the deferred namespace calls the wrapper of the target, and that wrapper calls the wrappers of the modules that the target imports. Any other build lowers each deferred import to a normal import, with a warning, and gives the output of the build with the option off.
+With `experimental.importDefer`, a build keeps the deferred evaluation of `import defer * as ns from './x.js'` when the build has a shape that the deferral supports (see "Whole-build fallback"). Each module of a deferred closure gets a lazy wrapper: `init_x` for an ES module, `require_x` for a CommonJS module. An ES module of a closure that reaches a top-level `await` also gets a state record (see "Top-level await"). The first access to the deferred namespace calls the wrapper of the target, and that wrapper calls the wrappers of the modules that the target imports. Any other build lowers each deferred import to a normal import, with a warning, and gives the output of the build with the option off.
 
 `import.defer()` is not supported yet: the pre-processor always lowers it to `import()`, with a warning (`crates/rolldown/src/utils/tweak_ast_for_scanning.rs`). Dev mode turns the option off (`crates/rolldown/src/utils/prepare_build_context.rs`).
 
@@ -48,9 +48,9 @@ The build keeps the deferral when all of these conditions are true:
 
 1. The output format is `esm` or `cjs`.
 2. The build makes one chunk: one entry record (each `EntryPoint`, also when one module has several), no `preserveModules`, no chunk groups, no `output.codeSplitting.experimentalInlineCommonChunks`, and no `import()`.
-3. No module has top-level `await`.
-4. The static import records make no cycle.
-5. No module of a deferred closure (a target and its dependencies) is an external module.
+3. The static import records make no cycle.
+4. No module of a deferred closure (a target and its dependencies) is an external module.
+5. A module outside the closures has no import of a module outside the closures after a deferred import of a module that reaches a top-level `await` (see "Top-level await"). An import of an external module does not count.
 
 When the build keeps the deferral, the saved `eval_flags` go into `stmt_infos`. The new flags are the union of both runs, because the deferred run only adds side effects. A module with `DeterminedSideEffects::Analyzed(false)` gets `Analyzed(true)` when one of its statements gets `UnknownSideEffect`.
 
@@ -107,9 +107,27 @@ Invariants:
 
 Tests: `commonjs_shared_namespace` (two files, two imports in one file, a `.mjs` importer, a wrapped importer, two objects that the entry exports, a `strictExecutionOrder` variant with no merge, and a `cjs` variant), `commonjs_eager_import_no_interop` (an eager import with no interop and a deferred import of each module, with no other user of `__toESM`, and a `cjs` variant), `commonjs_unread_namespace_keeps_wrapper` (unread deferred imports of two CommonJS modules that both declare `snapshot`: the entry parses, runs neither module and has no `__toESM`), `commonjs_escape`, `commonjs_target`, `commonjs_traps_before_evaluation`, `commonjs_write_and_call` and `named_commonjs_reexport`. `json_target` checks a JSON target.
 
+## Top-level await
+
+A deferred import of a module that has a top-level `await`, or that reaches one through static imports, has a preparation (spec `GatherAsynchronousTransitiveDependencies`): the importer waits for the modules with top-level `await` first. A later access then evaluates the rest of the closure synchronously. The access throws a `TypeError`, and evaluates nothing, when a module that it needs is still evaluating (spec `ReadyForSyncExecution`).
+
+- The early flag. `wrap_modules` and `reference_needed_symbols` run before tree shaking, and `compute_tla` runs after it. Thus `mark_tla_before_tree_shaking` (`crates/rolldown/src/stages/link_stage/compute_tla.rs`) sets `is_tla_or_contains_tla_dependency` before tree shaking: for each module with `await` at the top level, and for each module that reaches one through `import` records. `compute_tla` then sets the final flag, which is a subset.
+- Tracked modules. `track_import_defer_modules` (`crates/rolldown/src/stages/link_stage/wrapping.rs`) takes the graph of the requested modules (`import` and `import defer` records) between the ES modules of the closures. A module is tracked when its strongly connected component has a module with the early flag. `import_defer_tracked_deps` holds the tracked requested modules of a tracked module, and is `None` for each other module.
+- State records. The init wrapper of a tracked module is `__esmState(body, deps, flags)`, not `__esmMin` (`EsmWrapperStmtOptions::state` in `crates/rolldown_ecmascript_utils/src/ast_factory.rs`). The record has the state of spec `InnerModuleEvaluation` (evaluating, evaluating-async, evaluated, error), the stack indexes and the error. `deps` returns the init functions of the tracked requested modules. An async body calls `__esmEnd(init_x)` at its end and `__esmFail(init_x, e)` for an error. The comments in `crates/rolldown/src/runtime/runtime-defer.js` describe each field and helper.
+- The import forms in the body of a tracked module `bar` (`import_stmt_init_expr` in `crates/rolldown/src/module_finalizers/mod.rs`):
+  - `init_foo(init_bar)` when `foo` is also tracked. The record of `foo` gets the importer, so the walk follows the evaluation order.
+  - `__esmDepDone(init_foo(init_bar), init_foo, init_bar) || await init_foo(init_bar)` when `foo` also has the early flag. The body waits only when `foo` did not finish, so the body of `bar` runs synchronously after a preparation.
+- The preparation. The statement of a deferred import of a module with the early flag becomes `__esmGather(init_foo, init_bar) || await __esmGather();` (`deferred_import_preparation_stmt`). `init_bar` is absent when the importer is not tracked. The first call walks the records from `foo` and returns `true` when nothing is pending. Else the second call waits: first for each module with its own top-level `await`, then for each started module that waits. `reference_needed_symbols` keeps the statement also when `foo` has no side effects.
+- The access. A deferred access to a tracked module calls `__esmDefer(init_foo)`, not `init_foo()` (`deferred_init_call_expr`).
+
+The order rule (condition 5 of the fallback): the preparation is a statement in the body of the importer. A module outside the closures has no wrapper, so the code of its imports runs before its body. An import after the deferred import then runs before the modules with top-level `await` start, but native Node starts them first. A module of a closure has a wrapper that runs its import statements in order. A later import of a module of a closure is an init call in the body of the importer, so it runs after the preparation. The check does not know the wrappers of the link stage, so it also applies with `strictExecutionOrder`. The reasons are in [design.md](./design.md#top-level-await).
+
+Tests: `tla_transitive`, `tla_gather_order`, `tla_diamond_evaluates_once`, `tla_error_after_preparation`, `tla_defer_in_closure` and `tla_restored_reexport_helper`. The Node test `packages/rolldown/tests/import-defer-fallback.test.ts` checks the fallback of the order rule.
+
 ## Known gaps
 
 - The warnings of a fallback come again on each incremental rebuild.
+- A preparation waits for each module with top-level `await` in the order of its walk, and each module ends before the next one starts. Native Node starts all of them first, and then waits. A build without `import defer` has the same limit for eager imports.
 - In `cjs` output with `strictExecutionOrder`, the runtime module goes into its own chunk. The link stage wraps the closure modules, and the order lowering then moves the runtime out of the entry chunk. It moves the runtime back only for `esm` output (`fold_runtime_chunk_after_order_lowering`). A build with the option off has the same layout when the link stage wraps a module, for example a CommonJS module.
 - In a closure module, a top-level `arguments` is the arguments object of `init_x`, and direct `eval` code runs in `init_x` (see the JSDoc of `experimental.importDefer`).
 - A call `ns.fn()` of a CommonJS target gets `import_x` as `this`, not the deferred namespace object. Thus `this === ns` gives `false` in `fn` when `ns` escapes (`ns` is then `x_deferred`). Native Node and the eager import give `true`. A call through `x_deferred` gives the native result, but each call then goes through the `Proxy`.

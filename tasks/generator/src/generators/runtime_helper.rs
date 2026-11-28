@@ -103,8 +103,16 @@ impl RuntimeHelper {
 use crate::StmtInfoIdx;
 
 /// Maps each single-bit `RuntimeHelper` to the `StmtInfoIdx`s that depend on it.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct DependedRuntimeHelperMap([Vec<StmtInfoIdx>; RUNTIME_HELPER_NAMES.len()]);
+
+// A manual `Default`: the standard library implements `Default` only for arrays of 32 or fewer
+// elements.
+impl Default for DependedRuntimeHelperMap {
+  fn default() -> Self {
+    Self(std::array::from_fn(|_| Vec::new()))
+  }
+}
 
 impl DependedRuntimeHelperMap {
   /// Record that `stmt_info_idx` depends on `helper`. `helper` must have exactly one bit set.

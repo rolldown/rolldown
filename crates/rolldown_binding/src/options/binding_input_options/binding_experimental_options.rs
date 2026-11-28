@@ -19,6 +19,7 @@ pub struct BindingExperimentalOptions {
   pub chunk_optimization: Option<Either<bool, BindingChunkOptimizationOptions>>,
   pub lazy_barrel: Option<bool>,
   pub import_attributes: Option<bool>,
+  pub import_defer: Option<bool>,
 }
 
 impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
@@ -44,6 +45,7 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
       }),
       lazy_barrel: value.lazy_barrel,
       import_attributes: value.import_attributes,
+      import_defer: value.import_defer,
     })
   }
 }

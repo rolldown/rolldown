@@ -750,6 +750,16 @@ export interface InputOptions {
      * @default false
      */
     importAttributes?: boolean;
+    /**
+     * Keep the deferred evaluation of `import defer * as ns from './x'` and `import.defer('./x')`.
+     *
+     * Not implemented yet. With either value, Rolldown lowers each deferred import to a normal
+     * import and emits a warning.
+     *
+     * @see {@link https://github.com/tc39/proposal-defer-import-eval | Proposal}
+     * @default false
+     */
+    importDefer?: boolean;
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.

@@ -771,6 +771,217 @@ mod tests {
     assert!(watched.contains(&dep), "{watched:#?}");
   }
 
+  /// With `RebuildStrategy::Always` one task runs the HMR stage and then a rebuild. The
+  /// `on_hmr_updates` callback runs between the two, so a save in the callback lands after the
+  /// HMR stage read the file. The next task must send that save as an update.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn a_save_after_the_hmr_stage_is_the_next_update() {
+    use rolldown_common::WatcherChangeKind;
+
+    const MAIN: &str = "export const value = 1;\nimport.meta.hot.accept();\n";
+    save_after_the_hmr_stage(SaveAfterTheHmrStage {
+      name: "changed-module",
+      initial: &[("main.js", MAIN)],
+      first_task: &[(
+        "main.js",
+        "export const value = 2;\nimport.meta.hot.accept();\n",
+        WatcherChangeKind::Update,
+      )],
+      save: Some(("main.js", "export const value = 3;\nimport.meta.hot.accept();\n")),
+      second_task: ("main.js", None),
+      expected: [Some(&["value = 2"]), Some(&["value = 3"])],
+    })
+    .await;
+    // `c.js` is not in the graph when the task starts. The HMR stage adds it, so the rebuild
+    // finds it in the graph and reads it again.
+    save_after_the_hmr_stage(SaveAfterTheHmrStage {
+      name: "new-module",
+      initial: &[("main.js", MAIN)],
+      first_task: &[
+        (
+          "main.js",
+          "import './c.js';\nexport const value = 1;\nimport.meta.hot.accept();\n",
+          WatcherChangeKind::Update,
+        ),
+        ("c.js", "export const c = 2;\nimport.meta.hot.accept();\n", WatcherChangeKind::Create),
+      ],
+      save: Some(("c.js", "export const c = 3;\nimport.meta.hot.accept();\n")),
+      second_task: ("c.js", None),
+      expected: [Some(&["c = 2"]), Some(&["c = 3"])],
+    })
+    .await;
+    // The save turns `dep.js` into CommonJS. The clients' `main.js` reads `dep.js` as ESM, so
+    // the second patch must carry `main.js` too.
+    save_after_the_hmr_stage(SaveAfterTheHmrStage {
+      name: "interop",
+      initial: &[
+        (
+          "main.js",
+          "import dep from './dep.js';\nexport const value = dep;\nimport.meta.hot.accept();\n",
+        ),
+        ("dep.js", "export default 1;\n"),
+      ],
+      first_task: &[("dep.js", "export default 2;\n", WatcherChangeKind::Update)],
+      save: Some(("dep.js", "module.exports = 3;\n")),
+      second_task: ("dep.js", None),
+      expected: [
+        Some(&["__rolldown_default__ = 2"]),
+        Some(&[
+          "__rolldown_module__.exports = 3",
+          "__toESM(__rolldown_runtime__.loadExports(\"dep.js\"))",
+        ]),
+      ],
+    })
+    .await;
+  }
+
+  /// A rebuild that reads a module again with the content the HMR stage merged does not make the
+  /// next update of that module skip the unchanged-output check.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn a_rebuild_without_a_save_keeps_the_unchanged_output_check() {
+    use rolldown_common::WatcherChangeKind;
+
+    save_after_the_hmr_stage(SaveAfterTheHmrStage {
+      name: "no-save",
+      initial: &[("main.js", "export const value = 1;\nimport.meta.hot.accept();\n")],
+      first_task: &[(
+        "main.js",
+        "export const value = 1;\n\nimport.meta.hot.accept();\n",
+        WatcherChangeKind::Update,
+      )],
+      save: None,
+      second_task: ("main.js", Some("export const value = 1;\n\n\nimport.meta.hot.accept();\n")),
+      expected: [None, None],
+    })
+    .await;
+  }
+
+  #[cfg(feature = "testing")]
+  struct SaveAfterTheHmrStage<'a> {
+    name: &'a str,
+    /// The files before the first build. `main.js` is the entry.
+    initial: &'a [(&'a str, &'a str)],
+    first_task: &'a [(&'a str, &'a str, rolldown_common::WatcherChangeKind)],
+    /// Written in the `on_hmr_updates` callback of the first task.
+    save: Option<(&'a str, &'static str)>,
+    /// The file the second task updates, and the content to write before it, if any.
+    second_task: (&'a str, Option<&'a str>),
+    /// Per task: the strings its one patch must contain, or `None` for `Noop`.
+    expected: [Option<&'a [&'a str]>; 2],
+  }
+
+  /// Runs `first_task`, writes `save` in its `on_hmr_updates` callback, then runs `second_task`.
+  /// Checks the update of each task against `expected`.
+  #[cfg(feature = "testing")]
+  async fn save_after_the_hmr_stage(case: SaveAfterTheHmrStage<'_>) {
+    use std::sync::{Arc, Mutex};
+
+    use rolldown::{DevModeOptions, ExperimentalOptions};
+    use rolldown_common::{HmrUpdate, WatcherChangeKind};
+    use rolldown_utils::indexmap::FxIndexMap;
+
+    let dir = std::env::temp_dir().join(format!(
+      "rolldown-dev-save-after-hmr-stage-{}-{}",
+      case.name,
+      std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    // The resolver returns real paths, and the temp dir can sit behind a symlink.
+    let dir = dunce::canonicalize(&dir).unwrap();
+    for (file, content) in case.initial {
+      std::fs::write(dir.join(file), content).unwrap();
+    }
+
+    // One entry per `on_hmr_updates` call: the code of each patch, or `None` for `Noop`.
+    let updates = Arc::new(Mutex::new(Vec::<Vec<Option<String>>>::new()));
+    let on_hmr_updates = {
+      let updates = Arc::clone(&updates);
+      let save = case.save.map(|(file, content)| (dir.join(file), content));
+      Arc::new(move |result: rolldown_error::BuildResult<(Vec<_>, Vec<String>)>| {
+        let (client_updates, _) = result.unwrap();
+        let mut updates = updates.lock().unwrap();
+        updates.push(
+          client_updates
+            .into_iter()
+            .map(|client_update: rolldown_common::ClientHmrUpdate| match client_update.update {
+              HmrUpdate::Patch(patch) => Some(patch.code),
+              HmrUpdate::Noop => None,
+              HmrUpdate::FullReload { reason } => panic!("unexpected full reload: {reason}"),
+            })
+            .collect(),
+        );
+        if updates.len() == 1
+          && let Some((file, content)) = &save
+        {
+          std::fs::write(file, content).unwrap();
+        }
+      })
+    };
+
+    let engine = super::DevEngine::new(
+      BundlerConfig::new(
+        BundlerOptions {
+          input: Some(vec!["./main.js".to_string().into()]),
+          cwd: Some(dir.clone()),
+          experimental: Some(ExperimentalOptions {
+            dev_mode: Some(DevModeOptions::default()),
+            ..Default::default()
+          }),
+          ..Default::default()
+        },
+        vec![],
+      ),
+      crate::DevOptions {
+        on_hmr_updates: Some(on_hmr_updates),
+        rebuild_strategy: Some(crate::RebuildStrategy::Always),
+        watch: Some(crate::DevWatchOptions {
+          enabled: Some(false),
+          skip_write: true,
+          ..Default::default()
+        }),
+        ..Default::default()
+      },
+    )
+    .unwrap();
+    engine.run().await.unwrap();
+    engine.create_client_for_testing().await;
+
+    let mut changed = FxIndexMap::default();
+    for (file, content, kind) in case.first_task {
+      std::fs::write(dir.join(file), content).unwrap();
+      changed.insert(dir.join(file), *kind);
+    }
+    engine.ensure_task_with_changed_files(changed).await;
+    let (second_file, second_content) = case.second_task;
+    if let Some(content) = second_content {
+      std::fs::write(dir.join(second_file), content).unwrap();
+    }
+    engine
+      .ensure_task_with_changed_files(FxIndexMap::from_iter([(
+        dir.join(second_file),
+        WatcherChangeKind::Update,
+      )]))
+      .await;
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    let updates = updates.lock().unwrap();
+    assert_eq!(updates.len(), 2, "{updates:#?}");
+    for (update, expected) in updates.iter().zip(case.expected) {
+      let matches = match expected {
+        Some(parts) => {
+          matches!(update.as_slice(), [Some(code)] if parts.iter().all(|part| code.contains(part)))
+        }
+        None => matches!(update.as_slice(), [None]),
+      };
+      assert!(matches, "{}: {updates:#?}", case.name);
+    }
+  }
+
   #[cfg(feature = "testing")]
   const LAZY_FILES: &[(&str, &str)] = &[
     ("main.js", "import('./lazy.js');\n"),

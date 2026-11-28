@@ -29,7 +29,28 @@ pub struct Bundler {
   /// runs a full build. A successful full build clears it. It lives outside `cache` because
   /// a full scan drops `cache`, even when the scan fails.
   pub(super) lost_hmr_update: bool,
+  /// The modules that the last successful `compute_hmr_update_for_file_changes` merged, by
+  /// module id. See `mark_hmr_merged_modules_read_again`.
+  #[cfg_attr(not(feature = "experimental"), allow(dead_code))]
+  pub(super) hmr_merged_modules: rustc_hash::FxHashMap<rolldown_common::ModuleId, HmrMergedModule>,
+  /// The modules that a rebuild read again with other content after an HMR update merged them,
+  /// by module id. No client got that content. The value is the interop of the merged content,
+  /// which the clients' importers of the module were rendered against. The next HMR update that
+  /// changes one of them ships it, even when its output looks unchanged. See
+  /// `mark_hmr_merged_modules_read_again`.
+  #[cfg_attr(not(feature = "experimental"), allow(dead_code))]
+  pub(super) hmr_resend_modules:
+    rustc_hash::FxHashMap<rolldown_common::ModuleId, (rolldown_common::ExportsKind, bool)>,
   pub(super) closed: bool,
+}
+
+/// What an HMR stage merged for one module.
+#[cfg_attr(not(feature = "experimental"), allow(dead_code))]
+pub struct HmrMergedModule {
+  pub source: arcstr::ArcStr,
+  /// `(exports_kind, has_lazy_export)`: the facts about a module that its importers' factories
+  /// read.
+  pub interop: (rolldown_common::ExportsKind, bool),
 }
 
 impl Bundler {
@@ -53,6 +74,8 @@ impl Bundler {
       session: rolldown_devtools::Session::dummy(),
       cache: ScanStageCache::default(),
       lost_hmr_update: false,
+      hmr_merged_modules: rustc_hash::FxHashMap::default(),
+      hmr_resend_modules: rustc_hash::FxHashMap::default(),
       closed: false,
     })
   }

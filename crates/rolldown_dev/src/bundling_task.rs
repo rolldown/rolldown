@@ -370,6 +370,9 @@ impl BundlingTask {
     };
     self.hmr_stage_watch_files =
       hmr_stage_watch_files.filter(|list| !Arc::ptr_eq(list, bundler.watch_files()));
+    if self.input.require_generate_hmr_update() {
+      bundler.mark_hmr_merged_modules_read_again();
+    }
 
     match &build_result {
       Err(err) => {

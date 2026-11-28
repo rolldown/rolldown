@@ -797,10 +797,12 @@ Then, across all files of the batch:
    cannot block error recovery.
 5. **Unchanged-output suppression** — modules whose re-rendered output
    is byte-identical to the pre-rebuild render are dropped from the
-   update. Two exemptions ship anyway: everything after an errored
-   build (recovery must reach clients stuck on the overlay), and
-   modules a `hotUpdate` hook explicitly returned (the change may live
-   outside the module's own code, so identical output proves nothing).
+   update. Three exemptions ship anyway: everything after an errored
+   build (recovery must reach clients stuck on the overlay), modules a
+   `hotUpdate` hook explicitly returned (the change may live outside
+   the module's own code, so identical output proves nothing), and the
+   modules in `Bundler::hmr_resend_modules` (a rebuild read other
+   content for them after an HMR update, see §10).
 6. **Refetch and stamp** — one partial scan and cache merge. The
    merge sets `Bundler::lost_hmr_update`, and the update clears it only
    when it returns its patches (§9b). Then the stamp table starts a
@@ -889,13 +891,15 @@ Known gaps in this walk, kept on purpose for now:
   rule. A tagged marker is possible later, but it must change on both
   sides in the same release.
 
-### `rebuild` (`bundling_task.rs:359-408`)
+### `BundlingTask::rebuild` (`bundling_task.rs`)
 
 - Locks the `Bundler`.
 - If the task ran the HMR stage (`HmrRebuild`: `RebuildStrategy::Always`,
   or the recovery from a `Rebuild`-stage failure, §7), keeps an `Arc` of
   the latest build's watch list. If the build below replaces that list,
-  the task sends it as `hmr_stage_watch_files`.
+  the task sends it as `hmr_stage_watch_files`. After the build it
+  calls `Bundler::mark_hmr_merged_modules_read_again` (see "Why the next
+  HMR update ships the modules this rebuild read again" below).
 - Picks the scan mode:
   ```rust
   let scan_mode = if self.input.requires_full_rebuild() {
@@ -936,6 +940,55 @@ sends BundleCompleted { hmr_stage_watch_files: A }
 `dep.js` is never watched and later edits to it produce nothing. An
 `Hmr`-only task has no such gap: no build replaces its list before the
 coordinator registers it (§11).
+
+Why the next HMR update ships the modules this rebuild read again: the
+HMR stage reads each changed file and merges its module into the graph.
+The rebuild reads the same files again, so its build hooks
+(`buildStart`, `transform`, `buildEnd`) see every changed module. A save
+can land between the two reads. Then only the rebuild merges it, and no
+client gets it. The save's own task compares the module with the graph,
+finds no change, and would send `Noop`:
+
+```
+HmrRebuild task                    file main.js     graph main.js
+HMR stage: reads, merges, sends 2  2                2
+save                               3
+rebuild:   reads main.js again     3                3   <- no client got 3
+next Hmr task: 3 vs 3              3                3   -> must still send 3
+```
+
+So the HMR stage records each module it merged, with its source and its
+interop (`exports_kind` and whether it has a lazy export), in
+`HmrStageInput::merged_modules`, right after `cache.merge` in
+`hmr_stage.rs`. This includes the modules that its partial scan added to
+the graph. Example: one task edits `main.js` to import a new `c.js` and
+creates `c.js`. When the task starts, `c.js` is not in the graph, so it
+is not a changed module. The HMR stage adds it, so the rebuild finds
+`c.js` in the graph and reads it again.
+`Bundler::compute_hmr_update_for_file_changes` (`impl_bundler_hmr.rs`)
+clears that record when it starts and when it fails.
+
+After the build, `rebuild` calls
+`Bundler::mark_hmr_merged_modules_read_again`. It compares each recorded
+source with the source in the graph. Only a module whose source differs
+goes into `Bundler::hmr_resend_modules`, with its recorded interop: the
+rebuild read a save that no client got. A rebuild that read the same
+content adds nothing, so under `rebuildStrategy: 'always'` a save with no
+effective change still sends `Noop`.
+
+The next HMR stage that changes a module in `hmr_resend_modules`:
+
+- skips its unchanged-output check, the same way as for a module that a
+  `hotUpdate` hook selected
+- takes the recorded interop as the interop before the update. The
+  clients' importers of the module were rendered against it. So when the
+  save turned the module from ESM into CommonJS, the importers are
+  rendered again and shipped (`interop_changed`).
+- removes it from the set after the merge
+
+The tests are `a_save_after_the_hmr_stage_is_the_next_update`
+(`dev_engine.rs`), with cases for a changed module, a new module and an
+interop change, and `a_rebuild_without_a_save_keeps_the_unchanged_output_check`.
 
 ---
 

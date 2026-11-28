@@ -7,3 +7,4 @@ mod impl_bundler_incremental_build;
 mod impl_bundler_testing;
 
 pub use self::bundler::Bundler;
+pub use self::bundler::HmrMergedModule;

@@ -295,6 +295,18 @@ impl LinkStage<'_> {
                     }
                   },
                   ImportKind::DynamicImport => {
+                    let is_dynamic_defer =
+                      rec.is_defer_phase() && importee_linking_info.dynamic_defer_target;
+                    if is_dynamic_defer
+                      && importee_linking_info.import_defer_tracked_deps.is_some()
+                      && importee_linking_info.is_tla_or_contains_tla_dependency
+                    {
+                      // `import.defer()` first waits for the top-level await that a deferred
+                      // access to `foo` can evaluate: `__esmGather(init_foo) || await __esmGather()`.
+                      stmt_info
+                        .referenced_symbols
+                        .push(self.runtime.resolve_symbol("__esmGather").into());
+                    }
                     if self.options.code_splitting.is_disabled() {
                       match importee_linking_info.wrap_kind() {
                         WrapKind::None => {}
@@ -311,6 +323,12 @@ impl LinkStage<'_> {
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
+                          // `import.defer()` gives `foo_deferred`.
+                          if is_dynamic_defer
+                            && let Some(deferred_ref) = importee_linking_info.deferred_namespace_ref
+                          {
+                            stmt_info.referenced_symbols.push(deferred_ref.into());
+                          }
                         }
                       }
                     } else {

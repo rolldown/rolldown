@@ -572,9 +572,12 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           self,
         ));
         // The chunk runs this deferred module at its place, as the build without `import defer`
-        // does (`ChunkGraph::deferred_modules_run_at_load`).
+        // does (`ChunkGraph::deferred_modules_run_at_load`). The anchor of a moved module runs the
+        // call (`ChunkGraph::run_at_load_anchors`).
         // See internal-docs/import-defer/implementation.md ("Run at load").
-        if self.ctx.chunk_graph.deferred_modules_run_at_load.contains(&self.ctx.idx) {
+        if self.ctx.chunk_graph.deferred_modules_run_at_load.contains(&self.ctx.idx)
+          && !self.ctx.chunk_graph.run_at_load_anchors.contains_key(&self.ctx.idx)
+        {
           let init_call = self.wrapped_esm_init_call_expr(self.ctx.idx, SPAN, false, true);
           program.body.push(Statement::new_expression_statement(SPAN, init_call, self));
         }
@@ -586,6 +589,18 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     }
 
     self.append_order_cjs_carriers(program);
+
+    // The run-at-load modules that `plan_dynamic_defer_declarations` moves before this module run
+    // here, at their place in the order of execution (`ChunkGraph::run_at_load_anchors`).
+    let anchors = &self.ctx.chunk_graph.run_at_load_anchors;
+    if !anchors.is_empty() {
+      for &module_idx in &self.ctx.chunk.modules {
+        if anchors.get(&module_idx) == Some(&self.ctx.idx) {
+          let init_call = self.wrapped_esm_init_call_expr(module_idx, SPAN, false, true);
+          program.body.push(Statement::new_expression_statement(SPAN, init_call, self));
+        }
+      }
+    }
 
     if self.json_module_inlined_prop.is_some() {
       program.body.drain_filter(|item| matches!(item, ast::Statement::EmptyStatement(_)));
@@ -1142,6 +1157,12 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       }
       // inline dynamic import
       ast::Expression::ImportExpression(import_expr) => {
+        // The rewrites of `import.defer()` read the phase from the import record. A path that
+        // keeps the `import()` expression (a non-literal specifier, or a build that lowers the
+        // deferred imports) evaluates the module like `import()`.
+        if matches!(import_expr.phase, Some(ast::ImportPhase::Defer)) {
+          import_expr.phase = None;
+        }
         if let Some(new_expr) = self.try_rewrite_inline_dynamic_import_expr(import_expr) {
           *expr = new_expr;
         }

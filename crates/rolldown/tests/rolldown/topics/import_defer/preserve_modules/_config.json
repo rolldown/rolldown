@@ -1,0 +1,8 @@
+{
+  "config": {
+    "preserveModules": true,
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

@@ -201,6 +201,7 @@ impl LinkStage<'_> {
     let runtime_idx = self.runtime.id();
     let mut stack = vec![];
     let mut esm_targets = vec![];
+    let mut dynamic_targets = vec![];
     for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
       for (local_ref, named_import) in &module.named_imports {
         let rec = &module.import_records[named_import.record_idx];
@@ -221,9 +222,27 @@ impl LinkStage<'_> {
           esm_targets.push(target);
         }
       }
+      // `import.defer('./x')`. `apply_import_defer_support` lowers the deferred imports of a build
+      // with an `import.defer()` of a CommonJS module, so a CommonJS target keeps `import()`.
+      for rec in &module.import_records {
+        if rec.kind != ImportKind::DynamicImport || !rec.is_defer_phase() {
+          continue;
+        }
+        let Some(target) = rec.resolved_module else { continue };
+        let Module::Normal(target_module) = &self.module_table.modules[target] else { continue };
+        if target == runtime_idx || matches!(target_module.exports_kind, ExportsKind::CommonJs) {
+          continue;
+        }
+        stack.push(target);
+        esm_targets.push(target);
+        dynamic_targets.push(target);
+      }
     }
     esm_targets.sort_unstable();
     esm_targets.dedup();
+    for target in dynamic_targets {
+      self.metas[target].dynamic_defer_target = true;
+    }
 
     let mut visited = IndexBitSet::new(self.module_table.modules.len());
     while let Some(module_idx) = stack.pop() {
@@ -252,7 +271,8 @@ impl LinkStage<'_> {
   }
 
   /// Marks the modules that need the state records of `__esmState`, in the graph of the requested
-  /// modules (`import` and `import defer`) between the ESM modules of the deferred closures:
+  /// modules of all phases (`import`, `import defer`, `import.defer()`) between the ESM modules of
+  /// the deferred closures:
   /// - each module of a strongly connected component that contains a defer target. Only these
   ///   modules can be evaluating at a deferred access to the target.
   /// - each module with top-level await or a dependency with top-level await
@@ -269,7 +289,10 @@ impl LinkStage<'_> {
       let mut deps = module
         .import_records
         .iter()
-        .filter(|rec| matches!(rec.kind, ImportKind::Import))
+        .filter(|rec| {
+          matches!(rec.kind, ImportKind::Import)
+            || (matches!(rec.kind, ImportKind::DynamicImport) && rec.is_defer_phase())
+        })
         .filter_map(|rec| rec.resolved_module)
         .filter(|&dep| {
           closure.has_bit(dep)

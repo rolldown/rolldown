@@ -1,0 +1,390 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] local.json is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+# Assets
+
+## first.js
+
+```js
+import { n as __exportAll, t as __deferNs } from "./rolldown-runtime.js";
+// first.json
+var first_exports = /* @__PURE__ */ __exportAll({
+	a: () => a,
+	b: () => b,
+	default: () => first_default
+});
+var first_deferred = /* @__PURE__ */ __deferNs(() => first_exports, first_exports);
+var a = 1;
+var b = "x";
+var first_default = {
+	a,
+	b
+};
+export { a, b, first_default as default, first_exports as n, first_deferred as t };
+
+```
+
+## main.js
+
+```js
+import { n as __exportAll, t as __deferNs } from "./rolldown-runtime.js";
+// local.json
+var local_exports = /* @__PURE__ */ __exportAll({
+	d: () => d,
+	default: () => local_default
+});
+var local_deferred = /* @__PURE__ */ __deferNs(() => local_exports, local_exports);
+var d = true;
+var local_default = { d };
+// main.js
+const entries = (ns) => Object.keys(ns).map((key) => [key, ns[key]]);
+const compare = (eager, deferred, eagerAgain) => ({
+	eager: entries(eager),
+	deferred: entries(deferred),
+	sameEager: eager === eagerAgain,
+	distinctDeferred: deferred !== eager
+});
+async function run() {
+	const firstEager = await import("./first.js").then((n) => n.n);
+	const firstDeferred = await (async (n) => (n = await import("./first.js"), n.t))();
+	const firstEagerAgain = await import("./first.js").then((n) => n.n);
+	const secondDeferred = await (async (n) => (n = await import("./second.js"), n.t))();
+	const secondEager = await import("./second.js").then((n) => n.n);
+	const secondEagerAgain = await import("./second.js").then((n) => n.n);
+	const localEager = await Promise.resolve().then(() => local_exports);
+	const localDeferred = await (async () => local_deferred)();
+	const localEagerAgain = await Promise.resolve().then(() => local_exports);
+	return {
+		first: compare(firstEager, firstDeferred, firstEagerAgain),
+		second: compare(secondEager, secondDeferred, secondEagerAgain),
+		local: {
+			...compare(localEager, localDeferred, localEagerAgain),
+			static: local_deferred === localDeferred
+		}
+	};
+}
+export { run };
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __exportAll as n, __deferNs as t };
+
+```
+
+## second.js
+
+```js
+import { n as __exportAll, t as __deferNs } from "./rolldown-runtime.js";
+// second.json
+var second_exports = /* @__PURE__ */ __exportAll({
+	c: () => c,
+	default: () => second_default
+});
+var second_deferred = /* @__PURE__ */ __deferNs(() => second_exports, second_exports);
+var c = [2];
+var second_default = { c };
+export { c, second_default as default, second_exports as n, second_deferred as t };
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] local.json is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+## Assets
+
+### first.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+// first.json
+var first_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
+	a: () => a,
+	b: () => b,
+	default: () => first_default
+});
+var first_deferred = /* @__PURE__ */ require_rolldown_runtime.__deferNs(() => first_exports, first_exports);
+var a = 1;
+var b = "x";
+var first_default = {
+	a,
+	b
+};
+Object.defineProperty(exports, "a", {
+	enumerable: true,
+	get: function() {
+		return a;
+	}
+});
+Object.defineProperty(exports, "b", {
+	enumerable: true,
+	get: function() {
+		return b;
+	}
+});
+Object.defineProperty(exports, "default", {
+	enumerable: true,
+	get: function() {
+		return first_default;
+	}
+});
+Object.defineProperty(exports, "first_deferred", {
+	enumerable: true,
+	get: function() {
+		return first_deferred;
+	}
+});
+Object.defineProperty(exports, "first_exports", {
+	enumerable: true,
+	get: function() {
+		return first_exports;
+	}
+});
+
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+// local.json
+var local_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
+	d: () => d,
+	default: () => local_default
+});
+var local_deferred = /* @__PURE__ */ require_rolldown_runtime.__deferNs(() => local_exports, local_exports);
+var d = true;
+var local_default = { d };
+// main.js
+const entries = (ns) => Object.keys(ns).map((key) => [key, ns[key]]);
+const compare = (eager, deferred, eagerAgain) => ({
+	eager: entries(eager),
+	deferred: entries(deferred),
+	sameEager: eager === eagerAgain,
+	distinctDeferred: deferred !== eager
+});
+async function run() {
+	const firstEager = await Promise.resolve().then(() => require("./first.js")).then((n) => n.first_exports);
+	const firstDeferred = await (async (n) => (n = (await 0, require("./first.js")), n.first_deferred))();
+	const firstEagerAgain = await Promise.resolve().then(() => require("./first.js")).then((n) => n.first_exports);
+	const secondDeferred = await (async (n) => (n = (await 0, require("./second.js")), n.second_deferred))();
+	const secondEager = await Promise.resolve().then(() => require("./second.js")).then((n) => n.second_exports);
+	const secondEagerAgain = await Promise.resolve().then(() => require("./second.js")).then((n) => n.second_exports);
+	const localEager = await Promise.resolve().then(() => local_exports);
+	const localDeferred = await (async () => local_deferred)();
+	const localEagerAgain = await Promise.resolve().then(() => local_exports);
+	return {
+		first: compare(firstEager, firstDeferred, firstEagerAgain),
+		second: compare(secondEager, secondDeferred, secondEagerAgain),
+		local: {
+			...compare(localEager, localDeferred, localEagerAgain),
+			static: local_deferred === localDeferred
+		}
+	};
+}
+exports.run = run;
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__deferNs", {
+	enumerable: true,
+	get: function() {
+		return __deferNs;
+	}
+});
+Object.defineProperty(exports, "__exportAll", {
+	enumerable: true,
+	get: function() {
+		return __exportAll;
+	}
+});
+
+```
+
+### second.js
+
+```js
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+// second.json
+var second_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
+	c: () => c,
+	default: () => second_default
+});
+var second_deferred = /* @__PURE__ */ require_rolldown_runtime.__deferNs(() => second_exports, second_exports);
+var c = [2];
+var second_default = { c };
+Object.defineProperty(exports, "c", {
+	enumerable: true,
+	get: function() {
+		return c;
+	}
+});
+Object.defineProperty(exports, "default", {
+	enumerable: true,
+	get: function() {
+		return second_default;
+	}
+});
+Object.defineProperty(exports, "second_deferred", {
+	enumerable: true,
+	get: function() {
+		return second_deferred;
+	}
+});
+Object.defineProperty(exports, "second_exports", {
+	enumerable: true,
+	get: function() {
+		return second_exports;
+	}
+});
+
+```
+
+# Variant: strict: [strict_execution_order: true]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] local.json is dynamically imported by main.js but also statically imported by main.js, dynamic import will not move module into another chunk.
+
+```
+
+## Assets
+
+### first.js
+
+```js
+import { n as __esmMin, r as __exportAll, t as __deferNs } from "./rolldown-runtime.js";
+// first.json
+var first_exports = /* @__PURE__ */ __exportAll({
+	a: () => a,
+	b: () => b,
+	default: () => first_default
+});
+var first_deferred = /* @__PURE__ */ __deferNs(() => (init_first(), first_exports), first_exports);
+var a, b, first_default;
+function init_first() {
+	return (init_first = __esmMin((() => {
+		a = 1;
+		b = "x";
+		first_default = {
+			a,
+			b
+		};
+	})))();
+}
+init_first();
+export { a, b, first_default as default, first_exports as n, init_first as r, first_deferred as t };
+
+```
+
+### main.js
+
+```js
+import { n as __esmMin, r as __exportAll, t as __deferNs } from "./rolldown-runtime.js";
+// local.json
+var local_exports = /* @__PURE__ */ __exportAll({
+	d: () => d,
+	default: () => local_default
+});
+var local_deferred = /* @__PURE__ */ __deferNs(() => (init_local(), local_exports), local_exports);
+var d, local_default;
+function init_local() {
+	return (init_local = __esmMin((() => {
+		d = true;
+		local_default = { d };
+	})))();
+}
+// main.js
+async function run() {
+	const firstEager = await import("./first.js").then((n) => (n.r(), n.n));
+	const firstDeferred = await (async (n) => (n = await import("./first.js"), n.t))();
+	const firstEagerAgain = await import("./first.js").then((n) => (n.r(), n.n));
+	const secondDeferred = await (async (n) => (n = await import("./second.js"), n.n))();
+	const secondEager = await import("./second.js").then((n) => (n.t(), n.r));
+	const secondEagerAgain = await import("./second.js").then((n) => (n.t(), n.r));
+	const localEager = await Promise.resolve().then(() => (init_local(), local_exports));
+	const localDeferred = await (async () => local_deferred)();
+	const localEagerAgain = await Promise.resolve().then(() => (init_local(), local_exports));
+	return {
+		first: compare(firstEager, firstDeferred, firstEagerAgain),
+		second: compare(secondEager, secondDeferred, secondEagerAgain),
+		local: {
+			...compare(localEager, localDeferred, localEagerAgain),
+			static: local_deferred === localDeferred
+		}
+	};
+}
+var entries, compare;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		entries = (ns) => Object.keys(ns).map((key) => [key, ns[key]]);
+		compare = (eager, deferred, eagerAgain) => ({
+			eager: entries(eager),
+			deferred: entries(deferred),
+			sameEager: eager === eagerAgain,
+			distinctDeferred: deferred !== eager
+		});
+	})))();
+}
+init_main();
+export { run };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as n, __exportAll as r, __deferNs as t };
+
+```
+
+### second.js
+
+```js
+import { n as __esmMin, r as __exportAll, t as __deferNs } from "./rolldown-runtime.js";
+// second.json
+var second_exports = /* @__PURE__ */ __exportAll({
+	c: () => c,
+	default: () => second_default
+});
+var second_deferred = /* @__PURE__ */ __deferNs(() => (init_second(), second_exports), second_exports);
+var c, second_default;
+function init_second() {
+	return (init_second = __esmMin((() => {
+		c = [2];
+		second_default = { c };
+	})))();
+}
+init_second();
+export { c, second_default as default, second_deferred as n, second_exports as r, init_second as t };
+
+```

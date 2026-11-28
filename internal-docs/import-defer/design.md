@@ -4,7 +4,7 @@
 
 ## Summary
 
-`experimental.importDefer` keeps the deferred evaluation of `import defer` in the output. The support grows in steps. Each step supports more shapes of a build, and a build with another shape falls back to an eager import. A build with the option off must give the same output as before the option existed.
+`experimental.importDefer` keeps the deferred evaluation of `import defer` and `import.defer()` in the output. The support grows in steps. Each step supports more shapes of a build, and a build with another shape falls back to an eager import. A build with the option off must give the same output as before the option existed.
 
 ## Whole-build fallback
 
@@ -14,7 +14,7 @@ A build with a shape that the deferral does not support yet gives the output of 
 
 ### Decisions
 
-- The decision is for the whole build, not for each import. The conditions (the output format, no external module in the closures, no CommonJS file that runs its module at load, the order rule of top-level `await`) are properties of the module graph and the options. A decision for each import needs rules for deferred and eager closures across chunks, cycles and async modules.
+- The decision is for the whole build, not for each import. The conditions (the output format, no `import.defer()` of a CommonJS module, no external module in the closures, no CommonJS file that runs its module at load, the order rule of top-level `await`) are properties of the module graph and the options. A decision for each import needs rules for deferred and eager closures across chunks, cycles and async modules.
 - The decision runs after the scan and before the link stage, in `scan_modules_impl`. With `experimental.incrementalBuild`, the scan sees only the changed modules, and the normalized scan output has all modules. An error (a write to a deferred namespace in a build that falls back) then fails the build as a scan error does: `buildEnd` and `closeBundle` get the error, and no link step adds more errors.
 - The scanner keeps the eager results and saves the deferred results apart. Thus a fallback gives the scan results of the option-off build exactly. A second analysis at link time cannot give the same results, because the scan reads a partial `constant_export_map` that the link stage does not have.
 - The conditions are conservative. For example, an import of an external module after a deferred import of a module with top-level `await` counts in each build that can make more than one chunk, also when the build makes only one chunk.
@@ -112,11 +112,36 @@ A lazy host is the entry chunk of a deferred ES module, and its load does not ru
 - An import of the init chunk in each chunk with a static importer of the host. A chunk with a deferred-only importer then runs the module at load. In a cycle, the module runs before the bindings of the chunk exist. This form failed in 7 of 7 tested trees.
 - An init file that the bundler adds after the chunks render. `renderChunk` and `augmentChunkHash` do not see the file, and the `imports` of the importer in `renderChunk` do not list it. A plugin asset with the same name gave two outputs with one name, with no warning.
 
+## `import.defer()`
+
+### Goal
+
+`import.defer('./x.js')` gives the deferred namespace object of `x.js` after the load of its chunk, and evaluates nothing. Each call and each static deferred import of `x.js` give the same object.
+
+### Decisions
+
+- A call reads `x_deferred`, the object of the static form. Thus both forms give one object, and they share the closure wrappers, the state records and the preparation.
+- An async arrow function holds the read: `(async () => x_deferred)()`. Thus a failed preparation rejects the promise, and the call does not throw synchronously, as for `import()`. `x_deferred` has no `then` key, so the resolution of the promise does not evaluate the module.
+- In the same chunk, a call can run before the code of its target. Thus the declarations of the target and of its closure move to the start of the chunk. The code of a moved module has only declarations, so the move changes no evaluation order.
+- A module that its common chunk runs at load keeps its init call at its old place, after the code of the last module before it that does not move. The build without `import defer` runs the module at that place.
+- A build falls back when an `import.defer()` call loads a CommonJS module. Native ESM defers the evaluation of a CommonJS module also for this form. The deferred namespace of a CommonJS module belongs to a static import record (`import_x`, `x_deferred` of `create_deferred_cjs_namespaces`), and an `import()` of the module evaluates it when the chunk loads. The fallback gives the order of the build without `import defer`, with a warning.
+- With `codeSplitting: false`, an `import()` makes a module with no module syntax CommonJS, as in the build without `import defer`. The fallback check uses the same rule, so such a target also makes the build fall back.
+- A call with a `/* @vite-ignore */` comment becomes `import()`, with a warning, as a call with a specifier that is not static. The scanner adds no import record for such a call, so the build cannot defer its module. Before this step, each call got such a warning, so the comment must not remove it.
+
+### Rejected alternatives
+
+- A lowering of only the `import.defer()` calls of CommonJS modules to `import()`. The module then evaluates when its chunk loads, also before a static deferred access to the same module, and the build has no warning for it. The other conditions also decide for the whole build (see "Whole-build fallback").
+- A deferred namespace of a CommonJS module for `import.defer()`. The chunk of the module must then export an object that calls `require_x()` at the first access, outside the records of the importers. This needs a new symbol for each CommonJS target. A later step can add it.
+- No move for a module that its chunk runs at load. A read of its namespace object during a pause at a top-level `await` then gets `undefined`, because the code of the module did not run yet.
+- An await of the end of the chunk before the call reads `x_deferred`. A call at the top level of the chunk, with `await`, then waits for itself (fixture `dynamic_same_chunk_top_level_await`).
+
 ## Unresolved questions
 
-- Which steps remove which conditions: `import.defer()`, external modules, the other output formats, `experimentalInlineCommonChunks`, `includeDependenciesRecursively: false`, and the CommonJS files that run their module at load.
+- Which steps remove which conditions: external modules, the other output formats, `experimentalInlineCommonChunks`, `includeDependenciesRecursively: false`, the CommonJS files that run their module at load, and the `import.defer()` calls of CommonJS modules.
+- Can the file of an entry get a facade with `preserveModules`, as without `preserveModules`? A deferred importer of the entry module in another file then does not run the module at load. With `strictExecutionOrder`, the order wrappers already move the module out of the file of the entry.
+- Can `esm` output keep `import.defer()` for a call that the build does not process: a call with a `/* @vite-ignore */` comment, or with a specifier that is not static? The runtime then defers the module, but it must support `import.defer()`.
 - Can the preparation run at the position of the deferred import in a module with no wrapper? It must run before the code of the first later import, at the top level of the chunk, as `ensure_lazy_module_initialization_order` moves an init call (`Chunk::insert_map`). Then the order rule can go away.
 
 ## Related
 
-- [implementation.md](./implementation.md) — the scan, the fallback, the link stage, the finalizer, the CommonJS targets and the lazy hosts
+- [implementation.md](./implementation.md) — the scan, the fallback, the link stage, the finalizer, the CommonJS targets, the lazy hosts and `import.defer()`

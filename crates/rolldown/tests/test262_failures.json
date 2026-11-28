@@ -140,17 +140,8 @@
   "language/module-code/source-phase-import/reexport-source-binding-namespace-get.js": {
     "reason": "source phase imports are not supported in Rolldown"
   },
-  "language/expressions/dynamic-import/import-defer/import-defer-transitive-async-module/main.js": {
-    "reason": "`experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`"
-  },
   "language/expressions/dynamic-import/import-defer/import-defer-transitive-async-module/promise-prototype-then-not-called.js": {
-    "reason": "`experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`"
-  },
-  "language/expressions/dynamic-import/import-defer/sync-dependency-of-deferred-async-module/main.js": {
-    "reason": "`experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`"
-  },
-  "language/expressions/dynamic-import/import-defer/sync/main.js": {
-    "reason": "`experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`"
+    "reason": "The output loads the chunk of the target with a native `import()`, and the `import()` of Node.js calls `Promise.prototype.then`"
   },
   "language/expressions/dynamic-import/syntax/valid/nested-with-expression-import-defer-empty-str-is-valid-assign-expr.js": {
     "reason": "The test needs non-strict script code (`with`), but the runner gives each test to Rolldown as a `.js` entry, which Rolldown parses as module code (always strict)"
@@ -163,9 +154,6 @@
   },
   "language/expressions/dynamic-import/syntax/valid/nested-with-import-defer-script-code-valid.js": {
     "reason": "The test needs non-strict script code (`with`), but the runner gives each test to Rolldown as a `.js` entry, which Rolldown parses as module code (always strict)"
-  },
-  "language/import/import-defer/deferred-namespace-object/identity.js": {
-    "reason": "`experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`"
   },
   "language/import/import-defer/errors/resolution-error/import-defer-of-missing-module-fails.js": {
     "reason": "Rolldown reports a module that it cannot resolve as a build error, not as a rejection of `import()` at runtime"

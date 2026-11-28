@@ -1,0 +1,9 @@
+{
+  "_comment": "With `experimental.importDefer`, `import.defer()` with a `/* @vite-ignore */` comment keeps the fallback: `import()` and a warning. The scanner adds no import record for such a call, so the build cannot defer its module.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "expectWarning": true
+}

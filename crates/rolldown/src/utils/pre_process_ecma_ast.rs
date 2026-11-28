@@ -37,9 +37,13 @@ fn import_defer_removal_message(removal: DeferPhaseRemoval) -> (oxc::span::Span,
       span,
       "`import defer` is currently lowered to a normal import. This changes execution timing because side effects run immediately instead of when the deferred import is first used.",
     ),
-    DeferPhaseRemoval::DynamicImportDefer(span) => (
+    DeferPhaseRemoval::NonStaticSpecifier(span) => (
       span,
-      "`import.defer()` is currently lowered to `import()`. This changes execution timing because the module evaluates when it loads instead of when its namespace is first used. `experimental.importDefer` does not support `import.defer()` yet.",
+      "`import.defer()` with a specifier that is not a static string is lowered to `import()`. The module evaluates when it loads, not at the first access to its namespace.",
+    ),
+    DeferPhaseRemoval::IgnoredByComment(span) => (
+      span,
+      "`import.defer()` with a `/* @vite-ignore */` comment is lowered to `import()`. The module evaluates when it loads, not at the first access to its namespace.",
     ),
   }
 }

@@ -53,6 +53,12 @@ pub struct ChunkGraph {
   /// out (`GenerateStage::split_modules_before_deferred_imports`), and an init after the import of
   /// the chunk would run after them. These modules have no host (`deferred_init_host`).
   pub deferred_modules_run_at_load: FxHashSet<ModuleIdx>,
+  /// The modules of `deferred_modules_run_at_load` that
+  /// `GenerateStage::plan_dynamic_defer_declarations` puts before the other modules of their
+  /// chunk, with their anchor: the last module before them, in the order of the chunk, that keeps
+  /// its place. The finalizer of the anchor calls `init_x()` at the end of its code, so that the
+  /// module still runs at its place.
+  pub run_at_load_anchors: FxHashMap<ModuleIdx, ModuleIdx>,
 }
 
 /// An eager importer of a deferred module that runs when its chunk loads. The host of the module
@@ -138,6 +144,7 @@ impl ChunkGraph {
       post_chunk_optimization_operations: FxHashMap::default(),
       lazy_host_inits: LazyHostInits::default(),
       deferred_modules_run_at_load: FxHashSet::default(),
+      run_at_load_anchors: FxHashMap::default(),
     }
   }
 

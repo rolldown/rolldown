@@ -80,9 +80,9 @@ bitflags::bitflags! {
     const IsReExportOnly = 1 << 10;
     /// A direct CommonJS star export lowered to named re-exports for a dynamic entry.
     const CjsStarNamedExports = 1 << 11;
-    /// The record is a deferred import: `import defer * as ns from 'mod'`. The scanner sets it only
-    /// when `experimental.importDefer` is on. A build that does not support the deferral clears it
-    /// before the link stage.
+    /// The record is a deferred import: `import defer * as ns from 'mod'` or `import.defer('mod')`.
+    /// The scanner sets it only when `experimental.importDefer` is on. A build that does not
+    /// support the deferral clears it before the link stage.
     const DeferPhase = 1 << 12;
 
     const TopLevelPureDynamicImport = Self::IsTopLevel.bits() | Self::PureDynamicImport.bits();

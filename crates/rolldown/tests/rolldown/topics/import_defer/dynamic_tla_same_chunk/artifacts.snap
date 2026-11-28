@@ -1,0 +1,55 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+// t.js
+function init_t() {
+	return (init_t = __esmState((async () => {
+		try {
+			init_log();
+			log.push("t start");
+			await 0;
+			log.push("t end");
+		} catch (e) {
+			throw __esmFail(init_t, e);
+		}
+		__esmEnd(init_t);
+	}), () => [], 3))(arguments[0]);
+}
+// d.js
+var d_exports = /* @__PURE__ */ __exportAll({ value: () => "d" });
+var d_deferred = /* @__PURE__ */ __deferNs(() => (__esmDefer(init_d), d_exports), d_exports);
+function init_d() {
+	return (init_d = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_t(init_d), init_t, init_d) || await init_t(init_d);
+			log.push("d");
+		} catch (e) {
+			throw __esmFail(init_d, e);
+		}
+		__esmEnd(init_d);
+	}), () => [init_t], 1))(arguments[0]);
+}
+// main.js
+init_log();
+const promise = (async () => (await 0, __esmGather(init_d) || await __esmGather(), d_deferred))();
+log.push("after call");
+const ns = await promise;
+log.push("after import");
+const value = ns.value;
+export { log, value };
+
+```

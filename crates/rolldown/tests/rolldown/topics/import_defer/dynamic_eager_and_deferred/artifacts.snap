@@ -1,0 +1,54 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## d.js
+
+```js
+import { a as __exportAll, i as __esmMin, n as log, r as __deferNs, t as init_log } from "./log.js";
+// d.js
+var d_exports = /* @__PURE__ */ __exportAll({ value: () => "d" });
+var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(), d_exports), d_exports);
+var value;
+function init_d() {
+	return (init_d = __esmMin((() => {
+		init_log();
+		log.push("d");
+		value = "d";
+	})))();
+}
+export { d_exports as n, init_d as r, d_deferred as t, value };
+
+```
+
+## log.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+export { __exportAll as a, __esmMin as i, log as n, __deferNs as r, init_log as t };
+
+```
+
+## main.js
+
+```js
+import { n as log, t as init_log } from "./log.js";
+// main.js
+init_log();
+const deferred = await (async (n) => (n = await import("./d.js"), n.t))();
+log.push("after import.defer");
+const eager = await import("./d.js").then((n) => (n.r(), n.n));
+log.push("after import");
+const values = [eager.value, deferred.value];
+const same = deferred === eager;
+export { log, same, values };
+
+```

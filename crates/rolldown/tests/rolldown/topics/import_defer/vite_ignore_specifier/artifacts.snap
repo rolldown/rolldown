@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import.defer()` with a `/* @vite-ignore */` comment is lowered to `import()`. The module evaluates when it loads, not at the first access to its namespace.
+   ╭─[ main.js:4:18 ]
+   │
+ 4 │ const ns = await import.defer(/* @vite-ignore */ 'node:path');
+   │                  ──────────────────────┬─────────────────────  
+   │                                        ╰─────────────────────── The deferred phase is removed here.
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// main.js
+const ns = await import(
+	/* @vite-ignore */
+	"node:path"
+);
+assert.strictEqual(typeof ns.join, "function");
+
+```

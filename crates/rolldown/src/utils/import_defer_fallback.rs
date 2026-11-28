@@ -57,6 +57,8 @@ enum UnsupportedReason {
   OutputFormat,
   InlineCommonChunks,
   NonRecursiveGroups,
+  /// An `import.defer()` call targets this CommonJS module.
+  DynamicImportOfCommonJs(ModuleIdx),
   /// A deferred closure has this external module.
   ExternalModule(ModuleIdx),
   /// A deferred closure has this CommonJS module, and its output file runs it at load.
@@ -67,7 +69,8 @@ enum UnsupportedReason {
 }
 
 impl UnsupportedReason {
-  fn message(&self, modules: &IndexModules) -> String {
+  /// The warning for a static deferred import, and the warning for an `import.defer()` call.
+  fn messages(&self, modules: &IndexModules) -> (String, String) {
     let condition = match self {
       Self::OutputFormat => "the output format is not `esm` or `cjs`".to_string(),
       Self::InlineCommonChunks => {
@@ -77,6 +80,10 @@ impl UnsupportedReason {
         "a code splitting group sets `includeDependenciesRecursively: false`, so the chunks can import each other in a cycle"
           .to_string()
       }
+      Self::DynamicImportOfCommonJs(idx) => format!(
+        "an `import.defer()` call targets the CommonJS module `{}`",
+        modules[*idx].stable_id()
+      ),
       Self::ExternalModule(idx) => {
         format!("a deferred import evaluates the external module `{}`", modules[*idx].stable_id())
       }
@@ -89,8 +96,13 @@ impl UnsupportedReason {
         modules[*idx].stable_id()
       ),
     };
-    format!(
-      "`import defer` is currently lowered to a normal import, because {condition}. This changes execution timing because side effects run immediately instead of when the deferred import is first used. `experimental.importDefer` does not keep the deferred evaluation in this build yet."
+    (
+      format!(
+        "`import defer` is currently lowered to a normal import, because {condition}. This changes execution timing because side effects run immediately instead of when the deferred import is first used. `experimental.importDefer` does not keep the deferred evaluation in this build yet."
+      ),
+      format!(
+        "`import.defer()` is currently lowered to `import()`, because {condition}. This changes execution timing because the module evaluates when it loads instead of when its namespace is first used. `experimental.importDefer` does not keep the deferred evaluation in this build yet."
+      ),
     )
   }
 }
@@ -113,15 +125,72 @@ fn unsupported_reason(
   if options.manual_code_splitting.as_ref().is_some_and(has_non_recursive_dependency_capture) {
     return Some(UnsupportedReason::NonRecursiveGroups);
   }
+  let commonjs = commonjs_modules(output, options);
+  if let Some(module) = dynamic_import_of_commonjs(output, &commonjs) {
+    return Some(UnsupportedReason::DynamicImportOfCommonJs(module));
+  }
   let closures = match deferred_closures(output) {
     Ok(closures) => closures,
     Err(external) => return Some(UnsupportedReason::ExternalModule(external)),
   };
-  if let Some(module) = commonjs_module_run_at_load(output, options, &closures) {
+  if let Some(module) = commonjs_module_run_at_load(output, options, &closures, &commonjs) {
     return Some(UnsupportedReason::CommonJsRunAtLoad(module));
   }
   import_after_async_deferred_import(output, options, &closures)
     .map(UnsupportedReason::ImportAfterAsyncDeferredImport)
+}
+
+/// The modules that the link stage makes CommonJS (`determine_module_exports_kind`): the scan gives
+/// `ExportsKind::CommonJs`, or `ExportsKind::None` and a `require()` loads the module. With code
+/// splitting off, an `import()` also counts as a `require()`.
+fn commonjs_modules(
+  output: &NormalizedScanStageOutput,
+  options: &NormalizedBundlerOptions,
+) -> IndexBitSet<ModuleIdx> {
+  let modules = &output.module_table.modules;
+  let code_splitting_disabled = options.code_splitting.is_disabled();
+  let mut required = IndexBitSet::new(modules.len());
+  for rec in modules.iter().filter_map(Module::as_normal).flat_map(|module| &module.import_records)
+  {
+    if rec.kind == ImportKind::Require
+      || (rec.kind == ImportKind::DynamicImport && code_splitting_disabled)
+    {
+      if let Some(target) = rec.resolved_module {
+        required.set_bit(target);
+      }
+    }
+  }
+  let mut commonjs = IndexBitSet::new(modules.len());
+  for module in modules.iter().filter_map(Module::as_normal) {
+    let is_commonjs = match module.exports_kind {
+      ExportsKind::CommonJs => true,
+      ExportsKind::None => required.has_bit(module.idx),
+      ExportsKind::Esm => false,
+    };
+    if is_commonjs {
+      commonjs.set_bit(module.idx);
+    }
+  }
+  commonjs
+}
+
+/// The first CommonJS module that an `import.defer()` call targets. Native ESM defers the
+/// evaluation of a CommonJS module, as for the static form, and `import()` evaluates it when it
+/// loads. The deferred namespace of a CommonJS module (`create_deferred_cjs_namespaces`) exists
+/// only for the static form.
+fn dynamic_import_of_commonjs(
+  output: &NormalizedScanStageOutput,
+  commonjs: &IndexBitSet<ModuleIdx>,
+) -> Option<ModuleIdx> {
+  output
+    .module_table
+    .modules
+    .iter()
+    .filter_map(Module::as_normal)
+    .flat_map(|module| &module.import_records)
+    .filter(|rec| rec.kind == ImportKind::DynamicImport && rec.is_defer_phase())
+    .filter_map(|rec| rec.resolved_module)
+    .find(|&target| commonjs.has_bit(target))
 }
 
 /// The modules of the deferred closures, or `Err` with the first external module of a closure. A
@@ -233,47 +302,25 @@ fn import_after_async_deferred_import(
 /// - In `cjs` output, the chunk of a user-defined entry resolves its own export mode
 ///   (`export_mode_module`), and it can end with `module.exports = require_x();`. In `esm` output
 ///   without `preserveModules`, such a chunk gets a facade (`preserve_strict_entry_signatures`).
-///
-/// The link stage makes a module CommonJS when the scan gives `ExportsKind::CommonJs`, or
-/// `ExportsKind::None` and a `require()` loads the module (`determine_module_exports_kind`).
 fn commonjs_module_run_at_load(
   output: &NormalizedScanStageOutput,
   options: &NormalizedBundlerOptions,
   closures: &IndexBitSet<ModuleIdx>,
+  commonjs: &IndexBitSet<ModuleIdx>,
 ) -> Option<ModuleIdx> {
   let each_file = options.preserve_modules && matches!(options.format, OutputFormat::Esm);
   if !each_file && !matches!(options.format, OutputFormat::Cjs) {
     return None;
   }
-  let modules = &output.module_table.modules;
-  let code_splitting_disabled = options.code_splitting.is_disabled();
-  let mut required = IndexBitSet::new(modules.len());
-  for rec in modules.iter().filter_map(Module::as_normal).flat_map(|module| &module.import_records)
-  {
-    if rec.kind == ImportKind::Require
-      || (rec.kind == ImportKind::DynamicImport && code_splitting_disabled)
-    {
-      if let Some(target) = rec.resolved_module {
-        required.set_bit(target);
-      }
-    }
-  }
-  let is_commonjs = |idx: ModuleIdx| {
-    modules[idx].as_normal().is_some_and(|module| match module.exports_kind {
-      ExportsKind::CommonJs => true,
-      ExportsKind::None => required.has_bit(idx),
-      ExportsKind::Esm => false,
-    })
-  };
   if each_file {
-    return closures.index_of_one().find(|&idx| is_commonjs(idx));
+    return closures.index_of_one().find(|&idx| commonjs.has_bit(idx));
   }
   output
     .entry_points
     .iter()
     .filter(|entry| matches!(entry.kind, EntryPointKind::UserDefined))
     .map(|entry| entry.idx)
-    .find(|&idx| closures.has_bit(idx) && is_commonjs(idx))
+    .find(|&idx| closures.has_bit(idx) && commonjs.has_bit(idx))
 }
 
 /// Whether the build can make more than one chunk. A build with one user-defined or emitted entry,
@@ -324,12 +371,14 @@ fn lower_deferred_imports(
   output: &mut NormalizedScanStageOutput,
   reason: &UnsupportedReason,
 ) -> Result<(), Vec<BuildDiagnostic>> {
-  let message = reason.message(&output.module_table.modules);
+  let (static_message, dynamic_message) = reason.messages(&output.module_table.modules);
   let mut warnings = vec![];
   let mut errors = vec![];
   for module in output.module_table.modules.iter_mut().filter_map(Module::as_normal_mut) {
     for rec in module.ecma_view.import_records.iter_mut().filter(|rec| rec.is_defer_phase()) {
       rec.meta.remove(ImportRecordMeta::DeferPhase);
+      let message =
+        if rec.kind == ImportKind::DynamicImport { &dynamic_message } else { &static_message };
       let span = rec.state.importer_span;
       warnings.push(
         BuildDiagnostic::oxc_error(

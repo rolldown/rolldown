@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration/test262.rs
 expression: snapshot
 ---
-Summary: 239 passed, 13 failed, 252 total
+Summary: 243 passed, 9 failed, 252 total
 
 ---
 
@@ -13,13 +13,9 @@ Actual: Runtime execution succeeded
 ---
 
 # language/import/import-defer/deferred-namespace-object/identity.js
-Result: FAIL
-Reason: `experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: Test262Error {
-  message: 'Static and dynamic deferred import of the same module gives the same object Expected SameValue(«[object Deferred Module]», «[object Module]») to be true'
-}
+Actual: Runtime execution succeeded
 ---
 
 # language/import/import-defer/deferred-namespace-object/json-module.js
@@ -750,35 +746,29 @@ Actual: Async test completed successfully
 ---
 
 # language/expressions/dynamic-import/import-defer/import-defer-transitive-async-module/main.js
-Result: FAIL
-Reason: `experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`
+Result: PASS
 Expected: success
-Actual:
-Async test failed: Test262Error: Test262Error: Actual [tla start, tla end, imports-tla] and expected [tla start, tla end] should have the same contents. 
+Actual: Async test completed successfully
 ---
 
 # language/expressions/dynamic-import/import-defer/import-defer-transitive-async-module/promise-prototype-then-not-called.js
 Result: FAIL
-Reason: `experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`
+Reason: The output loads the chunk of the target with a native `import()`, and the `import()` of Node.js calls `Promise.prototype.then`
 Expected: success
 Actual:
-Async test failed: Test262Error: Test262Error: Promise.prototype.then must not be called by import.defer internals Expected SameValue(«4», «0») to be true
+Async test failed: Test262Error: Test262Error: Promise.prototype.then must not be called by import.defer internals Expected SameValue(«5», «0») to be true
 ---
 
 # language/expressions/dynamic-import/import-defer/sync/main.js
-Result: FAIL
-Reason: `experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`
+Result: PASS
 Expected: success
-Actual:
-Async test failed: Test262Error: Test262Error: Actual [dep, sync] and expected [] should have the same contents. 
+Actual: Async test completed successfully
 ---
 
 # language/expressions/dynamic-import/import-defer/sync-dependency-of-deferred-async-module/main.js
-Result: FAIL
-Reason: `experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`
+Result: PASS
 Expected: success
-Actual:
-Async test failed: Test262Error: Test262Error: Actual [dep, tla-with-dep start, tla-with-dep end, imports-tla-with-dep] and expected [dep, tla-with-dep start, tla-with-dep end] should have the same contents. 
+Actual: Async test completed successfully
 ---
 
 # language/expressions/dynamic-import/syntax/invalid/nested-arrow-assignment-expression-import-defer-assignment-expr-not-optional.js

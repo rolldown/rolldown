@@ -1,5 +1,6 @@
 pub mod asset_dedup_filename;
 pub mod chunk_filenames_function;
+pub mod chunk_graph_only;
 pub mod exports_kind_discovery_order;
 pub mod external_chunk_imports;
 pub mod external_interop_invariants;

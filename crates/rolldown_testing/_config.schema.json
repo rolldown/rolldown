@@ -1073,6 +1073,13 @@
             "boolean",
             "null"
           ]
+        },
+        "chunkGraphOnly": {
+          "description": "Skip module codegen, finalization, and minify. `generateBundle` still\nreceives chunks with `modules`, `imports`, and `moduleIds` filled in and\nwith empty `code`. For a build whose only job is to read the chunk graph\n(then apply `codeSplitting.groups` on a later build).",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

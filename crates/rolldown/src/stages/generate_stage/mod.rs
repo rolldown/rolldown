@@ -120,6 +120,7 @@ use crate::{
 };
 
 mod chunk_ext;
+mod chunk_graph_only;
 mod chunk_optimizer;
 mod code_splitting;
 mod compute_cross_chunk_links;
@@ -248,6 +249,25 @@ impl<'a> GenerateStage<'a> {
       self.inline_state.set_record_id(chunk_idx, id);
     }
     set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);
+
+    // `experimental.chunkGraphOnly`: membership and cross-chunk imports are
+    // already final. Skip deconflict, AST finalization, codegen, and minify.
+    if self.options.experimental.is_chunk_graph_only_enabled() {
+      if let Some(paths) = &self.options.paths {
+        let ids = self
+          .link_output
+          .module_table
+          .modules
+          .iter()
+          .filter_map(|m| m.as_external().map(|e| e.id.raw_id()));
+        self.resolved_paths = Some(paths.resolve_all(ids).await);
+      }
+      // Drop the AST table before emitting metadata; nothing below needs it.
+      drop(ast_table);
+      let mut output = self.emit_chunk_graph_only(&chunk_graph).await?;
+      output.warnings.extend(std::mem::take(&mut self.link_output.diagnostics).into_result()?);
+      return Ok(output);
+    }
 
     // A file names its carried records' modules together with its own.
     // See internal-docs/inline-common-chunks/implementation.md ("Deconflicting").

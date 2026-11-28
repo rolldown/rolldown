@@ -1,13 +1,13 @@
 use rolldown_common::{
   ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
-  RuntimeModuleBrief, Specifier, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRefDb, TaggedSymbolRef,
-  WrapKind,
+  RuntimeHelper, RuntimeModuleBrief, Specifier, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRefDb,
+  TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::IndexBitSet;
 use rustc_hash::FxHashMap;
 use smallvec::smallvec;
 
-use crate::types::linking_metadata::{LinkingMetadata, LinkingMetadataVec};
+use crate::types::linking_metadata::{DeferredCjsNamespace, LinkingMetadata, LinkingMetadataVec};
 
 use super::LinkStage;
 
@@ -90,13 +90,13 @@ fn determine_has_dynamic_exports(modules: &IndexModules, linking_infos: &mut Lin
 }
 
 impl LinkStage<'_> {
-  /// Returns the targets of `import defer`, sorted. `create_deferred_namespaces` gives them a
+  /// Returns the ESM targets of `import defer`, sorted. `create_deferred_namespaces` gives them a
   /// deferred namespace object after `generate_lazy_export`.
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn wrap_modules(&mut self) -> Vec<ModuleIdx> {
     let mut visited_modules_for_wrapping = IndexBitSet::new(self.module_table.modules.len());
     determine_has_dynamic_exports(&self.module_table.modules, &mut self.metas);
-    let deferred_targets = if self.options.experimental.is_import_defer_enabled() {
+    let deferred_esm_targets = if self.options.experimental.is_import_defer_enabled() {
       self.wrap_import_defer_closures()
     } else {
       vec![]
@@ -179,7 +179,11 @@ impl LinkStage<'_> {
         self.options,
       );
     }
-    deferred_targets
+    // The runtime module has `__deferNs` only when the option is on.
+    if self.options.experimental.is_import_defer_enabled() {
+      self.create_deferred_cjs_namespaces();
+    }
+    deferred_esm_targets
   }
 }
 
@@ -187,28 +191,37 @@ impl LinkStage<'_> {
   /// Wraps each target of `import defer` and the modules of its static dependency closure. A
   /// deferred access can evaluate a module of the closure before its eager position, so each one
   /// needs a lazy wrapper. The loop in `wrap_modules` then wraps the rest of their graph as for
-  /// any wrapped module. Returns the targets, sorted, which get a deferred namespace.
+  /// any wrapped module. Returns the ESM targets, sorted, which get a deferred namespace.
   ///
-  /// `apply_import_defer_support` keeps the deferral only when each module of a closure is an ES
-  /// module. See internal-docs/import-defer/implementation.md.
+  /// `apply_import_defer_support` keeps the deferral only when no module of a closure is an
+  /// external module. See internal-docs/import-defer/implementation.md.
   fn wrap_import_defer_closures(&mut self) -> Vec<ModuleIdx> {
     let runtime_idx = self.runtime.id();
     let mut stack = vec![];
+    let mut esm_targets = vec![];
     for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
-      for named_import in module.named_imports.values() {
+      for (local_ref, named_import) in &module.named_imports {
         let rec = &module.import_records[named_import.record_idx];
         if !rec.is_defer_phase() || !matches!(named_import.imported, Specifier::Star) {
           continue;
         }
         let Some(target) = rec.resolved_module else { continue };
-        if target != runtime_idx && self.module_table.modules[target].as_normal().is_some() {
-          stack.push(target);
+        let Module::Normal(target_module) = &self.module_table.modules[target] else { continue };
+        if target == runtime_idx {
+          continue;
+        }
+        stack.push(target);
+        if matches!(target_module.exports_kind, ExportsKind::CommonJs) {
+          self.metas[module.idx]
+            .deferred_cjs_namespace_imports
+            .insert(*local_ref, named_import.record_idx);
+        } else {
+          esm_targets.push(target);
         }
       }
     }
-    let mut targets = stack.clone();
-    targets.sort_unstable();
-    targets.dedup();
+    esm_targets.sort_unstable();
+    esm_targets.dedup();
 
     let mut visited = IndexBitSet::new(self.module_table.modules.len());
     while let Some(module_idx) = stack.pop() {
@@ -216,11 +229,13 @@ impl LinkStage<'_> {
         continue;
       }
       let Module::Normal(module) = &self.module_table.modules[module_idx] else { continue };
-      debug_assert!(!matches!(module.exports_kind, ExportsKind::CommonJs));
       let meta = &mut self.metas[module_idx];
       meta.wrapped_by_import_defer = true;
       if meta.wrap_kind().is_none() {
-        meta.set_wrap_kind(WrapKind::Esm);
+        meta.set_wrap_kind(match module.exports_kind {
+          ExportsKind::Esm | ExportsKind::None => WrapKind::Esm,
+          ExportsKind::CommonJs => WrapKind::Cjs,
+        });
       }
       stack.extend(
         module
@@ -230,14 +245,14 @@ impl LinkStage<'_> {
           .filter_map(|rec| rec.resolved_module),
       );
     }
-    targets
+    esm_targets
   }
 
-  /// Creates the deferred namespace object `x_deferred` of each target of `import defer`:
+  /// Creates the deferred namespace object `x_deferred` of each ESM target of `import defer`:
   /// `var x_deferred = __deferNs(() => (init_x(), x_exports), x_exports)`. The finalizer emits the
   /// declaration after the namespace object, when tree shaking keeps the facade statement.
-  /// Call it after `generate_lazy_export`, which can replace the symbols and the statements of a
-  /// module.
+  /// Call it after `generate_lazy_export`: for a JSON module, `json_object_expr_to_esm` makes a
+  /// new symbol table and new statement infos, and `unwrap_json_module` removes the wrapper.
   pub(super) fn create_deferred_namespaces(&mut self, targets: &[ModuleIdx]) {
     for &target in targets {
       let Module::Normal(module) = &self.module_table.modules[target] else { continue };
@@ -262,6 +277,63 @@ impl LinkStage<'_> {
       };
       meta.deferred_namespace_stmt_info = Some(self.stmt_infos[target].add_stmt_info(stmt_info));
       meta.deferred_namespace_ref = Some(deferred_ref);
+    }
+  }
+
+  /// Creates the deferred namespace object of each `import defer * as ns from './x'` where `./x`
+  /// is a CommonJS module. The importer owns the object, because the interop mode of `__toESM`
+  /// comes from the importer. The finalizer declares it with `import_x`, when tree shaking keeps
+  /// the facade statement:
+  /// `var import_x, x_deferred = __deferNs(() => import_x || (import_x = __toESM(require_x())))`.
+  /// Only an escape (`f(ns)`, `export { ns }`) reads the object. An access through the local
+  /// binding reads `import_x` directly.
+  fn create_deferred_cjs_namespaces(&mut self) {
+    let defer_ns_ref = self.runtime.resolve_symbol("__deferNs");
+    for importer_idx in self.metas.indices() {
+      if self.metas[importer_idx].deferred_cjs_namespace_imports.is_empty() {
+        continue;
+      }
+      let Module::Normal(importer) = &self.module_table.modules[importer_idx] else { continue };
+      let mut records = self.metas[importer_idx]
+        .deferred_cjs_namespace_imports
+        .values()
+        .copied()
+        .collect::<Vec<_>>();
+      records.sort_unstable();
+      for rec_idx in records {
+        let rec = &importer.import_records[rec_idx];
+        let Some(target) = rec.resolved_module else { continue };
+        let Module::Normal(target_module) = &self.module_table.modules[target] else { continue };
+        let Some(wrapper_ref) = self.metas[target].wrapper_ref else { continue };
+        let symbol_ref = self.symbols.create_facade_root_symbol_ref(
+          importer_idx,
+          &format!("{}_deferred", target_module.repr_name),
+        );
+        let stmt_info = StmtInfo {
+          declared_symbols: smallvec![TaggedSymbolRef::normal(symbol_ref)],
+          referenced_symbols: vec![
+            rec.namespace_ref.into(),
+            defer_ns_ref.into(),
+            wrapper_ref.into(),
+          ],
+          eval_flags: false.into(),
+          import_records: Vec::new(),
+          #[cfg(debug_assertions)]
+          debug_label: None,
+          meta: StmtInfoMeta::default(),
+          force_tree_shaking: true,
+        };
+        let stmt_info_idx = self.stmt_infos[importer_idx].add_stmt_info(stmt_info);
+        // The object calls `__toESM(require_x())` at its first key access, so this statement
+        // keeps `__toESM`. The record is an `import defer * as ns` (see
+        // `wrap_import_defer_closures`), and a namespace import always needs interop. The import
+        // statement does not keep `__toESM` for a deferred record.
+        // See internal-docs/import-defer/implementation.md.
+        self.depended_runtime_helper[importer_idx].push(RuntimeHelper::ToEsm, stmt_info_idx);
+        self.metas[importer_idx]
+          .deferred_cjs_namespaces
+          .insert(rec_idx, DeferredCjsNamespace { symbol_ref, stmt_info_idx });
+      }
     }
   }
 }

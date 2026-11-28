@@ -1,0 +1,17 @@
+{
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "strict",
+      "strictExecutionOrder": true
+    },
+    {
+      "_configName": "cjs",
+      "format": "cjs"
+    }
+  ]
+}

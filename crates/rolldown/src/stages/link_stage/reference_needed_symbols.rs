@@ -46,9 +46,15 @@ impl LinkStage<'_> {
         let mut symbols_to_be_declared = vec![];
         let deferred_access_targets = &self.metas[importer_idx].deferred_access_targets;
         stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
-          // A deferred access (`ns.foo`) calls the wrapper of the deferred module first.
+          // A deferred access (`ns.foo`) calls the wrapper of the deferred module first. The
+          // first access to a bundled CommonJS module assigns `import_x = __toESM(require_x())`,
+          // so the statement of the access keeps `__toESM`. The record is an
+          // `import defer * as ns`, and a namespace import always needs interop, so no search of
+          // the named imports is necessary. The import statement does not keep `__toESM`, so a
+          // namespace that nothing reads adds no helper.
           // See internal-docs/import-defer/implementation.md.
           if !deferred_access_targets.is_empty() {
+            let mut needs_deferred_to_esm = false;
             let mut targets = stmt_info
               .referenced_symbols
               .iter()
@@ -58,10 +64,18 @@ impl LinkStage<'_> {
                 }
                 SymbolOrMemberExprRef::Symbol(_) => None,
               })
-              .map(|access| match *access {
-                DeferredAccess::Esm(target) => target,
+              .filter_map(|access| match *access {
+                DeferredAccess::Esm(target) => Some(target),
+                DeferredAccess::Cjs(rec_idx) => {
+                  let target = importer.import_records[rec_idx].resolved_module?;
+                  needs_deferred_to_esm |= matches!(self.module_table[target], Module::Normal(_));
+                  Some(target)
+                }
               })
               .collect::<Vec<_>>();
+            if needs_deferred_to_esm {
+              depended_runtime_helper_map.push(RuntimeHelper::ToEsm, stmt_info_idx);
+            }
             targets.sort_unstable();
             targets.dedup();
             stmt_info.referenced_symbols.extend(
@@ -179,6 +193,10 @@ impl LinkStage<'_> {
                             stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                           }
                         } else {
+                          // A static `import defer` keeps this flag too, though the statement
+                          // runs nothing: when nothing reads the namespace, it is the only
+                          // reference to `require_x`, and the body of the module must stay in
+                          // that wrapper. See internal-docs/import-defer/implementation.md.
                           stmt_info.eval_flags = importee.side_effects.has_side_effects().into();
 
                           // Turn `import * as bar from 'bar_cjs'` into `var import_bar_cjs = __toESM(require_bar_cjs())`
@@ -188,15 +206,21 @@ impl LinkStage<'_> {
                           stmt_info
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
-                          // Only reference __toESM if this import needs interop (namespace or default import)
-                          let needs_toesm =
-                            if let Some(info) = self.safely_merge_cjs_ns_map.get(&importee.idx) {
-                              info.needs_interop
-                            } else {
-                              import_record_needs_interop(importer, *rec_id)
-                            };
-                          if needs_toesm {
-                            depended_runtime_helper_map.push(RuntimeHelper::ToEsm, stmt_info_idx);
+                          // A deferred import renders `var import_x;` with no call. Its accesses
+                          // and its namespace object keep `__toESM` instead (see above and
+                          // `create_deferred_cjs_namespaces`), so it skips this lookup. The
+                          // merge info describes only the eager imports.
+                          if !rec.is_defer_phase() {
+                            // Only reference __toESM if this import needs interop (namespace or default import)
+                            let needs_toesm =
+                              if let Some(info) = self.safely_merge_cjs_ns_map.get(&importee.idx) {
+                                info.needs_interop
+                              } else {
+                                import_record_needs_interop(importer, *rec_id)
+                              };
+                            if needs_toesm {
+                              depended_runtime_helper_map.push(RuntimeHelper::ToEsm, stmt_info_idx);
+                            }
                           }
                           symbols_to_be_declared.push((rec.namespace_ref, stmt_info_idx));
                           symbol_db.ast_scopes.set_symbol_name(

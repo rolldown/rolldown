@@ -167,9 +167,6 @@
   "language/import/import-defer/deferred-namespace-object/identity.js": {
     "reason": "`experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`"
   },
-  "language/import/import-defer/deferred-namespace-object/json-module.js": {
-    "reason": "`experimental.importDefer` does not keep the deferred evaluation of a JSON module yet, so Rolldown lowers `import defer` to a normal import"
-  },
   "language/import/import-defer/errors/get-other-while-dep-evaluating-async/main.js": {
     "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a top-level `await` yet, so Rolldown lowers `import defer` to a normal import"
   },

@@ -3,12 +3,21 @@
 // a build without the option does not pay for these helpers.
 // See internal-docs/runtime-helpers/implementation.md.
 
-// `__deferNs` creates the deferred namespace object of an ES module (`import defer * as ns`).
-// `init` evaluates the module and returns its namespace object `ns`. A static access such as
-// `ns.foo` does not use the `Proxy`, so the module can evaluate before that. The `Proxy` evaluates
-// the module for each operation with a string key other than `then`, and for `ownKeys`. A symbol
-// key and `then` evaluate nothing, and `then` is always absent. The target has the same keys as
-// the namespace, so that the `Proxy` invariants hold for `ownKeys` and `getOwnPropertyDescriptor`.
+// `__deferNs` creates the deferred namespace object of a module (`import defer * as ns`).
+// `init` evaluates the module and returns its namespace object. `ns` is that object when its keys
+// are known before the evaluation. Without `ns` (a CommonJS module, or a module with `export *`
+// from CommonJS), the first trap that calls `load` copies the keys from the result of `init`. A
+// static access such as `ns.foo` does not use the `Proxy`, so the module can evaluate before that.
+// The `Proxy` evaluates the module for each operation with a string key other than `then`, and for
+// `ownKeys`. A symbol key and `then` evaluate nothing, and `then` is always absent. The target has
+// the same keys as the namespace, so that the `Proxy` invariants hold for `ownKeys` and
+// `getOwnPropertyDescriptor`.
+// Without `ns`, the target stays extensible until that first `load`. Thus `defineProperty`
+// changes only a key that the target has, and `setPrototypeOf` accepts only `null`, as on a
+// namespace that is not extensible. Two limits remain until then, because a `Proxy` can report a
+// target that is not extensible only when the target has all keys: `Object.isExtensible` gives
+// `true`, and after `Object.preventExtensions`, the first `load` throws a `TypeError` when the
+// namespace has keys.
 export var __deferNs = (init, ns) => {
   var target = Object.setPrototypeOf({}, null),
     seal = () => {
@@ -18,11 +27,11 @@ export var __deferNs = (init, ns) => {
       }
       Object.preventExtensions(target);
     },
-    load = () => (init(), ns),
+    load = () => (ns ? init() : ((ns = init()), seal()), ns),
     deferred = (key) => typeof key === 'string' && key !== 'then',
     own = (key) => __hasOwnProp.call(target, key);
   __defProp(target, Symbol.toStringTag, { value: 'Deferred Module' });
-  seal();
+  ns && seal();
   return new Proxy(target, {
     get: (t, key) => (deferred(key) ? (load(), own(key) ? ns[key] : void 0) : t[key]),
     has: (t, key) => (deferred(key) ? (load(), own(key)) : key in t),

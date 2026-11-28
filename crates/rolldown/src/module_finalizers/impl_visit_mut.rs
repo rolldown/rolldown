@@ -660,7 +660,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     let deferred_target = if self.ctx.linking_info.deferred_access_targets.is_empty() {
       None
     } else {
-      self.deferred_access_target(expr)
+      self.prepare_deferred_access(expr)
     };
     self.visit_expression_body(expr);
     if let Some(target) = deferred_target {
@@ -981,10 +981,25 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     }
   }
 
-  /// The deferred module that an access to a deferred namespace (`ns.foo`, `'foo' in ns`)
-  /// evaluates first.
+  /// The deferred access of `expr`, if any. For `'foo' in ns` with a CommonJS module, it also
+  /// makes the right side read `import_x`.
   #[cold]
   #[inline(never)]
+  fn prepare_deferred_access(&self, expr: &mut ast::Expression<'ast>) -> Option<DeferredAccess> {
+    let deferred_target = self.deferred_access_target(expr);
+    if let Some(DeferredAccess::Cjs(rec_idx)) = deferred_target
+      && let ast::Expression::BinaryExpression(binary_expr) = expr
+    {
+      // `'foo' in ns` reads `import_x`. `ns` links to the deferred namespace object.
+      let namespace_ref = self.ctx.module.import_records[rec_idx].namespace_ref;
+      binary_expr.right =
+        Expression::new_id_ref_expr(SPAN, self.canonical_name_for(namespace_ref), self);
+    }
+    deferred_target
+  }
+
+  /// The deferred module that an access to a deferred namespace (`ns.foo`, `'foo' in ns`)
+  /// evaluates first.
   fn deferred_access_target(&self, expr: &ast::Expression<'ast>) -> Option<DeferredAccess> {
     let node_id = match expr {
       ast::Expression::BinaryExpression(binary_expr) => binary_expr.node_id(),
@@ -1219,10 +1234,41 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     walk_js_mut::walk_expression(self, expr);
   }
 
-  /// The access evaluates the deferred module `x` first: `(init_x(), <access>)`.
+  /// The access evaluates the deferred module `x` first.
+  /// - ESM `x`: `(init_x(), <access>)`.
+  /// - CommonJS `x`: `(import_x || (import_x = __toESM(require_x()))).foo`. The import statement
+  ///   declares `import_x` with no value. The first access assigns it, so that all accesses read
+  ///   one namespace object. The evaluation is the object of the member chain, so a call
+  ///   `ns.fn()` keeps `import_x` as `this`, as the eager form `import_x.fn()` does. An access
+  ///   with no such chain (`'foo' in ns`, an inlined export) uses
+  ///   `(import_x || (import_x = __toESM(require_x())), <access>)`.
   fn wrap_deferred_access(&self, expr: &mut ast::Expression<'ast>, access: DeferredAccess) {
-    let DeferredAccess::Esm(target) = access;
-    let evaluate = self.deferred_init_call_expr(target);
+    let evaluate = match access {
+      DeferredAccess::Cjs(rec_idx) => {
+        let Some(evaluate) = self.cjs_deferred_namespace_expr(rec_idx) else { return };
+        let namespace_name =
+          self.canonical_name_for(self.ctx.module.import_records[rec_idx].namespace_ref);
+        if let Some(root) = member_chain_root(expr)
+          && matches!(root, ast::Expression::Identifier(ident) if ident.name == namespace_name)
+        {
+          *root = ast::Expression::new_parenthesized_expression(SPAN, evaluate, self);
+          return;
+        }
+        evaluate
+      }
+      DeferredAccess::Esm(target) => {
+        // A module without a wrapper has no visible evaluation, for example a JSON module.
+        if self
+          .ctx
+          .order_wrap_state
+          .esm_init_target(target, &self.ctx.linking_infos[target])
+          .is_none()
+        {
+          return;
+        }
+        self.deferred_init_call_expr(target)
+      }
+    };
     let access = expr.take_in(self);
     *expr = ast::Expression::new_parenthesized_expression(
       SPAN,
@@ -1233,5 +1279,27 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       ),
       self,
     );
+  }
+}
+
+/// The root object of a member chain: `a` in `a.b.c`, `a?.b` or `a['b']`. `None` for any other
+/// expression.
+fn member_chain_root<'a, 'ast>(
+  mut cur: &'a mut ast::Expression<'ast>,
+) -> Option<&'a mut ast::Expression<'ast>> {
+  loop {
+    if matches!(cur, ast::Expression::Identifier(_)) {
+      return Some(cur);
+    }
+    cur = match cur {
+      ast::Expression::StaticMemberExpression(member) => &mut member.object,
+      ast::Expression::ComputedMemberExpression(member) => &mut member.object,
+      ast::Expression::ChainExpression(chain) => match &mut chain.expression {
+        ast::ChainElement::StaticMemberExpression(member) => &mut member.object,
+        ast::ChainElement::ComputedMemberExpression(member) => &mut member.object,
+        _ => return None,
+      },
+      _ => return None,
+    };
   }
 }

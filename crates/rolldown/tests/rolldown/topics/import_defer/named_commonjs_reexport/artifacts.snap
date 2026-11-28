@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// c.cjs
+var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { answer: 42 };
+}));
+// barrel.js
+var import_c;
+function init_barrel() {
+	return (init_barrel = __esmMin((() => {
+		import_c = /* @__PURE__ */ __toESM(require_c());
+	})))();
+}
+// route.js
+function read() {
+	return import_c.default.answer;
+}
+function init_route() {
+	return (init_route = __esmMin((() => {
+		init_barrel();
+	})))();
+}
+// main.js
+function run() {
+	return (init_route(), read)();
+}
+export { run };
+
+```

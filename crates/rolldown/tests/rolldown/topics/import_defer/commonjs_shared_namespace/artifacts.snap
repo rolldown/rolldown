@@ -1,0 +1,227 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.cjs
+var require_log = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = [];
+}));
+// x.cjs
+var require_x = /* @__PURE__ */ __commonJSMin(((exports) => {
+	require_log().push("x");
+	exports.__esModule = true;
+	exports.default = "d";
+	exports.foo = "foo";
+	exports.self = function() {
+		return this;
+	};
+}));
+// a.js
+var import_log = /* @__PURE__ */ __toESM(require_log());
+var import_x$2;
+const fooA = () => (import_x$2 || (import_x$2 = /* @__PURE__ */ __toESM(require_x())), "foo");
+const selfA = () => (import_x$2 || (import_x$2 = /* @__PURE__ */ __toESM(require_x()))).self();
+// b.js
+var x_deferred = /* @__PURE__ */ __deferNs(() => import_x$2 || (import_x$2 = /* @__PURE__ */ __toESM(require_x())));
+const getB = () => x_deferred;
+const selfB = () => (import_x$2 || (import_x$2 = /* @__PURE__ */ __toESM(require_x()))).self();
+// c.js
+const getC1 = () => x_deferred;
+const getC2 = () => x_deferred;
+// m.mjs
+var import_x$1, x_deferred$2 = /* @__PURE__ */ __deferNs(() => import_x$1 || (import_x$1 = /* @__PURE__ */ __toESM(require_x(), 1)));
+const getM = () => x_deferred$2;
+// wrapped.js
+var import_x, x_deferred$1, getW;
+function init_wrapped() {
+	return (init_wrapped = __esmMin((() => {
+		x_deferred$1 = /* @__PURE__ */ __deferNs(() => import_x || (import_x = /* @__PURE__ */ __toESM(require_x())));
+		getW = () => x_deferred$1;
+	})))();
+}
+// main.js
+const before = [...import_log.default];
+const results = {
+	bIsC1: getB() === getC1(),
+	c1IsC2: getC1() === getC2(),
+	sameReceiver: selfA() === selfB(),
+	foo: fooA(),
+	defaultTypes: [typeof getB().default, typeof getM().default],
+	wrappedFoo: (init_wrapped(), getW)().foo
+};
+const after = [...import_log.default];
+export { after, before, getB, x_deferred as one, results, x_deferred as two };
+
+```
+
+# Variant: strict: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.cjs
+var require_log = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = [];
+}));
+// x.cjs
+var require_x = /* @__PURE__ */ __commonJSMin(((exports) => {
+	require_log().push("x");
+	exports.__esModule = true;
+	exports.default = "d";
+	exports.foo = "foo";
+	exports.self = function() {
+		return this;
+	};
+}));
+// a.js
+var import_x$5, fooA, selfA;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		fooA = () => (import_x$5 || (import_x$5 = /* @__PURE__ */ __toESM(require_x())), "foo");
+		selfA = () => (import_x$5 || (import_x$5 = /* @__PURE__ */ __toESM(require_x()))).self();
+	})))();
+}
+// b.js
+var import_x$4, x_deferred$4, getB, selfB;
+function init_b() {
+	return (init_b = __esmMin((() => {
+		x_deferred$4 = /* @__PURE__ */ __deferNs(() => import_x$4 || (import_x$4 = /* @__PURE__ */ __toESM(require_x())));
+		getB = () => x_deferred$4;
+		selfB = () => (import_x$4 || (import_x$4 = /* @__PURE__ */ __toESM(require_x()))).self();
+	})))();
+}
+// c.js
+var import_x$2, x_deferred, import_x$3, x_deferred$1, getC1, getC2;
+function init_c() {
+	return (init_c = __esmMin((() => {
+		x_deferred = /* @__PURE__ */ __deferNs(() => import_x$2 || (import_x$2 = /* @__PURE__ */ __toESM(require_x())));
+		x_deferred$1 = /* @__PURE__ */ __deferNs(() => import_x$3 || (import_x$3 = /* @__PURE__ */ __toESM(require_x())));
+		getC1 = () => x_deferred;
+		getC2 = () => x_deferred$1;
+	})))();
+}
+// m.mjs
+var import_x$1, x_deferred$3, getM;
+function init_m() {
+	return (init_m = __esmMin((() => {
+		x_deferred$3 = /* @__PURE__ */ __deferNs(() => import_x$1 || (import_x$1 = /* @__PURE__ */ __toESM(require_x(), 1)));
+		getM = () => x_deferred$3;
+	})))();
+}
+// wrapped.js
+var import_x, x_deferred$2, getW;
+function init_wrapped() {
+	return (init_wrapped = __esmMin((() => {
+		x_deferred$2 = /* @__PURE__ */ __deferNs(() => import_x || (import_x = /* @__PURE__ */ __toESM(require_x())));
+		getW = () => x_deferred$2;
+	})))();
+}
+// main.js
+var import_log, before, results, after;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		import_log = /* @__PURE__ */ __toESM(require_log());
+		init_a();
+		init_b();
+		init_c();
+		init_m();
+		before = [...import_log.default];
+		results = {
+			bIsC1: getB() === getC1(),
+			c1IsC2: getC1() === getC2(),
+			sameReceiver: selfA() === selfB(),
+			foo: fooA(),
+			defaultTypes: [typeof getB().default, typeof getM().default],
+			wrappedFoo: (init_wrapped(), getW)().foo
+		};
+		after = [...import_log.default];
+	})))();
+}
+init_main();
+export { after, before, getB, x_deferred as one, results, x_deferred$1 as two };
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+// log.cjs
+var require_log = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = [];
+}));
+// x.cjs
+var require_x = /* @__PURE__ */ __commonJSMin(((exports) => {
+	require_log().push("x");
+	exports.__esModule = true;
+	exports.default = "d";
+	exports.foo = "foo";
+	exports.self = function() {
+		return this;
+	};
+}));
+// a.js
+var import_log = /* @__PURE__ */ __toESM(require_log());
+var import_x$2;
+const fooA = () => (import_x$2 || (import_x$2 = /* @__PURE__ */ __toESM(require_x())), "foo");
+const selfA = () => (import_x$2 || (import_x$2 = /* @__PURE__ */ __toESM(require_x()))).self();
+// b.js
+var x_deferred = /* @__PURE__ */ __deferNs(() => import_x$2 || (import_x$2 = /* @__PURE__ */ __toESM(require_x())));
+const getB = () => x_deferred;
+const selfB = () => (import_x$2 || (import_x$2 = /* @__PURE__ */ __toESM(require_x()))).self();
+// c.js
+const getC1 = () => x_deferred;
+const getC2 = () => x_deferred;
+// m.mjs
+var import_x$1, x_deferred$2 = /* @__PURE__ */ __deferNs(() => import_x$1 || (import_x$1 = /* @__PURE__ */ __toESM(require_x(), 1)));
+const getM = () => x_deferred$2;
+// wrapped.js
+var import_x, x_deferred$1, getW;
+function init_wrapped() {
+	return (init_wrapped = __esmMin((() => {
+		x_deferred$1 = /* @__PURE__ */ __deferNs(() => import_x || (import_x = /* @__PURE__ */ __toESM(require_x())));
+		getW = () => x_deferred$1;
+	})))();
+}
+// main.js
+const before = [...import_log.default];
+const results = {
+	bIsC1: getB() === getC1(),
+	c1IsC2: getC1() === getC2(),
+	sameReceiver: selfA() === selfB(),
+	foo: fooA(),
+	defaultTypes: [typeof getB().default, typeof getM().default],
+	wrappedFoo: (init_wrapped(), getW)().foo
+};
+const after = [...import_log.default];
+exports.after = after;
+exports.before = before;
+exports.getB = getB;
+Object.defineProperty(exports, "one", {
+	enumerable: true,
+	get: function() {
+		return x_deferred;
+	}
+});
+exports.results = results;
+Object.defineProperty(exports, "two", {
+	enumerable: true,
+	get: function() {
+		return x_deferred;
+	}
+});
+
+```

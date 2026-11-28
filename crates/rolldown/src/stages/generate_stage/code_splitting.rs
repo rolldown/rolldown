@@ -598,6 +598,103 @@ impl GenerateStage<'_> {
     }
   }
 
+  /// Links the deferred CommonJS namespaces (`import defer * as ns from './x.cjs'`) of the
+  /// unwrapped importers in one chunk, for each CommonJS module and interop mode. These importers
+  /// then read one deferred namespace object (`x_deferred`) and one namespace (`import_x`).
+  /// - The deferred records do not join the groups of `merge_cjs_namespace`: an eager import
+  ///   assigns its namespace at the import statement, and a deferred import at the first access.
+  /// - The importer gives the interop mode of `__toESM`, so two modes read two namespaces.
+  /// - A wrapped importer declares its records in its wrapper, where other modules cannot read
+  ///   them. Nothing merges with strict execution order, as in `determine_safely_merge_cjs_ns`:
+  ///   the order wraps of `finalize_chunk_plan` give the importers wrappers that `wrap_kind()`
+  ///   does not show.
+  /// - The first record by execution order keeps each declaration, so a linked record gets its
+  ///   object at the same time or earlier. `import_x` and `x_deferred` link apart, because a
+  ///   record with only static accesses keeps `import_x` and drops its object.
+  /// - The links go to the first symbol whose canonical symbol is a key of
+  ///   `exports_to_other_chunks` (another chunk imports it, or its entry chunk exports it), else
+  ///   to the first symbol. `commit_cross_chunk_links` builds that table before this merge, and a
+  ///   read in `cjs` output looks it up by the canonical symbol after it. Thus the canonical
+  ///   symbol of each key must stay a key. A second key can link to the root: the chunk then
+  ///   exports one object under two names.
+  ///
+  /// See internal-docs/import-defer/implementation.md ("Shared CommonJS namespaces").
+  pub fn merge_deferred_cjs_namespaces(&mut self, chunk_graph: &mut ChunkGraph) {
+    if !self.options.experimental.is_import_defer_enabled()
+      || self.options.is_strict_execution_order_enabled()
+    {
+      return;
+    }
+    // The group key (chunk, CommonJS module, interop mode), then the execution order of the
+    // importer, the importer and the record.
+    let mut records = vec![];
+    for (importer_idx, meta) in self.link_output.metas.iter_enumerated() {
+      if meta.deferred_cjs_namespaces.is_empty() || !meta.wrap_kind().is_none() {
+        continue;
+      }
+      let Some(chunk_idx) = chunk_graph.module_to_chunk[importer_idx] else { continue };
+      let Module::Normal(importer) = &self.link_output.module_table[importer_idx] else {
+        continue;
+      };
+      let node_mode = importer.should_consider_node_esm_spec_for_static_import();
+      for &rec_idx in meta.deferred_cjs_namespaces.keys() {
+        let Some(target) = importer.import_records[rec_idx].resolved_module else { continue };
+        if !matches!(self.link_output.module_table[target], Module::Normal(_)) {
+          continue;
+        }
+        records.push((chunk_idx, target, node_mode, importer.exec_order, importer_idx, rec_idx));
+      }
+    }
+    records.sort_unstable();
+    let chunk_table = &chunk_graph.chunk_table;
+    let merged = &mut chunk_graph.merged_deferred_cjs_namespace_refs;
+    let symbol_db = &mut self.link_output.symbol_db;
+    // Links the symbols of one group, in execution order. The first symbol keeps the declaration.
+    let mut link_group = |chunk_idx: ChunkIdx, symbols: &[SymbolRef]| {
+      let Some((&first, rest)) = symbols.split_first() else { return };
+      let exports = &chunk_table[chunk_idx].exports_to_other_chunks;
+      let root = symbols
+        .iter()
+        .copied()
+        .find(|symbol_ref| exports.contains_key(&symbol_db.canonical_ref_for(*symbol_ref)))
+        .unwrap_or(first);
+      for &symbol_ref in symbols {
+        if symbol_ref != root {
+          symbol_db.link(symbol_ref, root);
+        }
+      }
+      merged.extend(rest);
+    };
+    let (mut namespaces, mut objects) = (vec![], vec![]);
+    for group in records.chunk_by(|a, b| (a.0, a.1, a.2) == (b.0, b.1, b.2)) {
+      namespaces.clear();
+      objects.clear();
+      for &(.., importer_idx, rec_idx) in group {
+        let Module::Normal(importer) = &self.link_output.module_table[importer_idx] else {
+          continue;
+        };
+        let meta = &self.link_output.metas[importer_idx];
+        // The import statement declares `import_x`, and a facade statement declares
+        // `x_deferred`. A statement that tree shaking drops declares nothing, so its symbol does
+        // not take part.
+        let namespace_ref = importer.import_records[rec_idx].namespace_ref;
+        if self.link_output.stmt_infos[importer_idx]
+          .declared_stmts_by_symbol(&namespace_ref)
+          .iter()
+          .all(|stmt| meta.stmt_info_included.has_bit(*stmt))
+        {
+          namespaces.push(namespace_ref);
+        }
+        let object = meta.deferred_cjs_namespaces[&rec_idx];
+        if meta.stmt_info_included.has_bit(object.stmt_info_idx) {
+          objects.push(object.symbol_ref);
+        }
+      }
+      link_group(group[0].0, &namespaces);
+      link_group(group[0].0, &objects);
+    }
+  }
+
   /// Finalizes which module namespace objects should be included in the output bundle.
   ///
   /// This method determines whether each ESM module's namespace object (e.g., `import * as ns from './module'`)

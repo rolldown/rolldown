@@ -1021,6 +1021,8 @@ impl LinkStage<'_> {
           let mut written_cjs_exports: Vec<SymbolRef> = vec![];
           let mut star_reexport_consumptions: Vec<MemberReadConsumption> = vec![];
           let mut deferred_access_targets = FxHashMap::default();
+          let deferred_cjs_namespace_imports =
+            &self.metas[module.idx].deferred_cjs_namespace_imports;
           let import_defer = self.options.experimental.is_import_defer_enabled();
           stmt_infos.iter_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
@@ -1032,16 +1034,38 @@ impl LinkStage<'_> {
               let mut star_reexport_steps: Vec<(ModuleIdx, CompactStr)> = vec![];
 
               if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = symbol_ref {
-                let deferred_access = if import_defer {
-                  let canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
-                  (self.metas[canonical_ref.owner].deferred_namespace_ref == Some(canonical_ref))
-                    .then_some(DeferredAccess::Esm(canonical_ref.owner))
-                } else {
+                let deferred_access = if !import_defer {
                   None
+                } else if let Some(&rec_idx) =
+                  deferred_cjs_namespace_imports.get(&member_expr_ref.object_ref)
+                {
+                  Some(DeferredAccess::Cjs(rec_idx))
+                } else {
+                  let canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
+                  let meta = &self.metas[canonical_ref.owner];
+                  // An access through a re-export of a CommonJS deferred namespace object
+                  // (`export { ns }`) keeps the object, whose traps evaluate the module. It
+                  // cannot assign `import_x` of the other module.
+                  if meta.deferred_cjs_namespaces.values().any(|ns| ns.symbol_ref == canonical_ref)
+                  {
+                    return;
+                  }
+                  (meta.deferred_namespace_ref == Some(canonical_ref))
+                    .then_some(DeferredAccess::Esm(canonical_ref.owner))
+                };
+                // A local access to a CommonJS deferred namespace reads `import_x` directly, not
+                // the deferred namespace object that `ns` links to.
+                let cjs_namespace_ref = match deferred_access {
+                  Some(DeferredAccess::Cjs(rec_idx)) => {
+                    Some(module.import_records[rec_idx].namespace_ref)
+                  }
+                  _ => None,
                 };
                 if let Some(deferred_access) = deferred_access {
                   // A write (`ns.foo = v`, `ns.a.b++`, `delete ns.foo`) keeps the deferred
-                  // namespace object, whose traps reject it.
+                  // namespace object, whose traps reject it. This holds for a CommonJS module
+                  // too: a write target cannot hold the load of `import_x`, and a write to
+                  // `import_x` skips the traps.
                   if member_expr_ref.is_write {
                     return;
                   }
@@ -1091,11 +1115,24 @@ impl LinkStage<'_> {
                         reference_id: member_expr_ref.reference_id,
                       },
                     );
+                  } else if cjs_namespace_ref.is_some() {
+                    resolved_map.insert(
+                      member_expr_ref.node_id,
+                      MemberExprRefResolution {
+                        resolved: cjs_namespace_ref,
+                        prop_and_related_span_list: vec![],
+                        depended_refs: vec![],
+                        target_commonjs_exported_symbol: None,
+                        reference_id: member_expr_ref.reference_id,
+                      },
+                    );
                   }
                   return;
                 }
                 // First get the canonical ref of `foo_ns`, then we get the `NormalModule#namespace_object_ref` of `foo.js`.
-                let mut canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
+                let object_canonical_ref = cjs_namespace_ref
+                  .unwrap_or_else(|| self.symbols.canonical_ref_for(member_expr_ref.object_ref));
+                let mut canonical_ref = object_canonical_ref;
                 let mut canonical_ref_owner: &NormalModule =
                   match &self.module_table[canonical_ref.owner] {
                     Module::Normal(module) => module,
@@ -1237,9 +1274,9 @@ impl LinkStage<'_> {
                 if cursor < member_expr_ref.prop_and_span_list.len() {
                   // An import bound to an ESM declaration reads that declaration, so look at the
                   // canonical symbol.
-                  let maybe_namespace = self.symbols.canonical_ref_for(
-                    depended_refs.last().copied().unwrap_or(member_expr_ref.object_ref),
-                  );
+                  let maybe_namespace = depended_refs
+                    .last()
+                    .map_or(object_canonical_ref, |&symbol| self.symbols.canonical_ref_for(symbol));
                   let maybe_namespace_symbol = self.symbols.get(maybe_namespace);
                   let continue_resolve =
                     if let Some(ref ns) = maybe_namespace_symbol.namespace_alias {
@@ -1384,6 +1421,17 @@ impl LinkStage<'_> {
                         .to_vec(),
                       depended_refs,
                       target_commonjs_exported_symbol,
+                      reference_id: member_expr_ref.reference_id,
+                    },
+                  );
+                } else if cjs_namespace_ref.is_some() {
+                  resolved_map.insert(
+                    member_expr_ref.node_id,
+                    MemberExprRefResolution {
+                      resolved: cjs_namespace_ref,
+                      prop_and_related_span_list: member_expr_ref.prop_and_span_list.clone(),
+                      depended_refs,
+                      target_commonjs_exported_symbol: None,
                       reference_id: member_expr_ref.reference_id,
                     },
                   );
@@ -2075,9 +2123,13 @@ impl BindImportsAndExportsContext<'_> {
 
       let kind = match import_status {
         ImportStatus::CommonJS => match &tracker.imported {
-          Specifier::Star => {
-            MatchImportKind::Namespace { namespace_ref: importer_record.namespace_ref }
-          }
+          Specifier::Star => MatchImportKind::Namespace {
+            // `import defer * as ns` links to the deferred namespace object of the record.
+            namespace_ref: self.metas[tracker.importer]
+              .deferred_cjs_namespaces
+              .get(&named_import.record_idx)
+              .map_or(importer_record.namespace_ref, |ns| ns.symbol_ref),
+          },
           Specifier::Literal(alias) => MatchImportKind::NormalAndNamespace {
             namespace_ref: importer_record.namespace_ref,
             alias: alias.clone(),

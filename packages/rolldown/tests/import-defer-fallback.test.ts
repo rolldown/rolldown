@@ -1,6 +1,8 @@
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { rolldown } from 'rolldown';
 import type { InputOptions, OutputOptions, RolldownLog } from 'rolldown';
 import { afterAll, describe, expect, test } from 'vitest';
@@ -127,44 +129,88 @@ const cases: Case[] = [
     reason: 'a deferred import evaluates the external module `ext`',
   },
   {
+    name: 'a read statement',
+    files: { 'main.js': "import defer * as ns from './x.js';\nns.value;\nawait 0;\n" },
+    reason: 'a module of the build has a top-level `await`',
+  },
+];
+
+// A build with one of these shapes keeps the deferral. Each case calls exports of the entry, and
+// gives the value and the log after each call. The deferred modules run at the first read, not at
+// the load of the entry.
+const LOGGED_MAIN = (target: string, extra = '') =>
+  `import defer * as ns from '${target}';\nexport { log } from './log.js';\nexport const read = () => ns.value;\n${extra}`;
+
+interface KeptCase {
+  name: string;
+  files: Record<string, string>;
+  steps: [name: string, value: unknown, log: string[]][];
+}
+
+const keptCases: KeptCase[] = [
+  {
     name: 'CommonJS target',
     files: {
-      'main.js': "import defer * as ns from './x.cjs';\nexport const read = () => ns.value;\n",
-      'x.cjs': 'module.exports = { value: 1 };\n',
+      'main.js': LOGGED_MAIN('./x.cjs'),
+      'x.cjs': "require('./log.js').log.push('x');\nexports.value = 1;\n",
     },
-    reason: 'a deferred import evaluates the CommonJS module `x.cjs`',
+    steps: [['read', 1, ['x']]],
+  },
+  {
+    name: 'CommonJS module in the closure',
+    files: {
+      'main.js': LOGGED_MAIN('./x.js'),
+      'x.js': "import './c.cjs';\n" + X_JS,
+      'c.cjs': "require('./log.js').log.push('c');\n",
+    },
+    steps: [['read', 1, ['c', 'x']]],
   },
   {
     name: 'JSON target',
+    files: { 'main.js': LOGGED_MAIN('./data.json'), 'data.json': '{ "value": 1 }\n' },
+    steps: [['read', 1, []]],
+  },
+  {
+    name: 'text target',
     files: {
-      'main.js': "import defer * as ns from './data.json';\nexport const read = () => ns.value;\n",
-      'data.json': '{ "value": 1 }\n',
+      'main.js':
+        "import defer * as ns from './a.txt';\nexport { log } from './log.js';\nexport const read = () => ns.default;\n",
+      'a.txt': 'text',
     },
-    reason: 'a deferred import evaluates `data.json`, which is not a JavaScript module',
+    steps: [['read', 'text', []]],
   },
   {
     name: 'a closure module that require() loads',
     files: {
-      'main.js': MAIN_JS + "export const required = () => require('./x.js');\n",
+      'main.js': LOGGED_MAIN('./x.js', "export const required = () => require('./x.js').value;\n"),
     },
-    output: { format: 'cjs' },
-    reason: 'a deferred import evaluates `x.js`, which a `require()` call also loads',
+    steps: [
+      ['required', 1, ['x']],
+      ['read', 1, ['x']],
+    ],
   },
   {
     name: 'a closure module with require()',
     files: {
-      'main.js': MAIN_JS,
-      'x.js': X_JS + "export const y = () => require('./y.js');\n",
-      'y.js': 'export const y = 1;\n',
+      'main.js': LOGGED_MAIN('./x.js', 'export const readY = () => ns.y();\n'),
+      'x.js': X_JS + "export const y = () => require('./y.js').y;\n",
+      'y.js': "import { log } from './log.js';\nlog.push('y');\nexport const y = 2;\n",
     },
-    output: { format: 'cjs' },
-    reason:
-      'a deferred import evaluates `x.js`, which has a `require()` call or another import that is not an `import` statement',
+    steps: [
+      ['read', 1, ['x']],
+      ['readY', 2, ['x', 'y']],
+    ],
   },
   {
-    name: 'a read statement',
-    files: { 'main.js': "import defer * as ns from './x.js';\nns.value;\nawait 0;\n" },
-    reason: 'a module of the build has a top-level `await`',
+    name: 'new URL() in a closure module',
+    files: {
+      'main.js': LOGGED_MAIN('./x.js', 'export const readUrl = () => ns.url;\n'),
+      'x.js':
+        X_JS +
+        "export const url = new URL('./a.svg', import.meta.url).pathname.split('/').pop();\n",
+      'a.svg': '<svg xmlns="http://www.w3.org/2000/svg"/>\n',
+    },
+    steps: [['readUrl', 'a.svg', ['x']]],
   },
 ];
 
@@ -233,6 +279,21 @@ async function build(root: string, c: Case, importDefer: boolean): Promise<Build
   return { output, warnings, buildEndError, error };
 }
 
+// Runs the entry in a new Node.js process, and calls the exports of `steps` in this order.
+function run(dir: string, entry: string, steps: string[]): unknown {
+  const url = pathToFileURL(path.join(dir, entry)).href;
+  const script = `
+    const ns = await import(${JSON.stringify(url)});
+    const m = ${JSON.stringify(entry)}.endsWith('.cjs') ? ns.default : ns;
+    const result = { before: [...m.log], steps: [] };
+    for (const name of ${JSON.stringify(steps)}) result.steps.push([m[name](), [...m.log]]);
+    console.log(JSON.stringify(result));
+  `;
+  return JSON.parse(
+    execFileSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' }),
+  );
+}
+
 // The parts of the warnings that must be the same with the option on and off. A fallback adds its
 // warnings after the scan, so the order can differ.
 const positions = (logs: RolldownLog[]) =>
@@ -279,5 +340,30 @@ describe('import defer fallback', () => {
     expect(off.warnings.map((log) => log.code)).toStrictEqual(['UNSUPPORTED_FEATURE']);
     expect(on.output).not.toStrictEqual(off.output);
     expect(on.output[0].content).toContain('(init_x(), 1)');
+  });
+
+  test.each(
+    keptCases.flatMap((c) => (['esm', 'cjs'] as const).map((format) => ({ ...c, format }))),
+  )('a build keeps the deferral: $name, $format output', async (c) => {
+    const root = writeFiles(c.files);
+    const output: OutputOptions = {
+      format: c.format,
+      entryFileNames: c.format === 'esm' ? '[name].mjs' : '[name].cjs',
+    };
+    const on = await build(root, { name: c.name, files: c.files, output }, true);
+    expect(on.error).toBeUndefined();
+    expect(on.warnings).toStrictEqual([]);
+    const dir = path.join(root, 'out');
+    fs.mkdirSync(dir);
+    for (const file of on.output) {
+      fs.writeFileSync(path.join(dir, file.fileName), file.content);
+    }
+    expect(
+      run(
+        dir,
+        on.output[0].fileName,
+        c.steps.map(([name]) => name),
+      ),
+    ).toStrictEqual({ before: [], steps: c.steps.map(([, value, log]) => [value, log]) });
   });
 });

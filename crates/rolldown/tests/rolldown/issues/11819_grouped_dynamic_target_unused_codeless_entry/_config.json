@@ -1,0 +1,9 @@
+{
+  "config": {
+    "input": [{ "name": "index", "import": "index.js" }],
+    "codeSplitting": {
+      "groups": [{ "name": "vendor" }]
+    }
+  },
+  "snapshot": false
+}

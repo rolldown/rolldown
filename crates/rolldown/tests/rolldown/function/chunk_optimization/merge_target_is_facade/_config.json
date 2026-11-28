@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [{ "name": "a", "import": "./a.js" }],
+    "preserveEntrySignatures": "allow-extension",
+    "codeSplitting": {
+      "groups": [
+        { "name": "a-impl", "test": "[/\\\\]a\\.js$", "includeDependenciesRecursively": false }
+      ]
+    },
+    "experimental": {
+      "chunkOptimization": { "mergeCommonChunks": true, "avoidRedundantChunkLoads": false }
+    }
+  }
+}

@@ -72,6 +72,18 @@ struct ChunkCandidate {
 
 type TempIndexChunks = IndexVec<ChunkIdx, ChunkCandidate>;
 
+/// The dynamic entry chunks that each user-defined entry can reach.
+struct ReachedDynamicEntries {
+  /// Keyed by the chunk that already holds the entry module. A common module is merged only into
+  /// such a chunk. An entry whose module is still pending or sits in another chunk has no key.
+  /// The leak check can't see the side effects of that module, and a facade can form an import
+  /// cycle.
+  by_host_chunk: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
+  /// Keyed by the entry chunk, for every user-defined entry. The leak check reads it, because an
+  /// entry whose module is still pending can load these dynamic entries too.
+  by_entry_chunk: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
+}
+
 /// A temporary structure for managing chunk graph optimizations.
 /// Only store simplified information needed during optimization passes.
 #[derive(Debug, Default)]
@@ -330,8 +342,9 @@ impl GenerateStage<'_> {
   fn construct_static_entry_to_reached_dynamic_entries_map(
     &self,
     chunk_graph: &ChunkGraph,
-  ) -> FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> {
-    let mut ret: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> = FxHashMap::default();
+  ) -> ReachedDynamicEntries {
+    let mut by_host_chunk: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> = FxHashMap::default();
+    let mut by_entry_chunk: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> = FxHashMap::default();
     let dynamic_entry_modules = chunk_graph
       .chunk_table
       .iter_enumerated()
@@ -342,15 +355,14 @@ impl GenerateStage<'_> {
         ChunkKind::Common => None,
       })
       .collect::<FxHashMap<ModuleIdx, ChunkIdx>>();
-    for (&module_idx, _entry_points) in self
-      .link_output
-      .entries
-      .iter()
-      .filter(|(_, entries)| entries.iter().any(|e| e.kind.is_user_defined()))
-    {
-      let Some(entry_chunk_idx) = chunk_graph.module_to_chunk[module_idx] else {
+    for (entry_chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      let ChunkKind::EntryPoint { meta, module: module_idx, .. } = chunk.kind else {
         continue;
       };
+      if !meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk) {
+        continue;
+      }
+      let mut reached = FxHashSet::default();
       let mut q = VecDeque::from_iter([module_idx]);
       let mut visited = FxHashSet::default();
       while let Some(cur) = q.pop_front() {
@@ -365,13 +377,20 @@ impl GenerateStage<'_> {
         for dep_idx in module.import_records.iter().filter_map(|r| r.resolved_module) {
           // Can't put it at the beginning of the loop,
           if let Some(chunk_idx) = dynamic_entry_modules.get(&dep_idx) {
-            ret.entry(entry_chunk_idx).or_default().insert(*chunk_idx);
+            reached.insert(*chunk_idx);
           }
           q.push_back(dep_idx);
         }
       }
+      if reached.is_empty() {
+        continue;
+      }
+      if let Some(host_chunk_idx) = chunk_graph.module_to_chunk[module_idx] {
+        by_host_chunk.entry(host_chunk_idx).or_default().extend(reached.iter().copied());
+      }
+      by_entry_chunk.insert(entry_chunk_idx, reached);
     }
-    ret
+    ReachedDynamicEntries { by_host_chunk, by_entry_chunk }
   }
 
   /// Tries to insert common modules into existing entry chunks instead of creating new common chunks.
@@ -390,7 +409,7 @@ impl GenerateStage<'_> {
     dynamic_entry_merge_targets: &mut FxHashSet<ChunkIdx>,
     used_symbol_refs: UsedSymbolRefsView<'_>,
   ) {
-    let static_entry_chunk_reference: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> =
+    let reached_dynamic_entries =
       self.construct_static_entry_to_reached_dynamic_entries_map(chunk_graph);
 
     // Calculate on demand to avoid add a new field on each NormalModule.
@@ -433,7 +452,7 @@ impl GenerateStage<'_> {
         let merge_target = self
           .try_insert_into_existing_chunk(
             &chunk_idxs,
-            &static_entry_chunk_reference,
+            &reached_dynamic_entries,
             chunk_graph,
             &dynamic_entry_to_dynamic_importers,
             temp_chunk,
@@ -722,7 +741,7 @@ impl GenerateStage<'_> {
   fn try_insert_into_existing_chunk(
     &self,
     chunk_idxs: &[ChunkIdx],
-    entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
+    reached_dynamic_entries: &ReachedDynamicEntries,
     chunk_graph: &ChunkGraph,
     dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
     info: &ChunkCandidate,
@@ -795,7 +814,7 @@ impl GenerateStage<'_> {
     } else {
       let chunk_idx = merged_user_defined_chunk?;
       let chunk = &chunk_graph.chunk_table[chunk_idx];
-      let reached_dynamic_chunk = entry_chunk_reference.get(&chunk_idx);
+      let reached_dynamic_chunk = reached_dynamic_entries.by_host_chunk.get(&chunk_idx);
       // Check if all dynamic entry chunks are reachable from the merged user-defined entry chunk.
       // If not, we cannot merge the shared modules into the user-defined entry chunk because
       // the dynamic entries would not be able to access the shared modules.
@@ -822,10 +841,11 @@ impl GenerateStage<'_> {
         // dynamic entries (directly or transitively via dynamic import).
         // If yes, merging would leak `chunk_idx`'s side effects into that
         // other entry's dynamic load.
-        let leak_possible = entry_chunk_reference.iter().any(|(other_entry_chunk_idx, reached)| {
-          *other_entry_chunk_idx != chunk_idx
-            && dynamic_entry.iter().any(|dyn_idx| reached.contains(dyn_idx))
-        });
+        let leak_possible =
+          reached_dynamic_entries.by_entry_chunk.iter().any(|(other_entry_chunk_idx, reached)| {
+            *other_entry_chunk_idx != chunk_idx
+              && dynamic_entry.iter().any(|dyn_idx| reached.contains(dyn_idx))
+          });
         if leak_possible {
           return None;
         }

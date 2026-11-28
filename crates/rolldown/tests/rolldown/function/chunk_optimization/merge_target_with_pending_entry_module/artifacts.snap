@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { t as s } from "./s.js";
+// a.js
+globalThis.log.push(`a:${s()}`);
+globalThis.loadFromA = () => import("./d.js");
+
+```
+
+## b.js
+
+```js
+import "./a.js";
+
+```
+
+## c.js
+
+```js
+// c.js
+const loaded = import("./d.js").then((m) => m.d());
+export { loaded };
+
+```
+
+## d.js
+
+```js
+import { t as s } from "./s.js";
+// d.js
+function d() {
+	return `d:${s()}`;
+}
+export { d };
+
+```
+
+## s.js
+
+```js
+// s.js
+function s() {
+	return "s";
+}
+export { s as t };
+
+```

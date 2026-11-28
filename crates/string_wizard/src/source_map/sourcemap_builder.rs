@@ -80,8 +80,43 @@ impl<'a> SourcemapBuilder<'a> {
       let chunk_content = chunk.span.text(source);
       if matches!(self.hires, Hires::False) && !self.sourcemap_locations.is_empty() {
         self.add_original_chunk::<true>(chunk_content, chunk_start_utf16, loc, name_id);
+      } else if matches!(self.hires, Hires::False) {
+        self.add_original_chunk_line_starts(chunk_content, loc, name_id);
       } else {
         self.add_original_chunk::<false>(chunk_content, chunk_start_utf16, loc, name_id);
+      }
+    }
+  }
+
+  /// Same as `add_original_chunk::<false>` for [`Hires::False`]: one segment at the start of
+  /// each non-empty line. Works a line at a time instead of a char at a time.
+  fn add_original_chunk_line_starts(
+    &mut self,
+    chunk_content: &str,
+    mut loc: Location,
+    name_id: Option<u32>,
+  ) {
+    for line in chunk_content.split_inclusive('\n') {
+      let (text, has_newline) = match line.strip_suffix('\n') {
+        Some(text) => (text, true),
+        None => (line, false),
+      };
+      if !text.is_empty() {
+        self.source_map_builder.add_token(
+          self.generated_code_line,
+          self.generated_code_column,
+          loc.line,
+          loc.column,
+          Some(self.source_id),
+          name_id,
+        );
+        let text_utf16_len = simd_utf16_len::utf16_len(text) as u32;
+        loc.column += text_utf16_len;
+        self.generated_code_column += text_utf16_len;
+      }
+      if has_newline {
+        loc.bump_line();
+        self.bump_line();
       }
     }
   }

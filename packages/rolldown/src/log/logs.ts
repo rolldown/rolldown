@@ -1,3 +1,4 @@
+import { VERSION } from '../constants';
 import { getCodeFrame } from '../utils/code-frame';
 import { locate } from './locate-character';
 import type { RolldownLog } from './logging';
@@ -10,6 +11,7 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   MODULE_SIDE_EFFECTS_WRITE_AFTER_BUILD_END = 'MODULE_SIDE_EFFECTS_WRITE_AFTER_BUILD_END',
   PARSE_ERROR = 'PARSE_ERROR',
   NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER',
+  BUILTIN_PLUGIN_VERSION_MISMATCH = 'BUILTIN_PLUGIN_VERSION_MISMATCH',
   VALIDATION_ERROR = 'VALIDATION_ERROR';
 
 export function logParseError(message: string, id: string | undefined, pos?: number): RolldownLog {
@@ -39,6 +41,13 @@ export function logInputHookInOutputPlugin(pluginName: string, hookName: string)
   return {
     code: INPUT_HOOK_IN_OUTPUT_PLUGIN,
     message: `The "${hookName}" hook used by the output plugin ${pluginName} is a build time hook and will not be run for that plugin. Either this plugin cannot be used as an output plugin, or it should have an option to configure it as an output plugin.`,
+  };
+}
+
+export function logBuiltinPluginVersionMismatch(pluginName: string, version: string): RolldownLog {
+  return {
+    code: BUILTIN_PLUGIN_VERSION_MISMATCH,
+    message: `Built-in plugin "${pluginName}" was created by rolldown ${version}, but this build runs on rolldown ${VERSION}. A built-in plugin only works with the rolldown version that created it. Make sure only one version of rolldown is installed.`,
   };
 }
 

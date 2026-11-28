@@ -4,6 +4,7 @@ import {
   BindingCallableBuiltinPlugin,
   type BindingViteManifestPluginConfig,
 } from '../binding.cjs';
+import { VERSION } from '../constants';
 import { error, logPluginError } from '../log/logs';
 import type { PluginContextData } from '../plugin/plugin-context-data';
 import type { ViteManifestPluginConfig } from './vite-manifest-plugin';
@@ -22,6 +23,17 @@ export class BuiltinPlugin {
     // NOTE: has `_` to avoid conflict with `options` hook
     public _options?: unknown,
   ) {}
+}
+
+const BUILTIN_PLUGIN_BRAND: unique symbol = Symbol.for('rolldown.BuiltinPlugin');
+Object.defineProperty(BuiltinPlugin.prototype, BUILTIN_PLUGIN_BRAND, { value: VERSION });
+
+export function getBuiltinPluginVersion(plugin: unknown): string | undefined {
+  return (plugin as { [BUILTIN_PLUGIN_BRAND]?: string } | undefined)?.[BUILTIN_PLUGIN_BRAND];
+}
+
+export function isBuiltinPlugin(plugin: unknown): plugin is BuiltinPlugin {
+  return getBuiltinPluginVersion(plugin) === VERSION;
 }
 
 type CallableBuiltinPluginContext = {

@@ -1,5 +1,5 @@
 import type { InputOptions, OutputOptions, RolldownPlugin } from '..';
-import { BuiltinPlugin } from '../builtin-plugin/utils';
+import { isBuiltinPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
 import { getLogger, getOnLog } from '../log/logger';
 import { LOG_LEVEL_INFO, type LogLevelOption } from '../log/logging';
@@ -73,7 +73,7 @@ export function getObjectPlugins(plugins: RolldownPlugin[]): Plugin[] {
     if (!plugin) {
       return undefined;
     }
-    if (plugin instanceof BuiltinPlugin) {
+    if (isBuiltinPlugin(plugin)) {
       return undefined;
     }
     return plugin;

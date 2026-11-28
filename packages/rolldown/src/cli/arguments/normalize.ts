@@ -9,7 +9,15 @@ import { logger } from '../logger.ts';
 import type { ConfigLoader } from '../../utils/load-config.ts';
 import type { CliOptions } from './alias.ts';
 
-const reservedKeys = new Set(['help', 'version', 'config', 'watch', 'environment', 'configLoader']);
+const reservedKeys = new Set([
+  'help',
+  'version',
+  'config',
+  'watch',
+  'environment',
+  'configLoader',
+  'silent',
+]);
 
 export interface NormalizedCliOptions {
   input: InputOptions;
@@ -20,6 +28,7 @@ export interface NormalizedCliOptions {
   watch: boolean;
   environment?: string | string[];
   configLoader?: ConfigLoader;
+  silent?: boolean;
 }
 
 export function normalizeCliOptions(
@@ -42,6 +51,7 @@ export function normalizeCliOptions(
     help: options.help ?? false,
     version: options.version ?? false,
     watch: options.watch ?? false,
+    silent: options.silent ?? false,
   } as NormalizedCliOptions;
 
   if (typeof options.config === 'string') {

@@ -61,6 +61,8 @@ interface NormalizedCliOptions {
   version: boolean;
   watch: boolean;
   environment?: string | string[];
+  configLoader?: ConfigLoader;
+  silent?: boolean;
 }
 
 // Plus rawArgs: Record<string, any> — all parsed args including unknown ones

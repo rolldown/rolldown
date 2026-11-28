@@ -25,6 +25,6 @@
 		if (link.ep) return;
 		link.ep = true;
 		const fetchOpts = getFetchOpts(link);
-		fetch(link.href, fetchOpts);
+		fetch(link.href, fetchOpts).catch(() => {});
 	}
 })();

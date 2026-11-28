@@ -40,6 +40,7 @@
     link.ep = true;
     // pre populate the load record
     const fetchOpts = getFetchOpts(link);
-    fetch(link.href, fetchOpts);
+    // a failed warm-up is not an error: the module's own import reports real failures
+    fetch(link.href, fetchOpts).catch(() => {});
   }
 })();

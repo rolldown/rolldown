@@ -29,7 +29,7 @@ export { i as chainA } from "./service.js";
 ## cyclic.js
 
 ```js
-import { entryValue, r as chainB } from "./service.js";
+import { entryValue, n as chainB } from "./service.js";
 // cyclic.js
 const cyclic = "cyclic" + chainB + entryValue;
 export { cyclic };
@@ -51,10 +51,10 @@ export { done };
 // HIDDEN [\0rolldown/runtime.js]
 // chain-a.js
 const chainA = "chainA";
-// chain-b.js
-const chainB = "chainB";
 // shared.js
 const shared = "sharedchainA";
+// chain-b.js
+const chainB = "chainB";
 // service.js
 var service_exports = /* @__PURE__ */ __exportAll({
 	entryValue: () => entryValue,
@@ -66,13 +66,13 @@ const entryValue = "entry" + shared + chainB;
 const loadCyclic = () => import("./cyclic.js");
 const loadShared = () => import("./shared.js");
 const loadChainA = () => import("./chain-a.js");
-export { entryValue, chainA as i, loadChainA, loadCyclic, loadShared, shared as n, chainB as r, service_exports as t };
+export { entryValue, chainA as i, loadChainA, loadCyclic, loadShared, chainB as n, shared as r, service_exports as t };
 
 ```
 
 ## shared.js
 
 ```js
-export { n as shared } from "./service.js";
+export { r as shared } from "./service.js";
 
 ```

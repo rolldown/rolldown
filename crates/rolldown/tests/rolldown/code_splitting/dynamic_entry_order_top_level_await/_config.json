@@ -1,0 +1,11 @@
+{
+  "_comment": "`a.js` can only be reached through `z.js` and imports it, but `m1.js` and `m2.js` use top-level await, so at runtime their bodies interleave and no single order matches them. `z.js` keeps its place by module id.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import "./z.js";
+
+```
+
+## main.js
+
+```js
+// main.js
+const { later } = await import("./z2.js");
+await later();
+
+```
+
+## z.js
+
+```js
+import "ext-tla";
+// m2.js
+globalThis.G = "set";
+// m1.js
+(globalThis.log ??= []).push("m1 sees " + globalThis.G);
+// z.js
+const later = () => import("./a.js");
+export { later as t };
+
+```
+
+## z2.js
+
+```js
+export { t as later } from "./z.js";
+
+```

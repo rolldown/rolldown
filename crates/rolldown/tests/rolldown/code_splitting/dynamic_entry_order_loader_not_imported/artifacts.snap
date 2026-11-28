@@ -1,0 +1,56 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// main.js
+const lazy = () => import("./y.js");
+const { load } = await import("./zz-e.js");
+const value = await load();
+export { lazy, value };
+
+```
+
+## p.js
+
+```js
+// q.js
+const qv = globalThis.QV ?? "q";
+const Q = () => P;
+// p.js
+const P = "P" + qv;
+export { Q as n, P as t };
+
+```
+
+## x.js
+
+```js
+import { t as P } from "./p.js";
+// x.js
+const X = P;
+export { X };
+
+```
+
+## y.js
+
+```js
+import { n as Q } from "./p.js";
+// y.js
+const Y = Q;
+export { Y };
+
+```
+
+## zz-e.js
+
+```js
+// zz-e.js
+const load = () => import("./x.js").then((m) => m.X);
+export { load };
+
+```

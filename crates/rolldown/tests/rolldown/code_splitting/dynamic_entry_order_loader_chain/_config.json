@@ -1,0 +1,11 @@
+{
+  "_comment": "`a.js` can only be reached through `y.js`, and `y.js` only through `z.js`. `a.js` imports `z.js` but not `y.js`, so `z.js` is moved before it and the `z.js`/`store.js` cycle runs in the order `z.js` needs, as at runtime.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ]
+  }
+}

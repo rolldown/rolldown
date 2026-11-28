@@ -1,0 +1,19 @@
+{
+  "_comment": "`a.js` can only be reached through `z.js` and imports it, but it also runs `grp-u.js`, which `w.js` reaches without going through `z.js`, so `z.js` keeps its place by module id. `grp-u.js` and `grp-r.js` share the `grp` chunk, which `w.js` loads first, so `grp-u.js` runs first.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "codeSplitting": {
+      "groups": [
+        {
+          "name": "grp",
+          "test": "grp-"
+        }
+      ]
+    }
+  }
+}

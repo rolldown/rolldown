@@ -1,4 +1,4 @@
-use std::ffi::OsString;
+use std::{ffi::OsString, path::PathBuf};
 
 use arcstr::ArcStr;
 use cow_utils::CowUtils;
@@ -33,7 +33,12 @@ impl ViteManifestPlugin {
   pub fn get_chunk_name(&self, chunk: &OutputChunk, is_legacy: bool) -> String {
     match &chunk.facade_module_id {
       Some(module_id) => {
-        let mut name = module_id.relative_path(&self.root);
+        // Relativizing a virtual id would resolve it against the process cwd.
+        let mut name = if module_id.is_path() {
+          module_id.relative_path(&self.root)
+        } else {
+          PathBuf::from(module_id.raw_id())
+        };
         if is_legacy && !chunk.name.contains("-legacy") {
           let extension = OsString::from(name.extension().unwrap_or_default());
           if let Some(stem) = name.file_stem() {

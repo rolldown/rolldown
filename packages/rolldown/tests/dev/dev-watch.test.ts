@@ -555,11 +555,8 @@ test.concurrent(
 
     await engine.run();
     const client = await createClient(cwd);
-    const chunk = await engine.compileEntry(
-      `${path.join(cwd, 'lazy.js')}?rolldown-lazy=1`,
-      client.encodeHave(new Set()),
-    );
-    if (chunk.type !== 'Chunk') throw new Error(`expected a chunk: ${chunk.reason}`);
+    const chunk = await engine.renderPatch(client.encodeHave(new Set(), new Set(['lazy.js'])));
+    if (chunk.type !== 'Patch') throw new Error(`expected a payload: ${chunk.reason}`);
     runInRuntime(chunk.code, client);
     await engine.ensureLatestBuildOutput();
 

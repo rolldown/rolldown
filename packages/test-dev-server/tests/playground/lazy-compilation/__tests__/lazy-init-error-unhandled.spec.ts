@@ -6,7 +6,7 @@ import { page, serverUrl, waitForBuildStable } from '~utils';
 // an unhandled rejection — and keep doing so across a page refresh.
 //
 // Two loads, same dev engine (only the browser page reloads):
-//   1. cold  — first compile, via the on-demand `@vite/lazy` response
+//   1. cold  — first compile, via the on-demand lazy pull
 //   2. warm  — a repeat visit after the reload: the engine already holds the
 //      route and serves it from its graph, with no scan
 //

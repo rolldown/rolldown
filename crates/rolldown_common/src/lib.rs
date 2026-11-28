@@ -140,7 +140,6 @@ pub use crate::{
     hmr_patch::{HmrPatch, HmrPullResponse},
     hmr_session::{HMR_CATCH_UP_RING_SIZE, HmrCatchUp, HmrRingEntry, HmrSession, SharedHmrSession},
     hmr_update::HmrUpdate,
-    lazy_chunk_output::HmrLazyChunkOutput,
     lazy_proxy_id::{LAZY_PROXY_QUERY, is_lazy_proxy, lazy_proxy_target, write_lazy_proxy_id},
   },
   module::{Module, external_module::ExternalModule, normal_module::NormalModule},

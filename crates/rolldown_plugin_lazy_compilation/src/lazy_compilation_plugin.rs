@@ -18,8 +18,15 @@ pub struct LazyCompilationContext {
 }
 
 impl LazyCompilationContext {
-  pub fn mark_as_fetched(&self, proxy_module_id: &str) {
-    self.fetched_entries.insert(proxy_module_id.into());
+  /// Returns whether the id was not marked before.
+  pub fn mark_as_fetched(&self, proxy_module_id: &str) -> bool {
+    self.fetched_entries.insert(proxy_module_id.into())
+  }
+
+  /// Undoes `mark_as_fetched` after a failed scan. Otherwise a later full build would load the
+  /// fetched template and pull in a broken route that no page loaded.
+  pub fn unmark_fetched(&self, proxy_module_id: &str) {
+    self.fetched_entries.remove(proxy_module_id);
   }
 }
 
@@ -70,7 +77,7 @@ impl Plugin for LazyCompilationPlugin {
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     // Unknown proxy ids must fall through and stay unresolvable — that is what stops an
-    // arbitrary id from being bundled (cf. `HmrStage::compile_lazy_entry`).
+    // arbitrary id from being bundled (cf. `HmrStage::render_patch`).
     if is_lazy_proxy(args.specifier) && self.lazy_entries.contains(args.specifier) {
       return Ok(Some(HookResolveIdOutput {
         id: args.specifier.into(),

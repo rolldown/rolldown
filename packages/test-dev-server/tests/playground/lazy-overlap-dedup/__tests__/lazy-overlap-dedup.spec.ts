@@ -1,6 +1,6 @@
 import type { Response } from 'playwright';
 import { describe, expect, test } from 'vitest';
-import { page, serverUrl, waitForBuildStable } from '~utils';
+import { isPullUrl, lazyTargetsOf, page, serverUrl, waitForBuildStable } from '~utils';
 
 // A lazy request lists what the client holds, like an HMR patch request: a
 // lazy response omits every module this client already ran or holds.
@@ -12,14 +12,19 @@ const factoryFor = (file: string) => new RegExp(`registerFactory\\("[^"]*/${file
 
 describe('lazy-overlap-dedup', () => {
   test('the second lazy route omits the shared module the client already ran', { retry: 0 }, async () => {
-    // Keyed by the lazy request's `id` param (the proxy module id).
-    const lazyBodies: { id: string; body: Promise<string> }[] = [];
+    // Keyed by the lazy targets that the request's `l` names.
+    const lazyBodies: { ids: Promise<string[]>; body: Promise<string> }[] = [];
     const onResponse = (res: Response) => {
       const url = res.url();
-      if (url.includes('/@vite/lazy?')) {
-        const id = new URL(url).searchParams.get('id') ?? '';
-        lazyBodies.push({ id, body: res.text() });
+      if (isPullUrl(url) && new URL(url).searchParams.has('l')) {
+        lazyBodies.push({ ids: lazyTargetsOf(url), body: res.text() });
       }
+    };
+    const bodyOf = async (route: string) => {
+      for (const { ids, body } of lazyBodies) {
+        if ((await ids).some((id) => id.includes(route))) return body;
+      }
+      throw new Error(`no lazy request for ${route}`);
     };
     page.on('response', onResponse);
 
@@ -37,8 +42,8 @@ describe('lazy-overlap-dedup', () => {
       await expect.poll(() => page.textContent('#route-b-content')).toBe('B:shared-value');
 
       expect(lazyBodies.length).toBe(2);
-      const bodyA = await lazyBodies.find((e) => e.id.includes('page-a'))!.body;
-      const bodyB = await lazyBodies.find((e) => e.id.includes('page-b'))!.body;
+      const bodyA = await bodyOf('page-a');
+      const bodyB = await bodyOf('page-b');
 
       expect(bodyA).toMatch(factoryFor('page-a.js'));
       expect(bodyA).toMatch(factoryFor('shared.js'));

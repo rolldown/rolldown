@@ -101,7 +101,7 @@ pub fn assign_payload_nums(
 pub enum RowsSession<'a> {
   /// Full-build chunks. Their rows carry the epoch and call `__rolldown_runtime__.registerGraph`.
   Build(&'a DevRowsView),
-  /// Patches and lazy chunks. `assign_payload_nums` numbered every module the rows name. Their
+  /// Pulled payloads. `assign_payload_nums` numbered every module the rows name. Their
   /// rows call `__rolldown_payload__.registerGraph`, so the payload's generation applies to
   /// them, and they carry no epoch: the request already proved it.
   #[cfg_attr(not(feature = "experimental"), allow(dead_code))]

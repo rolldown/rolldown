@@ -55,8 +55,10 @@ class Module {
  * @typedef {{ gen: number, changedIds?: string[], staleIds: string[] }} HmrMissedUpdate
  *
  * The object `beginPayload` returns. A payload calls these instead of the runtime's own methods,
- * so its rows, factories and catch-up all carry the payload's generation.
- * @typedef {{ catchUp(missed: HmrMissedUpdate[]): void, registerGraph(delta: ModuleGraphDelta): void, registerFactory(id: string, fn: (id: string) => void): void }} PayloadScope
+ * so its rows, factories and catch-up all carry the payload's generation. `ids` lists the
+ * modules whose factory the payload installed, so a client can tell when none of them is
+ * installed any more (Vite's module runner then releases the payload's sourcemap).
+ * @typedef {{ ids: string[], catchUp(missed: HmrMissedUpdate[]): void, registerGraph(delta: ModuleGraphDelta): void, registerFactory(id: string, fn: (id: string) => void): void }} PayloadScope
  *
  * What `ensureRunnable` found. `caught-up`: a payload brought news of updates the client
  * missed, so the caller walks again with `changedIds` added to its changed modules.
@@ -221,7 +223,7 @@ export class DevRuntime {
    */
   moduleCache = new Map();
   /**
-   * Re-runnable factories from HMR patches and lazy chunks. The initial bundle stays
+   * Re-runnable factories from pulled payloads. The initial bundle stays
    * scope-hoisted and contributes none.
    * @type {Map<string, (id: string) => void>}
    */
@@ -233,7 +235,7 @@ export class DevRuntime {
    */
   factoriesNotRun = new Set();
   /**
-   * The generation of the payload whose row each id has. A late payload (a slow lazy chunk after
+   * The generation of the payload whose row each id has. A late payload (a slow lazy load after
    * an HMR patch) must not replace a row from a newer one. Full-build rows have no entry.
    * @type {Map<string, number>}
    */
@@ -332,10 +334,15 @@ export class DevRuntime {
     // A client with no known generation asked without `g`; this payload answers as of `gen`.
     if (this.knownGen < 0) this.knownGen = gen;
     if (gen > this.lastPayloadGen) this.lastPayloadGen = gen;
+    /** @type {string[]} */
+    const ids = [];
     return {
+      ids,
       catchUp: (missed) => this.catchUp(gen, missed),
       registerGraph: (delta) => this.registerGraph(delta, gen),
-      registerFactory: (id, fn) => this.registerFactory(id, fn, gen),
+      registerFactory: (id, fn) => {
+        if (this.registerFactory(id, fn, gen)) ids.push(id);
+      },
     };
   }
 
@@ -409,12 +416,14 @@ export class DevRuntime {
    * @param {string} id
    * @param {(id: string) => void} fn
    * @param {number} [gen]
+   * @returns {boolean} whether the factory was installed
    */
   registerFactory(id, fn, gen = 0) {
-    if (gen < (this.factoryGens.get(id) ?? 0)) return;
+    if (gen < (this.factoryGens.get(id) ?? 0)) return false;
     this.factoryGens.set(id, gen);
     this.factories.set(id, fn);
     if (!this.moduleCache.has(id)) this.factoriesNotRun.add(id);
+    return true;
   }
 
   /**
@@ -543,8 +552,9 @@ export class DevRuntime {
   lazyRequests = new Map();
 
   /**
-   * The entry point for a lazy `import()`. `id` is the module the boundary stands for;
-   * `proxyModuleId` is the boundary's own id, used only to load the chunk.
+   * The entry point for a lazy `import()`. `id` is the module the boundary stands for. When the
+   * client cannot run it yet, it pulls with `id` as a lazy root (`l`): the server compiles the
+   * route on its first visit, then answers like any pull.
    *
    * Nothing is registered under the boundary id, deliberately. A cache entry with no factory
    * behind it reads as "executed" to the HMR boundary walk, and `applyUpdate` turns an
@@ -564,22 +574,24 @@ export class DevRuntime {
    * graph. `isNodeMode` is the importer's choice, so the view is built per call, not memoized.
    *
    * @param {string} id
-   * @param {string} proxyModuleId
    * @param {boolean | 0 | 1} [isNodeMode]
    * @returns {Promise<any>}
    */
-  requestLazy(id, proxyModuleId, isNodeMode) {
+  requestLazy(id, isNodeMode) {
     let pending = this.lazyRequests.get(id);
     if (!pending) {
       // Factories outlive `removeModuleCache`, so an evicted module can be re-run without the
       // server — and must be, since the memo went with the cache entry. `Promise.resolve` keeps
       // a synchronous `initModule` throw from escaping the call site.
       const loaded = Promise.resolve().then(async () => {
-        // A chunk can arrive without a module the client dropped while it was on the way.
+        // A payload can arrive without a module the client dropped while it was on the way.
         // The second request describes the client as it is now.
         for (let loads = 0; loads < 2 && this.needsRequest(id); loads++) {
           this.throwIfReloadNeeded();
-          await this.loadLazyChunk(proxyModuleId);
+          // Every row set gives a number to the targets of its dynamic edges, so a module that
+          // ran an `import()` of `id` got the number of `id`.
+          if (!this.nums.has(id)) break;
+          await this.pullPatch(new Set(), new Set([id]));
         }
         this.throwIfMissing([id]);
       });
@@ -665,7 +677,7 @@ export class DevRuntime {
   }
 
   /**
-   * A request outside an update (a lazy chunk, a dynamic import, a refetch) can bring a
+   * A request outside an update (a lazy load, a dynamic import, a refetch) can bring a
    * catch-up. Its changes would wait for the next push, and the page would run their old code
    * until then. So the client is told, and it runs them as an update. Called once the request
    * settled: after the module ran, or after the request failed, so the update does not race with
@@ -877,7 +889,7 @@ export class DevRuntime {
   async ensureRunnable(updateIds) {
     for (let pulls = 0; ; pulls++) {
       if (this.reloadReason !== undefined) return { type: 'reload', reason: this.reloadReason };
-      // A catch-up can also come with a lazy chunk. Its changes join the next update, so the
+      // A catch-up can also come with a lazy load. Its changes join the next update, so the
       // client can set `appliedGen` to `knownGen` after it applies.
       if (this.hasCaughtUpChanges()) {
         const changedIds = [...this.caughtUpChangedIds.keys()];
@@ -921,18 +933,21 @@ export class DevRuntime {
   }
 
   /**
-   * What the client holds, as the query of a patch or lazy request: `s` epoch, `g` known
-   * generation, `u` the update, `e` executed modules minus the update, `f` held factories of
-   * modules that are not in `e`, `n` a nonce. The server never reads a factory of a module in
-   * `e`: such a module keeps its exports. An empty set is left out, and so is `g` while the
-   * client does not know it.
+   * What the client holds, as the query of a pull: `s` epoch, `g` known generation, `u` the
+   * update, `l` lazy `import()` targets, `e` executed modules minus the update, `f` held
+   * factories of modules that are not in `e`, `n` a nonce. The server never reads a factory of
+   * a module in `e`: such a module keeps its exports. An empty set is left out, and so is `g`
+   * while the client does not know it.
    * @param {Set<string>} updateIds
+   * @param {Set<string>} [lazyIds]
    */
-  encodeHave(updateIds) {
+  encodeHave(updateIds, lazyIds = new Set()) {
     let query = `s=${this.epoch ?? 0}`;
     if (this.knownGen >= 0) query += `&g=${this.knownGen}`;
     const update = new NumSet(this.maxNum);
     for (const id of updateIds) update.add(this.nums.get(id));
+    const lazy = new NumSet(this.maxNum);
+    for (const id of lazyIds) lazy.add(this.nums.get(id));
     const executed = new NumSet(this.maxNum);
     for (const module of this.moduleCache.values()) {
       if (!updateIds.has(module.id)) executed.add(module.num ?? this.nums.get(module.id));
@@ -944,6 +959,7 @@ export class DevRuntime {
     }
     const sets = [
       ['u', update.encode()],
+      ['l', lazy.encode()],
       ['e', executed.encode()],
       ['f', factories.encode()],
     ];
@@ -954,13 +970,14 @@ export class DevRuntime {
   }
 
   /**
-   * The query of the next patch or lazy request: `encodeHave(updateIds)`, or `t=<token>&n=<nonce>`
-   * when that is longer than `maxQueryLength`. A failed POST rejects, like a failed request.
+   * The query of the next pull: `encodeHave(updateIds, lazyIds)`, or `t=<token>&n=<nonce>` when
+   * that is longer than `maxQueryLength`. A failed POST rejects, like a failed request.
    * @param {Set<string>} updateIds
+   * @param {Set<string>} [lazyIds]
    * @returns {Promise<string>}
    */
-  async requestQuery(updateIds) {
-    const query = this.encodeHave(updateIds);
+  async requestQuery(updateIds, lazyIds) {
+    const query = this.encodeHave(updateIds, lazyIds);
     if (query.length <= this.maxQueryLength) return query;
     // Read before the POST: a request that starts while it runs moves the nonce on.
     const nonce = this.requestNonce;
@@ -998,20 +1015,22 @@ export class DevRuntime {
 
   /**
    * Pulls the patch that the update `updateIds` needs. `loadDynamic` passes its target here: a
-   * root the client never ran is carried with its static deps the same way. The dropped
-   * factories of `droppedDeps` are roots too. When the pull settles, with a payload, a reload
-   * body or a failure, each dropped module that still has no factory goes back to `droppedDeps`.
+   * root the client never ran is carried with its static deps the same way. `requestLazy`
+   * passes its target as a lazy root (`lazyIds`). The dropped factories of `droppedDeps` are
+   * roots too. When the pull settles, with a payload, a reload body or a failure, each dropped
+   * module that still has no factory goes back to `droppedDeps`.
    * @internal
    * @param {Set<string>} updateIds
+   * @param {Set<string>} [lazyIds]
    * @returns {Promise<number>} how many dropped modules went back
    */
-  async pullPatch(updateIds) {
+  async pullPatch(updateIds, lazyIds) {
     const taken = [...this.droppedDeps];
     this.droppedDeps.clear();
     const roots = taken.length > 0 ? new Set([...updateIds, ...taken]) : updateIds;
     let putBack = 0;
     try {
-      await this.importPatch(this.patchUrl(await this.requestQuery(roots)));
+      await this.importPatch(this.patchUrl(await this.requestQuery(roots, lazyIds)));
     } finally {
       for (const id of taken) {
         if (this.isDroppedDep(id)) {
@@ -1029,28 +1048,6 @@ export class DevRuntime {
    */
   importPatch(url) {
     return import(/* @vite-ignore */ url);
-  }
-
-  /**
-   * The URL of the lazy chunk behind a lazy boundary, for a query from `requestQuery`. The dev
-   * server owns the lazy endpoint, so a server that serves it at another URL (for example under
-   * a public base path) overrides this method.
-   * @param {string} proxyModuleId
-   * @param {string} query
-   * @returns {string}
-   */
-  lazyUrl(proxyModuleId, query) {
-    return `/@vite/lazy?id=${encodeURIComponent(proxyModuleId)}&${query}`;
-  }
-
-  /**
-   * Loads the lazy chunk behind a lazy boundary. The chunk only registers factories;
-   * `requestLazy` runs the module afterwards.
-   * @param {string} proxyModuleId
-   * @returns {Promise<unknown>}
-   */
-  async loadLazyChunk(proxyModuleId) {
-    return import(/* @vite-ignore */ this.lazyUrl(proxyModuleId, await this.requestQuery(new Set())));
   }
 
   /**

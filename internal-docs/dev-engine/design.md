@@ -87,8 +87,8 @@ no such exception — only new input recovers those. (Wired up in Vite:
 `triggerBundleRegenerationIfStale` in `bundledDev.ts`.)
 
 Realized in: `handle_file_changes` (§7) is the only producer of
-post-failure rebuild tasks, apart from the `ModuleChanged` handler
-(`bundle_coordinator.rs:150`) while a lost HMR update is pending.
+post-failure rebuild tasks, apart from the `LazyCompiled` handler
+(`bundle_coordinator.rs:145`) while a lost HMR update is pending.
 `triggerFullBuild` (§13e) is an explicit escape hatch for cases the
 watcher cannot observe (e.g. missing-import resolution; see Unresolved
 Questions).
@@ -168,7 +168,7 @@ flowchart LR
 - [watch-mode](../watch-mode/implementation.md) — `rolldown_watcher`, the actor-based
   watch architecture; `rolldown_dev` reuses the same actor pattern
 - [lazy-compilation](../lazy-compilation/implementation.md) — lazy entry compilation,
-  reached via `DevEngine::compile_lazy_entry` and the `ModuleChanged`
-  message
+  reached via the `l` set of a pull to `DevEngine::render_patch` and the
+  `LazyCompiled` message
 - [dev-server-test-harness](../dev-server-test-harness/implementation.md) — browser
   test harness for the dev server

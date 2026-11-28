@@ -209,12 +209,14 @@ impl BindingDevEngine {
     self.inner.trigger_full_build().expect("Should handle this error");
   }
 
-  /// Renders the patch a client asks for. `query` is the query string of the client's patch
-  /// request: `s=<epoch>&g=<gen>&u=<set>&e=<set>&f=<set>` (other keys are ignored). Each set is
+  /// Answers a client's pull. `query` is the query string of the client's request:
+  /// `s=<epoch>&g=<gen>&u=<set>&l=<set>&e=<set>&f=<set>` (other keys are ignored). Each set is
   /// `b` and a base64url bitset, or `d` and base64url gap varints (`HmrNumSet` in
-  /// `rolldown_common`). A query longer than the runtime's `maxQueryLength` comes first as the
+  /// `rolldown_common`). `l` names lazy `import()` targets: a route that is not in the graph yet
+  /// is compiled first. A query longer than the runtime's `maxQueryLength` comes first as the
   /// body of `POST <haveUrl()>`, and the request carries only a token: pass the stored query, not
   /// the token. A `Reload` answer means the client must reload; a bad query gets one too.
+  /// Failures, such as a lazy route that does not compile, come back as `BindingErrors`.
   #[napi]
   pub fn render_patch<'env>(
     &self,
@@ -257,42 +259,6 @@ impl BindingDevEngine {
     })
   }
 
-  /// Compile a lazy entry module and return HMR-style patch code. `query` describes what the
-  /// client holds, in the format of `renderPatch` (`u` is not used).
-  ///
-  /// This is called when a dynamically imported module is first requested at runtime.
-  /// The module was previously stubbed with a proxy, and now we need to compile the
-  /// actual module and its dependencies.
-  /// Failures come back as `BindingErrors`, the same shape the build and HMR callbacks
-  /// use, rather than as a napi error carrying a formatted string. A lazy compile runs the
-  /// full plugin pipeline, so what fails here is usually a user plugin - and `to_binding_error`
-  /// hands its thrown JS error back untouched, keeping the stack and the diagnostic's module
-  /// id instead of flattening both into a message.
-  #[napi]
-  pub fn compile_entry<'env>(
-    &self,
-    env: &'env Env,
-    module_id: String,
-    query: String,
-  ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingLazyChunkResponse>>> {
-    let inner = Arc::clone(&self.inner);
-    let cwd = Arc::<Path>::clone(&self.cwd);
-    spawn_boxed_future(env, async move {
-      Ok(match inner.compile_lazy_entry(module_id, &query).await {
-        Ok(HmrPullResponse::Payload(output)) => Either::B(BindingLazyChunkResponse::Chunk {
-          code: output.code,
-          sourcemap: output.sourcemap,
-        }),
-        Ok(HmrPullResponse::Reload { reason }) => {
-          Either::B(BindingLazyChunkResponse::Reload { reason })
-        }
-        Err(errors) => Either::A(BindingErrors::new(
-          errors.iter().map(|diagnostic| to_binding_error(diagnostic, cwd.to_path_buf())).collect(),
-        )),
-      })
-    })
-  }
-
   /// Same data the plugin-context `getModuleInfo` returns, readable from the engine
   /// handle at any time (no hook context needed).
   #[napi]
@@ -320,13 +286,6 @@ pub enum BindingPatchResponse {
   Reload {
     reason: String,
   },
-}
-
-/// `code` and `sourcemap` follow the rules of `BindingPatchResponse`.
-#[napi(discriminant = "type", object_from_js = false)]
-pub enum BindingLazyChunkResponse {
-  Chunk { code: String, sourcemap: Option<String> },
-  Reload { reason: String },
 }
 
 #[napi(object)]

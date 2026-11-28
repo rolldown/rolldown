@@ -3,7 +3,6 @@ import {
   BindingDevEngine,
   type BindingDevOptions,
   type BindingHmrUpdate,
-  type BindingLazyChunkResponse,
   type BindingModuleInfo,
   type BindingPatchResponse,
   BindingRebuildStrategy,
@@ -184,20 +183,25 @@ export class DevEngine {
   }
 
   /**
-   * Render the patch a client asks for.
+   * Answer a client's pull: an HMR update, a lazy `import()` or a dynamic
+   * `import()` in a pulled module.
    *
-   * @param query - The query string of the client's patch request,
-   * `s=<epoch>&g=<gen>&u=<set>&e=<set>&f=<set>`. Each set is `b` and a
-   * base64url bitset, or `d` and base64url gap varints. Other keys are ignored.
-   * A query longer than the runtime's `maxQueryLength` reaches the dev server
-   * first as the body of `POST <haveUrl()>`, and the request then carries only
+   * @param query - The query string of the client's request,
+   * `s=<epoch>&g=<gen>&u=<set>&l=<set>&e=<set>&f=<set>`. Each set is `b` and a
+   * base64url bitset, or `d` and base64url gap varints. `l` names the targets
+   * of lazy `import()` calls: a route that is not in the module graph yet is
+   * compiled first. Other keys are ignored. A query longer than the runtime's
+   * `maxQueryLength` reaches the dev server first as the body of
+   * `POST <haveUrl()>`, and the request then carries only
    * `t=<token>&n=<nonce>`. The dev server stores the body and passes the stored
    * query here, not the token.
-   * @returns The patch, or `{ type: 'Reload' }` when the client must reload (it
-   * belongs to another engine, its generation is too old to catch up, or the
-   * query is bad). With `sourcemap: true` or `'hidden'`, `sourcemap` is the map
-   * as JSON and `code` has no `sourceMappingURL` comment; the caller serves the
-   * map. With `'inline'`, `code` ends with an inline map.
+   * @returns The payload, or `{ type: 'Reload' }` when the client must reload
+   * (it belongs to another engine, its generation is too old to catch up, or
+   * the query is bad). With `sourcemap: true` or `'hidden'`, `sourcemap` is the
+   * map as JSON and `code` has no `sourceMappingURL` comment; the caller serves
+   * the map. With `'inline'`, `code` ends with an inline map.
+   * @throws The plugin's own error when a lazy route does not compile, since
+   * that compile runs the full plugin pipeline
    */
   async renderPatch(query: string): Promise<BindingPatchResponse> {
     return unwrapBindingResult(await this.#inner.renderPatch(query));
@@ -214,25 +218,5 @@ export class DevEngine {
         shutdownAsyncRuntime();
       }
     }
-  }
-
-  /**
-   * Compile a lazy entry module and return HMR-style patch code.
-   *
-   * This is called when a dynamically imported module is first requested at runtime.
-   * The module was previously stubbed with a proxy, and now we need to compile the
-   * actual module and its dependencies.
-   *
-   * @param moduleId - The absolute file path of the module to compile
-   * @param query - The query string of the client's lazy request, which
-   * describes what the client holds in the format of {@link renderPatch}. A
-   * token is resolved first, as for {@link renderPatch}
-   * @returns The compiled chunk, or `{ type: 'Reload' }` when the client must
-   * reload. `code` and `sourcemap` follow the rules of {@link renderPatch}.
-   * @throws The plugin's own error, since a lazy compile runs the full pipeline and is
-   * where a user plugin most often throws
-   */
-  async compileEntry(moduleId: string, query: string): Promise<BindingLazyChunkResponse> {
-    return unwrapBindingResult(await this.#inner.compileEntry(moduleId, query));
   }
 }

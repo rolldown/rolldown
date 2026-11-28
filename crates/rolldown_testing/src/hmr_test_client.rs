@@ -298,7 +298,7 @@ pub async fn harness_pull(
       generation,
       update: nums(&mut changed_ids.iter()),
       executed: nums(&mut executed.iter().filter(|id| !changed_ids.contains(id))),
-      factories: HmrNumSet::default(),
+      ..ClientHave::default()
     }
     .to_query()
   };

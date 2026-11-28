@@ -4,8 +4,7 @@ use super::Bundler;
 use crate::hmr::hmr_stage::{HmrStage, HmrStageInput};
 #[cfg(feature = "experimental")]
 use rolldown_common::{
-  ClientHave, HmrLazyChunkOutput, HmrPatch, HmrPullResponse, HmrSession, HmrUpdate,
-  SharedHmrSession, WatcherChangeKind,
+  ClientHave, HmrPatch, HmrPullResponse, HmrSession, HmrUpdate, SharedHmrSession, WatcherChangeKind,
 };
 #[cfg(feature = "experimental")]
 use rolldown_error::BuildResult;
@@ -41,42 +40,20 @@ impl Bundler {
       .await
   }
 
-  /// Renders the patch a client asks for. See `HmrStage::render_patch`.
+  /// Answers a client's pull, and compiles the lazy routes it asks for that are not in the graph
+  /// yet. `merged` becomes `true` once such a compile merges into the graph, also when a later
+  /// step fails. See `HmrStage::render_patch`.
   pub async fn render_patch(
     &mut self,
     have: &ClientHave,
+    merged: &mut bool,
   ) -> BuildResult<HmrPullResponse<HmrPatch>> {
     let _activity = crate::utils::build_activity::BuildActivity::enter();
-    let Some(hmr_stage) = self.hmr_stage() else {
+    let lazy_ctx = self.lazy_compilation_context.clone();
+    let Some(mut hmr_stage) = self.hmr_stage() else {
       return Ok(HmrPullResponse::Reload { reason: "no build has run yet".to_owned() });
     };
-    hmr_stage.render_patch(have).await
-  }
-
-  /// Compile a lazy entry module and render the factories the client needs to run it.
-  ///
-  /// Serves a lazy route to a client. A first visit scans the route into the graph; a repeat
-  /// visit renders it from the graph (see internal-docs/lazy-compilation/design.md, "Repeat
-  /// Visits").
-  ///
-  /// `merged` becomes `true` once the compile merges a scan into the graph, also when a later
-  /// step fails. See `HmrStage::compile_lazy_entry`.
-  pub async fn compile_lazy_entry(
-    &mut self,
-    module_id: String,
-    have: &ClientHave,
-    merged: &mut bool,
-  ) -> BuildResult<HmrPullResponse<HmrLazyChunkOutput>> {
-    let _activity = crate::utils::build_activity::BuildActivity::enter();
-    let Some(mut hmr_stage) = self.hmr_stage() else {
-      panic!("Lazy compilation requires at least one bundle to be built first");
-    };
-    hmr_stage.compile_lazy_entry(&module_id, have, merged).await
-  }
-
-  /// The reason the session cannot serve this client, if any.
-  pub fn hmr_reload_reason(&self, have: &ClientHave) -> Option<String> {
-    self.bundle_factory.hmr_session.lock().reload_reason(have)
+    hmr_stage.render_patch(have, lazy_ctx.as_ref(), merged).await
   }
 
   /// Starts a new session with `epoch`. Call it before the first build.

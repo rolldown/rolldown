@@ -1,16 +1,15 @@
 use std::sync::{Arc, atomic::Ordering};
 
 use anyhow::Context;
-use arcstr::ArcStr;
 use async_lock::Mutex;
 use futures::channel::mpsc::unbounded;
 use futures::{FutureExt, future::Shared};
 #[cfg(feature = "testing")]
 use rolldown_common::WatcherChangeKind;
-use rolldown_common::{ClientHave, HmrLazyChunkOutput, HmrPatch, HmrPullResponse};
+use rolldown_common::{ClientHave, HmrPatch, HmrPullResponse};
 use rolldown_error::{BuildResult, ResultExt};
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig};
-use rolldown_utils::{dashmap::FxDashSet, futures::try_spawn};
+use rolldown_utils::futures::try_spawn;
 #[cfg(feature = "testing")]
 use rustc_hash::FxHashSet;
 
@@ -44,7 +43,7 @@ pub struct DevEngine {
   coordinator_sender: CoordinatorSender,
   bundler: Arc<Mutex<Bundler>>,
   /// Shared dev context, kept so out-of-coordinator entry points (e.g.
-  /// `compile_lazy_entry`) can reach `options.on_additional_assets`.
+  /// `render_patch`) can reach `options.on_additional_assets`.
   dev_context: Arc<DevContext>,
   coordinator_state: Mutex<CoordinatorState>,
   /// Live handle to the plugin-facing module infos — the same map plugin contexts read.
@@ -287,9 +286,15 @@ impl DevEngine {
     Ok(())
   }
 
-  /// Renders the patch a client asks for. `query` is the query string of the patch request
-  /// (see `ClientHave::parse_query`), after the dev server resolved a have-set token (see
+  /// Answers a client's pull. `query` is the query string of the request (see
+  /// `ClientHave::parse_query`), after the dev server resolved a have-set token (see
   /// internal-docs/hmr/design.md, "Request size"). A query that does not parse gets a reload.
+  ///
+  /// A pull with lazy routes (`l`) compiles a route that is not in the graph yet. After such a
+  /// compile merged, it delivers the assets the compile emitted, also when a later step fails,
+  /// so they are servable when the payload runs. It tells the coordinator to watch the files the
+  /// compile loaded, and to recover a lost HMR update.
+  /// See internal-docs/lazy-compilation/design.md ("Repeat Visits").
   pub async fn render_patch(&self, query: &str) -> BuildResult<HmrPullResponse<HmrPatch>> {
     self.create_error_if_closed()?;
     self.dev_context.pull_requests.fetch_add(1, Ordering::Relaxed);
@@ -299,103 +304,36 @@ impl DevEngine {
       Ok(have) => have,
       Err(reason) => return Ok(HmrPullResponse::Reload { reason }),
     };
-    bundler.render_patch(&have).await
-  }
-
-  /// Compile a lazy entry module and return compiled code.
-  ///
-  /// Serves a lazy route to a client. A first visit scans the route into the graph; a repeat
-  /// visit renders it from the graph (see internal-docs/lazy-compilation/design.md, "Repeat
-  /// Visits").
-  ///
-  /// # Arguments
-  /// * `proxy_module_id` - The proxy module ID (with ?rolldown-lazy=1 suffix)
-  /// * `query` - The query string of the lazy request, which describes what the client holds
-  ///   (see `ClientHave::parse_query`), after the dev server resolved a have-set token. A query
-  ///   that does not parse gets a reload.
-  ///
-  /// # Errors
-  /// - If the module is not a lazy proxy from an earlier build
-  /// - If the compile fails
-  ///
-  /// # Panics
-  /// - If no build has run yet
-  pub async fn compile_lazy_entry(
-    &self,
-    proxy_module_id: String,
-    query: &str,
-  ) -> BuildResult<HmrPullResponse<HmrLazyChunkOutput>> {
-    self.create_error_if_closed()?;
-    self.dev_context.pull_requests.fetch_add(1, Ordering::Relaxed);
-    let mut bundler = self.bundler.lock().await;
-    let num_count = bundler.hmr_session().lock().num_count();
-    let have = match ClientHave::parse_query(query, num_count) {
-      Ok(have) => have,
-      Err(reason) => return Ok(HmrPullResponse::Reload { reason }),
-    };
-    // Checked before the proxy is marked as fetched, so a client that must reload changes
-    // nothing.
-    if let Some(reason) = bundler.hmr_reload_reason(&have) {
-      return Ok(HmrPullResponse::Reload { reason });
-    }
-
-    // Mark the proxy module as fetched BEFORE compilation.
-    // This changes the content returned by the lazy compilation plugin's load hook
-    // from the empty stub to the fetched template, which imports the real module.
-    if let Some(lazy_ctx) = &bundler.lazy_compilation_context {
-      lazy_ctx.mark_as_fetched(&proxy_module_id);
-    }
-
-    // Compile starting from the proxy module.
-    // The plugin will return new content (fetched template) that imports the real module,
-    // which triggers compilation of the actual module and its dependencies.
     let mut merged = false;
-    let result = bundler.compile_lazy_entry(proxy_module_id.clone(), &have, &mut merged).await;
-
-    // A compile that fails after its merge leaves the route in the graph, and a later visit
-    // serves the route with no scan. So the assets and the watch list of this compile must
-    // still reach the consumer and the coordinator.
-    if result.is_ok() || merged {
-      // Deliver assets emitted while compiling the lazy entry (e.g. an image
-      // imported by the lazy module) before returning the code, so the consumer
-      // can register/serve them before the client requests them.
-      if let Some(on_additional_assets) = self.dev_context.options.on_additional_assets.as_ref() {
-        let mut output = BundleOutput::default();
-        bundler.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
-        if !output.assets.is_empty() {
-          on_additional_assets(output);
-        }
-      }
-
-      // The build output needs no rebuild for the route: pages never load a lazy route from
-      // it, because every lazy `import()` calls `requestLazy`. The next build of any kind
-      // takes the route from the graph. A lost HMR update is the exception: its rebuild
-      // becomes the full build that reloads every client.
-      // See internal-docs/lazy-compilation/design.md ("Repeat Visits").
-      // The compile added the files it loaded to the watch list of the latest build.
-      // A new build can start before the coordinator reads this message, and its list
-      // starts empty, so send this list with the message.
-      // See internal-docs/dev-engine/implementation.md §15.
-      let rebuild = bundler.has_lost_hmr_update();
-      self.notify_module_changed(proxy_module_id, Arc::clone(bundler.watch_files()), rebuild);
+    let result = bundler.render_patch(&have, &mut merged).await;
+    if have.lazy.is_empty() || matches!(result, Ok(HmrPullResponse::Reload { .. })) {
+      return result;
     }
 
-    result
-  }
+    if merged
+      && let Some(on_additional_assets) = self.dev_context.options.on_additional_assets.as_ref()
+    {
+      let mut output = BundleOutput::default();
+      bundler.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
+      if !output.assets.is_empty() {
+        on_additional_assets(output);
+      }
+    }
 
-  /// Notify the coordinator that a lazy compile ran. It always watches the compile's files,
-  /// and queues a rebuild only when `rebuild` is true.
-  fn notify_module_changed(
-    &self,
-    module_id: String,
-    watch_files: Arc<FxDashSet<ArcStr>>,
-    rebuild: bool,
-  ) {
-    let _ = self.coordinator_sender.unbounded_send(CoordinatorMsg::ModuleChanged {
-      module_id,
-      watch_files,
-      rebuild,
-    });
+    // The build output needs no rebuild for the route: pages never load a lazy route from it,
+    // because every lazy `import()` calls `requestLazy`. The next build of any kind takes the
+    // route from the graph. A lost HMR update is the exception: a full build reloads every
+    // client. The scan added the files it loaded to the watch list of the latest build. A new
+    // build can start before the coordinator reads this message, and its list starts empty, so
+    // the message carries this list. See internal-docs/dev-engine/implementation.md §15.
+    let recover_lost_update = bundler.has_lost_hmr_update();
+    if merged || recover_lost_update {
+      let _ = self.coordinator_sender.unbounded_send(CoordinatorMsg::LazyCompiled {
+        watch_files: Arc::clone(bundler.watch_files()),
+        recover_lost_update,
+      });
+    }
+    result
   }
 
   pub async fn close(&self) -> BuildResult<()> {
@@ -554,7 +492,7 @@ mod tests {
   use futures::channel::mpsc::unbounded;
   use rolldown::{BundlerConfig, BundlerOptions};
   #[cfg(feature = "testing")]
-  use rolldown_common::{HmrLazyChunkOutput, HmrPullResponse, HmrUpdate};
+  use rolldown_common::{HmrPatch, HmrPullResponse, HmrUpdate};
   #[cfg(feature = "testing")]
   use rolldown_error::BuildResult;
 
@@ -573,15 +511,6 @@ mod tests {
     );
   }
 
-  /// The query of a client that holds nothing and knows the current generation, like a tab
-  /// that just loaded the latest output.
-  #[cfg(feature = "testing")]
-  async fn new_tab_query(engine: &super::DevEngine) -> String {
-    let bundler = engine.bundler.lock().await;
-    let session = bundler.hmr_session().lock();
-    format!("s={}&g={}", session.epoch(), session.generation())
-  }
-
   #[cfg(feature = "testing")]
   fn expect_payload<T>(response: HmrPullResponse<T>) -> T {
     match response {
@@ -590,16 +519,33 @@ mod tests {
     }
   }
 
-  /// A lazy visit of `proxy` by a tab that holds nothing.
+  /// The query of a lazy `import()` of the module `target` (a stable id) by a client that holds
+  /// nothing and knows the current generation.
   #[cfg(feature = "testing")]
-  async fn visit(engine: &super::DevEngine, proxy: &str) -> BuildResult<HmrLazyChunkOutput> {
-    let query = new_tab_query(engine).await;
-    engine.compile_lazy_entry(proxy.to_owned(), &query).await.map(expect_payload)
+  async fn lazy_query(engine: &super::DevEngine, target: &str) -> String {
+    let bundler = engine.bundler.lock().await;
+    let session = bundler.hmr_session().lock();
+    rolldown_common::ClientHave {
+      epoch: session.epoch(),
+      generation: session.generation(),
+      lazy: rolldown_common::HmrNumSet::from_nums([session
+        .num_of(target)
+        .expect("the rows of the module that imports `target` gave it a number")]),
+      ..Default::default()
+    }
+    .to_query()
+  }
+
+  /// A lazy visit of the module `target` (a stable id) by a tab that holds nothing.
+  #[cfg(feature = "testing")]
+  async fn visit(engine: &super::DevEngine, target: &str) -> BuildResult<HmrPatch> {
+    let query = lazy_query(engine, target).await;
+    engine.render_patch(&query).await.map(expect_payload)
   }
 
   /// A lazy compile adds the files it loads to the watch list of the build it runs
   /// against. A build that starts before the coordinator handles the compile's
-  /// `ModuleChanged` begins with an empty list, and no later build loads those cached
+  /// `LazyCompiled` begins with an empty list, and no later build loads those cached
   /// modules again, so the coordinator must still end up watching them.
   #[cfg(feature = "testing")]
   #[tokio::test]
@@ -644,8 +590,8 @@ mod tests {
     let watched = engine.get_watched_files().await.unwrap();
     assert!(!watched.contains(&lazy) && !watched.contains(&dep), "not loaded before the compile");
 
-    visit(&engine, &format!("{lazy}?rolldown-lazy=1")).await.unwrap();
-    // The compile has sent `ModuleChanged`. The coordinator runs on a runtime worker, so it
+    visit(&engine, "lazy.js").await.unwrap();
+    // The compile has sent `LazyCompiled`. The coordinator runs on a runtime worker, so it
     // can read the message before or after this build replaces the list; the message carries
     // the compile's list, so the files must end up watched in both orders.
     engine.bundler.lock().await.incremental_generate(ScanMode::Partial(vec![])).await.unwrap();
@@ -908,8 +854,15 @@ mod tests {
     }
 
     async fn pull_lazy(&self) {
-      let proxy = lazy_proxy_id(&self.dir);
-      expect_payload(self.engine.compile_lazy_entry(proxy, &Self::client_query()).await.unwrap());
+      let lazy = {
+        let bundler = self.engine.bundler.lock().await;
+        let num = bundler.hmr_session().lock().num_of("lazy.js").unwrap();
+        rolldown_common::HmrNumSet::from_nums([num])
+      };
+      let query =
+        rolldown_common::ClientHave { epoch: 7, generation: 1, lazy, ..Default::default() }
+          .to_query();
+      expect_payload(self.engine.render_patch(&query).await.unwrap());
       self.events.lock().unwrap().push("pull");
     }
 
@@ -1297,7 +1250,7 @@ mod tests {
     let (dir, engine, reported) = lazy_fixture_reported("lazy-first-visit", LAZY_FILES, |_| {});
     engine.run().await.unwrap();
 
-    visit(&engine, &lazy_proxy_id(&dir)).await.unwrap();
+    visit(&engine, "lazy.js").await.unwrap();
     let state = engine.get_bundle_state().await.unwrap();
     let watched = engine.get_watched_files().await.unwrap();
     let builds = reported.builds();
@@ -1320,11 +1273,10 @@ mod tests {
   async fn lazy_repeat_visit_skips_the_scan_and_the_rebuild() {
     let (dir, engine, reported) = lazy_fixture_reported("lazy-repeat-visit", LAZY_FILES, |_| {});
     engine.run().await.unwrap();
-    let proxy = lazy_proxy_id(&dir);
 
-    let first = visit(&engine, &proxy).await.unwrap();
+    let first = visit(&engine, "lazy.js").await.unwrap();
     let resolves_after_first = reported.resolve_calls();
-    let repeat = visit(&engine, &proxy).await.unwrap();
+    let repeat = visit(&engine, "lazy.js").await.unwrap();
     let state_after_repeat = engine.get_bundle_state().await.unwrap();
 
     engine.close().await.unwrap();
@@ -1346,15 +1298,14 @@ mod tests {
     let (dir, engine, reported) =
       lazy_fixture_reported("lazy-retry-first-compile", LAZY_FILES, |_| {});
     engine.run().await.unwrap();
-    let proxy = lazy_proxy_id(&dir);
 
     std::fs::write(dir.join("dep.js"), "export const dep = ;\n").unwrap();
-    let failed = visit(&engine, &proxy).await;
+    let failed = visit(&engine, "lazy.js").await;
     std::fs::write(dir.join("dep.js"), "export const dep = 'fixed';\n").unwrap();
-    let retry = visit(&engine, &proxy).await;
+    let retry = visit(&engine, "lazy.js").await;
     let state_after_retry = engine.get_bundle_state().await.unwrap();
     let resolves_after_retry = reported.resolve_calls();
-    let third = visit(&engine, &proxy).await;
+    let third = visit(&engine, "lazy.js").await;
 
     engine.close().await.unwrap();
     std::fs::remove_dir_all(&dir).unwrap();
@@ -1383,10 +1334,9 @@ mod tests {
       |_| {},
     );
     engine.run().await.unwrap();
-    let proxy = |file: &str| format!("{}?rolldown-lazy=1", dir.join(file).to_string_lossy());
 
-    let failed = visit(&engine, &proxy("b.js")).await;
-    let other = visit(&engine, &proxy("c.js")).await;
+    let failed = visit(&engine, "b.js").await;
+    let other = visit(&engine, "c.js").await;
     let state = engine.get_bundle_state().await.unwrap();
 
     engine.close().await.unwrap();
@@ -1440,14 +1390,13 @@ mod tests {
       },
     );
     engine.run().await.unwrap();
-    let proxy = lazy_proxy_id(&dir);
 
     fail.store(true, Ordering::Relaxed);
-    let failed = visit(&engine, &proxy).await;
+    let failed = visit(&engine, "lazy.js").await;
     let assets_after_failure = reported.assets.lock().unwrap().clone();
     let watched = engine.get_watched_files().await.unwrap();
     fail.store(false, Ordering::Relaxed);
-    let repeat = visit(&engine, &proxy).await;
+    let repeat = visit(&engine, "lazy.js").await;
     let state_after_repeat = engine.get_bundle_state().await.unwrap();
     std::fs::write(dir.join("dep.js"), "export const dep = 2;\n").unwrap();
     engine.ensure_task_with_changed_files(changed(&dir, "dep.js", WatcherChangeKind::Update)).await;
@@ -1487,17 +1436,15 @@ mod tests {
       ],
     );
     engine.run().await.unwrap();
-    let proxy = lazy_proxy_id(&dir);
 
-    visit(&engine, &proxy).await.unwrap();
+    visit(&engine, "lazy.js").await.unwrap();
     std::fs::write(dir.join("other.js"), "export const other = ;\n").unwrap();
     engine
       .ensure_task_with_changed_files(changed(&dir, "other.js", WatcherChangeKind::Update))
       .await;
     let state_after_break = engine.get_bundle_state().await.unwrap();
-    let repeat = visit(&engine, &proxy).await;
-    let second =
-      visit(&engine, &format!("{}?rolldown-lazy=1", dir.join("second.js").to_string_lossy())).await;
+    let repeat = visit(&engine, "lazy.js").await;
+    let second = visit(&engine, "second.js").await;
 
     engine.close().await.unwrap();
     std::fs::remove_dir_all(&dir).unwrap();
@@ -1534,8 +1481,7 @@ mod tests {
       .ensure_task_with_changed_files(changed(&dir, "other.js", WatcherChangeKind::Update))
       .await;
     let state_after_break = engine.get_bundle_state().await.unwrap();
-    let failed =
-      visit(&engine, &format!("{}?rolldown-lazy=1", dir.join("b.js").to_string_lossy())).await;
+    let failed = visit(&engine, "b.js").await;
     // Fixed with no watch event: only the queue can bring `other.js` to the next HMR task.
     std::fs::write(dir.join("other.js"), "export const other = 'fixed';\n").unwrap();
     std::fs::write(dir.join("b.js"), "export const b = 1;\n").unwrap();
@@ -1553,7 +1499,7 @@ mod tests {
   }
 
   /// An HMR update fails after its merge, so it is lost. A repeat visit is served from the
-  /// graph, and its rebuild becomes the full build that reloads every client.
+  /// graph, and the build it queues becomes the full build that reloads every client.
   #[cfg(feature = "testing")]
   #[tokio::test]
   async fn lazy_visit_with_a_lost_update_reloads_every_client() {
@@ -1563,9 +1509,8 @@ mod tests {
     let (dir, engine, reported) =
       lazy_fixture_reported("lazy-visit-lost-update", LAZY_FILES, |_| {});
     engine.run().await.unwrap();
-    let proxy = lazy_proxy_id(&dir);
 
-    visit(&engine, &proxy).await.unwrap();
+    visit(&engine, "lazy.js").await.unwrap();
     // The update merges the edit, and no client receives it.
     std::fs::write(dir.join("dep.js"), "export const dep = 'lost';\n").unwrap();
     {
@@ -1583,7 +1528,7 @@ mod tests {
         .unwrap();
       bundler.lose_hmr_update_for_testing();
     }
-    let repeat = visit(&engine, &proxy).await;
+    let repeat = visit(&engine, "lazy.js").await;
     // Wait for the task that the visit queued.
     engine.ensure_task_with_changed_files(FxIndexMap::default()).await;
     let state_after_visit = engine.get_bundle_state().await.unwrap();
@@ -1598,6 +1543,55 @@ mod tests {
     assert!(!state_after_visit.last_build_errored && !state_after_visit.has_stale_output);
   }
 
+  /// A lazy pull reads the lost-update flag under the bundler lock, so its `LazyCompiled` can
+  /// reach the coordinator after another task already recovered the update. The build it queues
+  /// must not absorb the next edit.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn a_late_lazy_recovery_does_not_absorb_the_next_edit() {
+    use rolldown_common::WatcherChangeKind;
+
+    use crate::types::coordinator_msg::CoordinatorMsg;
+    use rolldown_utils::indexmap::FxIndexMap;
+
+    let (dir, engine, reported) = lazy_fixture_reported("lazy-late-recovery", LAZY_FILES, |_| {});
+    engine.run().await.unwrap();
+    visit(&engine, "lazy.js").await.unwrap();
+
+    {
+      // Hold the lock as a pull does: the task of the first message waits for it, and the second
+      // message and the edit queue up behind that task.
+      let _bundler = engine.bundler.lock().await;
+      for _ in 0..2 {
+        let _ = engine.coordinator_sender.unbounded_send(CoordinatorMsg::LazyCompiled {
+          watch_files: Arc::default(),
+          recover_lost_update: true,
+        });
+      }
+      std::fs::write(dir.join("dep.js"), "export const dep = 2;\n").unwrap();
+      let _ = engine.coordinator_sender.unbounded_send(CoordinatorMsg::WatchEvent(vec![
+        rolldown_fs_watcher::FsEvent::new(dir.join("dep.js"), WatcherChangeKind::Update),
+      ]));
+      // The coordinator handles messages in order, so it handled the ones above when it answers.
+      engine.get_bundle_state().await.unwrap();
+    }
+    for _ in 0..3 {
+      engine.ensure_task_with_changed_files(FxIndexMap::default()).await;
+    }
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    let updates = reported.hmr_updates.lock().unwrap();
+    assert!(
+      updates.iter().any(|update| matches!(
+        update,
+        HmrUpdate::Changed { changed_ids, .. } if changed_ids.iter().any(|id| id == "dep.js")
+      )),
+      "{updates:#?}"
+    );
+  }
+
   /// Deleting a fetched route's file rescans the proxy in the HMR stage, and that scan fails
   /// to resolve the file. The proxy is then queued for a rescan, so the next compile scans and
   /// reports the missing file instead of serving the deleted module from the graph.
@@ -1608,14 +1602,13 @@ mod tests {
 
     let (dir, engine) = lazy_fixture("lazy-repeat-visit-deleted");
     engine.run().await.unwrap();
-    let proxy = lazy_proxy_id(&dir);
 
-    visit(&engine, &proxy).await.unwrap();
+    visit(&engine, "lazy.js").await.unwrap();
     std::fs::remove_file(dir.join("lazy.js")).unwrap();
     engine
       .ensure_task_with_changed_files(changed(&dir, "lazy.js", WatcherChangeKind::Delete))
       .await;
-    let repeat = visit(&engine, &proxy).await;
+    let repeat = visit(&engine, "lazy.js").await;
 
     engine.close().await.unwrap();
     std::fs::remove_dir_all(&dir).unwrap();
@@ -1685,6 +1678,7 @@ mod tests {
       update: nums(&["b.js", "utils.js"]),
       executed: nums(&["main.js", "a.js"]),
       factories: nums(factories),
+      ..ClientHave::default()
     };
     let patch = async |query: String| match engine.render_patch(&query).await.unwrap() {
       HmrPullResponse::Payload(HmrPatch { code, .. }) => code,
@@ -1767,6 +1761,7 @@ mod tests {
       update: nums(&["b.js"]),
       executed: nums(&["main.js"]),
       factories: nums(&["mid.js"]),
+      ..ClientHave::default()
     };
     let HmrPullResponse::Payload(HmrPatch { code, .. }) =
       engine.render_patch(&have.to_query()).await.unwrap()
@@ -1781,14 +1776,24 @@ mod tests {
     std::fs::remove_dir_all(&dir).unwrap();
   }
 
-  /// The lazy endpoint answers like the patch endpoint: a client that must reload gets a
-  /// reload and changes nothing, and a client that is behind gets a catch-up first.
+  /// Whether a visit marked the proxy of `lazy.js` as fetched.
+  #[cfg(feature = "testing")]
+  async fn is_fetched(engine: &super::DevEngine, dir: &std::path::Path) -> bool {
+    let bundler = engine.bundler.lock().await;
+    bundler
+      .lazy_compilation_context
+      .as_ref()
+      .unwrap()
+      .fetched_entries
+      .contains(lazy_proxy_id(dir).as_str())
+  }
+
+  /// A lazy pull answers like any pull: a client that must reload gets a reload and changes
+  /// nothing, and a client that is behind gets a catch-up first.
   #[cfg(feature = "testing")]
   #[tokio::test]
-  async fn compile_lazy_entry_reloads_or_catches_up_the_client() {
-    use rolldown_common::{
-      ClientHave, HmrLazyChunkOutput, HmrNumSet, HmrPullResponse, HmrUpdate, WatcherChangeKind,
-    };
+  async fn a_lazy_pull_reloads_or_catches_up_the_client() {
+    use rolldown_common::{ClientHave, HmrNumSet, HmrPullResponse, HmrUpdate, WatcherChangeKind};
     use rolldown_utils::indexmap::FxIndexMap;
 
     let (dir, engine) = lazy_fixture_with_files(
@@ -1801,34 +1806,30 @@ mod tests {
     );
     engine.set_hmr_epoch_for_testing(7).await;
     engine.run().await.unwrap();
-    let proxy = lazy_proxy_id(&dir);
-    let is_fetched = async || {
-      let bundler = engine.bundler.lock().await;
-      bundler.lazy_compilation_context.as_ref().unwrap().fetched_entries.contains(proxy.as_str())
-    };
     let have = |generation: u32| {
       let bundler = engine.bundler.try_lock().unwrap();
       let session = bundler.hmr_session().lock();
+      let nums =
+        |ids: &[&str]| HmrNumSet::from_nums(ids.iter().map(|id| session.num_of(id).unwrap()));
       ClientHave {
         epoch: 7,
         generation,
-        executed: HmrNumSet::from_nums(
-          ["main.js", "utils.js"].iter().map(|id| session.num_of(id).unwrap()),
-        ),
+        lazy: nums(&["lazy.js"]),
+        executed: nums(&["main.js", "utils.js"]),
         ..ClientHave::default()
       }
     };
 
     let other_engine = ClientHave { epoch: 8, ..have(0) };
-    let response = engine.compile_lazy_entry(proxy.clone(), &other_engine.to_query()).await;
+    let response = engine.render_patch(&other_engine.to_query()).await;
     assert!(matches!(response.unwrap(), HmrPullResponse::Reload { .. }));
-    assert!(!is_fetched().await);
+    assert!(!is_fetched(&engine, &dir).await);
 
     // Generation 1 reloads every client, so generation 0 is too old.
     engine.bundler.lock().await.begin_hmr_full_reload();
-    let response = engine.compile_lazy_entry(proxy.clone(), &have(0).to_query()).await;
+    let response = engine.render_patch(&have(0).to_query()).await;
     assert!(matches!(response.unwrap(), HmrPullResponse::Reload { .. }));
-    assert!(!is_fetched().await);
+    assert!(!is_fetched(&engine, &dir).await);
 
     std::fs::write(dir.join("utils.js"), "export const u = 2;\n").unwrap();
     let update = engine
@@ -1848,10 +1849,7 @@ mod tests {
     assert!(matches!(update, HmrUpdate::Changed { generation: 2, .. }), "{update:?}");
 
     // The client knows generation 1 and missed generation 2.
-    let response = engine.compile_lazy_entry(proxy.clone(), &have(1).to_query()).await;
-    let HmrPullResponse::Payload(HmrLazyChunkOutput { code, .. }) = response.unwrap() else {
-      panic!("expected a lazy chunk");
-    };
+    let code = expect_payload(engine.render_patch(&have(1).to_query()).await.unwrap()).code;
     assert!(
       code.starts_with(
         r#"const __rolldown_payload__ = __rolldown_runtime__.beginPayload(2);
@@ -1860,8 +1858,95 @@ __rolldown_payload__.catchUp([{gen:2,changedIds:["utils.js"],staleIds:["utils.js
       "{code}"
     );
     assert!(code.contains(r#"__rolldown_payload__.registerFactory("lazy.js""#), "{code}");
+    assert!(is_fetched(&engine, &dir).await);
 
     engine.close().await.unwrap();
     std::fs::remove_dir_all(&dir).unwrap();
+  }
+
+  /// The server reads only the numbers it gave out, and looks them up in the graph. A number
+  /// whose module is no longer in the graph gets the not-found error and marks nothing as
+  /// fetched (#9969).
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn a_lazy_pull_of_a_module_not_in_the_graph_fails() {
+    let (dir, engine) = lazy_fixture_with_files(
+      "lazy-not-found",
+      &[
+        ("main.js", "import './gone.js';\nimport('./lazy.js');\n"),
+        ("gone.js", ""),
+        ("lazy.js", ""),
+      ],
+    );
+    engine.run().await.unwrap();
+    let query = lazy_query(&engine, "gone.js").await;
+    // A full build starts the graph again, and the numbers stay.
+    std::fs::write(dir.join("main.js"), "import('./lazy.js');\n").unwrap();
+    engine.trigger_full_build().unwrap();
+    engine.ensure_latest_bundle_output().await.unwrap();
+
+    let response = engine.render_patch(&query).await;
+    let fetched =
+      engine.bundler.lock().await.lazy_compilation_context.as_ref().unwrap().fetched_entries.len();
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    let errors = format!("{:?}", response.expect_err("gone.js is not in the graph"));
+    assert!(errors.contains("Lazy entry module not found in cache. module_id=gone.js"), "{errors}");
+    assert_eq!(fetched, 0);
+  }
+
+  /// A lazy target that a static import already put in the graph is served from the graph. The
+  /// proxy stays a stub.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn a_lazy_pull_of_a_module_in_the_graph_does_not_scan() {
+    let (dir, engine, reported) = lazy_fixture_reported(
+      "lazy-static-target",
+      &[
+        ("main.js", "import './lazy.js';\nimport('./lazy.js');\n"),
+        ("lazy.js", "export const value = 'static-target';\n"),
+      ],
+      |_| {},
+    );
+    engine.run().await.unwrap();
+    let resolves_before = reported.resolve_calls();
+
+    let payload = visit(&engine, "lazy.js").await;
+    let fetched = is_fetched(&engine, &dir).await;
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    let payload = payload.unwrap();
+    assert!(payload.code.contains("static-target"), "{}", payload.code);
+    assert_eq!(reported.resolve_calls(), resolves_before, "the visit scans");
+    assert!(!fetched);
+  }
+
+  /// A failed first scan undoes its mark as fetched. Otherwise the next full build would load the
+  /// fetched template, and the broken route that no page loaded would fail it.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn a_failed_first_lazy_visit_leaves_the_proxy_a_stub() {
+    let (dir, engine) = lazy_fixture_with_files(
+      "lazy-failed-unmark",
+      &[("main.js", "import('./lazy.js');\n"), ("lazy.js", "export const value = ;\n")],
+    );
+    engine.run().await.unwrap();
+
+    let failed = visit(&engine, "lazy.js").await;
+    let fetched = is_fetched(&engine, &dir).await;
+    engine.trigger_full_build().unwrap();
+    engine.ensure_latest_bundle_output().await.unwrap();
+    let state = engine.get_bundle_state().await.unwrap();
+
+    engine.close().await.unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    failed.expect_err("lazy.js is broken");
+    assert!(!fetched);
+    assert!(!state.last_build_errored, "the full build loads the stub");
   }
 }

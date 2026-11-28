@@ -6,7 +6,7 @@ import { page, serverUrl, waitForBuildStable } from '~utils';
 //
 // Two loads of the same build output against the SAME dev engine (only the
 // browser page reloads):
-//   1. cold  — first compile, served through the on-demand `@vite/lazy` response
+//   1. cold  — first compile, served through the on-demand lazy pull
 //   2. warm  — a repeat visit after the reload: the engine already holds the
 //      route and serves it from its graph, with no scan
 //

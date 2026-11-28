@@ -1,4 +1,5 @@
-/// The answer to a client's patch request.
+/// The answer to a client's pull. One pull serves an update, a lazy `import()` and a
+/// `loadDynamic`.
 #[derive(Debug, Clone)]
 pub struct HmrPatch {
   /// Ends with an inline `sourceMappingURL` when `sourcemap` is `Inline`. Has no

@@ -14,8 +14,8 @@ import { getDevWatchOptionsForCi } from './utils/get-dev-watch-options-for-ci.js
  * Browser-platform dev server backed by Vite's full bundle mode
  * (`experimental.bundledDev`).
  *
- * In-memory serving, HMR fan-out, the lazy-bundling endpoint, the error
- * overlay, and the fallback spinner all come from Vite itself. The Vite
+ * In-memory serving, HMR fan-out, the pull route (updates and lazy loads),
+ * the error overlay, and the fallback spinner all come from Vite itself. The Vite
  * checkout at `vite/` (repo root, vitejs/vite `rolldown-canary` rebased onto
  * `main`) resolves `rolldown` to the workspace's `packages/rolldown` via a
  * node_modules symlink swap (see `just setup-vite`; the checkout itself

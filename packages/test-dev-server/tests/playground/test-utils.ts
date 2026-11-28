@@ -203,3 +203,58 @@ function untilBrowserLog(
   page.on('console', handleMsg);
   return promise;
 }
+
+// --- Pull requests -----------------------------------------------------------
+
+/**
+ * The numbers of a module set in a pull query: `b` is a base64url bitset (bit
+ * `n` for number `n`), `d` base64url LEB128 varints of the gaps.
+ */
+export function decodeModuleNumSet(value: string): number[] {
+  const bytes = Buffer.from(value.slice(1), 'base64url');
+  const nums: number[] = [];
+  if (value[0] === 'b') {
+    bytes.forEach((byte, index) => {
+      for (let bit = 0; bit < 8; bit++) {
+        if ((byte >> bit) & 1) nums.push(index * 8 + bit);
+      }
+    });
+    return nums;
+  }
+  let previous = 0;
+  for (let at = 0; at < bytes.length; ) {
+    let gap = 0;
+    for (let shift = 0; ; shift += 7) {
+      const byte = bytes[at++];
+      gap += (byte & 0x7f) * 2 ** shift;
+      if (byte < 0x80) break;
+    }
+    previous += gap;
+    nums.push(previous);
+  }
+  return nums;
+}
+
+/**
+ * The stable ids of the lazy `import()` targets that a pull names in its `l`
+ * set. `query` is the URL of the request, its query string, or the body of its
+ * POST. Session numbers differ between runs, so they are read through the
+ * page's `__rolldown_runtime__`.
+ */
+export async function lazyTargetsOf(query: string): Promise<string[]> {
+  const lazy = new URLSearchParams(query.slice(query.indexOf('?') + 1)).get('l');
+  if (!lazy) return [];
+  const nums = decodeModuleNumSet(lazy);
+  return page.evaluate((nums) => {
+    const ids: string[] = [];
+    for (const [id, num] of (globalThis as any).__rolldown_runtime__.nums) {
+      if (nums.includes(num)) ids.push(id);
+    }
+    return ids;
+  }, nums);
+}
+
+/** Whether `url` is a pull request (an HMR update, a lazy load or a `loadDynamic`). */
+export function isPullUrl(url: string): boolean {
+  return new URL(url).pathname.endsWith('/__rolldown_hmr_patch.js');
+}

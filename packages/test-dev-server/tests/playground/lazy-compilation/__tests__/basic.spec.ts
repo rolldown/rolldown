@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { page, serverUrl, waitForBuildStable } from '~utils';
+import { isPullUrl, lazyTargetsOf, page, serverUrl, waitForBuildStable } from '~utils';
 
 describe('lazy-compilation: basic', () => {
   test('should load lazy module on demand', async () => {
@@ -24,10 +24,13 @@ describe('lazy-compilation: basic', () => {
     await expect.poll(() => page.textContent('#basic-status')).toBe('lazy-loaded');
 
     // 3. The lazy module was fetched on demand, in exactly one request — the
-    // `/@vite/lazy` call that compiles it. Eager bundling would have shipped it
-    // inside the entry and made no request at all; a stub chunk standing in for
-    // it would have made two.
-    const lazyModuleChunks = jsRequests.filter((url) => url.includes('lazy-module'));
-    expect(lazyModuleChunks.length).toBe(1);
+    // pull whose `l` names it, which compiles it. Eager bundling would have
+    // shipped it inside the entry and made no request at all; a stub chunk
+    // standing in for it would have made two. The request names the module by
+    // its number, never by its path.
+    const pulls = jsRequests.filter(isPullUrl);
+    const lazyTargets = await Promise.all(pulls.map(lazyTargetsOf));
+    expect(lazyTargets).toEqual([[expect.stringMatching(/lazy-module\.js$/)]]);
+    expect(jsRequests.filter((url) => url.includes('lazy-module'))).toEqual([]);
   });
 });

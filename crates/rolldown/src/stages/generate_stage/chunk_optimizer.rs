@@ -1,6 +1,7 @@
 use std::{
   cell::{LazyCell, OnceCell},
-  collections::{VecDeque, hash_map::Entry},
+  cmp::Reverse,
+  collections::{BTreeSet, VecDeque, hash_map::Entry},
 };
 
 use arcstr::ArcStr;
@@ -23,10 +24,15 @@ use crate::{
 };
 
 use super::{
-  GenerateStage, chunk_ext::ChunkCreationReason, chunk_ext::ChunkDebugExt,
-  code_splitting::IndexSplittingInfo, compute_cross_chunk_links::chunk_evaluation_order,
+  GenerateStage,
+  chunk_ext::ChunkCreationReason,
+  chunk_ext::ChunkDebugExt,
+  code_splitting::IndexSplittingInfo,
+  compute_cross_chunk_links::chunk_evaluation_order,
   compute_cross_chunk_links::sort_chunk_importees_by,
+  dynamic_already_loaded::{imported_external_side_effects, side_effect_exec_order_range},
   dynamic_entry_namespace::is_pure_dynamic_entry_chunk,
+  reduced_chunk_graph::{ExecOrderRange, widen_exec_order_range},
   simulated_facade_inclusion::include_simulated_facade_namespace,
 };
 
@@ -66,8 +72,27 @@ struct ChunkCandidate {
   /// Whether this chunk needs to be created in the final chunk graph.
   needs_creation: bool,
   dependencies: FxHashSet<ChunkIdx>,
+  /// The subset of `dependencies` the emitted chunk is certain to import: the predicted static
+  /// imports.
+  certain_dependencies: FxHashSet<ChunkIdx>,
   /// Whether any module in this chunk has side effects.
   has_side_effects: bool,
+  side_effect_exec_orders: ExecOrderRange,
+  /// The execution orders, sorted, of the externals with a side effect of their own that the
+  /// chunk imports. They run before its body.
+  external_side_effects: Vec<u32>,
+  /// The chunk this one's modules were merged into, when they were.
+  merged_into: Option<ChunkIdx>,
+}
+
+impl ChunkCandidate {
+  /// The latest side effect that runs when the chunk loads, its imported externals included.
+  fn latest_side_effect(&self) -> Option<u32> {
+    self
+      .side_effect_exec_orders
+      .map(|(_, latest)| latest)
+      .max(self.external_side_effects.last().copied())
+  }
 }
 
 type TempIndexChunks = IndexVec<ChunkIdx, ChunkCandidate>;
@@ -84,6 +109,9 @@ pub struct ChunkOptimizationGraph {
   /// Initial chunks share identical indices; newly-created common chunks
   /// in chunk_graph are registered here so callers can translate.
   chunk_idx_to_temp_chunk_idx: FxHashMap<ChunkIdx, ChunkIdx>,
+  /// The unmerged chunks with side effects of their own, ordered by their latest side effect.
+  /// Filled by `calc_chunk_dependencies`.
+  latest_side_effects: BTreeSet<(u32, ChunkIdx)>,
 }
 
 impl ChunkOptimizationGraph {
@@ -92,6 +120,7 @@ impl ChunkOptimizationGraph {
     chunk_graph: &ChunkGraph,
     bits_to_chunk_idx: &FxHashMap<BitSet, ChunkIdx>,
     module_table: &ModuleTable,
+    own_side_effect_exec_orders: &IndexVec<ModuleIdx, Option<u32>>,
   ) -> Self {
     if !chunk_optimization {
       return Self::default();
@@ -118,7 +147,14 @@ impl ChunkOptimizationGraph {
           modules: item.modules.clone(),
           needs_creation: false,
           dependencies: FxHashSet::default(),
+          certain_dependencies: FxHashSet::default(),
           has_side_effects,
+          side_effect_exec_orders: side_effect_exec_order_range(
+            &item.modules,
+            own_side_effect_exec_orders,
+          ),
+          external_side_effects: vec![],
+          merged_into: None,
         }
       })
       .collect();
@@ -127,7 +163,13 @@ impl ChunkOptimizationGraph {
       bits_to_chunk_idx.iter().map(|(k, v)| (k.clone(), *v)).collect();
     bits_to_chunk_idx.sort_unstable_keys();
 
-    Self { chunks, bits_to_chunk_idx, module_to_chunk, chunk_idx_to_temp_chunk_idx }
+    Self {
+      chunks,
+      bits_to_chunk_idx,
+      module_to_chunk,
+      chunk_idx_to_temp_chunk_idx,
+      latest_side_effects: BTreeSet::default(),
+    }
   }
 
   /// Assigns a module to a temporary chunk based on its reachability bits.
@@ -140,18 +182,28 @@ impl ChunkOptimizationGraph {
     module_idx: ModuleIdx,
     bits: &BitSet,
     module_table: &ModuleTable,
+    own_side_effect_exec_orders: &IndexVec<ModuleIdx, Option<u32>>,
   ) {
     let module_has_side_effects = module_table[module_idx].side_effects().has_side_effects();
+    let side_effect_exec_orders =
+      side_effect_exec_order_range(&[module_idx], own_side_effect_exec_orders);
     if let Some(&chunk_idx) = self.bits_to_chunk_idx.get(bits) {
-      self.chunks[chunk_idx].modules.push(module_idx);
-      self.chunks[chunk_idx].has_side_effects |= module_has_side_effects;
+      let chunk = &mut self.chunks[chunk_idx];
+      chunk.modules.push(module_idx);
+      chunk.has_side_effects |= module_has_side_effects;
+      chunk.side_effect_exec_orders =
+        widen_exec_order_range(chunk.side_effect_exec_orders, side_effect_exec_orders);
       self.module_to_chunk[module_idx] = Some(chunk_idx);
     } else {
       let temp_chunk = ChunkCandidate {
         modules: vec![module_idx],
         needs_creation: true,
         dependencies: FxHashSet::default(),
+        certain_dependencies: FxHashSet::default(),
         has_side_effects: module_has_side_effects,
+        side_effect_exec_orders,
+        external_side_effects: vec![],
+        merged_into: None,
       };
       let chunk_idx = self.chunks.push(temp_chunk);
       self.bits_to_chunk_idx.insert(bits.clone(), chunk_idx);
@@ -164,10 +216,15 @@ impl ChunkOptimizationGraph {
     module_idx: ModuleIdx,
     chunk_idx: ChunkIdx,
     module_table: &ModuleTable,
+    own_side_effect_exec_orders: &IndexVec<ModuleIdx, Option<u32>>,
   ) {
-    self.chunks[chunk_idx].modules.push(module_idx);
-    self.chunks[chunk_idx].has_side_effects |=
-      module_table[module_idx].side_effects().has_side_effects();
+    let chunk = &mut self.chunks[chunk_idx];
+    chunk.modules.push(module_idx);
+    chunk.has_side_effects |= module_table[module_idx].side_effects().has_side_effects();
+    chunk.side_effect_exec_orders = widen_exec_order_range(
+      chunk.side_effect_exec_orders,
+      side_effect_exec_order_range(&[module_idx], own_side_effect_exec_orders),
+    );
     self.module_to_chunk[module_idx] = Some(chunk_idx);
   }
 
@@ -194,9 +251,22 @@ impl ChunkOptimizationGraph {
   /// as a dependency of the current chunk.
   ///
   /// This is similar to Rollup's `addChunkDependenciesAndGetExternalSideEffectAtoms`.
-  pub fn calc_chunk_dependencies(&mut self, metas: &IndexVec<ModuleIdx, LinkingMetadata>) {
+  ///
+  /// `certain_import_targets` names, per module, the static imports emission is certain to
+  /// produce; they fill `certain_dependencies`. It is empty under strict execution order.
+  pub fn calc_chunk_dependencies(
+    &mut self,
+    metas: &IndexVec<ModuleIdx, LinkingMetadata>,
+    certain_import_targets: &IndexVec<ModuleIdx, Vec<ModuleIdx>>,
+    module_table: &ModuleTable,
+    own_side_effect_exec_orders: &IndexVec<ModuleIdx, Option<u32>>,
+  ) {
     for chunk_idx in self.chunks.indices() {
       let modules = std::mem::take(&mut self.chunks[chunk_idx].modules);
+      if !own_side_effect_exec_orders.is_empty() {
+        self.chunks[chunk_idx].external_side_effects =
+          imported_external_side_effects(&modules, module_table, own_side_effect_exec_orders);
+      }
       for module_idx in &modules {
         let module_dependencies = &metas[*module_idx].dependencies;
         for &dep_module_idx in module_dependencies {
@@ -207,9 +277,21 @@ impl ChunkOptimizationGraph {
             }
           }
         }
+        for &dep_module_idx in certain_import_targets.get(*module_idx).into_iter().flatten() {
+          if let Some(dep_chunk_idx) = self.module_to_chunk[dep_module_idx]
+            && dep_chunk_idx != chunk_idx
+          {
+            self.chunks[chunk_idx].certain_dependencies.insert(dep_chunk_idx);
+          }
+        }
       }
       self.chunks[chunk_idx].modules = modules;
     }
+    self.latest_side_effects = self
+      .chunks
+      .iter_enumerated()
+      .filter_map(|(chunk_idx, chunk)| Some((chunk.latest_side_effect()?, chunk_idx)))
+      .collect();
   }
 
   pub fn add_entry_export_dependencies(&mut self, chunk_idx: ChunkIdx, targets: &[ModuleIdx]) {
@@ -271,6 +353,56 @@ impl ChunkOptimizationGraph {
     false
   }
 
+  /// Whether merging all of `source_chunk_idxs` into `target_chunk_idx` together creates a cycle:
+  /// a path that leaves the merged chunks and comes back to one of them. Their edges between each
+  /// other become internal.
+  pub fn group_merge_creates_cycle(
+    &self,
+    source_chunk_idxs: &[ChunkIdx],
+    target_chunk_idx: ChunkIdx,
+  ) -> bool {
+    let is_merged =
+      |chunk_idx: ChunkIdx| chunk_idx == target_chunk_idx || source_chunk_idxs.contains(&chunk_idx);
+    let mut queue: VecDeque<ChunkIdx> = std::iter::once(target_chunk_idx)
+      .chain(source_chunk_idxs.iter().copied())
+      .flat_map(|chunk_idx| self.chunks[chunk_idx].dependencies.iter().copied())
+      .map(|chunk_idx| self.merged_representative(chunk_idx))
+      .filter(|&chunk_idx| !is_merged(chunk_idx))
+      .collect();
+    let mut visited = FxHashSet::default();
+    while let Some(chunk_idx) = queue.pop_front() {
+      let chunk_idx = self.merged_representative(chunk_idx);
+      if is_merged(chunk_idx) {
+        return true;
+      }
+      if visited.insert(chunk_idx) {
+        queue.extend(self.chunks[chunk_idx].dependencies.iter().copied());
+      }
+    }
+    false
+  }
+
+  /// The first target whose held-back merges can all go together, as the set of their sources, or
+  /// an empty set. One group at a time: a group's merges change what the next group's check sees.
+  pub fn find_group_merge(
+    &self,
+    held_back_merges: impl Iterator<Item = (ChunkIdx, ChunkIdx)>,
+  ) -> FxHashSet<ChunkIdx> {
+    let mut sources_by_target: FxIndexMap<ChunkIdx, Vec<ChunkIdx>> = FxIndexMap::default();
+    for (source_chunk_idx, target_chunk_idx) in held_back_merges {
+      sources_by_target.entry(target_chunk_idx).or_default().push(source_chunk_idx);
+    }
+    sources_by_target
+      .into_iter()
+      .find(|(target_chunk_idx, source_chunk_idxs)| {
+        source_chunk_idxs.len() > 1
+          && !self.merge_runs_side_effects_late(source_chunk_idxs, *target_chunk_idx)
+          && !self.group_merge_creates_cycle(source_chunk_idxs, *target_chunk_idx)
+      })
+      .map(|(_, source_chunk_idxs)| source_chunk_idxs.into_iter().collect())
+      .unwrap_or_default()
+  }
+
   /// Returns true if `from` can transitively reach `to` through the dependency graph.
   pub fn is_reachable(&self, from: ChunkIdx, to: ChunkIdx) -> bool {
     let mut queue: VecDeque<ChunkIdx> = self.chunks[from].dependencies.iter().copied().collect();
@@ -299,18 +431,156 @@ impl ChunkOptimizationGraph {
     target_chunk_idx: ChunkIdx,
     source_chunk_idx: ChunkIdx,
   ) {
-    let source = &self.chunks[source_chunk_idx];
+    let source = &mut self.chunks[source_chunk_idx];
     let source_has_side_effects = source.has_side_effects;
-    let source_dependencies = std::mem::take(&mut self.chunks[source_chunk_idx].dependencies);
+    let source_side_effect_exec_orders = source.side_effect_exec_orders;
+    source.merged_into = Some(target_chunk_idx);
+    let source_dependencies = std::mem::take(&mut source.dependencies);
+    let source_certain_dependencies = std::mem::take(&mut source.certain_dependencies);
     for dep_chunk_idx in source_dependencies {
       // Don't add self-reference
       if dep_chunk_idx != target_chunk_idx {
         self.chunks[target_chunk_idx].dependencies.insert(dep_chunk_idx);
       }
     }
+    for dep_chunk_idx in source_certain_dependencies {
+      if dep_chunk_idx != target_chunk_idx {
+        self.chunks[target_chunk_idx].certain_dependencies.insert(dep_chunk_idx);
+      }
+    }
     // Remove self-reference if it exists (source might have depended on target)
     self.chunks[target_chunk_idx].dependencies.remove(&target_chunk_idx);
-    self.chunks[target_chunk_idx].has_side_effects |= source_has_side_effects;
+    self.chunks[target_chunk_idx].certain_dependencies.remove(&target_chunk_idx);
+    if let Some(latest) = self.chunks[source_chunk_idx].latest_side_effect() {
+      self.latest_side_effects.remove(&(latest, source_chunk_idx));
+    }
+    let source_external_side_effects =
+      std::mem::take(&mut self.chunks[source_chunk_idx].external_side_effects);
+    let target = &mut self.chunks[target_chunk_idx];
+    target.has_side_effects |= source_has_side_effects;
+    if let Some(latest) = target.latest_side_effect() {
+      self.latest_side_effects.remove(&(latest, target_chunk_idx));
+    }
+    target.side_effect_exec_orders =
+      widen_exec_order_range(target.side_effect_exec_orders, source_side_effect_exec_orders);
+    if !source_external_side_effects.is_empty() {
+      target.external_side_effects.extend(source_external_side_effects);
+      target.external_side_effects.sort_unstable();
+      target.external_side_effects.dedup();
+    }
+    if let Some(latest) = target.latest_side_effect() {
+      self.latest_side_effects.insert((latest, target_chunk_idx));
+    }
+  }
+
+  /// Whether merging all of `source_chunk_idxs` into `target_chunk_idx` together runs a side effect
+  /// of one of them late: the same check as `ReducedChunkGraph::runs_side_effects_late`, with
+  /// `dependencies` for the closure and `certain_dependencies` for the exemption. The sources run
+  /// in the target's body in execution order, so they cannot run late against each other.
+  pub fn merge_runs_side_effects_late(
+    &self,
+    source_chunk_idxs: &[ChunkIdx],
+    target_chunk_idx: ChunkIdx,
+  ) -> bool {
+    source_chunk_idxs.iter().any(|&source_chunk_idx| {
+      self.merge_runs_source_side_effects_late(
+        source_chunk_idx,
+        source_chunk_idxs,
+        target_chunk_idx,
+      )
+    })
+  }
+
+  fn merge_runs_source_side_effects_late(
+    &self,
+    source_chunk_idx: ChunkIdx,
+    source_chunk_idxs: &[ChunkIdx],
+    target_chunk_idx: ChunkIdx,
+  ) -> bool {
+    let Some((earliest_side_effect, _)) = self.chunks[source_chunk_idx].side_effect_exec_orders
+    else {
+      return false;
+    };
+    let is_merged =
+      |chunk_idx: ChunkIdx| chunk_idx == target_chunk_idx || source_chunk_idxs.contains(&chunk_idx);
+    let receivers = || std::iter::once(target_chunk_idx).chain(source_chunk_idxs.iter().copied());
+    // Only a chunk with a later side effect can be in the way, so the walk is skipped when there
+    // is none besides the merged chunks themselves and they import no later external.
+    let in_the_way = (earliest_side_effect.saturating_add(1), ChunkIdx::from_raw(0))..;
+    if receivers().all(|chunk_idx| {
+      self.chunks[chunk_idx]
+        .external_side_effects
+        .last()
+        .is_none_or(|&latest_external| latest_external <= earliest_side_effect)
+    }) && !self
+      .latest_side_effects
+      .range(in_the_way)
+      .any(|&(_, chunk_idx)| !is_merged(chunk_idx))
+    {
+      return false;
+    }
+    let already_before = self.certainly_loaded_before(source_chunk_idx);
+    let externals_before: FxHashSet<u32> = std::iter::once(source_chunk_idx)
+      .chain(already_before.iter().copied())
+      .flat_map(|chunk_idx| self.chunks[chunk_idx].external_side_effects.iter().copied())
+      .collect();
+    let imports_late_external = |chunk_idx: ChunkIdx| {
+      self.chunks[chunk_idx]
+        .external_side_effects
+        .iter()
+        .any(|&order| order > earliest_side_effect && !externals_before.contains(&order))
+    };
+    // What the source imports itself ran before it already. What the target and the other
+    // sources import, externals included, now runs before the target's body too.
+    let new_importers = || receivers().filter(|&chunk_idx| chunk_idx != source_chunk_idx);
+    if new_importers().any(imports_late_external) {
+      return true;
+    }
+    let mut visited = FxHashSet::default();
+    let mut stack: Vec<ChunkIdx> = new_importers()
+      .flat_map(|chunk_idx| self.chunks[chunk_idx].dependencies.iter().copied())
+      .collect();
+    while let Some(chunk_idx) = stack.pop() {
+      let chunk_idx = self.merged_representative(chunk_idx);
+      if is_merged(chunk_idx) || !visited.insert(chunk_idx) {
+        continue;
+      }
+      if !already_before.contains(&chunk_idx)
+        && self.chunks[chunk_idx]
+          .side_effect_exec_orders
+          .is_some_and(|(_, latest_side_effect)| latest_side_effect > earliest_side_effect)
+      {
+        return true;
+      }
+      if imports_late_external(chunk_idx) {
+        return true;
+      }
+      stack.extend(self.chunks[chunk_idx].dependencies.iter().copied());
+    }
+    false
+  }
+
+  /// The chunks, `chunk_idx` excluded, that its certain imports load before it.
+  fn certainly_loaded_before(&self, chunk_idx: ChunkIdx) -> FxHashSet<ChunkIdx> {
+    let mut reached = FxHashSet::default();
+    let mut stack: Vec<ChunkIdx> =
+      self.chunks[chunk_idx].certain_dependencies.iter().copied().collect();
+    while let Some(next) = stack.pop() {
+      let next = self.merged_representative(next);
+      if next != chunk_idx && reached.insert(next) {
+        stack.extend(self.chunks[next].certain_dependencies.iter().copied());
+      }
+    }
+    reached
+  }
+
+  /// A dependency edge keeps pointing at a chunk after its modules were merged away; the chunk
+  /// that holds them now is what that edge loads.
+  fn merged_representative(&self, mut chunk_idx: ChunkIdx) -> ChunkIdx {
+    while let Some(target_chunk_idx) = self.chunks[chunk_idx].merged_into {
+      chunk_idx = target_chunk_idx;
+    }
+    chunk_idx
   }
 }
 
@@ -445,67 +715,117 @@ impl GenerateStage<'_> {
       })
       .collect();
 
-    // Second pass: apply chunk assignments
+    let strict_execution_order = self.options.is_strict_execution_order_enabled();
     let can_skip_reexport_chunks = self.options.input.len() > 1
       && self.options.has_manual_code_splitting_groups()
       && self.options.inline_common_chunks.is_none()
-      && !self.options.is_strict_execution_order_enabled();
+      && !strict_execution_order;
     let pending_entry_merge_targets = if can_skip_reexport_chunks {
       assignments.iter().filter_map(|(_, _, _, target)| *target).collect()
     } else {
       FxHashSet::default()
     };
-    for (bits, temp_chunk_idx, chunk_idxs, merge_target) in assignments {
-      // Check if merging would create a circular dependency
-      let merge_target = match merge_target {
-        Some(target_chunk_idx)
-          if temp_chunk_graph
-            .would_create_circular_dependency(temp_chunk_idx, target_chunk_idx) =>
-        {
-          // Skip merge if it would create a circular dependency
-          None
-        }
-        other => other,
-      };
+    // Second pass: apply chunk assignments. A merge that would run a side effect late is held
+    // back, since the chunk in its way may merge into the same target later. Held-back merges are
+    // retried in descending order of their earliest side effect, so a chunk in the way, whose side
+    // effects run later, usually goes before the ones it blocks. Once a round merges nothing, the
+    // held-back merges into one target are tried together, since each can be all that keeps the
+    // others late. When that merges nothing either, the held-back chunks are created in their
+    // original order.
+    let mut pending: Vec<_> = assignments.into_iter().enumerate().collect();
+    let mut hold_back_late_merges = true;
+    let mut group_merges = FxHashSet::default();
+    loop {
+      let mut merged_this_round = false;
+      let mut held_back = vec![];
+      for (position, (bits, temp_chunk_idx, chunk_idxs, merge_target)) in pending {
+        // The order check runs first: it is cheaper, and a held-back merge would repeat the cycle
+        // check in every round. A merge of a group passed both checks for the whole group.
+        let merge_target = match merge_target {
+          Some(target_chunk_idx) if group_merges.remove(&temp_chunk_idx) => Some(target_chunk_idx),
+          Some(target_chunk_idx)
+            if !strict_execution_order
+              && temp_chunk_graph
+                .merge_runs_side_effects_late(&[temp_chunk_idx], target_chunk_idx) =>
+          {
+            if hold_back_late_merges {
+              held_back.push((position, (bits, temp_chunk_idx, chunk_idxs, merge_target)));
+              continue;
+            }
+            None
+          }
+          Some(target_chunk_idx)
+            if temp_chunk_graph
+              .would_create_circular_dependency(temp_chunk_idx, target_chunk_idx) =>
+          {
+            // Skip merge if it would create a circular dependency
+            None
+          }
+          other => other,
+        };
 
-      let temp_modules = &temp_chunk_graph.chunks[temp_chunk_idx].modules;
-      if merge_target.is_none()
-        && can_skip_reexport_chunks
-        && let [forwarder_idx] = *temp_modules.as_slice()
-        && let Some(owner) = self.find_redundant_reexport_target(
-          forwarder_idx,
+        let temp_modules = &temp_chunk_graph.chunks[temp_chunk_idx].modules;
+        if merge_target.is_none()
+          && can_skip_reexport_chunks
+          && let [forwarder_idx] = *temp_modules.as_slice()
+          && let Some(owner) = self.find_redundant_reexport_target(
+            forwarder_idx,
+            &bits,
+            chunk_graph,
+            &pending_entry_merge_targets,
+            used_symbol_refs,
+          )
+          && let Some(owner_temp_idx) = temp_chunk_graph.to_temp_idx(owner)
+          && !temp_chunk_graph.is_reachable(owner_temp_idx, temp_chunk_idx)
+        {
+          continue;
+        }
+        match self.assign_modules_to_chunk(
+          merge_target,
+          &chunk_idxs,
+          temp_modules,
           &bits,
           chunk_graph,
-          &pending_entry_merge_targets,
-          used_symbol_refs,
-        )
-        && let Some(owner_temp_idx) = temp_chunk_graph.to_temp_idx(owner)
-        && !temp_chunk_graph.is_reachable(owner_temp_idx, temp_chunk_idx)
-      {
-        continue;
-      }
-      match self.assign_modules_to_chunk(
-        merge_target,
-        &chunk_idxs,
-        temp_modules,
-        &bits,
-        chunk_graph,
-        bits_to_chunk,
-        input_base,
-      ) {
-        ChunkAssignment::Merged(target_chunk_idx) => {
-          // Merge chunk dependencies immediately after successful merge
-          temp_chunk_graph.merge_chunk_dependencies(target_chunk_idx, temp_chunk_idx);
-          // The merged modules can make the chunk of a dynamic entry export bindings that its
-          // entry module does not export. `find_leaking_dynamic_entry_namespaces` checks it.
-          if is_pure_dynamic_entry_chunk(&chunk_graph.chunk_table[target_chunk_idx]) {
-            dynamic_entry_merge_targets.insert(target_chunk_idx);
+          bits_to_chunk,
+          input_base,
+        ) {
+          ChunkAssignment::Merged(target_chunk_idx) => {
+            // Merge chunk dependencies immediately after successful merge
+            temp_chunk_graph.merge_chunk_dependencies(target_chunk_idx, temp_chunk_idx);
+            merged_this_round = true;
+            // The merged modules can make the chunk of a dynamic entry export bindings that its
+            // entry module does not export. `find_leaking_dynamic_entry_namespaces` checks it.
+            if is_pure_dynamic_entry_chunk(&chunk_graph.chunk_table[target_chunk_idx]) {
+              dynamic_entry_merge_targets.insert(target_chunk_idx);
+            }
+          }
+          ChunkAssignment::Created(new_chunk_id) => {
+            temp_chunk_graph.register_chunk_graph_index(new_chunk_id, temp_chunk_idx);
           }
         }
-        ChunkAssignment::Created(new_chunk_id) => {
-          temp_chunk_graph.register_chunk_graph_index(new_chunk_id, temp_chunk_idx);
-        }
       }
+      if held_back.is_empty() {
+        break;
+      }
+      if !merged_this_round && hold_back_late_merges {
+        group_merges = temp_chunk_graph.find_group_merge(held_back.iter().filter_map(
+          |(_, (_, temp_chunk_idx, _, merge_target))| Some((*temp_chunk_idx, (*merge_target)?)),
+        ));
+        merged_this_round = !group_merges.is_empty();
+      }
+      if merged_this_round {
+        // The members of a group go first, so no other merge lands between them.
+        held_back.sort_by_key(|(_, (_, temp_chunk_idx, _, _))| {
+          (
+            !group_merges.contains(temp_chunk_idx),
+            Reverse(temp_chunk_graph.chunks[*temp_chunk_idx].side_effect_exec_orders),
+          )
+        });
+      } else {
+        held_back.sort_by_key(|(position, _)| *position);
+      }
+      hold_back_late_merges = merged_this_round;
+      pending = held_back;
     }
   }
 

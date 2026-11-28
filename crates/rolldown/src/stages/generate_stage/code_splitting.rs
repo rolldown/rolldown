@@ -940,6 +940,38 @@ impl GenerateStage<'_> {
     }
   }
 
+  /// The edges of the merge's chunk graph: the imports of each chunk's modules, and those of the
+  /// empty entry facades.
+  fn calc_temp_chunk_dependencies(
+    &self,
+    temp_chunk_graph: &mut ChunkOptimizationGraph,
+    chunk_graph: &ChunkGraph,
+    used_symbol_refs_builder: &UsedSymbolRefsBuilder,
+    predicted_import_targets: &IndexVec<ModuleIdx, Vec<ModuleIdx>>,
+    own_side_effect_exec_orders: &IndexVec<ModuleIdx, Option<u32>>,
+  ) {
+    temp_chunk_graph.calc_chunk_dependencies(
+      &self.link_output.metas,
+      predicted_import_targets,
+      &self.link_output.module_table,
+      own_side_effect_exec_orders,
+    );
+    // Empty entry facades also import the owners of their exported bindings.
+    // See internal-docs/code-splitting/implementation.md#common-module-merging-try_insert_common_module_to_exist_chunk.
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      if let Some(entry_module_idx) = chunk.entry_module_idx() {
+        let mut targets = vec![];
+        self.entry_export_service_targets(
+          entry_module_idx,
+          used_symbol_refs_builder.view(),
+          true,
+          &mut targets,
+        );
+        temp_chunk_graph.add_entry_export_dependencies(chunk_idx, &targets);
+      }
+    }
+  }
+
   async fn split_chunks(
     &mut self,
     index_splitting_info: &mut IndexSplittingInfo,
@@ -993,6 +1025,8 @@ impl GenerateStage<'_> {
     // The pure dynamic entry chunks that a merge gives modules of other entries. See
     // `find_leaking_dynamic_entry_namespaces`.
     let mut dynamic_entry_merge_targets = FxHashSet::default();
+    let (own_side_effect_exec_orders, mut predicted_import_targets) =
+      self.side_effect_order_inputs(allow_merge_common_chunks || allow_avoid_redundant_chunk_loads);
     // See internal-docs/code-splitting/implementation.md#dynamic-already-loaded-analysis.
     if allow_avoid_redundant_chunk_loads {
       let entries_len: u32 = self
@@ -1009,6 +1043,8 @@ impl GenerateStage<'_> {
         entries_len,
         used_symbol_refs_builder,
         &mut dynamic_entry_merge_targets,
+        &own_side_effect_exec_orders,
+        &mut predicted_import_targets,
       );
     }
     self.extract_standalone_runtime_chunk(
@@ -1036,6 +1072,7 @@ impl GenerateStage<'_> {
       chunk_graph,
       bits_to_chunk,
       &self.link_output.module_table,
+      &own_side_effect_exec_orders,
     );
 
     // 1. Assign modules to corresponding chunks
@@ -1071,6 +1108,7 @@ impl GenerateStage<'_> {
             normal_module.idx,
             chunk_id,
             &self.link_output.module_table,
+            &own_side_effect_exec_orders,
           );
         }
       } else if allow_merge_common_chunks {
@@ -1078,6 +1116,7 @@ impl GenerateStage<'_> {
           normal_module.idx,
           bits,
           &self.link_output.module_table,
+          &own_side_effect_exec_orders,
         );
       } else {
         let mut chunk =
@@ -1097,21 +1136,13 @@ impl GenerateStage<'_> {
     }
 
     if allow_merge_common_chunks {
-      temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas);
-      // Empty entry facades also import the owners of their exported bindings.
-      // See internal-docs/code-splitting/implementation.md#common-module-merging-try_insert_common_module_to_exist_chunk.
-      for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
-        if let Some(entry_module_idx) = chunk.entry_module_idx() {
-          let mut targets = vec![];
-          self.entry_export_service_targets(
-            entry_module_idx,
-            used_symbol_refs_builder.view(),
-            true,
-            &mut targets,
-          );
-          temp_chunk_graph.add_entry_export_dependencies(chunk_idx, &targets);
-        }
-      }
+      self.calc_temp_chunk_dependencies(
+        &mut temp_chunk_graph,
+        chunk_graph,
+        used_symbol_refs_builder,
+        &predicted_import_targets,
+        &own_side_effect_exec_orders,
+      );
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,
         bits_to_chunk,

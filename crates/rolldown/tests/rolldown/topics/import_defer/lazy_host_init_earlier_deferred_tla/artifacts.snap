@@ -1,0 +1,79 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import defer` is currently lowered to a normal import, because an import in `b.js` comes after a deferred import of a module that has a top-level `await` or imports one. This changes execution timing because side effects run immediately instead of when the deferred import is first used. `experimental.importDefer` does not keep the deferred evaluation in this build yet.
+   ╭─[ b.js:1:1 ]
+   │
+ 1 │ import defer * as wait from './wait.js';
+   │ ────────────────────┬───────────────────  
+   │                     ╰───────────────────── The deferred phase is removed here.
+───╯
+
+```
+
+## UNSUPPORTED_FEATURE
+
+```text
+[UNSUPPORTED_FEATURE] `import defer` is currently lowered to a normal import, because an import in `b.js` comes after a deferred import of a module that has a top-level `await` or imports one. This changes execution timing because side effects run immediately instead of when the deferred import is first used. `experimental.importDefer` does not keep the deferred evaluation in this build yet.
+   ╭─[ main.js:2:1 ]
+   │
+ 2 │ import defer * as ns from './a.js';
+   │ ─────────────────┬─────────────────  
+   │                  ╰─────────────────── The deferred phase is removed here.
+───╯
+
+```
+
+# Assets
+
+## a.js
+
+```js
+// a.js
+globalThis.__initLog.push("a");
+
+```
+
+## b.js
+
+```js
+import "./wait.js";
+import "./a.js";
+import "./y.js";
+// b.js
+globalThis.__initLog.push("b");
+
+```
+
+## main.js
+
+```js
+import "./b.js";
+import "./a.js";
+// main.js
+const read = () => "a";
+export { read };
+
+```
+
+## wait.js
+
+```js
+// wait.js
+globalThis.__initLog.push("wait");
+await Promise.resolve();
+
+```
+
+## y.js
+
+```js
+// y.js
+globalThis.__yRan = true;
+
+```

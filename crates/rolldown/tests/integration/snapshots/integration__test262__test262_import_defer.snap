@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration/test262.rs
 expression: snapshot
 ---
-Summary: 237 passed, 15 failed, 252 total
+Summary: 239 passed, 13 failed, 252 total
 
 ---
 
@@ -18,7 +18,7 @@ Reason: `experimental.importDefer` does not support `import.defer()` yet, so Rol
 Expected: success
 Actual:
 Runtime error: Failed to import test module: Test262Error {
-  message: 'Static and dynamic deferred import of the same module gives the same object Expected SameValue(«[object Module]», «[object Module]») to be true'
+  message: 'Static and dynamic deferred import of the same module gives the same object Expected SameValue(«[object Deferred Module]», «[object Module]») to be true'
 }
 ---
 
@@ -83,19 +83,15 @@ Actual: Runtime execution succeeded
 ---
 
 # language/import/import-defer/errors/module-throws/defer-import-after-evaluation.js
-Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with an `import()` yet, so Rolldown lowers `import defer` to a normal import
+Result: PASS
 Expected: success
-Actual:
-Async test failed: Test262Error: [object Object]
+Actual: Async test completed successfully
 ---
 
 # language/import/import-defer/errors/module-throws/third-party-evaluation-after-defer-import.js
-Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with an `import()` yet, so Rolldown lowers `import defer` to a normal import
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: { someError: 'the error from throws_FIXTURE' }
+Actual: Async test completed successfully
 ---
 
 # language/import/import-defer/errors/module-throws/trigger-evaluation.js
@@ -133,7 +129,7 @@ Actual: Runtime execution succeeded
 
 # language/import/import-defer/evaluation-top-level-await/async-cycle-dependency-of-deferred-module/main.js
 Result: FAIL
-Reason: `experimental.importDefer` does not keep the deferred evaluation in a build with an `import()` yet, so Rolldown lowers `import defer` to a normal import
+Reason: Rolldown does not support preserving TLA semantics perfectly
 Expected: success
 Actual:
 Async test failed: Test262Error: $DONE was not called

@@ -1,0 +1,87 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## deferred.js
+
+```js
+import { t as require_x } from "./x.js";
+
+// deferred.js
+var import_x;
+const name = "deferred";
+
+export { name };
+```
+
+## eager.js
+
+```js
+import { t as require_x } from "./x.js";
+
+// eager.js
+var import_x = require_x();
+const name = "eager";
+
+export { name };
+```
+
+## x.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// x.cjs
+var require_x = /* @__PURE__ */ __commonJSMin(((exports) => {
+	globalThis.__events.push("x");
+}));
+
+export { require_x as t };
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### deferred.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+const require_x$1 = require("./x.js");
+
+// deferred.js
+var import_x;
+const name = "deferred";
+
+exports.name = name;
+```
+
+### eager.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+const require_x$1 = require("./x.js");
+
+// eager.js
+var import_x = require_x$1.require_x();
+const name = "eager";
+
+exports.name = name;
+```
+
+### x.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// x.cjs
+var require_x = /* @__PURE__ */ __commonJSMin(((exports) => {
+	globalThis.__events.push("x");
+}));
+
+Object.defineProperty(exports, "require_x", {
+  enumerable: true,
+  get: function () {
+    return require_x;
+  }
+});
+```

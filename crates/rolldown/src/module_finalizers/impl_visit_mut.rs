@@ -571,6 +571,13 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           },
           self,
         ));
+        // The chunk runs this deferred module at its place, as the build without `import defer`
+        // does (`ChunkGraph::deferred_modules_run_at_load`).
+        // See internal-docs/import-defer/implementation.md ("Run at load").
+        if self.ctx.chunk_graph.deferred_modules_run_at_load.contains(&self.ctx.idx) {
+          let init_call = self.wrapped_esm_init_call_expr(self.ctx.idx, SPAN, false, true);
+          program.body.push(Statement::new_expression_statement(SPAN, init_call, self));
+        }
       }
       ModuleWrapperMode::None => {
         program.body.splice(0..0, declaration_of_module_namespace_object);

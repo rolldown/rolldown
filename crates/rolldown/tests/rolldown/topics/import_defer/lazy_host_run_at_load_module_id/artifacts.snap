@@ -1,0 +1,43 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { t as init_a } from "./w.js";
+// b.js
+init_a();
+globalThis.log.push("b");
+// main.js
+const read = () => (init_a(), "a");
+export { read };
+
+```
+
+## other.js
+
+```js
+import { t as init_a } from "./w.js";
+// other.js
+init_a();
+globalThis.log.push("other");
+
+```
+
+## w.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+function init_a() {
+	return (init_a = __esmMin((() => {
+		globalThis.log.push("a");
+	})))();
+}
+init_a();
+// w.js
+globalThis.log.push("w");
+export { init_a as t };
+
+```

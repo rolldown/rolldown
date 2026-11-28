@@ -1,0 +1,8 @@
+{
+  "_comment": "The test file names have no hash. The source file `a.init.js` is a dynamic entry, so its chunk is `a.init.js`. The init chunk of the lazy host `a.js` gets a number instead: `a2.init.js`. The init chunks get their names after all other chunks, so a source chunk keeps its name.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

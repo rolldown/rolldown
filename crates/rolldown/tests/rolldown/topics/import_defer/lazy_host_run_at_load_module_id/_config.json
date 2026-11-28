@@ -1,0 +1,19 @@
+{
+  "_comment": "Two entries, so `a.js` and `w.js` are in one common chunk. `main.js` defers `a.js`, and `b.js` imports `a.js`, then `w.js`. With `chunkModulesOrder: 'moduleId'`, the chunk does not move `w.js` to a new chunk. Thus the chunk runs `a.js` at load, at its place, as the build without `import defer` does.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "other",
+        "import": "./other.js"
+      }
+    ],
+    "experimental": {
+      "importDefer": true,
+      "chunkModulesOrder": "moduleId"
+    }
+  }
+}

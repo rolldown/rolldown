@@ -179,6 +179,8 @@ impl GenerateStage<'_> {
         )
         .await?;
     }
+    // Before the merge of the external import symbols: it groups the symbols by chunk.
+    self.split_modules_before_deferred_imports(&mut chunk_graph);
     self.merge_external_import_symbols(&chunk_graph, used_symbol_refs_builder);
 
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
@@ -1644,7 +1646,11 @@ pub(super) fn module_namespace_is_referenced(
     // The kept deferred namespace object (`x_deferred`) reads the namespace, also when the module
     // has no exports. The finalizer declares it with the namespace.
     true
-  } else if matches!(module.exports_kind, ExportsKind::Esm) {
+  } else if matches!(module.exports_kind, ExportsKind::Esm)
+    // A module of a deferred closure is wrapped as ESM also with no exports, and `import()` of it
+    // can read its namespace from its chunk (`ChunkGraph::lazy_dynamic_defer_host`).
+    || (meta.wrapped_by_import_defer && matches!(module.exports_kind, ExportsKind::None))
+  {
     reason.contains(ModuleNamespaceIncludedReason::Unknown)
       || (reason.contains(ModuleNamespaceIncludedReason::ReExportDynamicExports)
         && meta.has_dynamic_exports)

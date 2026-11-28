@@ -1,0 +1,95 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { n as value, t as init_other } from "./other2.js";
+// main.js
+globalThis.log.push("main");
+const read = () => (init_other(), value);
+export { read };
+
+```
+
+## other.js
+
+```js
+import { n as value, t as init_other } from "./other2.js";
+init_other();
+export { value };
+
+```
+
+## other2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// other.js
+var value;
+function init_other() {
+	return (init_other = __esmMin((() => {
+		globalThis.log.push("other");
+		value = "other";
+	})))();
+}
+export { value as n, init_other as t };
+
+```
+
+# Variant: [strict_execution_order: true]
+
+## Assets
+
+### main.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as value, t as init_other } from "./other2.js";
+// main.js
+var read;
+function init_main() {
+	return (init_main = __esmMin((() => {
+		globalThis.log.push("main");
+		read = () => (init_other(), value);
+	})))();
+}
+init_main();
+export { read };
+
+```
+
+### other.js
+
+```js
+import { n as value, t as init_other } from "./other2.js";
+init_other();
+export { value };
+
+```
+
+### other2.js
+
+```js
+import { t as __esmMin } from "./rolldown-runtime.js";
+// other.js
+var value;
+function init_other() {
+	return (init_other = __esmMin((() => {
+		globalThis.log.push("other");
+		value = "other";
+	})))();
+}
+export { value as n, init_other as t };
+
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __esmMin as t };
+
+```

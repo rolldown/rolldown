@@ -3,6 +3,7 @@ use crate::utils::chunk::render_chunk_exports::{
   get_chunk_export_names_with_ctx, render_wrapped_entry_chunk,
 };
 use crate::{
+  chunk_graph::LazyHostInits,
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
   utils::chunk::render_chunk_exports::render_chunk_exports,
@@ -13,7 +14,7 @@ use rolldown_common::{AddonRenderContext, ExportsKind, OutputExports, StaticImpo
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{
   concat_string,
-  ecmascript::{escape_non_ascii, to_ecma_string_literal},
+  ecmascript::{escape_non_ascii, property_access_str_with_ascii, to_ecma_string_literal},
 };
 use rustc_hash::FxHashMap;
 
@@ -156,10 +157,27 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
           }
           s.push_str(&require_path_str);
         } else {
+          let binding = &ctx.chunk.require_binding_names_for_other_chunks[&exporter_id];
           s.push_str("const ");
-          s.push_str(&ctx.chunk.require_binding_names_for_other_chunks[&exporter_id]);
+          s.push_str(binding);
           s.push_str(" = ");
           s.push_str(&require_path_str);
+        }
+        // The chunk initializes deferred modules right after this `require()`, before the later
+        // imports run (`plan_lazy_host_inits`). The host is this chunk or an earlier import, so
+        // its binding exists here.
+        // See internal-docs/import-defer/implementation.md ("Init after the import of a host").
+        for init in ctx.chunk_graph.lazy_host_inits.inits_after(ctx.chunk_idx, exporter_id) {
+          if let Some(name) = LazyHostInits::init_export_name(
+            ctx.chunk_graph,
+            ctx.link_output,
+            init.host,
+            init.module,
+          ) {
+            let binding = &ctx.chunk.require_binding_names_for_other_chunks[&init.host];
+            s.push_str(&property_access_str_with_ascii(binding, &name, ascii_only));
+            s.push_str("();\n");
+          }
         }
       }
       Either::Right((importee_idx, named_imports)) => {

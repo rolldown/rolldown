@@ -26,7 +26,7 @@ pub struct PrepareBuildContext {
   pub warnings: Vec<BuildDiagnostic>,
 }
 
-fn has_non_recursive_dependency_capture(options: &ManualCodeSplittingOptions) -> bool {
+pub fn has_non_recursive_dependency_capture(options: &ManualCodeSplittingOptions) -> bool {
   match &options.groups {
     Some(groups) if !groups.is_empty() => groups.iter().any(|group| {
       !group

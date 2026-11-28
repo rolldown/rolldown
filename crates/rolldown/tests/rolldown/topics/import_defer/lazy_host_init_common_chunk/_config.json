@@ -1,0 +1,14 @@
+{
+  "_comment": "`r.js` defers `a.js`, and `b.js` imports it eagerly, so `a.js` is in a common chunk. That chunk does not run `a.js` at load. `b.js` imports `a.js`, then `y.js`, so native ESM runs `a` before `y`. The chunk of `b.js` initializes `a.js` right after its import of the common chunk.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "cjs",
+      "format": "cjs"
+    }
+  ]
+}

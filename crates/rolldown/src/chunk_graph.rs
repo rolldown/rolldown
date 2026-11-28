@@ -1,13 +1,16 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
+use oxc_str::CompactStr;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx,
-  PostChunkOptimizationOperation, RuntimeHelper, SymbolRef,
+  PostChunkOptimizationOperation, RuntimeHelper, SymbolRef, WrapKind,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{SharedOptions, stages::link_stage::LinkStageOutput};
+use crate::{
+  SharedOptions, stages::link_stage::LinkStageOutput, types::linking_metadata::LinkingMetadata,
+};
 
 #[derive(Debug)]
 pub struct ChunkGraph {
@@ -42,6 +45,82 @@ pub struct ChunkGraph {
   ///
   /// We use the second approach to avoid the overhead of re-indexing at the cost of some extra memory.
   pub post_chunk_optimization_operations: FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
+  /// The deferred modules that a chunk initializes at its imports
+  /// (`GenerateStage::plan_lazy_host_inits`).
+  pub lazy_host_inits: LazyHostInits,
+  /// The deferred modules (`import defer`) that their common chunk runs at load, at their place in
+  /// the chunk, as the build without `import defer` does. The chunk cannot move its later modules
+  /// out (`GenerateStage::split_modules_before_deferred_imports`), and an init after the import of
+  /// the chunk would run after them. These modules have no host (`deferred_init_host`).
+  pub deferred_modules_run_at_load: FxHashSet<ModuleIdx>,
+}
+
+/// An eager importer of a deferred module that runs when its chunk loads. The host of the module
+/// does not run it at load (`ChunkGraph::deferred_init_host`). The chunk of the importer
+/// initializes the module right after one of its imports, instead of a call in the body of the
+/// importer: after the import of the host, or after a later import of an earlier module of the
+/// importer.
+/// See internal-docs/import-defer/implementation.md ("Init after the import of a host").
+#[derive(Debug, Default)]
+pub struct LazyHostInits {
+  /// For each chunk, the modules that it initializes, in the order of its `static_imports`. The
+  /// modules after one import are in the order of the imports of the importer.
+  pub inits_by_chunk: FxHashMap<ChunkIdx, Vec<LazyHostInit>>,
+  /// `(importer, module)`: the importer does not call the init of the module in its body. An
+  /// importer with an order wrapper keeps its call.
+  pub moved_calls: FxHashSet<(ModuleIdx, ModuleIdx)>,
+  /// `esm` output: the host and the module of each init chunk. An init chunk has no modules. It
+  /// imports `init_x` from the host and calls it (`import { init_x } from "./x.js"; init_x();`),
+  /// and each chunk of `inits_by_chunk` imports it right after the import of `LazyHostInit::after`.
+  pub host_by_init_chunk: FxHashMap<ChunkIdx, (ChunkIdx, ModuleIdx)>,
+}
+
+/// A deferred module that a chunk initializes right after one of its imports.
+#[derive(Debug, Clone, Copy)]
+pub struct LazyHostInit {
+  /// The chunk after whose import the init runs: the host, or a later import of an earlier module
+  /// of the importer.
+  pub after: ChunkIdx,
+  /// The host of the module.
+  pub host: ChunkIdx,
+  pub module: ModuleIdx,
+}
+
+impl LazyHostInits {
+  /// The modules that the chunk initializes right after its import of `after_idx`, in order.
+  pub fn inits_after(
+    &self,
+    chunk_idx: ChunkIdx,
+    after_idx: ChunkIdx,
+  ) -> impl Iterator<Item = LazyHostInit> + '_ {
+    self
+      .inits_by_chunk
+      .get(&chunk_idx)
+      .into_iter()
+      .flatten()
+      .filter(move |init| init.after == after_idx)
+      .copied()
+  }
+
+  /// The name under which the host exports the init function of the module (`init_x`, or a short
+  /// name with `minifyInternalExports`).
+  pub fn init_export_name(
+    chunk_graph: &ChunkGraph,
+    link_output: &LinkStageOutput,
+    host_idx: ChunkIdx,
+    module_idx: ModuleIdx,
+  ) -> Option<CompactStr> {
+    let host = &chunk_graph.chunk_table[host_idx];
+    let symbol_db = &link_output.symbol_db;
+    let wrapper_ref = symbol_db.canonical_ref_for(link_output.metas[module_idx].wrapper_ref?);
+    host
+      .exports_to_other_chunks
+      .iter()
+      .filter(|(export_ref, _)| symbol_db.canonical_ref_for(**export_ref) == wrapper_ref)
+      .flat_map(|(_, names)| names)
+      .min_by(|a, b| a.as_str().cmp(b.as_str()))
+      .cloned()
+  }
 }
 
 impl ChunkGraph {
@@ -57,6 +136,8 @@ impl ChunkGraph {
       common_chunk_exported_facade_chunk_namespace: FxHashMap::default(),
       common_chunk_preserve_export_names_modules: FxHashMap::default(),
       post_chunk_optimization_operations: FxHashMap::default(),
+      lazy_host_inits: LazyHostInits::default(),
+      deferred_modules_run_at_load: FxHashSet::default(),
     }
   }
 
@@ -96,6 +177,56 @@ impl ChunkGraph {
   pub fn chunk_is_live(&self, chunk_idx: ChunkIdx) -> bool {
     self.post_chunk_optimization_operations.get(&chunk_idx)
       != Some(&PostChunkOptimizationOperation::Removed)
+  }
+
+  /// For an ESM module of a deferred closure (`import defer`), the dynamic entry chunk that holds
+  /// the code of the module. The tail of this chunk does not call `init_x()`: another chunk can
+  /// import this chunk statically for a deferred access, and the load must not evaluate the
+  /// module. Each `import()` of the module then calls `init_x()` itself. `None` when the module is
+  /// in a chunk with no such tail (a common chunk behind a facade) or in a user-defined or emitted
+  /// entry chunk, whose tail must stay.
+  pub fn lazy_dynamic_defer_host(
+    &self,
+    module_idx: ModuleIdx,
+    meta: &LinkingMetadata,
+  ) -> Option<ChunkIdx> {
+    if !meta.wrapped_by_import_defer || !matches!(meta.wrap_kind(), WrapKind::Esm) {
+      return None;
+    }
+    let chunk_idx = self.module_to_chunk[module_idx]?;
+    match self.chunk_table[chunk_idx].kind {
+      ChunkKind::EntryPoint { module, meta: chunk_meta, .. }
+        if module == module_idx
+          && !chunk_meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk) =>
+      {
+        Some(chunk_idx)
+      }
+      _ => None,
+    }
+  }
+
+  /// For an ESM module of a deferred closure, the chunk that holds the code of the module and does
+  /// not run the module when it loads: the lazy host of the module (`lazy_dynamic_defer_host`), or
+  /// a common chunk. A common chunk has no tail, so only an init function runs the module. An eager
+  /// importer in another chunk calls `init_x()` in its body
+  /// (`GenerateStage::plan_lazy_host_inits`). `None` for a module that its common chunk runs at
+  /// load (`deferred_modules_run_at_load`).
+  pub fn deferred_init_host(
+    &self,
+    module_idx: ModuleIdx,
+    meta: &LinkingMetadata,
+  ) -> Option<ChunkIdx> {
+    if !meta.wrapped_by_import_defer
+      || !matches!(meta.wrap_kind(), WrapKind::Esm)
+      || self.deferred_modules_run_at_load.contains(&module_idx)
+    {
+      return None;
+    }
+    let chunk_idx = self.module_to_chunk[module_idx]?;
+    if matches!(self.chunk_table[chunk_idx].kind, ChunkKind::Common) {
+      return Some(chunk_idx);
+    }
+    self.lazy_dynamic_defer_host(module_idx, meta)
   }
 
   /// The module is assigned to a live chunk that still contains it.

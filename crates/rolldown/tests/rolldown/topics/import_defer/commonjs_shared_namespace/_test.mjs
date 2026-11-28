@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { after, before, getB, one, results, two } from './dist/main.js';
+import { after, before, getB, loadOther, results } from './dist/main.js';
 
 // The unwrapped importers in one chunk share one deferred namespace object of `x.cjs` for each
 // interop mode, and one namespace for the static accesses. With `strictExecutionOrder`, the
@@ -15,7 +15,8 @@ assert.deepStrictEqual(results, {
   wrappedFoo: 'foo',
 });
 assert.deepStrictEqual(after, ['x']);
-// The entry exports two of the shared objects. The first object of the group (`b.js`) is the
-// object of both exports. The `cjs` variant reads each object through its export name.
-assert.strictEqual(one === getB(), shared);
-assert.strictEqual(two === one, shared);
+const other = await loadOther();
+// Another chunk imports two of the shared objects, and the first object of the group (`b.js`)
+// stays in its chunk. The `cjs` variant reads each object through its export name.
+assert.strictEqual(other.getOne() === getB(), shared);
+assert.strictEqual(other.getTwo() === other.getOne(), shared);

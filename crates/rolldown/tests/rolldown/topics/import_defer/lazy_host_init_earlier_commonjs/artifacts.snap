@@ -1,0 +1,160 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## _virtual/_rolldown/runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+export { __commonJSMin, __esmMin, __toESM };
+
+```
+
+## _virtual/a.init.js
+
+```js
+import { init_a } from "../a.js";
+init_a();
+
+```
+
+## a.js
+
+```js
+import { __esmMin } from "./_virtual/_rolldown/runtime.js";
+function init_a() {
+	return (init_a = __esmMin((() => {
+		globalThis.__initLog.push("a");
+	})))();
+}
+export { init_a };
+
+```
+
+## b.js
+
+```js
+import "./_virtual/_rolldown/runtime.js";
+import { require_x } from "./x.js";
+import "./a.js";
+import "./_virtual/a.init.js";
+import "./y.js";
+require_x();
+globalThis.__initLog.push("b:1");
+
+```
+
+## main.js
+
+```js
+import "./b.js";
+import { init_a } from "./a.js";
+// main.js
+const read = () => (init_a(), "a");
+export { read };
+
+```
+
+## x.js
+
+```js
+import { __commonJSMin } from "./_virtual/_rolldown/runtime.js";
+// x.cjs
+var require_x = /* @__PURE__ */ __commonJSMin(((exports) => {
+	globalThis.__initLog.push("x");
+	exports.p = 1;
+}));
+export default require_x();
+export { require_x };
+
+```
+
+## y.js
+
+```js
+// y.js
+globalThis.__ySawA = globalThis.__initLog.includes("a");
+
+```
+
+# Variant: cjs: [format: Cjs]
+
+## Assets
+
+### _virtual/_rolldown/runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+exports.__commonJSMin = __commonJSMin;
+exports.__esmMin = __esmMin;
+exports.__toESM = __toESM;
+
+```
+
+### a.js
+
+```js
+const require_runtime = require("./_virtual/_rolldown/runtime.js");
+function init_a() {
+	return (init_a = require_runtime.__esmMin((() => {
+		globalThis.__initLog.push("a");
+	})))();
+}
+Object.defineProperty(exports, "init_a", {
+	enumerable: true,
+	get: function() {
+		return init_a;
+	}
+});
+
+```
+
+### b.js
+
+```js
+require("./_virtual/_rolldown/runtime.js");
+const require_x$1 = require("./x.js");
+require("./a.js").init_a();
+require("./y.js");
+require_x$1.default;
+globalThis.__initLog.push("b:1");
+
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+require("./b.js");
+const require_a = require("./a.js");
+// main.js
+const read = () => (require_a.init_a(), "a");
+exports.read = read;
+
+```
+
+### x.js
+
+```js
+// x.cjs
+var require_x = /* @__PURE__ */ require("./_virtual/_rolldown/runtime.js").__commonJSMin(((exports) => {
+	globalThis.__initLog.push("x");
+	exports.p = 1;
+}));
+Object.defineProperty(exports, "default", {
+	enumerable: true,
+	get: function() {
+		return require_x();
+	}
+});
+
+```
+
+### y.js
+
+```js
+// y.js
+globalThis.__ySawA = globalThis.__initLog.includes("a");
+
+```

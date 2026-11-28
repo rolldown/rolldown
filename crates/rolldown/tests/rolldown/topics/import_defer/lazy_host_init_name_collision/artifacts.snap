@@ -1,0 +1,91 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.init.js
+
+```js
+// a.init.js
+globalThis.__initLog.push("a.init source");
+const tag = "source";
+export { tag };
+
+```
+
+## a.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// a.js
+var a_exports = /* @__PURE__ */ __exportAll({ a: () => "a" });
+var a;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		globalThis.__initLog.push("a");
+		a = "a";
+	})))();
+}
+export { a, init_a as n, a_exports as t };
+
+```
+
+## a2.init.js
+
+```js
+import { n as init_a } from "./a.js";
+init_a();
+
+```
+
+## b.js
+
+```js
+import "./a.js";
+import "./a2.init.js";
+import "./y.js";
+// b.js
+globalThis.__initLog.push("b");
+const v = "b";
+export { v };
+
+```
+
+## main.js
+
+```js
+// main.js
+const access = async () => {
+	const source = await import("./a.init.js");
+	const b = await import("./b.js");
+	const r = await import("./r.js");
+	const a = await import("./a.js").then((n) => (n.n(), n.t));
+	await import("./y.js");
+	return [
+		source.tag,
+		b.v,
+		r.read(),
+		a.a
+	].join(",");
+};
+export { access };
+
+```
+
+## r.js
+
+```js
+import { n as init_a } from "./a.js";
+// r.js
+const read = () => (init_a(), "a");
+export { read };
+
+```
+
+## y.js
+
+```js
+// y.js
+globalThis.__initLog.push("y");
+
+```

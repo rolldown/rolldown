@@ -1,0 +1,25 @@
+{
+  "_comment": "Two entries, so `x.cjs` is in a chunk that both entries can load. `deferred.js` has an unread `import defer` of `x.cjs`, and `eager.js` imports `x.cjs` for its side effect, with no interop. A deferred import statement does not reference `__toESM`: only an access or an escape does. Thus no chunk has `__toESM`. `minify` stays off, so that the helper keeps its name for the check in `_test.mjs`. The `cjs` variant checks the `cjs` output.",
+  "config": {
+    "input": [
+      {
+        "name": "deferred",
+        "import": "./deferred.js"
+      },
+      {
+        "name": "eager",
+        "import": "./eager.js"
+      }
+    ],
+    "minify": false,
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "cjs",
+      "format": "cjs"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "_comment": "Two entries, so the build has more than one chunk. `first.js` reads `a` through a star barrel in a deferred closure. `b.js` is a star target that the barrel re-exports, and the entry `other` imports it. `b.js` must initialize at the first deferred access, after the top level of `main.js` sets `state.value = 3`, as in native V8 (`--js-defer-import-eval`). The entry `other` must not run at startup. The `export *` statement keeps its eval flag with code splitting, because the init of a star target in another chunk is not restored for an excluded statement. Thus this output must stay as it is when tree shaking of deferred closures changes.",
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "other",
+        "import": "./other.js"
+      }
+    ],
+    "treeshake": {
+      "moduleSideEffects": false
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

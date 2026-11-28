@@ -1,0 +1,15 @@
+{
+  "_comment": "`b.js` imports the CommonJS module `x.cjs`, then the lazy host `a.js`, then `y.js`. Native ESM runs `x`, `a`, `y`. In `esm` output, the file of `x.cjs` runs `x` at load, so the chunk of `b.js` initializes `a.js` right after its import of the host. In `cjs` output, `b.js` runs `x` in its body, at the read of the `default` export, so `x` cannot run before `a`. The chunk still initializes `a.js` right after its import, as the build without `import defer` does, so that `a` runs before `y`.",
+  "config": {
+    "preserveModules": true,
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "cjs",
+      "format": "cjs"
+    }
+  ]
+}

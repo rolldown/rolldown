@@ -1,0 +1,73 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a1.init.js
+
+```js
+import { n as init_a1 } from "./a2.js";
+init_a1();
+
+```
+
+## a2.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+function init_a1() {
+	return (init_a1 = __esmMin((() => {
+		globalThis.log.push("a1");
+	})))();
+}
+function init_a2() {
+	return (init_a2 = __esmMin((() => {
+		globalThis.log.push("a2");
+	})))();
+}
+export { init_a1 as n, init_a2 as t };
+
+```
+
+## main.js
+
+```js
+import { n as init_a1, t as init_a2 } from "./a2.js";
+import "./a1.init.js";
+import "./w.js";
+// b.js
+init_a2();
+globalThis.log.push("b");
+// main.js
+const read = () => (init_a1(), "a1") + (init_a2(), "a2");
+export { read };
+
+```
+
+## other.js
+
+```js
+import { n as init_a1, t as init_a2 } from "./a2.js";
+// other.js
+init_a1();
+init_a2();
+globalThis.log.push("other");
+
+```
+
+## third.js
+
+```js
+import "./w.js";
+// third.js
+globalThis.log.push("third");
+
+```
+
+## w.js
+
+```js
+// w.js
+globalThis.log.push("w");
+
+```

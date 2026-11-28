@@ -1,0 +1,7 @@
+{
+  "expectError": true,
+  "config": {
+    "entryFilenames": "",
+    "sourcemap": "File"
+  }
+}

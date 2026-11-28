@@ -44,6 +44,9 @@ pub enum CoordinatorMsg {
     /// The watch list of the build the lazy compile ran against. It holds the files
     /// the compile loaded. See `DevEngine::compile_lazy_entry`.
     watch_files: Arc<FxDashSet<ArcStr>>,
+    /// Whether a lost HMR update is pending. Then the coordinator queues a `Rebuild`, and the
+    /// task upgrades it to a full build that reloads every client (`BundlingTask::run_inner`).
+    rebuild: bool,
   },
   Close,
 }

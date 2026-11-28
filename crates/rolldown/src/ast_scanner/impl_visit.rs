@@ -198,6 +198,17 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
       }
     }
     self.result.directive_range = program.directives.iter().map(GetSpan::span).collect();
+    // A reference that is still here was visited before its binding was declared, e.g. in a
+    // closure above `const mod = await import('mod')`, so its usage is unknown.
+    let info = &mut self.dynamic_import_usage_info;
+    for reference_id in info.dynamic_import_binding_reference_id.drain() {
+      let symbol_id = self.result.symbol_ref_db.scoping().get_reference(reference_id).symbol_id();
+      if let Some(rec_idx) =
+        symbol_id.and_then(|id| info.dynamic_import_binding_to_import_record_idx.get(&id))
+      {
+        info.dynamic_import_exports_usage.insert(*rec_idx, DynamicImportExportsUsage::Complete);
+      }
+    }
     self.result.dynamic_import_rec_exports_usage =
       std::mem::take(&mut self.dynamic_import_usage_info.dynamic_import_exports_usage);
     if self.result.ecma_view_meta.contains(EcmaViewMeta::Eval) {
@@ -301,9 +312,11 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
     } else {
       // No import record - either @vite-ignore or non-static dynamic import
       self.current_stmt_info.meta.insert(StmtInfoMeta::NonStaticDynamicImport);
-      // Its options still reach the output, where a legacy `assert` key becomes `with`.
-      if let Some(span) = expr.options.as_ref().and_then(assert_key_span) {
-        self.warn_deprecated_import_assertion(span);
+      if let Some(Expression::ObjectExpression(options)) = &expr.options
+        && last_import_option(options, "with").is_none()
+        && let Some(assertion) = last_import_option(options, "assert")
+      {
+        self.warn_deprecated_import_assertion(assertion.key.span());
       }
     }
     walk_js::walk_import_expression(self, expr);
@@ -331,6 +344,11 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
               .and_then(|(span, name)| Some((span, name.as_str()?)))
             {
               // `exports.test = ...`
+              if id.span.source_text(self.immutable_ctx.source) == "exports"
+                && let Some(name) = self.literal_cjs_export(node)
+              {
+                self.result.cjs_literal_export_names.insert(name);
+              }
               let exported_symbol =
                 self.result.symbol_ref_db.create_facade_root_symbol_ref(export_name);
 
@@ -355,13 +373,20 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
           }
         }
         // `module.exports.test` is also considered as commonjs keyword
-        Expression::StaticMemberExpression(member_expr) => {
-          if let Expression::Identifier(ref id) = member_expr.object {
+        Expression::StaticMemberExpression(module_exports) => {
+          if let Expression::Identifier(ref id) = module_exports.object {
             if id.name == "module"
-              && member_expr.property.name == "exports"
+              && module_exports.property.name == "exports"
               && self.is_global_identifier_reference(id)
             {
               self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
+              if id.span.source_text(self.immutable_ctx.source) == "module"
+                && module_exports.span.start == id.span.start
+                && module_exports.property.span.source_text(self.immutable_ctx.source) == "exports"
+                && let Some(name) = self.literal_cjs_export(node)
+              {
+                self.result.cjs_literal_export_names.insert(name);
+              }
             }
           }
         }
@@ -954,20 +979,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       );
       return ImportAttributes::default();
     };
-    let Some((keyword, with)) = options.properties.iter().find_map(|property| {
-      let ast::ObjectPropertyKind::ObjectProperty(property) = property else { return None };
-      let name = property.key.literal_name()?;
-      (name == "with" || name == "assert").then_some((name, property))
-    }) else {
+    let attributes = last_import_option(options, "with").or_else(|| {
+      let assertion = last_import_option(options, "assert")?;
+      self.warn_deprecated_import_assertion(assertion.key.span());
+      Some(assertion)
+    });
+    let Some(attributes) = attributes else {
       return ImportAttributes::default();
     };
-    if keyword == "assert" {
-      self.warn_deprecated_import_assertion(with.key.span());
-    }
-    let Expression::ObjectExpression(with) = &with.value else {
+    let Expression::ObjectExpression(with) = &attributes.value else {
       self.warn_invalid_import_attribute(
         InvalidImportAttributeKind::DynamicImportOptions,
-        with.value.span(),
+        attributes.value.span(),
       );
       return ImportAttributes::default();
     };
@@ -1022,13 +1045,16 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 }
 
-/// The span of a legacy `assert` key in the options of `import()`.
-fn assert_key_span(options: &Expression) -> Option<Span> {
-  let Expression::ObjectExpression(options) = options else { return None };
-  options.properties.iter().find_map(|property| {
-    let ast::ObjectPropertyKind::ObjectProperty(property) = property else { return None };
-    property.key.is_specific_literal_name("assert").then(|| property.key.span())
-  })
+fn last_import_option<'a, 'ast>(
+  options: &'a ast::ObjectExpression<'ast>,
+  name: &str,
+) -> Option<&'a ast::ObjectProperty<'ast>> {
+  options
+    .properties
+    .iter()
+    .rev()
+    .filter_map(ast::ObjectPropertyKind::as_property)
+    .find(|property| property.key.is_specific_static_name(name))
 }
 
 fn is_function_or_class(kind: AstKind) -> bool {

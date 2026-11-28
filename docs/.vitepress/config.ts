@@ -104,6 +104,10 @@ const sidebarForPlugins: DefaultTheme.SidebarItem[] = [
         link: '/builtin-plugins/esm-external-require.md',
       },
       {
+        text: 'builtin:inject',
+        link: '/builtin-plugins/inject.md',
+      },
+      {
         text: 'builtin:replace',
         link: '/builtin-plugins/replace.md',
       },

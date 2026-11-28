@@ -298,6 +298,8 @@ meaning of a resolved close promise.
 
 Build errors do **not** stop the watcher. On error, `event('ERROR')` is emitted with the error details and a `result` handle. The watcher continues watching — when the user fixes the error and saves, a rebuild triggers.
 
+When build error handling completes every `closeBundle` hook, closing the result skips those hooks and leaves the shared driver state intact. The next build clears stale driver state before it starts. At shutdown the watch task clears its last driver after closing the bundler, even if an event result still holds the handle. The coordinator then drops its watch tasks, and the binding releases the watcher's option callbacks. If a hook fails during build error handling, the first close of the result starts the hook sequence again.
+
 ## Plugin Hooks
 
 All watch-related hooks are **blocking** — the coordinator awaits their completion. This matches Rollup.

@@ -168,20 +168,6 @@ export function parseCliArguments(): NormalizedCliOptions & {
     delete parsedOptions[short];
   }
 
-  // Prototype pollution guard
-  for (const key of Object.keys(parsedOptions)) {
-    if (
-      key === '__proto__' ||
-      key === 'constructor' ||
-      key === 'prototype' ||
-      key.startsWith('__proto__.') ||
-      key.startsWith('constructor.') ||
-      key.startsWith('prototype.')
-    ) {
-      delete parsedOptions[key];
-    }
-  }
-
   // Unknown option detection + warning
   const unknownKeys = Object.keys(parsedOptions).filter((k) => !knownKeys.has(k));
 

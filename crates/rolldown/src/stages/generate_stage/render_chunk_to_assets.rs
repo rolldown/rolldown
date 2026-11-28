@@ -111,6 +111,10 @@ impl GenerateStage<'_> {
           output.push(Output::Chunk(Arc::new(OutputChunk {
             name: rendered_chunk.name.clone(),
             filename,
+            immutable: ecma_meta
+              .preliminary_filename
+              .hash_placeholder()
+              .is_some_and(|placeholders| !placeholders.is_empty()),
             code,
             is_entry: rendered_chunk.is_entry,
             is_dynamic_entry: rendered_chunk.is_dynamic_entry,
@@ -128,6 +132,7 @@ impl GenerateStage<'_> {
         InstantiationKind::Sourcemap(sourcemap_meta) => {
           output.push(Output::Asset(Arc::new(OutputAsset {
             filename,
+            immutable: false,
             source: code,
             original_file_names: sourcemap_meta.original_file_names,
             names: sourcemap_meta.names,
@@ -215,6 +220,7 @@ impl GenerateStage<'_> {
               resolved_paths,
               inline_state: &self.inline_state,
               carried_renders,
+              hoisted_keep_names: &self.hoisted_keep_names,
             };
             EcmaGenerator::instantiate_chunk(&mut ecma_ctx).await
           }
@@ -354,12 +360,13 @@ pub fn set_emitted_chunk_preliminary_filenames(
   file_emitter: &SharedFileEmitter,
   chunk_graph: &ChunkGraph,
 ) {
+  let reference_ids_by_file = chunk_graph.emitted_chunk_reference_ids_by_file();
   let emitted_chunk_info = chunk_graph
     .chunk_table
     .chunks
     .iter_enumerated()
     .filter_map(|(idx, chunk)| {
-      chunk_graph.chunk_idx_to_reference_ids.get(&idx).map(|reference_ids| {
+      reference_ids_by_file.get(&idx).map(|reference_ids| {
         reference_ids.iter().map(|reference_id| EmittedChunkInfo {
           reference_id: reference_id.clone(),
           filename: chunk
@@ -380,11 +387,12 @@ fn set_emitted_chunk_filenames(
   assets: &AssetVec,
   chunk_graph: &ChunkGraph,
 ) {
+  let reference_ids_by_file = chunk_graph.emitted_chunk_reference_ids_by_file();
   let emitted_chunk_info = assets
     .iter()
     .filter_map(|asset| {
       asset.originate_from.and_then(|originate_from| {
-        chunk_graph.chunk_idx_to_reference_ids.get(&originate_from).map(|reference_ids| {
+        reference_ids_by_file.get(&originate_from).map(|reference_ids| {
           reference_ids.iter().map(|reference_id| EmittedChunkInfo {
             reference_id: reference_id.clone(),
             filename: asset.filename.clone(),

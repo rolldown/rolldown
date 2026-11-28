@@ -1,8 +1,8 @@
-import type { BindingOutputAsset, ExternalMemoryStatus } from '../binding.cjs';
+import type { BindingOutputAsset } from '../binding.cjs';
 import { lazyProp } from '../decorators/lazy';
 import type { AssetSource } from '../utils/asset-source';
 import { transformAssetSource } from '../utils/asset-source';
-import { getLazyFields, PlainObjectLike } from './plain-object-like';
+import { PlainObjectLike } from './plain-object-like';
 import type { OutputAsset } from './rolldown-output';
 
 export class OutputAssetImpl extends PlainObjectLike implements OutputAsset {
@@ -15,6 +15,11 @@ export class OutputAssetImpl extends PlainObjectLike implements OutputAsset {
   @lazyProp
   get fileName(): string {
     return this.bindingAsset.getFileName();
+  }
+
+  @lazyProp
+  get immutable(): boolean {
+    return this.bindingAsset.getImmutable();
   }
 
   @lazyProp
@@ -40,19 +45,5 @@ export class OutputAssetImpl extends PlainObjectLike implements OutputAsset {
   @lazyProp
   get source(): AssetSource {
     return transformAssetSource(this.bindingAsset.getSource());
-  }
-
-  __rolldown_external_memory_handle__(keepDataAlive?: boolean): ExternalMemoryStatus {
-    if (keepDataAlive) {
-      this.#evaluateAllLazyFields();
-    }
-    return this.bindingAsset.dropInner();
-  }
-
-  #evaluateAllLazyFields(): void {
-    for (const field of getLazyFields(this)) {
-      // Accessing the property triggers lazy evaluation via the @lazyProp decorator.
-      const _value = (this as any)[field];
-    }
   }
 }

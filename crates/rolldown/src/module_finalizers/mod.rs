@@ -137,6 +137,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub top_level_var_bindings: FxIndexSet<Ident<'ast>>,
   pub cur_stmt_index: usize,
   pub keep_name_statement_to_insert: Vec<(usize, CompactStr, CompactStr)>,
+  pub hoisted_keep_names: Vec<(CompactStr, CompactStr)>,
   pub needs_hosted_top_level_binding: bool,
   pub module_namespace_included: bool,
   /// Finalized init statements this module donates to another module of its chunk
@@ -448,6 +449,63 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     true
   }
 
+  /// Node reads the named exports of a CommonJS module when an `import` first loads the module, so
+  /// the exports synthesized for a star export of it read their values right after `require`:
+  /// `var import_foo = require_foo(), a = __hasOwnProp.call(import_foo, "a") ? import_foo.a : void 0;`
+  fn declare_cjs_star_named_exports(
+    &self,
+    stmt: &mut Statement<'ast>,
+    rec_idx: ImportRecordIdx,
+    namespace_name: &str,
+  ) {
+    let Statement::VariableDeclaration(decl) = stmt else { unreachable!() };
+    for import in self.ctx.module.named_imports.values() {
+      let Specifier::Literal(name) = &import.imported else { continue };
+      if import.record_idx != rec_idx {
+        continue;
+      }
+      let namespace = || Expression::new_id_ref_expr(SPAN, namespace_name, self);
+      let has_own_prop_call = Expression::new_static_member_expression(
+        SPAN,
+        self.finalized_expr_for_runtime_symbol("__hasOwnProp"),
+        IdentifierName::new_id_name(SPAN, "call", self),
+        false,
+        self,
+      );
+      let key = Expression::new_string_literal(SPAN, ast::Str::from_str_in(name, self), None, self);
+      let has_own = Expression::new_call_expression(
+        SPAN,
+        has_own_prop_call,
+        None,
+        allocator::Vec::from_iter_in([namespace().into(), key.into()], self),
+        false,
+        self,
+      );
+      let value = Expression::new_member_expr_or_ident_ref(
+        namespace(),
+        &[MemberExprProp { name: name.clone(), span: SPAN, optional: false }],
+        SPAN,
+        self,
+      );
+      let init = Expression::new_conditional_expression(
+        SPAN,
+        has_own,
+        value,
+        Expression::new_void_0(SPAN, self),
+        self,
+      );
+      let binding = ast::Str::from_str_in(self.canonical_name_for(import.imported_as), self);
+      decl.declarations.push(ast::VariableDeclarator::new(
+        SPAN,
+        ast::BindingPattern::new_binding_identifier(SPAN, binding, self),
+        None,
+        Some(init),
+        false,
+        self,
+      ));
+    }
+  }
+
   fn wrapped_esm_init_stmt_for_import_record(
     &mut self,
     rec_idx: ImportRecordIdx,
@@ -670,6 +728,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // `import_foo`
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
         *stmt = Statement::new_var_decl(binding_name_for_wrapper_call_ret, init_expr, self);
+        if rec.meta.contains(ImportRecordMeta::CjsStarNamedExports) {
+          self.declare_cjs_star_named_exports(stmt, rec_idx, binding_name_for_wrapper_call_ret);
+        }
 
         return self.transfer_import_stmt(rec_idx, stmt);
       }
@@ -1256,7 +1317,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               false,
             );
             let rec = &self.ctx.module.import_records[idx];
-            let importee = rec.resolved_module.map(|module_idx| &self.ctx.modules[module_idx])?;
+            let importee = self.ctx.modules[rec.resolved_module?].as_external()?;
+            let import_path = importee.get_import_path(self.ctx.chunk, self.ctx.resolved_paths);
 
             let re_export_call_expr = CallExpression::new_re_export_call(
               // Insert `__reExport(importer_exports, require('ext'))`
@@ -1266,7 +1328,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 ast::Expression::new_identifier(SPAN, "require", self),
                 ast::Expression::new_string_literal(
                   SPAN,
-                  oxc::ast::ast::Str::from_str_in(importee.id().raw_id(), self),
+                  oxc::ast::ast::Str::from_str_in(&import_path, self),
                   None,
                   self,
                 ),
@@ -2327,13 +2389,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           }
         } else if let Some(export_all_decl) = top_stmt.as_export_all_declaration() {
           let rec_idx = self.ctx.module.imports[&export_all_decl.node_id()];
-          // "export * as ns from 'path'"
-          if let Some(_alias) = &export_all_decl.exported {
+          if export_all_decl.exported.is_some()
+            || self.ctx.module.import_records[rec_idx]
+              .meta
+              .contains(ImportRecordMeta::CjsStarNamedExports)
+          {
             if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
               return;
             }
           } else {
-            // "export * from 'path'"
             if self.ctx.order_wrap_state.is_consumer_local_reexport_route(self.ctx.idx) {
               return;
             }
@@ -2580,7 +2644,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 ));
 
                 // When keep_names is enabled, preserve "default" as the function name
-                if self.ctx.options.keep_names {
+                if self.ctx.options.keep_names && self.can_hoist_keep_names() {
+                  let new_name = canonical_name_for_default_export_ref.into();
+                  self.hoisted_keep_names.push(("default".into(), new_name));
+                } else if self.ctx.options.keep_names {
                   // current statement will be pushed to program.body, so the insert position is program.body.len() + 1
                   let insert_position = program.body.len() + 1;
                   self.keep_name_statement_to_insert.push((
@@ -2887,12 +2954,22 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     })
   }
 
-  /// Inserts `__name()` call statements for keeping function/class names.
-  /// This method processes the pending keep_name insertions in reverse order.
+  fn can_hoist_keep_names(&self) -> bool {
+    self.ctx.file_idx == self.ctx.chunk_idx
+      && !matches!(self.ctx.wrapper_mode(), ModuleWrapperMode::InteropCjs(_))
+      && !self.ctx.module.ast_usage.contains(rolldown_common::EcmaModuleAstUsage::TopLevelReturn)
+  }
+
+  /// Queues chunk-start name restoration for eligible function declarations and inserts the remaining calls in place.
   fn insert_keep_name_statements(
-    &self,
+    &mut self,
     statements: &mut allocator::Vec<'ast, ast::Statement<'ast>>,
   ) {
+    let can_hoist = self.state.contains(TraverseState::IsRootLevel) && self.can_hoist_keep_names();
+    let hoisted = self.keep_name_statement_to_insert.extract_if(.., |(stmt_index, ..)| {
+      can_hoist && matches!(statements[*stmt_index - 1], Statement::FunctionDeclaration(_))
+    });
+    self.hoisted_keep_names.extend(hoisted.map(|(_, original, renamed)| (original, renamed)));
     for (stmt_index, original_name, new_name) in self.keep_name_statement_to_insert.iter().rev() {
       let name_ref = self.canonical_ref_for_runtime("__name");
       let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
@@ -3273,20 +3350,20 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// unless the options already have one.
   fn rename_import_options_assert_key(&self, expr: &mut ast::ImportExpression<'ast>) {
     let Some(Expression::ObjectExpression(options)) = &mut expr.options else { return };
-    let literal_key = |property: &ObjectPropertyKind<'ast>| match property {
-      ObjectPropertyKind::ObjectProperty(property) => property.key.literal_name(),
-      ObjectPropertyKind::SpreadProperty(_) => None,
-    };
-    if options.properties.iter().any(|property| literal_key(property).is_some_and(|k| k == "with"))
+    if options
+      .properties
+      .iter()
+      .filter_map(ObjectPropertyKind::as_property)
+      .any(|property| property.key.is_specific_static_name("with"))
     {
       return;
     }
-    let assert = options
-      .properties
-      .iter_mut()
-      .find(|property| literal_key(property).is_some_and(|key| key == "assert"));
-    if let Some(ObjectPropertyKind::ObjectProperty(property)) = assert {
-      property.key = ast::PropertyKey::new_static_identifier(SPAN, "with", self);
+    for property in &mut options.properties {
+      if let ObjectPropertyKind::ObjectProperty(property) = property
+        && property.key.is_specific_static_name("assert")
+      {
+        property.key = ast::PropertyKey::new_static_identifier(SPAN, "with", self);
+      }
     }
   }
 

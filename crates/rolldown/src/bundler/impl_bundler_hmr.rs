@@ -37,6 +37,7 @@ impl Bundler {
     // HMR partial scans use the shared rayon pool without passing through
     // `BundleFactory::build_bundle`; wait for any deferred drops here too.
     crate::utils::defer_drop::drain();
+    let _activity = crate::utils::build_activity::BuildActivity::enter();
 
     let Some(plugin_driver) = self.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver) else {
       return Err(anyhow::format_err!(
@@ -150,9 +151,12 @@ impl Bundler {
   /// Compile a lazy entry module and return compiled code plus the pending-payload
   /// entry the delivery-time ship-map write consumes.
   ///
-  /// This is called when a dynamically imported module is first requested at runtime.
-  /// The module was previously stubbed with a proxy, and now we need to compile the
-  /// actual module and its dependencies.
+  /// Serves a lazy route to a client. A first visit scans the route into the graph; a repeat
+  /// visit renders it from the graph (see internal-docs/lazy-compilation/design.md, "Repeat
+  /// Visits").
+  ///
+  /// `merged` becomes `true` once the compile merges a scan into the graph, also when a later
+  /// step fails. See `HmrStage::compile_lazy_entry`.
   pub async fn compile_lazy_entry(
     &mut self,
     module_id: String,
@@ -160,10 +164,12 @@ impl Bundler {
     evaluated: &FxHashMap<ArcStr, u32>,
     stamp_table: &HmrStampTable,
     next_hmr_patch_id: Arc<AtomicU32>,
+    merged: &mut bool,
   ) -> BuildResult<HmrLazyChunkOutput> {
     // HMR partial scans use the shared rayon pool without passing through
     // `BundleFactory::build_bundle`; wait for any deferred drops here too.
     crate::utils::defer_drop::drain();
+    let _activity = crate::utils::build_activity::BuildActivity::enter();
 
     let Some(plugin_driver) = self.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver) else {
       panic!("Lazy compilation requires at least one bundle to be built first");
@@ -177,6 +183,6 @@ impl Bundler {
       lost_hmr_update: &mut self.lost_hmr_update,
       next_hmr_patch_id,
     });
-    hmr_stage.compile_lazy_entry(&module_id, shipped, evaluated, stamp_table).await
+    hmr_stage.compile_lazy_entry(&module_id, shipped, evaluated, stamp_table, merged).await
   }
 }

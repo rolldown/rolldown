@@ -8,12 +8,7 @@ import type {
 } from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
-import {
-  error,
-  logCycleLoading,
-  logFailedValidation,
-  logModuleSideEffectsWriteAfterBuildEnd,
-} from '../log/logs';
+import { error, logCycleLoading, logFailedValidation } from '../log/logs';
 import type { OutputOptions } from '../options/output-options';
 import { parseAst } from '../parse-ast-index';
 import {
@@ -62,6 +57,18 @@ export interface EmittedAsset {
   type: 'asset';
   name?: string;
   fileName?: string;
+  /**
+   * Whether {@linkcode fileName} contains a content hash, so the file can be cached long-term.
+   *
+   * Pass `true` when the plugin writes a hashed {@linkcode fileName} itself.
+   * Without it, the output asset reports `immutable: false`.
+   *
+   * Only used with {@linkcode fileName}.
+   * For an asset named by `assetFileNames`, the output asset is `true` when the template expands `[hash]`.
+   *
+   * @default false
+   */
+  immutable?: boolean;
   /**
    * An absolute path to the original file if this asset corresponds to a file on disk.
    *
@@ -117,6 +124,15 @@ export interface EmittedChunk {
 export interface EmittedPrebuiltChunk {
   type: 'prebuilt-chunk';
   fileName: string;
+  /**
+   * Whether {@linkcode fileName} contains a content hash, so the file can be cached long-term.
+   *
+   * Pass `true` when the plugin writes a hashed {@linkcode fileName} itself.
+   * Without it, the output chunk reports `immutable: false`.
+   *
+   * @default false
+   */
+  immutable?: boolean;
   /**
    * A semantic name for the chunk. If not provided, `fileName` will be used.
    */
@@ -325,16 +341,10 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
   ) {
     super(onLog, logLevel, plugin.name!, watchMode);
     this.getModuleInfo = (id: string) =>
-      this.data.getModuleInfo(id, context, this.warnWriteAfterBuildEnd);
+      this.data.getModuleInfo(id, context, (moduleId) =>
+        this.data.warnWriteAfterBuildEnd(moduleId, this.pluginName),
+      );
   }
-
-  /** @internal */
-  public warnWriteAfterBuildEnd = (moduleId: string): void => {
-    this.onLog(LOG_LEVEL_WARN, {
-      ...logModuleSideEffectsWriteAfterBuildEnd(moduleId),
-      plugin: this.pluginName,
-    });
-  };
 
   public async load(
     options: {
@@ -348,7 +358,9 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       this.onLog(LOG_LEVEL_WARN, logCycleLoading(this.pluginName, this.currentLoadingModule));
     }
     const resolveDependencies = options.resolveDependencies === true;
-    const moduleInfo = this.data.getModuleInfo(id, this.context, this.warnWriteAfterBuildEnd);
+    const moduleInfo = this.data.getModuleInfo(id, this.context, (moduleId) =>
+      this.data.warnWriteAfterBuildEnd(moduleId, this.pluginName),
+    );
     // The code is set once the module is parsed, which can be before its imports are resolved.
     if (moduleInfo !== null && moduleInfo.code !== null && !resolveDependencies) {
       return moduleInfo;
@@ -375,7 +387,9 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     }
 
     await loadPromise;
-    return this.data.getModuleInfo(id, this.context, this.warnWriteAfterBuildEnd)!;
+    return this.data.getModuleInfo(id, this.context, (moduleId) =>
+      this.data.warnWriteAfterBuildEnd(moduleId, this.pluginName),
+    )!;
   }
 
   public async resolve(
@@ -453,6 +467,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       }
       return this.context.emitPrebuiltChunk({
         fileName: file.fileName,
+        immutable: file.immutable,
         name: file.name,
         code: file.code,
         exports: file.exports,

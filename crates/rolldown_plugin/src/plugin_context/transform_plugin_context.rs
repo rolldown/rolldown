@@ -93,7 +93,7 @@ impl TransformPluginContext {
   }
 
   fn create_sourcemap(&self) -> SourceMap {
-    let magic_string = MagicString::new(self.original_code.as_str());
+    let mut magic_string = MagicString::new(self.original_code.as_str());
     magic_string.source_map(SourceMapOptions {
       hires: string_wizard::Hires::Boundary,
       include_content: true,
@@ -125,7 +125,7 @@ impl TransformPluginContext {
   /// is generated later and `None` is returned.
   pub fn send_magic_string(
     &self,
-    magic_string: MagicString<'static>,
+    mut magic_string: MagicString<'static>,
   ) -> anyhow::Result<Option<String>> {
     if !self.has_sourcemap_worker {
       // Same resolution as `PendingSourcemap::get`.

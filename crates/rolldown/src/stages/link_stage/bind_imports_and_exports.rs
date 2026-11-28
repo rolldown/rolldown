@@ -3,14 +3,16 @@ use std::hash::{Hash, Hasher};
 
 use arcstr::ArcStr;
 use indexmap::IndexSet;
+use itertools::Itertools;
 use oxc_str::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta, IndexModules,
+  EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta, IndexModules, LocalExport,
   MemberExprObjectReferencedType, MemberExprRef, MemberExprRefResolution, MemberExprWriteKind,
-  Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule, OutputFormat, ResolvedExport,
-  Specifier, StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, SymbolRefFlags,
+  Module, ModuleIdx, ModuleType, NamedImport, NamespaceAlias, NormalModule, OutputFormat,
+  ResolvedExport, Specifier, StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  SymbolRefFlags,
 };
 use rolldown_error::{
   AmbiguousExternalNamespaceModule, BuildDiagnostic, Diagnostics, EventKindSwitcher,
@@ -302,6 +304,61 @@ impl LinkStage<'_> {
   /// Unlike import from normal modules, the imported variable deosn't have a place that declared the variable. So we consider `import { a } from 'external'` in `foo.js` as the declaration statement of `a`.
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn bind_imports_and_exports(&mut self) {
+    // These gates keep synthesized exports on the dynamic entry file. Keep dynamic exports
+    // enabled so imports retain the full interface and skip namespace extraction.
+    if matches!(self.options.format, OutputFormat::Esm)
+      && !self.options.code_splitting.is_disabled()
+      && !self.options.has_manual_code_splitting_groups()
+      && !self.options.preserve_modules
+    {
+      for (&idx, entries) in &self.entries {
+        let Some(entry) = self.module_table[idx].as_normal() else { continue };
+        let Ok((rec_idx, importee)) = entry.star_export_records().exactly_one() else { continue };
+        let Some(dependency) = self.module_table[importee].as_normal() else { continue };
+        if entry.exports_kind != ExportsKind::Esm
+          || !entry.importers_idx.is_empty()
+          || entries.iter().any(|entry| !entry.kind.is_dynamic_import())
+          || dependency.exports_kind != ExportsKind::CommonJs
+          // Other code that reaches the CommonJS module, through an entry or another importer, can
+          // change its exports after Node reads them and before the bundle does.
+          || self.entries.contains_key(&importee)
+          || dependency.importers_idx.iter().any(|&importer| importer != idx)
+        {
+          continue;
+        }
+        let names: Vec<_> = dependency
+          .cjs_literal_export_names
+          .iter()
+          .filter(|&name| name != "default" && !entry.named_exports.contains_key(name))
+          .cloned()
+          .collect();
+        if names.is_empty() {
+          continue;
+        }
+        let entry = self.module_table[idx].as_normal_mut().unwrap();
+        let record = &mut entry.import_records[rec_idx];
+        record.meta.toggle(ImportRecordMeta::IsExportStar | ImportRecordMeta::CjsStarNamedExports);
+        for name in names {
+          // Strict mode code cannot declare `eval` or `arguments`.
+          let binding_name = match name.as_str() {
+            "eval" | "arguments" => Cow::Owned(format!("_{name}")),
+            _ => legitimize_identifier_name(&name),
+          };
+          let binding = self.symbols.create_facade_root_symbol_ref(idx, &binding_name);
+          let import = NamedImport {
+            imported: Specifier::Literal(name.clone()),
+            span_imported: oxc::span::SPAN,
+            imported_as: binding,
+            record_idx: rec_idx,
+          };
+          let export =
+            LocalExport { span: oxc::span::SPAN, referenced: binding, came_from_commonjs: false };
+          entry.named_imports.insert(binding, import);
+          entry.named_exports.insert(name, export);
+        }
+      }
+    }
+
     // Initialize `resolved_exports` to prepare for matching imports with exports
     self.metas.par_iter_mut_enumerated().for_each(|(module_id, meta)| {
       let Module::Normal(module) = &self.module_table[module_id] else {
@@ -1134,10 +1191,11 @@ impl LinkStage<'_> {
                 // TODO: we could record if a module could potential reference a cjs symbol
                 // so that we could skip this step.
                 if cursor < member_expr_ref.prop_and_span_list.len() {
-                  let maybe_namespace = depended_refs
-                    .last()
-                    .copied()
-                    .unwrap_or(self.symbols.canonical_ref_for(member_expr_ref.object_ref));
+                  // An import bound to an ESM declaration reads that declaration, so look at the
+                  // canonical symbol.
+                  let maybe_namespace = self.symbols.canonical_ref_for(
+                    depended_refs.last().copied().unwrap_or(member_expr_ref.object_ref),
+                  );
                   let maybe_namespace_symbol = self.symbols.get(maybe_namespace);
                   let continue_resolve =
                     if let Some(ref ns) = maybe_namespace_symbol.namespace_alias {
@@ -1161,8 +1219,13 @@ impl LinkStage<'_> {
                             .get(&maybe_namespace)
                         })
                         .or_else(|| {
-                          (self.metas[maybe_namespace.owner].has_dynamic_exports)
-                            .then_some(&maybe_namespace.owner)
+                          // Only the namespace of a module with `export * from './x.cjs'` has
+                          // its CommonJS exports, not the other bindings of that module.
+                          (self.metas[maybe_namespace.owner].has_dynamic_exports
+                            && self.module_table[maybe_namespace.owner]
+                              .as_normal()
+                              .is_some_and(|m| m.namespace_object_ref == maybe_namespace))
+                          .then_some(&maybe_namespace.owner)
                         })
                         .copied()
                     })

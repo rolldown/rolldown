@@ -44,6 +44,8 @@ pub struct Bundle<Fs: FileSystem + Clone + 'static = OsFileSystem> {
   pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) cache: ScanStageCache,
   pub(crate) bundle_span: tracing::Span,
+  pub(crate) _activity: crate::utils::build_activity::BuildActivity,
+  pub(crate) close_hooks_completed: bool,
 }
 
 impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
@@ -227,7 +229,10 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
     Ok(())
   }
 
-  async fn handle_build_error(&self, mut errors: BatchedBuildDiagnostic) -> BatchedBuildDiagnostic {
+  async fn handle_build_error(
+    &mut self,
+    mut errors: BatchedBuildDiagnostic,
+  ) -> BatchedBuildDiagnostic {
     debug_assert!(errors.iter().all(|e| e.severity() == Severity::Error));
     if let Err(error) = self
       .plugin_driver
@@ -241,6 +246,7 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
       .plugin_driver
       .close_bundle(Some(&HookCloseBundleArgs { errors: &errors, cwd: &self.options.cwd }))
       .await
+      .inspect(|()| self.close_hooks_completed = true)
     {
       Ok(()) => errors,
       Err(error) => error.into(),

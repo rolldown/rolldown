@@ -8,10 +8,6 @@ import { page, serverUrl, waitForBuildStable } from '~utils';
 // `inner.foo` came back undefined. The fix loads the proxy module's
 // registered exports instead.
 describe('lazy-nested-dynamic-import', () => {
-  // `retry: 0` matters: the bug only shows on the first click of a fresh
-  // page. That click makes the server rebuild main.js to use the fetched
-  // proxy, which bypasses the buggy code path — so a retry would always pass
-  // and hide the regression.
   test('lazy chunk can dynamically import another lazy chunk', { retry: 0 }, async () => {
     await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
     await waitForBuildStable();

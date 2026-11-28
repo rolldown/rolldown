@@ -25,8 +25,6 @@ pub type OnOutputCallback = Arc<dyn Fn(BuildResult<BundleOutput>) + Send + Sync>
 /// they would through `on_output`.
 pub type OnAdditionalAssetsCallback = Arc<dyn Fn(BundleOutput) + Send + Sync>;
 
-pub type SharedNormalizedDevOptions = Arc<NormalizedDevOptions>;
-
 #[derive(Debug, Default)]
 #[cfg_attr(feature = "deserialize_dev_options", derive(Deserialize, JsonSchema))]
 #[cfg_attr(

@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert/strict";
+// HIDDEN [\0rolldown/runtime.js]
+// meta.cjs
+var require_meta = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.version = "1.0.0";
+}));
+// impl.cjs
+var require_impl = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.foo = "foo";
+}));
+// read.cjs
+var require_read = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const meta = require_meta();
+	globalThis.version = meta.version;
+	module.exports = require_impl();
+}));
+// helper.cjs
+var require_helper = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.init = function() {
+		globalThis.initialized = true;
+	};
+}));
+// call.cjs
+var require_call = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	require_helper().init();
+	module.exports = require_impl();
+}));
+// main.js
+var import_read = require_read();
+var import_call = require_call();
+assert.strictEqual(import_read.foo, "foo");
+assert.strictEqual(globalThis.version, "1.0.0");
+assert.strictEqual(import_call.foo, "foo");
+assert.strictEqual(globalThis.initialized, true);
+
+```

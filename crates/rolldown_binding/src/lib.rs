@@ -54,6 +54,7 @@ pub mod binding_dev_options;
 pub mod binding_watcher_bundler;
 pub mod classic_bundler;
 mod generated;
+pub mod memory_reclaim;
 pub mod native_memory;
 pub mod options;
 #[cfg(not(target_family = "wasm"))]
@@ -119,6 +120,7 @@ fn init() {
       // we don't have that many `blocking` tasks to run at this moment
       .unwrap_or(4);
     let mut builder = tokio::runtime::Builder::new_multi_thread();
+    let reclaim_memory = crate::memory_reclaim::configure();
 
     let rt = builder
       .max_blocking_threads(max_blocking_threads)
@@ -127,6 +129,9 @@ fn init() {
       .enable_all()
       .build()
       .expect("Failed to create tokio runtime");
+    if reclaim_memory {
+      crate::memory_reclaim::init(rt.handle().clone());
+    }
     create_custom_tokio_runtime(rt);
   }
 

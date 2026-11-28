@@ -72,6 +72,9 @@ function transformToMutableRollupOutputChunk(
       codeCache.set(fileName, { identity, holder: bindingChunk, code });
       return code;
     },
+    get immutable() {
+      return bindingChunk.getImmutable();
+    },
     fileName,
     // Metadata is read lazily: the bundle is rebuilt for every JS `generateBundle`/`writeBundle`
     // hook, and most hooks read only a few fields of a few outputs. Each read crosses NAPI, and
@@ -126,6 +129,10 @@ function transformToMutableRollupOutputChunk(
       return value;
     },
     set(_target, p, newValue): boolean {
+      if (p === 'fileName' && newValue !== (cache.fileName ?? fileName)) {
+        if (newValue === fileName && !assigned?.has('immutable')) delete cache.immutable;
+        else cache.immutable = false;
+      }
       cache[p] = newValue;
       if (!assigned) {
         const names = new Set<string | symbol>();
@@ -146,9 +153,8 @@ function transformToMutableRollupOutputChunk(
  * Of the chunk properties that `update_output_chunk` in Rust applies, the ones a plugin changed,
  * or `undefined` when it changed none.
  *
- * A property the plugin neither read nor assigned is not in `cache` and still holds Rust's value,
- * so it is left out. An unread `map` is therefore not serialized in Rust, parsed here, and parsed
- * again in Rust. A chunk with no change is not sent at all, so Rust keeps the same chunk data and
+ * Leaving an unread `map` out avoids serializing it in Rust, parsing it here, and parsing it again
+ * in Rust. A chunk with no change is not sent at all, so Rust keeps the same chunk data and
  * `outputCodeCache` keeps its code. This matters for Vite's `vite:css-post`: when a build has a
  * pure CSS chunk, it assigns `chunk.imports` of every chunk, mostly to the same file names.
  */
@@ -163,7 +169,7 @@ function collectChunkChange(
   type _ = TypeAssert<
     Extends<
       keyof JsOutputChunk,
-      'filename' | 'isEntry' | 'code' | 'map' | 'imports' | 'dynamicImports'
+      'filename' | 'isEntry' | 'immutable' | 'code' | 'map' | 'imports' | 'dynamicImports'
     >
   >;
   const change: JsOutputChunk = {
@@ -171,6 +177,13 @@ function collectChunkChange(
     isEntry: 'isEntry' in cache ? cache.isEntry : original.isEntry,
   };
   let isChanged = change.filename !== original.fileName || change.isEntry !== original.isEntry;
+  if (
+    assigned.has('immutable') &&
+    cache.immutable !== (change.filename === original.fileName && original.immutable)
+  ) {
+    change.immutable = cache.immutable;
+    isChanged = true;
+  }
   // A string the plugin read cannot have changed.
   if (assigned.has('code')) {
     if (typeof cache.code !== 'string') {
@@ -237,9 +250,13 @@ function transformToMutableRollupOutputAsset(
   bindingAsset: BindingOutputAsset,
   changed: ChangedOutputs,
 ): OutputAsset {
+  const fileName = bindingAsset.getFileName();
   const asset = {
     type: 'asset',
-    fileName: bindingAsset.getFileName(),
+    get immutable() {
+      return bindingAsset.getImmutable();
+    },
+    fileName,
     // Lazy for the same reason as chunk metadata above.
     get originalFileName() {
       return bindingAsset.getOriginalFileName() || null;
@@ -258,6 +275,7 @@ function transformToMutableRollupOutputAsset(
     },
   } as OutputAsset;
   const cache: Record<string | symbol, any> = {};
+  let immutableAssigned = false;
   return new Proxy(asset, {
     get(target, p) {
       if (p in cache) {
@@ -268,11 +286,27 @@ function transformToMutableRollupOutputAsset(
       return value;
     },
     set(_target, p, newValue): boolean {
+      if (p === 'immutable') immutableAssigned = true;
+      if (p === 'fileName' && newValue !== (cache.fileName ?? fileName)) {
+        if (newValue === fileName && !immutableAssigned) delete cache.immutable;
+        else cache.immutable = false;
+      }
       cache[p] = newValue;
-      changed.updated.set(asset.fileName, undefined);
+      if (p !== 'immutable' || changed.updated.has(fileName) || newValue !== asset.immutable) {
+        changed.updated.set(fileName, immutableAssigned);
+      }
       return true;
     },
   });
+}
+
+/**
+ * The native side of an output is only freed when V8 collects its JS wrapper. Telling V8 how much
+ * memory that is keeps it from waiting forever on an almost empty JS heap.
+ */
+export function trackOutputExternalMemory(output: BindingOutputs): void {
+  for (const chunk of output.chunks) chunk.trackExternalMemory();
+  for (const asset of output.assets) asset.trackExternalMemory();
 }
 
 export function transformToRollupOutput(output: BindingOutputs): RolldownOutput {
@@ -342,10 +376,10 @@ export function transformToOutputBundle(
 
 export interface ChangedOutputs {
   /**
-   * The file names of the outputs a plugin assigned a property of. For a chunk, the value returns
-   * the properties that changed (see `collectChunkChange`).
+   * For a chunk, the value returns the changed properties. For an asset, it records whether
+   * the plugin assigned `immutable`.
    */
-  updated: Map<string, (() => JsOutputChunk | undefined) | undefined>;
+  updated: Map<string, (() => JsOutputChunk | undefined) | boolean>;
   deleted: Set<string>;
 }
 
@@ -355,19 +389,21 @@ export function collectChangedBundle(
 ): JsChangedOutputs {
   const changes: Record<string, JsOutputChunk | JsOutputAsset> = {};
   for (const key in bundle) {
-    if (changed.deleted.has(key) || !changed.updated.has(key)) {
+    const update = changed.updated.get(key);
+    if (changed.deleted.has(key) || update === undefined) {
       continue;
     }
     const item = bundle[key];
     if (item.type === 'asset') {
       changes[key] = {
         filename: item.fileName,
+        immutable: update === true ? item.immutable : undefined,
         originalFileNames: item.originalFileNames,
         source: bindingAssetSource(item.source),
         names: item.names,
       };
-    } else {
-      const change = changed.updated.get(key)?.();
+    } else if (typeof update === 'function') {
+      const change = update();
       if (change) {
         changes[key] = change;
       }

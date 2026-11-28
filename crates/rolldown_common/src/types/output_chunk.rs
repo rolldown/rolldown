@@ -24,6 +24,10 @@ pub struct OutputChunk {
   pub imports: Vec<ArcStr>,
   pub dynamic_imports: Vec<ArcStr>,
   // OutputChunk
+  /// Initially `true` when `entryFileNames` or `chunkFileNames` expands `[hash]` for the filename or the prebuilt chunk's emitter marks it immutable.
+  /// Clear the flag on rename. A later explicit assignment takes precedence.
+  /// Editing `code` preserves the flag.
+  pub immutable: bool,
   pub code: String,
   pub map: Option<SourceMap>,
   pub sourcemap_filename: Option<String>,

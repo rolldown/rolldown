@@ -90,6 +90,10 @@ Each generated CommonJS wrapper receives its own mutable bindings, matching Node
 
 The generated output requires a Node version that supports `import.meta.dirname` and `import.meta.filename`. These properties are available from Node 20.11.0 and are only present for local `file:` modules.
 
+### UMD compatibility
+
+When Rolldown wraps a CommonJS module that references an undeclared `define`, it adds `var define;` to the wrapper. The local binding starts as `undefined` and shadows any global `define` provided by an AMD loader such as RequireJS. This lets bundled UMD dependencies take their CommonJS branch and set `module.exports`.
+
 ## Caveats
 
 ### `require` external modules

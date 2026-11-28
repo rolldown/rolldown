@@ -888,12 +888,12 @@ export interface JSONSourceMap {
    */
   sourceRoot?: string
   /** A list of original sources used by the "mappings" entry, with `None` for unknown names. */
-  sources: Array<string | undefined | null>
+  sources: Array<string | null>
   /**
    * An optional list of source content, useful when the "source" can't be hosted.
    * The contents are listed in the same order as the sources in line 5. "null" may be used if some original sources should be retrieved by name.
    */
-  sourcesContent?: Array<string | undefined | null>
+  sourcesContent?: Array<string | null>
   /** A list of symbol names used by the "mappings" entry. */
   names: Array<string>
   /** An optional field containing the debugId for this sourcemap. */
@@ -912,7 +912,7 @@ export interface SourceMap {
   mappings: string
   names: Array<string>
   sourceRoot?: string
-  sources: Array<string | undefined | null>
+  sources: Array<string | null>
   sourcesContent?: Array<string>
   version: number
   ignoreList?: Array<number>
@@ -1548,6 +1548,34 @@ export interface TypeScriptOptions {
   rewriteImportExtensions?: 'rewrite' | 'remove' | boolean
 }
 
+export declare class Watcher {
+  constructor(callback: (arg0: WatcherEvent) => void, options?: WatcherOptions | undefined | null)
+  add(paths: Array<string>): void
+  remove(paths: Array<string>): void
+  isWatched(path: string, isIgnored?: ((arg: string) => boolean) | undefined | null): boolean
+  close(): void
+  ref(): void
+  unref(): void
+}
+
+export interface WatcherEvent {
+  kind: string
+  path?: string
+  isDir?: boolean
+  error?: string
+}
+
+export interface WatcherOptions {
+  usePolling?: boolean
+  pollInterval?: number
+  compareContentsForPolling?: boolean
+  useDebounce?: boolean
+  debounceDelay?: number
+  debounceTickRate?: number
+  followSymlinks?: boolean
+  ignored?: Array<string>
+}
+
 export declare class BindingBundleEndEventData {
   output: string
   duration: number
@@ -1579,7 +1607,6 @@ export declare class BindingCallableBuiltinPlugin {
 }
 
 export declare class BindingChunkingContext {
-  dropInner(): ExternalMemoryStatus
   getModuleInfo(moduleId: string): BindingModuleInfo | null
   /**
    * `getModuleInfo(moduleId)?.moduleSideEffects`, without copying the rest of the info. See
@@ -1597,7 +1624,6 @@ export declare class BindingChunkingContext {
 
 /** A decoded source map with mappings as an array of arrays instead of VLQ-encoded string. */
 export declare class BindingDecodedMap {
-  dropInner(): ExternalMemoryStatus
   /** The source map version (always 3). */
   get version(): number
   /** The generated file name. */
@@ -1662,18 +1688,12 @@ export declare class BindingDevEngine {
 }
 
 export declare class BindingLoadPluginContext {
-  dropInner(): ExternalMemoryStatus
   inner(): BindingPluginContext
   addWatchFile(file: string): void
 }
 
 export declare class BindingMagicString {
   constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
-  /**
-   * Releases the source text and its UTF-16 mapping table — together about nine
-   * times the source bytes — without waiting for a finalizer.
-   */
-  dropInner(): ExternalMemoryStatus
   get original(): string
   get filename(): string | null
   get indentExclusionRanges(): Array<Array<number>> | Array<number> | null
@@ -1750,6 +1770,18 @@ export declare class BindingMagicString {
    */
   slice(start?: number | undefined | null, end?: number | undefined | null): string
   /**
+   * Returns the UTF-16 indices in the original source that `addSourcemapLocation()` registers.
+   * Each index appears once. The indices are in ascending order.
+   */
+  get sourcemapLocations(): Array<number>
+  /**
+   * Registers a UTF-16 index in the original source for maps with `hires: false`.
+   * If the index falls within a non-newline character in an unedited piece,
+   * the map includes a segment for that index.
+   * The `offset` option does not change this index.
+   */
+  addSourcemapLocation(index: number): void
+  /**
    * Generates a source map for the transformations applied to this MagicString.
    * Returns a BindingSourceMap object with version, file, sources, sourcesContent, names, mappings.
    */
@@ -1770,12 +1802,10 @@ export declare class BindingModuleInfo {
   exports: Array<string>
   isEntry: boolean
   inputFormat: 'es' | 'cjs' | 'unknown'
-  dropInner(): ExternalMemoryStatus
   get code(): string | null
 }
 
 export declare class BindingNormalizedOptions {
-  dropInner(): ExternalMemoryStatus
   get input(): Array<string> | Record<string, string>
   get cwd(): string
   get platform(): 'node' | 'browser' | 'neutral'
@@ -1820,8 +1850,10 @@ export declare class BindingNormalizedOptions {
 }
 
 export declare class BindingOutputAsset {
-  dropInner(): ExternalMemoryStatus
+  /** V8 cannot see this memory, so without this it feels no pressure to collect this object. */
+  trackExternalMemory(): void
   getFileName(): string
+  getImmutable(): boolean
   getOriginalFileName(): string | null
   getOriginalFileNames(): Array<string>
   getSource(): BindingAssetSource
@@ -1830,7 +1862,8 @@ export declare class BindingOutputAsset {
 }
 
 export declare class BindingOutputChunk {
-  dropInner(): ExternalMemoryStatus
+  /** V8 cannot see this memory, so without this it feels no pressure to collect this object. */
+  trackExternalMemory(): void
   getIsEntry(): boolean
   getIsDynamicEntry(): boolean
   getFacadeModuleId(): string | null
@@ -1840,6 +1873,7 @@ export declare class BindingOutputChunk {
   getModules(): BindingModules
   getImports(): Array<string>
   getDynamicImports(): Array<string>
+  getImmutable(): boolean
   getCode(): string
   /**
    * Identity of the shared chunk data behind this object. Two `BindingOutputChunk` objects with the same
@@ -1854,7 +1888,6 @@ export declare class BindingOutputChunk {
 }
 
 export declare class BindingPluginContext {
-  dropInner(): ExternalMemoryStatus
   load(rawId: string, attributes: Record<string, string>, sideEffects: boolean | 'no-treeshake' | undefined, resolveDependencies: boolean, options?: BindingPluginContextLoadOptions): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
@@ -1881,7 +1914,6 @@ export declare class BindingPluginContext {
 }
 
 export declare class BindingRenderedChunk {
-  dropInner(): ExternalMemoryStatus
   get name(): string
   get isEntry(): boolean
   get isDynamicEntry(): boolean
@@ -1895,12 +1927,10 @@ export declare class BindingRenderedChunk {
 }
 
 export declare class BindingRenderedChunkMeta {
-  dropInner(): ExternalMemoryStatus
   get chunks(): Record<string, BindingRenderedChunk>
 }
 
 export declare class BindingRenderedModule {
-  dropInner(): ExternalMemoryStatus
   get code(): string | null
   /** `code.length` without materializing `code`. */
   get renderedLength(): number
@@ -1909,7 +1939,6 @@ export declare class BindingRenderedModule {
 
 /** A source map object with properties matching the SourceMap V3 specification. */
 export declare class BindingSourceMap {
-  dropInner(): ExternalMemoryStatus
   /** The source map version (always 3). */
   get version(): number
   /** The generated file name. */
@@ -1934,7 +1963,6 @@ export declare class BindingSourceMap {
 }
 
 export declare class BindingTransformPluginContext {
-  dropInner(): ExternalMemoryStatus
   getCombinedSourcemap(): string
   inner(): BindingPluginContext
   addWatchFile(file: string): void
@@ -2010,7 +2038,7 @@ export interface BindingBuiltinPlugin {
   options?: unknown
 }
 
-export type BindingBuiltinPluginName = 'builtin:bundle-analyzer' | 'builtin:esm-external-require' | 'builtin:isolated-declaration' | 'builtin:replace' | 'builtin:vite-alias' | 'builtin:vite-build-import-analysis' | 'builtin:vite-dynamic-import-vars' | 'builtin:vite-import-glob' | 'builtin:vite-json' | 'builtin:vite-load-fallback' | 'builtin:vite-manifest' | 'builtin:vite-module-preload-polyfill' | 'builtin:vite-react-refresh-wrapper' | 'builtin:vite-reporter' | 'builtin:vite-resolve' | 'builtin:vite-transform' | 'builtin:vite-web-worker-post' | 'builtin:oxc-runtime'
+export type BindingBuiltinPluginName = 'builtin:bundle-analyzer' | 'builtin:esm-external-require' | 'builtin:inject' | 'builtin:isolated-declaration' | 'builtin:replace' | 'builtin:vite-alias' | 'builtin:vite-build-import-analysis' | 'builtin:vite-dynamic-import-vars' | 'builtin:vite-import-glob' | 'builtin:vite-json' | 'builtin:vite-load-fallback' | 'builtin:vite-manifest' | 'builtin:vite-module-preload-polyfill' | 'builtin:vite-react-refresh-wrapper' | 'builtin:vite-reporter' | 'builtin:vite-resolve' | 'builtin:vite-transform' | 'builtin:vite-web-worker-post' | 'builtin:oxc-runtime'
 
 export interface BindingBundleAnalyzerPluginConfig {
   /** Output filename for the bundle analysis data (default: "analyze-data.json") */
@@ -2154,6 +2182,7 @@ export interface BindingDevWatchOptions {
 export interface BindingEmittedAsset {
   name?: string
   fileName?: string
+  immutable?: boolean
   originalFileName?: string
   source: BindingAssetSource
 }
@@ -2168,6 +2197,7 @@ export interface BindingEmittedChunk {
 
 export interface BindingEmittedPrebuiltChunk {
   fileName: string
+  immutable?: boolean
   name?: string
   code: string
   exports?: Array<string>
@@ -2410,6 +2440,7 @@ export interface BindingHookLoadExtraArgs {
 export interface BindingHookLoadOutput {
   code: string
   moduleSideEffects?: boolean | 'no-treeshake'
+  declaredModuleSize?: number
   map?: BindingSourcemap
   moduleType?: string
 }
@@ -2499,6 +2530,7 @@ export type BindingHookSideEffects = boolean | string
 export interface BindingHookTransformOutput {
   code?: string
   moduleSideEffects?: BindingHookSideEffects
+  declaredModuleSize?: number
   /**
    * A sourcemap, or `null` to explicitly signal "no sourcemap" (distinct from
    * omitting the field, which mirrors Rollup's "possibly broken" semantics).
@@ -2532,6 +2564,13 @@ export interface BindingInjectImportNamespace {
   tagNamespace: true
   alias: string
   from: string
+}
+
+export interface BindingInjectPluginConfig {
+  values: Array<BindingInjectImport>
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  cwd?: string
 }
 
 /**
@@ -3088,7 +3127,6 @@ export interface BindingViteAliasPluginConfig {
 export interface BindingViteBuildImportAnalysisPluginConfig {
   preloadCode: string
   insertPreload: boolean
-  optimizeModulePreloadRelativePaths: boolean
   renderBuiltUrl: boolean
   isRelativeBase: boolean
 }
@@ -3230,11 +3268,6 @@ export interface ExtensionAliasItem {
   replacements: Array<string>
 }
 
-export interface ExternalMemoryStatus {
-  freed: boolean
-  reason?: string
-}
-
 export type FilterTokenKind = 'Id' | 'ImporterId' | 'Code' | 'ModuleType' | 'And' | 'Or' | 'Not' | 'Include' | 'Exclude' | 'CleanUrl' | 'QueryKey' | 'QueryValue'
 
 /**
@@ -3255,13 +3288,14 @@ export interface JsOutputAsset {
   names: Array<string>
   originalFileNames: Array<string>
   filename: string
+  immutable?: boolean
   source: BindingAssetSource
 }
 
 /**
- * What a `generateBundle` or `writeBundle` hook changed in an output chunk. A field that is left
- * out is a property the plugin did not change, so the chunk keeps its value, which is never copied
- * through JavaScript. See `collectChunkChange` in
+ * What a `generateBundle` or `writeBundle` hook changed in an output chunk. Rust fills omitted
+ * fields from the existing chunk and clears `immutable` on a rename without an explicit value.
+ * See `collectChunkChange` in
  * `packages/rolldown/src/utils/transform-to-rollup-output.ts`.
  */
 export interface JsOutputChunk {
@@ -3271,6 +3305,7 @@ export interface JsOutputChunk {
    * `isEntry`, when napi picks a side of `Either<JsOutputChunk, JsOutputAsset>`.
    */
   isEntry: boolean
+  immutable?: boolean
   code?: string
   /** `null` removes the map. */
   map?: BindingSourcemap | null
@@ -3333,32 +3368,4 @@ export declare function startAsyncRuntime(): void
 
 export interface ViteImportGlobMeta {
   isSubImportsPattern?: boolean
-}
-
-export declare class Watcher {
-  constructor(callback: (arg0: WatcherEvent) => void, options?: WatcherOptions | undefined | null)
-  add(paths: Array<string>): void
-  remove(paths: Array<string>): void
-  isWatched(path: string, isIgnored?: ((arg: string) => boolean) | undefined | null): boolean
-  close(): void
-  ref(): void
-  unref(): void
-}
-
-export interface WatcherEvent {
-  kind: string
-  path?: string
-  isDir?: boolean
-  error?: string
-}
-
-export interface WatcherOptions {
-  usePolling?: boolean
-  pollInterval?: number
-  compareContentsForPolling?: boolean
-  useDebounce?: boolean
-  debounceDelay?: number
-  debounceTickRate?: number
-  followSymlinks?: boolean
-  ignored?: Array<string>
 }

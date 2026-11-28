@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+__name(test$1, "test");
 // a.js
 function test$1() {}
-__name(test$1, "test");
 var Foo$1 = class {
 	static {
 		__name(this, "Foo");

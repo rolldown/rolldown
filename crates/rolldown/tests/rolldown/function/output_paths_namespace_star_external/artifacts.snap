@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.cjs
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+// barrel.js
+var barrel_exports = /* @__PURE__ */ __exportAll({}, 2);
+__reExport(barrel_exports, require("node:path"));
+// main.js
+const hasFileURLToPath = Object.keys(barrel_exports).includes("fileURLToPath");
+exports.hasFileURLToPath = hasFileURLToPath;
+
+```
+
+# Variant: iife: [format: Iife]
+
+## Assets
+
+### main.cjs
+
+```js
+var bundle = (function(exports) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	// barrel.js
+	var barrel_exports = /* @__PURE__ */ __exportAll({}, 2);
+	__reExport(barrel_exports, require("node:path"));
+	exports.hasFileURLToPath = Object.keys(barrel_exports).includes("fileURLToPath");
+	return exports;
+})({});
+
+```
+
+# Variant: umd: [format: Umd]
+
+## Assets
+
+### main.cjs
+
+```js
+(function(global, factory) {
+	typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.bundle = {}));
+})(this, function(exports) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// HIDDEN [\0rolldown/runtime.js]
+	// barrel.js
+	var barrel_exports = /* @__PURE__ */ __exportAll({}, 2);
+	__reExport(barrel_exports, require("node:path"));
+	exports.hasFileURLToPath = Object.keys(barrel_exports).includes("fileURLToPath");
+});
+
+```

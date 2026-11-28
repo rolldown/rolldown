@@ -72,9 +72,10 @@ impl BundleHandle {
     &self.plugin_driver
   }
 
-  /// Close this bundle handle, calling the `closeBundle` plugin hook.
+  /// Close the handle. If watch build error handling completed every `closeBundle` hook, skip the
+  /// hook run and leave the driver intact.
   ///
-  /// A panicking hook becomes an error, and resources are cleared on every outcome.
+  /// A panicking hook becomes an error, and the driver is cleared after the hook attempt.
   pub async fn close(&self) -> anyhow::Result<()> {
     if self.closed.swap(true, Ordering::SeqCst) {
       return Ok(());
@@ -91,6 +92,7 @@ impl BundleHandle {
       }
     };
     self.plugin_driver.clear();
+    crate::utils::build_activity::notify_memory_released();
     result
   }
 }

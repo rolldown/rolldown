@@ -187,7 +187,7 @@ __rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		__rolldown_runtime__.initModule("hmr.js");
-		var import_hmr_10 = __rolldown_runtime__.loadExports("hmr.js");
+		var import_hmr_0 = __rolldown_runtime__.loadExports("hmr.js");
 		const hot_main = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 	} finally {}
 }), 3);

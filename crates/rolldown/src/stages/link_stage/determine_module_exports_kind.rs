@@ -21,10 +21,12 @@ impl LinkStage<'_> {
       .filter_map(|(idx, m)| matches!(m, Module::Normal(_)).then_some(idx))
       .collect();
 
-    // Make required modules without module syntax CommonJS before the walk, whose order varies
-    // between builds. See internal-docs/linking/determine-module-exports-kind/implementation.md.
+    // Wrap every required module, and make one without module syntax CommonJS, before the walk,
+    // whose order varies between builds. When code splitting is disabled, `import()` behaves like
+    // a `require()` that returns a promise. See
+    // internal-docs/linking/determine-module-exports-kind/implementation.md.
     let code_splitting_disabled = self.options.code_splitting.is_disabled();
-    let promoted_to_commonjs: Vec<ModuleIdx> = self
+    let required: Vec<ModuleIdx> = self
       .module_table
       .modules
       .iter()
@@ -35,12 +37,19 @@ impl LinkStage<'_> {
           || (rec.kind == ImportKind::DynamicImport && code_splitting_disabled)
       })
       .filter_map(|rec| rec.resolved_module)
-      .filter(|&idx| {
-        self.module_table[idx].as_normal().is_some_and(|m| m.exports_kind == ExportsKind::None)
-      })
       .collect();
-    for module_idx in promoted_to_commonjs {
-      self.promote_to_commonjs(module_idx);
+    for module_idx in required {
+      if let Some(module) = self.module_table[module_idx].as_normal() {
+        let wrap_kind = match module.exports_kind {
+          ExportsKind::Esm => WrapKind::Esm,
+          ExportsKind::CommonJs => WrapKind::Cjs,
+          ExportsKind::None => {
+            self.promote_to_commonjs(module_idx);
+            WrapKind::Cjs
+          }
+        };
+        self.metas[module_idx].set_wrap_kind(wrap_kind);
+      }
     }
 
     for importer_idx in importer_indices {
@@ -69,46 +78,16 @@ impl LinkStage<'_> {
               }
             }
           }
-          ImportKind::Require => match importee_kind {
-            ExportsKind::Esm => {
-              self.metas[importee_idx].set_wrap_kind(WrapKind::Esm);
-            }
-            ExportsKind::CommonJs => {
-              self.metas[importee_idx].set_wrap_kind(WrapKind::Cjs);
-            }
-            ExportsKind::None => {
-              self.metas[importee_idx].set_wrap_kind(WrapKind::Cjs);
-              // A `require`'d module with `ExportsKind::None` is promoted to `ExportsKind::CommonJs`.
-              self.promote_to_commonjs(importee_idx);
-            }
-          },
-          ImportKind::DynamicImport => {
-            if self.options.code_splitting.is_disabled() {
-              // When code splitting is disabled (e.g. iife/umd/cjs output), `import()` behaves
-              // like a `require()` that returns a promise, so the imported module must be wrapped.
-              match importee_kind {
-                ExportsKind::Esm => {
-                  self.metas[importee_idx].set_wrap_kind(WrapKind::Esm);
-                }
-                ExportsKind::CommonJs => {
-                  self.metas[importee_idx].set_wrap_kind(WrapKind::Cjs);
-                }
-                ExportsKind::None => {
-                  self.metas[importee_idx].set_wrap_kind(WrapKind::Cjs);
-                  // A dynamically-imported module with `ExportsKind::None` is promoted to `ExportsKind::CommonJs`
-                  // since we wrap it as CJS.
-                  self.promote_to_commonjs(importee_idx);
-                }
-              }
-            }
-          }
           ImportKind::AtImport => {
             unreachable!("A Js module would never import a CSS module via `@import`");
           }
           ImportKind::UrlImport => {
             unreachable!("A Js module would never import a CSS module via `url()`");
           }
-          ImportKind::NewUrl | ImportKind::HotAccept => {}
+          ImportKind::Require
+          | ImportKind::DynamicImport
+          | ImportKind::NewUrl
+          | ImportKind::HotAccept => {}
         }
       }
 

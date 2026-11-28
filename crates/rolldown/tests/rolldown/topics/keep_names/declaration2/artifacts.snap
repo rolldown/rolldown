@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 // HIDDEN [\0rolldown/runtime.js]
+__name(random64$1, "random64");
 // a.js
 var a_exports = /* @__PURE__ */ __exportAll({
 	delay: () => delay$1,
@@ -17,7 +18,6 @@ var delay$1 = /* @__PURE__ */ __name(function(time) {}, "delay");
 function random64$1() {
 	return BigInt(Math.random() * 0xffffffff & 0xffffffff) << 32n & BigInt(Math.random() * 0xffffffff & 0xffffffff);
 }
-__name(random64$1, "random64");
 // main.js
 console.log(`namespace: `, a_exports);
 var delay = function(time) {};

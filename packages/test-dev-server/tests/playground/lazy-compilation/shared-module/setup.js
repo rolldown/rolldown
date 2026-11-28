@@ -1,7 +1,7 @@
 // shared-module: page-a and page-b both import selectors, so selectors lands
 // in a shared chunk where export names get minified. Regression for PR #9132:
 // a lazy import must resolve to the exports read by stable id, otherwise
-// `sel.foo` is undefined. Only shows on the first click of a fresh server.
+// `sel.foo` is undefined. Only shows on an output built after the lazy fetches.
 const log = (msg) => {
   document.getElementById('shared-module-log').textContent += msg + '\n';
 };

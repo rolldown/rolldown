@@ -1,0 +1,11 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## FILE_NAME_OUTSIDE_OUTPUT_DIRECTORY
+
+```text
+[FILE_NAME_OUTSIDE_OUTPUT_DIRECTORY] The output file name "" is not contained in the output directory. Make sure all file names are relative paths without ".." segments.
+
+```

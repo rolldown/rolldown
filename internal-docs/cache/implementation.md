@@ -89,12 +89,17 @@ Rust keeps it (see below).
 
 - `Bundle::scan_modules_impl` passes `None` before `buildStart` of a full scan. All options are
   cleared.
-- `ScanStage::scan` passes the changed files of a partial scan before it resolves them again
-  without an importer, so the `resolveId` hooks of that resolution do not see the options of the
-  last fetch.
+- `ScanStage::reset_changed_modules` passes the changed modules of an incremental rebuild before
+  `buildStart`, so `getModuleInfo` in `buildStart` shows their start options. Without it,
+  `buildStart` sees the options of the last fetch, such as the ones of the HMR stage of the same
+  change.
 - `ModuleLoader::fetch_modules` passes the changed modules of a partial scan. Each one goes back
-  to the options it started with (`resolvedModuleOptionMap`), because its importers do not
-  resolve it again. The HMR stage and lazy compilation reset only here.
+  to the options it started with (`resolvedModuleOptionMap`), because the scan fetches it again
+  from the resolution that created it, and its importers do not resolve it again. In an
+  incremental rebuild, this second reset also drops what `buildStart` set. The HMR stage and lazy
+  compilation reset only here.
+- JS keeps a shallow copy of the start `meta`, as Rollup copies `meta`. A hook that changes a
+  nested object of `meta` in place also changes the start options, so a reset keeps that change.
 
 As in Rollup, only the resolution that creates a module sets its start options. Later
 resolutions of the same id, `this.resolve`, and `this.load` options for a module that exists do
@@ -117,17 +122,56 @@ not change the module.
 - The options of resolutions that created no module (Rust `this.resolve` probes, and imports of a
   module that already exists) stay until the build ends (`PluginContextData.clear`) or a full scan
   starts. A partial scan also drops them: each `resetModuleOptions` call with ids (one per HMR
-  update or lazy compile, two per incremental rebuild) drops `olderResolutionOptionsMap` and moves
+  update or lazy compile, two per incremental rebuild, none when no module changed) drops
+  `olderResolutionOptionsMap` and moves
   `resolutionOptionsMap` there. A module takes its options in the scan that resolved it, so only
   unused options are dropped, and an HMR-only session keeps at most those of the previous HMR
   update. The receipt counter does not restart, so a receipt never finds the options of another
   build.
 
-On the Rust side, the HMR stage fetches a changed module again from its
+On the Rust side, the HMR stage and an incremental rebuild fetch a changed module again from its
 `originative_resolved_id`. That `ResolvedId` keeps the `moduleSideEffects` of the resolution
-that created the module (`ModuleTask::run_inner`). An incremental rebuild fetches the module
-from the importer-less resolution above, so `ModuleLoader::try_spawn_new_task` replaces its
-`moduleSideEffects` with the one of the module's `originative_resolved_id` in the snapshot.
+that created the module (`ModuleTask::run_inner`).
+
+It also keeps the `package.json` that the resolution found, and the module format that its
+`type` field gave. The file can change after the resolution, so `ModuleLoader::fetch_modules`
+reads it again from the same path before it fetches a changed module, also for the modules in
+`pending_rescans` (`refresh_package_json` in `module_loader/resolve_utils.rs`). The HMR stage,
+lazy compilation and an incremental rebuild all fetch through it. It checks that the file exists
+with `metadata` of the file system, which also sees a file in a Yarn PnP zip archive. It infers
+the format again from the whole id or from the id without `?query` and `#fragment`, whichever
+gave the old format. When both gave it, it uses the whole id, so an id with a query from
+Rolldown's resolver that started as `Unknown` stays `Unknown`.
+
+A `package.json` that cannot be read or parsed keeps the data of the last read, and the module is
+fetched as usual. The refresh never fails the scan, for two reasons:
+
+- The refresh runs before the scan knows which modules the graph still needs. The same change can
+  remove the last import of the module, and then a fresh build does not read the file at all.
+- A successful scan must fetch each changed module again, because the HMR stage stamps and ships
+  each of them.
+
+A fresh build can give another result here. It fails to resolve the module when the file cannot be
+parsed, and it uses the next `package.json` up when the file cannot be read.
+
+The refresh reads the file through the `package.json` cache of the resolver, so it sees a change
+only after that cache was cleared. The dev engine clears it, among other cases, when a watched
+`package.json` changes (`internal-docs/dev-engine/implementation.md` §9c). Core does not watch a
+`package.json`, so a plugin must watch it, for example with `addWatchFile`. A direct caller of a
+partial scan clears the cache with `Bundler::clear_resolver_cache`. After the cache was cleared,
+other resolutions read the file again too. A new import of a module under a `package.json` that
+cannot be parsed then fails as in a fresh build.
+
+A `package.json` that no longer exists gives no `package.json` data. Three cases are not handled:
+
+- A `package.json` that a user adds nearer to the module is not found, because the path is the one
+  that the resolution found.
+- A `package.json` that a user adds after it was missing is not read again.
+- When only the `package.json` changes, the module is not fetched again, so it keeps the old data
+  until the module itself changes.
+
+All three need the files that the resolution depends on, also the ones that it looked for and did
+not find. Rolldown does not track them yet.
 
 `moduleSideEffects` lives only in Rust. A hook value reaches Rust with the hook result: the
 `resolveId`, `resolveDynamicImport`, `load` and `transform` wrappers send Rust only the
@@ -277,21 +321,21 @@ pub struct ScanStageCache {
 }
 ```
 
-| Field                            | Purpose                                                                                                                                                                               |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `snapshot`                       | The full module graph. `None` is a legal transient state; it is `private` and accessed only through the methods below.                                                                |
-| `barrel_state`                   | Barrel re-export resolution state (`BarrelState`).                                                                                                                                    |
-| `module_id_to_idx`               | The `ModuleId` → `ModuleIdx` registry/allocator (see "Module identity model").                                                                                                        |
-| `importers`                      | Reverse dependency graph: per module, who imports it.                                                                                                                                 |
-| `modules_with_changed_importers` | Modules whose `importers` records were mutated by a partial scan; `merge` drains it to re-derive their materialized importer sets (see below).                                        |
-| `pending_rescans`                | Work queue: files of an aborted partial scan, whose mutations were reverted (`ModuleLoader::revert_partial_scan`); the next partial scan retries them so their errors keep surfacing. |
-| `user_defined_entry`             | The set of configured root entry `ModuleId`s.                                                                                                                                         |
-| `user_defined_entry_common_dir`  | Common directory of the entries of the last full scan, configured and emitted. The path externals a partial scan adds render relative to it.                                          |
-| `module_idx_by_abs_path`         | Absolute-path → `ModuleIdx`, used by the watcher. Paths are slash-normalized.                                                                                                         |
-| `module_idx_by_stable_id`        | `StableModuleId` → `ModuleIdx`, used by HMR.                                                                                                                                          |
+| Field                            | Purpose                                                                                                                                                                                                                                                                                                                                                              |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `snapshot`                       | The full module graph. `None` is a legal transient state; it is `private` and accessed only through the methods below.                                                                                                                                                                                                                                               |
+| `barrel_state`                   | Barrel re-export resolution state (`BarrelState`).                                                                                                                                                                                                                                                                                                                   |
+| `module_id_to_idx`               | The `ModuleId` → `ModuleIdx` registry/allocator (see "Module identity model").                                                                                                                                                                                                                                                                                       |
+| `importers`                      | Reverse dependency graph: per module, who imports it.                                                                                                                                                                                                                                                                                                                |
+| `modules_with_changed_importers` | Modules whose `importers` records were mutated by a partial scan; `merge` drains it to re-derive their materialized importer sets (see below).                                                                                                                                                                                                                       |
+| `pending_rescans`                | Work queue: files of an aborted partial scan, whose mutations were reverted (`ModuleLoader::revert_partial_scan`); the next partial scan retries them so their errors keep surfacing. A lazy compile's scan retries only its own proxy (`ModuleLoader::set_retry_pending_rescans`; see [lazy-compilation/design.md](../lazy-compilation/design.md#6-repeat-visits)). |
+| `user_defined_entry`             | The set of configured root entry `ModuleId`s.                                                                                                                                                                                                                                                                                                                        |
+| `user_defined_entry_common_dir`  | Common directory of the entries of the last full scan, configured and emitted. The path externals a partial scan adds render relative to it.                                                                                                                                                                                                                         |
+| `module_idx_by_abs_path`         | Absolute-path → `ModuleIdx`, used by the watcher. Paths are slash-normalized.                                                                                                                                                                                                                                                                                        |
+| `module_idx_by_stable_id`        | `StableModuleId` → `ModuleIdx`, used by HMR.                                                                                                                                                                                                                                                                                                                         |
 
 `module_idx_by_abs_path` and `module_idx_by_stable_id` are **derived** —
-`build_module_index_maps` (`scan_stage_cache.rs:297`) clears and rebuilds both
+`ScanStageCache::build_module_index_maps` clears and rebuilds both
 from the snapshot whenever `set_snapshot` runs.
 
 Snapshot accessors (`scan_stage_cache.rs`):
@@ -301,7 +345,7 @@ Snapshot accessors (`scan_stage_cache.rs`):
 - `get_snapshot_mut` (`:51`) — `&mut`; **panics if `None`**.
 - `take_snapshot` (`:56`) — moves the snapshot out, leaving `None`.
 - `apply_module_side_effects_overrides` (`:72`) — takes the snapshot, applies the plugin writes to `moduleSideEffects` to it, restores it on every outcome, then propagates any error.
-- `merge` (`:80`) — splices a scan output into the snapshot (see below).
+- `merge` — splices a scan output into the snapshot (see below).
 - `create_output` (`:313`) — produces a `NormalizedScanStageOutput` for the build to consume.
 
 ### `BundleMode`
@@ -413,7 +457,10 @@ produces only the changed + newly discovered modules → sparse `Map`.
    In a partial scan, the kind of a module comes from one of two places:
 
    - A module that the scan re-scans or adds gets its kind from this scan.
-     Thus a changed file that was external can become a normal module.
+     A changed external module is not re-scanned: `changed_resolved_ids` in
+     `scan_stage.rs` marks it as invalidated, so the first resolution of its
+     id in this scan sets its kind again. Thus a changed file that was
+     external can become a normal module.
    - An unchanged module keeps its kind from the snapshot.
 
    Known gap: a partial scan also reports this error when an edit only
@@ -480,13 +527,14 @@ Consequence: every module present in a scan output was registered in
 
 ## `ScanStageCache::merge` — the write path
 
-`scan_stage_cache.rs:80`. Signature: `merge(&mut self, scan_stage_output: ScanStageOutput, plugin_driver: &PluginDriver) -> BuildResult<()>`.
+`ScanStageCache::merge` in `scan_stage_cache.rs`. Signature: `merge(&mut self, scan_stage_output: ScanStageOutput, plugin_driver: &PluginDriver) -> BuildResult<()>`.
 
 ### Callers
 
-- `bundle.rs:256` — in `normalize_scan_stage_output_and_update_cache`, the
-  non-full-scan branch.
-- `hmr_stage.rs:299`, `:410` — the HMR update and lazy-compile paths.
+- `Bundle::normalize_scan_stage_output_and_update_cache` — the non-full-scan
+  branch.
+- `HmrStage::compute_hmr_update_for_file_changes` and
+  `HmrStage::compile_lazy_entry` — the HMR update and lazy-compile paths.
 
 The full-scan build path does not call `merge`; it uses `set_snapshot` instead
 (`bundle.rs:250`). All current callers pass a partial-scan output, whose
@@ -495,14 +543,14 @@ arm is `unreachable!()`.
 
 ### Algorithm
 
-1. **First-build escape hatch** (`:91`–`:96`) — if `snapshot` is `None`,
+1. **First-build escape hatch** — if `snapshot` is `None`,
    convert the whole output via `try_into` and return.
-2. **Extract `modules`** (`:97`–`:106`) — the `module_table` is matched: the
+2. **Extract `modules`** — the `module_table` is matched: the
    `IndexVec` arm is `unreachable!()`; the `Map` arm is collected into a `Vec`
    and **sorted by idx**. The sort places existing modules (idx < cache length)
    before new ones (idx ≥ cache length), and orders new modules ascending so
    that `push` lands each at its allocated slot.
-3. **Per-module loop** (`:108`–`:172`):
+3. **Per-module loop**:
    - `new_idx` is the `Map` key (indexes the scan output); `idx` is
      `module_id_to_idx[new_module.id()].idx()` (indexes the cache). By
      invariant 6 they are equal.
@@ -515,7 +563,7 @@ arm is `unreachable!()`.
      count by the old↔new delta; replace or remove the TLA span.
    - All payload is moved (`mem::take` / `take` / `mem::replace` / `mem::swap`)
      out of the scan output — never cloned.
-4. **Re-derive importer sets of affected cached modules** (`:171`–`:182`) —
+4. **Re-derive importer sets of affected cached modules** —
    drain `modules_with_changed_importers` (filled by
    `ModuleLoader::mark_module_importers_changed` next to every mutation of the
    `importers` edge list) and rebuild each listed module's materialized
@@ -555,7 +603,7 @@ as the `module_id_to_idx` lookup and is infallible.
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `ScanStage::scan(scan_mode, &mut self.cache)`            | called at `bundle.rs:104`                                                                                                                         | Non-snapshot fields via the loader.                                                                                                                                                                                                                    |
 | `ModuleLoader` (`cache: &'a mut ScanStageCache`)         | `module_loader.rs:117` and methods                                                                                                                | `module_id_to_idx`, `barrel_state` (e.g. removes `barrel_infos` on invalidate), `importers`, `modules_with_changed_importers`, `user_defined_entry` (full incremental scan), `user_defined_entry_common_dir` (every full scan).                        |
-| `ScanStageCache::merge`                                  | `scan_stage_cache.rs:80`; called at `bundle.rs:256`, `hmr_stage.rs:299/410`                                                                       | `snapshot`, `module_idx_by_abs_path`, `module_idx_by_stable_id`, `barrel_state.resolved_barrel_modules` (drained), `modules_with_changed_importers` (drained), `tla_*` fields in the snapshot; refreshes plugin `module_infos` for re-derived modules. |
+| `ScanStageCache::merge`                                  | called in `Bundle::normalize_scan_stage_output_and_update_cache` and `HmrStage`                                                                   | `snapshot`, `module_idx_by_abs_path`, `module_idx_by_stable_id`, `barrel_state.resolved_barrel_modules` (drained), `modules_with_changed_importers` (drained), `tla_*` fields in the snapshot; refreshes plugin `module_infos` for re-derived modules. |
 | `ModuleLoader::revert_partial_scan`                      | `module_loader.rs` scan error exit                                                                                                                | Restores `module_id_to_idx` / `importers` / `barrel_state` / importer marks to their pre-scan state and fills `pending_rescans`.                                                                                                                       |
 | `ScanStageCache::set_snapshot`                           | `scan_stage_cache.rs:44`; called at `bundle.rs:250` and inside `apply_module_side_effects_overrides`                                              | `snapshot` + rebuilds `module_idx_by_abs_path` / `module_idx_by_stable_id`.                                                                                                                                                                            |
 | `ScanStageCache::apply_module_side_effects_overrides`    | `scan_stage_cache.rs:72`; called in `Bundle::end_build_phase`, `Bundle::normalize_scan_stage_output_and_update_cache` and twice in `hmr_stage.rs` | Takes and restores `snapshot`; applies the plugin writes to `moduleSideEffects` to the per-module side effects inside it.                                                                                                                              |

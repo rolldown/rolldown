@@ -5,10 +5,11 @@ mod utils;
 use std::{borrow::Cow, pin::Pin, sync::Arc};
 
 use oxc::ast_visit::VisitJs;
+use rolldown_error::{Diagnostic, DiagnosticOptions};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookTransformOutput, HookTransformOutputMap, HookUsage, Plugin,
-  PluginContext, SharedLoadPluginContext,
+  HookResolveIdReturn, HookTransformOutput, HookTransformOutputMap, HookUsage, LogWithoutPlugin,
+  Plugin, PluginContext, SharedLoadPluginContext,
 };
 use rolldown_plugin_utils::parse_program;
 use rolldown_std_utils::relative_path_as_js_specifier;
@@ -70,11 +71,12 @@ impl Plugin for ViteDynamicImportVarsPlugin {
         ctx: &ctx,
         source_text: args.code,
         root: ctx.cwd(),
-        importer: args.id.as_path(),
+        id: args.id,
         need_helper: false,
         vite_ignored_starts: Vec::default(),
         async_imports: Vec::default(),
         magic_string: None,
+        warnings: Vec::new(),
       };
       {
         let allocator = oxc::allocator::Allocator::default();
@@ -102,6 +104,7 @@ impl Plugin for ViteDynamicImportVarsPlugin {
             visitor.rewrite(
               import.span,
               import.source_span,
+              &import.options,
               import.first_quasi_len,
               &id[..index],
               &id,
@@ -111,6 +114,19 @@ impl Plugin for ViteDynamicImportVarsPlugin {
       }
 
       if let Some(mut magic_string) = visitor.magic_string {
+        let warnings = visitor.warnings;
+        if !warnings.is_empty() && ctx.options().on_log.is_some() {
+          let diagnostic_options = DiagnosticOptions { cwd: ctx.cwd().clone() };
+          let diagnostics: Vec<_> = warnings
+            .iter()
+            .map(|warning| warning.to_diagnostic_with(&diagnostic_options))
+            .collect();
+          let rendered =
+            Diagnostic::render_batch(&diagnostics, rolldown_error::stderr_supports_color());
+          for (warning, rendered) in warnings.iter().zip(rendered) {
+            ctx.warn(LogWithoutPlugin::from_rendered(warning, rendered));
+          }
+        }
         if visitor.need_helper {
           magic_string.prepend(format!(
             "import __variableDynamicImportRuntimeHelper from \"{DYNAMIC_IMPORT_HELPER}\";"

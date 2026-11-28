@@ -7,6 +7,7 @@ use oxc::ast::ast::{
   self, Argument, ArrayExpressionElement, Expression, ObjectPropertyKind, PropertyKey, PropertyKind,
 };
 use oxc::ast_visit::{VisitJs, walk_js};
+use rolldown_common::ImportAttributes;
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_plugin_utils::{
@@ -15,7 +16,7 @@ use rolldown_plugin_utils::{
 };
 use rolldown_std_utils::relative_path_to_slash;
 use rolldown_utils::{
-  ecmascript::{to_module_import_export_name_with_ascii, to_usv_str},
+  ecmascript::{to_ecma_string_literal, to_module_import_export_name_with_ascii, to_usv_str},
   indexmap::FxIndexMap,
 };
 use string_wizard::MagicString;
@@ -68,6 +69,7 @@ pub struct ImportGlobOptions {
   query: Option<String>,
   import: Option<String>,
   case_sensitive: Option<bool>,
+  attributes: ImportAttributes,
 }
 
 struct ImportGlobFileData {
@@ -289,6 +291,29 @@ impl<'ast> GlobImportVisit<'_> {
     omit_type: ImportGlobOmitType,
     span: oxc::span::Span,
   ) {
+    let import_attributes =
+      if options.attributes.is_empty() || matches!(omit_type, ImportGlobOmitType::Values) {
+        String::new()
+      } else {
+        let entries = options
+          .attributes
+          .iter()
+          .map(|(key, value)| {
+            format!(
+              "{}: {}",
+              to_module_import_export_name_with_ascii(key, false),
+              to_ecma_string_literal(value, false)
+            )
+          })
+          .collect::<Vec<_>>()
+          .join(", ");
+        if options.eager {
+          format!(" with {{ {entries} }}")
+        } else {
+          format!(", {{ with: {{ {entries} }} }}")
+        }
+      };
+
     let properties = files.iter().enumerate().map(|(index, file_data)| {
       let import_path = &file_data.import_path;
       let formatted_file = if let Some(query) = &options.query {
@@ -327,16 +352,21 @@ impl<'ast> GlobImportVisit<'_> {
           }
         };
 
-        self.import_decls.push(format!("import {module_specifier} from {formatted_file};"));
+        self
+          .import_decls
+          .push(format!("import {module_specifier} from {formatted_file}{import_attributes};"));
 
         Cow::Owned(name)
       } else {
         // () => import('./dir/bar.js') or () => import('./dir/foo.js').then((m) => m.setup)
         Cow::Owned(match options.import.as_deref() {
           Some(import) if import != "*" => {
-            format!("() => import({formatted_file}).then((m) => m[{}])", to_string_literal(import))
+            format!(
+              "() => import({formatted_file}{import_attributes}).then((m) => m[{}])",
+              to_string_literal(import)
+            )
           }
-          _ => format!("() => import({formatted_file})"),
+          _ => format!("() => import({formatted_file}{import_attributes})"),
         })
       };
 
@@ -733,6 +763,19 @@ impl GlobImportVisit<'_> {
         "caseSensitive" => {
           if let Expression::BooleanLiteral(bool) = &p.value {
             options.case_sensitive = Some(bool.value);
+          }
+        }
+        "with" => {
+          if let Expression::ObjectExpression(attributes) = &p.value {
+            options.attributes =
+              ImportAttributes::from_entries(attributes.properties.iter().filter_map(|property| {
+                let property = property.as_property()?;
+                let key = property.key.literal_name()?;
+                let Expression::StringLiteral(value) = property.value.get_inner_expression() else {
+                  return None;
+                };
+                Some((to_usv_str(key.as_js_str()).into_owned(), to_usv_str(value.value)))
+              }));
           }
         }
         "query" => match &p.value {

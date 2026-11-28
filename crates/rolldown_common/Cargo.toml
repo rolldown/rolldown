@@ -1,6 +1,6 @@
 [package]
 name = "rolldown_common"
-version = "1.3.3"
+version = "1.3.4"
 publish = true
 description = "This crate is mostly for sharing code between rolldwon crates."
 readme = "../../README.md"
@@ -52,9 +52,7 @@ num-bigint = { workspace = true }
 insta = { workspace = true }
 
 [features]
-default = ["serde"]
 deserialize_bundler_options = ["dep:schemars", "dep:serde"]
-serde = ["dep:serde", "oxc_index/serde"]
 
 [lib]
 doctest = false

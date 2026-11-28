@@ -89,8 +89,16 @@ impl JsChangedOutputs {
                 result = Err(err);
               }
             }
-            (v @ rolldown_common::Output::Asset(_), Either::B(asset)) => {
-              *v = rolldown_common::Output::Asset(Arc::new(asset.into()));
+            (rolldown_common::Output::Asset(previous), Either::B(asset)) => {
+              *previous = Arc::new(rolldown_common::OutputAsset {
+                immutable: asset.immutable.unwrap_or_else(|| {
+                  previous.immutable && previous.filename.as_str() == asset.filename
+                }),
+                names: asset.names,
+                original_file_names: asset.original_file_names,
+                filename: asset.filename.into(),
+                source: asset.source.into(),
+              });
             }
             _ => {}
           }

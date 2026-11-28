@@ -60,7 +60,7 @@ For each `(importer, importee, rec.kind)`:
 | `AtImport` / `UrlImport`   | —                       | `unreachable!` — see §"Why CSS import kinds are `unreachable!`".                      |
 | `NewUrl` / `HotAccept`     | —                       | No-op (asset reference / HMR metadata, not a module-shape signal).                    |
 
-A module with `ExportsKind::None` that is loaded both by `Import` and by `Require` (or no-split `DynamicImport`) becomes `CommonJs`, as in esbuild. A pre-pass promotes every such module before the walk, so the `Import` arm sees `CommonJs` and does nothing. Without it, the result would depend on which importer the walk visits first. The walk follows module-table order, which follows load completion and differs between builds.
+The `Require` and no-split `DynamicImport` rows run in a pre-pass, before the walk over importers handles the `Import` rows. So a module with `ExportsKind::None` that is loaded both by `Import` and by `Require` (or no-split `DynamicImport`) becomes `CommonJs`, as in esbuild, and the `Import` arm then sees `CommonJs` and does nothing. Without the pre-pass, the result would depend on which importer the walk visits first. The walk follows module-table order, which follows load completion and differs between builds.
 
 After processing all import records, the importer is itself wrapped as CJS when:
 
@@ -73,7 +73,7 @@ The top-level `this` of a CommonJS module creates an implicit reference to `expo
 
 `ModuleOrExports` includes this reference. The linker uses `ModuleOrExports` to add a CommonJS wrapper to IIFE and UMD entries. The finalizer prints the `this` as the third parameter of the wrapper. The renamer gives this parameter its name (`EcmaView::cjs_this_ref`), and the runtime passes the initial exports object of the module to it. See [renaming/design.md](../../renaming/design.md), principles 6 and 7.
 
-A module without module syntax gets `ExportsKind::None` from the scanner, which maps its top-level `this` to `ThisExprReplaceKind::Context`. When this pass promotes such a module to `CommonJs` (the `Require` and no-split `DynamicImport` arms), `promote_to_commonjs` switches those entries to `ThisExprReplaceKind::Exports`, sets `ExportsRef` and creates `cjs_this_ref`, as the scanner does for a module with CommonJS syntax. Node runs the module as CommonJS, so its top-level `this` is `module.exports` (#11269).
+A module without module syntax gets `ExportsKind::None` from the scanner, which maps its top-level `this` to `ThisExprReplaceKind::Context`. When the pre-pass promotes such a module to `CommonJs`, `promote_to_commonjs` switches those entries to `ThisExprReplaceKind::Exports`, sets `ExportsRef` and creates `cjs_this_ref`, as the scanner does for a module with CommonJS syntax. Node runs the module as CommonJS, so its top-level `this` is `module.exports` (#11269).
 
 > **Why "lazy export" is excluded from the `Import` + `None` arm:**
 > Lazy-export modules are deferred ESM facades; promoting them here would short-circuit the dedicated lazy-export pass that runs later (`generate_lazy_export`), which performs additional restructuring that a naive `None → Esm` promotion would skip.
@@ -114,7 +114,7 @@ Import records only come from the AST scanner, and the scanner never creates `Im
 
 Things that are easy to break and worth re-checking when changing this file:
 
-- **Order between `set_wrap_kind` calls and `exports_kind` mutation.** Wrap decisions inside the `Require` / `DynamicImport` arms read `importee.exports_kind` _before_ any promotion would happen. Don't reorder.
+- **Required modules are handled before the walk.** The pre-pass sets the wrap kind of every module that a `Require` or no-split `DynamicImport` loads, and promotes the ones with `ExportsKind::None`. Moving this back into the walk makes the `Import` + `None` result depend on visit order again.
 - **The CJS-importer wrap rule** (after the per-record loop). The conjunction of conditions encodes three different output-format contracts; flattening it into a `match self.options.format` rewrite has tripped more than one reviewer. Add a regression test rather than refactoring blindly.
 - **Don't widen the unsafe block.** Anything that needs mutable access to other fields of `NormalModule` should go through a separate pass.
 - **Don't promote lazy-export modules here.** Leave `has_lazy_export()` modules to `generate_lazy_export`; promoting them prematurely will break the JSON-lazy and ESM-default code paths in that file.

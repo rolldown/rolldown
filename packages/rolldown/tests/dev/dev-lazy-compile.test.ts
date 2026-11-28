@@ -6,6 +6,7 @@ import vm from 'node:vm';
 import type { InputOptions, OutputOptions, Plugin } from 'rolldown';
 import type { DevEngine, DevOptions } from 'rolldown/experimental';
 import { dev as _dev } from 'rolldown/experimental';
+import { parseSync } from 'rolldown/utils';
 import type * as DevRuntimeModule from 'rolldown/experimental/runtime';
 import { isWasiTest } from 'rolldown-tests/utils';
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map';
@@ -783,14 +784,93 @@ test(
       'reexport-external-client',
     );
 
-    const bindings = [...chunk.code.matchAll(/import \* as (\w+) from "external-dep"/g)].map(
-      (match) => match[1],
-    );
+    const bindings = externalBindings(chunk.code);
     expect(bindings).toHaveLength(1);
     // the registry never holds an external, so nothing may look it up there
     expect(chunk.code).not.toMatch(/loadExports\("external-dep"\)/);
     // and the one binding is declared once, so the import is not shadowed
-    expect(chunk.code).not.toMatch(new RegExp(`var\\s+${bindings[0]}\\b`));
+    expect(chunk.code).not.toMatch(new RegExp(`var\\s+${escapeRegExp(bindings[0])}\\b`));
+  },
+);
+
+function externalBindings(code: string): string[] {
+  return [...code.matchAll(/import \* as ([\w$]+) from "external-dep"/g)].map((match) => match[1]);
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[$()*+.?[\\\]^{|}]/g, '\\$&');
+}
+
+function semanticErrors(filename: string, code: string) {
+  return parseSync(filename, code, { sourceType: 'module', showSemanticErrors: true }).errors;
+}
+
+// The same factory code goes into every payload that carries the module. So the name of an
+// external's `import * as` binding, which sits at the payload top level, holds the importer's
+// id, not the module's place in the payload. Two importers of one external then never declare
+// the same name, in whatever payload their factories meet.
+test(
+  'a lazy chunk gives each importer of an external its own top-level binding',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    // `semanticErrors` must report a duplicate import binding, or the checks below prove nothing
+    expect(
+      semanticErrors('self-check.js', `import * as a from 'x';\nimport * as a from 'y';\n`),
+    ).not.toHaveLength(0);
+
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-external-names-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, 'main.js'),
+      `import('./a.js');\nimport('./b.js');\nimport('./c.js');\n`,
+    );
+    fs.writeFileSync(
+      path.join(dir, 'a.js'),
+      `import { helper } from 'external-dep';\nexport const a = helper;\n`,
+    );
+    fs.writeFileSync(
+      path.join(dir, 'b.js'),
+      `import { helper } from 'external-dep';\nexport const b = helper;\n`,
+    );
+    fs.writeFileSync(
+      path.join(dir, 'c.js'),
+      `export { a } from './a.js';\nexport { b } from './b.js';\n`,
+    );
+
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        external: ['external-dep'],
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist') },
+      {},
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+
+    // one client per route, so each payload carries its whole route
+    const compile = (name: string, clientId: string) =>
+      engine.compileEntry(`${path.join(dir, name)}?rolldown-lazy=1`, clientId);
+    const chunkA = await compile('a.js', 'external-names-x');
+    const chunkB = await compile('b.js', 'external-names-y');
+    const chunkC = await compile('c.js', 'external-names-z');
+
+    // a.js and b.js both sit first in their own payloads, and still get different names
+    const [bindingA] = externalBindings(chunkA.code);
+    const [bindingB] = externalBindings(chunkB.code);
+    expect(bindingA).not.toBe(bindingB);
+    // c.js's payload carries a.js and b.js again, with the same names
+    expect(externalBindings(chunkC.code).sort()).toEqual([bindingA, bindingB].sort());
+    expect(semanticErrors('c.js', chunkC.code)).toEqual([]);
   },
 );
 
@@ -864,11 +944,11 @@ test(
   },
 );
 
-// A plugin that emits a chunk from `buildStart` emits it again on every rebuild, including
-// the partial one that follows a lazy compile. The emitted module is unchanged, so that scan
-// never loads it, and its module info has to come from the previous build instead (#11318).
+// A plugin that emits a chunk from `buildStart` emits it again on every rebuild, including a
+// partial one after a lazy compile. The emitted module is unchanged, so that scan never loads
+// it, and its module info has to come from the previous build instead (#11318).
 test(
-  'a chunk emitted in buildStart survives the rebuild after a lazy compile',
+  'a chunk emitted in buildStart survives a rebuild after a lazy compile',
   { timeout: TEST_TIMEOUT },
   async ({ onTestFinished }) => {
     const uniqueId = crypto.randomUUID().slice(0, 8);
@@ -922,10 +1002,154 @@ test(
     );
     expect(chunk.code).toMatch(/registerFactory\("[^"]*dep\.js"/);
 
-    // The lazy compile queues a rebuild that runs `buildStart` again.
-    await engine.ensureCurrentBuildFinish();
-    expect(outputFileNames.length).toBeGreaterThanOrEqual(2);
+    // The coordinator handles messages in order, so after this reply it watches `dep.js`.
+    await engine.getBundleState();
+    // An edit of `dep.js` runs a partial rebuild, which runs `buildStart` again. The watcher can
+    // miss an event, so each poll edits the file again.
+    let edits = 0;
+    await expect
+      .poll(
+        async () => {
+          fs.writeFileSync(path.join(dir, 'dep.js'), `export const value = ${++edits + 1};\n`);
+          await engine.ensureLatestBuildOutput();
+          return outputFileNames.length;
+        },
+        { timeout: 20_000, interval: 500 },
+      )
+      .toBeGreaterThanOrEqual(2);
     expect(outputFileNames.at(-1)).toContain('emitted.js');
+  },
+);
+
+// rolldown#11489: a lazy compile merges its route into the server's graph and starts no build.
+// No page loads a lazy route from the build output, because every lazy `import()` calls
+// `requestLazy`. So the build output stays current, and N compiles leave one build.
+test('lazy compiles start no build', { timeout: TEST_TIMEOUT }, async ({ onTestFinished }) => {
+  const uniqueId = crypto.randomUUID().slice(0, 8);
+  const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-no-build-${uniqueId}`);
+  fs.mkdirSync(dir, { recursive: true });
+  const routes = [0, 1, 2, 3, 4];
+  fs.writeFileSync(
+    path.join(dir, 'main.js'),
+    routes.map((i) => `export const load${i} = () => import('./route-${i}.js');\n`).join(''),
+  );
+  fs.writeFileSync(path.join(dir, 'shared.js'), `export const shared = 'shared';\n`);
+  for (const i of routes) {
+    fs.writeFileSync(
+      path.join(dir, `route-${i}.js`),
+      `import { shared } from './shared.js';\nexport const route = shared + '-route-${i}';\n`,
+    );
+  }
+
+  let builds = 0;
+  const engine = await dev(
+    {
+      input: path.join(dir, 'main.js'),
+      experimental: { devMode: { lazy: true } },
+    },
+    { dir: path.join(dir, 'dist'), format: 'esm' },
+    {
+      onOutput(result) {
+        if (!(result instanceof Error)) {
+          builds++;
+        }
+      },
+    },
+  );
+
+  onTestFinished(async () => {
+    await engine.close();
+    if (!process.env.CI) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  await engine.run();
+  await engine.ensureCurrentBuildFinish();
+  await engine.registerClient('no-build-client');
+  for (const i of routes) {
+    const chunk = await engine.compileEntry(
+      `${path.join(dir, `route-${i}.js`)}?rolldown-lazy=1`,
+      'no-build-client',
+    );
+    expect(chunk.code).toContain(`-route-${i}`);
+  }
+
+  await engine.ensureCurrentBuildFinish();
+  expect(builds).toBe(1);
+  expect((await engine.getBundleState()).hasStaleOutput).toBe(false);
+});
+
+// The first build after a visit takes the fetched route from the graph, so the output holds
+// the route's code. The `import()` of the route must still call `requestLazy`: a page gets
+// built code only at boot. A reload and then a visit of the route must get factories, or a
+// module shared with another route runs twice.
+// See internal-docs/lazy-compilation/design.md ("After Boot, Only Factories").
+test(
+  'a build after a lazy compile keeps the fetched route behind requestLazy',
+  { timeout: TEST_TIMEOUT },
+  async ({ onTestFinished }) => {
+    const uniqueId = crypto.randomUUID().slice(0, 8);
+    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-build-after-fetch-${uniqueId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const mainCode = `export const load = () => import('./route.js');\n`;
+    fs.writeFileSync(path.join(dir, 'main.js'), mainCode);
+    fs.writeFileSync(path.join(dir, 'route.js'), `export const route = 'route-value';\n`);
+
+    const builds: string[][] = [];
+    const engine = await dev(
+      {
+        input: path.join(dir, 'main.js'),
+        experimental: { devMode: { lazy: true } },
+      },
+      { dir: path.join(dir, 'dist'), format: 'esm' },
+      {
+        onOutput(result) {
+          if (!(result instanceof Error)) {
+            builds.push(result.output.map((item) => (item.type === 'chunk' ? item.code : '')));
+          }
+        },
+      },
+    );
+
+    onTestFinished(async () => {
+      await engine.close();
+      if (!process.env.CI) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    await engine.run();
+    await engine.ensureCurrentBuildFinish();
+    expect(builds.at(-1)!.join('\n')).not.toContain('route-value');
+    await engine.registerClient('build-after-fetch-client');
+    const proxyId = `${path.join(dir, 'route.js')}?rolldown-lazy=1`;
+    const chunk = await engine.compileEntry(proxyId, 'build-after-fetch-client');
+    expect(chunk.code).toContain('route-value');
+
+    // An edit of `main.js` starts a build. The watcher can miss an event, so each poll edits
+    // the file again.
+    let edits = 0;
+    await expect
+      .poll(
+        async () => {
+          fs.writeFileSync(
+            path.join(dir, 'main.js'),
+            `${mainCode}export const edit = ${++edits};\n`,
+          );
+          await engine.ensureLatestBuildOutput();
+          return builds.length;
+        },
+        { timeout: 20_000, interval: 500 },
+      )
+      .toBeGreaterThanOrEqual(2);
+
+    const output = builds.at(-1)!.join('\n');
+    expect(output).toContain('route-value');
+    const main = fs.readFileSync(path.join(dir, 'dist', 'main.js'), 'utf8');
+    expect(main).toMatch(/requestLazy\("[^"]*route\.js", /);
+    expect(main).toContain(`, ${JSON.stringify(proxyId)}`);
+    expect(main).not.toMatch(/import\(\s*["'][^"']*route/);
   },
 );
 

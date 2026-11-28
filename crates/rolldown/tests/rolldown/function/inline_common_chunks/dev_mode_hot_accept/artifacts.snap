@@ -12,7 +12,9 @@ __share("self_accept-RFHWBDnX", ((exports) => {
 	__rolldown_runtime__.registerGraph({
 		ids: ["self_accept.js"],
 		localCount: 1,
-		edges: [[]]
+		edges: [[]],
+		nums: [5],
+		epoch: 1
 	});
 	// self_accept.js
 	var self_accept_exports = /* @__PURE__ */ __exportAll({ value: () => value });
@@ -37,6 +39,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["a.js", "self_accept.js"],
 	localCount: 1,
 	edges: [[1]],
+	nums: [0, 5],
+	epoch: 1,
 	entries: [0]
 });
 // a.js
@@ -66,7 +70,9 @@ __share("self_accept-RFHWBDnX", ((exports) => {
 	__rolldown_runtime__.registerGraph({
 		ids: ["self_accept.js"],
 		localCount: 1,
-		edges: [[]]
+		edges: [[]],
+		nums: [5],
+		epoch: 1
 	});
 	// self_accept.js
 	var self_accept_exports = /* @__PURE__ */ __exportAll({ value: () => value });
@@ -90,7 +96,9 @@ __share("accept_dep-z052dtnB", ((exports) => {
 	__rolldown_runtime__.registerGraph({
 		ids: ["dep.js", "accept_dep.js"],
 		localCount: 2,
-		edges: [[], [0]]
+		edges: [[], [0]],
+		nums: [4, 1],
+		epoch: 1
 	});
 	// dep.js
 	var dep_exports = /* @__PURE__ */ __exportAll({ dep: () => dep }), dep;
@@ -133,6 +141,12 @@ __rolldown_runtime__.registerGraph({
 	],
 	localCount: 1,
 	edges: [[1, 2]],
+	nums: [
+		2,
+		5,
+		1
+	],
+	epoch: 1,
 	entries: [0]
 });
 // b.js
@@ -160,7 +174,9 @@ __share("accept_dep-z052dtnB", ((exports) => {
 	__rolldown_runtime__.registerGraph({
 		ids: ["dep.js", "accept_dep.js"],
 		localCount: 2,
-		edges: [[], [0]]
+		edges: [[], [0]],
+		nums: [4, 1],
+		epoch: 1
 	});
 	// dep.js
 	var dep_exports = /* @__PURE__ */ __exportAll({ dep: () => dep }), dep;
@@ -198,6 +214,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["c.js", "accept_dep.js"],
 	localCount: 1,
 	edges: [[1]],
+	nums: [3, 1],
+	epoch: 1,
 	entries: [0]
 });
 // c.js
@@ -228,12 +246,33 @@ export { __share_require as a, __share_export as i, __exportAll as n, __share as
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- self_accept.js
+
+### Stale Ids
+
+- self_accept.js
+
+## Pull 0
+
+- g: 1
+- update: self_accept.js
+- executed: a.js, accept_dep.js, b.js, c.js, dep.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["self_accept.js"],localCount:1,edges:[[]],stamps:{0:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["self_accept.js"],localCount:1,edges:[[]],nums:[5]});
 //#region self_accept.js
-__rolldown_runtime__.registerFactory("self_accept.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("self_accept.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -243,42 +282,55 @@ __rolldown_runtime__.registerFactory("self_accept.js", (function(__rolldown_modu
 			globalThis.selfAccepted = mod.value;
 		});
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- self_accept.js
+- result: applied
 
 # HMR Step 1
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 2
+
+### Changed Ids
+
+- dep.js
+
+### Stale Ids
+
+- dep.js
+
+## Pull 0
+
+- g: 2
+- update: dep.js
+- executed: a.js, accept_dep.js, b.js, c.js, self_accept.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["dep.js"],localCount:1,edges:[[]],stamps:{0:2}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(2);
+__rolldown_payload__.registerGraph({ids:["dep.js"],localCount:1,edges:[[]],nums:[4]});
 //#region dep.js
-__rolldown_runtime__.registerFactory("dep.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("dep.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ dep: () => dep });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		const hot_dep = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const dep = "dep-v1";
 	} finally {}
-}), 2);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- dep.js
+- result: applied

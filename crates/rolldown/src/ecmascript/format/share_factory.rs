@@ -9,8 +9,8 @@ use rolldown_utils::{
 };
 
 use crate::{
-  ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext,
-  utils::chunk::render_chunk_exports::get_export_items,
+  ecmascript::ecma_generator::RenderedModuleSources, hmr::module_graph_delta::RowsSession,
+  types::generator::GenerateContext, utils::chunk::render_chunk_exports::get_export_items,
 };
 
 fn runtime_helper_name<'a>(ctx: &'a GenerateContext<'_>, name: &str) -> &'a str {
@@ -90,12 +90,12 @@ pub fn render_inline_records<'code>(
     }
     // Dev mode: the record's graph rows ship from inside its factory, which runs once per page;
     // a carrier's own prelude lists only its chunk's modules.
-    if ctx.options.is_dev_mode_enabled()
+    if let Some(dev_rows) = ctx.dev_rows
       && let Some(rows) = crate::hmr::module_graph_delta::render_register_graph_source(
         &ctx.link_output.module_table,
         ctx.chunk_graph.chunk_table[*record_idx].modules.iter().copied(),
         &ctx.link_output.user_defined_entry_modules,
-        None,
+        RowsSession::Build(dev_rows),
       )
     {
       head.push_str(&concat_string!("\n\t", rows));

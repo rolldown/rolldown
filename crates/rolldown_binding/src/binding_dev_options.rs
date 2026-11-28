@@ -1,5 +1,5 @@
 use crate::options::BindingWatcherFileWatcherOptions;
-use crate::types::binding_client_hmr_update::BindingClientHmrUpdate;
+use crate::types::binding_hmr_update::BindingHmrUpdate;
 use crate::types::binding_outputs::BindingOutputs;
 use crate::types::binding_rebuild_strategy::BindingRebuildStrategy;
 use crate::types::binding_string_or_regex::{
@@ -33,14 +33,17 @@ impl From<BindingDevWatchOptions> for rolldown_dev::DevWatchOptions {
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingDevOptions {
   #[napi(
-    ts_type = "undefined | ((result: BindingResult<[BindingClientHmrUpdate[], string[]]>) => void | Promise<void>)"
+    ts_type = "undefined | ((result: BindingResult<[BindingHmrUpdate, string[]]>) => void | Promise<void>)"
   )]
   pub on_hmr_updates:
-    Option<JsCallback<FnArgs<(BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)>,)>, ()>>,
+    Option<JsCallback<FnArgs<(BindingResult<(BindingHmrUpdate, Vec<String>)>,)>, ()>>,
+  /// `hmrGeneration` is the HMR generation the output is rendered at, when the build succeeded.
+  /// The output code does not carry it, so the consumer passes it to the page that loads this
+  /// output (the runtime's `setOutputGeneration`).
   #[napi(
-    ts_type = "undefined | ((result: BindingResult<BindingOutputs>) => void | Promise<void>)"
+    ts_type = "undefined | ((result: BindingResult<BindingOutputs>, hmrGeneration: number | undefined) => void | Promise<void>)"
   )]
-  pub on_output: Option<JsCallback<FnArgs<(BindingResult<BindingOutputs>,)>, ()>>,
+  pub on_output: Option<JsCallback<FnArgs<(BindingResult<BindingOutputs>, Option<u32>)>, ()>>,
   /// Called with assets emitted while generating an HMR patch or compiling a
   /// lazy entry. These never go through `on_output`, so a consumer (e.g. Vite)
   /// must register this to serve them (e.g. write them to its in-memory files).

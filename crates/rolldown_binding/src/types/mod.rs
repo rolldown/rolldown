@@ -1,5 +1,4 @@
 pub mod binding_bundler_options;
-pub mod binding_client_hmr_update;
 pub mod binding_error_stage;
 pub mod binding_hmr_update;
 pub mod binding_log;

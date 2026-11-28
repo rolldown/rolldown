@@ -10,7 +10,9 @@ import { t as __exportAll } from "./main.js";
 __rolldown_runtime__.registerGraph({
 	ids: ["foo.js"],
 	localCount: 1,
-	edges: [[]]
+	edges: [[]],
+	nums: [1],
+	epoch: 1
 });
 // foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
@@ -34,6 +36,12 @@ __rolldown_runtime__.registerGraph({
 	localCount: 2,
 	edges: [[], [0]],
 	dynamicEdges: { 0: [2] },
+	nums: [
+		0,
+		2,
+		1
+	],
+	epoch: 1,
 	entries: [1]
 });
 // app.js
@@ -56,27 +64,44 @@ export { __exportAll as t };
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- foo.js
+
+### Stale Ids
+
+- foo.js
+
+## Pull 0
+
+- g: 1
+- update: foo.js
+- executed: app.js, main.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["foo.js"],localCount:1,edges:[[]],stamps:{0:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["foo.js"],localCount:1,edges:[[]],nums:[1]});
 //#region foo.js
-__rolldown_runtime__.registerFactory("foo.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("foo.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		const hot_foo = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const value = 2;
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- foo.js
+- result: applied

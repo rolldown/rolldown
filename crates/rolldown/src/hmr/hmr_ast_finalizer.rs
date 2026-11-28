@@ -35,7 +35,6 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   pub modules: &'me IndexModules,
   pub module: &'me NormalModule,
   pub use_pife_for_module_wrappers: bool,
-  pub stamp: u32,
 
   // --- Internal state
   /// For
@@ -576,46 +575,58 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       return;
     }
 
-    // __rolldown_runtime__.loadExports('./foo.js')
-    // Use stable module ID for consistent runtime lookup
-    let mut load_exports_call_expr = ast::Expression::new_call_expression(
+    // The target is not a static dep, so the payload that carries this module does not carry
+    // it, and the client may not have it. `loadDynamic` pulls it from the server when needed,
+    // runs it, and resolves to its exports.
+    // See internal-docs/hmr/design.md, "Plain `import()` in a factory".
+    let importee_id = ast::Expression::new_string_literal(
       SPAN,
-      Expression::new_identifier(SPAN, "__rolldown_runtime__.loadExports", self),
+      Str::from_str_in(&importee.stable_id, self),
       None,
-      [ast::Argument::new_string_literal(
-        SPAN,
-        Str::from_str_in(&importee.stable_id, self),
-        None,
-        self,
-      )],
+      self,
+    );
+    let load_dynamic_call = Expression::new_call_with_arg(
+      Expression::new_member_access_expr("__rolldown_runtime__", "loadDynamic", self),
+      importee_id,
       false,
       self,
     );
 
-    if importee.exports_kind.is_commonjs() {
-      // __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports('./foo.js')[, 1])
-      load_exports_call_expr = Expression::new_to_esm_wrapper(
-        Expression::new_identifier(SPAN, "__rolldown_runtime__.__toESM", self),
-        load_exports_call_expr,
-        is_node_mode,
-        self,
-      );
+    if !importee.exports_kind.is_commonjs() {
+      *it = load_dynamic_call;
+      return;
     }
 
-    // `import()` is an execution point like static imports and `require`, so it goes through
-    // the same unconditional registry gate. Factories outlive the payload that shipped them:
-    // whether the importee rides this payload says nothing about whether it will be registered
-    // when these bytes run (a later patch may evict it), so the emitted code must not depend
-    // on payload membership. `initModule` short-circuits on a resident module and re-runs an
-    // evicted one from its factory.
-    // Turn `import('./foo.js')` into
-    // `(__rolldown_runtime__.initModule('./foo.js'), Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js')))`
-    let init_call = self.make_init_module_call(&self.modules[importee_idx]);
-    let promise_resolve_then_load_exports =
-      Expression::new_promise_resolve_then(load_exports_call_expr, self);
-    *it = ast::Expression::new_sequence_expression(
+    // `__rolldown_runtime__.loadDynamic('./foo.js').then(() => __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports('./foo.js')[, 1]))`
+    let load_exports_call_expr = Expression::new_call_with_arg(
+      Expression::new_member_access_expr("__rolldown_runtime__", "loadExports", self),
+      ast::Expression::new_string_literal(
+        SPAN,
+        Str::from_str_in(&importee.stable_id, self),
+        None,
+        self,
+      ),
+      false,
+      self,
+    );
+    let to_esm_call_expr = Expression::new_to_esm_wrapper(
+      Expression::new_identifier(SPAN, "__rolldown_runtime__.__toESM", self),
+      load_exports_call_expr,
+      is_node_mode,
+      self,
+    );
+    *it = ast::Expression::new_call_expression(
       SPAN,
-      [init_call, promise_resolve_then_load_exports],
+      Expression::new_static_member_expression(
+        SPAN,
+        load_dynamic_call,
+        IdentifierName::new(SPAN, "then", self),
+        false,
+        self,
+      ),
+      None,
+      [ast::Argument::from(Expression::new_arrow_returning(to_esm_call_expr, self))],
+      false,
       self,
     );
   }

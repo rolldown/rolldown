@@ -29,6 +29,11 @@ pub struct DevTestMeta {
   /// succeeds. The test client reloads too: it runs the new output and only the patches of later
   /// steps. A failed build does not reload it.
   pub full_build_after_steps: Vec<usize>,
+  #[serde(default)]
+  /// The test client does not get the update of each listed HMR step (0-based), as when its
+  /// connection drops for a moment. It keeps running and handles the push of a later step, so
+  /// it learns about the lost update from the server. A lost `FullReload` does not reload it.
+  pub lost_push_steps: Vec<usize>,
 }
 
 impl Default for DevTestMeta {

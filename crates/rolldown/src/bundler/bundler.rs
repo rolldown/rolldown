@@ -17,14 +17,13 @@ pub struct Bundler {
   pub(super) bundle_factory: BundleFactory,
   #[cfg_attr(not(feature = "experimental"), allow(dead_code))]
   pub(super) cache: ScanStageCache,
-  /// An HMR update has three stages:
+  /// An HMR update has two stages:
   ///
   /// 1. Refetch the changed modules.
-  /// 2. Merge them into the module graph.
-  /// 3. Render each client's patch.
+  /// 2. Merge them into the module graph and stamp them.
   ///
   /// A failure in step 1 leaves the graph unchanged, so the next update retries the edit. A
-  /// failure in step 2 or 3 loses the edit: no client ran it, and the graph already has it.
+  /// failure in step 2 loses the edit: no client ran it, and the graph already has it.
   /// This flag records that loss. While it is set, the dev engine reloads every client and
   /// runs a full build. A successful full build clears it. It lives outside `cache` because
   /// a full scan drops `cache`, even when the scan fails.

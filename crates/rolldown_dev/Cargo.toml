@@ -18,7 +18,7 @@ doctest = false
 workspace = true
 
 [features]
-testing = []
+testing = ["rolldown/testing"]
 
 [dependencies]
 anyhow = { workspace = true }

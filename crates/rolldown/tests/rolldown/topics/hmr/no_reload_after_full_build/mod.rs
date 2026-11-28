@@ -7,12 +7,10 @@ use rolldown_testing::{
 
 use super::failing_patch::fail_first_patch;
 
-/// - Step 0 edits `hmr.js`. Rendering the patch fails after the edit was merged into the module
-///   graph, so no client receives it.
-/// - A full build runs, like the one Vite runs when a page loads after the failure. Vite then
-///   reloads every tab, so the client runs the new output, which has the edit of step 0.
+/// - Step 0 edits `hmr.js`. The client pulls the patch, and rendering it fails, so the client
+///   reloads. It runs the output of the full build, which has the edit of step 0.
 /// - Step 1 edits only `other.js`. It must be a hot update, not another full reload: the full
-///   build already delivered the lost edit.
+///   build already delivered the edit.
 #[tokio::test(flavor = "multi_thread")]
 async fn no_reload_after_full_build() {
   manual_integration_test!()

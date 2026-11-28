@@ -110,26 +110,25 @@ violation in rolldown_dev itself (§16g).
 ## Lost HMR updates
 
 An HMR update can fail after it merged its edit into the module graph,
-for example when a plugin callback throws while the patch renders. No
-client ran the edit, and the next patch will not carry it: the graph
-already has the edit. Example: an edit to `Header.tsx` fails this way.
-A later edit to `Footer.tsx` sends a patch with `Footer` only, and the
-tabs keep the old `Header`.
+for example when a step after the merge throws. No client heard of the
+edit, and the next update will not list it: the graph already has the
+edit. Example: an edit to `Header.tsx` fails this way. A later edit to
+`Footer.tsx` pushes `Footer` only, and the tabs keep the old `Header`.
 
 So the engine records the loss (`Bundler::lost_hmr_update`). Its next
 task reloads every client and runs a full build (§9b).
 
 ```mermaid
 flowchart LR
-  F[patch fails after the merge] --> P[lost update pending]
+  F[update fails after the merge] --> P[lost update pending]
   P -->|next trigger| U[reload every client<br/>+ full build]
   U -->|succeeds| D[flag cleared]
   U -->|fails| P
 ```
 
 - **Reload, not resend.** Resending the edit would also need the modules
-  and imports it added, for each client. The failure is rare, so one
-  reload is cheaper.
+  and imports it added, and stamps for the factories it changed. The
+  failure is rare, so one reload is cheaper.
 - **The server decides.** Only the server knows the failure came after
   the merge. A syntax error looks the same to the client, but nothing
   merged, so it recovers with a hot update.
@@ -159,7 +158,8 @@ flowchart LR
   implementation map (components, message protocol, state machine,
   per-stage data flow)
 - [hmr/design.md](../hmr/design.md) — why HMR boundary decisions run in
-  the browser, and the per-client ship map the engine keeps for it
+  the browser, and why the browser describes itself in each request
+  instead of the engine keeping state per client
 - [bundler-data-lifecycle](../bundler-data-lifecycle/implementation.md) — `BundleMode`,
   `Bundle` / `BundleFactory`, and the `ScanStageCache` lifecycle the dev
   engine's incremental builds run through

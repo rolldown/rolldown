@@ -7,13 +7,11 @@ use rolldown_testing::{
 
 use super::failing_patch::fail_on_marker;
 
-/// - Step 0 edits `hmr.js`. Rendering the patch fails after the edit was merged into the module
-///   graph, so no client receives it.
-/// - A full build runs, like the one Vite runs when a page loads after the failure. It fails
-///   too: the sourcemap of the chunk also has `hmr.js`, which still has the marker.
-/// - Step 1 removes the marker. The engine recovers with a full build, which succeeds. Every
-///   client must get a full reload: no patch carries `v3`, and Vite reloads after a successful
-///   build only when a reload is pending.
+/// - Step 0 edits `hmr.js`. The client pulls the patch, and rendering it fails, so the client
+///   reloads. The full build for the reloading page fails too: the sourcemap of the chunk also
+///   has `hmr.js`, which still has the marker.
+/// - Step 1 removes the marker. The full build succeeds, and the reload that is still pending
+///   loads its output, which has `v3`.
 #[tokio::test(flavor = "multi_thread")]
 async fn reload_after_failed_full_build() {
   manual_integration_test!()

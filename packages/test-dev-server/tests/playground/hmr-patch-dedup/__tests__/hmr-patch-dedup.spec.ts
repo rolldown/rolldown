@@ -2,11 +2,11 @@ import type { Response } from 'playwright';
 import { describe, expect, test } from 'vitest';
 import { editFile, page, waitForBuildStable } from '~utils';
 
-// The ship-map factory selection: a patch carries only the factories this
-// client lacks or holds stale. The first edit of a chain ships the whole
-// re-execution chain (up to the accepting boundary); a repeat edit of the same
-// file ships only that file's factory — the parked copies of the rest are
-// still current per the server's shipped[C] ship map.
+// A patch carries only the factories this client lacks or holds stale. The
+// client lists the factories it holds in the patch request. The first edit of
+// a chain gets the whole re-execution chain (up to the accepting boundary); a
+// repeat edit of the same file gets only that file's factory, because the
+// client still holds current copies of the rest.
 
 const countFactories = (body: string) => body.match(/registerFactory\(/g)?.length ?? 0;
 
@@ -15,12 +15,11 @@ const countFactories = (body: string) => body.match(/registerFactory\(/g)?.lengt
 const factoryFor = (file: string) => new RegExp(`registerFactory\\("[^"]*/${file}"`);
 
 describe('hmr-patch-dedup', () => {
-  test('first edit ships the whole chain; a repeat edit ships only the changed file', async () => {
-    // Collect every HMR patch the page imports (the client fetches the patch
-    // at the envelope's `url`, e.g. `/hmr_patch_0.js`).
+  test('first edit gets the whole chain; a repeat edit gets only the changed file', async () => {
+    // Collect every HMR patch the page imports.
     const patchBodies: Promise<string>[] = [];
     const onResponse = (res: Response) => {
-      if (/\/hmr_patch_\d+\.js(?:\?|$)/.test(res.url())) {
+      if (/\/__rolldown_hmr_patch\.js\?/.test(res.url())) {
         patchBodies.push(res.text());
       }
     };
@@ -45,7 +44,7 @@ describe('hmr-patch-dedup', () => {
 
       await waitForBuildStable();
 
-      // Repeat edit of the same file: bar and foo were already delivered and
+      // Repeat edit of the same file: the client holds bar and foo, and they
       // are not stale, so the second patch carries baz's factory alone.
       editFile('baz.js', (code) => code.replace("'baz-v2'", "'baz-v3'"));
       await expect.poll(() => page.textContent('.chain')).toBe('bar(baz-v3)');

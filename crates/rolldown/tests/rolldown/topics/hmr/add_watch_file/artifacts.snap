@@ -11,6 +11,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["entry.js"],
 	localCount: 1,
 	edges: [[]],
+	nums: [0],
+	epoch: 1,
 	entries: [0]
 });
 __rolldown_runtime__.createModuleHotContext("entry.js");
@@ -21,27 +23,44 @@ console.log("input\n");
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- entry.js
+
+### Stale Ids
+
+- entry.js
+
+## Pull 0
+
+- g: 1
+- update: entry.js
+- executed: (none)
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["entry.js"],localCount:1,edges:[[]],stamps:{0:1},entries:[0]});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["entry.js"],localCount:1,edges:[[]],nums:[0],entries:[0]});
 //#region entry.js
-__rolldown_runtime__.registerFactory("entry.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("entry.js", (function(__rolldown_module_id__) {
 	try {
 		__rolldown_runtime__.registerModule(__rolldown_module_id__);
 		const hot_entry = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const content = "input2\n";
 		console.log(content);
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- entry.js
+- result: not run: the fixture runs no client, so the harness made this pull

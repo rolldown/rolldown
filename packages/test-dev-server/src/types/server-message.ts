@@ -1,7 +1,8 @@
 export interface HmrUpdateMessage {
   type: 'hmr:update';
-  url: string;
-  path: string;
+  changedIds: string[];
+  staleIds: string[];
+  gen: number;
 }
 
 export interface ConnectedMessage {

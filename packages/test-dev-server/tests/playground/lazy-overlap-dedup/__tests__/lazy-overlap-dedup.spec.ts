@@ -1,10 +1,9 @@
-import { setTimeout } from 'node:timers/promises';
 import type { Response } from 'playwright';
 import { describe, expect, test } from 'vitest';
 import { page, serverUrl, waitForBuildStable } from '~utils';
 
-// Lazy chunks are sized by the same per-client ship map as HMR
-// patches: a lazy response omits every factory this client already received.
+// A lazy request lists what the client holds, like an HMR patch request: a
+// lazy response omits every module this client already ran or holds.
 // Route A and route B both statically import shared.js — loaded sequentially,
 // A's chunk carries shared.js's factory, B's does NOT, and B still renders
 // shared values through the registry.
@@ -12,7 +11,7 @@ import { page, serverUrl, waitForBuildStable } from '~utils';
 const factoryFor = (file: string) => new RegExp(`registerFactory\\("[^"]*/${file}"`);
 
 describe('lazy-overlap-dedup', () => {
-  test('the second lazy route omits the already-delivered shared factory', { retry: 0 }, async () => {
+  test('the second lazy route omits the shared module the client already ran', { retry: 0 }, async () => {
     // Keyed by the lazy request's `id` param (the proxy module id).
     const lazyBodies: { id: string; body: Promise<string> }[] = [];
     const onResponse = (res: Response) => {
@@ -28,16 +27,12 @@ describe('lazy-overlap-dedup', () => {
       await page.goto(serverUrl, { waitUntil: 'domcontentloaded' });
       await waitForBuildStable();
 
-      // Route A first: its chunk delivers page-a AND the shared module.
+      // Route A first: its chunk carries page-a AND the shared module.
       await page.click('#route-a-btn');
       await expect.poll(() => page.textContent('#route-a-content')).toBe('A:shared-value');
 
-      // The ship map records a delivery when the response completes; give the
-      // (async, in-process) ship-map write a beat before the next compile reads it.
-      await setTimeout(300);
-
-      // Route B second: shared.js was already delivered to this client, so
-      // B's chunk must NOT re-ship it — and B still works via the registry.
+      // Route B second: this client already ran shared.js, so B's chunk must
+      // NOT carry it again — and B still works via the registry.
       await page.click('#route-b-btn');
       await expect.poll(() => page.textContent('#route-b-content')).toBe('B:shared-value');
 

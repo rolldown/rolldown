@@ -12,6 +12,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["a.js", "main.js"],
 	localCount: 2,
 	edges: [[], [0]],
+	nums: [0, 1],
+	epoch: 1,
 	entries: [1]
 });
 // a.js
@@ -34,12 +36,33 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- a.js
+
+### Stale Ids
+
+- a.js
+
+## Pull 0
+
+- g: 1
+- update: a.js
+- executed: main.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["a.js"],localCount:1,edges:[[]],stamps:{0:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["a.js"],localCount:1,edges:[[]],nums:[0]});
 //#region a.js
-__rolldown_runtime__.registerFactory("a.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("a.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_module__ = { exports: {} };
 		var __rolldown_exports__ = __rolldown_module__.exports;
@@ -51,15 +74,11 @@ __rolldown_runtime__.registerFactory("a.js", (function(__rolldown_module_id__) {
 		console.log(__rolldown_exports__.value, __rolldown_exports__.other);
 		hot_a.accept();
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- a.js
+- result: applied

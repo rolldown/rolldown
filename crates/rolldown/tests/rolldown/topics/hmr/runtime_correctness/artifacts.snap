@@ -70,6 +70,27 @@ __rolldown_runtime__.registerGraph({
 			16
 		]
 	],
+	nums: [
+		17,
+		8,
+		9,
+		10,
+		12,
+		11,
+		7,
+		5,
+		6,
+		0,
+		1,
+		2,
+		14,
+		15,
+		13,
+		4,
+		3,
+		16
+	],
+	epoch: 1,
 	entries: [17]
 });
 // trigger-dep.js
@@ -249,12 +270,33 @@ if (main_hot) main_hot.accept();
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- trigger-dep.js
+
+### Stale Ids
+
+- trigger-dep.js
+
+## Pull 0
+
+- g: 1
+- update: cases/deconflict_import_bindings/foo.mjs, cases/deconflict_import_bindings/foo/index.mjs, cases/deconflict_import_bindings/index.js, cases/imported_callee_this/index.js, cases/imported_callee_this/lib.js, cases/manual_reexport/barrel.js, cases/manual_reexport/index.js, cases/manual_reexport/lib.js, cases/require/cjs-lib-assign-exports.js, cases/require/cjs-lib-reassign-module-exports.js, cases/require/cjs-lib.js, cases/require/index.js, cases/require/umd-lib.js, cases/string_import_name/index.js, cases/string_import_name/lib.js, cases/string_import_name/reexport.js, main.js, trigger-dep.js
+- executed: (none)
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["cases/deconflict_import_bindings/foo.mjs","cases/deconflict_import_bindings/foo/index.mjs","cases/deconflict_import_bindings/index.js","cases/imported_callee_this/index.js","cases/imported_callee_this/lib.js","cases/manual_reexport/barrel.js","cases/manual_reexport/index.js","cases/manual_reexport/lib.js","cases/require/cjs-lib-assign-exports.js","cases/require/cjs-lib-reassign-module-exports.js","cases/require/cjs-lib.js","cases/require/index.js","cases/require/umd-lib.js","cases/string_import_name/index.js","cases/string_import_name/lib.js","cases/string_import_name/reexport.js","main.js","trigger-dep.js"],localCount:18,edges:[[17],[17],[0,1,17],[4,17],[17],[7,17],[5,17],[17],[17],[17],[17],[17,8,9,10,12],[17],[14,15,17],[17],[14,17],[11,6,2,13,3],[]],stamps:{17:1},entries:[16]});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["cases/deconflict_import_bindings/foo.mjs","cases/deconflict_import_bindings/foo/index.mjs","cases/deconflict_import_bindings/index.js","cases/imported_callee_this/index.js","cases/imported_callee_this/lib.js","cases/manual_reexport/barrel.js","cases/manual_reexport/index.js","cases/manual_reexport/lib.js","cases/require/cjs-lib-assign-exports.js","cases/require/cjs-lib-reassign-module-exports.js","cases/require/cjs-lib.js","cases/require/index.js","cases/require/umd-lib.js","cases/string_import_name/index.js","cases/string_import_name/lib.js","cases/string_import_name/reexport.js","main.js","trigger-dep.js"],localCount:18,edges:[[17],[17],[0,1,17],[4,17],[17],[7,17],[5,17],[17],[17],[17],[17],[17,8,9,10,12],[17],[14,15,17],[17],[14,17],[11,6,2,13,3],[]],nums:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17],entries:[16]});
 //#region cases/deconflict_import_bindings/foo.mjs
-__rolldown_runtime__.registerFactory("cases/deconflict_import_bindings/foo.mjs", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("cases/deconflict_import_bindings/foo.mjs", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -267,7 +309,7 @@ __rolldown_runtime__.registerFactory("cases/deconflict_import_bindings/foo.mjs",
 
 //#endregion
 //#region cases/deconflict_import_bindings/foo/index.mjs
-__rolldown_runtime__.registerFactory("cases/deconflict_import_bindings/foo/index.mjs", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("cases/deconflict_import_bindings/foo/index.mjs", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -281,7 +323,7 @@ __rolldown_runtime__.registerFactory("cases/deconflict_import_bindings/foo/index
 //#endregion
 //#region cases/deconflict_import_bindings/index.js
 import * as import$cases$2fdeconflict$5fimport$5fbindings$2findex$2ejs_0_node_assert from "node:assert";
-__rolldown_runtime__.registerFactory("cases/deconflict_import_bindings/index.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("cases/deconflict_import_bindings/index.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -300,7 +342,7 @@ __rolldown_runtime__.registerFactory("cases/deconflict_import_bindings/index.js"
 //#endregion
 //#region cases/imported_callee_this/index.js
 import * as import$cases$2fimported$5fcallee$5fthis$2findex$2ejs_0_node_assert from "node:assert";
-__rolldown_runtime__.registerFactory("cases/imported_callee_this/index.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("cases/imported_callee_this/index.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -319,7 +361,7 @@ __rolldown_runtime__.registerFactory("cases/imported_callee_this/index.js", (fun
 
 //#endregion
 //#region cases/imported_callee_this/lib.js
-__rolldown_runtime__.registerFactory("cases/imported_callee_this/lib.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("cases/imported_callee_this/lib.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			getThis: () => getThis,
@@ -341,7 +383,7 @@ __rolldown_runtime__.registerFactory("cases/imported_callee_this/lib.js", (funct
 
 //#endregion
 //#region cases/manual_reexport/barrel.js
-__rolldown_runtime__.registerFactory("cases/manual_reexport/barrel.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("cases/manual_reexport/barrel.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			Globals: () => import_lib_0.Globals,
@@ -359,7 +401,7 @@ __rolldown_runtime__.registerFactory("cases/manual_reexport/barrel.js", (functio
 //#endregion
 //#region cases/manual_reexport/index.js
 import * as import$cases$2fmanual$5freexport$2findex$2ejs_0_node_assert from "node:assert";
-__rolldown_runtime__.registerFactory("cases/manual_reexport/index.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("cases/manual_reexport/index.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -375,7 +417,7 @@ __rolldown_runtime__.registerFactory("cases/manual_reexport/index.js", (function
 
 //#endregion
 //#region cases/manual_reexport/lib.js
-__rolldown_runtime__.registerFactory("cases/manual_reexport/lib.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("cases/manual_reexport/lib.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({
 			Globals: () => Globals,
@@ -392,7 +434,7 @@ __rolldown_runtime__.registerFactory("cases/manual_reexport/lib.js", (function(_
 
 //#endregion
 //#region cases/require/cjs-lib-assign-exports.js
-__rolldown_runtime__.registerFactory("cases/require/cjs-lib-assign-exports.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("cases/require/cjs-lib-assign-exports.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_module__ = { exports: {} };
 		var __rolldown_exports__ = __rolldown_module__.exports;
@@ -406,7 +448,7 @@ __rolldown_runtime__.registerFactory("cases/require/cjs-lib-assign-exports.js", 
 
 //#endregion
 //#region cases/require/cjs-lib-reassign-module-exports.js
-__rolldown_runtime__.registerFactory("cases/require/cjs-lib-reassign-module-exports.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("cases/require/cjs-lib-reassign-module-exports.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_module__ = { exports: {} };
 		var __rolldown_exports__ = __rolldown_module__.exports;
@@ -423,7 +465,7 @@ __rolldown_runtime__.registerFactory("cases/require/cjs-lib-reassign-module-expo
 
 //#endregion
 //#region cases/require/cjs-lib.js
-__rolldown_runtime__.registerFactory("cases/require/cjs-lib.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("cases/require/cjs-lib.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_module__ = { exports: {} };
 		var __rolldown_exports__ = __rolldown_module__.exports;
@@ -450,7 +492,7 @@ __rolldown_runtime__.registerFactory("cases/require/cjs-lib.js", (function(__rol
 //#endregion
 //#region cases/require/index.js
 import * as import$cases$2frequire$2findex$2ejs_0_node_assert from "node:assert";
-__rolldown_runtime__.registerFactory("cases/require/index.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("cases/require/index.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -480,7 +522,7 @@ __rolldown_runtime__.registerFactory("cases/require/index.js", (function(__rolld
 
 //#endregion
 //#region cases/require/umd-lib.js
-__rolldown_runtime__.registerFactory("cases/require/umd-lib.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("cases/require/umd-lib.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_module__ = { exports: {} };
 		var __rolldown_exports__ = __rolldown_module__.exports;
@@ -512,7 +554,7 @@ __rolldown_runtime__.registerFactory("cases/require/umd-lib.js", (function(__rol
 //#endregion
 //#region cases/string_import_name/index.js
 import * as import$cases$2fstring$5fimport$5fname$2findex$2ejs_0_node_assert from "node:assert";
-__rolldown_runtime__.registerFactory("cases/string_import_name/index.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("cases/string_import_name/index.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -530,7 +572,7 @@ __rolldown_runtime__.registerFactory("cases/string_import_name/index.js", (funct
 
 //#endregion
 //#region cases/string_import_name/lib.js
-__rolldown_runtime__.registerFactory("cases/string_import_name/lib.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("cases/string_import_name/lib.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ ["a-b"]: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -543,7 +585,7 @@ __rolldown_runtime__.registerFactory("cases/string_import_name/lib.js", (functio
 
 //#endregion
 //#region cases/string_import_name/reexport.js
-__rolldown_runtime__.registerFactory("cases/string_import_name/reexport.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("cases/string_import_name/reexport.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => import_lib_0["a-b"] });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -557,7 +599,7 @@ __rolldown_runtime__.registerFactory("cases/string_import_name/reexport.js", (fu
 
 //#endregion
 //#region main.js
-__rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("main.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({});
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -580,21 +622,17 @@ __rolldown_runtime__.registerFactory("main.js", (function(__rolldown_module_id__
 
 //#endregion
 //#region trigger-dep.js
-__rolldown_runtime__.registerFactory("trigger-dep.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("trigger-dep.js", (function(__rolldown_module_id__) {
 	try {
 		__rolldown_runtime__.registerModule(__rolldown_module_id__);
 		const hot_trigger_dep = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		console.log("hmr");
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- trigger-dep.js
+- result: applied

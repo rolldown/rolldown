@@ -1,0 +1,17 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "main.ts"
+      }
+    ],
+    "tsconfig": true,
+    "experimental": {
+      "devMode": {}
+    }
+  },
+  "dev": {
+    "lostPushSteps": [0]
+  }
+}

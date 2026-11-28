@@ -155,7 +155,7 @@ impl GenerateStage<'_> {
     // aborts the build, otherwise the warnings ride out on the `BundleOutput`.
     // `into_result` fast-paths the common no-error case, skipping the partition.
     let warnings = diagnostics.into_result()?;
-    Ok(BundleOutput { assets: output, warnings, mangle_cache })
+    Ok(BundleOutput { assets: output, warnings, mangle_cache, hmr_generation: None })
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -221,6 +221,7 @@ impl GenerateStage<'_> {
               inline_state: &self.inline_state,
               carried_renders,
               hoisted_keep_names: &self.hoisted_keep_names,
+              dev_rows: self.dev_rows,
             };
             EcmaGenerator::instantiate_chunk(&mut ecma_ctx).await
           }

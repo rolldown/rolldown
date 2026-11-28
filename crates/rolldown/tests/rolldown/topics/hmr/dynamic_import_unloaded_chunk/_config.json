@@ -1,0 +1,10 @@
+{
+  "_comment": "An edit adds an `import()` of a module that is already in the graph but sits in a chunk this client never loaded (it is reachable only through a never-called `import()`). The re-run of hmr.js pulls route.js with its unheld static dep dep.js; shared.js already ran, so it is not carried.",
+  "config": {
+    "experimental": {
+      "devMode": {
+        "lazy": false
+      }
+    }
+  }
+}

@@ -92,9 +92,9 @@ Bundler.cache (ScanStageCache) ──(move)──> Bundle.cache (temporary holde
 | `module_idx_by_stable_id`        | Stable ID lookup for HMR                                                                      |
 
 `Bundler::lost_hmr_update` lives next to the cache, not in it. An HMR update
-sets it before it merges its rescan into the graph, and clears it when it
-returns its patches. If the update fails in between, no client ran an edit
-that the graph already has, and the next patch would not re-run it. The
+sets it before it merges its rescan into the graph, and sets it back after
+the last step that can fail. If the update fails in between, no client heard
+of an edit that the graph already has, and the next update would not list it. The
 dev engine then reloads every client and runs a full build instead of the
 next task, whatever its kind (`BundlingTask::run_inner`). It lives outside
 the cache because a full scan drops the whole `ScanStageCache`
@@ -102,10 +102,10 @@ the cache because a full scan drops the whole `ScanStageCache`
 
 A successful full build clears it (`Bundler::incremental_bundle`). The task
 that started that build has already sent every client a `FullReload`, and
-Vite holds that reload until the build output arrives. So the tabs reload
-onto the new output, which has the lost edit. If the full build fails, Vite
-drops the pending reload, but the flag stays set, so the next task sends
-the reload again.
+Vite holds that reload until a build succeeds. So the tabs reload onto the
+new output, which has the lost edit. If the full build fails, Vite keeps
+the reload pending and the flag stays set, so the next task sends the
+reload again, and the tabs reload after the first build that succeeds.
 
 The check covers `FullBuild` tasks too. After a failed full build, a file
 change queues a `FullBuild` (`FullBuildFailed` in `BundleCoordinator`). Vite
@@ -181,8 +181,8 @@ master copy everything else is recovered from:
 Two consumers depend on that queue's contents:
 
 - `HmrStage::compute_hmr_update` folds the pending files into its stale and
-  changed sets before computing client boundaries, so an edit that was rolled
-  back by a failed scan reaches the clients' patches once the retry succeeds
+  changed sets, so an edit that was rolled back by a failed scan reaches the
+  clients' pushes once the retry succeeds
   (not only the server-side graph);
 - error enrichment (`trace_import_chain_from_modules`) runs **before** the
   revert, while the failed scan's modules still exist in `module_id_to_idx`

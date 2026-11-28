@@ -12,7 +12,9 @@ __share("shared-NCqPxS0n", ((exports) => {
 	__rolldown_runtime__.registerGraph({
 		ids: ["leaf.js", "shared.js"],
 		localCount: 2,
-		edges: [[], [0]]
+		edges: [[], [0]],
+		nums: [0, 3],
+		epoch: 1
 	});
 	// leaf.js
 	var leaf_exports = /* @__PURE__ */ __exportAll({ leaf: () => leaf });
@@ -47,6 +49,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["main.js", "shared.js"],
 	localCount: 1,
 	edges: [[1]],
+	nums: [1, 3],
+	epoch: 1,
 	entries: [0]
 });
 // main.js
@@ -81,7 +85,9 @@ __share("shared-NCqPxS0n", ((exports) => {
 	__rolldown_runtime__.registerGraph({
 		ids: ["leaf.js", "shared.js"],
 		localCount: 2,
-		edges: [[], [0]]
+		edges: [[], [0]],
+		nums: [0, 3],
+		epoch: 1
 	});
 	// leaf.js
 	var leaf_exports = /* @__PURE__ */ __exportAll({ leaf: () => leaf });
@@ -116,6 +122,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["other.js", "shared.js"],
 	localCount: 1,
 	edges: [[1]],
+	nums: [2, 3],
+	epoch: 1,
 	entries: [0]
 });
 // other.js
@@ -144,12 +152,33 @@ export { __share_require as a, __share_export as i, __exportAll as n, __share as
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- leaf.js
+
+### Stale Ids
+
+- leaf.js
+
+## Pull 0
+
+- g: 1
+- update: leaf.js, shared.js
+- executed: main.js, other.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["leaf.js","shared.js"],localCount:2,edges:[[],[0]],stamps:{0:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["leaf.js","shared.js"],localCount:2,edges:[[],[0]],nums:[0,3]});
 //#region leaf.js
-__rolldown_runtime__.registerFactory("leaf.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("leaf.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ leaf: () => leaf });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -158,11 +187,11 @@ __rolldown_runtime__.registerFactory("leaf.js", (function(__rolldown_module_id__
 			return "leaf-v1";
 		}
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 //#region shared.js
-__rolldown_runtime__.registerFactory("shared.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("shared.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ shared: () => shared });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -178,10 +207,6 @@ __rolldown_runtime__.registerFactory("shared.js", (function(__rolldown_module_id
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- leaf.js
+- result: applied

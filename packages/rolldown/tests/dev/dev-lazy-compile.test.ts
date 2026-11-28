@@ -38,15 +38,50 @@ async function loadDevRuntime(): Promise<typeof DevRuntimeModule.DevRuntime> {
   return DevRuntime;
 }
 
-async function createDevRuntime(clientId: string): Promise<DevRuntimeModule.DevRuntime> {
+async function createDevRuntime(): Promise<DevRuntimeModule.DevRuntime> {
   const DevRuntime = await loadDevRuntime();
-  const runtime = new DevRuntime(clientId);
+  const runtime = new DevRuntime();
   runtime.hooks = { createModuleHotContext: () => ({}), onModuleCacheRemoval: () => {} };
   return runtime;
 }
 
 function runInRuntime(code: string, runtime: DevRuntimeModule.DevRuntime): void {
   vm.runInThisContext(`(__rolldown_runtime__) => {\n${code}\n}`)(runtime);
+}
+
+/** Runs only the `registerGraph` statements of `code`, the full-build rows a client reads. */
+function registerBuildGraph(code: string, runtime: DevRuntimeModule.DevRuntime): void {
+  for (const graph of code.match(/__rolldown_runtime__\.registerGraph\(\{[\s\S]*?\}\);/g) ?? []) {
+    runInRuntime(graph, runtime);
+  }
+}
+
+/**
+ * The query of a lazy request from a client that loaded the full build `code`. The modules of
+ * the build's rows for which `executed` is true count as run.
+ */
+async function lazyQuery(
+  code: string,
+  executed: (id: string) => boolean = () => true,
+): Promise<string> {
+  const runtime = await createDevRuntime();
+  registerBuildGraph(code, runtime);
+  for (const id of runtime.staticImports.keys()) {
+    if (executed(id)) runtime.registerModule(id);
+  }
+  return runtime.encodeHave(new Set());
+}
+
+function readBuild(dir: string): string {
+  return fs.readFileSync(path.join(dir, 'dist', 'main.js'), 'utf8');
+}
+
+async function compileChunk(engine: DevEngine, proxyModuleId: string, query: string) {
+  const response = await engine.compileEntry(proxyModuleId, query);
+  if (response.type !== 'Chunk') {
+    throw new Error(`expected a chunk, got a reload: ${response.reason}`);
+  }
+  return response;
 }
 
 // `compileEntry` (lazy compilation) takes a caller-supplied module id. That id
@@ -89,16 +124,14 @@ test(
     // The rejection aggregates the diagnostics, so match on the message rather
     // than on the whole string.
     await expect(
-      engine.compileEntry('/does/not/exist.js?rolldown-lazy=1', 'some-client'),
+      engine.compileEntry('/does/not/exist.js?rolldown-lazy=1', await lazyQuery(readBuild(dir))),
     ).rejects.toThrow('Lazy entry module not found in cache');
   },
 );
 
-// A lazy chunk is pure first-evaluation demand: a module the entry chunk already
-// evaluated at top level serves lazy imports from its live exports, so its factory must
-// not be re-shipped to a registered client (whose session froze the top-level-evaluated
-// map at hello). An unregistered client has no session and must still receive the
-// full closure.
+// A lazy chunk carries only what the client cannot run yet. A module the client already ran
+// serves the lazy import from its live exports, so the chunk has no factory for it. A client
+// that ran nothing gets the whole closure.
 test(
   'lazy chunk omits factories for modules the entry chunk evaluated at top level',
   { timeout: TEST_TIMEOUT },
@@ -141,16 +174,17 @@ test(
     // carries it.
     const proxyFactory = /registerFactory\("[^"]*\?rolldown-lazy=1"/;
 
-    // The hello freezes the top-level-evaluated map into the session: `shared.js` is
-    // statically imported by the entry, so its exports are already live.
-    await engine.registerClient('registered-client');
-    const chunk = await engine.compileEntry(lazyProxyId, 'registered-client');
+    // `shared.js` is statically imported by the entry, so the client ran it.
+    const chunk = await compileChunk(engine, lazyProxyId, await lazyQuery(readBuild(dir)));
     expect(chunk.code).toMatch(lazyFactory);
     expect(chunk.code).not.toMatch(sharedFactory);
     expect(chunk.code).not.toMatch(proxyFactory);
 
-    // No session → both per-client maps empty → the full closure ships.
-    const coldChunk = await engine.compileEntry(lazyProxyId, 'client-without-session');
+    const coldChunk = await compileChunk(
+      engine,
+      lazyProxyId,
+      await lazyQuery(readBuild(dir), () => false),
+    );
     expect(coldChunk.code).toMatch(lazyFactory);
     expect(coldChunk.code).toMatch(sharedFactory);
     expect(coldChunk.code).not.toMatch(proxyFactory);
@@ -216,10 +250,11 @@ test(
     });
 
     await engine.run();
-    await engine.registerClient('barrel-client');
-    const chunk = await engine.compileEntry(
+    // The client ran the modules of the entry chunk, and the barrel is in another chunk.
+    const chunk = await compileChunk(
+      engine,
       `${path.join(dir, 'lazy.js')}?rolldown-lazy=1`,
-      'barrel-client',
+      await lazyQuery(readBuild(dir)),
     );
     expect(chunk.code).toMatch(/registerFactory\("[^"]*barrel\.js"/);
   },
@@ -267,10 +302,24 @@ function throwPosition(code: string) {
   return { line: index + 1, column: lines[index].indexOf('throw') };
 }
 
-function inlineSourceMap(code: string) {
-  const match = /sourceMappingURL=data:application\/json[^,]+base64,([\w+/=]+)\s*$/.exec(code);
-  expect(match, 'the lazy chunk should carry an inline sourcemap').not.toBeNull();
-  return JSON.parse(Buffer.from(match![1], 'base64').toString());
+/**
+ * `'inline'` puts the map at the end of the code. `true` and `'hidden'` return it apart, with no
+ * comment in the code: no file is kept for a lazy chunk, so the dev server serves the map.
+ */
+function chunkSourceMap(
+  chunk: { code: string; sourcemap?: string | null },
+  sourcemap: 'inline' | 'hidden' | true,
+) {
+  if (sourcemap === 'inline') {
+    const match = /sourceMappingURL=data:application\/json[^,]+base64,([\w+/=]+)\s*$/.exec(
+      chunk.code,
+    );
+    expect(match, 'the lazy chunk should carry an inline sourcemap').not.toBeNull();
+    return JSON.parse(Buffer.from(match![1], 'base64').toString());
+  }
+  expect(chunk.code).not.toContain('sourceMappingURL');
+  expect(chunk.sourcemap).toBeTypeOf('string');
+  return JSON.parse(chunk.sourcemap!);
 }
 
 // A module's sourcemap chain is what maps the rendered output back to the file
@@ -279,10 +328,10 @@ function inlineSourceMap(code: string) {
 // the same way a module rendered into a chunk does — otherwise every position in
 // a lazily compiled module is off by whatever the transforms shifted, which is
 // every stack frame and every devtools jump inside it.
-test(
-  'lazy chunk sourcemap maps through the plugin sourcemap chain',
+test.for(['inline', true, 'hidden'] as const)(
+  'lazy chunk sourcemap maps through the plugin sourcemap chain (sourcemap: %s)',
   { timeout: TEST_TIMEOUT },
-  async ({ onTestFinished }) => {
+  async (sourcemap, { onTestFinished }) => {
     const uniqueId = crypto.randomUUID().slice(0, 8);
     const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-sourcemap-${uniqueId}`);
     const { lazyPath, lazyProxyId, plugin } = setupShiftedLazyModule(dir);
@@ -293,7 +342,7 @@ test(
         plugins: [plugin],
         experimental: { devMode: { lazy: true } },
       },
-      { dir: path.join(dir, 'dist'), sourcemap: 'inline' },
+      { dir: path.join(dir, 'dist'), sourcemap },
       {},
     );
 
@@ -306,11 +355,11 @@ test(
 
     await engine.run();
     await engine.ensureCurrentBuildFinish();
-    await engine.registerClient('c1');
-
-    const chunk = await engine.compileEntry(lazyProxyId, 'c1');
-    const position = await SourceMapConsumer.with(inlineSourceMap(chunk.code), null, (consumer) =>
-      consumer.originalPositionFor(throwPosition(chunk.code)),
+    const chunk = await compileChunk(engine, lazyProxyId, await lazyQuery(readBuild(dir)));
+    const position = await SourceMapConsumer.with(
+      chunkSourceMap(chunk, sourcemap),
+      null,
+      (consumer) => consumer.originalPositionFor(throwPosition(chunk.code)),
     );
 
     // Line 2 of the file on disk, not line 5 of what the plugin handed the bundler.
@@ -376,8 +425,7 @@ test(
     });
 
     await engine.run();
-    await engine.registerClient('c1');
-    await engine.compileEntry(`${lazy}?rolldown-lazy=1`, 'c1');
+    await compileChunk(engine, `${lazy}?rolldown-lazy=1`, await lazyQuery(readBuild(dir)));
 
     expect(seenTransformIds.some((id) => id.includes('?rolldown-lazy=1'))).toBe(false);
     expect(seenTransformIds.some((id) => id.endsWith('lazy.js'))).toBe(true);
@@ -451,8 +499,7 @@ test(
     });
 
     await engine.run();
-    await engine.registerClient('c1');
-    const chunk = await engine.compileEntry(lazyProxyId, 'c1');
+    const chunk = await compileChunk(engine, lazyProxyId, await lazyQuery(readBuild(dir)));
 
     expect(chunk.code).toContain('value');
     expect(resolvedProxyId).toBe(lazyProxyId);
@@ -522,9 +569,9 @@ test.for([
       engine.triggerFullBuild();
       await engine.ensureLatestBuildOutput();
     }
-    await engine.registerClient('c1');
+    const query = await lazyQuery(readBuild(dir));
     const callsBeforeFetch = calls;
-    const chunk = await engine.compileEntry(`${lazy}?rolldown-lazy=1`, 'c1');
+    const chunk = await compileChunk(engine, `${lazy}?rolldown-lazy=1`, query);
 
     expect(chunk.code).toContain('LAZY_VALUE');
     expect(seen[0]).toEqual({ meta: { call: callsBeforeFetch + 1 }, moduleSideEffects: false });
@@ -579,8 +626,11 @@ test(
     fs.writeFileSync(main, `globalThis.load = () => import('./lazy-alias.js');\n`);
     engine.triggerFullBuild();
     await engine.ensureLatestBuildOutput();
-    await engine.registerClient('c1');
-    const chunk = await engine.compileEntry(`${lazy}?rolldown-lazy=1`, 'c1');
+    const chunk = await compileChunk(
+      engine,
+      `${lazy}?rolldown-lazy=1`,
+      await lazyQuery(readBuild(dir)),
+    );
 
     expect(chunk.code).toContain('LAZY_VALUE');
     expect(seen).toEqual([{ alias: true }]);
@@ -628,55 +678,13 @@ test(
     });
 
     await engine.run();
-    await engine.registerClient('c1');
-    const chunk = await engine.compileEntry(`${virtualId}?rolldown-lazy=1`, 'c1');
+    const chunk = await compileChunk(
+      engine,
+      `${virtualId}?rolldown-lazy=1`,
+      await lazyQuery(readBuild(dir)),
+    );
 
     expect(chunk.code).toContain('VIRTUAL_VALUE');
-  },
-);
-
-// With `sourcemap: true` the chunk gets a `sourceMappingURL`, so the map it names
-// has to be reachable: a lazy chunk is not written to disk, which leaves the
-// return value as the only way for the consumer to serve it.
-test(
-  'lazy chunk returns the sourcemap its sourceMappingURL names',
-  { timeout: TEST_TIMEOUT },
-  async ({ onTestFinished }) => {
-    const uniqueId = crypto.randomUUID().slice(0, 8);
-    const dir = path.join(import.meta.dirname, 'temp', `dev-lazy-sourcemap-file-${uniqueId}`);
-    const { lazyProxyId, plugin } = setupShiftedLazyModule(dir);
-
-    const engine = await dev(
-      {
-        input: path.join(dir, 'main.js'),
-        plugins: [plugin],
-        experimental: { devMode: { lazy: true } },
-      },
-      { dir: path.join(dir, 'dist'), sourcemap: true },
-      {},
-    );
-
-    onTestFinished(async () => {
-      await engine.close();
-      if (!process.env.CI) {
-        fs.rmSync(dir, { recursive: true, force: true });
-      }
-    });
-
-    await engine.run();
-    await engine.ensureCurrentBuildFinish();
-    await engine.registerClient('c1');
-
-    const chunk = await engine.compileEntry(lazyProxyId, 'c1');
-
-    const referenced = /\/\/# sourceMappingURL=(.+)$/.exec(chunk.code.trimEnd())?.[1];
-    expect(chunk.sourcemapFilename).toBe(referenced);
-    expect(chunk.sourcemap).toBeTypeOf('string');
-
-    const position = await SourceMapConsumer.with(JSON.parse(chunk.sourcemap!), null, (consumer) =>
-      consumer.originalPositionFor(throwPosition(chunk.code)),
-    );
-    expect(position.line).toBe(2);
   },
 );
 
@@ -719,9 +727,10 @@ test(
 
     await engine.run();
 
-    const chunk = await engine.compileEntry(
+    const chunk = await compileChunk(
+      engine,
       `${path.join(dir, 'lazy.js')}?rolldown-lazy=1`,
-      'export-star-as-client',
+      await lazyQuery(readBuild(dir)),
     );
 
     // the namespace object carries `NS`, rather than `dep.js`'s own exports being
@@ -779,9 +788,10 @@ test(
 
     await engine.run();
 
-    const chunk = await engine.compileEntry(
+    const chunk = await compileChunk(
+      engine,
       `${path.join(dir, 'lazy.js')}?rolldown-lazy=1`,
-      'reexport-external-client',
+      await lazyQuery(readBuild(dir)),
     );
 
     const bindings = externalBindings(chunk.code);
@@ -857,12 +867,13 @@ test(
 
     await engine.run();
 
-    // one client per route, so each payload carries its whole route
-    const compile = (name: string, clientId: string) =>
-      engine.compileEntry(`${path.join(dir, name)}?rolldown-lazy=1`, clientId);
-    const chunkA = await compile('a.js', 'external-names-x');
-    const chunkB = await compile('b.js', 'external-names-y');
-    const chunkC = await compile('c.js', 'external-names-z');
+    // each query holds none of the routes, so each payload carries its whole route
+    const query = await lazyQuery(readBuild(dir));
+    const compile = (name: string) =>
+      compileChunk(engine, `${path.join(dir, name)}?rolldown-lazy=1`, query);
+    const chunkA = await compile('a.js');
+    const chunkB = await compile('b.js');
+    const chunkC = await compile('c.js');
 
     // a.js and b.js both sit first in their own payloads, and still get different names
     const [bindingA] = externalBindings(chunkA.code);
@@ -916,10 +927,10 @@ test(
     });
 
     await engine.run();
-    await engine.registerClient('require-unused-client');
-    const chunk = await engine.compileEntry(
+    const chunk = await compileChunk(
+      engine,
       `${path.join(pkg, 'cjs.js')}?rolldown-lazy=1`,
-      'require-unused-client',
+      await lazyQuery(readBuild(dir)),
     );
 
     // `require('./side-effect.js')` is a statement, so its result is thrown away and only the
@@ -927,7 +938,7 @@ test(
     expect(chunk.code).toMatch(/initModule\("[^"]*side-effect\.js"\)/);
     expect(chunk.code).not.toMatch(/loadExports\("[^"]*side-effect\.js"\)/);
 
-    const runtime = await createDevRuntime('require-unused-client');
+    const runtime = await createDevRuntime();
     runInRuntime(chunk.code, runtime);
 
     // The registry is keyed by the stable id, which is relative to the process cwd.
@@ -995,10 +1006,10 @@ test(
 
     await engine.run();
     await engine.ensureCurrentBuildFinish();
-    await engine.registerClient('emit-chunk-client');
-    const chunk = await engine.compileEntry(
+    const chunk = await compileChunk(
+      engine,
       `${path.join(dir, 'dep.js')}?rolldown-lazy=1`,
-      'emit-chunk-client',
+      await lazyQuery(readBuild(dir)),
     );
     expect(chunk.code).toMatch(/registerFactory\("[^"]*dep\.js"/);
 
@@ -1066,11 +1077,12 @@ test('lazy compiles start no build', { timeout: TEST_TIMEOUT }, async ({ onTestF
 
   await engine.run();
   await engine.ensureCurrentBuildFinish();
-  await engine.registerClient('no-build-client');
+  const query = await lazyQuery(readBuild(dir));
   for (const i of routes) {
-    const chunk = await engine.compileEntry(
+    const chunk = await compileChunk(
+      engine,
       `${path.join(dir, `route-${i}.js`)}?rolldown-lazy=1`,
-      'no-build-client',
+      query,
     );
     expect(chunk.code).toContain(`-route-${i}`);
   }
@@ -1122,9 +1134,8 @@ test(
     await engine.run();
     await engine.ensureCurrentBuildFinish();
     expect(builds.at(-1)!.join('\n')).not.toContain('route-value');
-    await engine.registerClient('build-after-fetch-client');
     const proxyId = `${path.join(dir, 'route.js')}?rolldown-lazy=1`;
-    const chunk = await engine.compileEntry(proxyId, 'build-after-fetch-client');
+    const chunk = await compileChunk(engine, proxyId, await lazyQuery(readBuild(dir)));
     expect(chunk.code).toContain('route-value');
 
     // An edit of `main.js` starts a build. The watcher can miss an event, so each poll edits
@@ -1227,10 +1238,8 @@ test(
     const outerProxyId = `${path.join(dir, 'outer.js')}?rolldown-lazy=1`;
     const innerProxyId = `${path.join(dir, 'inner.js')}?rolldown-lazy=1`;
 
-    const clientId = 'load-lazy-chunk-client';
-    await engine.registerClient(clientId);
-    const fullBuildCode = fs.readFileSync(path.join(dir, 'dist', 'main.js'), 'utf8');
-    const outerChunk = await engine.compileEntry(outerProxyId, clientId);
+    const fullBuildCode = readBuild(dir);
+    const outerChunk = await compileChunk(engine, outerProxyId, await lazyQuery(fullBuildCode));
     for (const code of [fullBuildCode, outerChunk.code]) {
       expect(code).toContain('requestLazy');
       expect(code).not.toContain('@vite/lazy');
@@ -1242,12 +1251,13 @@ test(
     class TestDevRuntime extends DevRuntime {
       async loadLazyChunk(proxyModuleId: string) {
         requested.push(proxyModuleId);
-        const chunk = await engine.compileEntry(proxyModuleId, clientId);
+        const chunk = await compileChunk(engine, proxyModuleId, this.encodeHave(new Set()));
         runInRuntime(chunk.code, this);
       }
     }
-    const runtime = new TestDevRuntime(clientId);
+    const runtime = new TestDevRuntime();
     runtime.hooks = { createModuleHotContext: () => ({}), onModuleCacheRemoval: () => {} };
+    registerBuildGraph(fullBuildCode, runtime);
 
     // Run the full build's call, as the browser would. A trailing `1` is the importer's
     // node-mode interop flag.
@@ -1293,22 +1303,20 @@ test(
     });
 
     await engine.run();
-    const clientId = 'lazy-graph-client';
-    await engine.registerClient(clientId);
-    const fullBuildCode = fs.readFileSync(path.join(dir, 'dist', 'main.js'), 'utf8');
-    const lazyChunk = await engine.compileEntry(
+    const fullBuildCode = readBuild(dir);
+    const lazyChunk = await compileChunk(
+      engine,
       `${path.join(dir, 'lazy.js')}?rolldown-lazy=1`,
-      clientId,
+      await lazyQuery(fullBuildCode),
     );
 
-    const runtime = await createDevRuntime(clientId);
-    for (const code of [fullBuildCode, lazyChunk.code]) {
-      const graphs = code.match(/__rolldown_runtime__\.registerGraph\(\{[\s\S]*?\}\);/g) ?? [];
-      expect(graphs).not.toHaveLength(0);
-      for (const graph of graphs) {
-        expect(graph).not.toContain('rolldown-lazy');
-        runInRuntime(graph, runtime);
-      }
+    const runtime = await createDevRuntime();
+    registerBuildGraph(fullBuildCode, runtime);
+    runInRuntime(lazyChunk.code, runtime);
+    const graphIds = [...runtime.staticImports.keys(), ...runtime.importers.keys()];
+    expect(graphIds).not.toHaveLength(0);
+    for (const id of [...graphIds, ...runtime.dynamicImporters.keys()]) {
+      expect(id).not.toContain('rolldown-lazy');
     }
 
     const stableId = (file: string) =>
@@ -1353,13 +1361,13 @@ test(
     });
 
     await engine.run();
-    await engine.registerClient('poison-client');
-    const chunk = await engine.compileEntry(
+    const chunk = await compileChunk(
+      engine,
       `${path.join(dir, 'boom.js')}?rolldown-lazy=1`,
-      'poison-client',
+      await lazyQuery(readBuild(dir)),
     );
 
-    const runtime = await createDevRuntime('poison-client');
+    const runtime = await createDevRuntime();
     runInRuntime(chunk.code, runtime);
 
     const realId = /registerFactory\("([^"]*boom\.js)"/.exec(chunk.code)![1];
@@ -1378,7 +1386,7 @@ test(
 // pre-edit namespace forever — the module is no longer re-executed by any other path that
 // could refresh it.
 test('a repeat lazy import after an HMR update sees the new exports', async () => {
-  const runtime = await createDevRuntime('stale-client');
+  const runtime = await createDevRuntime();
 
   const id = 'lazy.js';
   const registerVersion = (v: string) =>
@@ -1445,15 +1453,15 @@ test(
       /requestLazy\("[^"]*lazy\.cjs", "[^"]*lazy\.cjs\?rolldown-lazy=1", 1\)/,
     );
 
-    await engine.registerClient('cjs-client');
-    const chunk = await engine.compileEntry(
+    const chunk = await compileChunk(
+      engine,
       `${path.join(dir, 'lazy.cjs')}?rolldown-lazy=1`,
-      'cjs-client',
+      await lazyQuery(mainCode),
     );
     // The CommonJS module registers with the flag the runtime reads.
     expect(chunk.code).toContain('registerModule(__rolldown_module_id__, __rolldown_module__, 1)');
 
-    const runtime = await createDevRuntime('cjs-client');
+    const runtime = await createDevRuntime();
     runInRuntime(chunk.code, runtime);
 
     const realId = /registerFactory\("([^"]*lazy\.cjs)"/.exec(chunk.code)![1];
@@ -1469,7 +1477,7 @@ test(
 
 // Resident module (no fetch): the view is still built, per importer, on top of the memoized run.
 test('requestLazy applies CommonJS interop per importer, on top of the memoized run', async () => {
-  const runtime = await createDevRuntime('cjs-resident-client');
+  const runtime = await createDevRuntime();
 
   // `__esModule` + own `default`: node mode keeps `default` = exports, Babel mode unwraps it.
   const cjsExports = { __esModule: true, default: 'inner', named: 'n' };
@@ -1502,7 +1510,7 @@ test('requestLazy applies CommonJS interop per importer, on top of the memoized 
 // After an HMR patch the module is evicted and its factory replaced. A repeat `import()` re-runs
 // it, and the new registration must carry the CommonJS flag again.
 test('a lazily imported CommonJS module keeps its ESM view after an HMR update', async () => {
-  const runtime = await createDevRuntime('cjs-update-client');
+  const runtime = await createDevRuntime();
 
   const id = 'lib.cjs';
   const registerVersion = (version: string) =>
@@ -1573,8 +1581,9 @@ test(
     // The initial build stubs `lazy.js` with a proxy, so the plugin has not run on it yet.
     await engine.run();
 
+    const query = await lazyQuery(readBuild(dir));
     const rejection = await engine
-      .compileEntry(`${path.join(dir, 'lazy.js')}?rolldown-lazy=1`, 'c1')
+      .compileEntry(`${path.join(dir, 'lazy.js')}?rolldown-lazy=1`, query)
       .then(
         () => null,
         (error: unknown) => error,
@@ -1683,7 +1692,7 @@ test.for([
     expect(code).toContain(`import(${JSON.stringify(specifier)})`);
     expect(code).not.toContain('rolldown-lazy');
     // No proxy was registered, so the id the bug used to compile is unknown.
-    await expect(engine.compileEntry(proxyId(dir), 'client')).rejects.toThrow(
+    await expect(engine.compileEntry(proxyId(dir), await lazyQuery(code))).rejects.toThrow(
       'Lazy entry module not found in cache',
     );
   },

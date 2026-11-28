@@ -3,10 +3,10 @@ import { describe, expect, test } from 'vitest';
 import { browser, editFile, page, serverUrl, waitForBuildStable } from '~utils';
 
 // An edit adds a static import of heavy.js, which is already in the server's
-// module graph but was never shipped to tab B:
+// module graph but that tab B never received:
 //
 //   ① tab A clicks -> lazy compile -> heavy.js enters the graph, its factory
-//     is delivered to tab A only (lazy chunks are per-request);
+//     goes to tab A only (lazy chunks are per-request);
 //   ② tab B loads the page but never clicks -> holds no heavy.js factory;
 //   ③ an edit adds `import './heavy.js'` to self-accepting hmr.js;
 //   ④ the patch for tab B also carries heavy.js, so both tabs hot-update.
@@ -26,7 +26,7 @@ const factoryFor = (file: string) => new RegExp(`registerFactory\\("[^"]*/${file
 const collectPatchBodies = (p: typeof page) => {
   const bodies: Promise<string>[] = [];
   const onResponse = (res: Response) => {
-    if (/\/hmr_patch_\d+\.js(?:\?|$)/.test(res.url())) {
+    if (/\/__rolldown_hmr_patch\.js\?/.test(res.url())) {
       bodies.push(res.text());
     }
   };
@@ -45,7 +45,7 @@ describe('hmr-new-static-dep-unloaded-chunk', () => {
     await waitForBuildStable();
 
     // ① Tab A triggers the lazy compile: heavy.js enters the server's graph
-    // and its factory is delivered to tab A only.
+    // and its factory goes to tab A only.
     await page.click('.load-heavy');
     await expect.poll(() => page.textContent('.heavy')).toBe('heavy');
     await waitForBuildStable();
@@ -70,9 +70,9 @@ describe('hmr-new-static-dep-unloaded-chunk', () => {
           "import { heavy } from './heavy.js';\nexport const value = 'v2-' + heavy;",
         ));
 
-      // ④ Both tabs hot-update: the patch must carry heavy.js's factory to
-      // tab B, which never received it through a lazy chunk. Tab A already
-      // holds the current heavy.js, so its patch leaves it out.
+      // ④ Both tabs hot-update: tab B's patch must carry heavy.js's factory,
+      // which tab B never received through a lazy chunk. Tab A already ran
+      // heavy.js, so its patch leaves it out.
       await expect.poll(() => page.textContent('.value')).toBe('v2-heavy');
       expect(await readMarker(page)).toBe('alive');
       expect(patchesA.bodies.length).toBe(1);

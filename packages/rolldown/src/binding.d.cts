@@ -1659,20 +1659,16 @@ export declare class BindingDevEngine {
   ensureLatestBuildOutput(): Promise<BindingResult<undefined>>
   triggerFullBuild(): void
   /**
-   * Client-connect signal (the clientId hello): creates the per-client session
-   * with an empty ship map. Reconnects arrive as fresh clientIds.
+   * Renders the patch a client asks for. `query` is the query string of the client's patch
+   * request: `s=<epoch>&g=<gen>&u=<set>&e=<set>&f=<set>` (other keys are ignored). Each set is
+   * `b` and a base64url bitset (`HmrNumSet` in `rolldown_common`). A `Reload` answer means the
+   * client must reload; a bad query gets one too.
    */
-  registerClient(clientId: string): Promise<void>
-  /**
-   * Delivery notification for the payload `filename`: the client reported that it
-   * ran the payload, so record its modules as shipped to that client. See
-   * `DevEngine::notify_payload_delivered`.
-   */
-  notifyPayloadDelivered(filename: string): Promise<void>
-  removeClient(clientId: string): Promise<void>
+  renderPatch(query: string): Promise<BindingResult<BindingPatchResponse>>
   close(): Promise<void>
   /**
-   * Compile a lazy entry module and return HMR-style patch code.
+   * Compile a lazy entry module and return HMR-style patch code. `query` describes what the
+   * client holds, in the format of `renderPatch` (`u` is not used).
    *
    * This is called when a dynamically imported module is first requested at runtime.
    * The module was previously stubbed with a proxy, and now we need to compile the
@@ -1683,7 +1679,7 @@ export declare class BindingDevEngine {
    * hands its thrown JS error back untouched, keeping the stack and the diagnostic's module
    * id instead of flattening both into a message.
    */
-  compileEntry(moduleId: string, clientId: string): Promise<BindingResult<BindingLazyChunkOutput>>
+  compileEntry(moduleId: string, query: string): Promise<BindingResult<BindingLazyChunkResponse>>
   /**
    * Same data the plugin-context `getModuleInfo` returns, readable from the engine
    * handle at any time (no hook context needed).
@@ -2121,11 +2117,6 @@ export interface BindingChunkOptimizationOptions {
   avoidRedundantChunkLoads?: boolean
 }
 
-export interface BindingClientHmrUpdate {
-  clientId: string
-  update: BindingHmrUpdate
-}
-
 export interface BindingCommentsOptions {
   legal?: boolean
   annotation?: boolean
@@ -2153,8 +2144,13 @@ export interface BindingCompilerOptions {
 }
 
 export interface BindingDevOptions {
-  onHmrUpdates?: undefined | ((result: BindingResult<[BindingClientHmrUpdate[], string[]]>) => void | Promise<void>)
-  onOutput?: undefined | ((result: BindingResult<BindingOutputs>) => void | Promise<void>)
+  onHmrUpdates?: undefined | ((result: BindingResult<[BindingHmrUpdate, string[]]>) => void | Promise<void>)
+  /**
+   * `hmrGeneration` is the HMR generation the output is rendered at, when the build succeeded.
+   * The output code does not carry it, so the consumer passes it to the page that loads this
+   * output (the runtime's `setOutputGeneration`).
+   */
+  onOutput?: undefined | ((result: BindingResult<BindingOutputs>, hmrGeneration: number | undefined) => void | Promise<void>)
   /**
    * Called with assets emitted while generating an HMR patch or compiling a
    * lazy entry. These never go through `on_output`, so a consumer (e.g. Vite)
@@ -2396,13 +2392,13 @@ export interface BindingGeneratedCodeOptions {
   preset?: string
 }
 
+/**
+ * One update for every client. The client walks its own graph from `changedIds` and pulls the
+ * code it needs with `renderPatch`.
+ */
 export type BindingHmrUpdate =
-  | { type: 'Patch'; code: string; filename: string; sourcemap?: string; sourcemapFilename?: string; /**
-     * Stable ids of the changed modules — the `changedIds` of the push envelope.
-     * The client walks from these on its own graph.
-     */
-    changedIds: Array<string>; /** Per-client envelope sequence number. */
-  seq: number }
+  | { type: 'Changed'; changedIds: Array<string>; /** Every module stamped at `gen`. A client drops its factory of each one. */
+  staleIds: Array<string>; gen: number }
   | { type: 'FullReload'; reason?: string }
   | { type: 'Noop' }
 
@@ -2652,21 +2648,10 @@ export interface BindingJsWatchChangeEvent {
   event: string
 }
 
-/**
- * The client-facing slice of a lazy-compile result. The carried modules and
- * stamps stay server-side as the engine's pending-payload entry.
- */
-export interface BindingLazyChunkOutput {
-  code: string
-  filename: string
-  /**
-   * The chunk's sourcemap, when `sourcemap` is `File` or `Hidden`. Serve it
-   * under `sourcemapFilename`, which is what the chunk's `sourceMappingURL`
-   * refers to.
-   */
-  sourcemap?: string
-  sourcemapFilename?: string
-}
+/** `code` and `sourcemap` follow the rules of `BindingPatchResponse`. */
+export type BindingLazyChunkResponse =
+  | { type: 'Chunk'; code: string; sourcemap?: string }
+  | { type: 'Reload'; reason: string }
 
 export interface BindingLog {
   message: string
@@ -2839,6 +2824,15 @@ export interface BindingOverwriteOptions {
   /** Stores the replaced content in the generated sourcemap's `names` field. */
   storeName?: boolean
 }
+
+/**
+ * With `sourcemap` set to `Inline`, `code` ends with an inline `sourceMappingURL`. With `File`
+ * or `Hidden`, `sourcemap` is the map as JSON, and `code` has no `sourceMappingURL` comment: no
+ * file is kept for a pulled payload, so the consumer serves the map and adds the comment.
+ */
+export type BindingPatchResponse =
+  | { type: 'Patch'; code: string; sourcemap?: string }
+  | { type: 'Reload'; reason: string }
 
 /** The options of `BindingPluginContext.load` that a call can leave out. */
 export interface BindingPluginContextLoadOptions {

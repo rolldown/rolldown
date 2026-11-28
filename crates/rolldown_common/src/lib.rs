@@ -136,10 +136,9 @@ pub use crate::{
     SharedFileEmitter,
   },
   hmr::{
-    client_hmr_input::ClientHmrInput,
-    client_hmr_update::ClientHmrUpdate,
-    hmr_patch::HmrPatch,
-    hmr_stamp_table::HmrStampTable,
+    client_have::{ClientHave, HmrNumSet},
+    hmr_patch::{HmrPatch, HmrPullResponse},
+    hmr_session::{HMR_CATCH_UP_RING_SIZE, HmrCatchUp, HmrRingEntry, HmrSession, SharedHmrSession},
     hmr_update::HmrUpdate,
     lazy_chunk_output::HmrLazyChunkOutput,
     lazy_proxy_id::{LAZY_PROXY_QUERY, is_lazy_proxy, lazy_proxy_target, write_lazy_proxy_id},

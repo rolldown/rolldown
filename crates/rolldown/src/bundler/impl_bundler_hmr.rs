@@ -3,21 +3,16 @@ use super::Bundler;
 #[cfg(feature = "experimental")]
 use crate::hmr::hmr_stage::{HmrStage, HmrStageInput};
 #[cfg(feature = "experimental")]
-use arcstr::ArcStr;
-#[cfg(feature = "experimental")]
-use rolldown_common::WatcherChangeKind;
-#[cfg(feature = "experimental")]
 use rolldown_common::{
-  ClientHmrInput, ClientHmrUpdate, HmrLazyChunkOutput, HmrStampTable, ImportKind, Module, Output,
+  ClientHave, HmrLazyChunkOutput, HmrPatch, HmrPullResponse, HmrSession, HmrUpdate,
+  SharedHmrSession, WatcherChangeKind,
 };
 #[cfg(feature = "experimental")]
 use rolldown_error::BuildResult;
 #[cfg(feature = "experimental")]
 use rolldown_utils::indexmap::FxIndexMap;
 #[cfg(feature = "experimental")]
-use rustc_hash::{FxHashMap, FxHashSet};
-#[cfg(feature = "experimental")]
-use std::sync::{Arc, atomic::AtomicU32};
+use std::sync::Arc;
 
 #[cfg(feature = "experimental")]
 impl Bundler {
@@ -28,128 +23,37 @@ impl Bundler {
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
     changed_file_paths: &FxIndexMap<String, WatcherChangeKind>,
-    clients: &[ClientHmrInput<'_>],
-    stamp_table: &mut HmrStampTable,
-    next_hmr_patch_id: Arc<AtomicU32>,
     last_build_errored: bool,
     hot_update_hook_enabled: bool,
-  ) -> BuildResult<Vec<ClientHmrUpdate>> {
-    // HMR partial scans use the shared rayon pool without passing through
-    // `BundleFactory::build_bundle`; wait for any deferred drops here too.
-    crate::utils::defer_drop::drain();
+  ) -> BuildResult<HmrUpdate> {
     let _activity = crate::utils::build_activity::BuildActivity::enter();
-
-    let Some(plugin_driver) = self.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver) else {
+    let Some(mut hmr_stage) = self.hmr_stage() else {
       return Err(anyhow::format_err!(
         "HMR requires to run at least one bundle before invalidation"
       ))?;
     };
-    let mut hmr_stage = HmrStage::new(HmrStageInput {
-      fs: self.bundle_factory.fs.clone(),
-      options: Arc::clone(&self.bundle_factory.options),
-      resolver: Arc::clone(&self.bundle_factory.resolver),
-      plugin_driver: Arc::clone(plugin_driver),
-      cache: &mut self.cache,
-      lost_hmr_update: &mut self.lost_hmr_update,
-      next_hmr_patch_id,
-    });
     hmr_stage
       .compute_hmr_update_for_file_changes(
         changed_file_paths,
-        clients,
-        stamp_table,
         last_build_errored,
         hot_update_hook_enabled,
       )
       .await
   }
 
-  /// Compute the top-level-evaluated set of the current snapshot: the modules whose
-  /// evaluation is unconditionally triggered by entry-chunk top-level execution.
-  /// These are the modules reachable from the user-defined entry through
-  /// `ImportKind::Import` edges only — static `import` / `export … from` statements,
-  /// whose init calls the renderer hoists unconditionally into the importer.
-  /// Only modules in the entry's emitted static chunk closure are retained: a source
-  /// import can reach a barrel whose chunk tree shaking left unloaded.
-  /// See internal-docs/hmr/design.md, principle 2.
-  /// `Require` and dynamic edges are excluded: a `require()` site may be
-  /// conditional, so counting it could mark a module "evaluated" that never ran —
-  /// the one unsafe direction. Missing a module here only costs re-shipped bytes.
-  ///
-  /// Values are the modules' render-time stamps at computation, so consumers
-  /// compare currency with `HmrStampTable::is_stale` exactly like the ship map.
-  ///
-  /// Returns an empty (inert) map when there is no snapshot or when the build has
-  /// several user-defined entries: the server cannot yet tell which entry a given
-  /// client loaded, and a union would mark modules evaluated for clients that
-  /// never loaded them.
-  pub fn compute_top_level_evaluated_modules(
-    &self,
-    stamp_table: &HmrStampTable,
-    output: &crate::BundleOutput,
-  ) -> FxHashMap<ArcStr, u32> {
-    let Some(snapshot) = self.cache.snapshot() else {
-      return FxHashMap::default();
+  /// Renders the patch a client asks for. See `HmrStage::render_patch`.
+  pub async fn render_patch(
+    &mut self,
+    have: &ClientHave,
+  ) -> BuildResult<HmrPullResponse<HmrPatch>> {
+    let _activity = crate::utils::build_activity::BuildActivity::enter();
+    let Some(hmr_stage) = self.hmr_stage() else {
+      return Ok(HmrPullResponse::Reload { reason: "no build has run yet".to_owned() });
     };
-    if snapshot.user_defined_entry_modules.len() != 1 {
-      return FxHashMap::default();
-    }
-
-    let modules = &snapshot.module_table.modules;
-    let entry_id = modules[*snapshot.user_defined_entry_modules.iter().next().unwrap()].id();
-    let chunks = output
-      .assets
-      .iter()
-      .filter_map(|asset| match asset {
-        Output::Chunk(chunk) => Some((chunk.filename.as_str(), chunk)),
-        Output::Asset(_) => None,
-      })
-      .collect::<FxHashMap<_, _>>();
-    let mut pending = chunks
-      .values()
-      .copied()
-      .filter(|chunk| chunk.is_entry && chunk.facade_module_id.as_ref() == Some(entry_id))
-      .collect::<Vec<_>>();
-    let mut loaded = FxHashSet::default();
-    let mut visited = FxHashSet::default();
-    while let Some(chunk) = pending.pop() {
-      if !visited.insert(chunk.filename.as_str()) {
-        continue;
-      }
-      loaded.extend(chunk.module_ids.iter().cloned());
-      pending.extend(chunk.imports.iter().filter_map(|id| chunks.get(id.as_str()).copied()));
-    }
-    let mut evaluated = FxHashMap::default();
-    let mut stack: Vec<_> = snapshot.user_defined_entry_modules.iter().copied().collect();
-    while let Some(module_idx) = stack.pop() {
-      let Module::Normal(module) = &modules[module_idx] else {
-        continue;
-      };
-      let stable_id = module.stable_id.as_arc_str();
-      if evaluated.contains_key(stable_id) {
-        continue;
-      }
-      evaluated.insert(stable_id.clone(), stamp_table.render_time_stamp(stable_id.as_str()));
-      for rec in &module.import_records {
-        if rec.kind == ImportKind::Import
-          && let Some(dep_idx) = rec.resolved_module
-        {
-          stack.push(dep_idx);
-        }
-      }
-    }
-    evaluated.retain(|id, _| {
-      self
-        .cache
-        .module_idx_by_stable_id
-        .get(id.as_str())
-        .is_some_and(|idx| loaded.contains(modules[*idx].id()))
-    });
-    evaluated
+    hmr_stage.render_patch(have).await
   }
 
-  /// Compile a lazy entry module and return compiled code plus the pending-payload
-  /// entry the delivery-time ship-map write consumes.
+  /// Compile a lazy entry module and render the factories the client needs to run it.
   ///
   /// Serves a lazy route to a client. A first visit scans the route into the graph; a repeat
   /// visit renders it from the graph (see internal-docs/lazy-compilation/design.md, "Repeat
@@ -160,29 +64,56 @@ impl Bundler {
   pub async fn compile_lazy_entry(
     &mut self,
     module_id: String,
-    shipped: &FxHashMap<ArcStr, u32>,
-    evaluated: &FxHashMap<ArcStr, u32>,
-    stamp_table: &HmrStampTable,
-    next_hmr_patch_id: Arc<AtomicU32>,
+    have: &ClientHave,
     merged: &mut bool,
-  ) -> BuildResult<HmrLazyChunkOutput> {
+  ) -> BuildResult<HmrPullResponse<HmrLazyChunkOutput>> {
+    let _activity = crate::utils::build_activity::BuildActivity::enter();
+    let Some(mut hmr_stage) = self.hmr_stage() else {
+      panic!("Lazy compilation requires at least one bundle to be built first");
+    };
+    hmr_stage.compile_lazy_entry(&module_id, have, merged).await
+  }
+
+  /// The reason the session cannot serve this client, if any.
+  pub fn hmr_reload_reason(&self, have: &ClientHave) -> Option<String> {
+    self.bundle_factory.hmr_session.lock().reload_reason(have)
+  }
+
+  /// Starts a new session with `epoch`. Call it before the first build.
+  pub fn set_hmr_epoch(&self, epoch: u32) {
+    *self.bundle_factory.hmr_session.lock() = HmrSession::new(epoch);
+  }
+
+  pub fn hmr_session(&self) -> &SharedHmrSession {
+    &self.bundle_factory.hmr_session
+  }
+
+  /// See `HmrSession::begin_full_reload`.
+  pub fn begin_hmr_full_reload(&self) {
+    self.bundle_factory.hmr_session.lock().begin_full_reload();
+  }
+
+  /// Leaves the graph as a failure after the merge of an HMR update does: with an edit that no
+  /// client received.
+  #[cfg(feature = "testing")]
+  pub fn lose_hmr_update_for_testing(&mut self) {
+    self.lost_hmr_update = true;
+  }
+
+  fn hmr_stage(&mut self) -> Option<HmrStage<'_, rolldown_fs::OsFileSystem>> {
     // HMR partial scans use the shared rayon pool without passing through
     // `BundleFactory::build_bundle`; wait for any deferred drops here too.
     crate::utils::defer_drop::drain();
-    let _activity = crate::utils::build_activity::BuildActivity::enter();
 
-    let Some(plugin_driver) = self.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver) else {
-      panic!("Lazy compilation requires at least one bundle to be built first");
-    };
-    let mut hmr_stage = HmrStage::new(HmrStageInput {
+    let plugin_driver = self.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver)?;
+    Some(HmrStage::new(HmrStageInput {
       fs: self.bundle_factory.fs.clone(),
       options: Arc::clone(&self.bundle_factory.options),
       resolver: Arc::clone(&self.bundle_factory.resolver),
       plugin_driver: Arc::clone(plugin_driver),
       cache: &mut self.cache,
       lost_hmr_update: &mut self.lost_hmr_update,
-      next_hmr_patch_id,
-    });
-    hmr_stage.compile_lazy_entry(&module_id, shipped, evaluated, stamp_table, merged).await
+      session: self.bundle_factory.hmr_session.clone(),
+    }))
   }
 }

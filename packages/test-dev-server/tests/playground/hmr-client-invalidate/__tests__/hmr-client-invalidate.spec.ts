@@ -1,23 +1,35 @@
+import type { Response } from 'playwright';
 import { describe, expect, test } from 'vitest';
 import { browserLogs, editFile, page, waitForBuildStable } from '~utils';
 
-// `import.meta.hot.invalidate()` is fully client-side: the client re-walks
-// from the invalidator's importers and applies locally when its factory map
-// covers the new update set, else it does a clean full reload (never a stale
-// page). No websocket round trip is involved — the server never hears about
-// the invalidate.
+// `import.meta.hot.invalidate()` is handled by the client: it walks again
+// from the invalidator's importers and applies the update locally. The server
+// never hears about the invalidate; the client only requests the factories it
+// lacks, the same way it does for a pushed update.
 //
-// Factory coverage comes from the ship map: an edit of `inner` ships
-// only inner's factory (the server's update-superset walk stops at inner's static
-// self-accept), so on a COLD session the invalidate re-walk finds no factory
-// for `outer` and falls back to a clean reload. Once outer's factory has been
-// delivered (by editing outer once), the same invalidate hot-updates.
+// An edit of `inner` brings only inner's factory (inner accepts itself), so
+// the first invalidate requests outer's factory. The client keeps it, so a
+// later invalidate needs no request for outer.
 
 const plantMarker = () => page.evaluate(() => ((window as unknown as { __marker?: string }).__marker = 'alive'));
 const readMarker = () =>
   page.evaluate(() => (window as unknown as { __marker?: string }).__marker ?? null);
 const readOuterRuns = () =>
   page.evaluate(() => (window as unknown as { __outerRuns?: string[] }).__outerRuns ?? []);
+
+const factoryFor = (file: string) => new RegExp(`registerFactory\\("[^"]*/${file}"`);
+
+/** Collect the bodies of the HMR patches the page fetches. */
+const collectPatchBodies = () => {
+  const bodies: Promise<string>[] = [];
+  const onResponse = (res: Response) => {
+    if (/\/__rolldown_hmr_patch\.js\?/.test(res.url())) {
+      bodies.push(res.text());
+    }
+  };
+  page.on('response', onResponse);
+  return { bodies, stop: () => page.off('response', onResponse) };
+};
 
 describe('hmr-client-invalidate', () => {
   test('should render initial content', async () => {
@@ -26,51 +38,50 @@ describe('hmr-client-invalidate', () => {
     await expect.poll(() => page.textContent('.lone')).toBe('lone-v1');
   });
 
-  test('invalidate without factory coverage degrades to a clean reload (cold session)', async () => {
+  test('invalidate requests the factory of the accepting importer and hot-updates', async () => {
     await waitForBuildStable();
     await plantMarker();
+    const patches = collectPatchBodies();
+    const runsBefore = (await readOuterRuns()).length;
+    const logIndex = browserLogs.length;
 
-    // inner hot-updates (it self-accepts), its callback invalidates, the
-    // re-walk reaches outer's live accept — but this client never received
-    // outer's factory, so the coverage check turns the apply into a clean
-    // full reload onto FRESH content (never a silently stale page).
-    editFile('inner.js', (code) => code.replace("'inner-v1'", "'inner-v2'"));
-    await expect.poll(() => page.textContent('.outer')).toBe('inner-v2');
-    await expect.poll(readMarker).toBe(null);
+    try {
+      // inner hot-updates (it self-accepts), its callback invalidates, and the
+      // walk reaches outer's accept. The client never received outer's
+      // factory, so it requests it, then runs outer again in place.
+      editFile('inner.js', (code) => code.replace("'inner-v1'", "'inner-v2'"));
+      await expect.poll(() => page.textContent('.outer')).toBe('inner-v2');
+
+      expect((await readOuterRuns()).length).toBeGreaterThan(runsBefore);
+      expect(await readMarker()).toBe('alive');
+      await expect
+        .poll(() => browserLogs.slice(logIndex).join('\n'))
+        .toMatch(/\[vite\] invalidate .*inner\.js/);
+      expect((await Promise.all(patches.bodies)).join('\n')).toMatch(factoryFor('outer.js'));
+    } finally {
+      patches.stop();
+    }
 
     await waitForBuildStable();
   });
 
-  test('invalidate bubbles to an accepting importer and hot-updates (no reload)', async () => {
+  test('a later invalidate reuses the factory the client holds', async () => {
     await waitForBuildStable();
-
-    // Warm outer's factory: one edit of outer ships it (it is the
-    // self-accepting boundary of its own update), giving the invalidate
-    // re-walk full factory coverage from here on.
-    editFile('outer.js', (code) =>
-      code.replace('.textContent = inner', ".textContent = 'warmed:' + inner"),
-    );
-    await expect.poll(() => page.textContent('.outer')).toBe('warmed:inner-v2');
-    await waitForBuildStable();
-
     await plantMarker();
+    const patches = collectPatchBodies();
     const runsBefore = (await readOuterRuns()).length;
-    const logIndex = browserLogs.length;
 
-    // Edit inner: inner's (pre-edit) accept callback fires with the new
-    // exports and calls hot.invalidate(); the client re-walks from inner's
-    // importers, reaches outer's live accept, evicts and re-runs outer —
-    // all client-side, no page reload.
-    editFile('inner.js', (code) => code.replace("'inner-v2'", "'inner-v3'"));
-    await expect.poll(() => page.textContent('.outer')).toBe('warmed:inner-v3');
+    try {
+      editFile('inner.js', (code) => code.replace("'inner-v2'", "'inner-v3'"));
+      await expect.poll(() => page.textContent('.outer')).toBe('inner-v3');
 
-    // outer really re-ran, and nothing reloaded the page.
-    expect((await readOuterRuns()).length).toBeGreaterThan(runsBefore);
-    expect(await readMarker()).toBe('alive');
-    // The invalidate path (not a plain dep-accept) drove the update.
-    await expect
-      .poll(() => browserLogs.slice(logIndex).join('\n'))
-      .toMatch(/\[vite\] invalidate .*inner\.js/);
+      expect((await readOuterRuns()).length).toBeGreaterThan(runsBefore);
+      expect(await readMarker()).toBe('alive');
+      // outer did not change, so its factory is still current
+      expect((await Promise.all(patches.bodies)).join('\n')).not.toMatch(factoryFor('outer.js'));
+    } finally {
+      patches.stop();
+    }
 
     await waitForBuildStable();
   });

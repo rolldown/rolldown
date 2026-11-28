@@ -1,10 +1,11 @@
 import {
   type BindingBundleState,
-  type BindingClientHmrUpdate,
   BindingDevEngine,
   type BindingDevOptions,
-  type BindingLazyChunkOutput,
+  type BindingHmrUpdate,
+  type BindingLazyChunkResponse,
   type BindingModuleInfo,
+  type BindingPatchResponse,
   BindingRebuildStrategy,
   type BindingResult,
   shutdownAsyncRuntime,
@@ -78,15 +79,15 @@ export class DevEngine {
 
     const userOnHmrUpdates = devOptions.onHmrUpdates;
     const bindingOnHmrUpdates: BindingDevOptions['onHmrUpdates'] = userOnHmrUpdates
-      ? function (rawResult: BindingResult<[BindingClientHmrUpdate[], string[]]>) {
+      ? function (rawResult: BindingResult<[BindingHmrUpdate, string[]]>) {
           const result = normalizeBindingResult(rawResult);
           if (result instanceof Error) {
             userOnHmrUpdates(result);
             return;
           }
-          const [updates, changedFiles] = result;
+          const [update, changedFiles] = result;
           userOnHmrUpdates({
-            updates,
+            update,
             changedFiles,
           });
         }
@@ -94,14 +95,17 @@ export class DevEngine {
 
     const userOnOutput = devOptions.onOutput;
     const bindingOnOutput: BindingDevOptions['onOutput'] = userOnOutput
-      ? function (rawResult) {
+      ? function (rawResult, hmrGeneration) {
           const result = normalizeBindingResult(rawResult);
           if (result instanceof Error) {
             userOnOutput(result);
             return;
           }
           trackOutputExternalMemory(result);
-          userOnOutput(transformToRollupOutput(result));
+          userOnOutput(
+            transformToRollupOutput(result),
+            hmrGeneration == null ? undefined : { hmrGeneration },
+          );
         }
       : undefined;
 
@@ -173,26 +177,19 @@ export class DevEngine {
   }
 
   /**
-   * Client-connect signal (the clientId hello): creates the per-client session
-   * with an empty ship map. Reconnects arrive as fresh clientIds.
+   * Render the patch a client asks for.
+   *
+   * @param query - The query string of the client's patch request,
+   * `s=<epoch>&g=<gen>&u=<set>&e=<set>&f=<set>`. Each set is `b` and a
+   * base64url bitset. Other keys are ignored.
+   * @returns The patch, or `{ type: 'Reload' }` when the client must reload (it
+   * belongs to another engine, its generation is too old to catch up, or the
+   * query is bad). With `sourcemap: true` or `'hidden'`, `sourcemap` is the map
+   * as JSON and `code` has no `sourceMappingURL` comment; the caller serves the
+   * map. With `'inline'`, `code` ends with an inline map.
    */
-  async registerClient(clientId: string): Promise<void> {
-    await this.#inner.registerClient(clientId);
-  }
-
-  /**
-   * Delivery notification for the payload `filename`. Call it when the client
-   * reports that it ran the payload (Vite appends a
-   * `__rolldown_runtime__.payloadDelivered(filename)` statement to every patch
-   * and lazy chunk). A completed HTTP response is not enough: the bytes may not
-   * have evaluated yet. Records the payload's modules as shipped to that client.
-   */
-  async notifyPayloadDelivered(filename: string): Promise<void> {
-    await this.#inner.notifyPayloadDelivered(filename);
-  }
-
-  async removeClient(clientId: string): Promise<void> {
-    await this.#inner.removeClient(clientId);
+  async renderPatch(query: string): Promise<BindingPatchResponse> {
+    return unwrapBindingResult(await this.#inner.renderPatch(query));
   }
 
   async close(): Promise<void> {
@@ -216,13 +213,14 @@ export class DevEngine {
    * actual module and its dependencies.
    *
    * @param moduleId - The absolute file path of the module to compile
-   * @param clientId - The client ID requesting this compilation
-   * @returns The compiled chunk: its code plus the filename whose delivery the
-   * dev server reports via {@link notifyPayloadDelivered}
+   * @param query - The query string of the client's lazy request, which
+   * describes what the client holds in the format of {@link renderPatch}
+   * @returns The compiled chunk, or `{ type: 'Reload' }` when the client must
+   * reload. `code` and `sourcemap` follow the rules of {@link renderPatch}.
    * @throws The plugin's own error, since a lazy compile runs the full pipeline and is
    * where a user plugin most often throws
    */
-  async compileEntry(moduleId: string, clientId: string): Promise<BindingLazyChunkOutput> {
-    return unwrapBindingResult(await this.#inner.compileEntry(moduleId, clientId));
+  async compileEntry(moduleId: string, query: string): Promise<BindingLazyChunkResponse> {
+    return unwrapBindingResult(await this.#inner.compileEntry(moduleId, query));
   }
 }

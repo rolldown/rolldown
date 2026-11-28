@@ -1,0 +1,137 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["hmr.ts", "main.ts"],
+	localCount: 2,
+	edges: [[], [0]],
+	nums: [0, 1],
+	epoch: 1,
+	entries: [1]
+});
+// hmr.ts
+var hmr_exports = /* @__PURE__ */ __exportAll({ value: () => "v1" });
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.ts");
+__rolldown_runtime__.registerModule("hmr.ts", { exports: hmr_exports });
+hmr_hot.accept();
+// main.ts
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.ts");
+__rolldown_runtime__.registerModule("main.ts", { exports: main_exports });
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+	assert.strictEqual("v1", "v2");
+});
+
+```
+
+# HMR Step 0
+
+## Meta
+
+- update type: full-reload
+- reason: tsconfig change
+
+## Client
+
+- result: push lost: the test does not send it to the client
+
+## Build Output
+
+### Assets
+
+#### main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["hmr.ts", "main.ts"],
+	localCount: 2,
+	edges: [[], [0]],
+	nums: [0, 1],
+	epoch: 1,
+	entries: [1]
+});
+// hmr.ts
+var hmr_exports = /* @__PURE__ */ __exportAll({ value: () => "v1" });
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.ts");
+__rolldown_runtime__.registerModule("hmr.ts", { exports: hmr_exports });
+hmr_hot.accept();
+// main.ts
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.ts");
+__rolldown_runtime__.registerModule("main.ts", { exports: main_exports });
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+	assert.strictEqual("v1", "v2");
+});
+
+```
+
+# HMR Step 1
+
+## Meta
+
+- update type: changed
+- gen: 2
+
+### Changed Ids
+
+- hmr.ts
+
+### Stale Ids
+
+- hmr.ts
+
+## Pull 0
+
+- g: 0
+- update: hmr.ts
+- executed: main.ts
+- factories: (none)
+- reload: generation 0 is too old to catch up
+
+## Client
+
+- result: reload: generation 0 is too old to catch up
+
+## Build Output
+
+### Assets
+
+#### main.js
+
+```js
+import assert from "node:assert";
+// HIDDEN [\0rolldown/runtime.js]
+__rolldown_runtime__.registerGraph({
+	ids: ["hmr.ts", "main.ts"],
+	localCount: 2,
+	edges: [[], [0]],
+	nums: [0, 1],
+	epoch: 1,
+	entries: [1]
+});
+// hmr.ts
+var hmr_exports = /* @__PURE__ */ __exportAll({ value: () => "v2" });
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.ts");
+__rolldown_runtime__.registerModule("hmr.ts", { exports: hmr_exports });
+hmr_hot.accept();
+// main.ts
+var main_exports = /* @__PURE__ */ __exportAll({});
+__rolldown_runtime__.createModuleHotContext("main.ts");
+__rolldown_runtime__.registerModule("main.ts", { exports: main_exports });
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+	assert.strictEqual("v2", "v2");
+});
+
+```

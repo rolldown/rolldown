@@ -4,9 +4,9 @@ import { browser, editFile, page, serverUrl, waitForBuildStable } from '~utils';
 
 // Four tabs of the same app. Tab A (the shared `page`) and tab R click `.load`,
 // so lazy-holder.js and its imports enter the server's module graph and only
-// those two tabs run them. Tab R never acknowledges the payloads it runs
-// (`payloadDelivered` is stubbed), so the server never records those modules as
-// delivered to it. Tabs B and C never click.
+// those two tabs run them. Tab R also clicks `.load-late`. Tabs B and C never
+// click, so they hold none of those modules and request them when an update
+// needs them.
 //
 // All tabs open before the first edit: opening a page after an HMR update
 // regenerates the bundle and reloads every tab.
@@ -57,7 +57,7 @@ const factoryFor = (file: string) => new RegExp(`registerFactory\\("[^"]*/${file
 function collectPatches(p: Page) {
   const bodies: Promise<string>[] = [];
   const onResponse = (res: Response) => {
-    if (/\/hmr_patch_\d+\.js(?:\?|$)/.test(res.url())) bodies.push(res.text());
+    if (/\/__rolldown_hmr_patch\.js\?/.test(res.url())) bodies.push(res.text());
   };
   p.on('response', onResponse);
   return {
@@ -101,9 +101,6 @@ describe('hmr-unreceived-deps', () => {
     [tabB, tabC, tabR] = await Promise.all([openTab(), openTab(), openTab()]);
     await waitForBuildStable();
 
-    await tabR.evaluate(() => {
-      (globalThis as any).__rolldown_runtime__.payloadDelivered = () => {};
-    });
     await page.click('.load');
     await expect.poll(() => page.textContent('.lazy')).toBe(LAZY_TEXT);
     await tabR.click('.load');
@@ -117,21 +114,24 @@ describe('hmr-unreceived-deps', () => {
 
   test('a new import of an ESM re-export chain', async () => {
     const patchesA = collectPatches(page);
+    const patchesB = collectPatches(tabB);
     const patchesR = collectPatches(tabR);
     try {
       await withEdits([['hmr.js', IDENTITY_RENDER, FACADE_RENDER]], async () => {
         for (const p of [page, tabB, tabC, tabR]) {
           await expect.poll(() => p.textContent('.hmr')).toBe('[hello]');
         }
-        // The server sends implementation.js again only to tab R, which never acknowledged it.
-        expect(await patchesR.read()).toMatch(factoryFor('implementation.js'));
+        // Only a tab that never ran implementation.js requests it.
+        expect(await patchesB.read()).toMatch(factoryFor('implementation.js'));
         expect(await patchesA.read()).not.toMatch(factoryFor('implementation.js'));
-        // Tab R already ran implementation.js, so the copy sent again must not run.
+        expect(await patchesR.read()).not.toMatch(factoryFor('implementation.js'));
+        // Tab R already ran implementation.js, so it must not run again.
         expect(await readGlobal(tabR, '__implementationExecutions')).toBe(1);
         await expectNoReloadOrError();
       });
     } finally {
       patchesA.stop();
+      patchesB.stop();
       patchesR.stop();
     }
   });
@@ -165,7 +165,7 @@ describe('hmr-unreceived-deps', () => {
     });
   });
 
-  test('a self-accepting module whose delivery the tab never acknowledged', async () => {
+  test('a self-accepting module that only one tab ran', async () => {
     await withEdits(
       [['late-accept.js', "export const value = 'late';", "export const value = 'late2';"]],
       async () => {

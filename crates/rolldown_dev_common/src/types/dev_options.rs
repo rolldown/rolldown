@@ -1,5 +1,5 @@
 use derive_more::Debug;
-use rolldown_common::ClientHmrUpdate;
+use rolldown_common::HmrUpdate;
 use rolldown_error::BuildResult;
 use rolldown_utils::pattern_filter::StringOrRegex;
 use std::sync::Arc;
@@ -13,8 +13,8 @@ use super::bundle_output::BundleOutput;
 use super::dev_watch_options::DevWatchOptions;
 use super::rebuild_strategy::RebuildStrategy;
 
-pub type OnHmrUpdatesCallback =
-  Arc<dyn Fn(BuildResult<(Vec<ClientHmrUpdate>, Vec<String>)>) + Send + Sync>;
+/// Receives one update for every client, with the changed files.
+pub type OnHmrUpdatesCallback = Arc<dyn Fn(BuildResult<(HmrUpdate, Vec<String>)>) + Send + Sync>;
 pub type OnOutputCallback = Arc<dyn Fn(BuildResult<BundleOutput>) + Send + Sync>;
 /// Assets emitted while generating an HMR patch or compiling a lazy entry (e.g.
 /// an image newly imported by the changed/lazy module). A pure HMR patch and a

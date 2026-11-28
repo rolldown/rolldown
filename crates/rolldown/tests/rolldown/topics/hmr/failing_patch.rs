@@ -8,11 +8,11 @@ use std::{
 
 use rolldown_common::SourceMapPathTransform;
 
-/// Patch rendering fails while a source file contains this marker.
+/// Rendering fails while a source file contains this marker.
 const FAIL_MARKER: &str = "FAIL_PATCH";
 
-/// Fails while any source of the sourcemap contains `FAIL_MARKER`. The callback runs while
-/// the patch is rendered, after the update merged the edit into the module graph.
+/// Fails while any source of the sourcemap contains `FAIL_MARKER`: a patch that a client
+/// pulls, and a full build that renders the module.
 pub fn fail_on_marker() -> SourceMapPathTransform {
   SourceMapPathTransform::new(Arc::new(|sources, sourcemap_path| {
     let dir = Path::new(sourcemap_path).parent().unwrap().to_path_buf();
@@ -27,12 +27,12 @@ pub fn fail_on_marker() -> SourceMapPathTransform {
   }))
 }
 
-/// Fails the first HMR patch render. The callback runs while the patch is rendered, after
-/// the update merged the edit into the module graph. Chunks of a full build pass.
+/// Fails the first patch that a client pulls. Chunks of a full build pass.
 pub fn fail_first_patch() -> SourceMapPathTransform {
   let failed = Arc::new(AtomicBool::new(false));
   SourceMapPathTransform::new(Arc::new(move |sources, sourcemap_path| {
-    let is_patch = sourcemap_path.rsplit(['/', '\\']).next().unwrap().starts_with("hmr_patch_");
+    let is_patch =
+      sourcemap_path.rsplit(['/', '\\']).next().unwrap().starts_with("__rolldown_hmr_patch");
     let fail = is_patch && !failed.swap(true, Ordering::Relaxed);
     Box::pin(async move {
       if fail {

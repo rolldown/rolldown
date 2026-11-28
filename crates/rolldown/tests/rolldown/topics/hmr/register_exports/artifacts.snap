@@ -19,6 +19,12 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0, 1]
 	],
+	nums: [
+		0,
+		1,
+		2
+	],
+	epoch: 0,
 	entries: [2]
 });
 // esm.js

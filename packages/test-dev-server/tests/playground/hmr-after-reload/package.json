@@ -1,5 +1,5 @@
 {
-  "name": "@rolldown/test-hmr-reconnect-ship-map",
+  "name": "@rolldown/test-hmr-after-reload",
   "version": "0.0.0",
   "private": true,
   "type": "module",

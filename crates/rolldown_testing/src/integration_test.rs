@@ -14,7 +14,7 @@ use rolldown::{
   NormalizedBundlerOptions, OutputFormat, Platform, SourceMapType,
   plugin::{__inner::SharedPluginable, Plugin},
 };
-use rolldown_common::Output;
+use rolldown_common::{HmrUpdate, Output};
 use rolldown_dev::{BundlerConfig, DevEngine, DevOptions, DevWatchOptions};
 use rolldown_error::BuildResult;
 use rolldown_testing_config::{ExpectedExecutionFailure, TestMeta};
@@ -26,6 +26,7 @@ use crate::hmr_files::{
   apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
   copy_non_hmr_edit_files_to_hmr_temp_dir, get_changed_files_from_hmr_edit_files,
 };
+use crate::hmr_test_client::{self, HmrClientStepRecord, HmrTestClient};
 use crate::types::{
   BuildArtifactsSnapshot, BuildRoundOutput, DevArtifactsSnapshot, DevRoundOutput, HmrStepOutput,
 };
@@ -56,35 +57,6 @@ pub struct NamedBundlerOptions {
 
 fn default_test_input_item() -> rolldown::InputItem {
   rolldown::InputItem { name: Some("main".to_string()), import: "./main.js".to_string() }
-}
-
-fn read_output_files(dir: &Path) -> Vec<(PathBuf, Vec<u8>)> {
-  let mut files = vec![];
-  let mut dirs = vec![dir.to_path_buf()];
-  while let Some(dir) = dirs.pop() {
-    let Ok(entries) = fs::read_dir(&dir) else { continue };
-    for entry in entries {
-      let path = entry.unwrap().path();
-      if path.is_dir() {
-        dirs.push(path);
-      } else {
-        let content = fs::read(&path).unwrap();
-        files.push((path, content));
-      }
-    }
-  }
-  files
-}
-
-fn restore_output_files(dir: &Path, files: &[(PathBuf, Vec<u8>)]) {
-  fs::remove_dir_all(dir)
-    .or_else(|err| if err.kind() == std::io::ErrorKind::NotFound { Ok(()) } else { Err(err) })
-    .unwrap();
-  fs::create_dir_all(dir).unwrap();
-  for (path, content) in files {
-    fs::create_dir_all(path.parent().unwrap()).unwrap();
-    fs::write(path, content).unwrap();
-  }
 }
 
 impl IntegrationTest {
@@ -188,11 +160,8 @@ impl IntegrationTest {
 
     for mut named_options in multiple_options {
       // Type aliases for nested callback tracking
-      type HmrUpdatesBySteps = Arc<
-        std::sync::Mutex<
-          Vec<Vec<BuildResult<(Vec<rolldown_common::ClientHmrUpdate>, Vec<String>)>>>,
-        >,
-      >;
+      type HmrUpdatesBySteps =
+        Arc<std::sync::Mutex<Vec<Vec<BuildResult<(HmrUpdate, Vec<String>)>>>>>;
       type BuildResultsBySteps = Arc<std::sync::Mutex<Vec<Vec<BuildResult<BundleOutput>>>>>;
 
       let mut build_snapshot = DevRoundOutput {
@@ -207,12 +176,6 @@ impl IntegrationTest {
       copy_non_hmr_edit_files_to_hmr_temp_dir(test_folder_path, &hmr_temp_dir_path);
 
       named_options.options.cwd = Some(hmr_temp_dir_path.clone());
-
-      let output_dir = format!(
-        "{}/{}",
-        named_options.options.cwd.as_ref().map_or(".", |cwd| cwd.to_str().unwrap()),
-        named_options.options.dir.as_ref().map_or("dist", |v| v)
-      );
 
       let debug_title = named_options.description.clone().unwrap_or_else(String::new);
       if !debug_title.is_empty() {
@@ -276,16 +239,37 @@ impl IntegrationTest {
 
       // Run initial build (step 0)
       build_results_by_steps.lock().unwrap().push(vec![]);
+      dev_engine.set_hmr_epoch_for_testing(1).await;
       dev_engine.run().await.unwrap();
-      dev_engine.create_client_for_testing().await;
 
-      // Later builds overwrite the output directory, but a client keeps running the output it
-      // loaded until it reloads. Keep the files the test client loaded.
-      let mut client_output = read_output_files(Path::new(&output_dir));
-      // The last step that reloaded the test client: a full reload, or a full build from
-      // `full_build_after_steps`, whose build succeeded. The client then runs the output of that
-      // reload and only the patches of later steps.
-      let mut reloaded_after_step = None;
+      let config_name =
+        named_options.config_name.clone().or_else(|| self.test_meta.config_name.clone());
+      let execute_output = self.should_execute_output();
+      let initial_build_succeeded = build_results_by_steps
+        .lock()
+        .unwrap()
+        .first()
+        .and_then(|results| results.first())
+        .is_some_and(Result::is_ok);
+      let mut client = if execute_output && initial_build_succeeded {
+        Some(
+          Self::spawn_hmr_test_client(
+            &dev_engine,
+            config_name.as_deref(),
+            last_output_generation(&build_results_by_steps),
+          )
+          .await,
+        )
+      } else {
+        None
+      };
+      // A fixture that runs no client gets one pull per update, made by the harness, so its
+      // snapshot still shows the patch code. These are the modules the pull says it executed.
+      let mut page_modules =
+        if execute_output { vec![] } else { hmr_test_client::numbered_ids(&dev_engine).await };
+      // The client reloads after the next successful build.
+      let mut reload_pending = false;
+      let mut client_records = vec![];
 
       // Process HMR steps
       for (step, hmr_edit_files) in hmr_steps.iter().enumerate() {
@@ -312,28 +296,60 @@ impl IntegrationTest {
           )
           .await;
 
+        // Like Vite, ignore an update with no changed files.
+        let update = hmr_updates_by_steps.lock().unwrap().last().and_then(|updates| {
+          updates
+            .iter()
+            .flatten()
+            .filter(|(_, changed_files)| !changed_files.is_empty())
+            .map(|(update, _)| update.clone())
+            .next_back()
+        });
+        // Like Vite, the client handles the push before the output is brought up to date.
+        let mut client_record = None;
+        let push_lost = self.test_meta.dev.lost_push_steps.contains(&step);
+        match (&update, client.as_mut()) {
+          (Some(HmrUpdate::Changed { .. } | HmrUpdate::FullReload { .. }), Some(_))
+            if push_lost =>
+          {
+            client_record = Some(HmrClientStepRecord {
+              pulls: vec![],
+              result: "push lost: the test does not send it to the client".to_owned(),
+            });
+          }
+          (Some(HmrUpdate::Changed { changed_ids, stale_ids, generation }), Some(running)) => {
+            let record = running.push(&dev_engine, changed_ids, stale_ids, *generation).await;
+            if record.reloads() {
+              // A reloading page handles no more pushes.
+              client = None;
+              reload_pending = true;
+            }
+            client_record = Some(record);
+          }
+          (Some(HmrUpdate::Changed { changed_ids, generation, .. }), None) if !execute_output => {
+            client_record = Some(
+              hmr_test_client::harness_pull(&dev_engine, changed_ids, *generation, &page_modules)
+                .await,
+            );
+          }
+          (Some(HmrUpdate::FullReload { .. }), _) => reload_pending = true,
+          _ => {}
+        }
+        client_records.push(client_record);
+
         // Optionally wait for async builds to complete
         if self.test_meta.dev.ensure_latest_build_output_for_each_step {
           dev_engine.ensure_latest_bundle_output().await.unwrap();
         }
 
-        // Like Vite, ignore an update with no changed files.
-        let full_reload = hmr_updates_by_steps.lock().unwrap().last().is_some_and(|updates| {
-          updates
-            .iter()
-            .flatten()
-            .filter(|(_, changed_files)| !changed_files.is_empty())
-            .flat_map(|(updates, _)| updates)
-            .any(|u| u.update.is_full_reload())
-        });
         let full_build = self.test_meta.dev.full_build_after_steps.contains(&step);
         if full_build {
           dev_engine.trigger_full_build().unwrap();
         }
-        if full_reload || full_build {
+        if reload_pending || full_build {
           dev_engine.ensure_latest_bundle_output().await.unwrap();
-          // Like Vite, reload only after a successful build. A failed build drops the reload,
-          // and the client keeps the output and patches it already had.
+          // Like Vite, reload only after a successful build. After a failed build, the client
+          // keeps the output and patches it already had, and reloads after the next good build.
           let build_succeeded = build_results_by_steps
             .lock()
             .unwrap()
@@ -341,9 +357,21 @@ impl IntegrationTest {
             .and_then(|results| results.last())
             .is_some_and(Result::is_ok);
           if build_succeeded {
-            dev_engine.create_client_for_testing().await;
-            client_output = read_output_files(Path::new(&output_dir));
-            reloaded_after_step = Some(step);
+            reload_pending = false;
+            if execute_output {
+              // Dropping the old client kills it: a reloaded page does not run `beforeExit`.
+              drop(client.take());
+              client = Some(
+                Self::spawn_hmr_test_client(
+                  &dev_engine,
+                  config_name.as_deref(),
+                  last_output_generation(&build_results_by_steps),
+                )
+                .await,
+              );
+            } else {
+              page_modules = hmr_test_client::numbered_ids(&dev_engine).await;
+            }
           }
         }
 
@@ -389,13 +417,16 @@ impl IntegrationTest {
       let hmr_steps_output: Vec<HmrStepOutput> = hmr_updates_by_steps
         .into_iter()
         .zip(build_results_by_steps)
-        .map(|(hmr_updates_vec, build_outputs_vec)| {
+        .zip(client_records)
+        .map(|((hmr_updates_vec, build_outputs_vec), client)| {
           // A step may have 0 or 1 HMR update callbacks
           // (e.g., initial builds don't generate HMR updates)
-          let hmr_updates =
-            hmr_updates_vec.into_iter().next().unwrap_or_else(|| Ok((vec![], vec![])));
+          let hmr_update = hmr_updates_vec
+            .into_iter()
+            .next()
+            .map_or_else(|| Ok((None, vec![])), |result| result.map(|(u, f)| (Some(u), f)));
 
-          HmrStepOutput { hmr_updates, build_outputs: build_outputs_vec }
+          HmrStepOutput { hmr_update, client, build_outputs: build_outputs_vec }
         })
         .collect();
 
@@ -424,57 +455,15 @@ impl IntegrationTest {
             }
           }
 
-          if self.test_meta.write_to_disk {
-            restore_output_files(Path::new(&output_dir), &client_output);
-          }
-
-          // Process HMR updates and patches for execution
-          let mut patch_chunks: Vec<(String, Vec<String>)> = vec![];
-          for (step, step_output) in build_snapshot.hmr_steps.iter().enumerate() {
-            if reloaded_after_step.is_some_and(|reloaded| step <= reloaded) {
-              continue;
-            }
-            if let Ok((client_updates, _changed_files)) = &step_output.hmr_updates {
-              for hmr_update in client_updates {
-                match &hmr_update.update {
-                  rolldown_common::HmrUpdate::Patch(patch) => {
-                    let output_path = format!("{}/{}", output_dir, patch.filename);
-                    fs::write(&output_path, &patch.code).unwrap();
-                    patch_chunks.push((format!("./{}", patch.filename), patch.changed_ids.clone()));
-                  }
-                  // A full reload that ran reloads the test client, which skips this step. One
-                  // left here was dropped, as Vite drops it: its build failed, or it had no
-                  // changed files.
-                  rolldown_common::HmrUpdate::FullReload { .. }
-                  | rolldown_common::HmrUpdate::Noop => {}
-                }
-              }
-            }
-          }
-
-          // Execute output if needed
           let bundler_options = dev_engine.bundler_options().await;
-          let config_name = named_options
-            .config_name
-            .as_deref()
-            .map(Some)
-            .unwrap_or(self.test_meta.config_name.as_deref());
-          if self.should_execute_output() {
-            Self::execute_output_assets(
-              &bundler_options,
-              &debug_title,
-              &patch_chunks,
-              config_name,
-              true,
-              named_options.expect_execution_failure.as_ref(),
-            );
-          } else {
+          if let Some(client) = client.take() {
+            client.finish().await;
+          } else if !execute_output {
             if self.test_meta.write_to_disk {
               Self::execute_output_assets(
                 &bundler_options,
                 &debug_title,
-                &patch_chunks,
-                config_name,
+                config_name.as_deref(),
                 false,
                 named_options.expect_execution_failure.as_ref(),
               );
@@ -593,7 +582,6 @@ impl IntegrationTest {
             Self::execute_output_assets(
               bundler.options(),
               &debug_title,
-              &[],
               config_name,
               true,
               named_options.expect_execution_failure.as_ref(),
@@ -603,7 +591,6 @@ impl IntegrationTest {
               Self::execute_output_assets(
                 bundler.options(),
                 &debug_title,
-                &[],
                 config_name,
                 false,
                 named_options.expect_execution_failure.as_ref(),
@@ -670,6 +657,12 @@ impl IntegrationTest {
       !hmr_mode_enabled
         || multiple_options.iter().all(|options| options.expect_execution_failure.is_none()),
       "`expectExecutionFailure` is not supported by HMR fixtures",
+    );
+    assert!(
+      !hmr_mode_enabled
+        || !self.should_execute_output()
+        || ["_test.mjs", "_test.cjs"].iter().all(|file| !test_folder_path.join(file).exists()),
+      "`_test.mjs` and `_test.cjs` are not supported by HMR fixtures that run a client",
     );
     assert!(
       !self.test_meta.expect_error
@@ -782,7 +775,6 @@ impl IntegrationTest {
   fn execute_output_assets(
     options: &NormalizedBundlerOptions,
     test_title: &str,
-    patch_chunks: &[(String, Vec<String>)],
     config_name: Option<&str>,
     execute_compiled_entries: bool,
     expected_execution_failure: Option<&ExpectedExecutionFailure>,
@@ -817,14 +809,7 @@ impl IntegrationTest {
 
     let mut node_command = Command::new("node");
 
-    let globals_injection =
-      Self::generate_globals_injection_for_execute_output(config_name, patch_chunks, options);
-
-    if !globals_injection.is_empty() {
-      let inject_script_url = format!(
-        "data:text/javascript,{}",
-        percent_encoding::utf8_percent_encode(&globals_injection, DATA_URL_ENCODE_SET)
-      );
+    if let Some(inject_script_url) = Self::globals_injection_url(config_name) {
       node_command.arg("--import");
       node_command.arg(inject_script_url);
     }
@@ -841,7 +826,7 @@ impl IntegrationTest {
       // make sure to set this: https://github.com/nodejs/node/issues/59374
       node_command.arg("--input-type=module");
 
-      let mut compiled_entries = options
+      let compiled_entries = options
         .input
         .iter()
         .map(|item| {
@@ -859,16 +844,6 @@ impl IntegrationTest {
           }
         })
         .collect::<Vec<_>>();
-
-      let post_globals_injection =
-        Self::generate_post_globals_injection_for_execute_output(patch_chunks, &dist_folder);
-      if !post_globals_injection.is_empty() {
-        let inject_script_url = format!(
-          "data:text/javascript,{}",
-          percent_encoding::utf8_percent_encode(&post_globals_injection, DATA_URL_ENCODE_SET)
-        );
-        compiled_entries.push(inject_script_url);
-      }
 
       node_command.arg("--eval");
       node_command.arg(
@@ -924,63 +899,49 @@ impl IntegrationTest {
     }
   }
 
-  fn generate_globals_injection_for_execute_output(
+  /// A `data:` URL for `--import` that sets the globals a fixture reads.
+  fn globals_injection_url(config_name: Option<&str>) -> Option<String> {
+    let config_name = config_name?;
+    let globals_injection = format!("globalThis.__configName = `{config_name}`;");
+    Some(format!(
+      "data:text/javascript,{}",
+      percent_encoding::utf8_percent_encode(&globals_injection, DATA_URL_ENCODE_SET)
+    ))
+  }
+
+  /// `output_generation` is the HMR generation of the output the client runs, as a dev server
+  /// tells a page.
+  async fn spawn_hmr_test_client(
+    dev_engine: &DevEngine,
     config_name: Option<&str>,
-    patch_chunks: &[(String, Vec<String>)],
-    _options: &NormalizedBundlerOptions,
-  ) -> String {
-    let mut stmts = vec![];
-
-    if let Some(config_name) = config_name {
-      stmts.push(format!("globalThis.__configName = `{config_name}`;"));
-    }
-
-    if !patch_chunks.is_empty() {
-      // Each entry carries the patch file plus the push envelope's changedIds — the
-      // test runtime's walk driver consumes them the way the real client consumes the
-      // `{changedIds, url, seq}` envelope.
-      let patch_chunks_array = patch_chunks
-        .iter()
-        .map(|(file, changed_ids)| {
-          serde_json::json!({ "file": file, "changedIds": changed_ids }).to_string()
-        })
-        .collect::<Vec<_>>()
-        .join(",");
-      stmts.push(format!("globalThis.__testPatches = [{patch_chunks_array}];"));
-    }
-
-    stmts.join("\n")
-  }
-
-  fn generate_post_globals_injection_for_execute_output(
-    patch_chunks: &[(String, Vec<String>)],
-    dist_folder: &Path,
-  ) -> String {
-    if patch_chunks.is_empty() {
-      return String::new();
-    }
-
-    format!(
-      "\
-import url from 'node:url';
-import path from 'node:path';
-
-const dir = '{}';
-setTimeout(async () => {{
-  for (const patchChunk of globalThis.__testPatches) {{
-    const file = path.join(dir, patchChunk.file);
-    try {{
-      await import(url.pathToFileURL(file));
-      globalThis.__rolldown_runtime__.__testApplyHmr(patchChunk.changedIds);
-    }} catch (error) {{
-      console.error('Error executing a patch:', error);
-      process.exitCode = 1;
-      break;
-    }}
-  }}
-}}, 0);
-      ",
-      dist_folder.to_str().unwrap().replace('\\', "\\\\") // escape backslashes in Windows paths
+    output_generation: u32,
+  ) -> HmrTestClient {
+    let options = dev_engine.bundler_options().await;
+    let entry_file_names = options
+      .input
+      .iter()
+      .map(|item| format!("{}.js", item.name.as_deref().expect("inputs must have `name`")))
+      .collect::<Vec<_>>();
+    HmrTestClient::spawn(
+      &options.cwd.join(&options.out_dir),
+      &entry_file_names,
+      output_generation,
+      Self::globals_injection_url(config_name),
     )
+    .await
   }
+}
+
+/// The HMR generation of the newest successful build output.
+fn last_output_generation(
+  build_results_by_steps: &std::sync::Mutex<Vec<Vec<BuildResult<BundleOutput>>>>,
+) -> u32 {
+  build_results_by_steps
+    .lock()
+    .unwrap()
+    .iter()
+    .flatten()
+    .rev()
+    .find_map(|result| result.as_ref().ok().map(|output| output.hmr_generation.unwrap_or(0)))
+    .unwrap_or(0)
 }

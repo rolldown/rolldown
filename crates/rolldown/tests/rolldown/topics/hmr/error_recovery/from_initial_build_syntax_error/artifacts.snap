@@ -32,6 +32,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["main.js"],
 	localCount: 1,
 	edges: [[]],
+	nums: [0],
+	epoch: 1,
 	entries: [0]
 });
 __rolldown_runtime__.createModuleHotContext("main.js");

@@ -8,8 +8,8 @@ use std::sync::Arc;
 
 use crate::binding_dev_options::BindingDevOptions;
 use crate::types::binding_bundler_options::BindingBundlerOptions;
-use crate::types::binding_client_hmr_update::BindingClientHmrUpdate;
 use crate::types::binding_error_stage::BindingErrorStage;
+use crate::types::binding_hmr_update::BindingHmrUpdate;
 use crate::types::binding_module_info::BindingModuleInfo;
 use crate::types::binding_outputs::{BindingOutputs, to_binding_error};
 use crate::types::error::{BindingErrors, BindingResult};
@@ -20,6 +20,7 @@ use crate::utils::{
 };
 use napi::bindgen_prelude::{FnArgs, PromiseRaw};
 use napi::{Either, Env, threadsafe_function::ThreadsafeFunctionCallMode};
+use rolldown_common::HmrPullResponse;
 
 #[napi]
 pub struct BindingDevEngine {
@@ -59,29 +60,23 @@ impl BindingDevEngine {
     let (bundler_config, option_callbacks) =
       (normalized.config, SharedJsCallbackRelease::new(vec![normalized.callbacks]));
 
-    // If callback is provided, wrap it to convert BuildResult<(Vec<ClientHmrUpdate>, Vec<String>)> to BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)>
+    // If callback is provided, wrap it to convert BuildResult<(HmrUpdate, Vec<String>)> to BindingResult<(BindingHmrUpdate, Vec<String>)>
     let on_hmr_updates = on_hmr_updates_callback.map(|js_callback| {
       let cwd = Arc::<Path>::clone(&cwd);
       Arc::new(
-        move |result: rolldown_error::BuildResult<(
-          Vec<rolldown_common::ClientHmrUpdate>,
-          Vec<String>,
-        )>| {
-          let binding_result: BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)> =
-            match result {
-              Ok((updates, changed_files)) => {
-                let binding_updates: Vec<BindingClientHmrUpdate> =
-                  updates.into_iter().map(BindingClientHmrUpdate::from).collect();
-                Either::B((binding_updates, changed_files))
-              }
-              Err(errors) => {
-                let binding_errors: Vec<_> = errors
-                  .iter()
-                  .map(|diagnostic| to_binding_error(diagnostic, cwd.to_path_buf()))
-                  .collect();
-                Either::A(BindingErrors::new(binding_errors))
-              }
-            };
+        move |result: rolldown_error::BuildResult<(rolldown_common::HmrUpdate, Vec<String>)>| {
+          let binding_result: BindingResult<(BindingHmrUpdate, Vec<String>)> = match result {
+            Ok((update, changed_files)) => {
+              Either::B((BindingHmrUpdate::from(update), changed_files))
+            }
+            Err(errors) => {
+              let binding_errors: Vec<_> = errors
+                .iter()
+                .map(|diagnostic| to_binding_error(diagnostic, cwd.to_path_buf()))
+                .collect();
+              Either::A(BindingErrors::new(binding_errors))
+            }
+          };
           js_callback
             .call(FnArgs { data: (binding_result,) }, ThreadsafeFunctionCallMode::Blocking);
         },
@@ -92,8 +87,12 @@ impl BindingDevEngine {
     let on_output = on_output_callback.map(|js_callback| {
       let cwd = Arc::<Path>::clone(&cwd);
       Arc::new(move |result: rolldown_error::BuildResult<rolldown::BundleOutput>| {
+        let mut hmr_generation = None;
         let binding_result: BindingResult<BindingOutputs> = match result {
-          Ok(bundle_output) => Either::B(BindingOutputs::from(bundle_output)),
+          Ok(bundle_output) => {
+            hmr_generation = bundle_output.hmr_generation;
+            Either::B(BindingOutputs::from(bundle_output))
+          }
           Err(errors) => {
             let binding_errors: Vec<_> = errors
               .iter()
@@ -102,7 +101,10 @@ impl BindingDevEngine {
             Either::A(BindingErrors::new(binding_errors))
           }
         };
-        js_callback.call(FnArgs { data: (binding_result,) }, ThreadsafeFunctionCallMode::Blocking);
+        js_callback.call(
+          FnArgs { data: (binding_result, hmr_generation) },
+          ThreadsafeFunctionCallMode::Blocking,
+        );
       }) as OnOutputCallback
     });
 
@@ -201,47 +203,30 @@ impl BindingDevEngine {
     self.inner.trigger_full_build().expect("Should handle this error");
   }
 
-  /// Client-connect signal (the clientId hello): creates the per-client session
-  /// with an empty ship map. Reconnects arrive as fresh clientIds.
-  #[napi(ts_return_type = "Promise<void>")]
-  pub fn register_client<'env>(
+  /// Renders the patch a client asks for. `query` is the query string of the client's patch
+  /// request: `s=<epoch>&g=<gen>&u=<set>&e=<set>&f=<set>` (other keys are ignored). Each set is
+  /// `b` and a base64url bitset (`HmrNumSet` in `rolldown_common`). A `Reload` answer means the
+  /// client must reload; a bad query gets one too.
+  #[napi]
+  pub fn render_patch<'env>(
     &self,
     env: &'env Env,
-    client_id: String,
-  ) -> napi::Result<PromiseRaw<'env, ()>> {
+    query: String,
+  ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingPatchResponse>>> {
     let inner = Arc::clone(&self.inner);
+    let cwd = Arc::<Path>::clone(&self.cwd);
     spawn_boxed_future(env, async move {
-      inner.register_client(client_id).await;
-      Ok(())
-    })
-  }
-
-  /// Delivery notification for the payload `filename`: the client reported that it
-  /// ran the payload, so record its modules as shipped to that client. See
-  /// `DevEngine::notify_payload_delivered`.
-  #[napi(ts_return_type = "Promise<void>")]
-  pub fn notify_payload_delivered<'env>(
-    &self,
-    env: &'env Env,
-    filename: String,
-  ) -> napi::Result<PromiseRaw<'env, ()>> {
-    let inner = Arc::clone(&self.inner);
-    spawn_boxed_future(env, async move {
-      inner.notify_payload_delivered(&filename).await;
-      Ok(())
-    })
-  }
-
-  #[napi(ts_return_type = "Promise<void>")]
-  pub fn remove_client<'env>(
-    &self,
-    env: &'env Env,
-    client_id: String,
-  ) -> napi::Result<PromiseRaw<'env, ()>> {
-    let inner = Arc::clone(&self.inner);
-    spawn_boxed_future(env, async move {
-      inner.remove_client(&client_id).await;
-      Ok(())
+      Ok(match inner.render_patch(&query).await {
+        Ok(HmrPullResponse::Payload(patch)) => {
+          Either::B(BindingPatchResponse::Patch { code: patch.code, sourcemap: patch.sourcemap })
+        }
+        Ok(HmrPullResponse::Reload { reason }) => {
+          Either::B(BindingPatchResponse::Reload { reason })
+        }
+        Err(errors) => Either::A(BindingErrors::new(
+          errors.iter().map(|diagnostic| to_binding_error(diagnostic, cwd.to_path_buf())).collect(),
+        )),
+      })
     })
   }
 
@@ -264,7 +249,8 @@ impl BindingDevEngine {
     })
   }
 
-  /// Compile a lazy entry module and return HMR-style patch code.
+  /// Compile a lazy entry module and return HMR-style patch code. `query` describes what the
+  /// client holds, in the format of `renderPatch` (`u` is not used).
   ///
   /// This is called when a dynamically imported module is first requested at runtime.
   /// The module was previously stubbed with a proxy, and now we need to compile the
@@ -279,18 +265,19 @@ impl BindingDevEngine {
     &self,
     env: &'env Env,
     module_id: String,
-    client_id: String,
-  ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingLazyChunkOutput>>> {
+    query: String,
+  ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingLazyChunkResponse>>> {
     let inner = Arc::clone(&self.inner);
     let cwd = Arc::<Path>::clone(&self.cwd);
     spawn_boxed_future(env, async move {
-      Ok(match inner.compile_lazy_entry(module_id, client_id).await {
-        Ok(output) => Either::B(BindingLazyChunkOutput {
+      Ok(match inner.compile_lazy_entry(module_id, &query).await {
+        Ok(HmrPullResponse::Payload(output)) => Either::B(BindingLazyChunkResponse::Chunk {
           code: output.code,
-          filename: output.filename,
           sourcemap: output.sourcemap,
-          sourcemap_filename: output.sourcemap_filename,
         }),
+        Ok(HmrPullResponse::Reload { reason }) => {
+          Either::B(BindingLazyChunkResponse::Reload { reason })
+        }
         Err(errors) => Either::A(BindingErrors::new(
           errors.iter().map(|diagnostic| to_binding_error(diagnostic, cwd.to_path_buf())).collect(),
         )),
@@ -311,17 +298,27 @@ impl BindingDevEngine {
   }
 }
 
-/// The client-facing slice of a lazy-compile result. The carried modules and
-/// stamps stay server-side as the engine's pending-payload entry.
-#[napi(object)]
-pub struct BindingLazyChunkOutput {
-  pub code: String,
-  pub filename: String,
-  /// The chunk's sourcemap, when `sourcemap` is `File` or `Hidden`. Serve it
-  /// under `sourcemapFilename`, which is what the chunk's `sourceMappingURL`
-  /// refers to.
-  pub sourcemap: Option<String>,
-  pub sourcemap_filename: Option<String>,
+/// With `sourcemap` set to `Inline`, `code` ends with an inline `sourceMappingURL`. With `File`
+/// or `Hidden`, `sourcemap` is the map as JSON, and `code` has no `sourceMappingURL` comment: no
+/// file is kept for a pulled payload, so the consumer serves the map and adds the comment.
+#[napi(discriminant = "type", object_from_js = false)]
+pub enum BindingPatchResponse {
+  Patch {
+    code: String,
+    sourcemap: Option<String>,
+  },
+  /// The client must reload: it belongs to another engine, its generation is too old to catch
+  /// up, or the query is bad.
+  Reload {
+    reason: String,
+  },
+}
+
+/// `code` and `sourcemap` follow the rules of `BindingPatchResponse`.
+#[napi(discriminant = "type", object_from_js = false)]
+pub enum BindingLazyChunkResponse {
+  Chunk { code: String, sourcemap: Option<String> },
+  Reload { reason: String },
 }
 
 #[napi(object)]

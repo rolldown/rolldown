@@ -21,6 +21,13 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[1, 2]
 	],
+	nums: [
+		2,
+		0,
+		1,
+		3
+	],
+	epoch: 1,
 	entries: [3]
 });
 // lib.js
@@ -48,12 +55,33 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 # HMR Step 0
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- adder.js
+
+### Stale Ids
+
+- adder.js
+
+## Pull 0
+
+- g: 1
+- update: adder.js
+- executed: accepter.js, lib.js, main.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["adder.js","lib.js"],localCount:2,edges:[[1],[]],stamps:{0:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["adder.js","lib.js"],localCount:1,edges:[[1]],nums:[1,2]});
 //#region adder.js
-__rolldown_runtime__.registerFactory("adder.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("adder.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ tag: () => tag });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -63,38 +91,44 @@ __rolldown_runtime__.registerFactory("adder.js", (function(__rolldown_module_id_
 		const tag = `adder-${import_lib_0.value}`;
 		hot_adder.accept();
 	} finally {}
-}), 1);
-
-//#endregion
-//#region lib.js
-__rolldown_runtime__.registerFactory("lib.js", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		const hot_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		const value = "lib";
-	} finally {}
 }));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- adder.js
+- result: applied
 
 # HMR Step 1
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 2
+
+### Changed Ids
+
+- lib.js
+
+### Stale Ids
+
+- lib.js
+
+## Pull 0
+
+- g: 2
+- update: accepter.js, adder.js, lib.js
+- executed: main.js
+- factories: adder.js
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["accepter.js","adder.js","lib.js"],localCount:3,edges:[[2],[2],[]],stamps:{1:1,2:2}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(2);
+__rolldown_payload__.registerGraph({ids:["accepter.js","lib.js"],localCount:2,edges:[[1],[]],nums:[0,2]});
 //#region accepter.js
-__rolldown_runtime__.registerFactory("accepter.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("accepter.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ read: () => read });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -107,37 +141,19 @@ __rolldown_runtime__.registerFactory("accepter.js", (function(__rolldown_module_
 }));
 
 //#endregion
-//#region adder.js
-__rolldown_runtime__.registerFactory("adder.js", (function(__rolldown_module_id__) {
-	try {
-		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ tag: () => tag });
-		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
-		__rolldown_runtime__.initModule("lib.js");
-		var import_lib_0 = __rolldown_runtime__.loadExports("lib.js");
-		const hot_adder = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
-		const tag = `adder-${import_lib_0.value}`;
-		hot_adder.accept();
-	} finally {}
-}), 1);
-
-//#endregion
 //#region lib.js
-__rolldown_runtime__.registerFactory("lib.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("lib.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
 		const hot_lib = __rolldown_runtime__.createModuleHotContext(__rolldown_module_id__);
 		const value = "lib-edited";
 	} finally {}
-}), 2);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- lib.js
+- result: applied

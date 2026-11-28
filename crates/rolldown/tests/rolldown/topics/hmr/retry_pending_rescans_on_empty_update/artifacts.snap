@@ -11,6 +11,8 @@ __rolldown_runtime__.registerGraph({
 	ids: ["dep.js", "main.js"],
 	localCount: 2,
 	edges: [[], [0]],
+	nums: [0, 1],
+	epoch: 1,
 	entries: [1]
 });
 // dep.js
@@ -66,12 +68,33 @@ console.log("dep");
 
 # HMR Step 2
 
-## Code
+## Meta
+
+- update type: changed
+- gen: 1
+
+### Changed Ids
+
+- dep.js
+
+### Stale Ids
+
+- dep.js
+
+## Pull 0
+
+- g: 1
+- update: dep.js
+- executed: main.js
+- factories: (none)
+
+### Code
 
 ```js
-__rolldown_runtime__.registerGraph({ids:["dep.js"],localCount:1,edges:[[]],stamps:{0:1}});
+const __rolldown_payload__ = __rolldown_runtime__.beginPayload(1);
+__rolldown_payload__.registerGraph({ids:["dep.js"],localCount:1,edges:[[]],nums:[0]});
 //#region dep.js
-__rolldown_runtime__.registerFactory("dep.js", (function(__rolldown_module_id__) {
+__rolldown_payload__.registerFactory("dep.js", (function(__rolldown_module_id__) {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ value: () => value });
 		__rolldown_runtime__.registerModule(__rolldown_module_id__, { exports: __rolldown_exports__ });
@@ -81,15 +104,11 @@ __rolldown_runtime__.registerFactory("dep.js", (function(__rolldown_module_id__)
 			hot_dep.accept();
 		}
 	} finally {}
-}), 1);
+}));
 
 //#endregion
 ```
 
-## Meta
+## Client
 
-- update type: patch
-
-### Changed Ids
-
-- dep.js
+- result: not run: the fixture runs no client, so the harness made this pull

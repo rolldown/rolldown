@@ -109,8 +109,8 @@ hook turned on:
    hook are exempt from the unchanged-output suppression.
 4. `main.js` is fetched again. `transform` walks `pages/`, emits the object with `./pages/c.js` in
    it, and replaces the matchers.
-5. The partial scan pulls `pages/c.js` into the graph, and the patch ships. `main.js` accepts
-   itself, so the client runs it again in place.
+5. The partial scan pulls `pages/c.js` into the graph, and the push lists `main.js`. `main.js`
+   accepts itself, so the client pulls a patch for `main.js` and runs it again in place.
 
 Deleting a file goes the same way, except that the default set of step 2 holds the deleted module
 itself, and the engine starts the update from its importers.

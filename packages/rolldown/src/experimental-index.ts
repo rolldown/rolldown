@@ -1,10 +1,12 @@
 export { dev } from './api/dev';
 export { DevEngine } from './api/dev/dev-engine';
-export type { DevOptions, DevWatchOptions } from './api/dev/dev-options';
+export type { DevOptions, DevOutputInfo, DevWatchOptions } from './api/dev/dev-options';
 export { scan } from './api/experimental';
 export {
-  type BindingClientHmrUpdate,
+  type BindingHmrUpdate,
+  type BindingLazyChunkResponse,
   type BindingNativeMemoryStats,
+  type BindingPatchResponse,
   BindingRebuildStrategy,
   getNativeMemoryStats,
   isolatedDeclaration,

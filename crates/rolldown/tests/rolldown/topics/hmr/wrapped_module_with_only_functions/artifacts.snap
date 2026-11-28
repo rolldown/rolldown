@@ -20,6 +20,12 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0, 1]
 	],
+	nums: [
+		0,
+		2,
+		1
+	],
+	epoch: 0,
 	entries: [2]
 });
 // imported.js
@@ -69,6 +75,12 @@ __rolldown_runtime__.registerGraph({
 		[],
 		[0, 1]
 	],
+	nums: [
+		0,
+		2,
+		1
+	],
+	epoch: 0,
 	entries: [2]
 });
 // imported.js

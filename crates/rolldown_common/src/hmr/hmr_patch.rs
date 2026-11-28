@@ -1,18 +1,18 @@
-use arcstr::ArcStr;
-
+/// The answer to a client's patch request.
 #[derive(Debug, Clone)]
 pub struct HmrPatch {
+  /// Ends with an inline `sourceMappingURL` when `sourcemap` is `Inline`. Has no
+  /// `sourceMappingURL` comment otherwise.
   pub code: String,
-  pub filename: String,
+  /// The map as JSON when `sourcemap` is `File` or `Hidden`. No file is kept for a pulled
+  /// payload, so the consumer serves the map itself.
   pub sourcemap: Option<String>,
-  pub sourcemap_filename: Option<String>,
-  /// Stable ids of the changed modules — the `changedIds` of the push envelope.
-  /// The client walks from these on its own graph; the server decides nothing.
-  pub changed_ids: Vec<String>,
-  /// Per-client envelope sequence number.
-  pub seq: u32,
-  /// `(stable id, render-time stamp)` for every module this patch carries — the
-  /// pending-payload entry that the delivery-time ship-map write consumes
-  /// (`DevEngine::notify_payload_delivered`).
-  pub carried: Vec<(ArcStr, u32)>,
+}
+
+/// The server answers a client request with a payload, or tells the client to reload: it
+/// belongs to another engine, its generation is too old to catch up, or the request is bad.
+#[derive(Debug, Clone)]
+pub enum HmrPullResponse<T> {
+  Payload(T),
+  Reload { reason: String },
 }

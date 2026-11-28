@@ -702,6 +702,15 @@ directly, with no generation. They run their code right away, so their
 rows always replace the old ones. They reset only `rowGens`: a late stale
 factory must still not install.
 
+**Pulls before the rebuild.** Some tasks push an update and then rebuild
+the output (`rebuildStrategy: 'always'`, or the recovery after a failed
+rebuild). The rebuild holds the bundler lock for the whole build, and a
+pull needs that lock. So the task first waits until no pull arrived for
+50 ms, at most 500 ms, counted from when the consumer handled the push.
+The pulls of that push then run before the rebuild. Details are in
+[dev-engine/implementation.md](../dev-engine/implementation.md) ("Pulls
+before the rebuild").
+
 Each pull renders the factories it carries. The name that holds an
 importee's namespace in a factory depends only on the importer and the
 import record, not on the payload, so a factory's text is the same in
@@ -983,10 +992,10 @@ way), the patch would start with
   code, and `missedUpdate()` is false, so nothing catches up until the
   next edit of them.
 
-- **Pulls during a rebuild** — a task that pushes an update and then
-  rebuilds the output (`rebuildStrategy: 'always'`, or the recovery after
-  a failed rebuild) holds the bundler lock for the whole build, so a pull
-  that arrives after the push waits for that build.
+- **A save during the pull wait** — the rebuild after a push reads the
+  changed files again, so a save that lands during the wait reaches the
+  graph and the output, but no client. Its own task sends `Noop`
+  (dev-engine "Pulls before the rebuild").
 - **One render per pull** — every tab that pulls after one edit renders
   the factories it needs again; nothing is kept between pulls.
 - **Cold `__commonJSMin` wrappers** — a CommonJS module that a full-build

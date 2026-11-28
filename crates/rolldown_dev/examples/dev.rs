@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use rolldown::{BundlerOptions, ExperimentalOptions};
-use rolldown_dev::{BundlerConfig, DevEngine, DevOptions, RebuildStrategy};
+use rolldown_dev::{BundlerConfig, DevEngine, DevOptions, HmrUpdatesHandled, RebuildStrategy};
 use sugar_path::SugarPath;
 
 // RD_LOG=rolldown::dev=trace cargo run -p rolldown_dev --example dev
@@ -29,13 +29,16 @@ async fn main() {
     bundler_config,
     DevOptions {
       rebuild_strategy: Some(RebuildStrategy::Always),
-      on_hmr_updates: Some(Arc::new(|result| match result {
-        Ok((updates, changed_files)) => {
-          println!("HMR updates: {updates:#?} due to {changed_files:#?}");
+      on_hmr_updates: Some(Arc::new(|result| {
+        match result {
+          Ok((updates, changed_files)) => {
+            println!("HMR updates: {updates:#?} due to {changed_files:#?}");
+          }
+          Err(e) => {
+            eprintln!("HMR error: {e:#?}");
+          }
         }
-        Err(e) => {
-          eprintln!("HMR error: {e:#?}");
-        }
+        Box::pin(std::future::ready(())) as HmrUpdatesHandled
       })),
       ..Default::default()
     },

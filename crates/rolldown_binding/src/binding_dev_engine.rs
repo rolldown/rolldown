@@ -1,7 +1,8 @@
 use itertools::Itertools;
 use napi_derive::napi;
 use rolldown_dev::{
-  BundleState, OnAdditionalAssetsCallback, OnHmrUpdatesCallback, OnOutputCallback,
+  BundleState, HmrUpdatesHandled, OnAdditionalAssetsCallback, OnHmrUpdatesCallback,
+  OnOutputCallback,
 };
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -13,6 +14,7 @@ use crate::types::binding_hmr_update::BindingHmrUpdate;
 use crate::types::binding_module_info::BindingModuleInfo;
 use crate::types::binding_outputs::{BindingOutputs, to_binding_error};
 use crate::types::error::{BindingErrors, BindingResult};
+use crate::types::js_callback::await_call_eager_on;
 use crate::types::js_callback_release::{RequestReleaseOnDrop, SharedJsCallbackRelease};
 use crate::utils::{
   create_bundler_config_from_binding_options::create_bundler_config_from_binding_options,
@@ -77,8 +79,12 @@ impl BindingDevEngine {
               Either::A(BindingErrors::new(binding_errors))
             }
           };
-          js_callback
-            .call(FnArgs { data: (binding_result,) }, ThreadsafeFunctionCallMode::Blocking);
+          // The engine waits for this before it counts the time in which clients pull. An error
+          // needs no report here: napi reports a throw, and the TS wrapper a rejection.
+          let handled = await_call_eager_on(&js_callback, FnArgs { data: (binding_result,) });
+          Box::pin(async move {
+            let _ = handled.await;
+          }) as HmrUpdatesHandled
         },
       ) as OnHmrUpdatesCallback
     });

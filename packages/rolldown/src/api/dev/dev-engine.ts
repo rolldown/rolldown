@@ -81,14 +81,21 @@ export class DevEngine {
     const bindingOnHmrUpdates: BindingDevOptions['onHmrUpdates'] = userOnHmrUpdates
       ? function (rawResult: BindingResult<[BindingHmrUpdate, string[]]>) {
           const result = normalizeBindingResult(rawResult);
+          let handled: void | Promise<void>;
           if (result instanceof Error) {
-            userOnHmrUpdates(result);
-            return;
+            handled = userOnHmrUpdates(result);
+          } else {
+            const [update, changedFiles] = result;
+            handled = userOnHmrUpdates({
+              update,
+              changedFiles,
+            });
           }
-          const [update, changedFiles] = result;
-          userOnHmrUpdates({
-            update,
-            changedFiles,
+          if (!handled) return;
+          // The binding waits for the promise, and that wait would hide a rejection. Report it
+          // as an unhandled rejection, as if nothing waited.
+          return Promise.resolve(handled).catch((error: unknown) => {
+            void Promise.reject(error);
           });
         }
       : undefined;

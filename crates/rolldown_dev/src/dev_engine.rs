@@ -1,4 +1,4 @@
-use std::sync::{Arc, atomic::AtomicBool};
+use std::sync::{Arc, atomic::Ordering};
 
 use anyhow::Context;
 use arcstr::ArcStr;
@@ -47,7 +47,6 @@ pub struct DevEngine {
   /// `compile_lazy_entry`) can reach `options.on_additional_assets`.
   dev_context: Arc<DevContext>,
   coordinator_state: Mutex<CoordinatorState>,
-  is_closed: AtomicBool,
   /// Live handle to the plugin-facing module infos — the same map plugin contexts read.
   /// Full builds clear it in place (the `Arc` identity is stable), so lock-free reads
   /// here always observe the latest build. Powers the engine-level module queries.
@@ -79,11 +78,7 @@ impl DevEngine {
 
     let (coordinator_tx, coordinator_rx) = unbounded::<CoordinatorMsg>();
 
-    let ctx = Arc::new(DevContext {
-      options: normalized_options,
-      coordinator_tx: coordinator_tx.clone(),
-      last_task_errored: std::sync::atomic::AtomicBool::new(false),
-    });
+    let ctx = Arc::new(DevContext::new(normalized_options, coordinator_tx.clone()));
 
     let watcher_config = FsWatcherConfig {
       enabled: !ctx.options.disable_watcher,
@@ -116,7 +111,6 @@ impl DevEngine {
         coordinator: Some(coordinator),
         handle: None,
       }),
-      is_closed: AtomicBool::new(false),
       module_infos,
       module_side_effects_overrides,
     })
@@ -298,6 +292,7 @@ impl DevEngine {
   /// internal-docs/hmr/design.md, "Request size"). A query that does not parse gets a reload.
   pub async fn render_patch(&self, query: &str) -> BuildResult<HmrPullResponse<HmrPatch>> {
     self.create_error_if_closed()?;
+    self.dev_context.pull_requests.fetch_add(1, Ordering::Relaxed);
     let mut bundler = self.bundler.lock().await;
     let num_count = bundler.hmr_session().lock().num_count();
     let have = match ClientHave::parse_query(query, num_count) {
@@ -331,6 +326,7 @@ impl DevEngine {
     query: &str,
   ) -> BuildResult<HmrPullResponse<HmrLazyChunkOutput>> {
     self.create_error_if_closed()?;
+    self.dev_context.pull_requests.fetch_add(1, Ordering::Relaxed);
     let mut bundler = self.bundler.lock().await;
     let num_count = bundler.hmr_session().lock().num_count();
     let have = match ClientHave::parse_query(query, num_count) {
@@ -403,7 +399,7 @@ impl DevEngine {
   }
 
   pub async fn close(&self) -> BuildResult<()> {
-    if self.is_closed.swap(true, std::sync::atomic::Ordering::SeqCst) {
+    if !self.dev_context.mark_closed() {
       return Ok(());
     }
 
@@ -432,7 +428,7 @@ impl DevEngine {
   }
 
   pub fn is_closed(&self) -> bool {
-    self.is_closed.load(std::sync::atomic::Ordering::SeqCst)
+    self.dev_context.is_closed()
   }
 
   /// Returns a clone of the shared normalized bundler options
@@ -506,7 +502,7 @@ impl DevEngine {
   }
 
   fn create_error_if_closed(&self) -> BuildResult<()> {
-    if self.is_closed.load(std::sync::atomic::Ordering::SeqCst) {
+    if self.is_closed() {
       Err(anyhow::anyhow!("Dev engine is closed"))?;
     }
     Ok(())
@@ -554,9 +550,11 @@ mod tests {
   #[cfg(feature = "testing")]
   use std::sync::Arc;
 
+  #[cfg(feature = "testing")]
+  use futures::channel::mpsc::unbounded;
   use rolldown::{BundlerConfig, BundlerOptions};
   #[cfg(feature = "testing")]
-  use rolldown_common::{HmrLazyChunkOutput, HmrPullResponse};
+  use rolldown_common::{HmrLazyChunkOutput, HmrPullResponse, HmrUpdate};
   #[cfg(feature = "testing")]
   use rolldown_error::BuildResult;
 
@@ -727,7 +725,8 @@ mod tests {
   }
 
   /// A temp dir with `files` and a dev engine. With `RebuildStrategy::Always` every edit also
-  /// gives a new output. `files` must include `main.js`, the entry.
+  /// gives a new output. `files` must include `main.js`, the entry. `lazy` turns on lazy
+  /// compilation.
   #[cfg(feature = "testing")]
   fn rebuild_fixture_with_files(
     name: &str,
@@ -735,6 +734,7 @@ mod tests {
     on_hmr_updates: Option<crate::OnHmrUpdatesCallback>,
     on_output: crate::OnOutputCallback,
     rebuild_strategy: crate::RebuildStrategy,
+    lazy: bool,
   ) -> (std::path::PathBuf, super::DevEngine) {
     use rolldown::{DevModeOptions, ExperimentalOptions};
 
@@ -750,7 +750,7 @@ mod tests {
       input: Some(vec!["./main.js".to_string().into()]),
       cwd: Some(dir.clone()),
       experimental: Some(ExperimentalOptions {
-        dev_mode: Some(DevModeOptions::default()),
+        dev_mode: Some(DevModeOptions { lazy: Some(lazy), ..Default::default() }),
         ..Default::default()
       }),
       ..Default::default()
@@ -808,6 +808,7 @@ mod tests {
       None,
       on_output,
       crate::RebuildStrategy::Always,
+      false,
     );
     engine.run().await.unwrap();
 
@@ -831,6 +832,203 @@ mod tests {
     assert_eq!(outputs[0].0, outputs[2].0);
   }
 
+  /// A dev engine with `RebuildStrategy::Always` and lazy compilation. `main.js` imports
+  /// `dep.js` and `import('./lazy.js')`. Each output goes into `events` as `"output"`, or as
+  /// `"error"` when the build failed.
+  #[cfg(feature = "testing")]
+  struct PullWaitFixture {
+    dir: std::path::PathBuf,
+    engine: Arc<super::DevEngine>,
+    events: Arc<std::sync::Mutex<Vec<&'static str>>>,
+    push_rx: futures::channel::mpsc::UnboundedReceiver<HmrUpdate>,
+  }
+
+  #[cfg(feature = "testing")]
+  impl PullWaitFixture {
+    /// `handled` gives, for each push, the future that ends when the consumer handled it.
+    async fn new(
+      name: &str,
+      handled: impl Fn() -> crate::HmrUpdatesHandled + Send + Sync + 'static,
+    ) -> Self {
+      let events = Arc::new(std::sync::Mutex::new(Vec::new()));
+      let (push_tx, push_rx) = unbounded();
+      let on_hmr_updates = Arc::new(move |result: BuildResult<(HmrUpdate, Vec<String>)>| {
+        push_tx.unbounded_send(result.unwrap().0).unwrap();
+        handled()
+      }) as crate::OnHmrUpdatesCallback;
+      let on_output = {
+        let events = Arc::clone(&events);
+        Arc::new(move |result: BuildResult<BundleOutput>| {
+          events.lock().unwrap().push(if result.is_ok() { "output" } else { "error" });
+        }) as crate::OnOutputCallback
+      };
+      let (dir, engine) = rebuild_fixture_with_files(
+        name,
+        &[
+          (
+            "main.js",
+            "import { value } from './dep.js';\nconsole.log(value);\nimport('./lazy.js');\n",
+          ),
+          ("dep.js", "export const value = 1;\n"),
+          ("lazy.js", "export const lazy = 1;\n"),
+        ],
+        Some(on_hmr_updates),
+        on_output,
+        crate::RebuildStrategy::Always,
+        true,
+      );
+      engine.set_hmr_epoch_for_testing(7).await;
+      engine.run().await.unwrap();
+      Self { dir, engine: Arc::new(engine), events, push_rx }
+    }
+
+    /// Saves `dep.js` and starts its task. Returns the task when the task pushed its update.
+    async fn edit(&mut self) -> tokio::task::JoinHandle<()> {
+      use futures::StreamExt;
+      use rolldown_common::WatcherChangeKind;
+      use rolldown_utils::indexmap::FxIndexMap;
+
+      std::fs::write(self.dir.join("dep.js"), "export const value = 2;\n").unwrap();
+      let engine = Arc::clone(&self.engine);
+      let changed = FxIndexMap::from_iter([(self.dir.join("dep.js"), WatcherChangeKind::Update)]);
+      let task = tokio::spawn(async move { engine.ensure_task_with_changed_files(changed).await });
+      let update = self.push_rx.next().await.unwrap();
+      assert!(matches!(update, HmrUpdate::Changed { generation: 1, .. }), "{update:?}");
+      task
+    }
+
+    /// The query of a client that loaded the first output and got the push.
+    fn client_query() -> String {
+      rolldown_common::ClientHave { epoch: 7, generation: 1, ..Default::default() }.to_query()
+    }
+
+    async fn pull_patch(&self) {
+      expect_payload(self.engine.render_patch(&Self::client_query()).await.unwrap());
+      self.events.lock().unwrap().push("pull");
+    }
+
+    async fn pull_lazy(&self) {
+      let proxy = lazy_proxy_id(&self.dir);
+      expect_payload(self.engine.compile_lazy_entry(proxy, &Self::client_query()).await.unwrap());
+      self.events.lock().unwrap().push("pull");
+    }
+
+    /// Closes the engine and returns the events.
+    async fn finish(self) -> Vec<&'static str> {
+      self.engine.close().await.unwrap();
+      std::fs::remove_dir_all(&self.dir).unwrap();
+      self.events.lock().unwrap().clone()
+    }
+  }
+
+  /// With `RebuildStrategy::Always` the task that pushed an update rebuilds next. A client pull
+  /// that arrives soon after the push is served before that rebuild, not after it.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn a_pull_after_the_push_runs_before_the_rebuild() {
+    let mut fixture =
+      PullWaitFixture::new("pull-before-rebuild", || Box::pin(std::future::ready(()))).await;
+    let task = fixture.edit().await;
+    fixture.pull_patch().await;
+    task.await.unwrap();
+    assert_eq!(fixture.finish().await, ["output", "pull", "output"]);
+  }
+
+  /// Pins the await of `HmrUpdatesHandled`: the consumer is busy for four quiet periods before
+  /// it sends the push, and its pull still runs before the rebuild. The pull comes 25 ms after
+  /// the consumer handled the push, so it also needs the quiet period.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn the_pull_wait_starts_when_the_consumer_handled_the_push() {
+    use futures::channel::oneshot;
+    use std::{sync::Mutex, time::Duration};
+
+    let (handled_tx, handled_rx) = oneshot::channel::<()>();
+    let handled_rx = Mutex::new(Some(handled_rx));
+    let mut fixture = PullWaitFixture::new("pull-wait-after-handled", move || {
+      let handled_rx = handled_rx.lock().unwrap().take().expect("one push");
+      Box::pin(async move {
+        let _ = handled_rx.await;
+      })
+    })
+    .await;
+    let task = fixture.edit().await;
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    let _ = handled_tx.send(());
+    tokio::time::sleep(Duration::from_millis(25)).await;
+    fixture.pull_patch().await;
+    task.await.unwrap();
+    assert_eq!(fixture.finish().await, ["output", "pull", "output"]);
+  }
+
+  /// Pulls six times, 20 ms apart, from when the consumer handled the push. Each pull starts
+  /// the quiet period again, so all of them run before the rebuild. If a pull was not counted,
+  /// the rebuild would start about 50 ms after the push, and the later pulls would wait for it.
+  #[cfg(feature = "testing")]
+  async fn each_pull_delays_the_rebuild(name: &str, lazy: bool) {
+    use std::time::Duration;
+
+    let mut fixture = PullWaitFixture::new(name, || Box::pin(std::future::ready(()))).await;
+    let task = fixture.edit().await;
+    let start = tokio::time::Instant::now();
+    for i in 0..6 {
+      tokio::time::sleep_until(start + Duration::from_millis(20 * i)).await;
+      if lazy {
+        fixture.pull_lazy().await;
+      } else {
+        fixture.pull_patch().await;
+      }
+    }
+    task.await.unwrap();
+    assert_eq!(
+      fixture.finish().await,
+      ["output", "pull", "pull", "pull", "pull", "pull", "pull", "output"]
+    );
+  }
+
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn each_patch_request_delays_the_rebuild() {
+    each_pull_delays_the_rebuild("patch-requests-delay-rebuild", false).await;
+  }
+
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn each_lazy_request_delays_the_rebuild() {
+    each_pull_delays_the_rebuild("lazy-requests-delay-rebuild", true).await;
+  }
+
+  /// `DevEngine::close` waits for the running task, so a consumer that never handles the push
+  /// must not keep `close` waiting.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn close_ends_the_wait_for_the_consumer() {
+    use std::time::Duration;
+
+    let mut fixture =
+      PullWaitFixture::new("close-during-consumer-wait", || Box::pin(std::future::pending())).await;
+    let task = fixture.edit().await;
+    tokio::time::timeout(Duration::from_secs(5), fixture.engine.close())
+      .await
+      .expect("close ends without the consumer")
+      .unwrap();
+    task.await.unwrap();
+    assert_eq!(fixture.finish().await, ["output"]);
+  }
+
+  /// A close during the pull wait skips the rebuild: no build runs on the closed bundler, and
+  /// the consumer gets no output during the shutdown.
+  #[cfg(feature = "testing")]
+  #[tokio::test]
+  async fn close_during_the_pull_wait_skips_the_rebuild() {
+    let mut fixture =
+      PullWaitFixture::new("close-during-pull-wait", || Box::pin(std::future::ready(()))).await;
+    let task = fixture.edit().await;
+    fixture.engine.close().await.unwrap();
+    task.await.unwrap();
+    assert_eq!(fixture.finish().await, ["output"]);
+  }
+
   /// An update that fails after the cache merge leaves the graph with an edit that no client
   /// received. The next task reloads every client onto a full build, a request from before the
   /// reload gets `Reload`, and hot updates work again after that build.
@@ -846,6 +1044,7 @@ mod tests {
       let updates = Arc::clone(&updates);
       Arc::new(move |result: BuildResult<(HmrUpdate, Vec<String>)>| {
         updates.lock().unwrap().push(result.map_err(|_| ()));
+        Box::pin(std::future::ready(())) as crate::HmrUpdatesHandled
       }) as crate::OnHmrUpdatesCallback
     };
     let generations = Arc::new(Mutex::new(Vec::new()));
@@ -864,6 +1063,7 @@ mod tests {
       Some(on_hmr_updates),
       on_output,
       crate::RebuildStrategy::Never,
+      false,
     );
     let dep = dir.join("dep.js");
     engine.set_hmr_epoch_for_testing(7).await;
@@ -1050,6 +1250,7 @@ mod tests {
           if let Ok((update, _)) = result {
             on_hmr_updates.hmr_updates.lock().unwrap().push(update);
           }
+          Box::pin(std::future::ready(())) as crate::HmrUpdatesHandled
         })),
         on_additional_assets: Some(Arc::new(move |output| {
           on_additional_assets

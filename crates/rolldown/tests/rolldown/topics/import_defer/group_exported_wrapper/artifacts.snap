@@ -38,26 +38,26 @@ function init_leaf() {
 // barrel.js
 var barrel_exports = /* @__PURE__ */ __exportAll({ f: () => f });
 function init_barrel() {
-	return (init_barrel = __esmMin((() => {})))();
+	return (init_barrel = __esmState((() => {}), () => []))(arguments[0]);
 }
-export { __exportAll as a, __esmMin as i, f as n, init_leaf as r, init_barrel as t };
+export { __esmState as a, __esmDefer as i, f as n, __exportAll as o, init_leaf as r, init_barrel as t };
 
 ```
 
 ## main.js
 
 ```js
-import { a as __exportAll, i as __esmMin, n as f, t as init_barrel } from "./barrel.js";
+import { a as __esmState, i as __esmDefer, n as f, o as __exportAll, t as init_barrel } from "./barrel.js";
 // d.js
 var d_exports = /* @__PURE__ */ __exportAll({ f: () => f });
 function init_d() {
-	return (init_d = __esmMin((() => {
-		init_barrel();
-	})))();
+	return (init_d = __esmState((() => {
+		init_barrel(init_d);
+	}), () => [init_barrel]))(arguments[0]);
 }
 // main.js
 function run() {
-	return typeof (init_d(), f);
+	return typeof (__esmDefer(init_d), f);
 }
 function dynamic() {
 	return Promise.resolve().then(() => (init_d(), d_exports));

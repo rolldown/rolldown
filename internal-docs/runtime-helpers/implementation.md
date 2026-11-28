@@ -101,13 +101,15 @@ So the invariant is pairwise, not one source answering both questions. Narrowing
 
 Chunks do not exist yet when `patch_module_dependencies` runs, so `is_included` stands in for "will have a chunk". An observer that is not included cannot be attributed to one, and rendering falls back to wrapping every chunk emitting the external — so every referencing module keeps the edge, matching that fallback.
 
-## `__toESMCached` and `__deferNsCached`: one object for each external module
+## Shared CommonJS namespace helpers
 
 With `experimental.importDefer`, CommonJS output loads an external module lazily in two places: the deferred namespace of `import defer * as ns from 'ext'` or `import.defer('ext')` (with `output.dynamicImportInCjs: false`), and the import statements of a module in a deferred closure, which stay at their position in the init of the module. Each load calls `require("ext")`, and `__toESM` returns a new object for each call, so an eager namespace and a lazy namespace of the same external would be different objects.
 
 `__toESMCached(key, mod, isNodeMode)` keeps one `__toESM` result for each key and interop mode, in one `Map` for each mode. The key is the file name of the external module (`ExternalModule::get_file_name`), which is the same in all chunks. The `require()` path is not a correct key, because it is relative to the folder of the chunk. The exports object is not a correct key either: a primitive cannot be a key, and two externals can export one object (fixture `external_cjs_cache_key`). The cache is global to the runtime, so loads in different chunks also give one object. When an included module of a deferred closure loads the external lazily with interop, `mark_lazy_namespace_externals` sets `has_lazy_namespace_load` on the external. Then the hoisted binding of each chunk uses `__toESMCached` too (`render_cjs_chunk_imports` in `crates/rolldown/src/ecmascript/format/cjs.rs`). Else the bindings keep `__toESM`.
 
 `__deferNsCached(key, init, isNodeMode)` does the same for the deferred namespace object, with the same key. Each deferred import of the external (`import defer * as ns from 'ext'`, and `import.defer('ext')` with `dynamicImportInCjs: false`) gets one `__deferNs` result for each key and interop mode, also in another chunk or in a wrapper (fixture `external_cjs_shared_namespace`). `init` returns the result of `__toESMCached`, so all accesses read one namespace object.
+
+Bundled CommonJS modules expose partial `module.exports` to recursive loads. Repeated deferred imports share a reader keyed by execution order and interop mode. The factory marks successful completion, so a recursive load can return a temporary interop namespace without publishing it to other readers or fixing the keys of their shared deferred object. See [CommonJS targets](../import-defer/implementation.md#commonjs-targets).
 
 ## The helpers of `import defer`: only with the option
 

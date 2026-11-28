@@ -83,14 +83,13 @@ impl LinkStage<'_> {
               rec.kind.is_static()
                 || (self.options.code_splitting.is_disabled() && rec.kind.is_dynamic())
             };
-            // Visit the deferred records after the eager ones. A module that only a deferred
-            // record reaches then gets a position after the eager dependencies of the importer
-            // and before the importer, so its declarations exist before the importer's body.
-            let eager = records.iter().filter(is_executed).filter(|rec| !rec.is_defer_phase());
-            let deferred = records.iter().filter(is_executed).filter(|rec| rec.is_defer_phase());
+            // Preserve request order for placement. The eager import walk separately determines
+            // where to call the wrapper of a deferred target.
+            // See internal-docs/import-defer/implementation.md.
             execution_stack.extend(
-              eager
-                .chain(deferred)
+              records
+                .iter()
+                .filter(is_executed)
                 .filter_map(|rec| rec.resolved_module)
                 .rev()
                 .map(Status::ToBeExecuted),

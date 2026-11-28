@@ -1608,6 +1608,20 @@ impl GenerateStage<'_> {
     if target_chunk_idx == runtime_chunk_idx {
       return;
     }
+    if self.options.experimental.is_import_defer_enabled()
+      && chunk_graph.chunk_table[target_chunk_idx]
+        .modules
+        .iter()
+        .any(|&idx| self.link_output.metas[idx].wrapped_by_import_defer)
+      && Self::runtime_host_is_cyclic(
+        target_chunk_idx,
+        import_edges.get_or_insert_with(|| {
+          self.predicted_static_import_edges(chunk_graph, used_symbol_refs_builder)
+        }),
+      )
+    {
+      return;
+    }
     // Declaration plugins discard generated runtime statements in `renderChunk`, so these
     // chunks cannot host executable helpers. Check every merge path, including a sole consumer.
     // See internal-docs/code-splitting/implementation.md
@@ -1634,6 +1648,26 @@ impl GenerateStage<'_> {
     chunk_graph
       .post_chunk_optimization_operations
       .insert(runtime_chunk_idx, PostChunkOptimizationOperation::Removed);
+  }
+
+  /// A cyclic importer can call a hoisted deferred initializer before its host evaluates.
+  /// Keep its helpers in a separate dependency that evaluates before the cycle.
+  /// See internal-docs/code-splitting/implementation.md ("Runtime module placement").
+  fn runtime_host_is_cyclic(
+    host: ChunkIdx,
+    edges: &IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>,
+  ) -> bool {
+    let mut pending: Vec<_> = edges[host].iter().copied().collect();
+    let mut seen = FxHashSet::default();
+    while let Some(chunk) = pending.pop() {
+      if chunk == host {
+        return true;
+      }
+      if seen.insert(chunk) {
+        pending.extend(&edges[chunk]);
+      }
+    }
+    false
   }
 
   fn find_single_runtime_consumer(

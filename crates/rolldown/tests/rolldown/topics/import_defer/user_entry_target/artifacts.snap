@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { n as value, t as init_other } from "./other2.js";
 // main.js
 globalThis.log.push("main");
-const read = () => (init_other(), value);
+const read = () => (init_other(true), value);
 export { read };
 
 ```
@@ -30,7 +30,7 @@ export { value };
 // other.js
 var value;
 function init_other() {
-	return (init_other = __esmMin((() => {
+	return (init_other = __esmSync((() => {
 		globalThis.log.push("other");
 		value = "other";
 	})))();
@@ -53,7 +53,7 @@ var read;
 function init_main() {
 	return (init_main = __esmMin((() => {
 		globalThis.log.push("main");
-		read = () => (init_other(), value);
+		read = () => (init_other(true), value);
 	})))();
 }
 init_main();
@@ -73,11 +73,11 @@ export { value };
 ### other2.js
 
 ```js
-import { t as __esmMin } from "./rolldown-runtime.js";
+import { n as __esmSync } from "./rolldown-runtime.js";
 // other.js
 var value;
 function init_other() {
-	return (init_other = __esmMin((() => {
+	return (init_other = __esmSync((() => {
 		globalThis.log.push("other");
 		value = "other";
 	})))();
@@ -90,6 +90,6 @@ export { value as n, init_other as t };
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __esmMin as t };
+export { __esmSync as n, __esmMin as t };
 
 ```

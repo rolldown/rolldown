@@ -1,8 +1,10 @@
+use oxc::semantic::ScopeFlags;
+use oxc_index::index_vec;
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
-  ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
-  OutputFormat, RuntimeHelper, RuntimeModuleBrief, Specifier, StmtInfo, StmtInfoMeta, StmtInfos,
-  SymbolRefDb, TaggedSymbolRef, WrapKind,
+  ExportsKind, GetLocalDb, ImportKind, IndexModules, Module, ModuleIdx, NormalModule,
+  NormalizedBundlerOptions, OutputFormat, RuntimeHelper, RuntimeModuleBrief, Specifier, StmtInfo,
+  StmtInfoMeta, StmtInfos, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::IndexBitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -97,11 +99,12 @@ impl LinkStage<'_> {
   pub(super) fn wrap_modules(&mut self) -> Vec<ModuleIdx> {
     let mut visited_modules_for_wrapping = IndexBitSet::new(self.module_table.modules.len());
     determine_has_dynamic_exports(&self.module_table.modules, &mut self.metas);
-    let deferred_esm_targets = if self.options.experimental.is_import_defer_enabled() {
-      self.wrap_import_defer_closures()
-    } else {
-      vec![]
-    };
+    let (deferred_esm_targets, mut deferred_closure) =
+      if self.options.experimental.is_import_defer_enabled() {
+        self.wrap_import_defer_closures()
+      } else {
+        Default::default()
+      };
 
     for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
       let module_id = module.idx;
@@ -166,6 +169,16 @@ impl LinkStage<'_> {
       }
     }
 
+    if !deferred_esm_targets.is_empty()
+      && self.options.has_manual_code_splitting_groups()
+      && !self.options.is_strict_execution_order_enabled()
+      && !self.options.preserve_modules
+    {
+      // Add only static dependencies here. Ordinary dynamic imports from these modules
+      // still start their own evaluation, including concurrent top-level await.
+      self.wrap_grouped_eager_siblings(&mut deferred_closure);
+    }
+
     for m in &self.module_table.modules {
       let Some(ecma_module) = m.as_normal() else { continue };
       let idx = ecma_module.idx;
@@ -193,17 +206,18 @@ impl LinkStage<'_> {
   /// Wraps each target of `import defer` and the modules of its static dependency closure. A
   /// deferred access can evaluate a module of the closure before its eager position, so each one
   /// needs a lazy wrapper. The loop in `wrap_modules` then wraps the rest of their graph as for
-  /// any wrapped module. Returns the ESM targets, sorted, which get a deferred namespace.
+  /// any wrapped module. Returns the sorted ESM namespace targets and the wrapped closure.
   ///
   /// An external module is not part of a closure. `apply_import_defer_support` keeps the
   /// deferral only when the output format does not evaluate an external module of a closure
   /// before the first access (`deferred_closures`). See
   /// internal-docs/import-defer/implementation.md.
-  fn wrap_import_defer_closures(&mut self) -> Vec<ModuleIdx> {
+  fn wrap_import_defer_closures(&mut self) -> (Vec<ModuleIdx>, IndexBitSet<ModuleIdx>) {
     let runtime_idx = self.runtime.id();
     let mut stack = vec![];
     let mut esm_targets = vec![];
     let mut dynamic_targets = vec![];
+    let mut cjs_targets = FxHashSet::default();
     for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
       for (local_ref, named_import) in &module.named_imports {
         let rec = &module.import_records[named_import.record_idx];
@@ -226,6 +240,9 @@ impl LinkStage<'_> {
         }
         stack.push(target);
         if matches!(target_module.exports_kind, ExportsKind::CommonJs) {
+          if !cjs_targets.insert(target) {
+            self.metas[target].shared_deferred_cjs_target = true;
+          }
           self.metas[module.idx]
             .deferred_cjs_namespace_imports
             .insert(*local_ref, named_import.record_idx);
@@ -256,11 +273,25 @@ impl LinkStage<'_> {
     }
 
     let mut visited = IndexBitSet::new(self.module_table.modules.len());
+    self.wrap_defer_dependencies(stack, &mut visited, false);
+    if !esm_targets.is_empty() {
+      self.track_import_defer_modules(&visited, &esm_targets);
+    }
+    (esm_targets, visited)
+  }
+
+  fn wrap_defer_dependencies(
+    &mut self,
+    mut stack: Vec<ModuleIdx>,
+    visited: &mut IndexBitSet<ModuleIdx>,
+    eager_siblings: bool,
+  ) {
+    let runtime_idx = self.runtime.id();
     while let Some(module_idx) = stack.pop() {
+      let Module::Normal(module) = &self.module_table.modules[module_idx] else { continue };
       if module_idx == runtime_idx || !visited.set_bit(module_idx) {
         continue;
       }
-      let Module::Normal(module) = &self.module_table.modules[module_idx] else { continue };
       let meta = &mut self.metas[module_idx];
       meta.wrapped_by_import_defer = true;
       if meta.wrap_kind().is_none() {
@@ -268,6 +299,21 @@ impl LinkStage<'_> {
           ExportsKind::Esm | ExportsKind::None => WrapKind::Esm,
           ExportsKind::CommonJs => WrapKind::Cjs,
         });
+      }
+      // These additional modules are reached by ordinary eager imports. Use the normal
+      // module-level arrow wrapper if a hoisted function would capture their free
+      // `arguments` or change the enclosing function seen by direct eval.
+      if eager_siblings && meta.wrap_kind() == WrapKind::Esm {
+        let scope = self.symbols.local_db(module_idx).scoping();
+        meta.needs_lexical_esm_wrapper = module.meta.has_eval()
+          || scope.root_unresolved_references().get("arguments").is_some_and(|references| {
+            references.iter().any(|&id| {
+              scope.scope_ancestors(scope.get_reference(id).scope_id()).all(|idx| {
+                let flags = scope.scope_flags(idx);
+                !flags.contains(ScopeFlags::Function) || flags.contains(ScopeFlags::Arrow)
+              })
+            })
+          });
       }
       stack.extend(
         module
@@ -277,20 +323,69 @@ impl LinkStage<'_> {
           .filter_map(|rec| rec.resolved_module),
       );
     }
-    self.track_import_defer_modules(&visited, &esm_targets);
-    esm_targets
   }
 
-  /// Marks the modules that need the state records of `__esmState`, in the graph of the requested
-  /// modules of all phases (`import`, `import defer`, `import.defer()`) between the ESM modules of
-  /// the deferred closures:
-  /// - each module of a strongly connected component that contains a defer target. Only these
-  ///   modules can be evaluating at a deferred access to the target.
-  /// - each module with top-level await or a dependency with top-level await
-  ///   (`is_tla_or_contains_tla_dependency`), and the other modules of its component. A deferred
-  ///   import waits for these modules first (spec `GatherAsynchronousTransitiveDependencies`).
-  ///
-  /// The dependency list of a tracked module has its tracked requested modules, in source order.
+  /// A shared manual chunk cannot run its members at load in two different orders.
+  /// If an eager request evaluates a deferred module, keep the synchronous dependencies of
+  /// later requests callable too. Each entry can then initialize the group in its own order.
+  /// See internal-docs/import-defer/implementation.md.
+  fn wrap_grouped_eager_siblings(&mut self, wrapped: &mut IndexBitSet<ModuleIdx>) {
+    fn eager_dependencies(module: &NormalModule) -> impl Iterator<Item = ModuleIdx> + '_ {
+      module
+        .import_records
+        .iter()
+        .filter(|rec| rec.kind == ImportKind::Import && !rec.is_defer_phase())
+        .filter_map(|rec| rec.resolved_module)
+    }
+    let modules = &self.module_table.modules;
+    if self
+      .entries
+      .values()
+      .filter(|entries| entries.iter().any(|entry| entry.is_eagerly_requested(modules)))
+      .nth(1)
+      .is_none()
+    {
+      return;
+    }
+    let mut importers = index_vec![Vec::new(); modules.len()];
+    for module in modules.iter().filter_map(Module::as_normal) {
+      for target in eager_dependencies(module) {
+        importers[target].push(module.idx);
+      }
+    }
+    // An eager request through a barrel has the same ordering constraint as a direct one.
+    let mut reaches_wrapped = wrapped.clone();
+    let mut stack: Vec<_> = wrapped.index_of_one().collect();
+    while let Some(idx) = stack.pop() {
+      for &importer in &importers[idx] {
+        if reaches_wrapped.set_bit(importer) {
+          stack.push(importer);
+        }
+      }
+    }
+    for module in modules.iter().filter_map(Module::as_normal) {
+      if wrapped.has_bit(module.idx) || !reaches_wrapped.has_bit(module.idx) {
+        continue;
+      }
+      let mut follows_wrapped = false;
+      for target in eager_dependencies(module) {
+        if follows_wrapped
+          && !wrapped.has_bit(target)
+          && !self.metas[target].is_tla_or_contains_tla_dependency
+        {
+          stack.push(target);
+        }
+        follows_wrapped |= reaches_wrapped.has_bit(target);
+      }
+    }
+    self.wrap_defer_dependencies(stack, wrapped, true);
+  }
+
+  /// A namespace read can re-enter via arbitrary user code, including without an import cycle.
+  /// Track each independent entry into the static request graph and the paths to those entries.
+  /// A private synchronous dependency that only its eager parent can start runs while that
+  /// parent is evaluating. It needs no separate observation and may still join a deferred group.
+  /// See internal-docs/import-defer/design.md.
   fn track_import_defer_modules(
     &mut self,
     closure: &IndexBitSet<ModuleIdx>,
@@ -300,10 +395,7 @@ impl LinkStage<'_> {
       let mut deps = module
         .import_records
         .iter()
-        .filter(|rec| {
-          matches!(rec.kind, ImportKind::Import)
-            || (matches!(rec.kind, ImportKind::DynamicImport) && rec.is_defer_phase())
-        })
+        .filter(|rec| rec.kind == ImportKind::Import)
         .filter_map(|rec| rec.resolved_module)
         .filter(|&dep| {
           closure.has_bit(dep)
@@ -326,20 +418,51 @@ impl LinkStage<'_> {
         graph.add_edge(module.idx, dep, ());
       }
     }
-    let targets = targets.iter().copied().collect::<FxHashSet<_>>();
-    let mut tracked = FxHashSet::default();
-    for component in petgraph::algo::tarjan_scc(&graph) {
-      let is_cycle = component.len() > 1 || graph.contains_edge(component[0], component[0]);
-      let has_target = is_cycle && component.iter().any(|idx| targets.contains(idx));
-      if has_target
-        || component.iter().any(|&idx| self.metas[idx].is_tla_or_contains_tla_dependency)
+    let mut work = targets.to_vec();
+    // A require, entry, or another importer can start a dependency before the deferred root.
+    // In particular, this includes a dependency that user code enters through another chunk.
+    for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
+      if graph.contains_node(module.idx)
+        && (self.entries.contains_key(&module.idx)
+          || self.metas[module.idx].is_tla_or_contains_tla_dependency
+          || module.importers_idx.len() > 1
+          || self.options.preserve_modules)
       {
-        tracked.extend(component);
+        work.push(module.idx);
+      }
+      for rec in &module.import_records {
+        if let Some(dep) = rec.resolved_module
+          && graph.contains_node(dep)
+          && (rec.kind != ImportKind::Import || !graph.contains_node(module.idx))
+        {
+          work.push(dep);
+        }
       }
     }
+    let mut tracked = FxHashSet::default();
+    while let Some(idx) = work.pop() {
+      if graph.contains_node(idx) && tracked.insert(idx) {
+        work.extend(graph.neighbors_directed(idx, petgraph::Direction::Incoming));
+      }
+    }
+    let targets: FxHashSet<_> = targets.iter().copied().collect();
     for &idx in &tracked {
       let Module::Normal(module) = &self.module_table.modules[idx] else { continue };
-      let deps = requested(module).into_iter().filter(|dep| tracked.contains(dep)).collect();
+      let deps: Vec<_> =
+        requested(module).into_iter().filter(|dep| tracked.contains(dep)).collect();
+      // No tracked requester can query this module, and its private dependencies can run only
+      // inside this evaluation. One sentinel in the ordinary wrapper covers re-entrant reads.
+      if targets.contains(&idx)
+        && deps.is_empty()
+        && !self.options.profiler_names
+        && !self.metas[idx].is_tla_or_contains_tla_dependency
+        && !graph
+          .neighbors_directed(idx, petgraph::Direction::Incoming)
+          .any(|p| tracked.contains(&p))
+      {
+        self.metas[idx].deferred_self_check = true;
+        continue;
+      }
       self.metas[idx].import_defer_tracked_deps = Some(deps);
     }
   }
@@ -387,10 +510,12 @@ impl LinkStage<'_> {
   /// Only an escape (`f(ns)`, `export { ns }`) reads the object. An access through the local
   /// binding reads `import_x` directly. An external module in CommonJS output gets its object
   /// from `__deferNsCached`, with `require("ext")` in place of `require_x()`: one object for each
-  /// external module and interop mode, in all chunks.
+  /// external module and interop mode, in all chunks. Repeated imports of a bundled CommonJS
+  /// module share one reader and deferred object per interop mode.
   fn create_deferred_cjs_namespaces(&mut self) {
     let defer_ns_ref = self.runtime.resolve_symbol("__deferNs");
     let defer_ns_cached_ref = self.runtime.resolve_symbol("__deferNsCached");
+    let defer_cjs_ref = self.runtime.resolve_symbol("__deferCJS");
     for importer_idx in self.metas.indices() {
       if self.metas[importer_idx].deferred_cjs_namespace_imports.is_empty() {
         continue;
@@ -409,7 +534,12 @@ impl LinkStage<'_> {
         let name = match &self.module_table.modules[target] {
           Module::Normal(target_module) => {
             let Some(wrapper_ref) = self.metas[target].wrapper_ref else { continue };
-            referenced_symbols.extend([defer_ns_ref.into(), wrapper_ref.into()]);
+            let helper = if self.metas[target].shared_deferred_cjs_target {
+              defer_cjs_ref
+            } else {
+              defer_ns_ref
+            };
+            referenced_symbols.extend([helper.into(), wrapper_ref.into()]);
             target_module.repr_name.as_str()
           }
           // The import statement declares `import_ext` and references `__toESMCached`.
@@ -437,7 +567,12 @@ impl LinkStage<'_> {
         // statement does not keep `__toESM` for a deferred record.
         // See internal-docs/import-defer/implementation.md.
         if matches!(self.module_table.modules[target], Module::Normal(_)) {
-          self.depended_runtime_helper[importer_idx].push(RuntimeHelper::ToEsm, stmt_info_idx);
+          let helper = if self.metas[target].shared_deferred_cjs_target {
+            RuntimeHelper::CjsNamespace
+          } else {
+            RuntimeHelper::ToEsm
+          };
+          self.depended_runtime_helper[importer_idx].push(helper, stmt_info_idx);
         }
         self.metas[importer_idx]
           .deferred_cjs_namespaces
@@ -484,11 +619,11 @@ fn create_wrapper(
 
       let stmt_info = StmtInfo {
         declared_symbols: smallvec![TaggedSymbolRef::normal(wrapper_ref)],
-        referenced_symbols: vec![if options.profiler_names {
-          runtime.resolve_symbol("__commonJS").into()
-        } else {
-          runtime.resolve_symbol("__commonJSMin").into()
-        }],
+        referenced_symbols: vec![
+          runtime
+            .resolve_symbol(linking_info.commonjs_wrapper_helper(options.profiler_names))
+            .into(),
+        ],
         eval_flags: false.into(),
         import_records: Vec::new(),
         #[cfg(debug_assertions)]
@@ -515,7 +650,9 @@ fn create_wrapper(
 
       let stmt_info = StmtInfo {
         declared_symbols: smallvec![TaggedSymbolRef::normal(wrapper_ref)],
-        referenced_symbols: if linking_info.import_defer_tracked_deps.is_none() {
+        referenced_symbols: if linking_info.deferred_self_check {
+          vec![runtime.resolve_symbol("__esmSync").into()]
+        } else if linking_info.import_defer_tracked_deps.is_none() {
           vec![if options.profiler_names {
             runtime.resolve_symbol("__esm").into()
           } else {

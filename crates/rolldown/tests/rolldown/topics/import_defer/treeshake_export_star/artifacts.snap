@@ -12,7 +12,7 @@ var A;
 // route.js
 var route_default;
 function init_route() {
-	return (init_route = __esmMin((() => {
+	return (init_route = __esmSync((() => {
 		// a.js
 		A = { a: 1 };
 		// route.js
@@ -20,7 +20,7 @@ function init_route() {
 	})))();
 }
 // main.js
-const run = () => (init_route(), route_default)();
+const run = () => (init_route(true), route_default)();
 export { run };
 
 ```

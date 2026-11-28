@@ -139,6 +139,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         ctx: self,
         scope: ast_scope,
         ast_builder: AstBuilder::new(alloc),
+        prepared_through: None,
         generated_init_esm_importee_ids: FxHashSet::default(),
         generated_order_cjs_carriers: FxHashSet::default(),
         scope_stack: vec![],

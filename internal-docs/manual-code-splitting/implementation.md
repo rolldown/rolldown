@@ -83,6 +83,8 @@ Inflated sizes break `entriesAwareMergeThreshold` — subgroups that should merg
 
 #### `entriesAwareMergeThreshold`
 
+For groups containing deferred modules, the splitter checks the load dependencies between the merged subgroups. If they form a cycle, it keeps the original entry sets. Otherwise an entry can load one of its own importers, which reads an uninitialized binding even when the runtime helpers are in a separate chunk.
+
 Splitting by bitset can produce many tiny subgroups. `entriesAwareMergeThreshold` merges subgroups below a size threshold into their nearest neighbor (by bitset similarity):
 
 ```

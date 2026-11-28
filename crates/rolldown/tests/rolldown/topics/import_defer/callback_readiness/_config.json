@@ -1,0 +1,18 @@
+{
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "snapshot": false,
+  "configVariants": [
+    {
+      "_configName": "single",
+      "codeSplitting": false
+    },
+    {
+      "_configName": "preserve",
+      "preserveModules": true
+    }
+  ]
+}

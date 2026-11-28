@@ -7,28 +7,38 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-// m.js
-var observed;
 // c.cjs
 var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.value = 1;
 }));
+// m.js
+var observed;
+function init_m() {
+	return (init_m = __esmState((() => {
+		init_p(init_m);
+		observed = typeof c_deferred;
+	}), () => [init_p]))(arguments[0]);
+}
 // p.js
 var import_c, c_deferred;
+function init_p() {
+	return (init_p = __esmState((() => {
+		c_deferred = /* @__PURE__ */ __deferNs(() => import_c || (import_c = /* @__PURE__ */ __toESM(require_c())));
+		init_m(init_p);
+	}), () => [init_m]))(arguments[0]);
+}
 // d.js
 function read() {
 	return observed;
 }
 function init_d() {
-	return (init_d = __esmMin((() => {
-		c_deferred = /* @__PURE__ */ __deferNs(() => import_c || (import_c = /* @__PURE__ */ __toESM(require_c())));
-		// m.js
-		observed = typeof c_deferred;
-	})))();
+	return (init_d = __esmState((() => {
+		init_p(init_d);
+	}), () => [init_p]))(arguments[0]);
 }
 // main.js
 function run() {
-	return (init_d(), read)();
+	return (__esmDefer(init_d), read)();
 }
 export { run };
 

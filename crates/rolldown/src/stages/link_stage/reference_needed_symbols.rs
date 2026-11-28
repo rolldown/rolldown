@@ -68,7 +68,7 @@ impl LinkStage<'_> {
           // namespace that nothing reads adds no helper.
           // See internal-docs/import-defer/implementation.md.
           if !deferred_access_targets.is_empty() {
-            let mut needs_deferred_to_esm = false;
+            let mut interop_helpers = RuntimeHelper::empty();
             let mut targets = stmt_info
               .referenced_symbols
               .iter()
@@ -82,13 +82,19 @@ impl LinkStage<'_> {
                 DeferredAccess::Esm(target) => Some(target),
                 DeferredAccess::Cjs(rec_idx) => {
                   let target = importer.import_records[rec_idx].resolved_module?;
-                  needs_deferred_to_esm |= matches!(self.module_table[target], Module::Normal(_));
+                  if matches!(self.module_table[target], Module::Normal(_)) {
+                    interop_helpers |= if self.metas[target].shared_deferred_cjs_target {
+                      RuntimeHelper::CjsNamespace
+                    } else {
+                      RuntimeHelper::ToEsm
+                    };
+                  }
                   Some(target)
                 }
               })
               .collect::<Vec<_>>();
-            if needs_deferred_to_esm {
-              depended_runtime_helper_map.push(RuntimeHelper::ToEsm, stmt_info_idx);
+            for helper in interop_helpers {
+              depended_runtime_helper_map.push(helper, stmt_info_idx);
             }
             targets.sort_unstable();
             targets.dedup();
@@ -105,6 +111,11 @@ impl LinkStage<'_> {
           }
           if stmt_info.meta.contains(StmtInfoMeta::HasDummyRecord) {
             depended_runtime_helper_map.push(RuntimeHelper::Require, stmt_info_idx);
+          }
+          if stmt_info.meta.contains(StmtInfoMeta::CjsExportsLiteral)
+            && self.metas[importer.idx].shared_deferred_cjs_target
+          {
+            depended_runtime_helper_map.push(RuntimeHelper::CjsOrdinary, stmt_info_idx);
           }
           // Handle non-static dynamic imports like `import(foo)` or `import('a' + 'b')`
           if stmt_info.meta.intersects(StmtInfoMeta::NonStaticDynamicImport)
@@ -377,10 +388,10 @@ impl LinkStage<'_> {
                       && importee_linking_info.is_tla_or_contains_tla_dependency
                     {
                       // `import.defer()` first waits for the top-level await that a deferred
-                      // access to `foo` can evaluate: `__esmGather(init_foo) || await __esmGather()`.
+                      // access to `foo` can evaluate: `__esmGatherDynamic(init_foo) || await __esmGatherDynamic()`.
                       stmt_info
                         .referenced_symbols
-                        .push(self.runtime.resolve_symbol("__esmGather").into());
+                        .push(self.runtime.resolve_symbol("__esmGatherDynamic").into());
                     }
                     if self.options.code_splitting.is_disabled() {
                       match importee_linking_info.wrap_kind() {

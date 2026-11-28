@@ -15,6 +15,8 @@ use crate::{
 #[derive(Debug)]
 pub struct ChunkGraph {
   pub chunk_table: ChunkTable,
+  /// ESM loading facades for deferred targets in chunks with a potentially callable `then`.
+  pub deferred_import_facades: FxHashMap<ChunkIdx, ChunkIdx>,
   pub sorted_chunk_idx_vec: Vec<ChunkIdx>,
   /// Module to chunk that contains the module
   pub module_to_chunk: IndexVec<ModuleIdx, Option<ChunkIdx>>,
@@ -53,8 +55,14 @@ pub struct ChunkGraph {
   /// out (`GenerateStage::split_modules_before_deferred_imports`), and an init after the import of
   /// the chunk would run after them. These modules have no host (`deferred_init_host`).
   pub deferred_modules_run_at_load: FxHashSet<ModuleIdx>,
+  /// Eager fallback entries whose synchronous consumer layers run together after one async chunk.
+  /// Each layer waits for all modules in the previous one. See `render_async_consumers`.
+  pub async_consumer_layers: FxHashMap<ChunkIdx, Vec<usize>>,
+  /// ESM chunks split from a manual group to let the loader start its independent requests.
+  /// An eager wrapper after one of these imports must start while its top-level await is pending.
+  pub split_async_group_chunks: FxHashSet<ChunkIdx>,
   /// The modules of `deferred_modules_run_at_load` that
-  /// `GenerateStage::plan_dynamic_defer_declarations` puts before the other modules of their
+  /// `GenerateStage::plan_defer_declarations` puts before the other modules of their
   /// chunk, with their anchor: the last module before them, in the order of the chunk, that keeps
   /// its place. The finalizer of the anchor calls `init_x()` at the end of its code, so that the
   /// module still runs at its place.
@@ -133,6 +141,7 @@ impl ChunkGraph {
   pub fn new(modules_len: usize) -> Self {
     Self {
       chunk_table: ChunkTable::default(),
+      deferred_import_facades: FxHashMap::default(),
       module_to_chunk: index_vec![None; modules_len],
       sorted_chunk_idx_vec: Vec::new(),
       entry_module_to_entry_chunk: FxHashMap::default(),
@@ -143,6 +152,8 @@ impl ChunkGraph {
       common_chunk_preserve_export_names_modules: FxHashMap::default(),
       post_chunk_optimization_operations: FxHashMap::default(),
       lazy_host_inits: LazyHostInits::default(),
+      async_consumer_layers: FxHashMap::default(),
+      split_async_group_chunks: FxHashSet::default(),
       deferred_modules_run_at_load: FxHashSet::default(),
       run_at_load_anchors: FxHashMap::default(),
     }
@@ -210,6 +221,18 @@ impl ChunkGraph {
       }
       _ => None,
     }
+  }
+
+  /// Whether this import loads internal bindings (init and namespace) from the module's
+  /// physical chunk. Both the import expression and its chunk metadata must take the same path.
+  pub fn dynamic_import_reads_defer_bindings(
+    &self,
+    module: ModuleIdx,
+    meta: &LinkingMetadata,
+    is_defer: bool,
+  ) -> bool {
+    (meta.dynamic_defer_target && (is_defer || meta.wrapper_ref.is_none()))
+      || self.lazy_dynamic_defer_host(module, meta).is_some()
   }
 
   /// For an ESM module of a deferred closure, the chunk that holds the code of the module and does

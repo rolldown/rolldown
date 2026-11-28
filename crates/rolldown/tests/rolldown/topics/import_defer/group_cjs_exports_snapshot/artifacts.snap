@@ -15,7 +15,7 @@ function read() {
 }
 var import_c;
 function init_r() {
-	return (init_r = __esmMin((() => {
+	return (init_r = __esmSync((() => {
 		// c.cjs
 		var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
 			exports.x = 1;
@@ -28,7 +28,7 @@ function init_r() {
 }
 // main.js
 function run() {
-	return (init_r(), read)();
+	return (init_r(true), read)();
 }
 export { run };
 

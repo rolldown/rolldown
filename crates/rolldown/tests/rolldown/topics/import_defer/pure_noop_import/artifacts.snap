@@ -16,11 +16,11 @@ function check() {
 	return [isObject({}), isObject(1)];
 }
 function init_route() {
-	return (init_route = __esmMin((() => {})))();
+	return (init_route = __esmSync((() => {})))();
 }
 // main.js
 function run() {
-	return (init_route(), check)();
+	return (init_route(true), check)();
 }
 export { run };
 

@@ -11,14 +11,14 @@ import { join } from "node:path";
 // d.js
 var x;
 function init_d() {
-	return (init_d = __esmMin((() => {
+	return (init_d = __esmSync((() => {
 		globalThis.__extLog.push("d");
 		x = join("a", "b");
 	})))();
 }
 // main.js
 (globalThis.__extLog ??= []).push("main");
-const read = () => (init_d(), x);
+const read = () => (init_d(true), x);
 export { read };
 
 ```

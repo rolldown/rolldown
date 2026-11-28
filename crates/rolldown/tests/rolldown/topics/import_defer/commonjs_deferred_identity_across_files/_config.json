@@ -1,0 +1,19 @@
+{
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "snapshot": false,
+  "configVariants": [
+    {
+      "_configName": "strict",
+      "strictExecutionOrder": true
+    },
+    {
+      "_configName": "preserved-cjs",
+      "format": "cjs",
+      "preserveModules": true
+    }
+  ]
+}

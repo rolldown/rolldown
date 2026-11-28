@@ -39,13 +39,27 @@ bitflags! {
     const EsmComplete = 1 << 29;
     const EsmOnStack = 1 << 30;
     const EsmDepDone = 1 << 31;
-    const EsmGather = 1 << 32;
-    const EsmDefer = 1 << 33;
-    const DeferNs = 1 << 34;
-    const ToEsmCache = 1 << 35;
-    const ToEsmCached = 1 << 36;
-    const DeferNsCache = 1 << 37;
-    const DeferNsCached = 1 << 38;
+    const EsmSettled = 1 << 32;
+    const EsmPrepare = 1 << 33;
+    const EsmEvaluateDependency = 1 << 34;
+    const EsmGather = 1 << 35;
+    const EsmEvaluateRoot = 1 << 36;
+    const EsmGatherDynamic = 1 << 37;
+    const EsmDefer = 1 << 38;
+    const PreventExtensions = 1 << 39;
+    const DeferNs = 1 << 40;
+    const ToEsmCache = 1 << 41;
+    const ToEsmCached = 1 << 42;
+    const DeferNsCache = 1 << 43;
+    const DeferNsCached = 1 << 44;
+    const EsmSync = 1 << 45;
+    const CjsRecords = 1 << 46;
+    const CjsRecord = 1 << 47;
+    const CjsObjectInfo = 1 << 48;
+    const CjsOrdinary = 1 << 49;
+    const CommonJsShared = 1 << 50;
+    const CjsNamespace = 1 << 51;
+    const DeferCjs = 1 << 52;
   }
 }
 
@@ -100,7 +114,7 @@ impl DependedRuntimeHelperMap {
   }
 }
 
-pub const RUNTIME_HELPER_NAMES: [&str; 39] = [
+pub const RUNTIME_HELPER_NAMES: [&str; 53] = [
   "__create",
   "__defProp",
   "__name",
@@ -133,17 +147,31 @@ pub const RUNTIME_HELPER_NAMES: [&str; 39] = [
   "__esmComplete",
   "__esmOnStack",
   "__esmDepDone",
+  "__esmSettled",
+  "__esmPrepare",
+  "__esmEvaluateDependency",
   "__esmGather",
+  "__esmEvaluateRoot",
+  "__esmGatherDynamic",
   "__esmDefer",
+  "__preventExtensions",
   "__deferNs",
   "__toESMCache",
   "__toESMCached",
   "__deferNsCache",
   "__deferNsCached",
+  "__esmSync",
+  "__cjsRecords",
+  "__cjsRecord",
+  "__cjsObjectInfo",
+  "__cjsOrdinary",
+  "__commonJSShared",
+  "__cjsNamespace",
+  "__deferCJS",
 ];
 
 /// The helpers that the runtime module has only when `experimental.importDefer` is on.
-pub const RUNTIME_IMPORT_DEFER_HELPER_NAMES: [&str; 15] = [
+pub const RUNTIME_IMPORT_DEFER_HELPER_NAMES: [&str; 29] = [
   "__esmStack",
   "__esmState",
   "__esmEnd",
@@ -152,11 +180,25 @@ pub const RUNTIME_IMPORT_DEFER_HELPER_NAMES: [&str; 15] = [
   "__esmComplete",
   "__esmOnStack",
   "__esmDepDone",
+  "__esmSettled",
+  "__esmPrepare",
+  "__esmEvaluateDependency",
   "__esmGather",
+  "__esmEvaluateRoot",
+  "__esmGatherDynamic",
   "__esmDefer",
+  "__preventExtensions",
   "__deferNs",
   "__toESMCache",
   "__toESMCached",
   "__deferNsCache",
   "__deferNsCached",
+  "__esmSync",
+  "__cjsRecords",
+  "__cjsRecord",
+  "__cjsObjectInfo",
+  "__cjsOrdinary",
+  "__commonJSShared",
+  "__cjsNamespace",
+  "__deferCJS",
 ];

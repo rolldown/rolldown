@@ -107,10 +107,12 @@ pub struct LinkingMetadata {
   /// Results of the `'key' in ns` checks (see `EcmaView::namespace_in_checks`) that are known at
   /// link time.
   pub folded_namespace_in_checks: FxHashMap<NodeId, bool>,
-  /// Set on each target of `import defer` and on each module of its static dependency closure.
-  /// The ESM wrapper of such a module is a hoisted function, so that a call that runs before the
-  /// declaration works.
+  /// Set on the static closures of defer targets and of their order-sensitive eager siblings.
+  /// The ESM wrapper is hoisted unless the eager sibling needs its original lexical scope.
   pub wrapped_by_import_defer: bool,
+  /// An order-sensitive eager sibling needs a module-level arrow for its lexical scope.
+  /// Its body must also stay out of another module's hoisted wrapper.
+  pub needs_lexical_esm_wrapper: bool,
   /// Set on each ESM module that an `import.defer()` call targets. The chunk that holds the
   /// module must not evaluate it when the chunk loads, unless the module has no interop wrapper
   /// (a JSON module). Each `import.defer()` of the module reads `x_deferred` from that chunk. Each
@@ -119,6 +121,8 @@ pub struct LinkingMetadata {
   /// reads `x_exports`, and also `init_x` when `strictExecutionOrder` gives the module an
   /// execution-order wrapper (`rewrite_dynamic_import_of_defer_target`).
   pub dynamic_defer_target: bool,
+  /// Multiple deferred records need the same bundled CommonJS namespace across wrappers/chunks.
+  pub shared_deferred_cjs_target: bool,
   /// Set on each external module that a module of a deferred closure loads lazily in CommonJS
   /// output, with an included import that needs `__toESMCached` (`lazy_external_import_stmt`).
   /// Each chunk then renders its own binding of the external with `__toESMCached` too, so that
@@ -130,13 +134,12 @@ pub struct LinkingMetadata {
   pub deferred_namespace_ref: Option<SymbolRef>,
   /// The facade statement that declares `deferred_namespace_ref`.
   pub deferred_namespace_stmt_info: Option<StmtInfoIdx>,
-  /// Set when a deferred access must observe this module: the module has top-level await or a
-  /// dependency with top-level await, in the graph of the requested modules of the deferred
-  /// closures (`track_import_defer_modules`). The wrapper is then `__esmState`, which keeps a
-  /// record of the evaluation state, and a deferred access checks the records first
-  /// (`__esmDefer`). The list has the tracked modules that this module requests, in source order,
-  /// for the ready check.
+  /// Static requests whose evaluation can be observed independently by a deferred read, in
+  /// source order. A tracked wrapper (`__esmState`) exposes its state and these dependencies
+  /// for the `__esmDefer` readiness walk. See internal-docs/import-defer/implementation.md.
   pub import_defer_tracked_deps: Option<Vec<ModuleIdx>>,
+  /// Only this synchronous wrapper can be active at a read; no graph record is necessary.
+  pub deferred_self_check: bool,
   /// The local bindings of `import defer * as ns from './x'` in this module where `./x` is a
   /// CommonJS module, mapped to the import record of `./x`. An access through the local binding
   /// reads `import_x` directly (`DeferredAccess::Cjs`).
@@ -181,6 +184,16 @@ pub struct LinkingMetadata {
 }
 
 impl LinkingMetadata {
+  pub fn commonjs_wrapper_helper(&self, profiler_names: bool) -> &'static str {
+    if self.shared_deferred_cjs_target {
+      "__commonJSShared"
+    } else if profiler_names {
+      "__commonJS"
+    } else {
+      "__commonJSMin"
+    }
+  }
+
   /// Whether a dependency of the module, including an external one, has side effects.
   pub fn has_side_effectful_dependency(&self, modules: &IndexModules) -> bool {
     self

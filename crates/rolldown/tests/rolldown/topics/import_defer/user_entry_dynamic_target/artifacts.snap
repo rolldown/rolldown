@@ -28,10 +28,10 @@ export { value };
 // HIDDEN [\0rolldown/runtime.js]
 // other.js
 var other_exports = /* @__PURE__ */ __exportAll({ value: () => value });
-var other_deferred = /* @__PURE__ */ __deferNs(() => (init_other(), other_exports), other_exports);
+var other_deferred = /* @__PURE__ */ __deferNs(() => (init_other(true), other_exports), other_exports);
 var value;
 function init_other() {
-	return (init_other = __esmMin((() => {
+	return (init_other = __esmSync((() => {
 		globalThis.log.push("other");
 		value = "other";
 	})))();

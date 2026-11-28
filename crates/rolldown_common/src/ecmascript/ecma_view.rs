@@ -24,6 +24,8 @@ use crate::{
 /// can lower each deferred import to a normal import. See internal-docs/import-defer/implementation.md.
 #[derive(Debug, Default, Clone)]
 pub struct ImportDeferScan {
+  /// Object and array allocations that may supply a shared CommonJS namespace's keys at lock.
+  pub cjs_export_literals: FxHashSet<NodeId>,
   /// The flags of each statement whose flags change when a property read of a deferred namespace
   /// is not pure. Such a read evaluates the deferred module. `StmtInfo::eval_flags` keeps the
   /// flags of an eager import.

@@ -10,47 +10,56 @@ source: crates/rolldown_testing/src/integration_test.rs
 // state.js
 var state;
 function init_state() {
-	return (init_state = __esmMin((() => {
+	return (init_state = __esmState((() => {
 		state = { value: 1 };
-	})))();
+	}), () => []))(arguments[0]);
 }
 // a.js
 var a;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		a = { value: 1 };
+	})))();
+}
 // b.js
 var b;
 function init_b() {
-	return (init_b = __esmMin((() => {
-		init_state();
+	return (init_b = __esmState((() => {
+		init_state(init_b);
 		b = state.value;
-	})))();
+	}), () => [init_state]))(arguments[0]);
+}
+// barrel.js
+function init_barrel() {
+	return (init_barrel = __esmState((() => {
+		init_a();
+		init_b(init_barrel);
+	}), () => [init_b]))(arguments[0]);
 }
 // first.js
 function read$1() {
 	return a.value;
 }
 function init_first() {
-	return (init_first = __esmMin((() => {
-		// a.js
-		a = { value: 1 };
-		// barrel.js
-		init_b();
-	})))();
+	return (init_first = __esmState((() => {
+		init_barrel(init_first);
+	}), () => [init_barrel]))(arguments[0]);
 }
 // second.js
 function read() {
 	return b;
 }
 function init_second() {
-	return (init_second = __esmMin((() => {
-		init_b();
-	})))();
+	return (init_second = __esmState((() => {
+		init_b(init_second);
+	}), () => [init_b]))(arguments[0]);
 }
 // main.js
 init_state();
 function run() {
-	const a = (init_first(), read$1)();
+	const a = (__esmDefer(init_first), read$1)();
 	state.value = 2;
-	return [a, (init_second(), read)()];
+	return [a, (__esmDefer(init_second), read)()];
 }
 export { run };
 

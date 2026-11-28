@@ -11,12 +11,12 @@ const require_rolldown_runtime = require("./rolldown-runtime.js");
 // d.js
 var import_node_https;
 function init_d() {
-	return (init_d = require_rolldown_runtime.__esmMin((() => {
+	return (init_d = require_rolldown_runtime.__esmSync((() => {
 		import_node_https = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("node:https", require("node:https"));
 	})))();
 }
 // main.js
-const lazyNamespace = () => (init_d(), import_node_https);
+const lazyNamespace = () => (init_d(true), import_node_https);
 const loadOther = () => Promise.resolve().then(() => require("./other.js"));
 exports.lazyNamespace = lazyNamespace;
 exports.loadOther = loadOther;
@@ -39,10 +39,10 @@ exports.eagerNamespace = eagerNamespace;
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__esmMin", {
+Object.defineProperty(exports, "__esmSync", {
 	enumerable: true,
 	get: function() {
-		return __esmMin;
+		return __esmSync;
 	}
 });
 Object.defineProperty(exports, "__toESM", {

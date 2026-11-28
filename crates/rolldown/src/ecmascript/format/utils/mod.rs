@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use rolldown_common::{ExternalModule, OutputFormat};
+use rolldown_common::{ExternalModule, ModuleIdx, OutputFormat};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::ecmascript::{escape_non_ascii, to_ecma_string_literal};
 
@@ -132,11 +132,19 @@ pub fn render_chunk_external_imports<'a>(
 }
 
 pub fn render_hoisted_keep_names(ctx: &GenerateContext<'_>, source: &mut SourceJoiner<'_>) {
+  render_module_keep_names(ctx, source, ctx.chunk.modules.iter().copied());
+}
+
+pub(super) fn render_module_keep_names(
+  ctx: &GenerateContext<'_>,
+  source: &mut SourceJoiner<'_>,
+  modules: impl IntoIterator<Item = ModuleIdx>,
+) {
   if ctx.hoisted_keep_names.is_empty() {
     return;
   }
   let mut names =
-    ctx.chunk.modules.iter().filter_map(|id| ctx.hoisted_keep_names.get(id)).flatten().peekable();
+    modules.into_iter().filter_map(|id| ctx.hoisted_keep_names.get(&id)).flatten().peekable();
   if names.peek().is_none() {
     return;
   }

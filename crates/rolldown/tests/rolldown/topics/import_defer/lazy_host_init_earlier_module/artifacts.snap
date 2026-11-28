@@ -19,7 +19,7 @@ init_a();
 var a_exports = /* @__PURE__ */ __exportAll({ a: () => "a" });
 var a;
 function init_a() {
-	return (init_a = __esmMin((() => {
+	return (init_a = __esmSync((() => {
 		globalThis.__initLog.push("a");
 		a = "a";
 	})))();
@@ -66,7 +66,7 @@ export { access };
 ```js
 import { n as init_a } from "./a.js";
 // r.js
-const read = () => (init_a(), "a");
+const read = () => (init_a(true), "a");
 export { read };
 
 ```
@@ -95,7 +95,7 @@ globalThis.__initLog.push("y");
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-export { __esmMin, __exportAll };
+export { __esmSync, __exportAll };
 
 ```
 
@@ -110,12 +110,12 @@ init_a();
 ### a.js
 
 ```js
-import { __esmMin, __exportAll } from "./_virtual/_rolldown/runtime.js";
+import { __esmSync, __exportAll } from "./_virtual/_rolldown/runtime.js";
 // a.js
 var a_exports = /* @__PURE__ */ __exportAll({ a: () => "a" });
 var a;
 function init_a() {
-	return (init_a = __esmMin((() => {
+	return (init_a = __esmSync((() => {
 		globalThis.__initLog.push("a");
 		a = "a";
 	})))();
@@ -162,7 +162,7 @@ export { access };
 ```js
 import { init_a } from "./a.js";
 // r.js
-const read = () => (init_a(), "a");
+const read = () => (init_a(true), "a");
 export { read };
 
 ```
@@ -195,7 +195,7 @@ globalThis.__initLog.push("y");
 var a_exports = /* @__PURE__ */ __exportAll({ a: () => "a" });
 var a;
 function init_a() {
-	return (init_a = __esmMin((() => {
+	return (init_a = __esmSync((() => {
 		globalThis.__initLog.push("a");
 		a = "a";
 	})))();
@@ -259,7 +259,7 @@ exports.access = access;
 ```js
 const require_a = require("./a.js");
 // r.js
-const read = () => (require_a.init_a(), "a");
+const read = () => (require_a.init_a(true), "a");
 exports.read = read;
 
 ```

@@ -137,6 +137,8 @@ bitflags! {
         const ImportMeta = 1 << 4;
         /// Statement contains a top-level await, for await, or await using.
         const TopLevelAwait = 1 << 5;
+        /// An object or array literal that can become the CommonJS module's exports.
+        const CjsExportsLiteral = 1 << 6;
     }
 }
 

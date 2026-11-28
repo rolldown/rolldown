@@ -13,7 +13,10 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{
   share_factory::render_inline_records,
-  utils::{is_use_strict_directive, render_chunk_directives, render_hoisted_keep_names},
+  utils::{
+    is_use_strict_directive, render_chunk_directives, render_hoisted_keep_names,
+    render_module_keep_names,
+  },
 };
 use crate::{
   ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
@@ -61,7 +64,9 @@ pub fn render_esm<'code>(
   if let Some(imports) = render_esm_chunk_imports(ctx) {
     source_joiner.append_source(imports);
   }
-  if module_sources.first().is_none_or(|m| m.module_idx != ctx.link_output.runtime.id()) {
+  if !ctx.chunk_graph.async_consumer_layers.contains_key(&ctx.chunk_idx)
+    && module_sources.first().is_none_or(|m| m.module_idx != ctx.link_output.runtime.id())
+  {
     render_hoisted_keep_names(ctx, &mut source_joiner);
   }
 
@@ -130,6 +135,10 @@ fn render_chunk_content<'code>(
   module_sources: &'code [RenderedModuleSource],
   source_joiner: &mut SourceJoiner<'code>,
 ) {
+  if let Some(layers) = ctx.chunk_graph.async_consumer_layers.get(&ctx.chunk_idx) {
+    render_async_consumers(ctx, layers, module_sources, source_joiner);
+    return;
+  }
   // Dev chunks register graph rows for HMR after the runtime is available and before the user modules run.
   let mut dev_graph_prelude = if ctx.options.is_dev_mode_enabled() {
     crate::hmr::module_graph_delta::render_register_graph_source(
@@ -176,6 +185,67 @@ fn render_chunk_content<'code>(
   // `group_deferred_modules` makes no groups in dev mode, so no prelude is pending here.
   debug_assert!(dev_graph_prelude.is_none());
   render_deferred_groups(ctx, module_sources, source_joiner);
+}
+
+/// ESM resumes the synchronous ancestors of a fulfilled async module in one job, in
+/// evaluation order. A thrown value rejects that consumer's ancestors; its ready siblings
+/// still run. See internal-docs/import-defer/implementation.md.
+fn render_async_consumers<'code>(
+  ctx: &GenerateContext<'_>,
+  widths: &[usize],
+  module_sources: &'code [RenderedModuleSource],
+  out: &mut SourceJoiner<'code>,
+) {
+  let render = |out: &mut SourceJoiner<'code>, module: &'code RenderedModuleSource| {
+    for source in module.all_sources() {
+      out.append_source(source);
+    }
+  };
+  // If the runtime merged into this entry after planning, it is first in execution order.
+  let mut consumers = module_sources;
+  if let Some((first, rest)) = consumers.split_first()
+    && first.module_idx == ctx.link_output.runtime.id()
+  {
+    render(out, first);
+    render_module_keep_names(ctx, out, [first.module_idx]);
+    consumers = rest;
+  }
+  if !ctx.hoisted_keep_names.is_empty() {
+    // Only single-consumer layers declare their functions in the file scope. Siblings
+    // declare theirs inside the callbacks below.
+    let mut offset = 0;
+    let file_scope = widths.iter().filter_map(|&width| {
+      let first = offset;
+      offset += width;
+      (width == 1).then(|| consumers[first].module_idx)
+    });
+    render_module_keep_names(ctx, out, file_scope);
+  }
+  for &width in widths {
+    let (layer, rest) = consumers.split_at(width);
+    consumers = rest;
+    if let [module] = layer {
+      render(out, module);
+      continue;
+    }
+    out.append_source(
+      ";((inits) => {
+	let failure;
+	for (let i = 0; i < inits.length; i++) {
+		try { inits[i](); } catch (error) { if (!failure) failure = [error]; }
+	}
+	if (failure) throw failure[0];
+})([",
+    );
+    for module in layer {
+      out.append_source("() => {");
+      render_module_keep_names(ctx, out, [module.module_idx]);
+      render(out, module);
+      out.append_source("},");
+    }
+    out.append_source("]);");
+  }
+  debug_assert!(consumers.is_empty());
 }
 
 /// Renders a chunk with deferred groups (`group_deferred_modules`):

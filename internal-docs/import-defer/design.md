@@ -10,7 +10,7 @@
 
 ### Goal
 
-A build with a shape that the deferral does not support yet gives the output of the build with the option off, and a warning for each deferred import. Thus each step can add the deferral for some shapes, and all other shapes keep the eager result that they had before.
+A build with a shape that deferral does not support lowers each deferred import to an eager import and emits a warning. It uses the normal eager chunk layout wherever that layout allows independent async dependencies to start. When a single chunk would serialize their top-level awaits, the ESM loader needs separate files to evaluate them concurrently.
 
 ### Decisions
 
@@ -31,14 +31,14 @@ A build with a shape that the deferral does not support yet gives the output of 
 
 ### Goal
 
-The proposal gives one deferred namespace for each module. Without a merge, each `import defer` of a CommonJS module has its own `__deferNs` object and its own `__toESM` namespace, also for two imports in one file. An eager import shares one namespace for the importers with no wrapper in one chunk (`merge_cjs_namespace`). The deferred form has the same scope.
+The proposal gives one deferred namespace for each module. Without a merge, each `import defer` of a CommonJS module has its own `__deferNs` object and its own `__toESM` namespace, also for two imports in one file. Importers that use the same CommonJS interop mode must see the same deferred object, including across chunks. Code can observe its identity before any property access by using it as a `WeakMap` key.
 
 ### Decisions
 
 - The deferred records have their own groups, apart from the groups of `merge_cjs_namespace`. An eager import assigns `import_x` at the import statement, and a deferred access assigns it at the first access. One shared binding would get two `__toESM` objects in one run.
 - The interop mode is part of the key. The eager merge keys by module only, so its merged binding has the mode of the first importer. A deferred access assigns `import_x` with the mode of its own importer, so a merge by module only would make the mode depend on the access that runs first.
-- Only importers with no wrapper take part, as in the eager merge. A wrapped importer declares its symbols inside its wrapper, where other modules cannot read them.
-- Nothing merges with `strictExecutionOrder`, as in the eager merge. The order wraps of the generate stage give the importers wrappers that `wrap_kind()` does not show. A merge then puts the declaration in the wrapper of one importer, and another importer can read it before that wrapper runs. The strict variant of the fixture `commonjs_shared_namespace` checks this rule.
+- Only importers with no wrapper take part in the declaration merge, as in the eager merge. A wrapped importer declares its symbols inside its wrapper, where other modules cannot read them.
+- Nothing merges with `strictExecutionOrder`, as in the eager merge. The order wraps of the generate stage give the importers wrappers that `wrap_kind()` does not show. A merge then puts the declaration in the wrapper of one importer, and another importer can read it before that wrapper runs. Repeated records share one namespace reader per target and interop mode. Its deferred object has stable identity before evaluation. The reader caches the interop namespace once the CommonJS factory returns. A callback inside the factory can observe partial exports that the factory subsequently mutates or replaces. This gives wrapped importers and separate files the same identity without moving a declaration across an evaluation boundary.
 
 ### Rejected alternatives
 
@@ -52,8 +52,10 @@ A deferred import of a module with top-level `await` keeps the steps of native N
 
 ### Decisions
 
-- Only the tracked modules get a state record (`__esmState`). The other modules of a closure keep `__esmMin`, so a closure with no top-level `await` costs nothing more.
-- A module with top-level `await` ends before the next import starts, as in a build without `import defer`. Thus the preparation waits for each module in the order of its walk. Native Node starts all of them first, and then waits. The fixture `tla_gather_order` checks the order of the walk.
+- Only modules whose evaluation a deferred read can observe independently need state. Private synchronous dependencies run inside their parent’s evaluation and can still share its wrapper. A synchronous target whose own evaluation is the only state observable by a read needs a single running sentinel.
+- Preparation starts all gathered top-level `await` modules in request order before waiting for them. One sibling can then release a promise that an earlier sibling awaits (fixture `preserve_modules_concurrent_tla`). Consecutive deferred requests can share this preparation. When all their asynchronous modules belong to one entry, eager concatenation would remove the evaluation boundaries needed to start them concurrently.
+- A static import visits gathered roots within the importer’s evaluation walk. A synchronous failure aborts that walk. Dynamic `import.defer()` starts a separate evaluation for each root and joins their promises after starting all of them. The runtime shares the dependency discovery and wait, and uses a separate root evaluator for each import form. [ContinueDynamicImport](https://tc39.es/proposal-defer-import-eval/#sec-ContinueDynamicImport).
+- Across separate static requests, a wait in an importer body can prevent the loader from reaching a sibling that releases it. The same issue arises inside an eagerly started wrapper when either the module or a dependency has top-level `await`. A wrapper reached only after its async dependencies have finished can keep deferral. For builds that can split the siblings across ESM chunks, the eager fallback delegates their scheduling to the loader.
 - A build falls back when a module with no wrapper has an import after a deferred import of a module that reaches a top-level `await`. In the output, the code of that import runs before the modules with top-level `await` start, but native Node starts them first. The fallback gives the eager order, in which the modules with top-level `await` also run first. A build with `strictExecutionOrder` also falls back, because the fallback runs before the link stage and does not know the wrappers.
 
 ### Rejected alternatives
@@ -68,7 +70,7 @@ A cycle with a deferred target keeps the native result: the eager part of the cy
 
 ### Decisions
 
-- Only the members of a cycle with a deferred target, and the modules that reach a top-level `await`, get state records. The other cycles in the closures keep `__esmMin`.
+- A callback can read a deferred namespace during evaluation, even in an acyclic import graph. The readiness check follows static requests from the target to independently entered dependencies. Executing `import()` starts a separate evaluation. Merely declaring a function that could call it adds no dependency to the readiness check.
 - With a kept deferral, the position of a moved init call is the start record of the module in a walk of the eager imports, not the first import in chunk order (`ensure_lazy_module_initialization_order`). With the closure wrappers, the first import in chunk order can be in a deferred module or in another module of a cycle, and its call runs late. Then a later import of the entry ran before the module (the fixtures `cycle_eager_import_order` and `deferred_importer_first_in_chunk`). The rule applies only when the build keeps a deferral, so a build without `import defer` keeps the order that it had before.
 
 ### Rejected alternatives
@@ -94,6 +96,7 @@ A lazy host is the entry chunk of a deferred ES module, and its load does not ru
 - Some code stays in the body only because of `import defer`: the call of a deferred module that gets no init, and the preparation of a deferred import of a module with top-level `await`. The build without `import defer` runs that module when the chunk loads its chunk. A declined init at or after the import of that chunk would run the other module first, in the opposite order of that build. Thus the chunk adds only the declined inits before that import.
 - The modules of the body before the importer move to a new common chunk, when the move keeps the order of the other imports. The importer is then the first module, so the output can express `x`, `a`, `y` for `import './x.js'; import './a.js'; import './y.js'`. The cost is one more chunk, only in a build with `import defer`, and only when a later import of the importer runs code at load.
 - A common host gives up the modules that run at load and come after its first deferred module in execution order. They move to a new common chunk, and the runtime module and the deferred modules stay. Else the host runs such a module `w` at load, before the init of `a`, and `import './a.js'; import './w.js'` runs `w` first. The cost is one more chunk, only in a build with `import defer`, and only when a common chunk holds a deferred module with an eager importer in another chunk and a later module that runs at load.
+- Shared manual groups can have mutually incompatible entry orders. Synchronous siblings can stay together behind separate initializers. If a group still needs a global init that would run in the wrong entry, Rolldown warns and preserves independent evaluation boundaries for its movable eager members.
 - When a common host cannot move its later modules, it runs its deferred modules at load, at their places, as the build without `import defer` does. For example, the later module has top-level `await`, the host is the chunk of a code splitting group, or a second deferred module comes between two later modules. Else the host runs the later modules at load, before the init, and the order is worse than the order of that build. The cost: a deferred-only importer that loads the host also runs these modules at load, as in that build.
 - The host does not import the chunk of the importer. In such a cycle, the module can read bindings of the chunk before its body runs.
 - With `strictExecutionOrder`, a common chunk that holds an entry module is not a host. The order wrappers move such an entry into a common chunk that does not run it at load, also without `import defer`. That gap belongs to the order wrappers, so this design keeps the order of the build without `import defer` there.

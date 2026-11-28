@@ -384,6 +384,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // the dedup set, and splices at the same after-imports index the HMR header uses (an HMR
     // header spliced below lands before these calls, which is fine — it is registration glue).
     let entry_init_prelude = self.entry_reexported_wrapper_init_prelude();
+    let mut user_body_start = last_import_stmt_idx + entry_init_prelude.len();
     if !entry_init_prelude.is_empty() {
       program.body.splice(last_import_stmt_idx..last_import_stmt_idx, entry_init_prelude);
     }
@@ -396,6 +397,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         // Let's skip it for now.
         self.generate_hmr_header()
       };
+      user_body_start += hmr_header.len();
       program.body.splice(last_import_stmt_idx..last_import_stmt_idx, hmr_header);
     }
 
@@ -448,11 +450,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     match wrapper_mode {
       ModuleWrapperMode::InteropCjs(wrapper_ref) => {
         let wrap_ref_name = self.canonical_name_for(wrapper_ref);
-        let commonjs_ref = if self.ctx.options.profiler_names {
-          self.canonical_ref_for_runtime("__commonJS")
-        } else {
-          self.canonical_ref_for_runtime("__commonJSMin")
-        };
+        let commonjs_ref = self.canonical_ref_for_runtime(
+          self.ctx.linking_info.commonjs_wrapper_helper(self.ctx.options.profiler_names),
+        );
 
         let (commonjs_ref_expr, _) = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
         let mut stmts_inside_closure = allocator::Vec::new_in(self);
@@ -470,6 +470,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           commonjs_ref_expr,
           stmts_inside_closure,
           &self.cjs_wrapper_params(),
+          self.ctx.linking_info.shared_deferred_cjs_target.then_some(self.ctx.module.exec_order),
           self.ctx.options.profiler_names,
           &self.ctx.module.stable_id,
           self.ctx.linking_info.is_tla_or_contains_tla_dependency,
@@ -496,7 +497,9 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
 
         // Hoist all top-level "var" and "function" declarations out of the closure
-        old_body.into_iter().for_each(|mut stmt| match &mut stmt {
+        let mut dependency_count = stmts_inside_closure.len();
+        for (i, mut stmt) in old_body.into_iter().enumerate() {
+          match &mut stmt {
             ast::Statement::FunctionDeclaration(_) => {
               fn_stmts.push(stmt);
             }
@@ -510,8 +513,12 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             }
             _ => {
               stmts_inside_closure.push(stmt);
+              if i < user_body_start {
+                dependency_count = stmts_inside_closure.len();
+              }
             }
-          });
+          }
+        }
 
         // Safety net for the `init_is_noop` predictive classifier (see
         // `generate_stage::compute_wrapped_esm_init_metadata`): if a module was flagged as
@@ -559,6 +566,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               program,
               target.wrapper_ref,
               stmts_inside_closure,
+              dependency_count,
               wrapper_mode,
             );
             // The chunk runs this deferred module at its place, as the build without `import
@@ -592,7 +600,7 @@ impl<'ast> VisitJsMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
     self.append_order_cjs_carriers(program);
 
-    // The run-at-load modules that `plan_dynamic_defer_declarations` moves before this module run
+    // The run-at-load modules that `plan_defer_declarations` moves before this module run
     // here, at their place in the order of execution (`ChunkGraph::run_at_load_anchors`).
     let anchors = &self.ctx.chunk_graph.run_at_load_anchors;
     if !anchors.is_empty() {
@@ -997,6 +1005,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     program: &mut ast::Program<'ast>,
     wrapper_ref: SymbolRef,
     statements: allocator::Vec<'ast, Statement<'ast>>,
+    dependency_count: usize,
     wrapper_mode: ModuleWrapperMode,
   ) {
     let (esm_ref_expr, _) =
@@ -1007,7 +1016,11 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
         binding_name: wrap_ref_name,
         esm_fn_expr: esm_ref_expr,
         statements,
-        profiler_name: self.esm_wrapper_profiler_name(),
+        profiler_name: self
+          .ctx
+          .options
+          .profiler_names
+          .then_some(self.ctx.module.stable_id.as_str()),
         call_kind: if self.ctx.options.optimization.is_pife_for_module_wrappers_enabled()
           || (self.ctx.linking_info.wrapped_by_import_defer
             && self.ctx.options.optimization.is_pife_for_deferred_module_wrappers_enabled())
@@ -1022,7 +1035,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           EsmWrapperBodyKind::Sync
         },
         decl_kind: self.esm_wrapper_decl_kind(wrapper_mode),
-        state: self.esm_wrapper_state(),
+        state: self.esm_wrapper_state(dependency_count),
       },
       self,
     ));
@@ -1039,11 +1052,10 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     wrapper_mode: ModuleWrapperMode,
   ) -> (String, String) {
     debug_assert!(
-      !self.ctx.linking_info.is_tla_or_contains_tla_dependency
-        && self.ctx.linking_info.import_defer_tracked_deps.is_none(),
-      "the root of a deferred group has a sync wrapper with no state record"
+      !self.ctx.linking_info.is_tla_or_contains_tla_dependency,
+      "the root of a deferred group has a synchronous wrapper"
     );
-    self.push_esm_wrapper_stmt(program, wrapper_ref, allocator::Vec::new_in(self), wrapper_mode);
+    self.push_esm_wrapper_stmt(program, wrapper_ref, allocator::Vec::new_in(self), 0, wrapper_mode);
     let wrapper = program.body.pop().expect("`push_esm_wrapper_stmt` pushes one statement");
     let text = wrapper.to_output_source_string(self.ctx.options.charset.is_ascii());
     let text = text.trim_end();
@@ -1053,7 +1065,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   /// Returns the hoisted form `function init_x()` for each module with
-  /// `ModuleWrapperMode::ExecutionOrder` and for each module that `import defer` wraps. A call of
+  /// `ModuleWrapperMode::ExecutionOrder` and for each module of a deferred closure. A call of
   /// `init_x` can run before the declaration of the module, for example from a member of a module
   /// cycle that the order puts first. A hoisted function is callable at such a call.
   /// `var init_x = ...` is not. A deferred access calls `init_x` at the position of the access, so
@@ -1061,7 +1073,8 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   /// code sees the `arguments` of `init_x`, and direct `eval` code sees its function context.
   fn esm_wrapper_decl_kind(&self, wrapper_mode: ModuleWrapperMode) -> EsmWrapperDeclKind {
     if matches!(wrapper_mode, ModuleWrapperMode::ExecutionOrder(_))
-      || self.ctx.linking_info.wrapped_by_import_defer
+      || (self.ctx.linking_info.wrapped_by_import_defer
+        && !self.ctx.linking_info.needs_lexical_esm_wrapper)
     {
       EsmWrapperDeclKind::HoistedFunction
     } else {
@@ -1069,10 +1082,12 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     }
   }
 
-  /// `__esmState` for a module that a deferred access observes, else `__esm` with profiler names
-  /// and `__esmMin` without.
+  /// Choose the readiness check for a deferred observation. Other wrappers use the ordinary
+  /// helper for the configured profiler mode.
   fn esm_wrapper_runtime_ref(&self) -> SymbolRef {
-    if self.ctx.linking_info.import_defer_tracked_deps.is_some() {
+    if self.ctx.linking_info.deferred_self_check {
+      self.canonical_ref_for_runtime("__esmSync")
+    } else if self.ctx.linking_info.import_defer_tracked_deps.is_some() {
       self.canonical_ref_for_runtime("__esmState")
     } else if self.ctx.options.profiler_names {
       self.canonical_ref_for_runtime("__esm")
@@ -1081,17 +1096,11 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     }
   }
 
-  /// The `__esmState` wrapper takes the body as a plain arrow, so it has no profiler name.
-  fn esm_wrapper_profiler_name(&self) -> Option<&str> {
-    (self.ctx.options.profiler_names && self.ctx.linking_info.import_defer_tracked_deps.is_none())
-      .then_some(self.ctx.module.stable_id.as_str())
-  }
-
   /// The `__esmState` wrapper of a tracked module (`import defer`): its dependency list
   /// `() => [init_y, ...]` (the init functions of the tracked modules that it requests, for the
   /// ready check of a deferred access), its own top-level await, and, for an async body,
   /// `__esmEnd` and `__esmFail`.
-  fn esm_wrapper_state(&self) -> Option<EsmWrapperState<'ast>> {
+  fn esm_wrapper_state(&self, dependency_count: usize) -> Option<EsmWrapperState<'ast>> {
     let deps = self.ctx.linking_info.import_defer_tracked_deps.as_ref()?;
     let elements = deps.iter().filter_map(|&dep| {
       let wrapper_ref = self.ctx.linking_infos[dep].wrapper_ref?;
@@ -1101,6 +1110,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       Expression::new_array_expression(SPAN, allocator::Vec::from_iter_in(elements, self), self);
     Some(EsmWrapperState {
       deps: Expression::new_arrow_returning(array, self),
+      dependency_count,
       own_tla: self.ctx.module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait),
       end_and_fail: self.ctx.linking_info.is_tla_or_contains_tla_dependency.then(|| {
         (
@@ -1213,6 +1223,13 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     }
 
     match expr {
+      Expression::ObjectExpression(_) | Expression::ArrayExpression(_)
+        if self.ctx.linking_info.shared_deferred_cjs_target =>
+      {
+        walk_js_mut::walk_expression(self, expr);
+        self.mark_cjs_export_literal(expr);
+        return;
+      }
       ast::Expression::CallExpression(call_expr) => {
         self.rewrite_hot_accept_call_deps(call_expr);
         if let Some(new_expr) = self.try_rewrite_global_require_call(call_expr) {
@@ -1370,6 +1387,23 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     walk_js_mut::walk_expression(self, expr);
   }
 
+  fn mark_cjs_export_literal(&self, expr: &mut Expression<'ast>) {
+    if self
+      .ctx
+      .module
+      .import_defer_scan
+      .as_ref()
+      .is_some_and(|scan| scan.cjs_export_literals.contains(&expr.node_id()))
+    {
+      *expr = Expression::new_call_with_arg(
+        self.finalized_expr_for_runtime_symbol("__cjsOrdinary"),
+        expr.take_in(self),
+        false,
+        self,
+      );
+    }
+  }
+
   /// The access evaluates the deferred module `x` first.
   /// - ESM `x`: `(init_x(), <access>)`.
   /// - CommonJS `x`: `(import_x || (import_x = __toESM(require_x()))).foo`. The import statement
@@ -1377,11 +1411,24 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   ///   one namespace object. The evaluation is the object of the member chain, so a call
   ///   `ns.fn()` keeps `import_x` as `this`, as the eager form `import_x.fn()` does. An access
   ///   with no such chain (`'foo' in ns`, an inlined export) uses
-  ///   `(import_x || (import_x = __toESM(require_x())), <access>)`.
+  ///   `(import_x || (import_x = __toESM(require_x())), <access>)`. For a shared bundled
+  ///   module `import_x` holds the reader, so an `in` check needs its return value as the RHS.
   fn wrap_deferred_access(&self, expr: &mut ast::Expression<'ast>, access: DeferredAccess) {
     let evaluate = match access {
       DeferredAccess::Cjs(rec_idx) => {
-        let Some(evaluate) = self.cjs_deferred_namespace_expr(rec_idx) else { return };
+        let Some((binding, shared)) = self.cjs_deferred_namespace_binding(rec_idx) else { return };
+        let evaluate = if shared {
+          let read = Expression::new_call_expression(SPAN, binding, None, [], false, self);
+          if let ast::Expression::BinaryExpression(binary) = expr
+            && binary.operator == ast::BinaryOperator::In
+          {
+            binary.right = read;
+            return;
+          }
+          read
+        } else {
+          binding
+        };
         let namespace_name =
           self.canonical_name_for(self.ctx.module.import_records[rec_idx].namespace_ref);
         if let Some(root) = member_chain_root(expr)

@@ -14,7 +14,7 @@ function read() {
 	return import_c.default.answer;
 }
 function init_route() {
-	return (init_route = __esmMin((() => {
+	return (init_route = __esmSync((() => {
 		// barrel.js
 		import_c = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 			module.exports = { answer: 42 };
@@ -23,7 +23,7 @@ function init_route() {
 }
 // main.js
 function run() {
-	return (init_route(), read)();
+	return (init_route(true), read)();
 }
 export { run };
 

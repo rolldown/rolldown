@@ -10,19 +10,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 // log.js
 var log;
 function init_log() {
-	return (init_log = __esmMin((() => {
+	return (init_log = __esmState((() => {
 		log = [];
-	})))();
+	}), () => []))(arguments[0]);
 }
 // t.js
 var value$1;
 function init_t() {
 	return (init_t = __esmState((() => {
-		init_log();
+		init_log(init_t);
 		init_a(init_t);
 		log.push("t");
 		value$1 = "ta";
-	}), () => [init_a]))(arguments[0]);
+	}), () => [init_log, init_a]))(arguments[0]);
 }
 // a.js
 function readT() {
@@ -30,32 +30,38 @@ function readT() {
 }
 function init_a() {
 	return (init_a = __esmState((() => {
-		init_log();
+		init_log(init_a);
 		log.push("a");
-	}), () => [init_t]))(arguments[0]);
+	}), () => [init_log, init_t]))(arguments[0]);
+}
+// helper.js
+function init_helper() {
+	return (init_helper = __esmState((() => {
+		init_log(init_helper);
+		log.push("helper");
+	}), () => [init_log]))(arguments[0]);
 }
 // root.js
 var value;
 function init_root() {
-	return (init_root = __esmMin((() => {
-		init_log();
-		init_a();
-		// helper.js
-		init_log();
-		log.push("helper");
-		// root.js
-		init_log();
-		init_a();
+	return (init_root = __esmState((() => {
+		init_log(init_root);
+		init_a(init_root);
+		init_helper(init_root);
 		log.push("root");
 		value = "a";
-	})))();
+	}), () => [
+		init_log,
+		init_a,
+		init_helper
+	]))(arguments[0]);
 }
 // main.js
 init_log();
 function run() {
 	return [
-		(init_root(), value),
-		(init_root(), readT)(),
+		(__esmDefer(init_root), value),
+		(__esmDefer(init_root), readT)(),
 		...log
 	];
 }

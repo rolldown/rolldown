@@ -10,18 +10,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 // log.js
 var log;
 function init_log() {
-	return (init_log = __esmMin((() => {
+	return (init_log = __esmState((() => {
 		log = [];
-	})))();
+	}), () => []))(arguments[0]);
 }
 // x.js
 var x_exports = /* @__PURE__ */ __exportAll({ value: () => 1 });
-var x_deferred = /* @__PURE__ */ __deferNs(() => (init_x(), x_exports), x_exports);
+var x_deferred = /* @__PURE__ */ __deferNs(() => (__esmDefer(init_x), x_exports), x_exports);
 function init_x() {
-	return (init_x = __esmMin((() => {
-		init_log();
+	return (init_x = __esmState((() => {
+		init_log(init_x);
 		log.push("x");
-	})))();
+	}), () => [init_log]))(arguments[0]);
 }
 // main.js
 init_log();
@@ -44,7 +44,7 @@ const afterUpdate = [...log];
 const deleteError = errorName(() => {
 	delete x_deferred.value;
 });
-const value = (init_x(), 1);
+const value = (__esmDefer(init_x), 1);
 export { afterSet, afterUpdate, deleteError, setError, updateError, value };
 
 ```

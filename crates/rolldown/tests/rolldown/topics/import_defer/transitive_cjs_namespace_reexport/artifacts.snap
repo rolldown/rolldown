@@ -23,7 +23,7 @@ exports.consumerRead = consumerRead;
 // d.js
 var import_ext_ns;
 function init_d() {
-	return (init_d = __esmMin((() => {
+	return (init_d = __esmSync((() => {
 		import_ext_ns = /* @__PURE__ */ __toESMCached("ext-ns", require("ext-ns"));
 	})))();
 }
@@ -49,8 +49,8 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_d = require("./d.js");
 // main.js
 (globalThis.__extLog ??= []).push("main");
-const read = () => (require_d.init_d(), require_d.import_ext_ns.y);
-const escape = () => (require_d.init_d(), require_d.import_ext_ns);
+const read = () => (require_d.init_d(true), require_d.import_ext_ns.y);
+const escape = () => (require_d.init_d(true), require_d.import_ext_ns);
 const loadConsumer = () => Promise.resolve().then(() => require("./consumer.js"));
 exports.escape = escape;
 exports.loadConsumer = loadConsumer;
@@ -82,7 +82,7 @@ exports.consumerRead = consumerRead;
 // d.js
 var import_ext_ns;
 function init_d() {
-	return (init_d = __esmMin((() => {
+	return (init_d = __esmSync((() => {
 		import_ext_ns = /* @__PURE__ */ __toESMCached("ext-ns", require("ext-ns"));
 	})))();
 }
@@ -108,8 +108,8 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_d = require("./d.js");
 // main.js
 (globalThis.__extLog ??= []).push("main");
-const read = () => (require_d.init_d(), require_d.import_ext_ns.y);
-const escape = () => (require_d.init_d(), require_d.import_ext_ns);
+const read = () => (require_d.init_d(true), require_d.import_ext_ns.y);
+const escape = () => (require_d.init_d(true), require_d.import_ext_ns);
 const loadConsumer = () => Promise.resolve().then(() => require("./consumer.js"));
 exports.escape = escape;
 exports.loadConsumer = loadConsumer;

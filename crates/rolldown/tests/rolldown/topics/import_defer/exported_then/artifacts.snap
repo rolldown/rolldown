@@ -10,22 +10,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 // log.js
 var log;
 function init_log() {
-	return (init_log = __esmMin((() => {
+	return (init_log = __esmState((() => {
 		log = [];
-	})))();
+	}), () => []))(arguments[0]);
 }
 // x.js
 var x_exports = /* @__PURE__ */ __exportAll({
 	foo: () => "foo",
 	then: () => then
 });
-var x_deferred = /* @__PURE__ */ __deferNs(() => (init_x(), x_exports), x_exports), then;
+var x_deferred = /* @__PURE__ */ __deferNs(() => (__esmDefer(init_x), x_exports), x_exports), then;
 function init_x() {
-	return (init_x = __esmMin((() => {
-		init_log();
+	return (init_x = __esmState((() => {
+		init_log(init_x);
 		log.push("x");
 		then = "then";
-	})))();
+	}), () => [init_log]))(arguments[0]);
 }
 // main.js
 init_log();

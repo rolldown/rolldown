@@ -355,6 +355,11 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
             // `module.exports = <value>` replaces the entire exports object,
             // so all prior `exports.xxx` constants are stale.
             self.has_cjs_exports_reassignment = true;
+            if self.immutable_ctx.options.experimental.is_import_defer_enabled()
+              && node.operator == ast::AssignmentOperator::Assign
+            {
+              self.record_cjs_export_source(&node.right);
+            }
           }
           if id.name == "exports" && self.is_global_identifier_reference(id) {
             self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));

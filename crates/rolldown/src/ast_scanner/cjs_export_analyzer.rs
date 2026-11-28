@@ -2,9 +2,9 @@ use oxc::ast::{
   AstKind, MemberExpressionKind,
   ast::{self, AssignmentExpression, Expression, IdentifierReference, PropertyKey},
 };
-use oxc::semantic::NodeId;
+use oxc::semantic::{NodeId, SymbolId};
 use oxc_str::{CompactStr, JSStr};
-use rolldown_common::{AstScopes, EcmaModuleAstUsage};
+use rolldown_common::{AstScopes, EcmaModuleAstUsage, StmtInfoMeta};
 use rolldown_ecmascript_utils::ExpressionExt;
 
 use crate::ast_scanner::IdentifierReferenceKind;
@@ -44,7 +44,104 @@ pub enum CommonJsAstType {
   Reexport(NodeId),
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub(super) enum CjsExportBinding {
+  Value(SymbolId),
+  Factory(SymbolId),
+}
+
+fn literal_allocation(expr: &Expression<'_>) -> Option<NodeId> {
+  match expr.get_inner_expression() {
+    expr @ (Expression::ObjectExpression(_) | Expression::ArrayExpression(_)) => {
+      Some(expr.node_id())
+    }
+    _ => None,
+  }
+}
+
+fn returned_literal(body: &ast::FunctionBody<'_>) -> Option<NodeId> {
+  let ast::Statement::ReturnStatement(ret) = body.statements.last()? else { return None };
+  literal_allocation(ret.argument.as_ref()?)
+}
+
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
+  pub(super) fn record_cjs_export_source(&mut self, rhs: &Expression<'_>) {
+    if let Some(id) = literal_allocation(rhs) {
+      self.current_stmt_info.meta.insert(StmtInfoMeta::CjsExportsLiteral);
+      self.result.import_defer_scan.get_or_insert_default().cjs_export_literals.insert(id);
+      return;
+    }
+    let binding = match rhs.get_inner_expression() {
+      Expression::Identifier(id) => {
+        self.resolve_symbol_from_reference(id).map(CjsExportBinding::Value)
+      }
+      Expression::CallExpression(call) => {
+        let Expression::Identifier(id) = call.callee.get_inner_expression() else { return };
+        self.resolve_symbol_from_reference(id).map(CjsExportBinding::Factory)
+      }
+      _ => None,
+    };
+    if let Some(binding) = binding {
+      self.cjs_export_bindings.insert(binding);
+    }
+  }
+
+  /// Mark the allocation, never the value returned by a call. A factory can take another
+  /// return path or be reassigned to application code that returns a proxy.
+  /// See internal-docs/import-defer/implementation.md.
+  pub(super) fn collect_indirect_cjs_export_literals(&mut self, program: &ast::Program<'_>) {
+    let bindings = &self.cjs_export_bindings;
+    let scan = &mut self.result.import_defer_scan;
+    for (stmt, info) in program.body.iter().zip(self.result.stmt_infos.iter_mut().skip(1)) {
+      let mut mark = |id: Option<NodeId>| {
+        if let Some(id) = id {
+          scan.get_or_insert_default().cjs_export_literals.insert(id);
+          info.meta.insert(StmtInfoMeta::CjsExportsLiteral);
+        }
+      };
+      match stmt {
+        ast::Statement::FunctionDeclaration(f) => {
+          if f
+            .id
+            .as_ref()
+            .is_some_and(|id| bindings.contains(&CjsExportBinding::Factory(id.symbol_id())))
+            && !f.r#async
+            && !f.generator
+          {
+            mark(f.body.as_deref().and_then(returned_literal));
+          }
+        }
+        ast::Statement::VariableDeclaration(decl) if decl.kind.is_const() => {
+          for var in &decl.declarations {
+            let (ast::BindingPattern::BindingIdentifier(id), Some(init)) = (&var.id, &var.init)
+            else {
+              continue;
+            };
+            if bindings.contains(&CjsExportBinding::Value(id.symbol_id())) {
+              mark(literal_allocation(init));
+            }
+            if bindings.contains(&CjsExportBinding::Factory(id.symbol_id())) {
+              match init.get_inner_expression() {
+                Expression::ArrowFunctionExpression(f) if !f.r#async => {
+                  mark(
+                    f.get_expression()
+                      .and_then(literal_allocation)
+                      .or_else(|| f.get_function_body().and_then(returned_literal)),
+                  );
+                }
+                Expression::FunctionExpression(f) if !f.r#async && !f.generator => {
+                  mark(f.body.as_deref().and_then(returned_literal));
+                }
+                _ => {}
+              }
+            }
+          }
+        }
+        _ => {}
+      }
+    }
+  }
+
   pub fn commonjs_export_analyzer(
     &self,
     ident_ref: &IdentifierReference,

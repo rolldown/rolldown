@@ -37,7 +37,7 @@ impl GenerateStage<'_> {
   ///
   /// Call it after `commit_cross_chunk_links`, which writes the chunk exports, and after
   /// `ensure_lazy_module_initialization_order`, because a member must not have a moved init call.
-  /// Call it after `plan_dynamic_defer_declarations`, which sets the anchors, and before
+  /// Call it after `plan_defer_declarations`, which sets the anchors, and before
   /// `finalize_modules`, which reads the groups.
   /// See internal-docs/import-defer/implementation.md ("Deferred groups").
   pub fn group_deferred_modules(
@@ -85,10 +85,12 @@ impl GenerateStage<'_> {
           && module_to_chunk[idx].is_some()
           && meta.is_included
           && meta.wrapped_by_import_defer
+          // Concatenation would put the body inside the root's hoisted function.
+          && !meta.needs_lexical_esm_wrapper
           && matches!(meta.wrap_kind(), WrapKind::Esm)
           && meta.wrapper_ref.is_some()
           && !meta.is_tla_or_contains_tla_dependency
-          && meta.import_defer_tracked_deps.is_none()
+          && (meta.import_defer_tracked_deps.is_none() || keeps_wrapper.contains(&idx))
           && !meta.dynamic_defer_target
           && !chunk_graph.deferred_modules_run_at_load.contains(&idx)
           && !anchors.contains(&idx)

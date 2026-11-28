@@ -143,7 +143,7 @@ impl GenerateStage<'_> {
         continue;
       };
 
-      let expected_order = self.expected_order_for_root(root);
+      let expected_order = self.expected_order_for_root(root, true);
       let (actual_order, trigger_hosts) =
         self.actual_order_for_root(root, root_chunk, chunk_graph, &import_edges);
       let mut at_risk = self.at_risk_modules(&expected_order, &actual_order, &trigger_hosts);
@@ -759,7 +759,7 @@ impl GenerateStage<'_> {
       if !self.link_output.metas[root].is_included {
         continue;
       }
-      for module_idx in self.expected_order_for_root_with_states(root, &mut states) {
+      for module_idx in self.expected_order_for_root_with_states(root, &mut states, true) {
         if self.is_order_wrap_eligible(module_idx) {
           plan.insert(module_idx);
         }
@@ -768,15 +768,20 @@ impl GenerateStage<'_> {
     OrderAnalysis { plan }
   }
 
-  fn expected_order_for_root(&self, root: ModuleIdx) -> Vec<ModuleIdx> {
+  pub(super) fn expected_order_for_root(
+    &self,
+    root: ModuleIdx,
+    include_deferred: bool,
+  ) -> Vec<ModuleIdx> {
     let mut states = index_vec![VisitState::Unvisited; self.link_output.module_table.modules.len()];
-    self.expected_order_for_root_with_states(root, &mut states)
+    self.expected_order_for_root_with_states(root, &mut states, include_deferred)
   }
 
   fn expected_order_for_root_with_states(
     &self,
     root: ModuleIdx,
     states: &mut IndexVec<ModuleIdx, VisitState>,
+    include_deferred: bool,
   ) -> Vec<ModuleIdx> {
     let mut order = Vec::new();
 
@@ -800,7 +805,7 @@ impl GenerateStage<'_> {
         let rec = &module.import_records[rec_idx];
         *next_import_idx += 1;
 
-        if rec.kind != ImportKind::Import {
+        if rec.kind != ImportKind::Import || (!include_deferred && rec.is_defer_phase()) {
           continue;
         }
         let Some(importee_idx) = rec.resolved_module else { continue };

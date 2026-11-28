@@ -819,6 +819,11 @@ fn add_wrapped_esm_init_targets_for_static_member_reads(
           opaque_use = true;
         }
         SymbolOrMemberExprRef::MemberExpr(member_expr) if member_expr.object_ref == local_ref => {
+          // The finalizer calls this init at the property access. Forwarding the namespace
+          // through an eager import of a barrel does not evaluate the deferred target.
+          if ctx.importer_meta.deferred_access_targets.contains_key(&member_expr.node_id) {
+            continue;
+          }
           if let Some(module_idx) = consumer_local_namespace
             && let Some(property) = member_expr.prop_and_span_list.first()
             && !export_has_consumer_local_init(ctx, module_idx, &property.name)

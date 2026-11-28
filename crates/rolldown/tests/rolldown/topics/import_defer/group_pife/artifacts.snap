@@ -14,14 +14,14 @@ function read() {
 	return value;
 }
 function init_r() {
-	return (init_r = __esmMin((() => {
+	return (init_r = __esmSync((() => {
 // m.js
 value = 40 + (globalThis.__two ?? 2);
 })))();
 }
 // main.js
 function run() {
-	return (init_r(), read)();
+	return (init_r(true), read)();
 }
 
 export { run };
@@ -42,14 +42,14 @@ function read() {
 	return value;
 }
 function init_r() {
-	return (init_r = __esmMin(() => {
+	return (init_r = __esmSync(() => {
 // m.js
 value = 40 + (globalThis.__two ?? 2);
 }))();
 }
 // main.js
 function run() {
-	return (init_r(), read)();
+	return (init_r(true), read)();
 }
 
 export { run };

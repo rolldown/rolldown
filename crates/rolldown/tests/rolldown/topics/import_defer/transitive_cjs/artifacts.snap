@@ -13,10 +13,10 @@ var d_exports = /* @__PURE__ */ __exportAll({
 	nsValue: () => nsValue,
 	x: () => x
 }, 2);
-var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(), d_exports));
+var d_deferred = /* @__PURE__ */ __deferNs(() => (init_d(true), d_exports));
 var import_ext_named, import_ext_ns, x, nsValue;
 function init_d() {
-	return (init_d = __esmMin((() => {
+	return (init_d = __esmSync((() => {
 		require("ext-bare");
 		import_ext_named = require("ext-named");
 		import_ext_ns = /* @__PURE__ */ __toESMCached("ext-ns", require("ext-ns"));
@@ -29,9 +29,9 @@ function init_d() {
 // main.js
 (globalThis.__extLog ??= []).push("main");
 const read = () => [
-	(init_d(), x),
-	(init_d(), nsValue),
-	(init_d(), d_deferred.starValue)
+	(init_d(true), x),
+	(init_d(true), nsValue),
+	(init_d(true), d_deferred.starValue)
 ];
 const keys = () => Object.keys(d_deferred);
 exports.keys = keys;
@@ -53,10 +53,10 @@ var d_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
 	nsValue: () => nsValue,
 	x: () => x
 }, 2);
-var d_deferred = /* @__PURE__ */ require_rolldown_runtime.__deferNs(() => (init_d(), d_exports));
+var d_deferred = /* @__PURE__ */ require_rolldown_runtime.__deferNs(() => (init_d(true), d_exports));
 var import_ext_named, import_ext_ns, x, nsValue;
 function init_d() {
-	return (init_d = require_rolldown_runtime.__esmMin((() => {
+	return (init_d = require_rolldown_runtime.__esmSync((() => {
 		require("ext-bare");
 		import_ext_named = require("ext-named");
 		import_ext_ns = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-ns", require("ext-ns"));
@@ -72,9 +72,9 @@ function init_main() {
 	return (init_main = require_rolldown_runtime.__esmMin((() => {
 		(globalThis.__extLog ??= []).push("main");
 		read = () => [
-			(init_d(), x),
-			(init_d(), nsValue),
-			(init_d(), d_deferred.starValue)
+			(init_d(true), x),
+			(init_d(true), nsValue),
+			(init_d(true), d_deferred.starValue)
 		];
 		keys = () => Object.keys(d_deferred);
 	})))();
@@ -99,6 +99,12 @@ Object.defineProperty(exports, "__esmMin", {
 	enumerable: true,
 	get: function() {
 		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__esmSync", {
+	enumerable: true,
+	get: function() {
+		return __esmSync;
 	}
 });
 Object.defineProperty(exports, "__exportAll", {

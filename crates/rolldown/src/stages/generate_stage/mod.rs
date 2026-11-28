@@ -119,12 +119,14 @@ use crate::{
   utils::external_import_interop::ChunkAssignments,
 };
 
+mod async_fallback_chunks;
 mod chunk_ext;
 mod chunk_optimizer;
 mod code_splitting;
 mod compute_cross_chunk_links;
 mod compute_wrapped_esm_init_metadata;
 mod deferred_groups;
+mod deferred_import_facades;
 mod detect_ineffective_dynamic_imports;
 mod dynamic_already_loaded;
 mod dynamic_entry_namespace;
@@ -138,7 +140,7 @@ pub mod minify_chunks;
 mod order_analysis;
 pub mod order_wrap_state;
 mod order_wrapping;
-mod place_dynamic_defer_declarations;
+mod place_defer_declarations;
 mod post_banner_footer;
 mod reduced_chunk_graph;
 mod render_chunk_to_assets;
@@ -259,6 +261,7 @@ impl<'a> GenerateStage<'a> {
       &final_esm_init_metadata,
     );
     if import_defer {
+      self.add_deferred_import_facades(&mut chunk_graph, &order_state);
       self.trace_action_chunks_infos(&chunk_graph);
     }
 
@@ -320,8 +323,7 @@ impl<'a> GenerateStage<'a> {
     }
 
     let resolved_file_urls = self.resolve_file_urls(&chunk_graph).await?;
-    let dynamic_defer_placements =
-      self.plan_dynamic_defer_declarations(&mut chunk_graph, &order_state);
+    let defer_placements = self.plan_defer_declarations(&mut chunk_graph, &order_state);
     self.group_deferred_modules(&mut chunk_graph, &final_esm_init_metadata);
     self.finalize_modules(
       &mut chunk_graph,
@@ -341,7 +343,7 @@ impl<'a> GenerateStage<'a> {
         }
       }
     }
-    Self::place_dynamic_defer_declarations(&mut chunk_graph, dynamic_defer_placements);
+    Self::place_defer_declarations(&mut chunk_graph, defer_placements);
     self.detect_ineffective_dynamic_imports(&chunk_graph);
     self.render_chunk_to_assets(&chunk_graph, ast_table, &used_symbol_refs, &order_state).await
   }

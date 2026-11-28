@@ -16,7 +16,7 @@ init_a();
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 function init_a() {
-	return (init_a = __esmMin((() => {
+	return (init_a = __esmSync((() => {
 		globalThis.__initLog.push("a");
 	})))();
 }
@@ -55,7 +55,7 @@ export { access };
 ```js
 import { t as init_a } from "./a.js";
 // r.js
-const read = () => (init_a(), "a");
+const read = () => (init_a(true), "a");
 export { read };
 
 ```
@@ -79,7 +79,7 @@ export { seen };
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 function init_a() {
-	return (init_a = __esmMin((() => {
+	return (init_a = __esmSync((() => {
 		globalThis.__initLog.push("a");
 	})))();
 }
@@ -122,7 +122,7 @@ exports.access = access;
 ```js
 const require_a = require("./a.js");
 // r.js
-const read = () => (require_a.init_a(), "a");
+const read = () => (require_a.init_a(true), "a");
 exports.read = read;
 
 ```

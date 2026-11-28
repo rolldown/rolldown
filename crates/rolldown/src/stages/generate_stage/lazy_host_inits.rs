@@ -5,6 +5,7 @@ use rolldown_common::{
   ImportRecordIdx, ModuleIdx, NormalModule, NormalizedBundlerOptions, OutputExports, OutputFormat,
   PreliminaryFilename, RuntimeHelper, StaticImport, UsedSymbolRefs, WrapKind,
 };
+use rolldown_error::{BuildDiagnostic, EventKind};
 use rolldown_utils::{concat_string, dashmap::FxDashMap, make_unique_name::make_unique_name};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -47,6 +48,14 @@ enum HostSplit {
   /// The deferred modules that the chunk runs at load, at their place
   /// (`ChunkGraph::deferred_modules_run_at_load`).
   RunAtLoad(Vec<ModuleIdx>),
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) enum HostPlacement {
+  /// Move the modules as one synchronous block.
+  Together,
+  /// Give each module its own evaluation boundary in the loader.
+  Separate,
 }
 
 /// An init of `LazyHostInitPlanner::add_declined_inits`, and the call that it moves out of the
@@ -129,6 +138,7 @@ impl GenerateStage<'_> {
       order_state,
       used_symbol_refs,
       final_esm_init_metadata,
+      loads_split_async_group: chunks_loading_split_async_groups(chunk_graph),
       runs_code_at_load: FxHashMap::default(),
     };
     chunk_graph.lazy_host_inits = planner.plan();
@@ -164,7 +174,7 @@ impl GenerateStage<'_> {
   ///
   /// Call it after the modules have their chunks, and before the chunk modules are sorted.
   /// See internal-docs/import-defer/implementation.md ("Split before a deferred import").
-  pub(super) fn split_modules_before_deferred_imports(&self, chunk_graph: &mut ChunkGraph) {
+  pub(super) fn split_modules_before_deferred_imports(&mut self, chunk_graph: &mut ChunkGraph) {
     let options = self.options;
     if !options.experimental.is_import_defer_enabled()
       || options.is_strict_execution_order_enabled()
@@ -198,15 +208,22 @@ impl GenerateStage<'_> {
         (chunk_idx, split)
       })
       .collect::<Vec<_>>();
+    let mut grouped_inits = FxHashSet::default();
     for (chunk_idx, split) in host_splits {
       match split {
         HostSplit::Keep => {}
         HostSplit::Move(moved) => {
-          self.move_modules_to_new_common_chunk(chunk_graph, chunk_idx, &moved);
+          self.move_host_modules(chunk_graph, chunk_idx, &moved, HostPlacement::Together);
+        }
+        HostSplit::RunAtLoad(modules)
+          if chunk_graph.chunk_table[chunk_idx].chunk_reason_type.group_index().is_some() =>
+        {
+          grouped_inits.extend(modules);
         }
         HostSplit::RunAtLoad(modules) => chunk_graph.deferred_modules_run_at_load.extend(modules),
       }
     }
+    self.plan_grouped_run_at_load(chunk_graph, grouped_inits);
     if module_id_order {
       return;
     }
@@ -218,52 +235,179 @@ impl GenerateStage<'_> {
       })
       .collect::<Vec<_>>();
     for (chunk_idx, moved) in splits {
-      self.move_modules_to_new_common_chunk(chunk_graph, chunk_idx, &moved);
+      self.move_host_modules(chunk_graph, chunk_idx, &moved, HostPlacement::Together);
     }
   }
 
-  /// Moves the modules to a new common chunk with the bits of their chunk. The old chunk keeps the
-  /// runtime helpers of its other modules. `ExportAll` stays: the chunk optimizer adds it for the
-  /// namespace of an eliminated facade.
-  fn move_modules_to_new_common_chunk(
+  /// Prefer to keep the manual group together. A deferred request can put a wrapper before the eager
+  /// members of its group in chunk order, even when every eager importer needs it *after* them.
+  /// In that case leave the init with the importer. Loading the group from another entry then
+  /// only runs its eager members. See internal-docs/import-defer/implementation.md.
+  fn plan_grouped_run_at_load(
+    &mut self,
+    chunk_graph: &mut ChunkGraph,
+    mut candidates: FxHashSet<ModuleIdx>,
+  ) {
+    if candidates.is_empty() {
+      return;
+    }
+    let runtime = self.link_output.runtime.id();
+    let mut group_sizes = FxHashMap::default();
+    for &idx in &candidates {
+      let group = chunk_graph.module_to_chunk[idx].expect("candidate has a host");
+      group_sizes.entry(group).or_insert_with(|| {
+        chunk_graph.chunk_table[group]
+          .modules
+          .iter()
+          .filter(|&&m| {
+            m != runtime && matches!(self.link_output.metas[m].wrap_kind(), WrapKind::None)
+          })
+          .count()
+      });
+    }
+    // The ordinal in this flattened list is the entry bit assigned by `init_entry_point`.
+    let eager_entries: Vec<_> = self
+      .link_output
+      .entries
+      .values()
+      .flatten()
+      .map(|entry| entry.is_eagerly_requested(&self.link_output.module_table.modules))
+      .collect();
+    let mut entry_flags = eager_entries.as_slice();
+    let mut seen_eagerly = FxHashSet::default();
+    let mut early_entries = FxHashMap::<ModuleIdx, usize>::default();
+    for (&root, entries) in &self.link_output.entries {
+      let (flags, rest) = entry_flags.split_at(entries.len());
+      entry_flags = rest;
+      let eager_count = flags.iter().filter(|&&eager| eager).count();
+      let mut remaining = group_sizes.clone();
+      for idx in self.expected_order_for_root(root, false) {
+        let Some(count) =
+          chunk_graph.module_to_chunk[idx].and_then(|group| remaining.get_mut(&group))
+        else {
+          continue;
+        };
+        if idx != runtime && matches!(self.link_output.metas[idx].wrap_kind(), WrapKind::None) {
+          *count -= 1;
+        } else if candidates.contains(&idx) {
+          seen_eagerly.insert(idx);
+          if *count != 0 {
+            chunk_graph.deferred_modules_run_at_load.insert(idx);
+            if eager_count != 0 {
+              *early_entries.entry(idx).or_default() += eager_count;
+            }
+          }
+        }
+      }
+    }
+    // Keep the original placement when no eager entry walk reached the candidate.
+    candidates.retain(|idx| !seen_eagerly.contains(idx));
+    chunk_graph.deferred_modules_run_at_load.extend(candidates);
+
+    let mut consumer_counts = FxHashMap::default();
+    let mut conflicts = early_entries
+      .into_iter()
+      .filter_map(|(idx, count)| {
+        let group = chunk_graph.module_to_chunk[idx]?;
+        let consumers = consumer_counts.entry(group).or_insert_with(|| {
+          chunk_graph.chunk_table[group]
+            .bits
+            .index_of_one()
+            .filter(|&bit| eager_entries[bit as usize])
+            .count()
+        });
+        (count < *consumers).then_some(group)
+      })
+      .collect::<Vec<_>>();
+    conflicts.sort_unstable();
+    conflicts.dedup();
+    for group in conflicts {
+      self.split_conflicting_defer_group(chunk_graph, group);
+    }
+  }
+
+  /// The group's global init would also evaluate the candidate in an entry that defers it or
+  /// requests it later. Keep the wrapped members together. Give the remaining eager members
+  /// independent files so the loader can run them in each entry's request order, even with TLA.
+  fn split_conflicting_defer_group(&mut self, chunk_graph: &mut ChunkGraph, group: ChunkIdx) {
+    let chunk = &chunk_graph.chunk_table[group];
+    let runtime = self.link_output.runtime.id();
+    let mut moved: Vec<_> = chunk
+      .modules
+      .iter()
+      .copied()
+      .filter(|&idx| idx != runtime && self.link_output.metas[idx].wrap_kind().is_none())
+      .collect();
+    if !self.host_can_move(chunk_graph, group, &moved, HostPlacement::Separate) {
+      return;
+    }
+    moved.sort_unstable_by_key(|&idx| self.link_output.module_table[idx].exec_order());
+    let group_name = chunk.name.as_deref().expect("a manual group has a name");
+    let module =
+      self.link_output.module_table[moved[0]].as_normal().expect("a chunk member is internal");
+    let message = format!(
+      "Code splitting group `{group_name}` uses separate chunks for its eager modules because its entries require different evaluation orders with `import defer`."
+    );
+    self.link_output.diagnostics.push(
+      BuildDiagnostic::oxc_error(
+        module.ecma_view.source.clone(),
+        module.id.to_string(),
+        String::new(),
+        message,
+        vec![],
+        EventKind::UnsupportedFeatureError,
+      )
+      .with_severity_warning(),
+    );
+    for idx in &chunk.modules {
+      chunk_graph.deferred_modules_run_at_load.remove(idx);
+    }
+    self.move_host_modules(chunk_graph, group, &moved, HostPlacement::Separate);
+    for idx in moved {
+      if self.link_output.metas[idx].is_tla_or_contains_tla_dependency {
+        chunk_graph.split_async_group_chunks.insert(chunk_graph.module_to_chunk[idx].unwrap());
+      }
+    }
+  }
+
+  /// The new common chunks inherit the entry bits of the old chunk. Keep runtime helpers that
+  /// its remaining modules need, including `ExportAll` for eliminated facades.
+  pub(super) fn move_host_modules(
     &self,
     chunk_graph: &mut ChunkGraph,
     chunk_idx: ChunkIdx,
     moved: &[ModuleIdx],
+    placement: HostPlacement,
   ) {
     let metas = &self.link_output.metas;
-    let chunk = &chunk_graph.chunk_table[chunk_idx];
-    let bits = chunk.bits.clone();
-    let mut split = Chunk::new(
-      None,
-      None,
-      bits.clone(),
-      vec![],
-      ChunkKind::Common,
-      chunk.input_base.clone(),
-      None,
-    );
-    split.add_creation_reason(
-      ChunkCreationReason::CommonChunk { bits: &bits, link_output: self.link_output },
-      self.options,
-    );
-    let split_idx = chunk_graph.add_chunk(split);
-    let moved_set = moved.iter().copied().collect::<FxHashSet<_>>();
     let old = &mut chunk_graph.chunk_table[chunk_idx];
-    old.modules.retain(|module_idx| !moved_set.contains(module_idx));
+    let bits = old.bits.clone();
+    let input_base = old.input_base.clone();
+    let moved_set = moved.iter().copied().collect::<FxHashSet<_>>();
+    old.modules.retain(|idx| !moved_set.contains(idx));
     let helpers_of = |modules: &[ModuleIdx]| {
-      modules.iter().fold(RuntimeHelper::empty(), |helpers, module_idx| {
-        helpers | metas[*module_idx].depended_runtime_helper
-      })
+      modules
+        .iter()
+        .fold(RuntimeHelper::empty(), |helpers, &idx| helpers | metas[idx].depended_runtime_helper)
     };
     let moved_only = helpers_of(moved).difference(helpers_of(&old.modules));
     old.depended_runtime_helper.remove(moved_only.difference(RuntimeHelper::ExportAll));
-    for &module_idx in moved {
-      chunk_graph.add_module_to_chunk(
-        module_idx,
-        split_idx,
-        metas[module_idx].depended_runtime_helper,
+
+    let chunk_size = match placement {
+      HostPlacement::Together => moved.len(),
+      HostPlacement::Separate => 1,
+    };
+    for members in moved.chunks(chunk_size) {
+      let mut split =
+        Chunk::new(None, None, bits.clone(), vec![], ChunkKind::Common, input_base.clone(), None);
+      split.add_creation_reason(
+        ChunkCreationReason::CommonChunk { bits: &bits, link_output: self.link_output },
+        self.options,
       );
+      let split_idx = chunk_graph.add_chunk(split);
+      for &idx in members {
+        chunk_graph.add_module_to_chunk(idx, split_idx, metas[idx].depended_runtime_helper);
+      }
     }
   }
 
@@ -372,7 +516,7 @@ impl GenerateStage<'_> {
     if can_move
       && one_place
       && chunk.chunk_reason_type.group_index().is_none()
-      && self.host_can_move(chunk_graph, chunk_idx, &moved)
+      && self.host_can_move(chunk_graph, chunk_idx, &moved, HostPlacement::Together)
     {
       return HostSplit::Move(moved);
     }
@@ -387,13 +531,18 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
     chunk_idx: ChunkIdx,
     moved: &[ModuleIdx],
+    placement: HostPlacement,
   ) -> bool {
     let link_output = &*self.link_output;
     let module_table = &link_output.module_table;
     let metas = &link_output.metas;
     let chunk = &chunk_graph.chunk_table[chunk_idx];
     let moved_set = moved.iter().copied().collect::<FxHashSet<_>>();
-    if moved.iter().any(|&module_idx| metas[module_idx].is_tla_or_contains_tla_dependency)
+    if moved.is_empty()
+      || (placement == HostPlacement::Separate
+        && moved.iter().any(|idx| link_output.entries.contains_key(idx)))
+      || (placement == HostPlacement::Together
+        && moved.iter().any(|&module_idx| metas[module_idx].is_tla_or_contains_tla_dependency))
       || chunk_graph
         .common_chunk_preserve_export_names_modules
         .get(&chunk_idx)
@@ -412,14 +561,23 @@ impl GenerateStage<'_> {
         rec.kind.is_dynamic()
           && rec.resolved_module.is_some_and(|target_idx| {
             chunk_graph.module_to_chunk[target_idx] == Some(chunk_idx)
-              && moved_set.contains(&target_idx) != is_moved
+              && target_idx != module_idx
+              && (moved_set.contains(&target_idx) != is_moved
+                || (is_moved && placement == HostPlacement::Separate))
           })
       }) {
         return false;
       }
-      if !is_moved {
+      if !is_moved || placement == HostPlacement::Separate {
         self.push_kept_static_importees(module_idx, &mut importees);
-        if importees.drain(..).any(|importee| moved_set.contains(&importee)) {
+        // Keep cycles within one file. On a back edge the dependency follows its importer in
+        // execution order. A module that stays must also keep its eager imports in the host.
+        if importees.drain(..).any(|importee| {
+          moved_set.contains(&importee)
+            && (!is_moved
+              || (importee != module_idx
+                && module_table[importee].exec_order() > module.exec_order))
+        }) {
           return false;
         }
       }
@@ -842,6 +1000,33 @@ pub(super) fn avoid_reserved_names(
   if name == original { filename } else { PreliminaryFilename::new(name, None) }
 }
 
+/// A static import waits for a split async group member even through intermediate chunks.
+fn chunks_loading_split_async_groups(graph: &ChunkGraph) -> FxHashSet<ChunkIdx> {
+  let mut loads_async = graph.split_async_group_chunks.clone();
+  if loads_async.is_empty() {
+    return loads_async;
+  }
+  let mut importers = IndexVec::from_vec(vec![Vec::new(); graph.chunk_table.len()]);
+  for (idx, chunk) in graph.chunk_table.iter_enumerated() {
+    if graph.chunk_is_live(idx) {
+      for import in &chunk.static_imports {
+        if let StaticImport::Chunk(dep) = *import {
+          importers[dep].push(idx);
+        }
+      }
+    }
+  }
+  let mut stack: Vec<_> = loads_async.iter().copied().collect();
+  while let Some(idx) = stack.pop() {
+    for &importer in &importers[idx] {
+      if loads_async.insert(importer) {
+        stack.push(importer);
+      }
+    }
+  }
+  loads_async
+}
+
 /// The read-only inputs of `plan_lazy_host_inits`.
 struct LazyHostInitPlanner<'a> {
   link_output: &'a LinkStageOutput,
@@ -850,6 +1035,7 @@ struct LazyHostInitPlanner<'a> {
   order_state: &'a OrderWrapState,
   used_symbol_refs: &'a UsedSymbolRefs,
   final_esm_init_metadata: &'a FinalEsmInitMetadata,
+  loads_split_async_group: FxHashSet<ChunkIdx>,
   /// The memo of `chunk_runs_code_at_load`.
   runs_code_at_load: FxHashMap<ChunkIdx, bool>,
 }
@@ -1138,8 +1324,8 @@ impl LazyHostInitPlanner<'_> {
   /// that the init follows, when the chunk can initialize the module there: the chunk imports
   /// `init_x` from the host (`init_host`), and the host does not import the chunk. The init
   /// follows the import of the host, or the last earlier import of the importer (`last_position`)
-  /// when that import is a chunk after the host. A static import after the init must run code at
-  /// load.
+  /// when that import is a chunk after the host. A later import must run code at load, or an earlier
+  /// import of a split async group member must be able to suspend.
   fn lazy_host_to_init(
     &mut self,
     chunk_idx: ChunkIdx,
@@ -1175,7 +1361,14 @@ impl LazyHostInitPlanner<'_> {
         StaticImport::External(_) => true,
         StaticImport::Chunk(importee_idx) => self.chunk_runs_code_at_load(importee_idx),
       });
-    later_import_runs_code
+    // A body following an async static import would wait for its completion. An init chunk
+    // after that import instead starts the sibling while the earlier module is suspended.
+    let earlier_async = !self.loads_split_async_group.is_empty()
+      && chunk.static_imports[..=position].iter().any(|import| {
+        matches!(import,
+        StaticImport::Chunk(idx) if self.loads_split_async_group.contains(idx))
+      });
+    (later_import_runs_code || earlier_async)
       .then_some((LazyHostInit { after, host: host_idx, module: target_idx }, position))
   }
 
@@ -1373,8 +1566,8 @@ impl LazyHostInitPlanner<'_> {
       && meta.import_defer_tracked_deps.is_some()
   }
 
-  /// Whether the load of a chunk can run code. A lazy host and a chunk with only the runtime run
-  /// only declarations, so they run code only through their own static imports. An external
+  /// A lazy host, a common chunk containing only lazy initializers, and the runtime run code
+  /// at load only through their static imports. An external
   /// import runs code. Any other chunk counts as one that runs code. A cycle of chunk imports adds
   /// nothing.
   fn chunk_runs_code_at_load(&mut self, chunk_idx: ChunkIdx) -> bool {
@@ -1392,6 +1585,8 @@ impl LazyHostInitPlanner<'_> {
     let runs_only_declarations = chunk.modules.iter().all(|&module_idx| {
       module_idx == runtime_idx
         || (is_lazy_host && !matches!(link_output.metas[module_idx].wrap_kind(), WrapKind::None))
+        || (matches!(chunk.kind, ChunkKind::Common)
+          && self.init_host(module_idx) == Some(chunk_idx))
     });
     let result = !runs_only_declarations
       || chunk.static_imports.iter().any(|import| match *import {

@@ -11,12 +11,12 @@ const require_rolldown_runtime = require("./rolldown-runtime.js");
 // d.js
 var import_ext_ns;
 function init_d() {
-	return (init_d = require_rolldown_runtime.__esmMin((() => {
+	return (init_d = require_rolldown_runtime.__esmSync((() => {
 		import_ext_ns = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-ns", require("ext-ns"));
 	})))();
 }
 // main.js
-const lazyNamespace = () => (init_d(), import_ext_ns);
+const lazyNamespace = () => (init_d(true), import_ext_ns);
 exports.lazyNamespace = lazyNamespace;
 
 ```
@@ -41,10 +41,10 @@ Object.defineProperty(exports, "c", {
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
-Object.defineProperty(exports, "__esmMin", {
+Object.defineProperty(exports, "__esmSync", {
 	enumerable: true,
 	get: function() {
-		return __esmMin;
+		return __esmSync;
 	}
 });
 Object.defineProperty(exports, "__toESM", {

@@ -137,7 +137,7 @@ Reason: `experimental.importDefer` does not keep the deferred evaluation yet whe
 Expected: success
 Actual:
 Runtime error: Failed to import test module: Test262Error {
-  message: 'Actual [1, 2.1.1 start, 2.1.1 end, 2.1, 2.2.1, 2.2 start, 2.2 end, 2, 3, 4.1 start, 4.1 end, 4, 5] and expected [1, 2.1.1 start, 2.2.1, 2.2 start, 3, 5, 2.1.1 end, 2.2 end, 4.1 start, 4.1 end] should have the same contents. '
+  message: 'Actual [1, 2.1.1 start, 2.2.1, 2.2 start, 3, 5, 2.1.1 end, 2.2 end, 2.1, 2, 4.1 start, 4.1 end, 4] and expected [1, 2.1.1 start, 2.2.1, 2.2 start, 3, 5, 2.1.1 end, 2.2 end, 4.1 start, 4.1 end] should have the same contents. '
 }
 ---
 

@@ -7,6 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [\0rolldown/runtime.js]
+// f.js
+function init_f() {
+	return (init_f = __esmState((() => {
+		init_e(init_f);
+		globalThis.order.push("f");
+	}), () => [init_e]))(arguments[0]);
+}
 // e.js
 var e;
 function init_e() {
@@ -15,13 +22,6 @@ function init_e() {
 		globalThis.order.push("e");
 		e = String("e");
 	}), () => [init_f]))(arguments[0]);
-}
-// f.js
-function init_f() {
-	return (init_f = __esmState((() => {
-		init_e(init_f);
-		globalThis.order.push("f");
-	}), () => [init_e]))(arguments[0]);
 }
 // n.js
 init_f();

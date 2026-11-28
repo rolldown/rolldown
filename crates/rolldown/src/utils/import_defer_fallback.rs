@@ -10,6 +10,7 @@ use rolldown_common::{
 };
 use rolldown_error::{BuildDiagnostic, EventKind};
 use rolldown_utils::{IndexBitSet, node_builtin::is_node_like_builtin};
+use rustc_hash::FxHashSet;
 
 use crate::{
   stages::scan_stage::NormalizedScanStageOutput,
@@ -21,8 +22,8 @@ use crate::{
 ///
 /// The scanner keeps the results of an eager import and saves the deferred results in
 /// `EcmaView::import_defer_scan`. A build that keeps the deferral gets the saved results here. A
-/// build that does not keep it lowers each deferred import to a normal import: it gives the output
-/// of the build with `experimental.importDefer` off, and a warning for each deferred import.
+/// fallback keeps the eager scan results and warns for each lowered import. An async-order
+/// fallback can split chunks to let the native loader start independent dependencies.
 ///
 /// Returns the `assign_to_import` errors of a build that lowers the deferred imports.
 pub fn apply_import_defer_support(
@@ -46,7 +47,7 @@ pub fn apply_import_defer_support(
       keep_deferral(output);
       Ok(())
     }
-    Some(reason) => lower_deferred_imports(output, &reason),
+    Some(reason) => lower_deferred_imports(output, &reason, options),
   }
 }
 
@@ -56,6 +57,8 @@ pub fn apply_import_defer_support(
 enum UnsupportedReason {
   InlineCommonChunks,
   NonRecursiveGroups,
+  SerialAsyncImports(ModuleIdx),
+  PreservedImporterCycle(ModuleIdx),
   /// An `import.defer()` call targets this CommonJS module.
   DynamicImportOfCommonJs(ModuleIdx),
   /// A deferred import evaluates this external module, and the output format evaluates it before
@@ -79,6 +82,14 @@ impl UnsupportedReason {
         "a code splitting group sets `includeDependenciesRecursively: false`, so the chunks can import each other in a cycle"
           .to_string()
       }
+      Self::SerialAsyncImports(idx) => format!(
+        "the imports in `{}` can start a later dependency while a top-level `await` is pending, but deferred initialization would wait for them in sequence",
+        modules[*idx].stable_id()
+      ),
+      Self::PreservedImporterCycle(idx) => format!(
+        "`preserveModules` is on and a static import cycle can access the deferred namespace in `{}` before its runtime helpers load",
+        modules[*idx].stable_id()
+      ),
       Self::DynamicImportOfCommonJs(idx) => format!(
         "an `import.defer()` call targets the CommonJS module `{}`",
         modules[*idx].stable_id()
@@ -141,8 +152,48 @@ fn unsupported_reason(
   if let Some(module) = commonjs_module_run_at_load(output, options, &closures, &commonjs) {
     return Some(UnsupportedReason::CommonJsRunAtLoad(module));
   }
-  import_after_async_deferred_import(output, options, &closures)
-    .map(UnsupportedReason::ImportAfterAsyncDeferredImport)
+  if options.preserve_modules
+    && let Some(module) = preserved_importer_cycle(output)
+  {
+    return Some(UnsupportedReason::PreservedImporterCycle(module));
+  }
+  unsupported_async_import_order(output, options, &closures)
+}
+
+/// A sibling in an eager cycle can call an exported function or read a re-exported namespace
+/// before the deferred host and its helpers load. Declarations in separate files cannot move
+/// ahead of that call. See internal-docs/import-defer/implementation.md.
+fn preserved_importer_cycle(output: &NormalizedScanStageOutput) -> Option<ModuleIdx> {
+  let modules = &output.module_table.modules;
+  let mut cycles = None;
+  modules
+    .iter()
+    .filter_map(Module::as_normal)
+    .filter(|module| {
+      module.import_records.iter().any(|rec| {
+        rec.kind == ImportKind::Import
+          && rec.is_defer_phase()
+          && rec.resolved_module.is_some_and(|idx| modules[idx].is_normal())
+      })
+    })
+    .filter(|module| {
+      module.named_exports.iter().any(|(name, export)| {
+        // An anonymous default function has a synthetic export symbol.
+        (name.as_str() == "default" && output.symbol_ref_db.is_facade_symbol(export.referenced))
+          || export.referenced.is_declared_by_function(&output.symbol_ref_db)
+          || module
+            .named_imports
+            .get(&export.referenced)
+            .is_some_and(|import| module.import_records[import.record_idx].is_defer_phase())
+      })
+    })
+    .filter(|module| {
+      cycles
+        .get_or_insert_with(|| crate::utils::eager_import_cycle_modules(modules))
+        .contains(&module.idx)
+    })
+    .min_by_key(|module| &module.stable_id)
+    .map(|module| module.idx)
 }
 
 /// The modules that the link stage makes CommonJS (`determine_module_exports_kind`): the scan gives
@@ -303,25 +354,24 @@ fn deferred_closures(
   Ok(visited)
 }
 
-/// The first module outside the deferred closures with an import of a module outside the closures
-/// after a deferred import of a module that reaches a top-level `await` (the early flag of
-/// `mark_tla_before_tree_shaking`).
+/// Finds import lists where deferred preparation or an async wrapper changes when a sibling
+/// starts. Uses the early top-level await flag of `mark_tla_before_tree_shaking`.
 ///
 /// The preparation of the deferred import (`__esmGather`) waits for the modules with top-level
 /// `await` in the body of the importer. A module outside the closures has no wrapper, so the code
 /// of its imports runs before its body: the later import runs before the modules with top-level
-/// `await` start. In native order, they start first. A module of a closure has a wrapper that runs
-/// its import statements in order, and so does a later import of a closure module. In a build with
+/// `await` start. In native order, they start first. Async wrappers can also suspend before later
+/// imports run, where native ESM would start the remaining siblings. In a build with
 /// one chunk, an external module runs first also without the deferral, so it does not count. In a
 /// build with more chunks, a chunk imports an external module in the order of its imports.
-fn import_after_async_deferred_import(
+fn unsupported_async_import_order(
   output: &NormalizedScanStageOutput,
   options: &NormalizedBundlerOptions,
   closures: &IndexBitSet<ModuleIdx>,
-) -> Option<ModuleIdx> {
+) -> Option<UnsupportedReason> {
   let modules = &output.module_table.modules;
   let normal_modules = || modules.iter().filter_map(Module::as_normal);
-  let externals_count = can_have_more_chunks(output, options);
+  let multiple_chunks = can_have_more_chunks(output, options);
   let mut queue = normal_modules()
     .filter(|module| module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait))
     .map(|module| module.idx)
@@ -329,6 +379,7 @@ fn import_after_async_deferred_import(
   if queue.is_empty() {
     return None;
   }
+  let mut eager_roots = queue.clone();
   let mut importers = IndexVec::<ModuleIdx, Vec<ModuleIdx>>::from_vec(vec![vec![]; modules.len()]);
   for module in normal_modules() {
     for rec in &module.import_records {
@@ -336,6 +387,11 @@ fn import_after_async_deferred_import(
         && let Some(dependency) = rec.resolved_module
       {
         importers[dependency].push(module.idx);
+      } else if matches!(rec.kind, ImportKind::DynamicImport | ImportKind::Require)
+        && !rec.is_defer_phase()
+        && let Some(target) = rec.resolved_module
+      {
+        eager_roots.push(target);
       }
     }
   }
@@ -350,25 +406,228 @@ fn import_after_async_deferred_import(
       }
     }
   }
-  normal_modules().filter(|module| !closures.has_bit(module.idx)).find_map(|module| {
+  // Preparation starts modules with their own TLA and follows their eager imports. User
+  // entries and ordinary dynamic imports can also start a closure without preparing it.
+  // All other wrapped bodies run after preparation has finished their async dependencies.
+  eager_roots
+    .extend(output.entry_points.iter().filter(|e| e.kind.is_user_defined()).map(|e| e.idx));
+  let mut eager = IndexBitSet::new(modules.len());
+  while let Some(idx) = eager_roots.pop() {
+    if reaches_tla.has_bit(idx) && eager.set_bit(idx) {
+      eager_roots.extend(
+        modules[idx]
+          .import_records()
+          .iter()
+          .filter(|rec| rec.kind == ImportKind::Import && !rec.is_defer_phase())
+          .filter_map(|rec| rec.resolved_module),
+      );
+    }
+  }
+  let mut import_cycles = None;
+  let mut shared = None;
+  normal_modules().find_map(|module| {
+    let wrapped = closures.has_bit(module.idx);
+    if !eager.has_bit(module.idx) {
+      return None;
+    }
+    let mut after_async_import = false;
+    let mut consecutive_deferred = true;
+    let mut batch_can_split =
+      options.preserve_modules || options.has_manual_code_splitting_groups();
     let mut after_async_deferred_import = false;
-    for rec in &module.import_records {
+    let mut evaluation = None;
+    let mut checked = 0;
+    for (index, rec) in module.import_records.iter().enumerate() {
       let Some(target) = rec.resolved_module else { continue };
-      if !matches!(rec.kind, ImportKind::Import) {
+      if rec.kind != ImportKind::Import || target == output.runtime.id() {
         continue;
       }
-      if rec.is_defer_phase() {
-        after_async_deferred_import |= reaches_tla.has_bit(target);
-      } else if after_async_deferred_import
-        && !closures.has_bit(target)
-        && target != output.runtime.id()
-        && (externals_count || matches!(modules[target], Module::Normal(_)))
-      {
-        return Some(module.idx);
+      let is_async = reaches_tla.has_bit(target);
+      if after_async_import || is_async {
+        consecutive_deferred &= rec.is_defer_phase()
+          && modules[target].as_normal().is_some_and(|m| m.exports_kind != ExportsKind::CommonJs);
       }
+      if !wrapped
+        && after_async_deferred_import
+        && !rec.is_defer_phase()
+        && !closures.has_bit(target)
+        && (multiple_chunks || modules[target].is_normal())
+      {
+        return Some(UnsupportedReason::ImportAfterAsyncDeferredImport(module.idx));
+      }
+      // Native module loading starts siblings before waiting for their async evaluations.
+      // A deferred preparation in the importer body cannot start while an earlier import
+      // waits. An async wrapper likewise awaits an eager dependency before its next init.
+      let later_init = if rec.is_defer_phase() {
+        is_async
+      } else {
+        wrapped && modules[target].side_effects().has_side_effects()
+      };
+      if multiple_chunks && after_async_import && later_init {
+        // Only expand the requests once we encounter a possible serial wait.
+        let earlier_requests = evaluation.get_or_insert_with(EarlierRequests::default);
+        let known_tlas = earlier_requests.tla.len();
+        for request in &module.import_records.as_raw_slice()[checked..index] {
+          earlier_requests.visit(request, modules, module.idx, &reaches_tla);
+        }
+        let earlier_tlas = earlier_requests.tla.len();
+        earlier_requests.visit(rec, modules, module.idx, &reaches_tla);
+        checked = index + 1;
+        // Consecutive deferred ESM requests in a private entry chunk share one gather.
+        // Eager fallback here would concatenate their async bodies and wait in sequence.
+        if consecutive_deferred && !batch_can_split {
+          let shared = shared.get_or_insert_with(|| modules_shared_by_entries(output));
+          batch_can_split =
+            earlier_requests.tla[known_tlas..].iter().any(|&idx| shared.has_bit(idx));
+        }
+        if (!consecutive_deferred || batch_can_split)
+          && earlier_requests.needs_concurrent_start(
+            earlier_tlas,
+            modules,
+            &importers,
+            &reaches_tla,
+            &mut import_cycles,
+          )
+        {
+          return Some(UnsupportedReason::SerialAsyncImports(module.idx));
+        }
+      }
+      after_async_import |= is_async;
+      after_async_deferred_import |= rec.is_defer_phase() && is_async;
     }
     None
   })
+}
+
+/// With default chunking, an internal module reachable from only one entry belongs to
+/// that entry. Include dynamic entry roots and require edges. Each module's dependencies
+/// are visited at most twice, once for its first owner and once when it becomes shared.
+fn modules_shared_by_entries(output: &NormalizedScanStageOutput) -> IndexBitSet<ModuleIdx> {
+  let modules = &output.module_table.modules;
+  let mut first_entry = IndexVec::from_vec(vec![None; modules.len()]);
+  let mut shared = IndexBitSet::new(modules.len());
+  let mut stack = Vec::new();
+  for entry in &output.entry_points {
+    stack.push(entry.idx);
+    while let Some(idx) = stack.pop() {
+      if let Some(first) = first_entry[idx] {
+        if first == entry.idx || !shared.set_bit(idx) {
+          continue;
+        }
+      } else {
+        first_entry[idx] = Some(entry.idx);
+      }
+      stack.extend(
+        modules[idx]
+          .import_records()
+          .iter()
+          .filter(|rec| rec.kind.is_static())
+          .filter_map(|rec| rec.resolved_module),
+      );
+    }
+  }
+  shared
+}
+
+/// An eager request evaluates its target. A deferred request only prepares it until it
+/// reaches a module with its own top-level await, which evaluates its eager dependencies.
+#[derive(Default)]
+struct EarlierRequests {
+  prepared: FxHashSet<ModuleIdx>,
+  evaluated: FxHashSet<ModuleIdx>,
+  stack: Vec<(ModuleIdx, bool)>,
+  new_bodies: Vec<ModuleIdx>,
+  tla: Vec<ModuleIdx>,
+  checked_tla: usize,
+  waits_for_all: FxHashSet<ModuleIdx>,
+}
+
+impl EarlierRequests {
+  /// Record this request and the bodies it starts for the first time. Each module's
+  /// imports are visited at most twice per importer, once in each phase.
+  fn visit(
+    &mut self,
+    request: &ResolvedImportRecord,
+    modules: &IndexModules,
+    importer: ModuleIdx,
+    reaches_tla: &IndexBitSet<ModuleIdx>,
+  ) {
+    self.new_bodies.clear();
+    let Some(target) = request.resolved_module else { return };
+    if request.kind != ImportKind::Import {
+      return;
+    }
+    self.stack.push((target, request.is_defer_phase()));
+    while let Some((idx, deferred)) = self.stack.pop() {
+      // A path back through the importer cannot start its later requests.
+      if idx == importer || self.evaluated.contains(&idx) {
+        continue;
+      }
+      let own_tla = modules[idx]
+        .as_normal()
+        .is_some_and(|module| module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait));
+      let prepare_only = deferred && !own_tla;
+      if prepare_only {
+        if !reaches_tla.has_bit(idx) || !self.prepared.insert(idx) {
+          continue;
+        }
+      } else {
+        self.evaluated.insert(idx);
+        self.new_bodies.push(idx);
+        if own_tla {
+          self.tla.push(idx);
+        }
+      }
+      self.stack.extend(modules[idx].import_records().iter().filter_map(|rec| {
+        if rec.kind != ImportKind::Import {
+          return None;
+        }
+        Some((rec.resolved_module?, prepare_only || rec.is_defer_phase()))
+      }));
+    }
+  }
+
+  /// Both phases wait for top-level await in the static closure. A new body can be
+  /// delayed if it must already wait for every earlier async module. Intersect their
+  /// dependents, visiting each earlier async module's reverse closure once per importer.
+  fn needs_concurrent_start(
+    &mut self,
+    earlier_tlas: usize,
+    modules: &IndexModules,
+    importers: &IndexVec<ModuleIdx, Vec<ModuleIdx>>,
+    reaches_tla: &IndexBitSet<ModuleIdx>,
+    import_cycles: &mut Option<FxHashSet<ModuleIdx>>,
+  ) -> bool {
+    if self.new_bodies.is_empty() {
+      return false;
+    }
+    if earlier_tlas == 0 || self.new_bodies.iter().any(|&idx| !reaches_tla.has_bit(idx)) {
+      return true;
+    }
+    // A back edge can bypass the wait for an evaluating ancestor.
+    let cyclic = import_cycles.get_or_insert_with(|| {
+      crate::utils::synchronous_cycle_modules(modules, |_, rec| rec.kind == ImportKind::Import)
+    });
+    while self.checked_tla < earlier_tlas {
+      let mut stack = vec![self.tla[self.checked_tla]];
+      let mut dependents = FxHashSet::default();
+      while let Some(idx) = stack.pop() {
+        if !cyclic.contains(&idx) && dependents.insert(idx) {
+          stack.extend(&importers[idx]);
+        }
+      }
+      if self.checked_tla == 0 {
+        self.waits_for_all = dependents;
+      } else {
+        self.waits_for_all.retain(|idx| dependents.contains(idx));
+      }
+      self.checked_tla += 1;
+      if self.new_bodies.iter().any(|idx| !self.waits_for_all.contains(idx)) {
+        return true;
+      }
+    }
+    self.new_bodies.iter().any(|idx| !self.waits_for_all.contains(idx))
+  }
 }
 
 /// The first CommonJS module of the deferred closures whose output file runs the module at load.
@@ -446,12 +705,24 @@ fn keep_deferral(output: &mut NormalizedScanStageOutput) {
 fn lower_deferred_imports(
   output: &mut NormalizedScanStageOutput,
   reason: &UnsupportedReason,
+  options: &NormalizedBundlerOptions,
 ) -> Result<(), Vec<BuildDiagnostic>> {
+  let check_async_chunks = matches!(
+    reason,
+    UnsupportedReason::SerialAsyncImports(_) | UnsupportedReason::ImportAfterAsyncDeferredImport(_)
+  ) && matches!(options.format, OutputFormat::Esm)
+    && !options.code_splitting.is_disabled()
+    && !options.preserve_modules
+    // Strict wrappers evaluate their requests themselves, even across chunk boundaries.
+    && !options.is_strict_execution_order_enabled()
+    && options.file.is_none();
   let (static_message, dynamic_message) = reason.messages(&output.module_table.modules);
   let mut warnings = vec![];
   let mut errors = vec![];
   for module in output.module_table.modules.iter_mut().filter_map(Module::as_normal_mut) {
+    let mut has_static_defer = false;
     for rec in module.ecma_view.import_records.iter_mut().filter(|rec| rec.is_defer_phase()) {
+      has_static_defer |= rec.kind == ImportKind::Import;
       rec.meta.remove(ImportRecordMeta::DeferPhase);
       let message =
         if rec.kind == ImportKind::DynamicImport { &dynamic_message } else { &static_message };
@@ -467,6 +738,9 @@ fn lower_deferred_imports(
         )
         .with_severity_warning(),
       );
+    }
+    if check_async_chunks && has_static_defer {
+      output.async_fallback_importers.push(module.idx);
     }
     if let Some(scan) = module.ecma_view.import_defer_scan.take() {
       // With an eager import, the scanner reports these errors.

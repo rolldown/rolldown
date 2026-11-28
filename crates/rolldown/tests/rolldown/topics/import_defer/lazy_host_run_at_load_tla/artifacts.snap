@@ -11,7 +11,7 @@ import { t as init_a } from "./w.js";
 init_a();
 globalThis.log.push("b");
 // main.js
-const read = () => (init_a(), "a");
+const read = () => (init_a(true), "a");
 export { read };
 
 ```
@@ -31,7 +31,7 @@ globalThis.log.push("other");
 ```js
 // HIDDEN [\0rolldown/runtime.js]
 function init_a() {
-	return (init_a = __esmMin((() => {
+	return (init_a = __esmSync((() => {
 		globalThis.log.push("a");
 	})))();
 }

@@ -6,20 +6,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## d.js
 
 ```js
-import { a as __esmDepDone, d as __exportAll, i as __esmDefer, l as __esmMin, n as log, o as __esmEnd, r as __deferNs, s as __esmFail, t as init_log, u as __esmState } from "./log.js";
+import { a as __esmDepDone, i as __esmDefer, l as __esmState, n as log, o as __esmEnd, r as __deferNs, s as __esmFail, t as init_log, u as __exportAll } from "./log.js";
 // e.js
 function init_e() {
-	return (init_e = __esmMin((() => {
-		init_log();
+	return (init_e = __esmState((() => {
+		init_log(init_e);
 		log.push("e throws");
 		throw new Error("e failed");
-	})))();
+	}), () => [init_log]))(arguments[0]);
 }
 // a.js
 function init_a() {
 	return (init_a = __esmState((async () => {
 		try {
-			init_log();
+			init_log(init_a);
+		} catch (e) {
+			throw __esmFail(init_a, e, true);
+		}
+		try {
 			log.push("a start");
 			await 0;
 			log.push("a end");
@@ -27,7 +31,7 @@ function init_a() {
 			throw __esmFail(init_a, e);
 		}
 		__esmEnd(init_a);
-	}), () => [], 3))(arguments[0]);
+	}), () => [init_log], 3))(arguments[0]);
 }
 // d.js
 var d_exports = /* @__PURE__ */ __exportAll({ value: () => "d" });
@@ -36,8 +40,8 @@ var value;
 function init_d() {
 	return (init_d = __esmState((async () => {
 		try {
-			init_log();
-			init_e();
+			init_log(init_d);
+			init_e(init_d);
 			__esmDepDone(init_a(init_d), init_a, init_d) || await init_a(init_d);
 			log.push("d");
 			value = "d";
@@ -45,7 +49,11 @@ function init_d() {
 			throw __esmFail(init_d, e);
 		}
 		__esmEnd(init_d);
-	}), () => [init_a], 1))(arguments[0]);
+	}), () => [
+		init_log,
+		init_e,
+		init_a
+	], 1))(arguments[0]);
 }
 export { d_exports as n, init_d as r, d_deferred as t, value };
 
@@ -58,22 +66,22 @@ export { d_exports as n, init_d as r, d_deferred as t, value };
 // log.js
 var log;
 function init_log() {
-	return (init_log = __esmMin((() => {
+	return (init_log = __esmState((() => {
 		log = [];
-	})))();
+	}), () => []))(arguments[0]);
 }
-export { __esmDepDone as a, __esmGather as c, __exportAll as d, __esmDefer as i, __esmMin as l, log as n, __esmEnd as o, __deferNs as r, __esmFail as s, init_log as t, __esmState as u };
+export { __esmDepDone as a, __esmGatherDynamic as c, __esmDefer as i, __esmState as l, log as n, __esmEnd as o, __deferNs as r, __esmFail as s, init_log as t, __exportAll as u };
 
 ```
 
 ## main.js
 
 ```js
-import { c as __esmGather, n as log, t as init_log } from "./log.js";
+import { c as __esmGatherDynamic, n as log, t as init_log } from "./log.js";
 // main.js
 init_log();
 await (async (n) => (n = await import("./d.js"), await n.r(), n.n))().catch((e) => log.push(`import(d) rejects: ${e.message}`));
-const ns = await (async (n) => (n = await import("./d.js"), __esmGather(n.r) || await __esmGather(), n.t))();
+const ns = await (async (n) => (n = await import("./d.js"), __esmGatherDynamic(n.r) || await __esmGatherDynamic(), n.t))();
 log.push("import.defer resolves");
 let result;
 try {

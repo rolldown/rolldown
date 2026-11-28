@@ -18,14 +18,18 @@ import { l as __esmState, n as log, s as __esmFail, t as init_log } from "./log.
 function init_a() {
 	return (init_a = __esmState((async () => {
 		try {
-			init_log();
+			init_log(init_a);
+		} catch (e) {
+			throw __esmFail(init_a, e, true);
+		}
+		try {
 			log.push("a");
 			await 0;
 			throw new Error("a failed");
 		} catch (e) {
 			throw __esmFail(init_a, e);
 		}
-	}), () => [], 3))(arguments[0]);
+	}), () => [init_log], 3))(arguments[0]);
 }
 export { init_a as t };
 
@@ -38,22 +42,22 @@ export { init_a as t };
 // log.js
 var log;
 function init_log() {
-	return (init_log = __esmMin((() => {
+	return (init_log = __esmState((() => {
 		log = [];
-	})))();
+	}), () => []))(arguments[0]);
 }
-export { __esmDepDone as a, __esmGather as c, __esmDefer as i, __esmState as l, log as n, __esmEnd as o, __deferNs as r, __esmFail as s, init_log as t, __exportAll as u };
+export { __esmDepDone as a, __esmGatherDynamic as c, __esmDefer as i, __esmState as l, log as n, __esmEnd as o, __deferNs as r, __esmFail as s, init_log as t, __exportAll as u };
 
 ```
 
 ## main.js
 
 ```js
-import { c as __esmGather, n as log, t as init_log } from "./log.js";
+import { c as __esmGatherDynamic, n as log, t as init_log } from "./log.js";
 // main.js
 init_log();
 await import("./a.js").catch(() => log.push("import(a) rejects"));
-const ns = await (async (n) => (n = await import("./x.js"), __esmGather(n.t) || await __esmGather(), n.n))();
+const ns = await (async (n) => (n = await import("./x.js"), __esmGatherDynamic(n.t) || await __esmGatherDynamic(), n.n))();
 log.push("import.defer resolves");
 let result;
 try {
@@ -77,7 +81,7 @@ var value;
 function init_x() {
 	return (init_x = __esmState((async () => {
 		try {
-			init_log();
+			init_log(init_x);
 			__esmDepDone(init_a(init_x), init_a, init_x) || await init_a(init_x);
 			log.push("x");
 			value = "x";
@@ -85,7 +89,7 @@ function init_x() {
 			throw __esmFail(init_x, e);
 		}
 		__esmEnd(init_x);
-	}), () => [init_a], 1))(arguments[0]);
+	}), () => [init_log, init_a], 1))(arguments[0]);
 }
 export { x_deferred as n, x_exports as r, init_x as t, value };
 

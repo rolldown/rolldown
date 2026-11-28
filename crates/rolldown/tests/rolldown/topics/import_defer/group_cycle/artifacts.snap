@@ -10,61 +10,80 @@ source: crates/rolldown_testing/src/integration_test.rs
 // log.js
 var log;
 function init_log() {
-	return (init_log = __esmMin((() => {
+	return (init_log = __esmState((() => {
 		log = [];
-	})))();
+	}), () => []))(arguments[0]);
 }
 // s.js
 function init_s() {
-	return (init_s = __esmMin((() => {
-		init_log();
-		init_x();
+	return (init_s = __esmState((() => {
+		init_log(init_s);
+		init_x(init_s);
 		log.push("s");
-	})))();
+	}), () => [init_log, init_x]))(arguments[0]);
+}
+// a.js
+function init_a() {
+	return (init_a = __esmState((() => {
+		init_log(init_a);
+		init_s(init_a);
+		log.push("a");
+	}), () => [init_log, init_s]))(arguments[0]);
 }
 // x.js
 function init_x() {
-	return (init_x = __esmMin((() => {
-		init_log();
-		// a.js
-		init_log();
-		init_s();
-		log.push("a");
-		// x.js
-		init_log();
+	return (init_x = __esmState((() => {
+		init_log(init_x);
+		init_a(init_x);
 		log.push("x");
-	})))();
+	}), () => [init_log, init_a]))(arguments[0]);
+}
+// q.js
+function init_q() {
+	return (init_q = __esmState((() => {
+		init_log(init_q);
+		init_p(init_q);
+		log.push("q");
+	}), () => [init_log, init_p]))(arguments[0]);
+}
+// p.js
+function init_p() {
+	return (init_p = __esmState((() => {
+		init_log(init_p);
+		init_q(init_p);
+		log.push("p");
+	}), () => [init_log, init_q]))(arguments[0]);
 }
 function init_r1() {
-	return (init_r1 = __esmMin((() => {
-		init_log();
-		init_x();
-		// q.js
-		init_log();
-		log.push("q");
-		// p.js
-		init_log();
-		log.push("p");
-		// r1.js
-		init_log();
-		init_x();
+	return (init_r1 = __esmState((() => {
+		init_log(init_r1);
+		init_x(init_r1);
+		init_p(init_r1);
 		log.push("r1");
-	})))();
+	}), () => [
+		init_log,
+		init_x,
+		init_p
+	]))(arguments[0]);
 }
 function init_r2() {
-	return (init_r2 = __esmMin((() => {
-		init_log();
-		init_x();
-		init_s();
+	return (init_r2 = __esmState((() => {
+		init_log(init_r2);
+		init_x(init_r2);
+		init_s(init_r2);
 		log.push("r2");
-	})))();
+	}), () => [
+		init_log,
+		init_x,
+		init_s
+	]))(arguments[0]);
 }
 // main.js
 init_log();
 function run() {
 	return [
-		(init_r1(), "r1"),
-		(init_r2(), "r2"),
+		(__esmDefer(init_r1), "r1"),
+		(__esmDefer(init_r2), "r2"),
 		...log
 	];
 }

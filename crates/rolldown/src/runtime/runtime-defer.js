@@ -36,7 +36,10 @@ export var __esmState = (body, deps, flags, rec) => (
     if (rec.s) {
       if (rec.s === 1 && from && rec.a < from.a) from.a = rec.a;
       if ((x = __esmError(rec))) {
-        if (flags & 1) return rec.p.catch(() => {}), Promise.reject(x[0]);
+        if (flags & 1) {
+          rec.p.catch(() => {});
+          return (async () => { throw x[0]; })();
+        }
         throw x[0];
       }
       return rec.p;
@@ -47,7 +50,7 @@ export var __esmState = (body, deps, flags, rec) => (
     __esmStack.push(rec);
     if (flags & 1) {
       rec.p = body();
-      // The sync part threw, and `__esmFail` popped the stack.
+      // A static dependency threw during startup and `__esmFail` popped the stack.
       if (rec.s === 3) return rec.p;
     } else {
       try {
@@ -71,11 +74,15 @@ export var __esmEnd = (init, rec) => {
   rec.b = 1;
   if (rec.s === 4) rec.s = 2;
 };
-// An error of a body. In the sync part, each module on the stack above the module is in its cycle,
-// and gets the error. Returns the error, for `throw`.
-export var __esmFail = (init, e, rec, x) => {
+// A synchronous dependency failure aborts the walk and marks its cycle. A rejection from
+// the module’s own async body is observed after startup. Return the original thrown value.
+export var __esmFail = (init, e, dependency, rec, x) => {
   rec = init(__esmState);
-  if (rec.s === 1) {
+  if (rec.s === 1 && rec.t && !dependency) {
+    // Executing a TLA module rejects asynchronously even if its first statement throws.
+    // Leave it evaluating while the synchronous walk starts the remaining requests.
+    (async () => { await 0; rec.s = 3; rec.e = e; })();
+  } else if (rec.s === 1) {
     do ((x = __esmStack.pop()).s = 3), (x.e = e);
     while (x !== rec);
   } else (rec.s = 3), (rec.e = e);
@@ -107,14 +114,13 @@ export var __esmDepDone = (p, dep, caller, m, x) => {
   }
   return __esmComplete(m);
 };
-// `__esmGather(init_d, init_importer) || await __esmGather()`: the preparation of a deferred
-// import of d whose closure has a module with top-level await (spec
-// `GatherAsynchronousTransitiveDependencies`). The first call walks the records from d. It returns
-// true when nothing is pending. Else it keeps the lists, and the second call returns a promise
-// that waits for them: first each module with top-level await (an error rejects the importer),
-// then each started module that waits (its error waits for the access).
-export var __esmGather = (d, importer) => {
-  if (!d) return (d = __esmStack.w), (__esmStack.w = 0), d();
+// Wait for an evaluation whose error is already recorded on the module.
+var __esmSettled = async (p) => { try { await p; } catch {} };
+// The two import forms share discovery and the wait. Only their root evaluation differs.
+// Publish the wait only after all roots have started. Nested preparations can then use the
+// same slot. The caller takes it immediately, or skips the await entirely for an empty gather.
+var __esmPrepare = (d, importer, evaluate) => {
+  if (!d) return (d = __esmStack.w), (__esmStack.w = 0), d;
   var from = importer && importer(__esmState),
     seen = new Set(),
     g = [],
@@ -127,24 +133,64 @@ export var __esmGather = (d, importer) => {
       if (m.s === 4) started.push(m);
       for (var dep of m.d().map((f) => f(__esmState))) walk(dep);
     };
-  walk(d(__esmState));
+  // A run of deferred requests shares the visited set and the wait. Resolve all the
+  // hoisted init functions before walking the first root: it can also reach a later root.
+  if (typeof d === "function") walk(d(__esmState));
+  else {
+    for (var i = 0; i < d.length; i++) d[i] = d[i](__esmState);
+    for (i = 0; i < d.length; i++) walk(d[i]);
+  }
   if (!g.length && !started.length) return true;
-  __esmStack.w = async () => {
-    for (var m of g) if (m.s !== 2) await m.f(importer);
-    for (m of started) await Promise.resolve(m.f()).then(
-      () => {},
-      () => {},
-    );
+  var pending = g.length, failure, finish, p;
+  var observe = async (p) => {
+    try {
+      await p;
+    } catch (e) {
+      if (!failure) failure = [e];
+    }
+    if ((--pending === 0 || failure) && finish) finish();
   };
+  for (var sibling of g) {
+    p = evaluate(sibling, importer);
+    if (g.length !== 1) observe(p);
+  }
+  __esmStack.w = (async () => {
+    if (g.length === 1) await p;
+    else if (g.length) {
+      // Await supplies intrinsic resolving functions on the next microtask.
+      await {
+        then(resolve, reject) {
+          finish = () => failure ? reject(failure[0]) : resolve();
+          if (!pending || failure) finish();
+        },
+      };
+    }
+    for (var m of started) await __esmSettled(m.f());
+  })();
   return false;
 };
+// InnerModuleEvaluation visits all static requests in one walk. Propagate an abrupt
+// completion immediately, after observing the rejection of the generated async wrapper.
+var __esmEvaluateDependency = (m, importer) => {
+  var p = m.f(importer);
+  if (m.s === 3) {
+    __esmSettled(p);
+    throw m.e;
+  }
+  return p;
+};
+export var __esmGather = (d, importer) => __esmPrepare(d, importer, __esmEvaluateDependency);
+// ContinueDynamicImport calls Evaluate() separately for each gathered root. Each TLA
+// wrapper returns its evaluation promise, including when a synchronous dependency threw.
+var __esmEvaluateRoot = (m) => m.f();
+export var __esmGatherDynamic = (d) => __esmPrepare(d, void 0, __esmEvaluateRoot);
 // `__esmDefer` is a deferred access to a module with a `__esmState` record (spec
 // `EnsureDeferredNamespaceEvaluation`). It throws a `TypeError`, and evaluates nothing, when the
 // module or a module that it requests is evaluating (spec `ReadyForSyncExecution`). Else it
 // evaluates the module synchronously, or throws its stored error.
 export var __esmDefer = (init) => {
   var m = init(__esmState),
-    seen = new Set(),
+    seen,
     ready = (m) =>
       seen.has(m) ||
       (seen.add(m),
@@ -153,6 +199,7 @@ export var __esmDefer = (init) => {
     p,
     x;
   if (!__esmComplete(m)) {
+    seen = new Set();
     if (!ready(m)) throw new TypeError('A deferred module or a module that it imports is evaluating');
     p = m.f();
   }
@@ -162,6 +209,7 @@ export var __esmDefer = (init) => {
   }
   if (!__esmComplete(m)) throw new TypeError('A deferred module did not finish synchronously');
 };
+var __preventExtensions = Object.preventExtensions || Reflect.preventExtensions;
 // `__deferNs` creates the deferred namespace object of a module (`import defer * as ns`).
 // `init` evaluates the module and returns its namespace object. `ns` is that object when its keys
 // are known before the evaluation. Without `ns` (a CommonJS module, an external module in
@@ -176,20 +224,32 @@ export var __esmDefer = (init) => {
 // namespace that is not extensible. Two limits remain until then, because a `Proxy` can report a
 // target that is not extensible only when the target has all keys: `Object.isExtensible` gives
 // `true`, and after `Object.preventExtensions`, the first `load` throws a `TypeError` when the
-// namespace has keys.
-export var __deferNs = (init, ns) => {
-  var target = Object.setPrototypeOf({}, null),
+// namespace has keys. Once a shared CommonJS factory starts, a lock uses only known names.
+export var __deferNs = (init, ns, lock) => {
+  var makeTarget = () => __defProp(Object.setPrototypeOf({}, null), Symbol.toStringTag, {
+      value: 'Deferred Module',
+    }),
+    target = makeTarget(),
+    shape = target,
     seal = () => {
       for (var key of __getOwnPropNames(ns).sort()) {
         key === 'then' ||
-          __defProp(target, key, { value: void 0, writable: true, enumerable: true });
+          __defProp(shape, key, { value: void 0, writable: true, enumerable: true });
       }
-      Object.preventExtensions(target);
+      __preventExtensions(shape);
     },
-    load = () => (ns ? init() : ((ns = init()), seal()), ns),
+    load = () => {
+      if (ns && shape === target) {
+        init();
+      } else {
+        ns = init();
+        // An unfinished factory can still change keys until someone locks the namespace.
+        shape = lock && !init.record.ready && !init.record.updateLocked ? makeTarget() : target;
+        seal();
+      }
+    },
     deferred = (key) => typeof key === 'string' && key !== 'then',
-    own = (key) => __hasOwnProp.call(target, key);
-  __defProp(target, Symbol.toStringTag, { value: 'Deferred Module' });
+    own = (key) => __hasOwnProp.call(shape, key);
   ns && seal();
   return new Proxy(target, {
     get: (t, key) => (deferred(key) ? (load(), own(key) ? ns[key] : void 0) : t[key]),
@@ -198,13 +258,13 @@ export var __deferNs = (init, ns) => {
       deferred(key)
         ? (load(),
           own(key)
-            ? { value: ns[key], writable: true, enumerable: true, configurable: false }
+            ? { value: ns[key], writable: true, enumerable: true, configurable: shape !== target }
             : void 0)
         : __getOwnPropDesc(t, key),
     defineProperty: (t, key, desc) =>
       deferred(key)
         ? (load(),
-          own(key) &&
+          shape === target && own(key) &&
             !desc.configurable &&
             desc.enumerable !== false &&
             !('get' in desc || 'set' in desc) &&
@@ -212,15 +272,24 @@ export var __deferNs = (init, ns) => {
             (!('value' in desc) || Object.is(desc.value, ns[key])))
         : own(key) && Reflect.defineProperty(t, key, desc),
     deleteProperty: (t, key) => (deferred(key) ? (load(), !own(key)) : Reflect.deleteProperty(t, key)),
-    ownKeys: (t) => (load(), Reflect.ownKeys(t)),
+    ownKeys: () => (load(), Reflect.ownKeys(shape)),
+    preventExtensions: lock && function (t) {
+      if ((!ns || shape !== t) && init.record.module) {
+        ns = lock();
+        shape = t;
+        seal();
+      } else {
+        __preventExtensions(t);
+      }
+      // Every subsequent lock can forward to the already non-extensible target.
+      this.preventExtensions = void 0;
+      return true;
+    },
     set: () => false,
     setPrototypeOf: (t, proto) => proto === null,
   });
 };
-// `__toESM` with one result for each external module and interop mode. In CommonJS output, a
-// module of a deferred closure (`import defer`) loads an external lazily, and each chunk can also
-// load it eagerly. All these loads must give one namespace object. `key` names the external module
-// with the same text in all chunks.
+// Share an external CommonJS namespace across chunks by filename and interop mode.
 // See internal-docs/runtime-helpers/implementation.md.
 var __toESMCache = [];
 export var __toESMCached = (key, mod, isNodeMode, cache, ns) => {
@@ -228,7 +297,7 @@ export var __toESMCached = (key, mod, isNodeMode, cache, ns) => {
   if (!(ns = cache.get(key))) cache.set(key, (ns = __toESM(mod, isNodeMode)));
   return ns;
 };
-// `__deferNs` with one result for each external module and interop mode, as `__toESMCached`.
+// Share the deferred object before the first evaluation, with the same key as `__toESMCached`.
 // In CommonJS output, each deferred import of an external (`import defer * as ns from 'ext'`
 // and `import.defer('ext')`) gets its deferred namespace here, also in another chunk or in a
 // wrapper. `init` returns the result of `__toESMCached` with the same key and mode.
@@ -237,4 +306,98 @@ export var __deferNsCached = (key, init, isNodeMode, cache, ns) => {
   cache = __deferNsCache[isNodeMode ? 1 : 0] || (__deferNsCache[isNodeMode ? 1 : 0] = new Map());
   if (!(ns = cache.get(key))) cache.set(key, (ns = __deferNs(init)));
   return ns;
+};
+
+// A synchronous deferred target with only private dependencies. Eager back-edges can
+// reuse a running wrapper, but a deferred read during evaluation must throw.
+export var __esmSync = (body, result, error) => (deferred) => {
+  if (error) throw error[0];
+  if (body) {
+    var run = body;
+    body = 0;
+    try {
+      result = run();
+    } catch (e) {
+      error = [e];
+      throw e;
+    } finally {
+      body = void 0;
+    }
+  } else if (deferred && body === 0) {
+    throw new TypeError('A deferred module is evaluating');
+  }
+  return result;
+};
+
+// The factory and all deferred importers share this record, including when an ordinary
+// require starts the factory. A nested require sees the current module.exports. Only the
+// namespace built after the factory returns is safe to keep. See internal-docs/import-defer/implementation.md.
+var __cjsRecords = /* @__PURE__ */ __create(null);
+var __cjsRecord = (key) => __cjsRecords[key] || (__cjsRecords[key] = __create(null));
+// true identifies a wrapper-created object or a literal. For other objects, store only
+// names an actual partial read observed, separately for each target and interop mode.
+var __cjsObjectInfo = /* @__PURE__ */ (() => {
+  if (typeof WeakMap !== 'function') return;
+  var map = new WeakMap();
+  return { get: map.get.bind(map), set: map.set.bind(map) };
+})();
+export var __cjsOrdinary = (value) => (__cjsObjectInfo && __cjsObjectInfo.set(value, true), value);
+export var __commonJSShared = (cb, key) => __commonJSMin((exports, mod) => {
+  var record = __cjsRecord(key);
+  record.module = mod;
+  __cjsOrdinary(exports);
+  (typeof cb === 'function' ? cb : cb[__getOwnPropNames(cb)[0]])(exports, mod, exports);
+  record.ready = true;
+});
+export var __cjsNamespace = (key, load, isNodeMode) => {
+  var target = __cjsRecord(key), mode = isNodeMode ? 1 : 0;
+  if (target[mode]) return target[mode];
+  // The two interop modes share the factory's module and readiness only.
+  var record = __create(target);
+  record.id = key * 2 + mode;
+  var read = () => {
+    if (record.cached) return record.cached;
+    var raw = load(), value = __toESM(raw, isNodeMode);
+    if (record.updateLocked) value = record.updateLocked(value);
+    if (!record.ready) {
+      if (__cjsObjectInfo && !record.updateLocked && raw !== null && (typeof raw === 'object' || typeof raw === 'function')) {
+        var info = __cjsObjectInfo.get(raw);
+        if (info !== true) {
+          if (!info) __cjsObjectInfo.set(raw, info = __create(null));
+          info[record.id] = __getOwnPropNames(value);
+        }
+      }
+      return value;
+    }
+    load = void 0;
+    return record.cached || (record.cached = value);
+  };
+  read.record = record;
+  return (target[mode] = read);
+};
+export var __deferCJS = (read) => {
+  var record = read.record;
+  if (record.deferred) return record.deferred;
+  var lock = () => {
+    if (record.cached) return record.cached;
+    // The module record is ours, but module.exports can be an accessor or a revoked
+    // proxy. Only a real namespace read may invoke application code to discover keys.
+    var desc = __getOwnPropDesc(record.module, 'exports'),
+      raw = desc && __hasOwnProp.call(desc, 'value') ? desc.value : void 0,
+      info = __cjsObjectInfo && __cjsObjectInfo.get(raw),
+      names = info === true ? __getOwnPropNames(raw) : info && info[record.id],
+      current;
+    // A successful lock fixes the names for escaped and static reads. Keep their
+    // values live even if the factory replaces module.exports after the lock.
+    var locked = __create(null);
+    for (let key of ['default', ...(names || [])]) {
+      if (key !== 'then' && !__hasOwnProp.call(locked, key)) __defProp(locked, key, {
+        get: () => __hasOwnProp.call(current, key) ? current[key] : void 0,
+        enumerable: true,
+      });
+    }
+    record.updateLocked = (value) => (current = value, locked);
+    return locked;
+  };
+  return (record.deferred = __deferNs(read, void 0, lock));
 };

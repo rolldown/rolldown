@@ -18,7 +18,7 @@ function read$1() {
 }
 var import_a, import_shared$1;
 function init_first() {
-	return (init_first = __esmMin((() => {
+	return (init_first = __esmSync((() => {
 		// first.js
 		import_a = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 			globalThis.__events.push("a");
@@ -34,7 +34,7 @@ function read() {
 }
 var import_b, import_shared;
 function init_second() {
-	return (init_second = __esmMin((() => {
+	return (init_second = __esmSync((() => {
 		// second.js
 		import_b = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
 			globalThis.__events.push("b");
@@ -49,9 +49,9 @@ globalThis.__events = [];
 function run() {
 	return {
 		before: [...globalThis.__events],
-		first: (init_first(), read$1)(),
+		first: (init_first(true), read$1)(),
 		middle: [...globalThis.__events],
-		second: (init_second(), read)(),
+		second: (init_second(true), read)(),
 		events: globalThis.__events
 	};
 }

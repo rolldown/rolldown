@@ -57,7 +57,6 @@ enum UnsupportedReason {
   ChunkGroups,
   InlineCommonChunks,
   DynamicImport,
-  ImportCycle,
   /// A deferred closure has this external module.
   ExternalModule(ModuleIdx),
   /// This module is outside the deferred closures. It has a deferred import of a module that
@@ -76,7 +75,6 @@ impl UnsupportedReason {
         "`output.codeSplitting.experimentalInlineCommonChunks` is on".to_string()
       }
       Self::DynamicImport => "the build has an `import()`".to_string(),
-      Self::ImportCycle => "the build has a static import cycle".to_string(),
       Self::ExternalModule(idx) => {
         format!("a deferred import evaluates the external module `{}`", modules[*idx].stable_id())
       }
@@ -118,56 +116,12 @@ fn unsupported_reason(
   if normal_modules().any(|module| module.import_records.iter().any(|rec| rec.kind.is_dynamic())) {
     return Some(UnsupportedReason::DynamicImport);
   }
-  if has_static_import_cycle(modules) {
-    return Some(UnsupportedReason::ImportCycle);
-  }
   let closures = match deferred_closures(output) {
     Ok(closures) => closures,
     Err(external) => return Some(UnsupportedReason::ExternalModule(external)),
   };
   import_after_async_deferred_import(output, &closures)
     .map(UnsupportedReason::ImportAfterAsyncDeferredImport)
-}
-
-/// Whether the static import records make a cycle. An iterative walk, for deep graphs.
-fn has_static_import_cycle(modules: &IndexModules) -> bool {
-  const NOT_VISITED: u8 = 0;
-  const ON_PATH: u8 = 1;
-  const DONE: u8 = 2;
-  let mut state = IndexVec::<ModuleIdx, u8>::from_vec(vec![NOT_VISITED; modules.len()]);
-  for root in modules.indices() {
-    if state[root] != NOT_VISITED {
-      continue;
-    }
-    state[root] = ON_PATH;
-    // Each item is a module on the path and the position of its next record.
-    let mut path = vec![(root, 0)];
-    while let Some(&(idx, next)) = path.last() {
-      let records = &modules[idx].import_records().raw;
-      let dependency = records[next.min(records.len())..]
-        .iter()
-        .position(|rec| rec.kind.is_static() && rec.resolved_module.is_some())
-        .map(|offset| next + offset);
-      let Some(position) = dependency else {
-        state[idx] = DONE;
-        path.pop();
-        continue;
-      };
-      if let Some(last) = path.last_mut() {
-        last.1 = position + 1;
-      }
-      let dependency = records[position].resolved_module.expect("checked above");
-      match state[dependency] {
-        NOT_VISITED => {
-          state[dependency] = ON_PATH;
-          path.push((dependency, 0));
-        }
-        ON_PATH => return true,
-        _ => {}
-      }
-    }
-  }
-  false
 }
 
 /// The modules of the deferred closures, or `Err` with the first external module of a closure. A

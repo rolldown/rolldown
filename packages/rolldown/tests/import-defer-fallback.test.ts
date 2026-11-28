@@ -121,11 +121,6 @@ const cases: Case[] = [
     reason: AFTER_ASYNC_DEFER_REASON,
   },
   {
-    name: 'import cycle',
-    files: { 'main.js': MAIN_JS, 'x.js': "import './main.js';\n" + X_JS },
-    reason: 'the build has a static import cycle',
-  },
-  {
     name: 'external target',
     files: { 'main.js': "import defer * as ns from 'ext';\nexport const read = () => ns.value;\n" },
     inputOptions: { external: ['ext'] },
@@ -212,6 +207,20 @@ const keptCases: KeptCase[] = [
       ['read', 1, ['x']],
       ['readY', 2, ['x', 'y']],
     ],
+  },
+  {
+    name: 'a cycle through the deferred import',
+    files: { 'main.js': LOGGED_MAIN('./x.js'), 'x.js': "import './main.js';\n" + X_JS },
+    steps: [['read', 1, ['x']]],
+  },
+  {
+    name: 'a cycle that only the deferred import reaches',
+    files: {
+      'main.js': LOGGED_MAIN('./x.js'),
+      'x.js': "import './y.js';\n" + X_JS,
+      'y.js': "import { log } from './log.js';\nimport './x.js';\nlog.push('y');\n",
+    },
+    steps: [['read', 1, ['y', 'x']]],
   },
   {
     name: 'new URL() in a closure module',

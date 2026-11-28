@@ -1,0 +1,8 @@
+{
+  "_comment": "The deferred target `a.js` is in the static import cycle `a.js` -> `c.js` -> `b.js` -> `a.js`. The entry imports `b.js` eagerly before the deferred import, and `z.js` after it. As in native order, the eager import evaluates the cycle (`c.js` and `a.js` first) before `z.js`.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

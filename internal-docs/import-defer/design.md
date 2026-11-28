@@ -14,10 +14,10 @@ A build with a shape that the deferral does not support yet gives the output of 
 
 ### Decisions
 
-- The decision is for the whole build, not for each import. The conditions (one chunk, no cycle, no external module in the closures, the order rule of top-level `await`) are properties of the module graph. A decision for each import needs rules for deferred and eager closures across chunks, cycles and async modules.
+- The decision is for the whole build, not for each import. The conditions (one chunk, no external module in the closures, the order rule of top-level `await`) are properties of the module graph. A decision for each import needs rules for deferred and eager closures across chunks, cycles and async modules.
 - The decision runs after the scan and before the link stage, in `scan_modules_impl`. With `experimental.incrementalBuild`, the scan sees only the changed modules, and the normalized scan output has all modules. An error (a write to a deferred namespace in a build that falls back) then fails the build as a scan error does: `buildEnd` and `closeBundle` get the error, and no link step adds more errors.
 - The scanner keeps the eager results and saves the deferred results apart. Thus a fallback gives the scan results of the option-off build exactly. A second analysis at link time cannot give the same results, because the scan reads a partial `constant_export_map` that the link stage does not have.
-- The conditions are conservative. For example, a static import cycle anywhere in the graph makes the build fall back.
+- The conditions are conservative. For example, an `import()` anywhere in the build makes the build fall back, also when the deferred closures do not reach it.
 
 ### Rejected alternatives
 
@@ -57,9 +57,25 @@ A deferred import of a module with top-level `await` keeps the steps of native N
 
 - A fallback for each build with top-level `await`. The preparation and the state records give the native result for the other shapes, also when an import comes before the deferred import.
 
+## Cycles
+
+### Goal
+
+A cycle with a deferred target keeps the native result: the eager part of the cycle runs at its native position, and a deferred access to a member of a cycle that did not finish throws a `TypeError`.
+
+### Decisions
+
+- Only the members of a cycle with a deferred target, and the modules that reach a top-level `await`, get state records. The other cycles in the closures keep `__esmMin`.
+- With a kept deferral, the position of a moved init call is the start record of the module in a walk of the eager imports, not the first import in chunk order (`ensure_lazy_module_initialization_order`). With the closure wrappers, the first import in chunk order can be in a deferred module or in another module of a cycle, and its call runs late. Then a later import of the entry ran before the module (the fixtures `cycle_eager_import_order` and `deferred_importer_first_in_chunk`). The rule applies only when the build keeps a deferral, so a build without `import defer` keeps the order that it had before.
+
+### Rejected alternatives
+
+- The rule for each build. A build without `import defer` can also wrap modules, and its output would change. The option must not change such a build.
+- Skip only the imports inside a cycle, and keep the first import in chunk order for the other modules. A later import of a module of the cycle, other than the module that the evaluation enters first, then moves its call first, and the cycle runs from that module in a different order (fixture `cycle_member_later_import`). A deferred module that comes first in chunk order also keeps its position (fixture `deferred_importer_first_in_chunk`).
+
 ## Unresolved questions
 
-- Which steps remove which conditions: cycles, more than one chunk, `import.defer()`, external modules and the other output formats.
+- Which steps remove which conditions: more than one chunk, `import.defer()`, external modules and the other output formats.
 - Can the preparation run at the position of the deferred import in a module with no wrapper? It must run before the code of the first later import, at the top level of the chunk, as `ensure_lazy_module_initialization_order` moves an init call (`Chunk::insert_map`). Then the order rule can go away.
 
 ## Related

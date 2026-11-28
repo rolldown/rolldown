@@ -591,6 +591,8 @@ Uses the immutable link-stage `wrap_kind()` from `LinkingMetadata`.
 
 **Step 5 — Find first init position.** Walks chunk modules in order, scanning import records. For each module in the check set, records the first `(importer, import_record_idx)` that imports it. Stops early once all positions are found.
 
+When the build keeps a deferral of `import defer`, Step 3 uses `eager_import_order`. It also skips the deferred records, and it returns the record that starts each module. Step 5 then takes only that start record for a wrapped module, and only in an importer with no wrapper. See `internal-docs/import-defer/implementation.md` ("Init order").
+
 **Step 6 — Build transfer maps.** Sorts init positions by execution order, then iterates:
 
 - **Wrapped module** → added to `pending_transfer`

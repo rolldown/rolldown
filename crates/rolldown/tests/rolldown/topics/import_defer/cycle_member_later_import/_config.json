@@ -1,0 +1,8 @@
+{
+  "_comment": "The deferred target `e.js` is in a static import cycle with `f.js`. The entry imports `f.js` first, so the cycle runs from `f.js` (`e` before `f`), before `n.js`. `x.js` imports `e.js` after `n.js`. That import does not start the cycle, so its init call does not move before `n.js`.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

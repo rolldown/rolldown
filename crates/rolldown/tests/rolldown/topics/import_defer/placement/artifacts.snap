@@ -21,11 +21,11 @@ function init_d() {
 	})))();
 }
 // a.js
+init_log();
 function read() {
 	return init_d(), "d";
 }
 // main.js
-init_log();
 init_d();
 const order = [...log];
 const value = read();

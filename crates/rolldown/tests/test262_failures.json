@@ -167,27 +167,6 @@
   "language/import/import-defer/deferred-namespace-object/identity.js": {
     "reason": "`experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`"
   },
-  "language/import/import-defer/errors/get-other-while-dep-evaluating-async/main.js": {
-    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import"
-  },
-  "language/import/import-defer/errors/get-other-while-dep-evaluating/main.js": {
-    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import"
-  },
-  "language/import/import-defer/errors/get-other-while-evaluating-async/main.js": {
-    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import"
-  },
-  "language/import/import-defer/errors/get-other-while-evaluating/main.js": {
-    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import"
-  },
-  "language/import/import-defer/errors/get-self-while-defer-evaluating/main.js": {
-    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import"
-  },
-  "language/import/import-defer/errors/get-self-while-evaluating-async/main.js": {
-    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import"
-  },
-  "language/import/import-defer/errors/get-self-while-evaluating.js": {
-    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import"
-  },
   "language/import/import-defer/errors/module-throws/defer-import-after-evaluation.js": {
     "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with an `import()` yet, so Rolldown lowers `import defer` to a normal import"
   },

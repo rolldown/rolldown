@@ -1,0 +1,106 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+// t.js
+var v$4;
+function init_t() {
+	return (init_t = __esmState((async () => {
+		try {
+			init_log();
+			log.push("t start");
+			await new Promise((r) => setTimeout(r, 5));
+			v$4 = "set";
+			log.push("t end");
+		} catch (e) {
+			throw __esmFail(init_t, e);
+		}
+		__esmEnd(init_t);
+	}), () => [], 3))(arguments[0]);
+}
+// c.js
+var v$3;
+function init_c() {
+	return (init_c = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_r(init_c), init_r, init_c) || await init_r(init_c);
+			__esmDepDone(init_t(init_c), init_t, init_c) || await init_t(init_c);
+			log.push("c start r=" + v + " t=" + v$4);
+			v$3 = "set";
+			log.push("c end");
+		} catch (e) {
+			throw __esmFail(init_c, e);
+		}
+		__esmEnd(init_c);
+	}), () => [init_r, init_t], 1))(arguments[0]);
+}
+// p.js
+var v$2;
+function init_p() {
+	return (init_p = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_c(init_p), init_c, init_p) || await init_c(init_p);
+			log.push("p start c=" + v$3);
+			v$2 = "set";
+			log.push("p end");
+		} catch (e) {
+			throw __esmFail(init_p, e);
+		}
+		__esmEnd(init_p);
+	}), () => [init_c], 1))(arguments[0]);
+}
+// x.js
+var v$1;
+function init_x() {
+	return (init_x = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_c(init_x), init_c, init_x) || await init_c(init_x);
+			log.push("x start c=" + v$3);
+			v$1 = "set";
+			log.push("x end");
+		} catch (e) {
+			throw __esmFail(init_x, e);
+		}
+		__esmEnd(init_x);
+	}), () => [init_c], 1))(arguments[0]);
+}
+// r.js
+var v;
+function init_r() {
+	return (init_r = __esmState((async () => {
+		try {
+			init_log();
+			__esmDepDone(init_p(init_r), init_p, init_r) || await init_p(init_r);
+			__esmDepDone(init_x(init_r), init_x, init_r) || await init_x(init_r);
+			log.push("r start p=" + v$2 + " x=" + v$1);
+			v = "set";
+			log.push("r end");
+		} catch (e) {
+			throw __esmFail(init_r, e);
+		}
+		__esmEnd(init_r);
+	}), () => [init_p, init_x], 1))(arguments[0]);
+}
+// main.js
+init_log();
+await init_r();
+__esmGather(init_c) || await __esmGather();
+log.push("main sees ns.v=" + (__esmDefer(init_c), v$3));
+export { log };
+
+```

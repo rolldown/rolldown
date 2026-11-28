@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// a.js
+var a;
+function init_a() {
+	return (init_a = __esmState((() => {
+		init_b(init_a);
+		globalThis.order.push("a");
+		a = String("a");
+	}), () => [init_b]))(arguments[0]);
+}
+// b.js
+var access;
+function init_b() {
+	return (init_b = __esmState((() => {
+		globalThis.order.push("b");
+		access = () => (__esmDefer(init_a), a);
+	}), () => [init_a]))(arguments[0]);
+}
+// n.js
+init_b();
+globalThis.order.push("n");
+// x.js
+init_a();
+globalThis.order.push("x");
+export { access };
+
+```

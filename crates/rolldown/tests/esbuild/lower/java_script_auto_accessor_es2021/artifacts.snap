@@ -3,46 +3,220 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
+## classPrivateFieldSet2.js
+
+```js
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+export { _classPrivateMethodInitSpec as a, _classPrivateFieldInitSpec as i, _classPrivateFieldGet2 as n, toPropertyKey as o, _assertClassBrand as r, _classPrivateFieldSet2 as t };
+
+```
+
 ## js-define.js
 
 ```js
+import { a as _classPrivateMethodInitSpec, i as _classPrivateFieldInitSpec, n as _classPrivateFieldGet2, o as toPropertyKey, r as _assertClassBrand, t as _classPrivateFieldSet2 } from "./classPrivateFieldSet2.js";
 // js-define.js
-three(), six();
+var _toPropertyKey2;
+var _toPropertyKey3;
+let _Foo;
+let _toPropertyKey4;
+let _toPropertyKey5;
+let _toPropertyKey6;
+let _toPropertyKey7;
+let _one_accessor_storage = /* @__PURE__ */ new WeakMap();
+let _two_accessor_storage = /* @__PURE__ */ new WeakMap();
+let _Foo_brand = /* @__PURE__ */ new WeakSet();
+let _0_accessor_storage = /* @__PURE__ */ new WeakMap();
+_toPropertyKey4 = _toPropertyKey2 = toPropertyKey(three());
+_toPropertyKey5 = _toPropertyKey2;
+_toPropertyKey6 = _toPropertyKey3 = toPropertyKey(six());
+_toPropertyKey7 = _toPropertyKey3;
+_Foo = class Foo {
+	constructor() {
+		_classPrivateMethodInitSpec(this, _Foo_brand);
+		_classPrivateFieldInitSpec(this, _one_accessor_storage, 1);
+		_classPrivateFieldInitSpec(this, _two_accessor_storage, 2);
+		_classPrivateFieldInitSpec(this, _0_accessor_storage, 3);
+	}
+	get one() {
+		return _classPrivateFieldGet2(_one_accessor_storage, this);
+	}
+	set one(value) {
+		_classPrivateFieldSet2(_one_accessor_storage, this, value);
+	}
+	get [_toPropertyKey4]() {
+		return _classPrivateFieldGet2(_0_accessor_storage, this);
+	}
+	set [_toPropertyKey5](value) {
+		_classPrivateFieldSet2(_0_accessor_storage, this, value);
+	}
+	static get four() {
+		return _assertClassBrand(Foo, _Foo, _four_accessor_storage)._;
+	}
+	static set four(value) {
+		_four_accessor_storage._ = _assertClassBrand(Foo, _Foo, value);
+	}
+	static get [_toPropertyKey6]() {
+		return _assertClassBrand(Foo, _Foo, _1_accessor_storage)._;
+	}
+	static set [_toPropertyKey7](value) {
+		_1_accessor_storage._ = _assertClassBrand(Foo, _Foo, value);
+	}
+};
+var _four_accessor_storage = { _: 4 };
+var _1_accessor_storage = { _: 6 };
 
 ```
 
 ## ts-assign_ts-assign.js
 
 ```js
+import { a as _classPrivateMethodInitSpec, i as _classPrivateFieldInitSpec, n as _classPrivateFieldGet2, o as toPropertyKey, r as _assertClassBrand, t as _classPrivateFieldSet2 } from "./classPrivateFieldSet2.js";
 // ts-assign/ts-assign.ts
-three(), six();
-var StaticNormal = class {
-	static accessor a = b;
-	static {
-		this.c = d;
+var _toPropertyKey2;
+var _toPropertyKey3;
+let _Foo;
+let _toPropertyKey4;
+let _toPropertyKey5;
+let _toPropertyKey6;
+let _toPropertyKey7;
+let _StaticNormal;
+let _one_accessor_storage = /* @__PURE__ */ new WeakMap();
+let _two_accessor_storage = /* @__PURE__ */ new WeakMap();
+let _Foo_brand = /* @__PURE__ */ new WeakSet();
+let _0_accessor_storage = /* @__PURE__ */ new WeakMap();
+_toPropertyKey4 = _toPropertyKey2 = toPropertyKey(three());
+_toPropertyKey5 = _toPropertyKey2;
+_toPropertyKey6 = _toPropertyKey3 = toPropertyKey(six());
+_toPropertyKey7 = _toPropertyKey3;
+_Foo = class Foo {
+	constructor() {
+		_classPrivateMethodInitSpec(this, _Foo_brand);
+		_classPrivateFieldInitSpec(this, _one_accessor_storage, 1);
+		_classPrivateFieldInitSpec(this, _two_accessor_storage, 2);
+		_classPrivateFieldInitSpec(this, _0_accessor_storage, 3);
+	}
+	get one() {
+		return _classPrivateFieldGet2(_one_accessor_storage, this);
+	}
+	set one(value) {
+		_classPrivateFieldSet2(_one_accessor_storage, this, value);
+	}
+	get [_toPropertyKey4]() {
+		return _classPrivateFieldGet2(_0_accessor_storage, this);
+	}
+	set [_toPropertyKey5](value) {
+		_classPrivateFieldSet2(_0_accessor_storage, this, value);
+	}
+	static get four() {
+		return _assertClassBrand(Foo, _Foo, _four_accessor_storage)._;
+	}
+	static set four(value) {
+		_four_accessor_storage._ = _assertClassBrand(Foo, _Foo, value);
+	}
+	static get [_toPropertyKey6]() {
+		return _assertClassBrand(Foo, _Foo, _1_accessor_storage)._;
+	}
+	static set [_toPropertyKey7](value) {
+		_1_accessor_storage._ = _assertClassBrand(Foo, _Foo, value);
 	}
 };
-var StaticPrivate = class {
-	static accessor #a = b;
-	static {
-		this.c = d;
+var _four_accessor_storage = { _: 4 };
+var _1_accessor_storage = { _: 6 };
+var StaticNormal = class StaticNormal {
+	static get a() {
+		return _assertClassBrand(StaticNormal, _StaticNormal, _a_accessor_storage3)._;
+	}
+	static set a(value) {
+		_a_accessor_storage3._ = _assertClassBrand(StaticNormal, _StaticNormal, value);
 	}
 };
+_StaticNormal = StaticNormal;
+var _a_accessor_storage3 = { _: b };
+StaticNormal.c = d;
+var StaticPrivate = class {};
+b;
+StaticPrivate.c = d;
 
 ```
 
 ## ts-define_ts-define.js
 
 ```js
+import { a as _classPrivateMethodInitSpec, i as _classPrivateFieldInitSpec, n as _classPrivateFieldGet2, o as toPropertyKey, r as _assertClassBrand, t as _classPrivateFieldSet2 } from "./classPrivateFieldSet2.js";
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // ts-define/ts-define.ts
-three(), six();
-var StaticNormal = class {
-	static accessor a = b;
-	static c = d;
+var _toPropertyKey2;
+var _toPropertyKey3;
+let _Foo;
+let _toPropertyKey4;
+let _toPropertyKey5;
+let _toPropertyKey6;
+let _toPropertyKey7;
+let _StaticNormal;
+let _one_accessor_storage = /* @__PURE__ */ new WeakMap();
+let _two_accessor_storage = /* @__PURE__ */ new WeakMap();
+let _Foo_brand = /* @__PURE__ */ new WeakSet();
+let _0_accessor_storage = /* @__PURE__ */ new WeakMap();
+_toPropertyKey4 = _toPropertyKey2 = toPropertyKey(three());
+_toPropertyKey5 = _toPropertyKey2;
+_toPropertyKey6 = _toPropertyKey3 = toPropertyKey(six());
+_toPropertyKey7 = _toPropertyKey3;
+_Foo = class Foo {
+	constructor() {
+		_classPrivateMethodInitSpec(this, _Foo_brand);
+		_classPrivateFieldInitSpec(this, _one_accessor_storage, 1);
+		_classPrivateFieldInitSpec(this, _two_accessor_storage, 2);
+		_classPrivateFieldInitSpec(this, _0_accessor_storage, 3);
+	}
+	get one() {
+		return _classPrivateFieldGet2(_one_accessor_storage, this);
+	}
+	set one(value) {
+		_classPrivateFieldSet2(_one_accessor_storage, this, value);
+	}
+	get [_toPropertyKey4]() {
+		return _classPrivateFieldGet2(_0_accessor_storage, this);
+	}
+	set [_toPropertyKey5](value) {
+		_classPrivateFieldSet2(_0_accessor_storage, this, value);
+	}
+	static get four() {
+		return _assertClassBrand(Foo, _Foo, _four_accessor_storage)._;
+	}
+	static set four(value) {
+		_four_accessor_storage._ = _assertClassBrand(Foo, _Foo, value);
+	}
+	static get [_toPropertyKey6]() {
+		return _assertClassBrand(Foo, _Foo, _1_accessor_storage)._;
+	}
+	static set [_toPropertyKey7](value) {
+		_1_accessor_storage._ = _assertClassBrand(Foo, _Foo, value);
+	}
 };
-var StaticPrivate = class {
-	static accessor #a = b;
-	static c = d;
+var _four_accessor_storage = { _: 4 };
+var _1_accessor_storage = { _: 6 };
+var StaticNormal = class StaticNormal {
+	static get a() {
+		return _assertClassBrand(StaticNormal, _StaticNormal, _a_accessor_storage3)._;
+	}
+	static set a(value) {
+		_a_accessor_storage3._ = _assertClassBrand(StaticNormal, _StaticNormal, value);
+	}
 };
+_StaticNormal = StaticNormal;
+var _a_accessor_storage3 = { _: b };
+_defineProperty(StaticNormal, "c", d);
+var StaticPrivate = class {};
+b;
+_defineProperty(StaticPrivate, "c", d);
 
 ```

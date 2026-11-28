@@ -1,0 +1,9 @@
+{
+  "config": {
+    "input": [{ "name": "main", "import": "./main.ts" }],
+    "transform": { "target": "es2022" },
+    "sourcemap": "File"
+  },
+  "visualizeSourcemap": true,
+  "expectExecuted": false
+}

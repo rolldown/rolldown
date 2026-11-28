@@ -31,6 +31,7 @@ The following transforms are supported:
 - Syntax lowering
   - Automatically transforms modern syntax to be compatible with your defined target.
   - Supports [down to ES2015](https://oxc.rs/docs/guide/usage/transformer/lowering#transformations).
+  - Lowers standard decorators and auto-accessors at any concrete target, and keeps them at `esnext`. Set `transform.decorator.lower` to override this.
 
 ## CJS support
 

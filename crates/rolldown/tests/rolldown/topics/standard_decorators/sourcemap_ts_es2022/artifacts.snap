@@ -1,0 +1,129 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// main.ts
+var _greet_dec;
+let _init;
+function bound(value, ctx) {
+	ctx.addInitializer(function() {
+		this[ctx.name] = this[ctx.name].bind(this);
+	});
+	return value;
+}
+let _count_accessor_storage = /* @__PURE__ */ new WeakMap();
+_greet_dec = [[void 0, bound]];
+var Greeter = class {
+	constructor() {
+		_runInitializers(_init, 5, this);
+		this.name = "x";
+		_classPrivateFieldInitSpec(this, _count_accessor_storage, 0);
+	}
+	greet() {
+		throw new Error("boom from greet");
+	}
+	get count() {
+		return _classPrivateFieldGet2(_count_accessor_storage, this);
+	}
+	set count(value) {
+		_classPrivateFieldSet2(_count_accessor_storage, this, value);
+	}
+};
+_init = _decoratorStart(null);
+_decorateElement(_init, 1, "greet", _greet_dec, Greeter);
+_decoratorMetadata(_init, Greeter);
+export { Greeter };
+
+//# sourceMappingURL=main.js.map
+```
+
+# Sourcemap Visualizer
+
+```
+- ../main.ts
+(0:0) "function " --> (237:0) "function "
+(0:9) "bound<T extends Function>(" --> (237:9) "bound("
+(0:35) "value: T, " --> (237:15) "value, "
+(0:45) "ctx: ClassMethodDecoratorContext): T " --> (237:22) "ctx) "
+(0:82) "{\n" --> (237:27) "{\n"
+(1:2) "ctx." --> (238:1) "ctx."
+(1:6) "addInitializer(" --> (238:5) "addInitializer("
+(1:21) "function (this: any) " --> (238:20) "function() "
+(1:42) "{\n" --> (238:31) "{\n"
+(2:4) "this[" --> (239:2) "this["
+(2:9) "ctx." --> (239:7) "ctx."
+(2:13) "name] = " --> (239:11) "name] = "
+(2:21) "this[" --> (239:19) "this["
+(2:26) "ctx." --> (239:24) "ctx."
+(2:30) "name]" --> (239:28) "name]"
+(2:35) "." --> (239:33) "."
+(2:36) "bind(" --> (239:34) "bind("
+(2:41) "this" --> (239:39) "this"
+(2:45) ");\n" --> (239:43) ");\n"
+(3:2) "}" --> (240:1) "}"
+(3:3) ");\n" --> (240:2) ");\n"
+(4:2) "return " --> (241:1) "return "
+(4:9) "value;\n" --> (241:8) "value;\n"
+(5:0) "}\n" --> (242:0) "}\n"
+(8:3) "bound\n" --> (244:0) "_greet_dec = "
+(8:3) "bound\n" --> (244:13) "["
+(8:3) "bound\n" --> (244:14) "["
+(8:3) "bound\n" --> (244:15) "void "
+(8:3) "bound\n" --> (244:20) "0, "
+(8:3) "bound\n" --> (244:23) "bound"
+(8:3) "bound\n" --> (244:28) "]"
+(8:3) "bound\n" --> (244:29) "];\n"
+(6:0) "export class " --> (245:0) "var "
+(6:13) "Greeter " --> (245:4) "Greeter = "
+(6:0) "export class Greeter " --> (245:14) "class "
+(6:21) "{\n" --> (245:20) "{\n"
+(7:2) "name: string = " --> (248:2) "this."
+(7:2) "name: string = " --> (248:7) "name = "
+(7:17) "'x';\n" --> (248:14) "\"x\";\n"
+(12:27) "0;\n" --> (249:2) "_classPrivateFieldInitSpec("
+(12:27) "0;\n" --> (249:29) "this, "
+(12:27) "0;\n" --> (249:35) "_count_accessor_storage, "
+(12:27) "0;\n" --> (249:60) "0"
+(12:27) "0;\n" --> (249:61) ");\n"
+(9:2) "greet(): string " --> (251:1) "greet() "
+(9:18) "{\n" --> (251:9) "{\n"
+(10:4) "throw " --> (252:2) "throw "
+(10:10) "new " --> (252:8) "new "
+(10:14) "Error(" --> (252:12) "Error("
+(10:20) "'boom from greet'" --> (252:18) "\"boom from greet\""
+(10:37) ");\n" --> (252:35) ");\n"
+(11:2) "}\n" --> (253:1) "}\n"
+(12:11) "count: number = 0;\n" --> (254:1) "get "
+(12:11) "count: number = 0;\n" --> (254:5) "count() "
+(12:11) "count: number = 0;\n" --> (254:13) "{\n"
+(13:0) "}\n" --> (260:0) "};\n"
+(6:7) "class Greeter {\n" --> (261:0) "_init = "
+(6:7) "class Greeter {\n" --> (261:8) "_decoratorStart("
+(6:7) "class Greeter {\n" --> (261:24) "null"
+(13:0) "}\n" --> (261:28) ");\n"
+(8:2) "@bound\n" --> (262:0) "_decorateElement("
+(8:2) "@bound\n" --> (262:17) "_init, "
+(8:2) "@bound\n" --> (262:24) "1, "
+(8:2) "@bound\n" --> (262:27) "\"greet\", "
+(8:2) "@bound\n" --> (262:36) "_greet_dec, "
+(8:2) "@bound\n" --> (262:48) "Greeter"
+(11:2) "}\n" --> (262:55) ");\n"
+(6:7) "class Greeter {\n" --> (263:0) "_decoratorMetadata("
+(6:7) "class Greeter {\n" --> (263:19) "_init, "
+(6:7) "class Greeter {\n" --> (263:26) "Greeter"
+(13:0) "}\n" --> (263:33) ");\n"
+```

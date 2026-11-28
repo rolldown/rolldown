@@ -1,0 +1,51 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// lib.js
+const log = [];
+function logged(value, ctx) {
+	log.push(`${ctx.kind}:${String(ctx.name)}`);
+	if (ctx.kind === "method") return function(...args) {
+		log.push(`call:${String(ctx.name)}`);
+		return value.call(this, ...args);
+	};
+	if (ctx.kind === "field") return (v) => v * 2;
+	if (ctx.kind === "accessor") return {
+		get() {
+			return value.get.call(this) + 1;
+		},
+		set(v) {
+			value.set.call(this, v);
+		},
+		init(v) {
+			return v + 100;
+		}
+	};
+	if (ctx.kind === "class") {
+		ctx.metadata.tagged = true;
+		ctx.addInitializer(function() {
+			log.push(`init:${this.name}`);
+		});
+	}
+}
+// main.ts
+var Foo = @logged class Foo {
+	@logged x = 1;
+	@logged accessor y = 2;
+	@logged greet(n) {
+		return `hi ${n} ${this.x}`;
+	}
+	static #secret = 7;
+	@logged static reveal() {
+		return Foo.#secret;
+	}
+};
+var main_default = @logged class {};
+export { Foo, main_default as default, log };
+
+```

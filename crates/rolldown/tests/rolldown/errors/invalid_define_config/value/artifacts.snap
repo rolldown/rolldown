@@ -6,6 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INVALID_DEFINE_CONFIG
 
 ```text
-[INVALID_DEFINE_CONFIG] Invalid assignment in object literal
+[INVALID_DEFINE_CONFIG] The define value `{ a = 1 }` for key `key` is not a valid expression: Invalid assignment in object literal
 
 ```

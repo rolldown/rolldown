@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // entry.ts
 let _r;
+let _x;
 let _y;
 var Foo = class {
 	constructor() {
@@ -16,11 +17,11 @@ var Foo = class {
 		this[_y] = z;
 	}
 	static {
-		q, _r = r, x, _y = y;
+		q, _r = r, _x = x, _y = y;
 	}
 };
-__decorate([dec], Foo.prototype, null, void 0);
-__decorate([dec], Foo.prototype, null, void 0);
+__decorate([dec], Foo.prototype, _x, void 0);
+__decorate([dec], Foo.prototype, _y, void 0);
 new Foo();
 
 ```

@@ -29,10 +29,10 @@ console.log(data, data2);
 ```
 - ../main.js
 (1:0) "const " --> (4:0) "const "
-(1:6) "data2 = require('./hello.txt');\n" --> (4:6) "data2 = ("
-(1:6) "data2 = require('./hello.txt');\n" --> (4:15) "/* @__PURE__ */ (("
-(1:6) "data2 = require(" --> (7:1) "))"
-(1:6) "data2 = require(" --> (7:3) "("
+(1:6) "data2 = " --> (4:6) "data2 = ("
+(1:14) "require('./hello.txt');\n" --> (4:15) "/* @__PURE__ */ (("
+(1:14) "require(" --> (7:1) "))"
+(1:14) "require(" --> (7:3) "("
 (1:22) "'./hello.txt'" --> (7:4) "\"./assets/hello-CUbDYdKJ.txt\""
 (1:35) ");\n" --> (7:33) ");\n"
 (2:0) "console." --> (8:0) "console."

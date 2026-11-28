@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// lib.js
+function dec(value, ctx) {
+	globalThis.__decCalls = (globalThis.__decCalls ?? 0) + 1;
+}
+var Decorated = @dec class {
+	@dec m() {}
+};
+var OnlyMemberDecorated = class {
+	@dec field = 1;
+};
+var Used = class {
+	accessor v = 3;
+};
+// main.js
+const value = new Used().v;
+export { value };
+
+```

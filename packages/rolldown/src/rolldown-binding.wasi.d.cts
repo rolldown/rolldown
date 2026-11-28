@@ -380,7 +380,7 @@ export interface ExportImportName {
   end: number | null
 }
 
-export type ExportImportNameKind = 'Name' | 'All' | 'AllButDefault' | 'None'
+export type ExportImportNameKind = 'Name' | 'All' | 'AllButDefault' | 'None' | 'Source'
 
 export interface ExportLocalName {
   kind: ExportLocalNameKind
@@ -398,7 +398,7 @@ export interface ImportName {
   end: number | null
 }
 
-export type ImportNameKind = 'Name' | 'NamespaceObject' | 'Default'
+export type ImportNameKind = 'Name' | 'NamespaceObject' | 'Default' | 'Source'
 
 /**
  * Parse JS/TS source asynchronously on a separate thread.
@@ -991,6 +991,18 @@ export interface DecoratorOptions {
    */
   legacy?: boolean
   /**
+   * Lower standard decorators and auto-accessors.
+   *
+   * When omitted, lowering follows the target: a concrete target lowers them, and `esnext`
+   * or no target preserves them. Set to `false` to preserve this syntax for a later transform
+   * at any target while stripping TypeScript types. Set to `true` to lower it regardless of
+   * target. Other target-selected transforms still run on unrelated syntax.
+   * `legacy: true` takes precedence over this option.
+   *
+   * @default undefined
+   */
+  lower?: boolean
+  /**
    * Enables emitting decorator metadata.
    *
    * This option the same as [emitDecoratorMetadata](https://www.typescriptlang.org/tsconfig/#emitDecoratorMetadata)
@@ -1022,6 +1034,12 @@ export interface Es2015Options {
 export type HelperMode = 'Runtime' | 'External'
 
 export interface Helpers {
+  /**
+   * How helper functions are loaded. Defaults to `Runtime`.
+   *
+   * Lowered decorators, legacy or standard, call helpers that only `@oxc-project/runtime`
+   * provides and Babel's helpers lack, so use the `Runtime` mode when decorators are lowered.
+   */
   mode?: HelperMode
 }
 

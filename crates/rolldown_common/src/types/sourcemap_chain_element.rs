@@ -10,8 +10,7 @@ use crate::PluginIdx;
 pub enum SourcemapChainElement {
   /// A string representing the URL of an external source map.
   Transform((PluginIdx, SourceMap)),
-  /// A transform hook returned a native MagicString while
-  /// `experimental.nativeMagicString` is enabled. The sourcemap worker
+  /// A transform hook returned a native MagicString. The sourcemap worker
   /// generates the map, unless a later hook's `getCombinedSourcemap` needs it
   /// first.
   MagicString((PluginIdx, Arc<PendingSourcemap>)),

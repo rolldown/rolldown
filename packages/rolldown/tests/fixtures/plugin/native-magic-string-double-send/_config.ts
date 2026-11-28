@@ -9,9 +9,6 @@ import { expect } from 'vitest';
 export default defineTest({
   config: {
     input: ['main.js'],
-    experimental: {
-      nativeMagicString: true,
-    },
     output: {
       sourcemap: true,
     },

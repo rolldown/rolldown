@@ -349,7 +349,6 @@ export type RenderedChunkMeta = {
   /**
    * A lazily-created MagicString instance for the chunk's code.
    * Use this to perform string transformations with automatic source map support.
-   * This is only available when `experimental.nativeMagicString` is enabled.
    */
   magicString?: RolldownMagicString;
 };

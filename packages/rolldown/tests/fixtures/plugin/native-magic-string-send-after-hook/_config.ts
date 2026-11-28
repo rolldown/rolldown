@@ -18,12 +18,9 @@ export default defineTest({
   skip: isWasiTest,
   config: {
     input: ['main.js'],
-    experimental: {
-      nativeMagicString: true,
-    },
     output: {
-      // With `nativeMagicString`, this starts the sourcemap worker, so a send stores the map
-      // in the slot instead of returning it as JSON.
+      // this starts the sourcemap worker, so a send stores the map in the slot instead
+      // of returning it as JSON.
       sourcemap: true,
     },
     plugins: [

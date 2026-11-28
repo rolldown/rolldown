@@ -2,7 +2,7 @@
 
 ## Overview
 
-`experimental.nativeMagicString` is an optimization feature that replaces the JavaScript-based MagicString implementation with a native Rust version, enabling source map generation in background threads for improving performance.
+Native MagicString is an optimization feature that replaces the JavaScript-based MagicString implementation with a native Rust version, enabling source map generation in background threads for improving performance.
 
 ## What is MagicString?
 
@@ -35,7 +35,7 @@ Rolldown's native MagicString implementation rewrites the core functionality in 
 
 ## How It Works
 
-When `experimental.nativeMagicString` is enabled, Rolldown modifies the transformation pipeline. The diagrams below show the architectural differences:
+The diagrams below show the architectural differences:
 
 :::info
 Some technical details are simplified for better illustration. The native MagicString implementation provides a `magicString` object in the `meta` parameter of transform hooks, which plugins can use just like the JavaScript version.
@@ -124,7 +124,7 @@ The map includes no segments for inserted text.
 
 When Rolldown composes the maps, a position resolves to the last segment at or before it on its line. If the position is before the first segment of its line, it resolves to that first segment. If its line has no segment, the position has no mapping.
 
-To use a different resolution, create the MagicString with the `hires` option. `meta.magicString` has no options, because Rolldown creates it, so create your own instance from `code`. With this option, Rolldown still generates the `transform` map on a background thread when `experimental.nativeMagicString` and source maps are on.
+To use a different resolution, create the MagicString with the `hires` option. `meta.magicString` has no options, because Rolldown creates it, so create your own instance from `code`. With this option, Rolldown still generates the `transform` map on a background thread when source maps are on.
 
 You can also return your own map with the MagicString, for example `{ code: magicString, map: magicString.generateMap({ hires: 'boundary' }) }`. Rolldown then uses your map and does not generate one, but your hook generates that map on the JS thread. `map: null` tells Rolldown that the step did not move code, so Rolldown does not generate a map for it. If the step moved code, the output source map points to wrong positions.
 
@@ -158,9 +158,6 @@ For detailed benchmark results, see the [benchmark pull request](https://github.
 import { defineConfig } from 'rolldown';
 
 export default defineConfig({
-  experimental: {
-    nativeMagicString: true,
-  },
   output: {
     sourcemap: true,
   },
@@ -271,9 +268,6 @@ You can use [`rolldown-string`](https://github.com/sxzz/rolldown-string), which 
 
 ```javascript [rolldown.config.js]
 export default {
-  experimental: {
-    nativeMagicString: true,
-  },
   output: {
     sourcemap: true, // Required for source map generation
   },
@@ -318,6 +312,6 @@ transform(code, id, meta) {
 
 ## Conclusion
 
-`experimental.nativeMagicString` represents a significant performance optimization for Rolldown by leveraging Rust's efficiency for code transformation tasks. While it requires some considerations for compatibility, the performance benefits make it an attractive option for large-scale projects and performance-critical build processes.
+Native MagicString feature represents a significant performance optimization for Rolldown by leveraging Rust's efficiency for code transformation tasks. While it requires some considerations for compatibility, the performance benefits make it an attractive option for large-scale projects and performance-critical build processes.
 
 As an experimental feature, it's recommended to test thoroughly in development environments before adopting in production workflows. The Rolldown team is actively working on this feature, and feedback from the community is valuable for its continued development.

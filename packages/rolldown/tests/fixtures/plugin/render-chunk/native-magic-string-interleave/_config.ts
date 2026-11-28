@@ -16,9 +16,6 @@ export default defineTest({
   sequential: true,
   config: {
     input: ['a.js', 'b.js'],
-    experimental: {
-      nativeMagicString: true,
-    },
     plugins: [
       {
         name: 'test-render-chunk-interleaved-magic-string',

@@ -47,7 +47,6 @@ const probePlugin = {
 await build({
   input: ENTRY_ID,
   plugins: [probePlugin],
-  experimental: { nativeMagicString: true },
   output: { sourcemap: true },
   write: false,
 });

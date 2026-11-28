@@ -1046,12 +1046,6 @@
             "null"
           ]
         },
-        "nativeMagicString": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
         "chunkOptimization": {
           "anyOf": [
             {

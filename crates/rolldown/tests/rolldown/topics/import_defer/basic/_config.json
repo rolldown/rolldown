@@ -3,6 +3,5 @@
     "experimental": {
       "importDefer": true
     }
-  },
-  "expectWarning": true
+  }
 }

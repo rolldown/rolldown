@@ -140,6 +140,24 @@ impl<'me, 'ast: 'me> VisitJs<'ast> for AstScanner<'me, 'ast> {
         analyzer.add_top_level_eager_order_reasons(stmt, &mut stmt_eval_facts);
       }
       self.current_stmt_info.eval_flags = stmt_eval_facts.tree_shaking_flags();
+      // A property read of a deferred namespace evaluates the deferred module, so it is not a pure
+      // read. `eval_flags` keeps the result of an eager import. A build that keeps the deferral
+      // uses the saved result. See `EcmaView::import_defer_scan`.
+      if !self.deferred_namespace_symbol_ids.is_empty() {
+        let deferred_flags = analyzer
+          .with_deferred_namespaces(&self.deferred_namespace_symbol_ids)
+          .analyze_stmt(stmt)
+          .tree_shaking_flags();
+        if deferred_flags != self.current_stmt_info.eval_flags {
+          let stmt_idx = self.current_stmt_idx;
+          self
+            .result
+            .import_defer_scan
+            .get_or_insert_default()
+            .eval_flags
+            .push((stmt_idx, deferred_flags));
+        }
+      }
 
       #[cfg(debug_assertions)]
       {

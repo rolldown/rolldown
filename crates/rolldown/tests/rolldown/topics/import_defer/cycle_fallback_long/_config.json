@@ -1,0 +1,9 @@
+{
+  "_comment": "The static import cycle `a.js` -> `c.js` -> `b.js` -> `a.js` makes the build lower `import defer` to a normal import, with a warning. The eager import of `b.js` evaluates `c.js` and `a.js` first, so the order is the native order.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "expectWarning": true
+}

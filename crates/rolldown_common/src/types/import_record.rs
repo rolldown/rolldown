@@ -80,6 +80,10 @@ bitflags::bitflags! {
     const IsReExportOnly = 1 << 10;
     /// A direct CommonJS star export lowered to named re-exports for a dynamic entry.
     const CjsStarNamedExports = 1 << 11;
+    /// The record is a deferred import: `import defer * as ns from 'mod'`. The scanner sets it only
+    /// when `experimental.importDefer` is on. A build that does not support the deferral clears it
+    /// before the link stage.
+    const DeferPhase = 1 << 12;
 
     const TopLevelPureDynamicImport = Self::IsTopLevel.bits() | Self::PureDynamicImport.bits();
   }
@@ -108,6 +112,10 @@ pub struct ImportRecord<State: Debug + Clone> {
 impl<State: Debug + Clone> ImportRecord<State> {
   pub fn is_unspanned(&self) -> bool {
     self.meta.contains(ImportRecordMeta::IsUnspannedImport)
+  }
+
+  pub fn is_defer_phase(&self) -> bool {
+    self.meta.contains(ImportRecordMeta::DeferPhase)
   }
 }
 

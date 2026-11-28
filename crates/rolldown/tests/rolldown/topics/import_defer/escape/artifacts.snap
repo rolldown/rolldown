@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// log.js
+var log;
+function init_log() {
+	return (init_log = __esmMin((() => {
+		log = [];
+	})))();
+}
+// x.js
+var x_exports = /* @__PURE__ */ __exportAll({
+	count: () => count$1,
+	foo: () => "foo",
+	inc: () => inc
+});
+var x_deferred = /* @__PURE__ */ __deferNs(() => (init_x(), x_exports), x_exports);
+function inc() {
+	count$1++;
+}
+var count$1;
+function init_x() {
+	return (init_x = __esmMin((() => {
+		init_log();
+		log.push("x");
+		count$1 = 0;
+	})))();
+}
+// main.js
+init_log();
+const use = (value) => value;
+const same = x_deferred === x_deferred;
+const tag = Object.prototype.toString.call(use(x_deferred));
+const before = [...log];
+const keys = Object.keys(use(x_deferred));
+const after = [...log];
+(init_x(), inc)();
+const count = use(x_deferred).count;
+export { after, before, count, keys, same, tag };
+
+```

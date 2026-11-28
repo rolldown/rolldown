@@ -1,0 +1,8 @@
+{
+  "_comment": "A write to a deferred namespace throws a `TypeError` at run time, as in native ESM. A plain write does not evaluate the module. A compound assignment and `delete` evaluate it first. With the option off, the same writes are build errors.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

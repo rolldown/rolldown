@@ -33,6 +33,7 @@ struct Test262Frontmatter {
   negative: Option<Test262Negative>,
   flags: FxHashSet<String>,
   includes: FxHashSet<String>,
+  features: FxHashSet<String>,
 }
 
 impl Test262Frontmatter {
@@ -45,16 +46,7 @@ impl FromStr for Test262Frontmatter {
   type Err = anyhow::Error;
 
   fn from_str(content: &str) -> Result<Self, Self::Err> {
-    let start = content.find("/*---").ok_or_else(|| anyhow!("Missing frontmatter start"))?;
-    let end = content[start..].find("---*/").ok_or_else(|| anyhow!("Missing frontmatter end"))?;
-    let yaml_content = &content[start + 5..start + end];
-    let documents = Yaml::load_from_str(yaml_content)?;
-    let [yaml] = documents.as_slice() else {
-      return Err(anyhow!("Expected exactly one YAML document in frontmatter"));
-    };
-    if !yaml.is_mapping() {
-      return Err(anyhow!("Frontmatter is not a YAML mapping"));
-    }
+    let yaml = &frontmatter_yaml(content)?;
     let negative = match yaml.as_mapping_get("negative") {
       Some(negative) if !negative.is_null() => Some(Test262Negative {
         phase: yaml_str(negative, "phase")?,
@@ -66,8 +58,24 @@ impl FromStr for Test262Frontmatter {
       negative,
       flags: yaml_str_set(yaml, "flags")?,
       includes: yaml_str_set(yaml, "includes")?,
+      features: yaml_str_set(yaml, "features")?,
     })
   }
+}
+
+/// The YAML mapping in the `/*--- ... ---*/` header of a test file or a harness file.
+fn frontmatter_yaml(content: &str) -> anyhow::Result<Yaml<'_>> {
+  let start = content.find("/*---").ok_or_else(|| anyhow!("Missing frontmatter start"))?;
+  let end = content[start..].find("---*/").ok_or_else(|| anyhow!("Missing frontmatter end"))?;
+  let yaml_content = &content[start + 5..start + end];
+  let mut documents = Yaml::load_from_str(yaml_content)?;
+  let (Some(yaml), true) = (documents.pop(), documents.is_empty()) else {
+    return Err(anyhow!("Expected exactly one YAML document in frontmatter"));
+  };
+  if !yaml.is_mapping() {
+    return Err(anyhow!("Frontmatter is not a YAML mapping"));
+  }
+  Ok(yaml)
 }
 
 fn yaml_str(yaml: &Yaml, key: &str) -> anyhow::Result<String> {
@@ -108,9 +116,9 @@ static KNOWN_FAILURES: LazyLock<FxHashMap<String, Test262FailureMetadata>> = Laz
   serde_json::from_str(&json_content).expect("Failed to parse test262_failures.json")
 });
 
-/// Discovers all test files in the test262 module-code directory
-fn discover_test_files(module_code_dir: &PathBuf) -> Vec<PathBuf> {
-  let mut test_files = WalkDir::new(module_code_dir)
+/// Discovers all test files in a test262 directory
+fn discover_test_files(dir: &Path) -> Vec<PathBuf> {
+  let mut test_files = WalkDir::new(dir)
     .into_iter()
     .filter_map(Result::ok)
     .filter(|e| {
@@ -122,6 +130,14 @@ fn discover_test_files(module_code_dir: &PathBuf) -> Vec<PathBuf> {
   test_files.sort();
   test_files
 }
+
+/// The test262 directories that have import defer tests. Only the tests with the `import-defer`
+/// feature run.
+const IMPORT_DEFER_DIRS: [&str; 3] = [
+  "language/import/import-defer",
+  "language/expressions/dynamic-import",
+  "language/expressions/assignmenttargettype",
+];
 
 #[derive(Debug)]
 struct TestResult {
@@ -228,7 +244,11 @@ impl TestResult {
 }
 
 /// Creates bundler options for a test262 test file
-fn create_bundler_options(test_file: &Path, test_folder: &Path) -> BundlerOptions {
+fn create_bundler_options(
+  test_file: &Path,
+  test_folder: &Path,
+  experimental: Option<rolldown::ExperimentalOptions>,
+) -> BundlerOptions {
   BundlerOptions {
     input: Some(vec![rolldown::InputItem {
       name: Some("main".to_string()),
@@ -239,6 +259,7 @@ fn create_bundler_options(test_file: &Path, test_folder: &Path) -> BundlerOption
     platform: Some(rolldown::Platform::Node),
     keep_names: Some(true),
     generated_code: Some(rolldown::GeneratedCodeOptions { symbols: true }),
+    experimental,
     ..Default::default()
   }
 }
@@ -313,20 +334,17 @@ function print(msg) {
         code.push_str(&harness_content);
         code.push('\n');
 
-        // Extract and expose function names to globalThis
-        if let Some(defines_match) = harness_content.lines().find(|line| line.contains("defines:"))
-        {
-          if let Some(start) = defines_match.find('[') {
-            if let Some(end) = defines_match.find(']') {
-              let defines_str = &defines_match[start + 1..end];
-              for func_name in defines_str.split(',') {
-                let func_name = func_name.trim();
-                if !func_name.is_empty() {
-                  writeln!(code, "globalThis.{func_name} = {func_name};").unwrap();
-                }
-              }
-            }
-          }
+        // Expose the names in `defines` to globalThis. The list can be a flow sequence
+        // (`[a, b]`) or a block sequence (`- a` on each line). A name with a dot, such as
+        // `$262.agent.getReport`, is a property of a host object, not a declaration of the file.
+        let defines = frontmatter_yaml(&harness_content)
+          .and_then(|yaml| yaml_str_set(&yaml, "defines"))
+          .unwrap_or_else(|err| panic!("Invalid frontmatter in harness file {include}: {err}"));
+        let mut defines =
+          defines.into_iter().filter(|name| !name.contains('.')).collect::<Vec<_>>();
+        defines.sort_unstable();
+        for name in defines {
+          writeln!(code, "globalThis.{name} = {name};").unwrap();
         }
       }
     }
@@ -575,12 +593,15 @@ fn validate_no_stale_pass_metadata(results: &[TestResult]) {
   );
 }
 
-/// Validates that all KNOWN_FAILURES entries correspond to actual test files
-fn validate_known_failures(results: &[TestResult]) {
+/// Validates that all KNOWN_FAILURES entries of a suite correspond to actual test files
+fn validate_known_failures(results: &[TestResult], is_in_suite: impl Fn(&str) -> bool) {
   let all_test_paths: FxHashSet<String> = results.iter().map(TestResult::get_clean_path).collect();
 
-  let unknown_failures: Vec<String> =
-    KNOWN_FAILURES.keys().filter(|key| !all_test_paths.contains(key.as_str())).cloned().collect();
+  let unknown_failures: Vec<String> = KNOWN_FAILURES
+    .keys()
+    .filter(|key| is_in_suite(key) && !all_test_paths.contains(key.as_str()))
+    .cloned()
+    .collect();
 
   assert!(
     unknown_failures.is_empty(),
@@ -589,19 +610,20 @@ fn validate_known_failures(results: &[TestResult]) {
   );
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn test262_module_code() {
+/// Runs the test262 tests in `test_files` and checks the snapshot `snapshot_name`.
+/// `is_in_suite` tells which entries of `test262_failures.json` belong to this suite.
+/// `experimental` is the experimental options of each build.
+async fn run_test262_suite(
+  test_files: Vec<PathBuf>,
+  is_in_suite: impl Fn(&str) -> bool,
+  snapshot_name: &str,
+  experimental: Option<rolldown::ExperimentalOptions>,
+) {
   let cwd = std::env::current_dir().unwrap();
   let test262_root = cwd.join("../../test262");
-  let module_code_dir = test262_root.join("test/language/module-code");
-  assert!(
-    module_code_dir.exists(),
-    "test262 module-code directory not found at {module_code_dir:?}. \
-    Please ensure test262 is cloned as a submodule."
-  );
 
   let filter = std::env::var("TEST262_FILTER").ok();
-  let test_files: Vec<_> = discover_test_files(&module_code_dir)
+  let test_files: Vec<_> = test_files
     .into_iter()
     .filter(|test_file| {
       // Example: TEST262_FILTER="export-default" cargo test --test integration -- --no-capture
@@ -622,6 +644,7 @@ async fn test262_module_code() {
     .map(|test_file| {
       let cwd = cwd.clone();
       let test262_root = test262_root.clone();
+      let experimental = experimental.clone();
 
       tokio::spawn(async move {
         let content = std::fs::read_to_string(&test_file).unwrap();
@@ -629,7 +652,7 @@ async fn test262_module_code() {
         let expected = TestExpectation::from(&frontmatter);
 
         let test_folder = test_file.parent().unwrap();
-        let options = create_bundler_options(&test_file, test_folder);
+        let options = create_bundler_options(&test_file, test_folder, experimental);
 
         let test_meta = TestMeta {
           write_to_disk: false,
@@ -685,8 +708,53 @@ async fn test262_module_code() {
   }
 
   validate_no_stale_pass_metadata(&results);
-  validate_known_failures(&results);
+  validate_known_failures(&results, is_in_suite);
 
   let snapshot = generate_snapshot(&results);
-  insta::assert_snapshot!(snapshot);
+  insta::assert_snapshot!(snapshot_name, snapshot);
+}
+
+fn test262_test_dir() -> PathBuf {
+  let test_dir = std::env::current_dir().unwrap().join("../../test262/test");
+  assert!(
+    test_dir.exists(),
+    "test262 test directory not found at {}. \
+    Please ensure test262 is cloned as a submodule.",
+    test_dir.display()
+  );
+  test_dir
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test262_module_code() {
+  let test_files = discover_test_files(&test262_test_dir().join("language/module-code"));
+  run_test262_suite(
+    test_files,
+    |path| path.starts_with("language/module-code/"),
+    "test262_module_code",
+    None,
+  )
+  .await;
+}
+
+/// The import defer tests (`features: [import-defer]`) outside `module-code`.
+#[tokio::test(flavor = "multi_thread")]
+async fn test262_import_defer() {
+  let test_dir = test262_test_dir();
+  let test_files = IMPORT_DEFER_DIRS
+    .iter()
+    .flat_map(|dir| discover_test_files(&test_dir.join(dir)))
+    .filter(|test_file| {
+      let content = std::fs::read_to_string(test_file).unwrap();
+      Test262Frontmatter::from_str(&content)
+        .is_ok_and(|frontmatter| frontmatter.features.contains("import-defer"))
+    })
+    .collect();
+  run_test262_suite(
+    test_files,
+    |path| IMPORT_DEFER_DIRS.iter().any(|dir| path.starts_with(&format!("{dir}/"))),
+    "test262_import_defer",
+    Some(rolldown::ExperimentalOptions { import_defer: Some(true), ..Default::default() }),
+  )
+  .await;
 }

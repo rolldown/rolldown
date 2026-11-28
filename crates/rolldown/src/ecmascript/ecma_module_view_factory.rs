@@ -104,6 +104,7 @@ pub async fn create_ecma_view(
     deferred_write_constants,
     cjs_reexport_require_node_ids: _,
     cjs_reexport_import_record_ids,
+    import_defer_scan,
   } = scan_result;
   // If a export symbol in commonjs defined in multiple time, we just bailout treeshake it.
   for (k, v) in commonjs_exports {
@@ -176,6 +177,7 @@ pub async fn create_ecma_view(
     json_module_none_self_reference_included_symbol: None,
     cjs_reexport_import_record_ids,
     dynamic_import_called_names,
+    import_defer_scan,
   };
 
   let ecma_related =

@@ -1,0 +1,8 @@
+{
+  "_comment": "The shape of `cycle_fallback` without the import of `a.js` in `b.js`. The build has no cycle, so it keeps the deferral: `a.js` evaluates at the first access, after `z.js`.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

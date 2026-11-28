@@ -1,6 +1,7 @@
 use rolldown_common::{
   ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
-  RuntimeModuleBrief, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRefDb, TaggedSymbolRef, WrapKind,
+  RuntimeModuleBrief, Specifier, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRefDb, TaggedSymbolRef,
+  WrapKind,
 };
 use rolldown_utils::IndexBitSet;
 use rustc_hash::FxHashMap;
@@ -89,10 +90,17 @@ fn determine_has_dynamic_exports(modules: &IndexModules, linking_infos: &mut Lin
 }
 
 impl LinkStage<'_> {
+  /// Returns the targets of `import defer`, sorted. `create_deferred_namespaces` gives them a
+  /// deferred namespace object after `generate_lazy_export`.
   #[tracing::instrument(level = "debug", skip_all)]
-  pub(super) fn wrap_modules(&mut self) {
+  pub(super) fn wrap_modules(&mut self) -> Vec<ModuleIdx> {
     let mut visited_modules_for_wrapping = IndexBitSet::new(self.module_table.modules.len());
     determine_has_dynamic_exports(&self.module_table.modules, &mut self.metas);
+    let deferred_targets = if self.options.experimental.is_import_defer_enabled() {
+      self.wrap_import_defer_closures()
+    } else {
+      vec![]
+    };
 
     for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
       let module_id = module.idx;
@@ -170,6 +178,90 @@ impl LinkStage<'_> {
         &self.runtime,
         self.options,
       );
+    }
+    deferred_targets
+  }
+}
+
+impl LinkStage<'_> {
+  /// Wraps each target of `import defer` and the modules of its static dependency closure. A
+  /// deferred access can evaluate a module of the closure before its eager position, so each one
+  /// needs a lazy wrapper. The loop in `wrap_modules` then wraps the rest of their graph as for
+  /// any wrapped module. Returns the targets, sorted, which get a deferred namespace.
+  ///
+  /// `apply_import_defer_support` keeps the deferral only when each module of a closure is an ES
+  /// module. See internal-docs/import-defer/implementation.md.
+  fn wrap_import_defer_closures(&mut self) -> Vec<ModuleIdx> {
+    let runtime_idx = self.runtime.id();
+    let mut stack = vec![];
+    for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
+      for named_import in module.named_imports.values() {
+        let rec = &module.import_records[named_import.record_idx];
+        if !rec.is_defer_phase() || !matches!(named_import.imported, Specifier::Star) {
+          continue;
+        }
+        let Some(target) = rec.resolved_module else { continue };
+        if target != runtime_idx && self.module_table.modules[target].as_normal().is_some() {
+          stack.push(target);
+        }
+      }
+    }
+    let mut targets = stack.clone();
+    targets.sort_unstable();
+    targets.dedup();
+
+    let mut visited = IndexBitSet::new(self.module_table.modules.len());
+    while let Some(module_idx) = stack.pop() {
+      if module_idx == runtime_idx || !visited.set_bit(module_idx) {
+        continue;
+      }
+      let Module::Normal(module) = &self.module_table.modules[module_idx] else { continue };
+      debug_assert!(!matches!(module.exports_kind, ExportsKind::CommonJs));
+      let meta = &mut self.metas[module_idx];
+      meta.wrapped_by_import_defer = true;
+      if meta.wrap_kind().is_none() {
+        meta.set_wrap_kind(WrapKind::Esm);
+      }
+      stack.extend(
+        module
+          .import_records
+          .iter()
+          .filter(|rec| rec.kind.is_static())
+          .filter_map(|rec| rec.resolved_module),
+      );
+    }
+    targets
+  }
+
+  /// Creates the deferred namespace object `x_deferred` of each target of `import defer`:
+  /// `var x_deferred = __deferNs(() => (init_x(), x_exports), x_exports)`. The finalizer emits the
+  /// declaration after the namespace object, when tree shaking keeps the facade statement.
+  /// Call it after `generate_lazy_export`, which can replace the symbols and the statements of a
+  /// module.
+  pub(super) fn create_deferred_namespaces(&mut self, targets: &[ModuleIdx]) {
+    for &target in targets {
+      let Module::Normal(module) = &self.module_table.modules[target] else { continue };
+      let deferred_ref = self
+        .symbols
+        .create_facade_root_symbol_ref(target, &format!("{}_deferred", module.repr_name));
+      let meta = &mut self.metas[target];
+      let mut referenced_symbols =
+        vec![self.runtime.resolve_symbol("__deferNs").into(), module.namespace_object_ref.into()];
+      if let Some(wrapper_ref) = meta.wrapper_ref {
+        referenced_symbols.push(wrapper_ref.into());
+      }
+      let stmt_info = StmtInfo {
+        declared_symbols: smallvec![TaggedSymbolRef::normal(deferred_ref)],
+        referenced_symbols,
+        eval_flags: false.into(),
+        import_records: Vec::new(),
+        #[cfg(debug_assertions)]
+        debug_label: None,
+        meta: StmtInfoMeta::default(),
+        force_tree_shaking: true,
+      };
+      meta.deferred_namespace_stmt_info = Some(self.stmt_infos[target].add_stmt_info(stmt_info));
+      meta.deferred_namespace_ref = Some(deferred_ref);
     }
   }
 }

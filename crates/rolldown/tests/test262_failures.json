@@ -139,5 +139,80 @@
   },
   "language/module-code/source-phase-import/reexport-source-binding-namespace-get.js": {
     "reason": "source phase imports are not supported in Rolldown"
+  },
+  "language/expressions/dynamic-import/import-defer/import-defer-transitive-async-module/main.js": {
+    "reason": "`experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`"
+  },
+  "language/expressions/dynamic-import/import-defer/import-defer-transitive-async-module/promise-prototype-then-not-called.js": {
+    "reason": "`experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`"
+  },
+  "language/expressions/dynamic-import/import-defer/sync-dependency-of-deferred-async-module/main.js": {
+    "reason": "`experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`"
+  },
+  "language/expressions/dynamic-import/import-defer/sync/main.js": {
+    "reason": "`experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`"
+  },
+  "language/expressions/dynamic-import/syntax/valid/nested-with-expression-import-defer-empty-str-is-valid-assign-expr.js": {
+    "reason": "The test needs non-strict script code (`with`), but the runner gives each test to Rolldown as a `.js` entry, which Rolldown parses as module code (always strict)"
+  },
+  "language/expressions/dynamic-import/syntax/valid/nested-with-expression-import-defer-script-code-valid.js": {
+    "reason": "The test needs non-strict script code (`with`), but the runner gives each test to Rolldown as a `.js` entry, which Rolldown parses as module code (always strict)"
+  },
+  "language/expressions/dynamic-import/syntax/valid/nested-with-import-defer-empty-str-is-valid-assign-expr.js": {
+    "reason": "The test needs non-strict script code (`with`), but the runner gives each test to Rolldown as a `.js` entry, which Rolldown parses as module code (always strict)"
+  },
+  "language/expressions/dynamic-import/syntax/valid/nested-with-import-defer-script-code-valid.js": {
+    "reason": "The test needs non-strict script code (`with`), but the runner gives each test to Rolldown as a `.js` entry, which Rolldown parses as module code (always strict)"
+  },
+  "language/import/import-defer/deferred-namespace-object/identity.js": {
+    "reason": "`experimental.importDefer` does not support `import.defer()` yet, so Rolldown lowers it to `import()`"
+  },
+  "language/import/import-defer/deferred-namespace-object/json-module.js": {
+    "reason": "`experimental.importDefer` does not keep the deferred evaluation of a JSON module yet, so Rolldown lowers `import defer` to a normal import"
+  },
+  "language/import/import-defer/errors/get-other-while-dep-evaluating-async/main.js": {
+    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a top-level `await` yet, so Rolldown lowers `import defer` to a normal import"
+  },
+  "language/import/import-defer/errors/get-other-while-dep-evaluating/main.js": {
+    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import"
+  },
+  "language/import/import-defer/errors/get-other-while-evaluating-async/main.js": {
+    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a top-level `await` yet, so Rolldown lowers `import defer` to a normal import"
+  },
+  "language/import/import-defer/errors/get-other-while-evaluating/main.js": {
+    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import"
+  },
+  "language/import/import-defer/errors/get-self-while-defer-evaluating/main.js": {
+    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import"
+  },
+  "language/import/import-defer/errors/get-self-while-evaluating-async/main.js": {
+    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a top-level `await` yet, so Rolldown lowers `import defer` to a normal import"
+  },
+  "language/import/import-defer/errors/get-self-while-evaluating.js": {
+    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a static import cycle yet, so Rolldown lowers `import defer` to a normal import"
+  },
+  "language/import/import-defer/errors/module-throws/defer-import-after-evaluation.js": {
+    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with an `import()` yet, so Rolldown lowers `import defer` to a normal import"
+  },
+  "language/import/import-defer/errors/module-throws/third-party-evaluation-after-defer-import.js": {
+    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with an `import()` yet, so Rolldown lowers `import defer` to a normal import"
+  },
+  "language/import/import-defer/errors/resolution-error/import-defer-of-missing-module-fails.js": {
+    "reason": "Rolldown reports a module that it cannot resolve as a build error, not as a rejection of `import()` at runtime"
+  },
+  "language/import/import-defer/evaluation-top-level-await/async-cycle-dependency-of-deferred-module/main.js": {
+    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with an `import()` yet, so Rolldown lowers `import defer` to a normal import"
+  },
+  "language/import/import-defer/evaluation-top-level-await/flattening-order/main.js": {
+    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a top-level `await` yet, so Rolldown lowers `import defer` to a normal import"
+  },
+  "language/import/import-defer/evaluation-top-level-await/import-defer-transitive-async-module/main.js": {
+    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a top-level `await` yet, so Rolldown lowers `import defer` to a normal import"
+  },
+  "language/import/import-defer/evaluation-top-level-await/sync-dependency-of-deferred-async-module/main.js": {
+    "reason": "`experimental.importDefer` does not keep the deferred evaluation in a build with a top-level `await` yet, so Rolldown lowers `import defer` to a normal import"
+  },
+  "language/import/import-defer/evaluation-triggers/ignore-private-name-access.js": {
+    "reason": "Node.js 24.12.0 does not support `nonextensible-applies-to-private`, so it adds a private field to a non-extensible object with no TypeError"
   }
 }

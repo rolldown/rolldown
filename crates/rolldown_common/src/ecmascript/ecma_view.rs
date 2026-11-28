@@ -14,9 +14,34 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   ExportsKind, HmrInfo, ImportRecordIdx, ImporterRecord, LocalExport, ModuleDefFormat, ModuleId,
-  ModuleIdx, NamedImport, ResolvedImportRecord, StmtInfoIdx, SymbolRef,
+  ModuleIdx, NamedImport, ResolvedImportRecord, StmtEvalFlags, StmtInfoIdx, SymbolRef,
   side_effects::DeterminedSideEffects,
 };
+
+/// The scan results of a module that change when the build keeps the deferred evaluation of
+/// `import defer`. The other fields of `EcmaView` and `StmtInfo` keep the results of an eager
+/// import, as with `experimental.importDefer` off. Thus a build that does not support the deferral
+/// can lower each deferred import to a normal import. See internal-docs/import-defer/implementation.md.
+#[derive(Debug, Default, Clone)]
+pub struct ImportDeferScan {
+  /// The flags of each statement whose flags change when a property read of a deferred namespace
+  /// is not pure. Such a read evaluates the deferred module. `StmtInfo::eval_flags` keeps the
+  /// flags of an eager import.
+  pub eval_flags: Vec<(StmtInfoIdx, StmtEvalFlags)>,
+  /// The writes to a property of a deferred namespace (`ns.x = 1`). With an eager import, each
+  /// write is an `assign_to_import` error. A build that keeps the deferral keeps the write: the
+  /// namespace object rejects it at run time, and the write does not evaluate the module.
+  pub namespace_writes: Vec<DeferredNamespaceWrite>,
+}
+
+/// The data of the `assign_to_import` error of a write to a deferred namespace.
+#[derive(Debug, Clone)]
+pub struct DeferredNamespaceWrite {
+  pub span: Span,
+  pub name: ArcStr,
+  pub import_decl_span: Span,
+  pub imported_name: ArcStr,
+}
 
 bitflags! {
     #[derive(Debug, Default, Clone, Copy)]
@@ -205,6 +230,8 @@ pub struct EcmaView {
   /// Members called on a dynamic import's namespace, e.g. `foo` in
   /// `import('mod').then(ns => ns.foo())`.
   pub dynamic_import_called_names: FxHashMap<ImportRecordIdx, FxHashSet<CompactStr>>,
+  /// `Some` only for a module with an `import defer` that the scanner kept.
+  pub import_defer_scan: Option<Box<ImportDeferScan>>,
 }
 
 impl EcmaView {

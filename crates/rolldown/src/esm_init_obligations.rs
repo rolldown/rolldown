@@ -92,7 +92,8 @@ pub fn record_is_init_obligation(
   rec_idx: ImportRecordIdx,
   stmt_is_included: bool,
 ) -> bool {
-  if rec.kind != ImportKind::Import {
+  // A deferred import evaluates nothing at its statement. A deferred access calls the init.
+  if rec.kind != ImportKind::Import || rec.is_defer_phase() {
     return false;
   }
   if order_state.is_consumer_local_reexport_record(importer.idx, rec_idx) {
@@ -231,6 +232,11 @@ pub fn collect_entry_reexported_wrapper_inits(
       }
       let wrapper_ref = owner_meta.wrapper_ref?;
       if wrapper_ref == canonical_ref {
+        return None;
+      }
+      // The deferred namespace object (`x_deferred`) sits outside `init_x`, and a read of it must
+      // not evaluate `x`: an access through the object evaluates it.
+      if owner_meta.deferred_namespace_ref == Some(canonical_ref) {
         return None;
       }
       let canonical_wrapper_ref = symbol_db.canonical_ref_for(wrapper_ref);
@@ -894,6 +900,12 @@ fn add_wrapped_esm_init_target_for_symbol(
     return;
   }
   let meta = &ctx.metas[canonical_ref.owner];
+  // The deferred namespace object (`x_deferred`) sits outside `init_x`, and a read of it must not
+  // evaluate `x`: an access through the object evaluates it. An import of a re-exported deferred
+  // namespace (`export { ns }`) reaches this symbol.
+  if meta.deferred_namespace_ref == Some(canonical_ref) {
+    return;
+  }
   let transparent_order_wrapper =
     ctx.order_wrap_state.reexport_init_is_transparent(canonical_ref.owner);
   if wrapped_esm_target_is_reachable(
@@ -1001,6 +1013,7 @@ fn eager_forwarder_discharges_own_hops(
     |(stmt_idx, stmt_info)| {
       stmt_info.import_records.iter().all(|rec_idx| {
         module.import_records[*rec_idx].kind != ImportKind::Import
+          || module.import_records[*rec_idx].is_defer_phase()
           || (meta.stmt_info_included.has_bit(stmt_idx)
             && !ctx.order_wrap_state.is_nested_reexport_record(module_idx, *rec_idx)
             && !ctx.order_wrap_state.is_consumer_local_reexport_record(module_idx, *rec_idx))
@@ -1185,6 +1198,7 @@ pub fn collect_order_wrap_esm_init_targets(
         continue;
       }
       if rec.kind == ImportKind::Import
+        && !rec.is_defer_phase()
         && let Some(sub_importee_idx) = rec.resolved_module
       {
         let carrier_key = OrderCjsCarrierKey { importer: importee.idx, record: rec_idx };
@@ -1224,7 +1238,10 @@ fn collect_eager_retained_path_modules(
       continue;
     }
     for (rec_idx, rec) in module.import_records.iter_enumerated() {
-      if rec.kind != ImportKind::Import || !retained_records.contains(&(module_idx, rec_idx)) {
+      if rec.kind != ImportKind::Import
+        || rec.is_defer_phase()
+        || !retained_records.contains(&(module_idx, rec_idx))
+      {
         continue;
       }
       let Some(importee_idx) = rec.resolved_module else {

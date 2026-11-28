@@ -36,11 +36,11 @@ use oxc_str::{CompactStr, JSStr};
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
   ConstExportMeta, ConstantValue, DeferredWriteConstant, DynamicImportExprInfo, EcmaModuleAstUsage,
-  EcmaViewMeta, ExportsKind, FlatOptions, HmrInfo, ImportAttributes, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, LocalExport, MemberExprProp, MemberExprRef, ModuleDefFormat, ModuleId,
-  ModuleIdx, NamedImport, RawImportRecord, RolldownFileUrlReference, Specifier, StmtEvalFlags,
-  StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
-  TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
+  EcmaViewMeta, ExportsKind, FlatOptions, HmrInfo, ImportAttributes, ImportDeferScan, ImportKind,
+  ImportRecordIdx, ImportRecordMeta, LocalExport, MemberExprProp, MemberExprRef, ModuleDefFormat,
+  ModuleId, ModuleIdx, NamedImport, RawImportRecord, RolldownFileUrlReference, Specifier,
+  StmtEvalFlags, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule,
+  SymbolRefFlags, TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
 };
 use rolldown_ecmascript_utils::FunctionExt;
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan, EventKindSwitcher};
@@ -140,6 +140,8 @@ pub struct ScanResult {
   pub cjs_reexport_require_node_ids: Vec<NodeId>,
   /// Import record indices for `module.exports = require(...)` patterns.
   pub cjs_reexport_import_record_ids: Vec<ImportRecordIdx>,
+  /// See `EcmaView::import_defer_scan`.
+  pub import_defer_scan: Option<Box<ImportDeferScan>>,
 }
 
 pub struct AstScannerImmutableCtx<'me, 'ast> {
@@ -188,6 +190,9 @@ pub struct AstScanner<'me, 'ast> {
   /// Symbol IDs of namespace imports (`import * as ns from '...'`).
   /// Used to treat property reads on namespace objects as side-effect-free.
   namespace_object_symbol_ids: FxHashSet<SymbolId>,
+  /// The namespaces of `import defer * as ns from '...'`. They are also in
+  /// `namespace_object_symbol_ids`. See `EcmaView::import_defer_scan`.
+  deferred_namespace_symbol_ids: FxHashSet<SymbolId>,
   /// Tracks reads of root `var` bindings before their declarator runs. `None` when the module
   /// declares no root `var`.
   early_var_reads: Option<EarlyVarReads>,
@@ -300,6 +305,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       deferred_write_constants: Vec::new(),
       ecma_view_meta: EcmaViewMeta::default(),
       cjs_reexport_require_node_ids: Vec::new(),
+      import_defer_scan: None,
       cjs_reexport_import_record_ids: Vec::new(),
     };
 
@@ -338,6 +344,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       current_comment_idx: 0,
       untranspiled_syntax: UntranspiledSyntax::empty(),
       namespace_object_symbol_ids: FxHashSet::default(),
+      deferred_namespace_symbol_ids: FxHashSet::default(),
       early_var_reads: None,
       current_stmt_start: 0,
       mutated_root_lets: FxHashSet::default(),
@@ -677,6 +684,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       },
     );
     self.namespace_object_symbol_ids.insert(local);
+    if self.result.import_records[record_idx].is_defer_phase() {
+      self.deferred_namespace_symbol_ids.insert(local);
+    }
   }
 
   fn add_local_export(&mut self, export_name: &str, local: SymbolId, span: Span) {
@@ -1166,16 +1176,19 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   fn scan_import_decl(&mut self, decl: &ImportDeclaration) {
+    let mut meta = if decl.source.span().is_empty() {
+      ImportRecordMeta::IsUnspannedImport
+    } else {
+      ImportRecordMeta::empty()
+    };
+    // The pre-processor keeps the phase only when `experimental.importDefer` is on.
+    meta.set(ImportRecordMeta::DeferPhase, matches!(decl.phase, Some(ast::ImportPhase::Defer)));
     let rec_id = self.add_import_record(
       &to_usv_str(decl.source.value),
       ImportKind::Import,
       decl.source.span(),
       decl.span,
-      if decl.source.span().is_empty() {
-        ImportRecordMeta::IsUnspannedImport
-      } else {
-        ImportRecordMeta::empty()
-      },
+      meta,
       None,
     );
 

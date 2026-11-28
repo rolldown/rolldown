@@ -403,20 +403,37 @@ function registerBuildRows(runtime: any, ids: string[], edges: number[][], gen =
   });
 }
 
-/** The numbers of a `b` set: a bitset in base64url, bit `n` for number `n`. */
+/**
+ * The numbers of a set in either form: `b` is a bitset in base64url, bit `n` for number `n`;
+ * `d` is base64url LEB128 varints of the gaps between the sorted numbers.
+ */
 function decodeNumSet(value: string): number[] {
-  expect(value[0]).toBe('b');
   const bytes = Buffer.from(value.slice(1), 'base64url');
   const nums: number[] = [];
-  bytes.forEach((byte, i) => {
-    for (let bit = 0; bit < 8; bit++) {
-      if (byte & (1 << bit)) nums.push(i * 8 + bit);
+  if (value[0] === 'b') {
+    bytes.forEach((byte, i) => {
+      for (let bit = 0; bit < 8; bit++) {
+        if (byte & (1 << bit)) nums.push(i * 8 + bit);
+      }
+    });
+    return nums;
+  }
+  expect(value[0]).toBe('d');
+  let previous = 0;
+  for (let at = 0; at < bytes.length;) {
+    let gap = 0;
+    for (let shift = 0; ; shift += 7) {
+      const byte = bytes[at++];
+      gap += (byte & 0x7f) * 2 ** shift;
+      if (byte < 0x80) break;
     }
-  });
+    previous += gap;
+    nums.push(previous);
+  }
   return nums;
 }
 
-test('a request names modules by number in bitsets', async () => {
+test('a request names modules by number in the shorter of a bitset and a gap list', async () => {
   const { runtime } = await createRuntime();
   const ids = Array.from({ length: 2000 }, (_, i) => `m${i}.js`);
   registerBuildRows(
@@ -433,13 +450,14 @@ test('a request names modules by number in bitsets', async () => {
   const query = new URLSearchParams(runtime.encodeHave(new Set(['m3.js'])));
   expect(query.get('s')).toBe('7');
   expect(query.get('g')).toBe('3');
-  // Bit 3 of byte 0.
+  // Bit 3 of byte 0. The gap list `03` is as long, and equal length picks the bitset.
   expect(query.get('u')).toBe('bCA');
-  // Bits 0 and 17 (byte 0 bit 0, byte 2 bit 1) and 8 (byte 1 bit 0), without the update.
+  // Bits 0 and 17 (byte 0 bit 0, byte 2 bit 1) and 8 (byte 1 bit 0), without the update. The
+  // gaps 0, 8, 9 are 3 bytes too.
   expect(query.get('e')).toBe('bAQEC');
-  // A bitset ends at its last nonzero byte.
+  // The gaps 5, 995, 999 are the varints 05 e3 07 e7 07: 5 bytes instead of a 250-byte bitset.
+  expect(query.get('f')).toBe('dBeMH5wc');
   expect(decodeNumSet(query.get('f')!)).toEqual([5, 1000, 1999]);
-  expect(Buffer.from(query.get('f')!.slice(1), 'base64url')).toHaveLength(250);
   // A new nonce for every request.
   const nonce = new URLSearchParams(runtime.encodeHave(new Set())).get('n');
   expect(nonce).not.toBe(query.get('n'));
@@ -713,6 +731,152 @@ test('a failed pull of loadDynamic rejects without a reload', async () => {
   await expect(runtime.loadDynamic('route.js')).rejects.toThrow('500');
   expect(onMissingFactory).not.toHaveBeenCalled();
   expect(onReloadNeeded).not.toHaveBeenCalled();
+});
+
+test('every set of a dense or sparse client uses the shorter form', async () => {
+  const { runtime } = await createRuntime();
+  const ids = Array.from({ length: 3000 }, (_, i) => `m${i}.js`);
+  registerBuildRows(
+    runtime,
+    ids,
+    ids.map(() => []),
+    1,
+  );
+  // Dense: every module from 0 to 1499 ran. A gap list needs a byte per member, a bitset a
+  // byte per 8 numbers.
+  for (let i = 0; i < 1500; i++) runtime.registerModule(ids[i]);
+  // Sparse: a few high numbers. A gap list is a few bytes, a bitset about 375.
+  for (const i of [2990, 2995, 2999]) runtime.registerFactory(ids[i], () => {});
+  const query = new URLSearchParams(runtime.encodeHave(new Set(['m2000.js'])));
+  for (const [key, form, nums] of [
+    ['u', 'd', [2000]],
+    ['e', 'b', Array.from({ length: 1500 }, (_, i) => i)],
+    ['f', 'd', [2990, 2995, 2999]],
+  ] as const) {
+    expect(query.get(key)![0], key).toBe(form);
+    expect(decodeNumSet(query.get(key)!), key).toEqual(nums);
+  }
+});
+
+test('a long query goes in a POST body first, and the request carries the token', async () => {
+  const { runtime } = await createRuntime();
+  registerBuildRows(runtime, ['main.js', 'hot.js', 'lazy.js'], [[1], [], []], 1);
+  runtime.registerModule('main.js');
+  runtime.registerModule('hot.js');
+
+  const posts: { url: string; init: RequestInit }[] = [];
+  const fetch = vi.fn(async (url: string, init: RequestInit) => {
+    posts.push({ url, init });
+    return new Response(`token-${posts.length}`, { status: 200 });
+  });
+  vi.stubGlobal('fetch', fetch);
+  try {
+    const urls: string[] = [];
+    runtime.importPatch = async (url: string) => {
+      urls.push(url);
+      const payload = runtime.beginPayload(1);
+      payload.registerGraph({ ids: ['hot.js'], localCount: 1, edges: [[]], nums: [1] });
+      payload.registerFactory('hot.js', () => {});
+    };
+
+    // A short query needs no POST.
+    expect(await runtime.ensureRunnable(new Set(['hot.js']))).toEqual({ type: 'ready' });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(urls[0]).toMatch(/^\/__rolldown_hmr_patch\.js\?s=7&g=1&u=bAg&e=bAQ&n=\d+$/);
+
+    runtime.maxQueryLength = 10;
+    runtime.factories.clear();
+    expect(await runtime.ensureRunnable(new Set(['hot.js']))).toEqual({ type: 'ready' });
+    expect(posts).toHaveLength(1);
+    expect(posts[0].url).toBe('/__rolldown_hmr_have');
+    expect(posts[0].init.method).toBe('POST');
+    expect(posts[0].init.headers).toEqual({ 'content-type': 'application/x-rolldown-hmr-have' });
+    const body = new URLSearchParams(String(posts[0].init.body));
+    expect(body.get('u')).toBe('bAg');
+    expect(body.get('e')).toBe('bAQ');
+    // The token URL keeps the nonce of the query it stands for.
+    expect(urls[1]).toBe(`/__rolldown_hmr_patch.js?t=token-1&n=${body.get('n')}`);
+
+    // A server with another base overrides the endpoint.
+    runtime.haveUrl = () => '/base/__rolldown_hmr_have';
+    expect(await runtime.requestQuery(new Set())).toMatch(/^t=token-2&n=\d+$/);
+    expect(posts[1].url).toBe('/base/__rolldown_hmr_have');
+
+    // A client with no URL limit never posts.
+    runtime.maxQueryLength = Infinity;
+    expect(await runtime.requestQuery(new Set(['hot.js']))).toMatch(/^s=7&g=1&u=bAg/);
+    expect(posts).toHaveLength(2);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+test('a token URL keeps its nonce while other requests start during the POST', async () => {
+  const { runtime } = await createRuntime();
+  registerBuildRows(runtime, ['main.js'], [[]], 1);
+  runtime.registerModule('main.js');
+  runtime.maxQueryLength = 0;
+  let answer!: (response: Response) => void;
+  let body = '';
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((_url: string, init: RequestInit) => {
+      body = String(init.body);
+      return new Promise<Response>((resolve) => (answer = resolve));
+    }),
+  );
+  try {
+    const pending = runtime.requestQuery(new Set());
+    await vi.waitFor(() => expect(body).not.toBe(''));
+    const nonce = new URLSearchParams(body).get('n');
+    runtime.encodeHave(new Set());
+    answer(new Response('abc', { status: 200 }));
+    expect(await pending).toBe(`t=abc&n=${nonce}`);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+test('loadLazyChunk posts a long query and imports the lazy URL with the token', async () => {
+  const { runtime } = await createRuntime();
+  registerBuildRows(runtime, ['main.js'], [[]], 1);
+  runtime.registerModule('main.js');
+  runtime.maxQueryLength = 0;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response('abc', { status: 200 })),
+  );
+  const urls: string[] = [];
+  try {
+    // The default `loadLazyChunk` imports this URL; a data URL stands for the server's answer.
+    runtime.lazyUrl = (proxyModuleId: string, query: string) => {
+      urls.push(`/@vite/lazy?id=${encodeURIComponent(proxyModuleId)}&${query}`);
+      return 'data:text/javascript,export {}';
+    };
+    await runtime.loadLazyChunk('lazy.js?rolldown-lazy=1');
+    expect(urls).toHaveLength(1);
+    expect(urls[0]).toMatch(/^\/@vite\/lazy\?id=lazy\.js%3Frolldown-lazy%3D1&t=abc&n=\d+$/);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+test('a failed POST rejects the request like a failed GET and keeps the dropped deps', async () => {
+  const runtime = await createRuntimeWithDroppedDep();
+  runtime.maxQueryLength = 0;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response('too large', { status: 413 })),
+  );
+  const importPatch = vi.fn();
+  runtime.importPatch = importPatch;
+  try {
+    await expect(runtime.loadDynamic('route.js')).rejects.toThrow('status 413');
+    expect(importPatch).not.toHaveBeenCalled();
+    expect([...runtime.droppedDeps]).toEqual(['b.js']);
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });
 
 test('a push that skips a generation keeps knownGen, and the next pull asks for the catch-up', async () => {

@@ -16,3 +16,4 @@ import './circular-reexport/setup.js';
 import './circular-import-binding/setup.js';
 import './top-level-await/setup.js';
 import './cjs-interop/setup.js';
+import './have-post/setup.js';

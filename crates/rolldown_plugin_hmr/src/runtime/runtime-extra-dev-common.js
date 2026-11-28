@@ -76,10 +76,28 @@ function toBase64Url(bytes, length) {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+/** The number of set bits of each byte value. */
+const BIT_COUNTS = Uint8Array.from({ length: 256 }, (_, byte) => {
+  let count = 0;
+  for (let rest = byte; rest; rest >>= 1) count += rest & 1;
+  return count;
+});
+
 /**
- * A set of module numbers in the request format: `b` and a bitset in base64url without padding.
- * Bit `n` is set for number `n`, bytes in little-endian bit order. An empty set is `''`. See
- * internal-docs/hmr/design.md.
+ * @param {number} gap
+ */
+function varintLength(gap) {
+  return gap < 0x80 ? 1 : gap < 0x4000 ? 2 : gap < 0x200000 ? 3 : gap < 0x10000000 ? 4 : 5;
+}
+
+/**
+ * A set of module numbers in the request format: the shorter of two forms, each base64url
+ * without padding after a one-character prefix (equal length picks `b`). `b` is a bitset: bit
+ * `n` is set for number `n`, bytes in little-endian bit order. `d` is the sorted numbers as
+ * LEB128 varints of their gaps: the first number, then each number minus the one before it. An
+ * empty set is `''`. See internal-docs/hmr/design.md.
+ *
+ * Both forms come from the bitset, so the numbers need no sort.
  */
 class NumSet {
   /**
@@ -105,7 +123,42 @@ class NumSet {
 
   /** @returns {string} */
   encode() {
-    return this.length === 0 ? '' : `b${toBase64Url(this.bits, this.length)}`;
+    const { bits, length } = this;
+    if (length === 0) return '';
+    let members = 0;
+    for (let byte = 0; byte < length; byte++) members += BIT_COUNTS[bits[byte]];
+    // Each gap takes at least one byte, and base64 grows with the byte count.
+    if (members >= length) return `b${toBase64Url(bits, length)}`;
+    let gapsLength = 0;
+    let previous = 0;
+    for (let byte = 0; byte < length; byte++) {
+      for (let value = bits[byte], bit = 0; value; value >>= 1, bit++) {
+        if (value & 1) {
+          const num = byte * 8 + bit;
+          gapsLength += varintLength(num - previous);
+          previous = num;
+        }
+      }
+    }
+    if (gapsLength >= length) return `b${toBase64Url(bits, length)}`;
+    const gaps = new Uint8Array(gapsLength);
+    let at = 0;
+    previous = 0;
+    for (let byte = 0; byte < length; byte++) {
+      for (let value = bits[byte], bit = 0; value; value >>= 1, bit++) {
+        if (value & 1) {
+          const num = byte * 8 + bit;
+          let gap = num - previous;
+          previous = num;
+          while (gap >= 0x80) {
+            gaps[at++] = (gap & 0x7f) | 0x80;
+            gap >>>= 7;
+          }
+          gaps[at++] = gap;
+        }
+      }
+    }
+    return `d${toBase64Url(gaps, gapsLength)}`;
   }
 }
 
@@ -242,6 +295,14 @@ export class DevRuntime {
   refetching = undefined;
   /** Makes each request URL unique: the browser keeps one module record per URL. */
   requestNonce = 0;
+  /**
+   * A query longer than this is sent first in a POST body to `haveUrl()`, and the request URL
+   * carries only the token that the server answers. Node's default header limit (16 KiB for the
+   * request line and all headers) answers a longer request with 431, and the other headers need
+   * room too. A client with no such limit sets `Infinity`.
+   * @type {number}
+   */
+  maxQueryLength = 6000;
   /**
    * Counts `registerModule` calls. A module that ran while the HMR client waited may import a
    * module of the update, so the client walks again when the count changed.
@@ -893,7 +954,40 @@ export class DevRuntime {
   }
 
   /**
-   * The URL of a patch, for a query from `encodeHave`. The patch is served next to the output
+   * The query of the next patch or lazy request: `encodeHave(updateIds)`, or `t=<token>&n=<nonce>`
+   * when that is longer than `maxQueryLength`. A failed POST rejects, like a failed request.
+   * @param {Set<string>} updateIds
+   * @returns {Promise<string>}
+   */
+  async requestQuery(updateIds) {
+    const query = this.encodeHave(updateIds);
+    if (query.length <= this.maxQueryLength) return query;
+    // Read before the POST: a request that starts while it runs moves the nonce on.
+    const nonce = this.requestNonce;
+    const response = await fetch(this.haveUrl(), {
+      method: 'POST',
+      // Not a CORS-safelisted type, so a page on another origin can only post after a preflight.
+      headers: { 'content-type': 'application/x-rolldown-hmr-have' },
+      body: query,
+    });
+    if (!response.ok) {
+      throw new Error(`The have-set request failed with status ${response.status}`);
+    }
+    const token = await response.text();
+    return `t=${encodeURIComponent(token)}&n=${nonce}`;
+  }
+
+  /**
+   * The URL that stores a long query and answers a token for it. A server with another output
+   * base overrides this method, like `patchUrl`.
+   * @returns {string}
+   */
+  haveUrl() {
+    return '/__rolldown_hmr_have';
+  }
+
+  /**
+   * The URL of a patch, for a query from `requestQuery`. The patch is served next to the output
    * files, so a server with another output base overrides this method.
    * @param {string} query
    * @returns {string}
@@ -917,7 +1011,7 @@ export class DevRuntime {
     const roots = taken.length > 0 ? new Set([...updateIds, ...taken]) : updateIds;
     let putBack = 0;
     try {
-      await this.importPatch(this.patchUrl(this.encodeHave(roots)));
+      await this.importPatch(this.patchUrl(await this.requestQuery(roots)));
     } finally {
       for (const id of taken) {
         if (this.isDroppedDep(id)) {
@@ -938,7 +1032,7 @@ export class DevRuntime {
   }
 
   /**
-   * The URL of the lazy chunk behind a lazy boundary, for a query from `encodeHave`. The dev
+   * The URL of the lazy chunk behind a lazy boundary, for a query from `requestQuery`. The dev
    * server owns the lazy endpoint, so a server that serves it at another URL (for example under
    * a public base path) overrides this method.
    * @param {string} proxyModuleId
@@ -956,7 +1050,7 @@ export class DevRuntime {
    * @returns {Promise<unknown>}
    */
   async loadLazyChunk(proxyModuleId) {
-    return import(/* @vite-ignore */ this.lazyUrl(proxyModuleId, this.encodeHave(new Set())));
+    return import(/* @vite-ignore */ this.lazyUrl(proxyModuleId, await this.requestQuery(new Set())));
   }
 
   /**

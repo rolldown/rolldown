@@ -294,7 +294,8 @@ impl DevEngine {
   }
 
   /// Renders the patch a client asks for. `query` is the query string of the patch request
-  /// (see `ClientHave::parse_query`). A query that does not parse gets a reload.
+  /// (see `ClientHave::parse_query`), after the dev server resolved a have-set token (see
+  /// internal-docs/hmr/design.md, "Request size"). A query that does not parse gets a reload.
   pub async fn render_patch(&self, query: &str) -> BuildResult<HmrPullResponse<HmrPatch>> {
     self.create_error_if_closed()?;
     let mut bundler = self.bundler.lock().await;
@@ -315,7 +316,8 @@ impl DevEngine {
   /// # Arguments
   /// * `proxy_module_id` - The proxy module ID (with ?rolldown-lazy=1 suffix)
   /// * `query` - The query string of the lazy request, which describes what the client holds
-  ///   (see `ClientHave::parse_query`). A query that does not parse gets a reload.
+  ///   (see `ClientHave::parse_query`), after the dev server resolved a have-set token. A query
+  ///   that does not parse gets a reload.
   ///
   /// # Errors
   /// - If the module is not a lazy proxy from an earlier build
@@ -1521,9 +1523,14 @@ mod tests {
       HmrPullResponse::Reload { .. }
     ));
     assert!(matches!(engine.render_patch("g=1").await.unwrap(), HmrPullResponse::Reload { .. }));
-    // Number 1000 was never given out.
-    let unknown = format!("s=7&g=1&u={}", HmrNumSet::from_nums([1000]).encode());
-    assert!(matches!(engine.render_patch(&unknown).await.unwrap(), HmrPullResponse::Reload { .. }));
+    // Number 1000 was never given out: as a gap list (the varint e8 07), and as a bitset whose
+    // byte 125 is 01.
+    for unknown in ["d6Ac".to_owned(), format!("b{}B", "A".repeat(167))] {
+      assert!(matches!(
+        engine.render_patch(&format!("s=7&g=1&u={unknown}")).await.unwrap(),
+        HmrPullResponse::Reload { .. }
+      ));
+    }
 
     engine.close().await.unwrap();
     std::fs::remove_dir_all(&dir).unwrap();

@@ -48,6 +48,8 @@ await new Promise((resolve) => setTimeout(resolve, 0));
 const runtime = /** @type {any} */ (globalThis).__rolldown_runtime__;
 // A dev server tells the page the generation of its output; the output code does not carry it.
 runtime.setOutputGeneration(Number(process.env.ROLLDOWN_HMR_CLIENT_GENERATION ?? 0));
+// Requests go over stdin, which has no URL size limit.
+runtime.maxQueryLength = Infinity;
 // The stand-in for the patch GET: Rust renders the patch and writes it to a file.
 runtime.importPatch = async (/** @type {string} */ url) => {
   send({ t: 'request', query: url.slice(url.indexOf('?') + 1) });

@@ -14,27 +14,21 @@ export { __exportAll };
 ## data.json.js
 
 ```js
-import { __exportAll } from "./_virtual/_rolldown/runtime.js";
-// data.json
-var data_exports = /* @__PURE__ */ __exportAll({
-	answer: () => answer,
-	default: () => data_default,
-	nested: () => nested
-});
+import "./_virtual/_rolldown/runtime.js";
 var answer = 42;
 var nested = { "ok": true };
 var data_default = {
 	answer,
 	nested
 };
-export { answer, data_exports, data_default as default, nested };
+export { answer, data_default as default, nested };
 
 ```
 
 ## index.js
 
 ```js
-import { data_exports } from "./data.json.js";
+import * as data_exports from "./data.json.js";
 // index.js
 const namespace = data_exports;
 const namespaceKeys = Object.keys(data_exports).sort();

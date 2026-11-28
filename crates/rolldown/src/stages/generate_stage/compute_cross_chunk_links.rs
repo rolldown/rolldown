@@ -1984,13 +1984,27 @@ impl GenerateStage<'_> {
             });
           // Check if the import is from another chunk
           if chunk_id != importee_chunk_idx {
+            // A preserved ESM chunk with static exports already has a native namespace.
+            let import_chunk_namespace = self.options.preserve_modules
+              && matches!(self.options.format, OutputFormat::Esm)
+              && self.link_output.module_table[import_ref.owner].as_normal().is_some_and(
+                |module| {
+                  let meta = &self.link_output.metas[module.idx];
+                  module.namespace_object_ref == import_ref
+                    && module.exports_kind == ExportsKind::Esm
+                    && meta.wrap_kind() == WrapKind::None
+                    && !meta.has_dynamic_exports
+                },
+              );
             index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
             let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
             imports_from_other_chunks
               .entry(importee_chunk_idx)
               .or_default()
-              .push(CrossChunkImportItem { import_ref });
-            index_chunk_exported_symbols[importee_chunk_idx].entry(import_ref).or_default();
+              .push(CrossChunkImportItem { import_ref, import_chunk_namespace });
+            if !import_chunk_namespace {
+              index_chunk_exported_symbols[importee_chunk_idx].entry(import_ref).or_default();
+            }
           }
         }
 

@@ -14,28 +14,25 @@ export { __exportAll };
 ## index.js
 
 ```js
-export { two_exports as two } from "./two.js";
+import * as two_exports from "./two.js";
+export { two_exports as two };
 
 ```
 
 ## three.js
 
 ```js
-import { __exportAll } from "./_virtual/_rolldown/runtime.js";
-// three.js
-var three_exports = /* @__PURE__ */ __exportAll({ myVariable: () => myVariable });
+import "./_virtual/_rolldown/runtime.js";
 const myVariable = "world";
-export { myVariable, three_exports };
+export { myVariable };
 
 ```
 
 ## two.js
 
 ```js
-import { __exportAll } from "./_virtual/_rolldown/runtime.js";
-import { three_exports } from "./three.js";
-// two.js
-var two_exports = /* @__PURE__ */ __exportAll({ three: () => three_exports });
-export { three_exports as three, two_exports };
+import "./_virtual/_rolldown/runtime.js";
+import * as three_exports from "./three.js";
+export { three_exports as three };
 
 ```

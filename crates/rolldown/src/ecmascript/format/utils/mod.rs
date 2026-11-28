@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use rolldown_common::{ExternalModule, OutputFormat};
+use rolldown_common::{ExternalModule, OutputFormat, SymbolRef};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::ecmascript::{escape_non_ascii, to_ecma_string_literal};
 
@@ -30,6 +30,29 @@ impl<'a> ExternalImportKind<'a> {
   pub fn is_used(&self) -> bool {
     matches!(self, ExternalImportKind::Used(_))
   }
+}
+
+pub fn external_import_kind<'a>(
+  ctx: &GenerateContext<'_>,
+  importee: &'a ExternalModule,
+  mut named_imports: impl Iterator<Item = SymbolRef>,
+) -> Option<ExternalImportKind<'a>> {
+  let used = match ctx.options.format {
+    // Merged external imports share a canonical binding across chunks, so check liveness on the
+    // original import binding. Re-exported imports that skip the merger use their local canonical
+    // binding.
+    OutputFormat::Esm => named_imports.any(|local| {
+      let canonical = ctx.link_output.symbol_db.canonical_ref_for(local);
+      let binding =
+        if ctx.link_output.module_table[canonical.owner].is_external() { local } else { canonical };
+      ctx.used_symbol_refs.contains(&binding)
+    }),
+    _ => ctx.link_output.used_external_symbols.contains(&importee.namespace_ref),
+  };
+  if used {
+    return Some(ExternalImportKind::Used(importee));
+  }
+  importee.side_effects.has_side_effects().then_some(ExternalImportKind::SideEffectOnly(importee))
 }
 
 pub fn render_factory_parameters(
@@ -69,7 +92,8 @@ pub fn render_chunk_external_imports<'a>(
       let external_module_symbol_name =
         escape_non_ascii(external_module_symbol_name, ctx.options.charset.is_ascii());
 
-      if ctx.link_output.used_external_symbols.contains(&importee.namespace_ref) {
+      let kind = external_import_kind(ctx, importee, std::iter::empty())?;
+      if kind.is_used() {
         // `named_imports` only covers imports written by modules that live in this chunk, so the
         // mode set also folds in what the inclusion pass recorded for observers landing here.
         // Deconflicting derives the mixed-mode binding names from this same call.
@@ -119,12 +143,8 @@ pub fn render_chunk_external_imports<'a>(
             import_code.push_str(");\n");
           }
         }
-        Some(ExternalImportKind::Used(importee))
-      } else if importee.side_effects.has_side_effects() {
-        Some(ExternalImportKind::SideEffectOnly(importee))
-      } else {
-        None
       }
+      Some(kind)
     })
     .collect_vec();
 

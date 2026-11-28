@@ -46,6 +46,7 @@ pub fn generate_pre_rendered_chunk(
 pub fn generate_rendered_chunk(
   chunk: &GenerateContext<'_>,
   render_modules: FxHashMap<ModuleId, RenderedModule>,
+  static_imports: &[StaticImport],
 ) -> RollupRenderedChunk {
   let GenerateContext { chunk_idx, chunk_graph, chunk, link_output, resolved_paths, .. } = chunk;
   let pre_rendered_chunk =
@@ -64,8 +65,7 @@ pub fn generate_rendered_chunk(
       .expect("should have preliminary_filename")
       .clone(),
     modules: render_modules.into(),
-    imports: chunk
-      .static_imports
+    imports: static_imports
       .iter()
       .map(|static_import| match *static_import {
         StaticImport::Chunk(chunk_idx) => chunk_graph.chunk_table[chunk_idx]

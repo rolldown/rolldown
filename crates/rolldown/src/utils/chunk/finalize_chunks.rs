@@ -222,7 +222,7 @@ pub async fn finalize_assets(
       (&mut ins_chunk.meta, ins_chunk.originate_from)
     {
       let chunk = &chunk_graph.chunk_table[originate_from];
-      ecma_meta.imports = chunk
+      ecma_meta.imports = ecma_meta
         .static_imports
         .iter()
         .flat_map(|static_import| match *static_import {

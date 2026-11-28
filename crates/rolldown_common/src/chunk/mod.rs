@@ -107,12 +107,10 @@ pub struct Chunk {
   pub depended_runtime_helper: RuntimeHelper,
   /// related to [`crate::types::import_record::ImportRecordMeta::EntryLevelExternal`]
   pub entry_level_external_module_idx: Vec<ModuleIdx>,
-  /// The chunks of `cross_chunk_imports` and the external modules of
-  /// `direct_imports_from_external_modules`, `entry_level_external_module_idx`, and the local
-  /// require factory, in the order in which the chunk imports them, which is also the order of
-  /// `chunk.imports`. The renderer writes an entry-level `export *` from an external module after
-  /// the imports.
+  /// Ordered chunk imports and external import candidates for rendering, including direct external
+  /// imports, entry-level external re-exports, and the local require factory.
   pub static_imports: Vec<StaticImport>,
+  pub body_external_imports: Vec<ModuleIdx>,
   pub insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>>,
   pub remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>,
   /// Pre-computed export mode for the chunk

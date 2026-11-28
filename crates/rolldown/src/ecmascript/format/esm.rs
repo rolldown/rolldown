@@ -12,7 +12,10 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{
   share_factory::render_inline_records,
-  utils::{is_use_strict_directive, render_chunk_directives, render_hoisted_keep_names},
+  utils::{
+    external_import_kind, is_use_strict_directive, render_chunk_directives,
+    render_hoisted_keep_names,
+  },
 };
 use crate::{
   ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
@@ -329,24 +332,14 @@ where
   let mut default_alias = vec![];
   let specifiers = named_imports
     .filter_map(|(_importer, named_import)| {
-      let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(named_import.imported_as);
-      // A named import that is itself re-exported skips the external binding merger
-      // (`bind_imports_and_exports`), so its canonical ref stays importer-local; its usage
-      // is still answered by `used_symbol_refs` until exports get their own tracking.
-      let is_used = if ctx.link_output.module_table[canonical_ref.owner].is_external() {
-        // Every importer of an external module shares one binding, so check the importer's own
-        // import binding: another chunk may still use the shared one.
-        ctx.used_symbol_refs.contains(&named_import.imported_as)
-      } else {
-        ctx.used_symbol_refs.contains(&canonical_ref)
-      };
-      if !is_used {
+      let kind = external_import_kind(ctx, importee, std::iter::once(named_import.imported_as));
+      if !kind.is_some_and(|kind| kind.is_used()) {
         return None;
       }
       let alias = ctx
         .link_output
         .symbol_db
-        .canonical_name_for_or_original(canonical_ref, &ctx.chunk.canonical_names);
+        .canonical_name_for_or_original(named_import.imported_as, &ctx.chunk.canonical_names);
       let rendered_alias = escape_non_ascii(alias, ascii_only);
       match &named_import.imported {
         Specifier::Star => {
@@ -391,7 +384,7 @@ where
 
   if !specifiers.is_empty()
     || !default_alias.is_empty()
-    || (importee.side_effects.has_side_effects() && !*is_importee_rendered)
+    || (!*is_importee_rendered && external_import_kind(ctx, importee, std::iter::empty()).is_some())
   {
     *is_importee_rendered = true;
     s.push_str(&create_import_declaration(

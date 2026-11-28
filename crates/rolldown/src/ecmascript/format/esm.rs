@@ -217,6 +217,8 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
       .get(&exporter_id)
       .expect("every chunk of `static_imports` is in `imports_from_other_chunks`");
     let importee_chunk = &ctx.chunk_graph.chunk_table[exporter_id];
+    let import_path = ctx.chunk.import_path_for(importee_chunk);
+    let mut namespace_imported = false;
     let mut default_alias = vec![];
     // Track seen canonical refs to avoid duplicate imports.
     // Multiple import_refs can resolve to the same canonical_ref (e.g., re-exports from CJS modules),
@@ -239,6 +241,15 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
           .symbol_db
           .canonical_name_for_or_original(canonical_ref, &ctx.chunk.canonical_names);
         let rendered_imported = escape_non_ascii(imported, ascii_only);
+        if item.import_chunk_namespace {
+          s.push_str("import * as ");
+          s.push_str(&rendered_imported);
+          s.push_str(" from ");
+          s.push_str(&to_ecma_string_literal(&import_path, ascii_only));
+          s.push_str(";\n");
+          namespace_imported = true;
+          return None;
+        }
         let alias = &ctx.render_export_items_index_vec[exporter_id]
           .get(&item.import_ref)
           .expect("should have export item index")[0];
@@ -259,13 +270,15 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
       .collect::<Vec<_>>();
     specifiers.sort_unstable();
 
-    s.push_str(&create_import_declaration(
-      specifiers,
-      &default_alias,
-      &ctx.chunk.import_path_for(importee_chunk),
-      None,
-      ascii_only,
-    ));
+    if !namespace_imported || !specifiers.is_empty() || !default_alias.is_empty() {
+      s.push_str(&create_import_declaration(
+        specifiers,
+        &default_alias,
+        &import_path,
+        None,
+        ascii_only,
+      ));
+    }
   }
   (!s.is_empty()).then_some(s)
 }

@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      { "import": "./main.js" },
+      { "import": "./counter.js" }
+    ],
+    "preserveModules": true,
+    "preserveEntrySignatures": "strict"
+  },
+  "snapshot": false
+}

@@ -13,6 +13,7 @@ const expectedKeys = ['answer', 'default', 'nested'];
 
 assert.deepEqual(namespaceKeys, expectedKeys);
 assert.deepEqual(Object.keys(namespace).sort(), expectedKeys);
+assert.equal(namespace, dataModule);
 assert.equal(namespace.answer, 42);
 assert.deepEqual(namespace.nested, { ok: true });
 assert.deepEqual(namespace.default, expectedDefault);

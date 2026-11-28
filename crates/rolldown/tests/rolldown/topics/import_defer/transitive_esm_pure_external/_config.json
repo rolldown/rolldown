@@ -1,0 +1,13 @@
+{
+  "_comment": "ESM output: the deferred module `d.js` imports the external module `ext-pure`, and the chunk imports it at its start. With `moduleSideEffects: false`, the external module has no side effects, so its early evaluation is not observable. The build keeps the deferral, with no warning.",
+  "config": {
+    "external": ["ext-pure"],
+    "treeshake": {
+      "moduleSideEffects": false
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "expectWarning": false
+}

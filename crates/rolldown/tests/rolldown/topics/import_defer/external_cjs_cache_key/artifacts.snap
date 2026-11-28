@@ -1,0 +1,45 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+// HIDDEN [\0rolldown/runtime.js]
+// p1.js
+var import_ext_prim$1;
+function init_p1() {
+	return (init_p1 = __esmMin((() => {
+		import_ext_prim$1 = /* @__PURE__ */ __toESMCached("ext-prim", require("ext-prim"));
+	})))();
+}
+// p2.js
+var import_ext_prim;
+function init_p2() {
+	return (init_p2 = __esmMin((() => {
+		import_ext_prim = /* @__PURE__ */ __toESMCached("ext-prim", require("ext-prim"));
+	})))();
+}
+// a.js
+var import_ext_a;
+function init_a() {
+	return (init_a = __esmMin((() => {
+		import_ext_a = /* @__PURE__ */ __toESMCached("ext-a", require("ext-a"));
+	})))();
+}
+// b.js
+var import_ext_b;
+function init_b() {
+	return (init_b = __esmMin((() => {
+		import_ext_b = /* @__PURE__ */ __toESMCached("ext-b", require("ext-b"));
+	})))();
+}
+// main.js
+const primitive = () => [(init_p1(), import_ext_prim$1) === (init_p2(), import_ext_prim), (init_p1(), import_ext_prim$1.default)];
+const twoExternals = () => [(init_a(), import_ext_a) === (init_b(), import_ext_b), (init_a(), import_ext_a.default) === (init_b(), import_ext_b.default)];
+exports.primitive = primitive;
+exports.twoExternals = twoExternals;
+
+```

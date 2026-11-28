@@ -1,0 +1,11 @@
+{
+  "_comment": "CommonJS output with the default `dynamicImportInCjs: true` keeps the native `import()` for `import.defer()` of an external module, with a warning. The external evaluates when it loads, as in the build with the option off. `ext-tla` is an ES module with top-level `await`: `require()` throws for it, but `import()` loads it.",
+  "config": {
+    "format": "cjs",
+    "external": ["ext-cjs", "ext-tla"],
+    "experimental": {
+      "importDefer": true
+    }
+  },
+  "expectWarning": true
+}

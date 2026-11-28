@@ -1,0 +1,63 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+// d.js
+var import_ext_ns;
+function init_d() {
+	return (init_d = require_rolldown_runtime.__esmMin((() => {
+		import_ext_ns = /* @__PURE__ */ require_rolldown_runtime.__toESMCached("ext-ns", require("ext-ns"));
+	})))();
+}
+// main.js
+const lazyNamespace = () => (init_d(), import_ext_ns);
+exports.lazyNamespace = lazyNamespace;
+
+```
+
+## other.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const require_rolldown_runtime = require("./rolldown-runtime.js");
+let ext_ns = require("ext-ns");
+ext_ns = require_rolldown_runtime.__toESMCached("ext-ns", ext_ns);
+Object.defineProperty(exports, "c", {
+	enumerable: true,
+	get: function() {
+		return ext_ns;
+	}
+});
+
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+Object.defineProperty(exports, "__esmMin", {
+	enumerable: true,
+	get: function() {
+		return __esmMin;
+	}
+});
+Object.defineProperty(exports, "__toESM", {
+	enumerable: true,
+	get: function() {
+		return __toESM;
+	}
+});
+Object.defineProperty(exports, "__toESMCached", {
+	enumerable: true,
+	get: function() {
+		return __toESMCached;
+	}
+});
+
+```

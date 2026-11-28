@@ -4,12 +4,12 @@
 use oxc::diagnostics::LabeledSpan;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaModuleAstUsage, EntryPointKind, ExportsKind, ImportKind, ImportRecordMeta, IndexModules,
-  Module, ModuleIdx, NormalizedBundlerOptions, OutputFormat, ResolvedImportRecord, StmtEvalFlags,
-  side_effects::DeterminedSideEffects,
+  EcmaModuleAstUsage, EntryPointKind, ExportsKind, ExternalModule, ImportKind, ImportRecordMeta,
+  IndexModules, Module, ModuleIdx, NormalizedBundlerOptions, OutputFormat, ResolvedImportRecord,
+  StmtEvalFlags, side_effects::DeterminedSideEffects,
 };
 use rolldown_error::{BuildDiagnostic, EventKind};
-use rolldown_utils::IndexBitSet;
+use rolldown_utils::{IndexBitSet, node_builtin::is_node_like_builtin};
 
 use crate::{
   stages::scan_stage::NormalizedScanStageOutput,
@@ -54,13 +54,13 @@ pub fn apply_import_defer_support(
 /// generate stages do not support for `import defer` yet.
 #[derive(Debug)]
 enum UnsupportedReason {
-  OutputFormat,
   InlineCommonChunks,
   NonRecursiveGroups,
   /// An `import.defer()` call targets this CommonJS module.
   DynamicImportOfCommonJs(ModuleIdx),
-  /// A deferred closure has this external module.
-  ExternalModule(ModuleIdx),
+  /// A deferred import evaluates this external module, and the output format evaluates it before
+  /// the first access (`deferred_closures`).
+  ExternalModule(ModuleIdx, OutputFormat),
   /// A deferred closure has this CommonJS module, and its output file runs it at load.
   CommonJsRunAtLoad(ModuleIdx),
   /// This module is outside the deferred closures. It has a deferred import of a module that
@@ -72,7 +72,6 @@ impl UnsupportedReason {
   /// The warning for a static deferred import, and the warning for an `import.defer()` call.
   fn messages(&self, modules: &IndexModules) -> (String, String) {
     let condition = match self {
-      Self::OutputFormat => "the output format is not `esm` or `cjs`".to_string(),
       Self::InlineCommonChunks => {
         "`output.codeSplitting.experimentalInlineCommonChunks` is on".to_string()
       }
@@ -84,9 +83,18 @@ impl UnsupportedReason {
         "an `import.defer()` call targets the CommonJS module `{}`",
         modules[*idx].stable_id()
       ),
-      Self::ExternalModule(idx) => {
-        format!("a deferred import evaluates the external module `{}`", modules[*idx].stable_id())
-      }
+      Self::ExternalModule(idx, OutputFormat::Esm) => format!(
+        "a deferred import evaluates the external module `{}`, and `esm` output imports that module at the start of the chunk",
+        modules[*idx].stable_id()
+      ),
+      Self::ExternalModule(idx, OutputFormat::Cjs) => format!(
+        "a deferred import evaluates the external module `{}` through `export *`, and the `cjs` output file of an entry module loads the external modules of its `export *` when the file loads",
+        modules[*idx].stable_id()
+      ),
+      Self::ExternalModule(idx, format) => format!(
+        "a deferred import evaluates the external module `{}`, and `{format}` output gets that module as a global or as a wrapper argument",
+        modules[*idx].stable_id()
+      ),
       Self::CommonJsRunAtLoad(idx) => format!(
         "a deferred import evaluates the CommonJS module `{}`, and the output file of that module runs it when the file loads",
         modules[*idx].stable_id()
@@ -111,9 +119,6 @@ fn unsupported_reason(
   output: &NormalizedScanStageOutput,
   options: &NormalizedBundlerOptions,
 ) -> Option<UnsupportedReason> {
-  if !matches!(options.format, OutputFormat::Esm | OutputFormat::Cjs) {
-    return Some(UnsupportedReason::OutputFormat);
-  }
   // Each eager importer of a deferred module in another chunk calls `init_x()` in its body, after
   // the later imports of the chunk run (`plan_lazy_host_inits` does not run here).
   if options.inline_common_chunks.is_some() {
@@ -129,9 +134,9 @@ fn unsupported_reason(
   if let Some(module) = dynamic_import_of_commonjs(output, &commonjs) {
     return Some(UnsupportedReason::DynamicImportOfCommonJs(module));
   }
-  let closures = match deferred_closures(output) {
+  let closures = match deferred_closures(output, options) {
     Ok(closures) => closures,
-    Err(external) => return Some(UnsupportedReason::ExternalModule(external)),
+    Err(external) => return Some(UnsupportedReason::ExternalModule(external, options.format)),
   };
   if let Some(module) = commonjs_module_run_at_load(output, options, &closures, &commonjs) {
     return Some(UnsupportedReason::CommonJsRunAtLoad(module));
@@ -193,36 +198,107 @@ fn dynamic_import_of_commonjs(
     .find(|&target| commonjs.has_bit(target))
 }
 
-/// The modules of the deferred closures, or `Err` with the first external module of a closure. A
-/// closure is a deferred target and its static dependencies. The link stage wraps these modules
-/// (`wrap_import_defer_closures`), and this walk also follows only the static records.
+/// The modules of the deferred closures, or `Err` with the first external module that a record
+/// of a closure evaluates before the first access. A closure is a deferred target and its static
+/// dependencies. The link stage wraps these modules (`wrap_import_defer_closures`), and this walk
+/// also follows only the static records. The records of an external module that evaluate it
+/// early:
+/// - `cjs` output: a module of a closure loads an external module at the position of the import,
+///   in its init (`lazy_external_import_stmt`). A deferred import of an external module loads it
+///   at the first access (`__deferNsCached`). But the output file of an entry module loads the
+///   external modules of its `export *` chain when the file loads (`render_chunk_exports`:
+///   `var ext = require("ext")` and a copy of the keys of `ext`). A module of a closure can be the
+///   entry module of a file: with `preserveModules`, or as an entry point (user-defined, emitted,
+///   or the target of an `import()` or `import.defer()` call). The check does not know the chunks,
+///   so it also counts an entry module that gets an entry facade.
+/// - `esm` output: an eager import or re-export of an external module in a module of a closure.
+///   The chunk imports the external module at its start. The output keeps a deferred import of
+///   an external module (`import defer`, `import.defer()`). A `require()` call stays at its
+///   position.
+/// - `iife` and `umd` output: also a deferred import of an external module. The output gets an
+///   external module as a global or as a wrapper argument.
+///
+/// A builtin module and an external module with no side effects do not count: their early
+/// evaluation is not observable. See internal-docs/import-defer/implementation.md ("External
+/// modules").
 fn deferred_closures(
   output: &NormalizedScanStageOutput,
+  options: &NormalizedBundlerOptions,
 ) -> Result<IndexBitSet<ModuleIdx>, ModuleIdx> {
   let modules = &output.module_table.modules;
   let runtime_idx = output.runtime.id();
-  let mut stack = modules
-    .iter()
-    .filter_map(Module::as_normal)
-    .flat_map(|module| module.import_records.iter())
-    .filter(|rec| rec.is_defer_phase())
-    .filter_map(|rec| rec.resolved_module)
-    .collect::<Vec<_>>();
+  let format = options.format;
+  let is_observable = |external: &ExternalModule| {
+    external.side_effects.has_side_effects() && !is_node_like_builtin(external.id.as_str())
+  };
+  let evaluates_external_early = |rec: &ResolvedImportRecord, external: &ExternalModule| {
+    let early = match format {
+      OutputFormat::Cjs => false,
+      OutputFormat::Esm => rec.kind == ImportKind::Import && !rec.is_defer_phase(),
+      OutputFormat::Iife | OutputFormat::Umd => {
+        rec.kind == ImportKind::Import || rec.is_defer_phase()
+      }
+    };
+    early && is_observable(external)
+  };
+  let mut stack = vec![];
+  // Adds the target of `rec` to the walk, or returns the external module that it evaluates early.
+  let push = |stack: &mut Vec<ModuleIdx>, rec: &ResolvedImportRecord| {
+    let Some(target) = rec.resolved_module else { return Ok(()) };
+    match &modules[target] {
+      Module::Normal(_) => stack.push(target),
+      Module::External(external) if evaluates_external_early(rec, external) => {
+        return Err(target);
+      }
+      Module::External(_) => {}
+    }
+    Ok(())
+  };
+  for module in modules.iter().filter_map(Module::as_normal) {
+    for rec in module.import_records.iter().filter(|rec| rec.is_defer_phase()) {
+      push(&mut stack, rec)?;
+    }
+  }
   let mut visited = IndexBitSet::new(modules.len());
   while let Some(idx) = stack.pop() {
     if idx == runtime_idx || !visited.set_bit(idx) {
       continue;
     }
-    let Module::Normal(module) = &modules[idx] else {
-      return Err(idx);
-    };
-    stack.extend(
-      module
-        .import_records
+    let Module::Normal(module) = &modules[idx] else { continue };
+    for rec in module.import_records.iter().filter(|rec| rec.kind.is_static()) {
+      push(&mut stack, rec)?;
+    }
+  }
+  if matches!(format, OutputFormat::Cjs) {
+    // The `export *` chains of the modules of the closures that can be entry modules.
+    let mut stack = if options.preserve_modules {
+      visited.index_of_one().collect::<Vec<_>>()
+    } else {
+      output
+        .entry_points
         .iter()
-        .filter(|rec| rec.kind.is_static())
-        .filter_map(|rec| rec.resolved_module),
-    );
+        .map(|entry| entry.idx)
+        .filter(|&idx| visited.has_bit(idx))
+        .collect()
+    };
+    let mut star_visited = IndexBitSet::new(modules.len());
+    while let Some(idx) = stack.pop() {
+      if !star_visited.set_bit(idx) {
+        continue;
+      }
+      let Module::Normal(module) = &modules[idx] else { continue };
+      for rec in &module.import_records {
+        if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
+          continue;
+        }
+        let Some(target) = rec.resolved_module else { continue };
+        match &modules[target] {
+          Module::Normal(_) => stack.push(target),
+          Module::External(external) if is_observable(external) => return Err(target),
+          Module::External(_) => {}
+        }
+      }
+    }
   }
   Ok(visited)
 }

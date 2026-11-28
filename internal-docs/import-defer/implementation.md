@@ -10,6 +10,8 @@ A build with more than one chunk also keeps the deferral. The chunk that holds a
 
 `import.defer('./x.js')` also keeps the deferral: its promise gives the deferred namespace object of `x.js`, and the call evaluates nothing (see "`import.defer()`"). Dev mode turns the option off (`crates/rolldown/src/utils/prepare_build_context.rs`).
 
+All output formats keep the deferral of the modules in the bundle. For an external module, `cjs` output loads the module at the first access, and `esm` output keeps `import defer` and `import.defer()`. A build falls back when its output format evaluates an external module of a closure before the first access (see "External modules").
+
 Example (fixture `topics/import_defer/basic`, output shortened):
 
 ```js
@@ -48,18 +50,17 @@ const value = (init_dep(), 1);
 
 The build keeps the deferral when all of these conditions are true:
 
-1. The output format is `esm` or `cjs`.
-2. The build does not use `output.codeSplitting.experimentalInlineCommonChunks`. With this option, the init plan does not run, so each eager importer of a deferred module in another chunk calls `init_x()` in its body, after the later imports of its chunk (see "Init after the import of a host").
-3. No code splitting group sets `includeDependenciesRecursively: false` (`has_non_recursive_dependency_capture`). Such a group can make two chunks import each other. In such a cycle, a chunk can run before the other chunk exports its init functions: `require_x.init_x is not a function` in `cjs` output. When the runtime is in the cycle, a chunk can also run before the runtime helpers exist: `__esmMin is not a function`. The build without `import defer` calls no init function or helper there.
-4. No `import.defer()` call loads a CommonJS module (`dynamic_import_of_commonjs`). Native ESM defers the evaluation of a CommonJS module also for this form, but the deferred namespace of a CommonJS module exists only for the static form (see "CommonJS targets"). The check finds the CommonJS modules as `determine_module_exports_kind` does (`commonjs_modules`): the scan gives `ExportsKind::CommonJs`, or `ExportsKind::None` and a `require()` loads the module. With `codeSplitting: false`, an `import()` or an `import.defer()` also counts as a `require()`.
-5. No module of a deferred closure (a target and its dependencies) is an external module. The target of an `import.defer()` call is also the target of a closure.
-6. No output file of a CommonJS module of a closure runs the module when the file loads (`commonjs_module_run_at_load`). A deferred importer imports that file, so the module runs before the first access:
+1. The build does not use `output.codeSplitting.experimentalInlineCommonChunks`. With this option, the init plan does not run, so each eager importer of a deferred module in another chunk calls `init_x()` in its body, after the later imports of its chunk (see "Init after the import of a host").
+2. No code splitting group sets `includeDependenciesRecursively: false` (`has_non_recursive_dependency_capture`). Such a group can make two chunks import each other. In such a cycle, a chunk can run before the other chunk exports its init functions: `require_x.init_x is not a function` in `cjs` output. When the runtime is in the cycle, a chunk can also run before the runtime helpers exist: `__esmMin is not a function`. The build without `import defer` calls no init function or helper there.
+3. No `import.defer()` call loads a CommonJS module (`dynamic_import_of_commonjs`). Native ESM defers the evaluation of a CommonJS module also for this form, but the deferred namespace of a CommonJS module exists only for the static form (see "CommonJS targets"). The check finds the CommonJS modules as `determine_module_exports_kind` does (`commonjs_modules`): the scan gives `ExportsKind::CommonJs`, or `ExportsKind::None` and a `require()` loads the module. With `codeSplitting: false`, an `import()` or an `import.defer()` also counts as a `require()`.
+4. The output format does not evaluate an external module of a deferred closure (a target and its dependencies) before the first access (`deferred_closures`). A deferred import of an external module counts too. The rules for each format are in "External modules".
+5. No output file of a CommonJS module of a closure runs the module when the file loads (`commonjs_module_run_at_load`). A deferred importer imports that file, so the module runs before the first access:
    - With `preserveModules` and `esm` output, the file of each CommonJS module ends with `export default require_x();`. In `cjs` output, the file exports a `default` getter, which runs the module at the first read.
    - In `cjs` output, the chunk of a user-defined entry resolves its own export mode (`export_mode_module`), so it can end with `module.exports = require_x();`. An emitted chunk keeps the `Named` mode and its getter. In `esm` output without `preserveModules`, the chunk of a user-defined entry gets a facade (see "Lazy hosts").
 
    The check finds the CommonJS modules in the same way as the check of `import.defer()` (`commonjs_modules`).
 
-7. A module outside the closures has no import of a module outside the closures after a deferred import of a module that reaches a top-level `await` (see "Top-level await"). An import of an external module counts only when the build can make more than one chunk (`can_have_more_chunks`): code splitting is on, and the build has `preserveModules`, chunk groups, an `import()`, or more than one entry record (each user-defined or emitted `EntryPoint`, also when one module has several). In a build with one chunk, the chunk imports each external module at its top, so the external module also runs first without the deferral.
+6. A module outside the closures has no import of a module outside the closures after a deferred import of a module that reaches a top-level `await` (see "Top-level await"). An import of an external module counts only when the build can make more than one chunk (`can_have_more_chunks`): code splitting is on, and the build has `preserveModules`, chunk groups, an `import()`, or more than one entry record (each user-defined or emitted `EntryPoint`, also when one module has several). In a build with one chunk, the chunk imports each external module at its top, so the external module also runs first without the deferral.
 
 When the build keeps the deferral, the saved `eval_flags` go into `stmt_infos`. The new flags are the union of both runs, because the deferred run only adds side effects. A module with `DeterminedSideEffects::Analyzed(false)` gets `Analyzed(true)` when one of its statements gets `UnknownSideEffect`.
 
@@ -315,8 +316,52 @@ Tests:
 - `dynamic_json_target`, `dynamic_json_target_eager_and_deferred` and `dynamic_json_target_strict_user_entry`: JSON targets.
 - `preserve_modules` and `user_entry_dynamic_target`: a call with `preserveModules`, and a call of a user-defined entry.
 - `non_literal_specifier` and `vite_ignore_specifier`: the warnings for a specifier that is not static and for a call with a `/* @vite-ignore */` comment.
-- The Node test `packages/rolldown/tests/import-defer-fallback.test.ts`: the fallback for an external target, for a CommonJS target, and for a module with no module syntax with `codeSplitting: false`, and a kept call.
+- The Node test `packages/rolldown/tests/import-defer-fallback.test.ts`: the fallback for an external target in `iife` output, for a CommonJS target, and for a module with no module syntax with `codeSplitting: false`, and a kept call.
 - The test262 tests in `language/expressions/dynamic-import/import-defer` (`crates/rolldown/tests/integration/test262.rs`).
+
+## External modules
+
+The rules depend on the output format. `deferred_closures` (`crates/rolldown/src/utils/import_defer_fallback.rs`) checks them before the link stage, and a build that breaks a rule falls back (see "Whole-build fallback"). Two kinds of external module do not count, because their early evaluation is not observable:
+
+- a builtin module (`is_node_like_builtin` in `crates/rolldown_utils/src/node_builtin.rs`);
+- an external module with no side effects, for example with `treeshake.moduleSideEffects: false`.
+
+The reasons for the rules are in [design.md](./design.md#external-modules).
+
+### `cjs` output
+
+- A module of a closure loads each external module at the place of its import, in its init (`loads_externals_lazily` in `crates/rolldown/src/module_finalizers/mod.rs`):
+  - An import becomes `var import_ext = require("ext")`, or `__toESMCached("ext", require("ext"))` when the import needs the interop helper (`lazy_external_import_stmt`). The link stage declares `import_ext` (`reference_needed_symbols`), and binds each import of the module to it (`match_external_import` in `crates/rolldown/src/stages/link_stage/bind_imports_and_exports.rs`).
+  - `export * from 'ext'` becomes `__reExport(x_exports, require("ext"))` at its place (`cjs_external_re_export_stmt`).
+  - The chunk has no `require()` of these external modules at its top: `is_lazy_external_import` (`crates/rolldown/src/stages/generate_stage/compute_cross_chunk_links.rs`) leaves them out of the imports of the chunk.
+- `import defer * as ns from 'ext'` gets a deferred namespace over `__toESMCached("ext", require("ext"))` (`create_deferred_cjs_namespaces` in `crates/rolldown/src/stages/link_stage/wrapping.rs`, and `deferred_cjs_import_decl` in the finalizer). The first access loads the external module.
+- `import.defer('ext')` becomes `(async () => __deferNsCached("ext", () => __toESMCached("ext", require("ext"))))()`, but only with `output.dynamicImportInCjs: false`. With `dynamicImportInCjs: true` (the default), the call keeps the native `import()` of the build with the option off, with an `UNSUPPORTED_FEATURE` warning (`lowered_external_dynamic_defer_imports`). A call with a second argument also keeps `import()`, because `require()` cannot carry import attributes. The module then evaluates when it loads.
+- `__toESMCached` and `__deferNsCached` give one object for each external module and interop mode, also across chunks (see [runtime-helpers](../runtime-helpers/implementation.md)). `mark_lazy_namespace_externals` (`crates/rolldown/src/stages/link_stage/patch_module_dependencies.rs`) sets `has_lazy_namespace_load` on each external module that a module of a closure loads lazily with the interop helper. The binding of such an external module in the imports of a chunk then also uses `__toESMCached` (`render_cjs_chunk_imports` in `crates/rolldown/src/ecmascript/format/cjs.rs`). Thus an eager import and a lazy load give one namespace object.
+- The output file of an entry module loads the external modules of its `export *` chain when the file loads (`render_chunk_exports`: `var ext = require("ext")` and a copy of the keys of `ext`). Thus the build falls back when a module of a closure can be such an entry module:
+  - with `preserveModules`;
+  - as an entry point: user-defined, emitted, or the target of an `import()` or `import.defer()` call.
+
+  The check does not know the chunks, so it also counts an entry module that gets an entry facade.
+
+### `esm` output
+
+- The output keeps `import defer * as ns from 'ext'` and `import.defer('ext')`. `render_named_imports` (`crates/rolldown/src/ecmascript/format/esm.rs`) renders a deferred namespace import as its own `import defer` declaration. The chunk renders a bare `import "ext"` for the side effects of the external module only when a module of the chunk has an eager import of it (`has_evaluation_phase_import`). The finalizer sets the phase of an `import.defer()` call of an external module (`try_rewrite_import_expression`).
+- The chunk imports each external module at its start. Thus the build falls back when a module of a closure has an eager import or re-export of an external module.
+
+### `iife` and `umd` output
+
+The output gets each external module as a global or as a wrapper argument, so it cannot delay the external module. The build falls back when a module of a closure imports an external module, and for each deferred import of an external module. A build with no such import keeps the deferral. `iife` and `umd` output make one chunk, so they have no lazy host.
+
+### Limits
+
+- In `esm` output, the check also counts an external module that a module outside the closures imports eagerly. The check runs before the chunks and tree shaking exist. Such a build falls back, also when the eager import of the other module evaluates the external module first in native Node.
+- In `cjs` output, `require()` throws for an ES module with top-level `await` (`ERR_REQUIRE_ASYNC_MODULE`). Thus a static deferred import of such a module, and an import of it in a module of a closure, throw at the first access. The build with the option off also loads these modules with `require()`, and throws when the chunk loads.
+
+Tests:
+
+- `cjs` output: `external_cjs`, `external_cjs_cache_key`, `external_cjs_cross_chunk_identity`, `external_cjs_cross_chunk_observer`, `external_cjs_dynamic_import`, `external_cjs_eager_and_deferred`, `external_cjs_shared_namespace`, `transitive_cjs`, `transitive_cjs_barrel`, `transitive_cjs_dynamic`, `transitive_cjs_identity` and `transitive_cjs_namespace_reexport`.
+- `esm` output: `external_esm_preserve`, `transitive_esm_builtin` and `transitive_esm_pure_external`.
+- The fallbacks: `external_iife_umd`, `transitive_external_fallback`, and the Node test `packages/rolldown/tests/import-defer-fallback.test.ts` (each format, and the `export *` rule of `cjs` output).
 
 ## Known gaps
 
@@ -332,5 +377,5 @@ Tests:
 
 ## Related
 
-- [design.md](./design.md) — why one fallback for the whole build, why a chunk initializes a lazy host after its import, and the decisions for `import.defer()`
+- [design.md](./design.md) — why one fallback for the whole build, why a chunk initializes a lazy host after its import, the decisions for `import.defer()` and for external modules
 - `../runtime-helpers/implementation.md` — the runtime helpers of `import defer`

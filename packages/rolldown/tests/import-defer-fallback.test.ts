@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import vm from 'node:vm';
 import { rolldown } from 'rolldown';
 import type { InputOptions, OutputOptions, RolldownLog } from 'rolldown';
 import { afterAll, describe, expect, test } from 'vitest';
@@ -27,6 +28,12 @@ const CJS_MAIN_JS = "import defer * as ns from './x.cjs';\nexport const read = (
 const CJS_X = 'exports.value = 1;\n';
 const CJS_RUN_AT_LOAD_REASON = (id: string) =>
   `a deferred import evaluates the CommonJS module \`${id}\`, and the output file of that module runs it when the file loads`;
+const EXTERNAL_MAIN_JS = "import defer * as ns from 'ext';\nexport const read = () => ns.value;\n";
+const EXTERNAL_REASON = (format: 'iife' | 'umd') =>
+  `a deferred import evaluates the external module \`ext\`, and \`${format}\` output gets that module as a global or as a wrapper argument`;
+const EXTERNAL_STAR_X_JS = "export * from 'ext';\n" + X_JS;
+const EXTERNAL_STAR_REASON =
+  'a deferred import evaluates the external module `ext` through `export *`, and the `cjs` output file of an entry module loads the external modules of its `export *` when the file loads';
 
 interface Case {
   name: string;
@@ -39,18 +46,6 @@ interface Case {
 }
 
 const cases: Case[] = [
-  {
-    name: 'iife output',
-    files: { 'main.js': MAIN_JS },
-    output: { format: 'iife', name: 'lib' },
-    reason: 'the output format is not `esm` or `cjs`',
-  },
-  {
-    name: 'umd output',
-    files: { 'main.js': MAIN_JS },
-    output: { format: 'umd', name: 'lib' },
-    reason: 'the output format is not `esm` or `cjs`',
-  },
   {
     name: 'inline common chunks',
     files: { 'main.js': MAIN_JS },
@@ -84,16 +79,26 @@ const cases: Case[] = [
     reason: AFTER_ASYNC_DEFER_REASON,
   },
   {
-    name: 'external target',
-    files: { 'main.js': "import defer * as ns from 'ext';\nexport const read = () => ns.value;\n" },
+    name: 'external target, iife output',
+    files: { 'main.js': EXTERNAL_MAIN_JS },
     inputOptions: { external: ['ext'] },
-    reason: 'a deferred import evaluates the external module `ext`',
+    output: { format: 'iife', name: 'lib', globals: { ext: 'Ext' } },
+    reason: EXTERNAL_REASON('iife'),
   },
   {
-    name: 'external target of import.defer()',
+    name: 'external target, umd output',
+    files: { 'main.js': EXTERNAL_MAIN_JS },
+    inputOptions: { external: ['ext'] },
+    output: { format: 'umd', name: 'lib', globals: { ext: 'Ext' } },
+    reason: EXTERNAL_REASON('umd'),
+  },
+  {
+    // The output keeps a native `import()` of the external module.
+    name: 'external target of import.defer(), iife output',
     files: { 'main.js': "export const load = () => import.defer('ext');\n" },
     inputOptions: { external: ['ext'] },
-    reason: 'a deferred import evaluates the external module `ext`',
+    output: { format: 'iife', name: 'lib' },
+    reason: EXTERNAL_REASON('iife'),
   },
   {
     name: 'import.defer() of a CommonJS module',
@@ -118,7 +123,34 @@ const cases: Case[] = [
     name: 'external module in the closure',
     files: { 'main.js': MAIN_JS, 'x.js': "import 'ext';\n" + X_JS },
     inputOptions: { external: ['ext'] },
-    reason: 'a deferred import evaluates the external module `ext`',
+    reason:
+      'a deferred import evaluates the external module `ext`, and `esm` output imports that module at the start of the chunk',
+  },
+  {
+    name: 'external module in the closure, umd output',
+    files: { 'main.js': MAIN_JS, 'x.js': "import 'ext';\n" + X_JS },
+    inputOptions: { external: ['ext'] },
+    output: { format: 'umd', name: 'lib', globals: { ext: 'Ext' } },
+    reason: EXTERNAL_REASON('umd'),
+  },
+  {
+    // The file of `x.js` loads `ext` for its `export *` when the file loads.
+    name: 'export * of an external module in a deferred closure, cjs output with preserveModules',
+    files: { 'main.js': MAIN_JS, 'x.js': EXTERNAL_STAR_X_JS },
+    inputOptions: { external: ['ext'] },
+    output: { format: 'cjs', preserveModules: true },
+    reason: EXTERNAL_STAR_REASON,
+  },
+  {
+    // The chunk of the target `x.js` loads `ext` for its `export *` when the chunk loads.
+    name: 'export * of an external module in the target of import.defer(), cjs output',
+    files: {
+      'main.js': "export const load = () => import.defer('./x.js');\n",
+      'x.js': EXTERNAL_STAR_X_JS,
+    },
+    inputOptions: { external: ['ext'] },
+    output: { format: 'cjs' },
+    reason: EXTERNAL_STAR_REASON,
   },
   {
     // The file of `x.cjs` ends with `export default require_x();`.
@@ -228,6 +260,16 @@ const keptCases: KeptCase[] = [
       ['read', 1, ['x']],
       ['readY', 2, ['x', 'y']],
     ],
+  },
+  {
+    // The early evaluation of a builtin module is not observable.
+    name: 'a closure module that imports a builtin module',
+    files: {
+      'main.js': LOGGED_MAIN('./x.js'),
+      'x.js': "import { sep } from 'node:path';\n" + X_JS + 'export const s = sep;\n',
+    },
+    inputOptions: { external: ['node:path'] },
+    steps: [['read', 1, ['x']]],
   },
   {
     name: 'a cycle through the deferred import',
@@ -474,6 +516,25 @@ describe('import defer fallback', () => {
     expect(off.warnings.map((log) => log.code)).toStrictEqual(['UNSUPPORTED_FEATURE']);
     expect(on.output).not.toStrictEqual(off.output);
     expect(on.output[0].content).toContain('(init_x(), 1)');
+  });
+
+  // IIFE and UMD output make one chunk. The output sets the global `lib`.
+  test.each(['iife', 'umd'] as const)('a build keeps the deferral: %s output', async (format) => {
+    const c: Case = {
+      name: format,
+      files: { 'main.js': LOGGED_MAIN('./x.js') },
+      output: { format, name: 'lib' },
+    };
+    const root = writeFiles(c.files);
+    const on = await build(root, c, true);
+    expect(on.error).toBeUndefined();
+    expect(on.warnings).toStrictEqual([]);
+    const context: { lib?: { log: string[]; read: () => unknown } } = {};
+    vm.runInNewContext(on.output[0].content, context);
+    const lib = context.lib!;
+    expect([...lib.log]).toStrictEqual([]);
+    expect(lib.read()).toBe(1);
+    expect([...lib.log]).toStrictEqual(['x']);
   });
 
   test.each(

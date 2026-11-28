@@ -11,8 +11,8 @@ use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta, IndexModules, LocalExport,
   MemberExprObjectReferencedType, MemberExprRef, MemberExprRefResolution, MemberExprWriteKind,
   Module, ModuleIdx, ModuleType, NamedImport, NamespaceAlias, NormalModule, OutputFormat,
-  ResolvedExport, Specifier, StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
-  SymbolRefFlags,
+  ResolvedExport, ResolvedImportRecord, Specifier, StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef,
+  SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_error::{
   AmbiguousExternalNamespaceModule, BuildDiagnostic, Diagnostics, EventKindSwitcher,
@@ -1714,6 +1714,9 @@ impl BindImportsAndExportsContext<'_> {
 
       if is_esm && is_external {
         match named_import.imported {
+          // `import defer * as ns from 'ext'` keeps its own binding: the output declares it with
+          // `import defer` (ESM) or as a lazy namespace (CommonJS), never merged with an eager one.
+          Specifier::Star if rec.is_defer_phase() => {}
           Specifier::Star => {
             self
               .external_import_namespace_merger
@@ -2080,6 +2083,53 @@ impl BindImportsAndExportsContext<'_> {
     (result, promotion)
   }
 
+  /// Links an import of an external module.
+  fn match_external_import(
+    &self,
+    tracker: &ImportTracker,
+    named_import: &NamedImport,
+    importer_record: &ResolvedImportRecord,
+    symbol_ref: SymbolRef,
+  ) -> MatchImportKind {
+    if self.options.format.keep_esm_import_export_syntax() {
+      // Imports from external modules should not be converted to CommonJS
+      // if the output format preserves the original ES6 import statements
+      return MatchImportKind::Normal(MatchImportKindNormal {
+        symbol: tracker.imported_as,
+        reexports: vec![],
+      });
+    }
+
+    // CommonJS output, a module of a deferred closure: the import reads the binding of its own
+    // record, which the module assigns at the position of the import, in its init
+    // (`lazy_external_import_stmt`). Thus, the external loads when the module evaluates. A
+    // re-export chain from another module ends at this binding, and that module calls the init of
+    // this module before it reads it. The link target keeps the module that wrote the import: a
+    // link to the shared namespace of the external cannot, because `SymbolRefDb::link` compresses
+    // the path.
+    let namespace_ref = if matches!(self.options.format, OutputFormat::Cjs)
+      && self.metas[tracker.importer].wrapped_by_import_defer
+      && !importer_record.is_defer_phase()
+    {
+      importer_record.namespace_ref
+    } else {
+      symbol_ref
+    };
+    match &tracker.imported {
+      Specifier::Star => MatchImportKind::Namespace {
+        // `import defer * as ns from 'ext'` in CommonJS output links to the deferred namespace
+        // object of the record, like a CommonJS module.
+        namespace_ref: self.metas[tracker.importer]
+          .deferred_cjs_namespaces
+          .get(&named_import.record_idx)
+          .map_or(namespace_ref, |ns| ns.symbol_ref),
+      },
+      Specifier::Literal(alias) => {
+        MatchImportKind::NormalAndNamespace { namespace_ref, alias: alias.clone() }
+      }
+    }
+  }
+
   fn match_import_with_export(
     &mut self,
     ctx: &mut MatchingContext,
@@ -2198,22 +2248,7 @@ impl BindImportsAndExportsContext<'_> {
           break MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports });
         }
         ImportStatus::External(symbol_ref) => {
-          if self.options.format.keep_esm_import_export_syntax() {
-            // Imports from external modules should not be converted to CommonJS
-            // if the output format preserves the original ES6 import statements
-            break MatchImportKind::Normal(MatchImportKindNormal {
-              symbol: tracker.imported_as,
-              reexports: vec![],
-            });
-          }
-
-          match &tracker.imported {
-            Specifier::Star => MatchImportKind::Namespace { namespace_ref: symbol_ref },
-            Specifier::Literal(alias) => MatchImportKind::NormalAndNamespace {
-              namespace_ref: symbol_ref,
-              alias: alias.clone(),
-            },
-          }
+          self.match_external_import(&tracker, named_import, importer_record, symbol_ref)
         }
       };
       break kind;

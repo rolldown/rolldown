@@ -118,6 +118,44 @@ impl LinkStage<'_> {
                         rec.namespace_ref.symbol,
                         &concat_string!("import_", &importee.identifier_name),
                       );
+                      // A module of a deferred closure in CommonJS output calls
+                      // `__reExport(x_exports, require("ext"))` at this statement, in its init.
+                      if matches!(self.options.format, OutputFormat::Cjs)
+                        && self.metas[importer_idx].wrapped_by_import_defer
+                      {
+                        stmt_info.eval_flags = true.into();
+                        depended_runtime_helper_map.push(RuntimeHelper::ReExport, stmt_info_idx);
+                        stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
+                      }
+                    } else if rec.is_defer_phase()
+                      && matches!(self.options.format, OutputFormat::Cjs)
+                    {
+                      // `import defer * as ns from 'ext'` in CommonJS output becomes
+                      // `var import_ext;`, and the first deferred access assigns
+                      // `__toESMCached("ext", require("ext"))` to it. The statement
+                      // evaluates nothing.
+                      depended_runtime_helper_map.push(RuntimeHelper::ToEsmCached, stmt_info_idx);
+                      symbols_to_be_declared.push((rec.namespace_ref, stmt_info_idx));
+                      symbol_db.ast_scopes.set_symbol_name(
+                        rec.namespace_ref.symbol,
+                        &concat_string!("import_", &importee.identifier_name),
+                      );
+                    } else if matches!(self.options.format, OutputFormat::Cjs)
+                      && self.metas[importer_idx].wrapped_by_import_defer
+                    {
+                      // A module of a deferred closure in CommonJS output loads the external at
+                      // the position of the import, in its init: `var import_ext = require("ext")`
+                      // (`lazy_external_import_stmt`). Tree shaking keeps the statement when the
+                      // external has side effects, or when a read of `import_ext` stays.
+                      stmt_info.eval_flags = importee.side_effects.has_side_effects().into();
+                      if import_record_needs_interop(importer, *rec_id) {
+                        depended_runtime_helper_map.push(RuntimeHelper::ToEsmCached, stmt_info_idx);
+                      }
+                      symbols_to_be_declared.push((rec.namespace_ref, stmt_info_idx));
+                      symbol_db.ast_scopes.set_symbol_name(
+                        rec.namespace_ref.symbol,
+                        &concat_string!("import_", &importee.identifier_name),
+                      );
                     } else {
                       // import ... from 'external' or export ... from 'external'
                       if matches!(
@@ -140,6 +178,16 @@ impl LinkStage<'_> {
                       .referenced_symbols
                       .push(self.runtime.resolve_symbol("__require").into());
                     record_meta_pairs.push((*rec_id, ImportRecordMeta::CallRuntimeRequire));
+                  }
+                  ImportKind::DynamicImport
+                    if rec.is_defer_phase()
+                      && matches!(self.options.format, OutputFormat::Cjs)
+                      && !self.options.dynamic_import_in_cjs =>
+                  {
+                    // `(async () => __deferNsCached("ext", () => __toESMCached("ext", require("ext"))))()`.
+                    // With `dynamicImportInCjs: true`, the output keeps `import("ext")`.
+                    depended_runtime_helper_map.push(RuntimeHelper::ToEsmCached, stmt_info_idx);
+                    depended_runtime_helper_map.push(RuntimeHelper::DeferNsCached, stmt_info_idx);
                   }
                   ImportKind::DynamicImport
                     if matches!(self.options.format, OutputFormat::Cjs)

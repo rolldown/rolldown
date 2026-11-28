@@ -1,0 +1,10 @@
+{
+  "_comment": "CommonJS output: `d.js` is in a deferred closure in the chunk of `main.js`, which also holds the runtime, and loads `node:https` lazily. The dynamic chunk of `other.js` reads the namespace only through `shim.js`, which tree shaking removes (the builtin has no side effects). So that chunk renders its binding from the recorded observer, not from a named import. It still uses `__toESMCached`, and it imports the helper from the chunk of `main.js`, which exports it only for this import. Both get one namespace object.",
+  "config": {
+    "format": "cjs",
+    "external": ["node:https"],
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

@@ -12,9 +12,10 @@ pub type FinalizerMutableFields = (
 
 use oxc::ast::builder::AstBuilder;
 use oxc::ast_visit::VisitJsMut as _;
+use oxc::diagnostics::LabeledSpan;
 use oxc::semantic::NodeId;
 use rolldown_ecmascript::EcmaAst;
-use rolldown_error::{BuildDiagnostic, CausedPlugin};
+use rolldown_error::{BuildDiagnostic, CausedPlugin, EventKind};
 use rolldown_plugin::HookResolveFileUrlOutput;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -153,6 +154,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         surviving_import_meta_spans: FxIndexMap::default(),
         unsupported_jsx_element_names: Vec::new(),
         dropped_import_attributes: Vec::new(),
+        lowered_external_dynamic_defer_imports: Vec::new(),
       };
       finalizer.visit_program(oxc_program);
 
@@ -185,6 +187,26 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         )
         .with_severity_warning()
       }));
+
+      diagnostics.extend(finalizer.lowered_external_dynamic_defer_imports.iter().map(
+        |&(span, has_options)| {
+          let module = finalizer.ctx.module;
+          let message = if has_options {
+            "`import.defer()` of an external module with a second argument is lowered to `import()` in CommonJS output, because `require()` cannot carry import attributes. The module evaluates when it loads, not at the first access to its namespace."
+          } else {
+            "`import.defer()` of an external module is lowered to `import()` in CommonJS output, because `output.dynamicImportInCjs` is `true`. The module evaluates when it loads, not at the first access to its namespace. With `output.dynamicImportInCjs: false`, the output loads the module with `require()` at the first access. `require()` fails for an ES module with top-level `await`."
+          };
+          BuildDiagnostic::oxc_error(
+            module.ecma_view.source.clone(),
+            module.id.to_string(),
+            String::new(),
+            message.to_string(),
+            vec![LabeledSpan::at(span.start..span.end, "The deferred phase is removed here.")],
+            EventKind::UnsupportedFeatureError,
+          )
+          .with_severity_warning()
+        },
+      ));
 
       let missing_file_reference_ids = finalizer.missing_file_reference_ids;
       if !missing_file_reference_ids.is_empty() {

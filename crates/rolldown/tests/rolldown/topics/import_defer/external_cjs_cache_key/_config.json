@@ -1,0 +1,10 @@
+{
+  "_comment": "CommonJS output: `__toESMCached` keys its cache by the external module, not by the exports object. Two lazy loads of `ext-prim`, which exports a primitive, give one namespace object. `ext-a` exports the exports object of `ext-b`, and the two externals still give two namespace objects, as two native modules do.",
+  "config": {
+    "format": "cjs",
+    "external": ["ext-prim", "ext-a", "ext-b"],
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

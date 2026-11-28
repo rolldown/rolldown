@@ -14,7 +14,7 @@ A build with a shape that the deferral does not support yet gives the output of 
 
 ### Decisions
 
-- The decision is for the whole build, not for each import. The conditions (the output format, no `import.defer()` of a CommonJS module, no external module in the closures, no CommonJS file that runs its module at load, the order rule of top-level `await`) are properties of the module graph and the options. A decision for each import needs rules for deferred and eager closures across chunks, cycles and async modules.
+- The decision is for the whole build, not for each import. The conditions (no `import.defer()` of a CommonJS module, no external module that the output format evaluates before the first access, no CommonJS file that runs its module at load, the order rule of top-level `await`) are properties of the module graph and the options. A decision for each import needs rules for deferred and eager closures across chunks, cycles and async modules.
 - The decision runs after the scan and before the link stage, in `scan_modules_impl`. With `experimental.incrementalBuild`, the scan sees only the changed modules, and the normalized scan output has all modules. An error (a write to a deferred namespace in a build that falls back) then fails the build as a scan error does: `buildEnd` and `closeBundle` get the error, and no link step adds more errors.
 - The scanner keeps the eager results and saves the deferred results apart. Thus a fallback gives the scan results of the option-off build exactly. A second analysis at link time cannot give the same results, because the scan reads a partial `constant_export_map` that the link stage does not have.
 - The conditions are conservative. For example, an import of an external module after a deferred import of a module with top-level `await` counts in each build that can make more than one chunk, also when the build makes only one chunk.
@@ -135,13 +135,44 @@ A lazy host is the entry chunk of a deferred ES module, and its load does not ru
 - No move for a module that its chunk runs at load. A read of its namespace object during a pause at a top-level `await` then gets `undefined`, because the code of the module did not run yet.
 - An await of the end of the chunk before the call reads `x_deferred`. A call at the top level of the chunk, with `await`, then waits for itself (fixture `dynamic_same_chunk_top_level_await`).
 
+## External modules
+
+### Goal
+
+A deferred import of an external module, and an import of an external module in a module of a closure, keep the native order where the output format can delay the external module. Where the format cannot delay it, the build gives the order of the build with the option off, with a warning. The order must not be worse than the order of the build without `import defer`.
+
+### Decisions
+
+- `cjs` output loads an external module with `require()` at the place of the import, in the init of the module of the closure. A deferred import loads the external module at the first access. `require()` is synchronous, so a deferred namespace can call it at the first access.
+- `esm` output keeps `import defer` and `import.defer()` of an external module, and the runtime defers the module. An eager import of an external module in a module of a closure makes the build fall back. The chunk imports the external module at its start, so the module evaluates when the chunk loads.
+- `iife` and `umd` output get an external module as a global or as a wrapper argument, so the module evaluates before the bundle runs. The build falls back for each import of an external module in a closure, and for each deferred import of an external module.
+- A builtin module and an external module with no side effects do not make a build fall back. Their early evaluation is not observable.
+- In `cjs` output with `dynamicImportInCjs: true`, `import.defer('ext')` keeps `import()`, with a warning. `require()` throws for an ES module with top-level `await` (`ERR_REQUIRE_ASYNC_MODULE`), but `import()` loads it. The build with the option off keeps `import()` too, so `require()` would make a working build fail. With `dynamicImportInCjs: false`, the build with the option off also loads the module with `require()`, so the call gets a deferred namespace.
+- In `cjs` output, the build falls back when the `export *` chain of a module of a closure reaches an external module, and the module can be the entry module of an output file. The file copies the keys of the external module to its exports when it loads. Thus the external module evaluates at load, and the module of the closure at the first access. Neither native Node nor the build with the option off gives this order.
+- The checks run before the link stage, with the other conditions of the fallback (see "Whole-build fallback"). They do not know the chunks. Thus an external module that an eager importer outside the closures also imports still makes an `esm` build fall back.
+
+### Rejected alternatives
+
+- An eager external module with a warning, for `esm`, `iife` and `umd` output: the chunk imports the external module at its start, and the build keeps the deferral of the other modules. The order is then neither the native order nor the order of the build with the option off. Example: `main.js` has `import defer * as a from './a.js'; globalThis.counter++` and reads `a.seen`. `a.js` has `import 'ext'; export const seen = globalThis.counter`. `ext` sets `counter = 0`. Native Node gives 0 (main, ext, a). The build with the option off gives 0 (ext, a, main). An eager external module gives 1 (ext, main, a).
+- `require()` for `import.defer('ext')` in `cjs` output with `dynamicImportInCjs: true`. See the decisions.
+- A lazy copy of the keys for the `export *` of an entry module. An importer of the file reads the keys when the file loads, and the keys need the evaluated module.
+
+### RFC parts marked unreasonable
+
+The implementation follows the `import defer` RFC for external modules, except in the parts below. Each part is marked **Unreasonable**, with a quote from the RFC, the reason, what the implementation does, and the tests. A review against the RFC can start here.
+
+- **Unreasonable: an eager external module with a warning.** The RFC table "Output formats and externals" has the row "An external module that a module of a deferred closure imports eagerly", with "Eager. Warning `DEFERRED_EXTERNAL_EVALUATED_EAGERLY`." for ESM output and "Eager. Warning." for IIFE and UMD output. That order is neither the native order nor the order of the build with the option off (see the example in "Rejected alternatives"). Instead, the build falls back, and the warning names the external module. The warning `DEFERRED_EXTERNAL_EVALUATED_EAGERLY` and the key `checks.deferredExternalEvaluatedEagerly` do not exist. Tests: `transitive_external_fallback`, `external_iife_umd` and the Node test `packages/rolldown/tests/import-defer-fallback.test.ts`.
+- **Unreasonable: `require()` for `import.defer()` of an external module with `dynamicImportInCjs: true`.** The RFC table gives `(async () => __deferNsCached("ext", () => __toESMCached("ext", require("ext"))))()` for CommonJS output. Its known limits say: "External modules in CommonJS output must load with `require()`. An ES module with top-level await cannot load that way". The build with the option off loads such a module with `import()`. Instead, the call keeps `import()`, with a warning, and gets the RFC form only with `dynamicImportInCjs: false`. Test: `external_cjs_dynamic_import`.
+- **Unreasonable: no rule for an `export *` of an external module in `cjs` output.** For an external module that a module of a deferred closure imports eagerly, the RFC table gives "A lazy `require("ext")` in the init wrapper of the importer" for CommonJS output. But the output file of an entry module also loads the external modules of its `export *` chain when the file loads. Instead, the build falls back (see the decisions). Tests: the two `export *` cases of the Node test `packages/rolldown/tests/import-defer-fallback.test.ts`.
+
 ## Unresolved questions
 
-- Which steps remove which conditions: external modules, the other output formats, `experimentalInlineCommonChunks`, `includeDependenciesRecursively: false`, the CommonJS files that run their module at load, and the `import.defer()` calls of CommonJS modules.
+- Which steps remove which conditions: `experimentalInlineCommonChunks`, `includeDependenciesRecursively: false`, the CommonJS files that run their module at load, and the `import.defer()` calls of CommonJS modules.
+- Can the check of `esm` output skip an external module that an eager importer outside the closures, in the same chunk, also imports? The check runs before the chunks exist.
 - Can the file of an entry get a facade with `preserveModules`, as without `preserveModules`? A deferred importer of the entry module in another file then does not run the module at load. With `strictExecutionOrder`, the order wrappers already move the module out of the file of the entry.
 - Can `esm` output keep `import.defer()` for a call that the build does not process: a call with a `/* @vite-ignore */` comment, or with a specifier that is not static? The runtime then defers the module, but it must support `import.defer()`.
 - Can the preparation run at the position of the deferred import in a module with no wrapper? It must run before the code of the first later import, at the top level of the chunk, as `ensure_lazy_module_initialization_order` moves an init call (`Chunk::insert_map`). Then the order rule can go away.
 
 ## Related
 
-- [implementation.md](./implementation.md) — the scan, the fallback, the link stage, the finalizer, the CommonJS targets, the lazy hosts and `import.defer()`
+- [implementation.md](./implementation.md) — the scan, the fallback, the link stage, the finalizer, the CommonJS targets, the lazy hosts, `import.defer()` and the external modules

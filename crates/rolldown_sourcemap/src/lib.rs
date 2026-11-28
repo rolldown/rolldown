@@ -74,10 +74,43 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>]) ->
     // If there's only one sourcemap, return it as is.
     return sourcemap_chain[0].clone().into_owned();
   }
-  let tokens = remap_chain(sourcemap_chain, &mut []);
+  let tokens = remap_chain::<false>(sourcemap_chain, &mut []);
   let (sources, source_contents) = copy_sources(sourcemap_chain[0], None);
   let names = copy_names(sourcemap_chain, None);
   SourceMap::new(None, names, None, sources, source_contents, tokens, None)
+}
+
+/// Composes a run of maps into one map that can take the place of the run in a longer chain.
+///
+/// Unlike `collapse_sourcemaps`, the result has one token for each token of the last map, at the
+/// same position. A token that does not reach a source stays as an unmapped token. So a lookup in
+/// the result finds the token that the same lookup finds in the last map, and a chain with the
+/// result gives the same final map as a chain with the whole run. The result also keeps the
+/// `sourceRoot` of the first map, because its sources come from that map.
+///
+/// Returns `None` if a map before the last one has tokens that are not sorted by generated
+/// position. A lookup in such a map can depend on the earlier lookups, so the composition could
+/// give another final map. A run of one map gives a copy of that map.
+pub fn compose_sourcemap_run(
+  sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>],
+) -> Option<SourceMap> {
+  let (_, earlier_maps) = sourcemap_chain.split_last()?;
+  if earlier_maps.is_empty() {
+    return Some(sourcemap_chain[0].clone().into_owned());
+  }
+  if !earlier_maps.iter().all(|map| has_sorted_tokens(map)) {
+    return None;
+  }
+  let first_map = sourcemap_chain[0];
+  let tokens = remap_chain::<true>(sourcemap_chain, &mut []);
+  let (sources, source_contents) = copy_sources(first_map, None);
+  let names = copy_names(sourcemap_chain, None);
+  let source_root = first_map.get_source_root().map(owned);
+  Some(SourceMap::new(None, names, source_root, sources, source_contents, tokens, None))
+}
+
+fn has_sorted_tokens(map: &oxc_sourcemap::SourceMap<'_>) -> bool {
+  map.get_tokens().map(|token| (token.get_dst_line(), token.get_dst_col())).is_sorted()
 }
 
 /// Like `collapse_sourcemaps`, but keeps only the sources and names that a traced token
@@ -95,7 +128,7 @@ pub fn collapse_sourcemaps_traced(sourcemap_chain: &[&oxc_sourcemap::SourceMap<'
   let name_count: usize = sourcemap_chain.iter().map(|map| map.get_names().len()).sum();
   // The last flag is for the name ids out of range. A chain without names marks no names.
   let mut name_used = if name_count == 0 { Vec::new() } else { vec![false; name_count + 1] };
-  let mut tokens = remap_chain(sourcemap_chain, &mut name_used);
+  let mut tokens = remap_chain::<false>(sourcemap_chain, &mut name_used);
   let name_out_of_range = name_used.pop();
   let (mut stack_flags, mut heap_flags) = ([false; 64], Vec::new());
   let source_used = source_flags(first_map.get_sources().len(), &mut stack_flags, &mut heap_flags);
@@ -344,7 +377,9 @@ fn copy_sources(map: &oxc_sourcemap::SourceMap<'_>, used: Option<&[bool]>) -> So
 /// Remaps the last map's tokens through the earlier maps. A name id in the result points into the
 /// names of every map, in chain order. When `name_used` is not empty, the remap also marks the
 /// names that a traced token references. Its last flag is then for the ids out of range.
-fn remap_chain(
+/// With `KEEP_POSITIONS`, the result has one token for each token of the last map (see
+/// `compose_sourcemap_run`).
+fn remap_chain<const KEEP_POSITIONS: bool>(
   sourcemap_chain: &[&oxc_sourcemap::SourceMap<'_>],
   name_used: &mut [bool],
 ) -> Box<[Token]> {
@@ -371,12 +406,13 @@ fn remap_chain(
 
   // `last_offset` counts the names of every map before the last one. When it is 0, no traced
   // token can carry a name, so the remap loop skips the per-step name tracking. A chain without
-  // names also skips the marks.
-  let remap = match (last_offset == 0, name_used.is_empty()) {
-    (true, true) => remap_tokens::<false, false>,
-    (true, false) => remap_tokens::<false, true>,
-    (false, true) => remap_tokens::<true, false>,
-    (false, false) => remap_tokens::<true, true>,
+  // names also skips the marks. A composed run always tracks the names: a name id out of range of
+  // its map points into the names of a later map, and the longer chain reads that id later.
+  let remap = match (last_offset == 0 && !KEEP_POSITIONS, name_used.is_empty()) {
+    (true, true) => remap_tokens::<false, false, KEEP_POSITIONS>,
+    (true, false) => remap_tokens::<false, true, KEEP_POSITIONS>,
+    (false, true) => remap_tokens::<true, false, KEEP_POSITIONS>,
+    (false, false) => remap_tokens::<true, true, KEEP_POSITIONS>,
   };
   remap(last_map, &mut chain_with_offsets, last_offset, name_used)
 }
@@ -385,7 +421,7 @@ fn remap_chain(
 /// `TRACK_NAMES` and `MARK_NAMES` are consts so that a chain without names, or a collapse that
 /// does not mark names in `name_used`, compiles without that work. With `MARK_NAMES`, `name_used`
 /// has one flag for each name and one more flag for the ids out of range.
-fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool>(
+fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool, const KEEP_POSITIONS: bool>(
   last_map: &oxc_sourcemap::SourceMap<'_>,
   chain: &mut [(LookupCursor<'_>, u32)],
   last_offset: u32,
@@ -444,6 +480,10 @@ fn remap_tokens<const TRACK_NAMES: bool, const MARK_NAMES: bool>(
       ))
     })();
 
+    if KEEP_POSITIONS {
+      remapped.push(mapped_token.unwrap_or_else(unmapped_token));
+      continue;
+    }
     if let Some(mapped_token) = mapped_token {
       if !has_mapping {
         // Keep a leading unmapped segment when this line later becomes mapped. Approximate
@@ -990,4 +1030,205 @@ fn test_collapse_sourcemaps_traced_beyond_stack_flags() {
   assert_eq!(dropped.get_names().collect::<Vec<_>>(), ["used"]);
   let token = dropped.get_tokens().next().unwrap();
   assert_eq!((token.get_source_id(), token.get_name_id()), (Some(0), Some(0)));
+}
+
+#[test]
+fn test_compose_sourcemap_run_keeps_a_token_at_each_position_of_the_last_map() {
+  use oxc_sourcemap::SourceMapBuilder;
+
+  let mut first_builder = SourceMapBuilder::default();
+  let original_source = first_builder.add_source_and_content("original.js", "const value = 1;\n");
+  for (dst_col, src_col) in [(0, 0), (4, 6), (10, 14)] {
+    first_builder.add_token(0, dst_col, 0, src_col, Some(original_source), None);
+  }
+  let first_map = first_builder.into_sourcemap().into_owned();
+
+  // At column 3, the last map has an unmapped token and then a mapped token. A lookup at column 3
+  // finds the unmapped token. `collapse_sourcemaps` drops the second unmapped token, so the same
+  // lookup in its result finds the mapped token.
+  let last_map = SourceMap::new(
+    None,
+    vec![],
+    None,
+    vec![Some("first.js".into())],
+    vec![None],
+    Box::new([
+      Token::new(0, 0, 0, 0, None, None),
+      Token::new(0, 3, 0, 0, None, None),
+      Token::new(0, 3, 0, 4, Some(0), None),
+    ]),
+    None,
+  );
+
+  let composed = compose_sourcemap_run(&[&first_map, &last_map]).unwrap();
+  let tokens = composed
+    .get_tokens()
+    .map(|token| {
+      (token.get_dst_line(), token.get_dst_col(), token.get_src_col(), token.get_source_id())
+    })
+    .collect::<Vec<_>>();
+  assert_eq!(tokens, [(0, 0, 0, None), (0, 3, 0, None), (0, 3, 6, Some(0))]);
+  let lookup_table = composed.generate_lookup_table();
+  assert_eq!(composed.lookup_token_approx(&lookup_table, 0, 3).unwrap().get_source_id(), None);
+}
+
+#[test]
+fn test_compose_sourcemap_run_returns_none_for_an_unsorted_earlier_map() {
+  let map = |columns: &[u32]| {
+    SourceMap::new(
+      None,
+      vec![],
+      None,
+      vec![Some("source.js".into())],
+      vec![None],
+      columns.iter().map(|&column| Token::new(0, column, 0, column, Some(0), None)).collect(),
+      None,
+    )
+  };
+  let sorted = map(&[0, 2, 4]);
+  let unsorted = map(&[0, 4, 2]);
+
+  // A lookup in an unsorted map can depend on the earlier lookups.
+  assert!(compose_sourcemap_run(&[&unsorted, &sorted]).is_none());
+  assert!(compose_sourcemap_run(&[&sorted, &unsorted, &sorted]).is_none());
+  // The composition does not look up tokens in the last map, so its order does not matter.
+  assert!(compose_sourcemap_run(&[&sorted, &unsorted]).is_some());
+}
+
+#[test]
+fn test_compose_sourcemap_run_returns_none_when_a_lookup_depends_on_the_lookup_order() {
+  let map = |tokens: &[(u32, u32)]| {
+    SourceMap::new(
+      None,
+      vec![],
+      None,
+      vec![Some("source.js".into())],
+      vec![None],
+      tokens
+        .iter()
+        .map(|&(dst_col, src_col)| Token::new(0, dst_col, 0, src_col, Some(0), None))
+        .collect(),
+      None,
+    )
+  };
+  // The columns of this line are in reverse order.
+  let unsorted = map(&[(6, 0), (4, 1), (2, 2)]);
+  let last = map(&[(0, 7), (1, 5)]);
+  let after = map(&[(0, 1)]);
+
+  // The collapse of the whole chain looks up only column 5 in the unsorted map. That lookup finds
+  // the token at column 6.
+  let whole = collapse_sourcemaps(&[&unsorted, &last, &after]);
+  assert_eq!(whole.get_tokens().map(|token| token.get_src_col()).collect::<Vec<_>>(), [0]);
+
+  // A composition looks up column 7 first and then column 5. After the first lookup, the cursor
+  // finds the token at column 2 for column 5. So a chain with that composition gives another map.
+  let tokens = remap_chain::<true>(&[&unsorted, &last], &mut []);
+  assert_eq!(tokens.iter().map(Token::get_src_col).collect::<Vec<_>>(), [2, 2]);
+  assert!(compose_sourcemap_run(&[&unsorted, &last]).is_none());
+}
+
+#[test]
+fn test_compose_sourcemap_run_keeps_the_source_root_of_the_first_map() {
+  let parse = |json: &str| oxc_sourcemap::SourceMap::from_json_string(json).unwrap().into_owned();
+  let first = parse(
+    r#"{"version":3,"sourceRoot":"../lib","names":[],"sources":["a.ts"],"sourcesContent":["const a = 1;\n"],"mappings":"AAAA"}"#,
+  );
+  let last = parse(
+    r#"{"version":3,"sourceRoot":"other/","names":[],"sources":["a.js"],"sourcesContent":["const a = 1;\n"],"mappings":"AAAA"}"#,
+  );
+
+  let composed = compose_sourcemap_run(&[&first, &last]).unwrap();
+  assert_eq!(composed.get_source_root(), Some("../lib"));
+  assert_eq!(composed.get_sources().collect::<Vec<_>>(), [Some("a.ts")]);
+  // A run of one map gives a copy of that map.
+  assert_eq!(compose_sourcemap_run(&[&first]).unwrap().to_json_string(), first.to_json_string());
+}
+
+/// Checks the contract of `compose_sourcemap_run` on random chains: if a run of maps is replaced
+/// by its composition, the collapse gives the same map. Each chain is `[before?, run.., after]`,
+/// like a load map, a run of transform maps, and the map of rendering.
+#[test]
+fn test_compose_sourcemap_run_matches_the_whole_run_for_random_chains() {
+  /// A linear congruential generator, so that every run of the test checks the same chains.
+  struct Random(u32);
+
+  impl Random {
+    fn below(&mut self, bound: u32) -> u32 {
+      self.0 = self.0.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+      (self.0 >> 16) % bound
+    }
+  }
+
+  /// Builds a map with up to 3 lines and small columns, so that tokens often share a column and
+  /// lookups often fall before the first token of a line. Some tokens are unmapped, and some
+  /// name ids are out of range, as in a map from a Rust plugin.
+  fn random_map(random: &mut Random, label: &str, may_be_unsorted: bool) -> SourceMap {
+    let source_count = 1 + random.below(2);
+    let name_count = random.below(3);
+    let unsorted_line = (may_be_unsorted && random.below(4) == 0).then(|| random.below(3));
+    let mut tokens = vec![];
+    for dst_line in 0..3 {
+      let mut columns = (0..random.below(5)).map(|_| random.below(8)).collect::<Vec<_>>();
+      columns.sort_unstable();
+      if unsorted_line == Some(dst_line) {
+        columns.reverse();
+      }
+      for dst_col in columns {
+        tokens.push(if random.below(10) < 3 {
+          Token::new(dst_line, dst_col, 0, 0, None, None)
+        } else {
+          let name_id =
+            if random.below(2) == 0 { Some(random.below(name_count + 2)) } else { None };
+          let source_id = Some(random.below(source_count));
+          Token::new(dst_line, dst_col, random.below(3), random.below(8), source_id, name_id)
+        });
+      }
+    }
+    SourceMap::new(
+      None,
+      (0..name_count).map(|i| format!("{label}-name-{i}").into()).collect(),
+      if random.below(4) == 0 { Some(format!("{label}-root/").into()) } else { None },
+      (0..source_count).map(|i| Some(format!("{label}-{i}.js").into())).collect(),
+      (0..source_count).map(|_| None).collect(),
+      tokens.into_boxed_slice(),
+      None,
+    )
+  }
+
+  const ITERATIONS: u32 = 10_000;
+  let mut random = Random(1);
+  let mut composed_runs = 0;
+  for iteration in 0..ITERATIONS {
+    let before = (random.below(2) == 0).then(|| random_map(&mut random, "before", false));
+    let run = (0..2 + random.below(3))
+      .map(|i| random_map(&mut random, &format!("run{i}"), true))
+      .collect::<Vec<_>>();
+    let after = random_map(&mut random, "after", false);
+
+    let run_refs = run.iter().collect::<Vec<_>>();
+    let Some(composed) = compose_sourcemap_run(&run_refs) else {
+      continue;
+    };
+    composed_runs += 1;
+
+    let whole_chain = before.iter().chain(&run).chain([&after]).collect::<Vec<_>>();
+    let composed_chain = before.iter().chain([&composed, &after]).collect::<Vec<_>>();
+    let inputs =
+      || whole_chain.iter().map(|map| map.to_json_string()).collect::<Vec<_>>().join("\n");
+    assert_eq!(
+      collapse_sourcemaps(&composed_chain).to_json_string(),
+      collapse_sourcemaps(&whole_chain).to_json_string(),
+      "collapse_sourcemaps, iteration {iteration}, chain:\n{}",
+      inputs()
+    );
+    assert_eq!(
+      collapse_sourcemaps_traced(&composed_chain).to_json_string(),
+      collapse_sourcemaps_traced(&whole_chain).to_json_string(),
+      "collapse_sourcemaps_traced, iteration {iteration}, chain:\n{}",
+      inputs()
+    );
+  }
+  // Most runs have sorted maps, so most iterations check a composition.
+  assert!(composed_runs > ITERATIONS / 2, "only {composed_runs} runs were composed");
 }

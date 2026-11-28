@@ -434,9 +434,18 @@ impl<Fs: FileSystem + Clone + 'static> Bundle<Fs> {
 
   async fn bundle_up(
     &mut self,
-    scan_stage_output: NormalizedScanStageOutput,
+    mut scan_stage_output: NormalizedScanStageOutput,
     is_write: bool,
   ) -> BuildResult<BundleOutput> {
+    // A module keeps the map of every transform hook until it is rendered. Compose the
+    // consecutive transform maps now, so the intermediate maps are freed before the link and
+    // generate stages. An incremental build reads the chains of unchanged modules in later
+    // builds, so it keeps them as they are.
+    if !self.options.experimental.is_incremental_build_enabled()
+      && self.options.is_sourcemap_enabled()
+    {
+      crate::utils::sourcemap_chain::collapse_sourcemap_chains(&mut scan_stage_output.module_table);
+    }
     // The one stretch of a build with no plugin in it, which is what makes it a usable
     // baseline for "was this build plugin-bound?" — see `BuildTimings`.
     let link_start = self.plugin_driver.build_timings.start();

@@ -59,6 +59,12 @@ impl GenerateStage<'_> {
         inline_renders,
       )
       .await?;
+    // Every module is rendered, and its final map is built. A build that is not incremental
+    // reads the sourcemap chains no more, so free them before `renderChunk` and minification,
+    // where the memory of a build peaks.
+    if !self.options.experimental.is_incremental_build_enabled() {
+      crate::utils::sourcemap_chain::free_sourcemap_chains(&mut self.link_output.module_table);
+    }
 
     self.trace_action_package_graph_ready(chunk_graph, &instantiated_chunks);
     self.trace_action_module_rendered(&instantiated_chunks);

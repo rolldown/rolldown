@@ -1,0 +1,8 @@
+{
+  "_comment": "`first.js` and `second.js` are the only ESM modules that `import defer` wraps. Each one is a root that imports only CommonJS modules. The wrapper declaration of `a.cjs` goes in the wrapper of `first.js`, and the wrapper declaration of `b.cjs` goes in the wrapper of `second.js`. `shared.cjs` stays at the top level, because both roots import it.",
+  "config": {
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

@@ -119,6 +119,7 @@ pub use crate::{
       chunk_debug_info::{ChunkDebugInfo, FacadeChunkEliminationReason},
       chunk_reason_type::ChunkReasonType,
       cross_chunk_import_item::CrossChunkImportItem,
+      module_group::ModuleGroup,
       preliminary_filename::PreliminaryFilename,
       static_import::StaticImport,
     },
@@ -163,6 +164,9 @@ pub use crate::{
   types::bundle_mode::BundleMode,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
+  types::concatenate_wrapped_module::{
+    ConcatenateWrappedModuleKind, ConcatenatedGroupEvent, RenderedConcatenatedModuleParts,
+  },
   types::constant_value::{ConstExportMeta, ConstantValue, DeferredWriteConstant},
   types::entry_point::{EntryPoint, EntryPointKind},
   types::exports_kind::ExportsKind,

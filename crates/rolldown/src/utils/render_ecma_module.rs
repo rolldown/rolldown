@@ -1,5 +1,13 @@
 use std::sync::Arc;
 
+use oxc::{
+  allocator::{Allocator, Vec as ArenaVec},
+  ast::{
+    ast::{Comment, Program},
+    builder::AstBuilder,
+  },
+  span::GetSpan,
+};
 use rolldown_common::{
   AttachDebugInfo, ModuleRenderOutput, NormalModule, NormalizedBundlerOptions,
   SourcemapChainElement,
@@ -25,6 +33,48 @@ pub fn render_normal_module(
   ast: &rolldown_ecmascript::EcmaAst,
   initial_indent: u32,
 ) -> ModuleRenderOutput {
+  render_program(module, options, ast.program(), initial_indent)
+}
+
+/// Moves the body of a root or a member of a deferred group (the statements from
+/// `body_start` on) out of the program of `ast`, and prints it on its own, as
+/// `render_normal_module` does. The program keeps the top-level declarations, which
+/// `render_normal_module` prints later. Each comment goes to the part where a print of the
+/// whole program puts it (`take_group_body_comments`).
+/// See internal-docs/import-defer/implementation.md ("Rendering").
+pub fn render_normal_module_group_body(
+  module: &NormalModule,
+  options: &NormalizedBundlerOptions,
+  ast: &mut rolldown_ecmascript::EcmaAst,
+  body_start: usize,
+) -> ModuleRenderOutput {
+  ast.program.with_mut(|fields| {
+    let program = fields.program;
+    let allocator = fields.allocator;
+    let builder = AstBuilder::new(allocator);
+    let comments = take_group_body_comments(program, body_start, allocator);
+    let body = ArenaVec::from_iter_in(program.body.drain(body_start..), &allocator);
+    let body_program = Program::new(
+      program.span,
+      program.source_type,
+      program.source_text,
+      comments,
+      None,
+      [],
+      body,
+      &builder,
+    );
+    render_program(module, options, &body_program, 0)
+  })
+}
+
+/// Prints `program`, the program of a module or a part of it (see `render_normal_module`).
+fn render_program(
+  module: &NormalModule,
+  options: &NormalizedBundlerOptions,
+  program: &Program<'_>,
+  initial_indent: u32,
+) -> ModuleRenderOutput {
   let enable_sourcemap = options.sourcemap.is_some() && !module.is_virtual();
   let mut print_comments: rolldown_ecmascript::PrintCommentsOptions = options.comments.into();
   // Annotation comments must survive into the rendered text because
@@ -33,8 +83,8 @@ pub fn render_normal_module(
   // `minify_chunks` codegen will honour the user's `comments.annotation`
   // setting when it emits the final output.
   print_comments.annotation = true;
-  let printed = rolldown_ecmascript::EcmaCompiler::print_with(
-    ast,
+  let printed = rolldown_ecmascript::EcmaCompiler::print_program_with(
+    program,
     rolldown_ecmascript::PrintOptions {
       sourcemap: enable_sourcemap,
       filename: module.id.to_string(),
@@ -59,6 +109,48 @@ pub fn render_normal_module(
   ModuleRenderOutput { code: printed.code, map, warnings }
 }
 
+/// Takes from `program` the comments that a print of the whole program puts in its statements
+/// from `body_start` on (the body of a root or a member of a deferred group). `program` keeps
+/// the other comments. A comment goes to the declarations (the statements before `body_start`):
+/// - at position 0: the print puts these at the start of the program.
+/// - in a declaration: its anchor is there. A declaration is a hoisted function, a module
+///   declaration, or a statement that the finalizer made, which has an empty span and no
+///   comments in it.
+/// - a legal comment before the start of a declaration: the print puts a legal comment before
+///   the first statement that starts after it, also if its anchor is gone.
+fn take_group_body_comments<'a>(
+  program: &mut Program<'a>,
+  body_start: usize,
+  allocator: &'a Allocator,
+) -> ArenaVec<'a, Comment> {
+  let mut declaration_spans = program.body[..body_start]
+    .iter()
+    .map(GetSpan::span)
+    .filter(|span| !span.is_empty())
+    .collect::<Vec<_>>();
+  declaration_spans.sort_unstable_by_key(|span| span.start);
+  let last_declaration_start = declaration_spans.last().map(|span| span.start);
+  let in_declarations = |comment: &Comment| {
+    let position = comment.attached_to;
+    let idx = declaration_spans.partition_point(|span| span.start <= position);
+    position == 0
+      || (idx > 0 && position < declaration_spans[idx - 1].end)
+      || ((comment.is_legal() || comment.is_coverage_ignore_file())
+        && last_declaration_start.is_some_and(|start| start > position))
+  };
+  let mut declaration_comments = ArenaVec::new_in(&allocator);
+  let mut body_comments = ArenaVec::new_in(&allocator);
+  for comment in &program.comments {
+    if in_declarations(comment) {
+      declaration_comments.push(comment.clone());
+    } else {
+      body_comments.push(comment.clone());
+    }
+  }
+  program.comments = declaration_comments;
+  body_comments
+}
+
 pub fn render_ecma_module(
   module: &NormalModule,
   options: &NormalizedBundlerOptions,
@@ -71,33 +163,93 @@ pub fn render_ecma_module(
     return RenderEcmaModuleOutput { sources: None, warnings: vec![] };
   }
   let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send + Sync>> = Vec::with_capacity(6);
+  let warnings = push_module_sources(module, options, render_output, true, &mut sources);
+  RenderEcmaModuleOutput { sources: Some(Arc::from(sources.into_boxed_slice())), warnings }
+}
+
+/// Renders a root or a member of a deferred group in two parts: its top-level declarations, and
+/// its body, which `render_normal_module_group_body` printed on its own. Returns the sources of
+/// both parts in one list, and the number of sources of the first part. The chunk renderer puts
+/// the second part in the init wrapper of the root.
+/// See internal-docs/import-defer/implementation.md ("Rendering").
+pub fn render_grouped_ecma_module(
+  module: &NormalModule,
+  options: &NormalizedBundlerOptions,
+  declarations: ModuleRenderOutput,
+  body: Option<ModuleRenderOutput>,
+) -> (RenderEcmaModuleOutput, usize) {
+  let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send + Sync>> = Vec::with_capacity(6);
+  let mut warnings = vec![];
+  let declarations = without_end_newline(declarations);
+  if !declarations.code.is_empty() {
+    warnings = push_module_sources(module, options, declarations, true, &mut sources);
+  }
+  let declarations_len = sources.len();
+  if let Some(body) = body.map(without_end_newline)
+    && !body.code.trim().is_empty()
+  {
+    // The chunk renderer adds the debug comment of the body, because only it knows if a member
+    // body comes before it. The two parts have the same sourcemap warnings.
+    let body_warnings = push_module_sources(module, options, body, false, &mut sources);
+    if declarations_len == 0 {
+      warnings = body_warnings;
+    }
+  }
+  let sources = (!sources.is_empty()).then(|| Arc::from(sources.into_boxed_slice()));
+  (RenderEcmaModuleOutput { sources, warnings }, declarations_len)
+}
+
+/// The source joiner adds a newline between two sources.
+fn without_end_newline(mut output: ModuleRenderOutput) -> ModuleRenderOutput {
+  let len = output.code.trim_end_matches('\n').len();
+  output.code.truncate(len);
+  output
+}
+
+/// Pushes the code of `render_output` to `sources`, and returns its sourcemap warnings.
+fn push_module_sources(
+  module: &NormalModule,
+  options: &NormalizedBundlerOptions,
+  render_output: ModuleRenderOutput,
+  debug_comment: bool,
+  sources: &mut Vec<Box<dyn rolldown_sourcemap::Source + Send + Sync>>,
+) -> Vec<BuildDiagnostic> {
   // Mark only where a module starts, like esbuild and bun.
-  if matches!(
-    options.experimental.attach_debug_info,
-    Some(AttachDebugInfo::Simple | AttachDebugInfo::Full)
-  ) {
-    sources.push(Box::new(concat_string!("// ", module.debug_id)));
+  if debug_comment && let Some(comment) = module_debug_comment(module, options) {
+    sources.push(Box::new(comment));
   }
 
   let enable_sourcemap = options.sourcemap.is_some() && !module.is_virtual();
   // Chain collapse (and its `SOURCEMAP_BROKEN` warnings) already ran in
   // `render_normal_module` while the codegen map was still borrowed.
-  let warnings = render_output.warnings;
+  let ModuleRenderOutput { code, map, warnings } = render_output;
 
   if enable_sourcemap {
-    if let Some(sourcemap) = render_output.map {
+    if let Some(sourcemap) = map {
       sources.push(Box::new(
-        SourceMapSource::new(render_output.code, sourcemap)
+        SourceMapSource::new(code, sourcemap)
           .with_pre_compute_sourcemap_data(options.is_sourcemap_enabled()),
       ));
     } else {
-      sources.push(Box::new(render_output.code));
+      sources.push(Box::new(code));
     }
   } else {
-    sources.push(Box::new(render_output.code));
+    sources.push(Box::new(code));
   }
+  warnings
+}
 
-  RenderEcmaModuleOutput { sources: Some(Arc::from(sources.into_boxed_slice())), warnings }
+/// The comment that marks the start of the code of a module (`// <debug id>`), if the
+/// `attachDebugInfo` option asks for it.
+pub fn module_debug_comment(
+  module: &NormalModule,
+  options: &NormalizedBundlerOptions,
+) -> Option<String> {
+  matches!(
+    options.experimental.attach_debug_info,
+    Some(AttachDebugInfo::Simple | AttachDebugInfo::Full)
+  )
+  .then(|| concat_string!("// ", module.debug_id))
 }
 
 /// Collapses a module's `sourcemap_chain` together with the oxc codegen map

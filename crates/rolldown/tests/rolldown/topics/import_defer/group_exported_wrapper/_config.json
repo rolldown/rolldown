@@ -1,0 +1,9 @@
+{
+  "_comment": "`bridge.js` puts `barrel.js` and `leaf.js` in a second chunk. `main.js` reads `f` of `leaf.js` through the deferred namespace of `d.js`, so the second chunk also exports `init_leaf` to the main chunk, although the main chunk does not call it. The export needs the declaration, so `leaf.js` must keep its wrapper and must not become a member of the group of `barrel.js`. `format` is set, so that the extended variant runs with `minifyInternalExports: false`.",
+  "config": {
+    "format": "esm",
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

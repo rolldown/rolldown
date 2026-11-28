@@ -8,8 +8,10 @@ use std::{
 use crate::{
   ChunkIdx, ChunkKind, FilenameTemplate, ImportRecordIdx, ModuleIdx, ModuleTable, NamedImport,
   NormalModule, NormalizedBundlerOptions, OutputExports, PreserveEntrySignatures,
-  RollupPreRenderedChunk, RuntimeHelper, SymbolRef,
-  chunk::types::{chunk_debug_info::ChunkDebugInfo, chunk_reason_type::ChunkReasonType},
+  RenderedConcatenatedModuleParts, RollupPreRenderedChunk, RuntimeHelper, SymbolRef,
+  chunk::types::{
+    chunk_debug_info::ChunkDebugInfo, chunk_reason_type::ChunkReasonType, module_group::ModuleGroup,
+  },
 };
 pub mod chunk_table;
 pub mod types;
@@ -115,6 +117,11 @@ pub struct Chunk {
   pub static_imports: Vec<StaticImport>,
   pub insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>>,
   pub remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>,
+  /// The deferred groups of the chunk (`GenerateStage::group_deferred_modules`).
+  pub module_groups: Vec<ModuleGroup>,
+  /// The parts of each root and member of a deferred group, from its finalizer.
+  pub module_idx_to_render_concatenated_module:
+    FxHashMap<ModuleIdx, RenderedConcatenatedModuleParts>,
   /// Pre-computed export mode for the chunk
   pub output_exports: OutputExports,
 }

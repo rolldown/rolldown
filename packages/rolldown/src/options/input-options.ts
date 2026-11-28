@@ -272,9 +272,13 @@ export type OptimizationOptions = {
    *
    * Enabling this option improves the start up performance of the generated bundle with the cost of a slight increase in bundle size.
    *
+   * The wrappers of the modules that `import defer` evaluates lazily (see `experimental.importDefer`) use the PIFE pattern also with `platform: 'neutral'`. Set this option to `false` to turn it off for them too.
+   *
    * {@include ./docs/optimization-pife-for-module-wrappers.md}
    *
-   * @default true
+   * @default
+   * - `false` if the platform is `'neutral'`
+   * - `true` for other platforms
    */
   pifeForModuleWrappers?: boolean;
 };
@@ -799,8 +803,8 @@ export interface InputOptions {
      * - A module that only re-exports other modules stays in the output when a deferred module
      *   imports a binding through it. Its init calls the init of each re-exported module that
      *   stays in the output.
-     * - The target of an `export *` in a deferred module stays in the output also when no code
-     *   uses it.
+     * - With code splitting (the default) or with more than one entry, the target of an
+     *   `export *` in a deferred module stays in the output also when no code uses it.
      *
      * @see {@link https://github.com/tc39/proposal-defer-import-eval | Proposal}
      * @default false

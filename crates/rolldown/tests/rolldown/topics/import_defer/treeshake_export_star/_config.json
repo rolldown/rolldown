@@ -1,0 +1,12 @@
+{
+  "_comment": "Tree shaking of `export *` in a deferred closure of a build with one chunk. `route.js` reads `A` through a star barrel. No code uses `B`, and `b.js` has `moduleSideEffects: false`, so the eager build drops `b.js`. The deferred closure must drop it too, and must not run its static initializer. `codeSplitting: false` makes the build have one chunk, which this rule needs.",
+  "config": {
+    "codeSplitting": false,
+    "treeshake": {
+      "moduleSideEffects": false
+    },
+    "experimental": {
+      "importDefer": true
+    }
+  }
+}

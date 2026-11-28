@@ -165,6 +165,66 @@ The implementation follows the `import defer` RFC for external modules, except i
 - **Unreasonable: `require()` for `import.defer()` of an external module with `dynamicImportInCjs: true`.** The RFC table gives `(async () => __deferNsCached("ext", () => __toESMCached("ext", require("ext"))))()` for CommonJS output. Its known limits say: "External modules in CommonJS output must load with `require()`. An ES module with top-level await cannot load that way". The build with the option off loads such a module with `import()`. Instead, the call keeps `import()`, with a warning, and gets the RFC form only with `dynamicImportInCjs: false`. Test: `external_cjs_dynamic_import`.
 - **Unreasonable: no rule for an `export *` of an external module in `cjs` output.** For an external module that a module of a deferred closure imports eagerly, the RFC table gives "A lazy `require("ext")` in the init wrapper of the importer" for CommonJS output. But the output file of an entry module also loads the external modules of its `export *` chain when the file loads. Instead, the build falls back (see the decisions). Tests: the two `export *` cases of the Node test `packages/rolldown/tests/import-defer-fallback.test.ts`.
 
+## Deferred groups
+
+### Goal
+
+Each lazy init wrapper has a cost in the engine at startup (the parse of the function) and at the first use (the compile and the call). A deferred closure can have hundreds of modules, and without groups each module has its own wrapper. A group gives one wrapper for each root, so that the engine parses and compiles fewer functions.
+
+### Measurements
+
+Bench: a 1.4 MB bundle of open-source packages (graphql, the AWS SDK, zod, React, the AI SDK), with four deferred routes, minified, in one chunk. Node 26, 60 rounds in fresh processes, medians, against the same build without groups:
+
+| Build                                          | Init wrappers | Startup  | First use of all routes |
+| ---------------------------------------------- | ------------- | -------- | ----------------------- |
+| Without groups                                 | 546           | 20.40 ms | 19.76 ms                |
+| Groups, a shared module has no group           | 118           | −0.40 ms | −2.14 ms                |
+| Groups, a shared module can have its own group | 33            | −0.62 ms | −2.38 ms                |
+
+The size goes from 1,422,419 B to 1,394,787 B.
+
+The CommonJS wrappers of the groups (11 in this bench) then move into the root wrappers. Two more runs of 60 rounds compare this step against the groups without it. The second run measures the code after the fixes of the `Init` steps and of the split. In the same run, the fixes have no measurable effect against the build before them: startup 0.00 ms, first use of all routes −0.14 ms.
+
+| Run    | Startup  | First use of all routes | First use of the route with React server rendering | webpack, same route |
+| ------ | -------- | ----------------------- | -------------------------------------------------- | ------------------- |
+| First  | −0.28 ms | +0.72 ms                | 0.52 → 1.05 ms                                     | 3.31 ms             |
+| Second | −0.46 ms | +0.74 ms                | 0.55 → 1.12 ms                                     | 3.48 ms             |
+
+The bench has one chunk, so no chunk runs a deferred module at load (see the decisions).
+
+### Decisions
+
+- Only plain `import` edges make a member. A `require()` target can run conditionally. `ImportKind::is_static()` also includes `require`, `new URL` and the CSS kinds, so the closure of a deferred import can contain modules that the root must not run.
+- A member has callers only in its own group, and it is in the same chunk as its root. Thus only the wrapper of the root can start its body, and the error and the order rules of one wrapper stay correct: a throw in a member ends the init of the root, and a second call throws the same error again.
+- A module that other code can call keeps its wrapper (see "Membership" in implementation.md). A module that the closures of two roots contain keeps its wrapper, and it can have its own group.
+- A module whose wrapper a chunk exports keeps its wrapper, also when no code calls it. The cross-chunk links add the wrapper of the owner of each imported symbol, before the groups exist. This costs one wrapper for each such module, and only with code splitting.
+- The member bodies run in the depth-first order of the steps, and a pre-call keeps a module outside the group before a member body. The alternative was to keep the init calls of the members as they are, which needs a wrapper for each member.
+- The declarations of the members stay at the top level of the chunk. Code outside the group can read them (namespace getters, `(init_r(), x)` reads, exports to other chunks).
+- A statement that writes a binding of an import (a CommonJS import, a deferred CommonJS namespace, the `__reExport` of an `export *`) moves before the next member body. A member body runs before the whole body of its importer, but without groups this statement runs before the init calls of the later imports. The statement moves one time and as a whole, with its names in the hoisted `var` list. Thus the order of evaluation and the identity of each namespace object are the same as without groups and in native ESM.
+- The finalizer records where the body of a root or a member starts, as an index in its program. The two parts are printed on their own, and the wrapper text of the root comes from a print of the wrapper with an empty closure. Thus no part of the text that the renderer splits comes from user code.
+- A CommonJS wrapper that only one group uses goes into the root wrapper. A factory at the top level has the eager-compile hint (`pife`), so the engine compiles it at startup. In the root wrapper, the engine compiles it with the root wrapper at the first use. This moves compile time from startup to the first use: the startup is the cost that `import defer` must make smaller.
+- No groups in strict execution order, dev mode, `profilerNames` and inline common chunks. These paths put their own calls or names on each wrapper.
+- No group for a deferred module that its common chunk runs at load (see "Run at load" in implementation.md), or for an anchor: the module whose code ends with the init call of such a module (see "Declarations before the first call" in implementation.md). The finalizer puts this call at the top level of the program. In a group module, that place is the body, which runs in the wrapper of the root. Thus the call would not run at load, and a later module of the chunk would run first (fixture `group_run_at_load_anchor`).
+
+### Rejected alternatives
+
+- One lazy function for each root that contains all declarations and bodies of its closure: in a model build, the first use was 1.58 ms slower.
+- No group for a module in a cycle that reads a binding of an import before the statement of the binding runs. A cycle is not necessary for this failure: a member can change the exports of a CommonJS module before the root makes its namespace (fixture `group_cjs_exports_snapshot`). A cycle check thus does not find all cases.
+- A marker statement in the printed code, and a split of the text at the line of the marker. User code can contain the same text, also on a line of its own in a template literal (fixture `group_marker_text`).
+- Remove the export of a member wrapper and its import in the other chunk. This needs proof that no code of the importing chunk calls the wrapper. When the wrapper stays, the output stays valid without that proof (fixture `group_exported_wrapper`).
+
+## PIFE hint of deferred wrappers
+
+### Goal
+
+`optimization.pifeForModuleWrappers` puts the closure of a module wrapper in parentheses. This hint makes the engine compile the closure eagerly (<https://v8.dev/blog/preparser#pife>). The option is off by default for `platform: 'neutral'`. For the wrapper of a deferred module, the hint has no cost at load time, so the build keeps it.
+
+### Decisions
+
+- The wrapper of a module that `import defer` wraps keeps the hint also for `platform: 'neutral'`. The wrapper is in its hoisted `function init_x()`, and the engine compiles `init_x` only at the first access. The closure runs right after that, so the hint compiles nothing at load time.
+- An explicit `pifeForModuleWrappers: false` turns off the hint also for these wrappers.
+- A root of a group gets the text of its wrapper from a print of the wrapper with an empty closure. Thus the root has the same hint as a wrapper with no group (fixture `group_pife`).
+
 ## Unresolved questions
 
 - Which steps remove which conditions: `experimentalInlineCommonChunks`, `includeDependenciesRecursively: false`, the CommonJS files that run their module at load, and the `import.defer()` calls of CommonJS modules.
@@ -172,7 +232,9 @@ The implementation follows the `import defer` RFC for external modules, except i
 - Can the file of an entry get a facade with `preserveModules`, as without `preserveModules`? A deferred importer of the entry module in another file then does not run the module at load. With `strictExecutionOrder`, the order wrappers already move the module out of the file of the entry.
 - Can `esm` output keep `import.defer()` for a call that the build does not process: a call with a `/* @vite-ignore */` comment, or with a specifier that is not static? The runtime then defers the module, but it must support `import.defer()`.
 - Can the preparation run at the position of the deferred import in a module with no wrapper? It must run before the code of the first later import, at the top level of the chunk, as `ensure_lazy_module_initialization_order` moves an init call (`Chunk::insert_map`). Then the order rule can go away.
+- Can a group move the private declarations of its members into the wrapper of the root? In a model build, the saving was near the noise floor.
+- Can a CommonJS wrapper that two groups share leave the top level? There it keeps its eager-compile hint (`pife`), which costs startup time. The bench of "Deferred groups" has no such wrapper.
 
 ## Related
 
-- [implementation.md](./implementation.md) — the scan, the fallback, the link stage, the finalizer, the CommonJS targets, the lazy hosts, `import.defer()` and the external modules
+- [implementation.md](./implementation.md) — the scan, the fallback, the link stage, the finalizer, the CommonJS targets, the lazy hosts, `import.defer()`, the external modules and the deferred groups

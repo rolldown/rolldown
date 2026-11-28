@@ -1,0 +1,62 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// required.js
+var required_exports = /* @__PURE__ */ __exportAll({ value: () => value$1 });
+var value$1;
+var init_required = __esmMin(() => {
+	globalThis.events.push("required");
+	value$1 = "required";
+});
+// lazy.js
+var value;
+function init_lazy() {
+	return (init_lazy = __esmMin((() => {
+		globalThis.events.push("lazy");
+		value = "lazy";
+	})))();
+}
+// main.js
+function run() {
+	return [(init_lazy(), value), (init_required(), __toCommonJS(required_exports)).value];
+}
+export { run };
+
+```
+
+# Variant: [pife_for_module_wrappers: false]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [\0rolldown/runtime.js]
+// required.js
+var required_exports = /* @__PURE__ */ __exportAll({ value: () => value$1 });
+var value$1;
+var init_required = __esmMin(() => {
+	globalThis.events.push("required");
+	value$1 = "required";
+});
+// lazy.js
+var value;
+function init_lazy() {
+	return (init_lazy = __esmMin(() => {
+		globalThis.events.push("lazy");
+		value = "lazy";
+	}))();
+}
+// main.js
+function run() {
+	return [(init_lazy(), value), (init_required(), __toCommonJS(required_exports)).value];
+}
+export { run };
+
+```
